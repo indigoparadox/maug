@@ -26,20 +26,20 @@
 #define platform_fclose fclose
 #endif /* !platform_fclose */
 
-#ifndef DEBUG_THRESHOLD
-#define DEBUG_THRESHOLD 1
-#endif /* !DEBUG_THRESHOLD */
-
 #ifdef LOG_TO_FILE
-#ifndef DEBUG_LOG
-#define DEBUG_LOG
-#endif /* !DEBUG_LOG */
-#define LOG_ERR_TARGET g_log_file
-#define LOG_STD_TARGET g_log_file
+#  ifndef DEBUG_LOG
+#     define DEBUG_LOG
+#  endif /* !DEBUG_LOG */
+#  define LOG_ERR_TARGET g_log_file
+#  define LOG_STD_TARGET g_log_file
 #else
-#define LOG_ERR_TARGET stderr
-#define LOG_STD_TARGET stdout
+#  define LOG_ERR_TARGET stderr
+#  define LOG_STD_TARGET stdout
 #endif /* LOG_TO_FILE */
+
+#if defined( DEBUG_LOG ) && !defined( DEBUG_THRESHOLD )
+#  define DEBUG_THRESHOLD 1
+#endif /* DEBUG_LOG && !DEBUG_THRESHOLD */
 
 /* ! */
 #if defined( ANCIENT_C )
@@ -67,6 +67,8 @@ static void error_printf( const char* fmt, ... ) {
    printf( "\n" );
 }
 
+#  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is %lu bytes", (sz) );
+
 /* ! */
 #elif defined( DEBUG_LOG )
 /* ! */
@@ -89,6 +91,7 @@ static void error_printf( const char* fmt, ... ) {
 
 #  define debug_printf( ... )
 #  define error_printf( ... )
+#  define size_printf( ... )
 
 /* ! */
 #endif /* DEBUG_LOG, ANCIENT_C */
