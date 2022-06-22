@@ -37,6 +37,12 @@
 #  define LOG_STD_TARGET stdout
 #endif /* LOG_TO_FILE */
 
+#ifdef __GNUC__
+#  define SIZE_T_FMT "%lu"
+#else
+#  define SIZE_T_FMT "%u"
+#endif /* __GNUC__ */
+
 #if defined( DEBUG_LOG ) && !defined( DEBUG_THRESHOLD )
 #  define DEBUG_THRESHOLD 1
 #endif /* DEBUG_LOG && !DEBUG_THRESHOLD */
@@ -67,9 +73,9 @@ static void error_printf( const char* fmt, ... ) {
    printf( "\n" );
 }
 
-#  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is %lu bytes", (sz) );
+#  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is " SIZE_T_FMT " bytes", (sz) );
 
-#  define size_multi_printf( lvl, name, sz, max ) debug_printf( lvl, "single " name " size is %lu bytes, " name " array size is %lu bytes", (sz), ((sz) * (max)) );
+#  define size_multi_printf( lvl, name, sz, max ) debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
 #elif defined( DEBUG_LOG )
@@ -85,9 +91,9 @@ static void error_printf( const char* fmt, ... ) {
 
 #  define error_printf( ... ) internal_error_printf( __VA_ARGS__ )
 
-#  define size_printf( lvl, name, sz ) internal_debug_printf( lvl, name " size is %lu bytes", (sz) );
+#  define size_printf( lvl, name, sz ) internal_debug_printf( lvl, name " size is " SIZE_T_FMT " bytes", (sz) );
 
-#  define size_multi_printf( lvl, name, sz, max ) internal_debug_printf( lvl, "single " name " size is %lu bytes, " name " array size is %lu bytes", (sz), ((sz) * (max)) );
+#  define size_multi_printf( lvl, name, sz, max ) internal_debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
 #else /* !DEBUG_LOG, !ANCIENT_C */
