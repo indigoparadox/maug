@@ -74,7 +74,9 @@ int retroflat_poll_input();
 
 #ifdef RETROFLT_C
 
+#  include <stdio.h>
 #  include <stdlib.h>
+#  include <string.h>
 
 /* === Globals === */
 
