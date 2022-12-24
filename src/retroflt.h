@@ -189,9 +189,25 @@ struct RETROFLAT_BITMAP {
    BITMAP* b;
 };
 typedef int RETROFLAT_COLOR;
-#  define RETROFLAT_COLOR_BLACK     makecol( 0, 0, 0 )
-#  define RETROFLAT_COLOR_WHITE     makecol( 255, 255, 255 )
-#  define RETROFLAT_COLOR_GRAY      makecol( 128, 128, 128 )
+
+#  define RETROFLAT_COLOR_BLACK        makecol(0,   0,   0)
+#  define RETROFLAT_COLOR_DARKBLUE     makecol(0, 0, 170)
+#  define RETROFLAT_COLOR_DARKGREEN    makecol(0, 170, 0)
+#  define RETROFLAT_COLOR_TEAL         makecol(0, 170, 170)
+#  define RETROFLAT_COLOR_DARKRED      makecol(170, 0, 0)
+#  define RETROFLAT_COLOR_VIOLET       makecol(170, 0, 170)
+#  define RETROFLAT_COLOR_BROWN        makecol(170, 85, 0)
+#  define RETROFLAT_COLOR_GRAY         makecol(170, 170, 170)
+#  define RETROFLAT_COLOR_DARKGRAY     makecol(85, 85, 85)
+#  define RETROFLAT_COLOR_BLUE         makecol(85, 85, 255)
+#  define RETROFLAT_COLOR_GREEN        makecol(85, 255, 85)
+#  define RETROFLAT_COLOR_CYAN         makecol(85, 255, 255)
+#  define RETROFLAT_COLOR_RED          makecol(255, 85, 85)
+#  define RETROFLAT_COLOR_MAGENTA      makecol(255, 85, 255)
+#  define RETROFLAT_COLOR_YELLOW       makecol(255, 255, 85)
+#  define RETROFLAT_COLOR_WHITE        makecol(255, 255, 255)
+
+
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -318,6 +334,40 @@ typedef COLORREF RETROFLAT_COLOR;
       DispatchMessage( &g_msg ); \
    } while( 0 < g_msg_retval );
 
+/* Create a brush and set it to the target HDC. */
+#  define retroflat_win_setup_brush( brush, old_brush, target, flags ) \
+   if( RETROFLAT_FLAGS_FILL != (RETROFLAT_FLAGS_FILL & flags) ) { \
+      old_brush = SelectObject( target->hdc_b, GetStockObject( NULL_BRUSH ) ); \
+   } else { \
+      brush = CreateSolidBrush( color ); \
+      if( (HBRUSH)NULL == brush ) { \
+         goto cleanup; \
+      } \
+      old_brush = SelectObject( target->hdc_b, brush ); \
+   }
+
+/* Create a pen and set it to the target HDC. */
+#  define retroflat_win_setup_pen( pen, old_pen, target, flags ) \
+   pen = CreatePen( PS_SOLID, RETROFLAT_LINE_THICKNESS, color ); \
+   if( (HPEN)NULL == pen ) { \
+      goto cleanup; \
+   } \
+   old_pen = SelectObject( target->hdc_b, pen );
+
+#  define retroflat_win_cleanup_brush( brush, old_brush, target ) \
+   if( (HBRUSH)NULL != old_brush ) { \
+      SelectObject( target->hdc_b, old_brush ); \
+   } \
+   if( (HBRUSH)NULL != brush ) { \
+      DeleteObject( brush ); \
+   }
+
+#  define retroflat_win_cleanup_pen( pen, old_pen, target ) \
+   if( (HPEN)NULL != pen ) { \
+      SelectObject( target->hdc_b, old_pen ); \
+      DeleteObject( pen ); \
+   }
+
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
 
 #  define RETROFLAT_KEY_UP	   VK_UP
@@ -440,6 +490,12 @@ struct RETROFLAT_BITMAP {
  *        \ref maug_retroflt_drawing.
  * \{
  */
+
+/**
+ * \brief Functions that accept parameters of this type will accept the colors
+ *        on this page.
+ */
+typedef int RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_BLACK        0
 #  define RETROFLAT_COLOR_DARKBLUE     1
@@ -576,6 +632,18 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags );
+
+/**
+ * \brief Draw an ellipse onto the target ::RETROFLAT_BITMAP.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto.
+ * \param color \ref maug_retroflt_color in which to draw.
+ * \param flags Flags to control drawing. The following flags apply:
+ *        ::RETROFLAT_FLAGS_FILL
+ */
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x, int y, int w, int h, unsigned char flags );
+
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags );
@@ -1218,10 +1286,12 @@ void retroflat_rect(
    int x, int y, int w, int h, unsigned char flags
 ) {
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   RECT rect;
    HBRUSH brush = (HBRUSH)NULL;
+   HBRUSH old_brush = (HBRUSH)NULL;
    int lock_ret = 0,
       locked_target_internal = 0;
+   HPEN pen = (HPEN)NULL;
+   HPEN old_pen = (HPEN)NULL;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
@@ -1234,37 +1304,27 @@ void retroflat_rect(
    /* == Allegro == */
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      rectfill( target->b, x, y, w, h, color );
+      rectfill( target->b, x, y, x + w, y + h, color );
    } else {
-      rect( target->b, x, y, w, h, color );
+      rect( target->b, x, y, x + w, y + h, color );
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
 
-   rect.left = x;
-   rect.top = y;
-   rect.right = x + w;
-   rect.bottom = y + h;
-
-   /* TODO: Apply thickness? */
-
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   brush = CreateSolidBrush( color );
-   if( (HBRUSH)NULL == brush ) {
-      goto cleanup;
-   }
+   retroflat_win_setup_brush( brush, old_brush, target, flags );
+   retroflat_win_setup_pen( pen, old_pen, target, flags );
 
-   FillRect( target->hdc_b, &rect, brush );
+   Rectangle( target->hdc_b, x, y, x + w, y + h );
 
 cleanup:
 
-   if( (HBRUSH)NULL != brush ) {
-      DeleteObject( brush );
-   }
+   retroflat_win_cleanup_brush( brush, old_brush, target )
+   retroflat_win_cleanup_pen( pen, old_pen, target )
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
@@ -1307,12 +1367,7 @@ void retroflat_line(
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   /* Create the pen and set it to the target HDC. */
-   pen = CreatePen( PS_SOLID, RETROFLAT_LINE_THICKNESS, color );
-   if( (HPEN)NULL == pen ) {
-      goto cleanup;
-   }
-   old_pen = SelectObject( target->hdc_b, pen );
+   retroflat_win_setup_pen( pen, old_pen, target, flags );
 
    /* Create the line points. */
    points[0].x = x1;
@@ -1339,6 +1394,60 @@ cleanup:
 }
 
 /* === */
+
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x, int y, int w, int h, unsigned char flags
+) {
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   HPEN pen = (HPEN)NULL;
+   HPEN old_pen = (HPEN)NULL;
+   HBRUSH brush = (HBRUSH)NULL;
+   HBRUSH old_brush = (HBRUSH)NULL;
+   int lock_ret = 0,
+      locked_target_internal = 0;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( NULL == target ) {
+      target = &(g_screen);
+   }
+   assert( NULL != target->b );
+
+#  ifdef RETROFLAT_API_ALLEGRO
+
+   /* == Allegro == */
+
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      ellipsefill( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
+   } else {
+      ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
+   }
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   retroflat_win_setup_brush( brush, old_brush, target, flags );
+   retroflat_win_setup_pen( pen, old_pen, target, flags );
+
+   Ellipse( target->hdc_b, x, y, x + w, y + h );
+
+cleanup:
+
+   retroflat_win_cleanup_brush( brush, old_brush, target )
+   retroflat_win_cleanup_pen( brush, old_brush, target )
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
+#  else
+#     error "not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+}
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
