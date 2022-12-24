@@ -2,6 +2,14 @@
 
 Augmented minimal standard library for C89 and legacy compilers.
 
+## retroflt
+
+`#include <retroflt.h>`
+
+RetroFlat is a rough, quick-and-dirty compatibility layer for making graphical programs that work on Win16 (32-bit via OpenWatcom's Win386), MS-DOS (32-bit via DOS/32a or DOS4GW via Allegro), and possibly other platforms in the future.
+
+Further documentation pending.
+
 ## mtypes
 
 `#include <mtypes.h>`
