@@ -362,7 +362,7 @@ typedef COLORREF RETROFLAT_COLOR;
    }
 
 #else
-#  error "not implemented
+#  error "not implemented"
 
 /**
  * \addtogroup maug_retroflt_bitmap
