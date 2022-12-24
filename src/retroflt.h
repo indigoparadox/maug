@@ -36,7 +36,7 @@ struct RETROFLAT_INPUT {
 
 #ifndef RETROFLAT_LINE_THICKNESS
 /*! \brief Line drawing thickness (only works on some platforms). */
-#define RETROFLAT_LINE_THICKNESS 3
+#define RETROFLAT_LINE_THICKNESS 1
 #endif /* !RETROFLAT_LINE_THICKNESS */
 
 #ifndef RETROFLAT_FPS
@@ -170,6 +170,19 @@ typedef COLORREF RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_YELLOW       RGB(255, 255, 85)
 #  define RETROFLAT_COLOR_WHITE        RGB(255, 255, 255)
 
+/* Transparency background color: black by default, to match Allegro. */
+#  ifndef RETROFLAT_TXP_R
+#  define RETROFLAT_TXP_R 0x00
+#  endif /* !RETROFLAT_TXP_R */
+
+#  ifndef RETROFLAT_TXP_G
+#  define RETROFLAT_TXP_G 0x00
+#  endif /* !RETROFLAT_TXP_G */
+
+#  ifndef RETROFLAT_TXP_B
+#  define RETROFLAT_TXP_B 0x00
+#  endif /* !RETROFLAT_TXP_B */
+
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
@@ -243,6 +256,10 @@ typedef COLORREF RETROFLAT_COLOR;
 #     define WINXAPI WINAPI
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+/* TODO: Verify this on multi-monitor Win32 systems. */
+#define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
+#define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
+
 /* Improvise a rough WinMain to call main(). */
 #define END_OF_MAIN() \
    int WINXAPI WinMain( \
@@ -312,7 +329,10 @@ int g_cmd_show = 0;
 const long gc_ms_target = 1000 / RETROFLAT_FPS;
 static unsigned long g_ms_start = 0; 
 volatile unsigned long g_ms;
-unsigned char g_last_key;
+unsigned char g_last_key = 0;
+unsigned int g_last_mouse = 0;
+unsigned int g_last_mouse_x = 0;
+unsigned int g_last_mouse_y = 0;
 unsigned char g_running;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -390,6 +410,13 @@ static LRESULT CALLBACK WndProc(
 
       case WM_KEYDOWN:
          g_last_key = wParam;
+         break;
+
+      case WM_LBUTTONDOWN:
+      case WM_RBUTTONDOWN:
+         g_last_mouse = wParam;
+         g_last_mouse_x = GET_X_LPARAM( lParam );
+         g_last_mouse_y = GET_Y_LPARAM( lParam );
          break;
 
       case WM_DESTROY:
@@ -618,11 +645,17 @@ int retroflat_load_bitmap(
    char filename_path[PATH_MAX + 1];
    int retval = 0;
 #if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
-   HDC hdc = NULL;
+   HDC hdc_win = (HDC)NULL;
+   HDC hdc_mask = (HDC)NULL;
+   HDC hdc_bmp = (HDC)NULL;
    long i, x, y, w, h, bpp, offset, sz, read;
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
+   HBITMAP old_hbm_mask = (HBITMAP)NULL;
+   HBITMAP old_hbm_bmp = (HBITMAP)NULL;
+   unsigned long txp_color = 0;
+   BITMAP bm;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
@@ -650,8 +683,10 @@ int retroflat_load_bitmap(
 
    /* == Win16 == */
 
+   /* Load the bitmap file from disk. */
    bmp_file = fopen( filename_path, "rb" );
    if( NULL == bmp_file ) {
+      retroflat_message( "Error", "Could not load bitmap: %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
@@ -671,15 +706,41 @@ int retroflat_load_bitmap(
    assert( 0 == bmi->bmiHeader.biWidth % 8 );
    assert( 0 == bmi->bmiHeader.biHeight % 8 );
 
-   hdc = GetDC( g_window );
-   bmp_out->b = CreateCompatibleBitmap( hdc,
+   hdc_win = GetDC( g_window );
+   bmp_out->b = CreateCompatibleBitmap( hdc_win,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
 
-   SetDIBits( hdc, bmp_out->b, 0,
+   SetDIBits( hdc_win, bmp_out->b, 0,
       bmi->bmiHeader.biHeight, &(buf[offset]), bmi,
       DIB_RGB_COLORS );
 
-   /* TODO: Setup bitmap transparency. */
+   /* Setup bitmap transparency mask. */
+   bmp_out->mask = CreateBitmap(
+      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight, 1, 1, NULL );
+
+   hdc_bmp = CreateCompatibleDC( 0 );
+   hdc_mask = CreateCompatibleDC( 0 );
+
+   old_hbm_bmp = SelectObject( hdc_bmp, bmp_out->b );
+   old_hbm_mask = SelectObject( hdc_mask, bmp_out->mask );
+
+   /* Convert the color key into bitmap format. */
+   txp_color |= (RETROFLAT_TXP_B & 0xff);
+   txp_color <<= 8;
+   txp_color |= (RETROFLAT_TXP_G & 0xff);
+   txp_color <<= 8;
+   txp_color |= (RETROFLAT_TXP_R & 0xff);
+   SetBkColor( hdc_bmp, txp_color );
+
+   /* Create the mask from the color key. */
+   BitBlt(
+      hdc_mask, 0, 0,
+      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
+      hdc_bmp, 0, 0, SRCCOPY );
+   BitBlt(
+      hdc_bmp, 0, 0,
+      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
+      hdc_mask, 0, 0, SRCINVERT );
 
 cleanup:
 
@@ -691,8 +752,18 @@ cleanup:
       fclose( bmp_file );
    }
 
-   if( NULL != hdc ) {
-      ReleaseDC( g_window, hdc );
+   if( (HDC)NULL != hdc_win ) {
+      ReleaseDC( g_window, hdc_win );
+   }
+
+   if( (HDC)NULL != hdc_mask ) {
+      SelectObject( hdc_mask, old_hbm_mask );
+      DeleteDC( hdc_mask );
+   }
+
+   if( (HDC)NULL != hdc_bmp ) {
+      SelectObject( hdc_bmp, old_hbm_bmp );
+      DeleteDC( hdc_bmp );
    }
 
 #  elif defined( RETROFLAT_API_WIN32 )
@@ -985,13 +1056,29 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int key_out = 0;
 
-   /* Return g_last_key, which is set in WndProc when a keypress msg is
-    * received.
-    */
-   key_out = g_last_key;
+   if( g_last_key ) {
+      /* Return g_last_key, which is set in WndProc when a keypress msg is
+      * received.
+      */
+      key_out = g_last_key;
 
-   /* Reset pressed key. */
-   g_last_key = 0;
+      /* Reset pressed key. */
+      g_last_key = 0;
+
+   } else if( g_last_mouse ) {
+      if( MK_LBUTTON == (MK_LBUTTON & g_last_mouse) ) {
+         input->mouse_x = g_last_mouse_x;
+         input->mouse_y = g_last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_LEFT;
+      } else if( MK_RBUTTON == (MK_RBUTTON & g_last_mouse) ) {
+         input->mouse_x = g_last_mouse_x;
+         input->mouse_y = g_last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_RIGHT;
+      }
+      g_last_mouse = 0;
+      g_last_mouse_x = 0;
+      g_last_mouse_y = 0;
+   }
 
    return key_out;
 #  else
