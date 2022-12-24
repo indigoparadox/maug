@@ -31,6 +31,11 @@
 #define RETROFLAT_ERROR_ENGINE   0x01
 #define RETROFLAT_ERROR_GRAPHICS 0x02
 #define RETROFLAT_ERROR_MOUSE    0x04
+
+/**
+ * \brief Returned if there is a problem loading or locking a
+ *        ::RETROFLAT_BITMAP struct.
+ */
 #define RETROFLAT_ERROR_BITMAP   0x08
 #define RETROFLAT_ERROR_TIMER    0x0f
 
@@ -70,14 +75,21 @@
  * the limitations of the underyling layers:
  *
  * - They must have a 16-color palette.
- * - The colors must be in the specified order.
+ * - The colors must be in the order specified in \ref maug_retroflt_color.
  * - The first color (black) is the transparency color.
  *
  * ::RETROFLAT_BITMAP structs loaded with retroflat_load_bitmap() should later
  * be freed using retroflat_destroy_bitmap().
  *
- * \todo Specify palette order.
- * 
+ * Locking from the \ref maug_retroflt_drawing also applies here. Please see
+ * that page for more information on retroflat_draw_lock() and
+ * retroflat_draw_release().
+ *
+ * \warning The screen \b MUST be locked by calling retroflat_draw_lock() with
+ *          NULL before it is drawn to, and released with
+ *          retroflat_draw_release() when drawing is finished before the
+ *          retroflat_loop_iter() ends!
+ *
  * \{
  */
 
@@ -173,6 +185,7 @@ struct RETROFLAT_INPUT {
 
 #  include <allegro.h>
 struct RETROFLAT_BITMAP {
+   unsigned char flags;
    BITMAP* b;
 };
 typedef int RETROFLAT_COLOR;
@@ -181,6 +194,7 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_GRAY      makecol( 128, 128, 128 )
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
+#  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 
@@ -252,9 +266,15 @@ typedef int RETROFLAT_COLOR;
 
 #  include <windows.h>
 struct RETROFLAT_BITMAP {
+   unsigned char flags;
    HBITMAP b;
    HBITMAP mask;
+   HDC hdc_b;
+   HDC hdc_mask;
+   HBITMAP old_hbm_b;
+   HBITMAP old_hbm_mask;
 };
+
 typedef COLORREF RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_BLACK        RGB(0,   0,   0)
 #  define RETROFLAT_COLOR_DARKBLUE     RGB(0, 0, 170)
@@ -274,9 +294,20 @@ typedef COLORREF RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_WHITE        RGB(255, 255, 255)
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
+#  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 #  define retroflat_quit( retval ) PostQuitMessage( retval );
+
+/* Convenience macro for auto-locking inside of draw functions. */
+#  define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
+   if( !retroflat_bitmap_locked( bmp ) ) { \
+      lock_ret = retroflat_draw_lock( bmp ); \
+      if( RETROFLAT_OK != lock_ret ) { \
+         goto cleanup; \
+      } \
+      lock_auto = 1; \
+   }
 
 #  define retroflat_loop( iter, data ) \
    g_loop_iter = (retroflat_loop_iter)iter; \
@@ -375,7 +406,9 @@ typedef COLORREF RETROFLAT_COLOR;
  *
  * Please see the \ref maug_retroflt_bitmap for more information.
  */
-struct RETROFLAT_BITMAP {};
+struct RETROFLAT_BITMAP {
+   unsigned char flags;
+};
 
 /*! \brief Check to see if a bitmap is loaded. */
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
@@ -392,7 +425,7 @@ struct RETROFLAT_BITMAP {};
  * \brief This should be called in order to quit a program using RetroFlat.
  * \param retval The return value to pass back to the operating system.
  */
-#  define retroflat_quit( retval ) 
+#  define retroflat_quit( retval )
 
 /**
  * \brief This should be called once in the main body of the program in order
@@ -400,6 +433,32 @@ struct RETROFLAT_BITMAP {};
  *        loop_iter with data as an argument until retroflat_quit() is called.
  */
 #  define retroflat_loop( loop_iter, data )
+
+/**
+ * \addtogroup maug_retroflt_color RetroFlat Colors
+ * \brief Color definitions RetroFlat is aware of, for use with the
+ *        \ref maug_retroflt_drawing.
+ * \{
+ */
+
+#  define RETROFLAT_COLOR_BLACK        0
+#  define RETROFLAT_COLOR_DARKBLUE     1
+#  define RETROFLAT_COLOR_DARKGREEN    2
+#  define RETROFLAT_COLOR_TEAL         3
+#  define RETROFLAT_COLOR_DARKRED      4
+#  define RETROFLAT_COLOR_VIOLET       5
+#  define RETROFLAT_COLOR_BROWN        6
+#  define RETROFLAT_COLOR_GRAY         7
+#  define RETROFLAT_COLOR_DARKGRAY     8
+#  define RETROFLAT_COLOR_BLUE         9
+#  define RETROFLAT_COLOR_GREEN        10
+#  define RETROFLAT_COLOR_CYAN         11
+#  define RETROFLAT_COLOR_RED          12
+#  define RETROFLAT_COLOR_MAGENTA      13
+#  define RETROFLAT_COLOR_YELLOW       14
+#  define RETROFLAT_COLOR_WHITE        15
+
+/*! \} */
 
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -439,8 +498,8 @@ int retroflat_init( const char* title, int screen_w, int screen_h );
  */
 void retroflat_shutdown( int retval );
 
-/** 
- * \brief Set the assets path that will be prepended to all calls to 
+/**
+ * \brief Set the assets path that will be prepended to all calls to
  *        retroflat_load_bitmap().
  */
 void retroflat_set_assets_path( const char* path );
@@ -462,7 +521,27 @@ void retroflat_set_assets_path( const char* path );
  */
 int retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
+
+/**
+ * \brief Unload a bitmap from a ::RETROFLAT_BITMAP struct. The struct, itself,
+ *        is not freed (in case it is on the stack).
+ * \param bitmap Pointer to the ::RETROFLAT_BITMAP to unload.
+ */
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
+
+/**
+ * \brief Blit the contents of a ::RETROFLAT_BITMAP onto another
+ *        ::RETROFLAT_BITMAP.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to blit src onto.
+ * \param src Pointer to the ::RETROFLAT_BITMAP to blit onto target.
+ * \param s_x Left X coordinate to blit starting from on the source bitmap.
+ * \param s_y Top Y coordinate to blit starting from on the source bitmap.
+ * \param d_x Left X coordinate to blit to on the target bitmap.
+ * \param d_y Top Y coordinate to blit to on the target bitmap.
+ * \param w Pixel width of the region to blit.
+ * \param h Pixel height of the region to blit.
+ * \todo Currently s_x, s_y, w, and h are not functional on all platforms!
+ */
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h );
@@ -473,8 +552,27 @@ void retroflat_blit_bitmap(
  * \addtogroup maug_retroflt_drawing
  * \{
  */
-void retroflat_draw_lock();
-void retroflat_draw_flip();
+
+/**
+ * \brief Lock a bitmap for drawing. This will be done automatically if
+ *        necessary and not called explicitly, but performance should
+ *        improve if done before a batch of drawing operations.
+ * \param bmp Pointer to a ::RETROFLAT_BITMAP struct to lock. If this is NULL,
+ *            try to lock the screen.
+ * \return ::RETROFLAT_OK if lock was successful or \ref maug_retroflt_retval
+ *         otherwise.
+ */
+int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
+
+void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
+
+/**
+ * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto.
+ * \param color \ref maug_retroflt_color in which to draw.
+ * \param flags Flags to control drawing. The following flags apply:
+ *        ::RETROFLAT_FLAGS_FILL
+ */
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags );
@@ -515,7 +613,7 @@ int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 int g_cmd_show = 0;
 const long gc_ms_target = 1000 / RETROFLAT_FPS;
-static unsigned long g_ms_start = 0; 
+static unsigned long g_ms_start = 0;
 volatile unsigned long g_ms;
 unsigned char g_last_key = 0;
 unsigned int g_last_mouse = 0;
@@ -641,7 +739,7 @@ void retroflat_message( const char* title, const char* format, ... ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL ); 
+   MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL );
 #  else
 #     error "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -724,7 +822,7 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
    }
 
    g_window = CreateWindowEx(
-      0, RETROFLAT_WINDOW_CLASS, title, 
+      0, RETROFLAT_WINDOW_CLASS, title,
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
       CW_USEDEFAULT, CW_USEDEFAULT,
       g_screen_w, g_screen_h, 0, 0, g_instance, 0
@@ -780,30 +878,82 @@ void retroflat_set_assets_path( const char* path ) {
 
 /* === */
 
-void retroflat_draw_lock() {
+int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   int retval = RETROFLAT_OK;
 
 #  if defined( RETROFLAT_API_ALLEGRO )
+
+   if( NULL != bmp ) {
+      /* Normal bitmaps don't need to be locked in allegro. */
+      goto cleanup;
+   }
+
+   /* Lock screen for drawing if bmp is NULL. */
+
 #     ifdef RETROFLAT_MOUSE
-      /* XXX: Broken in DOS. */
+   /* XXX: Broken in DOS. */
    show_mouse( NULL ); /* Disable mouse before drawing. */
 #     endif
    acquire_screen();
+
+cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   /* Do nothing. */
+
+   if( NULL == bmp ) {
+      /* Do nothing. */
+      /* TODO: Handle screen locking? */
+      goto cleanup;
+   }
+
+   /* Sanity check. */
+   assert( (HBITMAP)NULL != bmp->b );
+   assert( (HBITMAP)NULL != bmp->mask );
+   assert( (HDC)NULL == bmp->hdc_b );
+   assert( (HDC)NULL == bmp->hdc_mask );
+
+   /* Create HDC for source bitmap compatible with the buffer. */
+   bmp->hdc_b = CreateCompatibleDC( (HDC)NULL );
+   if( (HDC)NULL == bmp->hdc_b ) {
+      retroflat_message( "Error", "Error locking bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   /* Create HDC for source mask compatible with the buffer. */
+   bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
+   if( (HDC)NULL == bmp->hdc_mask ) {
+      retroflat_message( "Error", "Error locking bitmap mask!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
+   bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
+
+cleanup:
 #  else
 #     error "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
+   return retval;
 }
 
 /* === */
 
-void retroflat_draw_flip() {
+void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
+   if( NULL != bmp ) {
+      /* Don't need to lock bitmaps in Allegro. */
+      return;
+   }
+
+   /* Flip the buffer. */
    blit( g_screen.b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
+
+   /* Release the screen. */
    release_screen();
 #     ifdef RETROFLAT_MOUSE
       /* XXX: Broken in DOS. */
@@ -815,9 +965,28 @@ void retroflat_draw_flip() {
 
    /* == Win16/Win32 == */
 
-   /* The closest analog to the actual graphics_flip(): */
-   if( (HWND)NULL != g_window ) {
-      InvalidateRect( g_window, 0, TRUE );
+   if( NULL == bmp  ) {
+      /* Trigger a screen refresh if this was a screen lock. */
+      if( (HWND)NULL != g_window ) {
+         InvalidateRect( g_window, 0, TRUE );
+      }
+      return;
+   }
+
+   /* Unlock the bitmap. */
+   if( (HDC)NULL != bmp->hdc_b ) {
+      SelectObject( bmp->hdc_b, bmp->old_hbm_b );
+      DeleteDC( bmp->hdc_b );
+      bmp->hdc_b = (HDC)NULL;
+      bmp->old_hbm_b = (HBITMAP)NULL;
+   }
+
+   /* Unlock the mask. */
+   if( (HDC)NULL != bmp->hdc_mask ) {
+      SelectObject( bmp->hdc_mask, bmp->old_hbm_mask );
+      DeleteDC( bmp->hdc_mask );
+      bmp->hdc_mask = (HDC)NULL;
+      bmp->old_hbm_mask = (HBITMAP)NULL;
    }
 
 #  else
@@ -834,16 +1003,13 @@ int retroflat_load_bitmap(
    int retval = 0;
 #if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
-   HDC hdc_mask = (HDC)NULL;
-   HDC hdc_bmp = (HDC)NULL;
    long i, x, y, w, h, bpp, offset, sz, read;
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
-   HBITMAP old_hbm_mask = (HBITMAP)NULL;
-   HBITMAP old_hbm_bmp = (HBITMAP)NULL;
    unsigned long txp_color = 0;
    BITMAP bm;
+   int lock_ret = 0;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
@@ -906,11 +1072,10 @@ int retroflat_load_bitmap(
    bmp_out->mask = CreateBitmap(
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight, 1, 1, NULL );
 
-   hdc_bmp = CreateCompatibleDC( 0 );
-   hdc_mask = CreateCompatibleDC( 0 );
-
-   old_hbm_bmp = SelectObject( hdc_bmp, bmp_out->b );
-   old_hbm_mask = SelectObject( hdc_mask, bmp_out->mask );
+   lock_ret = retroflat_draw_lock( bmp_out );
+   if( RETROFLAT_OK != lock_ret ) {
+      goto cleanup;
+   }
 
    /* Convert the color key into bitmap format. */
    txp_color |= (RETROFLAT_TXP_B & 0xff);
@@ -918,17 +1083,17 @@ int retroflat_load_bitmap(
    txp_color |= (RETROFLAT_TXP_G & 0xff);
    txp_color <<= 8;
    txp_color |= (RETROFLAT_TXP_R & 0xff);
-   SetBkColor( hdc_bmp, txp_color );
+   SetBkColor( bmp_out->hdc_b, txp_color );
 
    /* Create the mask from the color key. */
    BitBlt(
-      hdc_mask, 0, 0,
+      bmp_out->hdc_mask, 0, 0,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
-      hdc_bmp, 0, 0, SRCCOPY );
+      bmp_out->hdc_b, 0, 0, SRCCOPY );
    BitBlt(
-      hdc_bmp, 0, 0,
+      bmp_out->hdc_b, 0, 0,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
-      hdc_mask, 0, 0, SRCINVERT );
+      bmp_out->hdc_mask, 0, 0, SRCINVERT );
 
 cleanup:
 
@@ -944,18 +1109,12 @@ cleanup:
       ReleaseDC( g_window, hdc_win );
    }
 
-   if( (HDC)NULL != hdc_mask ) {
-      SelectObject( hdc_mask, old_hbm_mask );
-      DeleteDC( hdc_mask );
-   }
-
-   if( (HDC)NULL != hdc_bmp ) {
-      SelectObject( hdc_bmp, old_hbm_bmp );
-      DeleteDC( hdc_bmp );
+   if( RETROFLAT_OK == lock_ret ) {
+      retroflat_draw_release( bmp_out );
    }
 
 #  elif defined( RETROFLAT_API_WIN32 )
-   
+
    /* == Win32 == */
 
    bmp_out->b = LoadImage( NULL, b->id, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
@@ -1002,12 +1161,9 @@ void retroflat_blit_bitmap(
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   HDC hdcBuffer = (HDC)NULL;
-   HDC hdcSrc = (HDC)NULL;
-   HBITMAP oldHbmSrc = (HBITMAP)NULL;
-   HBITMAP oldHbmBuffer = (HBITMAP)NULL;
-   HDC hdcSrcMask = (HDC)NULL;
-   HBITMAP oldHbmSrcMask = (HBITMAP)NULL;
+   int lock_ret = 0;
+   int locked_src_internal = 0;
+   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
@@ -1018,7 +1174,7 @@ void retroflat_blit_bitmap(
    assert( NULL != src->b );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
-   
+
    /* == Allegro == */
 
    /* TODO: Handle partial blit. */
@@ -1026,65 +1182,33 @@ void retroflat_blit_bitmap(
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   /* Create HDC for the off-screen buffer to blit to. */
-   hdcBuffer = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == hdcBuffer ) {
-      goto cleanup;
-   }
-   oldHbmBuffer = SelectObject( hdcBuffer, target->b );
-
-   /* Create HDC for source bitmap compatible with the buffer. */
-   hdcSrc = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == hdcSrc ) {
-      goto cleanup;
-   }
-   oldHbmSrc = SelectObject( hdcSrc, src->b );
-
-   /* Create HDC for source bitmap mask compatible with the buffer. */
-   hdcSrcMask = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == hdcSrcMask ) {
-      goto cleanup;
-   }
-   oldHbmSrcMask = SelectObject( hdcSrcMask, src->mask );
+   retroflat_internal_autolock_bitmap(
+      src, lock_ret, locked_src_internal );
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
 
    /* Use mask to blit transparency. */
-
    BitBlt(
-      hdcBuffer,
-      d_x, d_y, w, h,
-      hdcSrcMask,
-      s_x, s_y,
-      SRCAND
-   );
+      target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
 
+   /* Do actual blit. */
    BitBlt(
-      hdcBuffer,
-      d_x, d_y, w, h,
-      hdcSrc,
-      s_x, s_y,
-      SRCPAINT
-   );
+      target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
 
 cleanup:
 
-   if( (HDC)NULL != hdcSrcMask ) {
-      SelectObject( hdcSrcMask, oldHbmSrcMask );
-      DeleteDC( hdcSrcMask );
+   if( locked_src_internal ) {
+      retroflat_draw_release( src );
    }
 
-   if( (HDC)NULL != hdcSrc ) {
-      SelectObject( hdcSrc, oldHbmSrc );
-      DeleteDC( hdcSrc );
-   }
-
-   if( (HDC)NULL != hdcBuffer ) {
-      SelectObject( hdcBuffer, oldHbmBuffer );
-      DeleteDC( hdcBuffer );
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
    }
 
 #  else
 #     error "not implimented"
 #  endif /* RETROFLAT_API_ALLEGRO */
+   return;
 }
 
 /* === */
@@ -1094,10 +1218,10 @@ void retroflat_rect(
    int x, int y, int w, int h, unsigned char flags
 ) {
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   HDC hdcBuffer = (HDC)NULL;
-   HBITMAP oldHbmBuffer = (HBITMAP)NULL;
    RECT rect;
    HBRUSH brush = (HBRUSH)NULL;
+   int lock_ret = 0,
+      locked_target_internal = 0;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
@@ -1126,19 +1250,15 @@ void retroflat_rect(
 
    /* TODO: Apply thickness? */
 
-   /* Create HDC for the off-screen buffer to blit to. */
-   hdcBuffer = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == hdcBuffer ) {
-      goto cleanup;
-   }
-   oldHbmBuffer = SelectObject( hdcBuffer, target->b );
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
 
    brush = CreateSolidBrush( color );
    if( (HBRUSH)NULL == brush ) {
       goto cleanup;
    }
 
-   FillRect( hdcBuffer, &rect, brush );
+   FillRect( target->hdc_b, &rect, brush );
 
 cleanup:
 
@@ -1146,10 +1266,8 @@ cleanup:
       DeleteObject( brush );
    }
 
-   if( (HDC)NULL != hdcBuffer ) {
-      /* Reselect the initial objects into the provided DCs. */
-      SelectObject( hdcBuffer, oldHbmBuffer );
-      DeleteDC( hdcBuffer );
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
    }
 
 #  else
@@ -1164,11 +1282,11 @@ void retroflat_line(
    int x1, int y1, int x2, int y2, unsigned char flags
 ) {
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   HDC hdcBuffer = (HDC)NULL;
-   HBITMAP oldHbmBuffer = (HBITMAP)NULL;
    HPEN pen = (HPEN)NULL;
-   HPEN oldPen = (HPEN)NULL;
+   HPEN old_pen = (HPEN)NULL;
    POINT points[2];
+   int lock_ret = 0,
+      locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
@@ -1186,29 +1304,33 @@ void retroflat_line(
 
    /* == Win16/Win32 == */
 
-   /* Create HDC for the off-screen buffer to blit to. */
-   hdcBuffer = CreateCompatibleDC( (HDC)NULL );
-   oldHbmBuffer = SelectObject( hdcBuffer, target->b );
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
 
+   /* Create the pen and set it to the target HDC. */
    pen = CreatePen( PS_SOLID, RETROFLAT_LINE_THICKNESS, color );
    if( (HPEN)NULL == pen ) {
       goto cleanup;
    }
-   oldPen = SelectObject( hdcBuffer, pen );
+   old_pen = SelectObject( target->hdc_b, pen );
+
+   /* Create the line points. */
    points[0].x = x1;
    points[0].y = y1;
    points[1].x = x2;
    points[1].y = y2;
-   Polyline( hdcBuffer, points, 2 );
-   SelectObject( hdcBuffer, oldPen );
-   DeleteObject( pen );
+
+   Polyline( target->hdc_b, points, 2 );
 
 cleanup:
 
-   /* Reselect the initial objects into the provided DCs. */
-   if( NULL != hdcBuffer ) {
-      SelectObject( hdcBuffer, oldHbmBuffer );
-      DeleteDC( hdcBuffer );
+   if( (HPEN)NULL != pen ) {
+      SelectObject( target->hdc_b, old_pen );
+      DeleteObject( pen );
+   }
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
    }
 
 #  else
