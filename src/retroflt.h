@@ -3,11 +3,30 @@
 #define RETROFLT_H
 
 /**
+ * \addtogroup maug_retroflt RetroFlat API
+ * \{
+ *
  * \file retroflt.h
+ * \brief Abstraction layer header for retro systems.
+ *
+ * RetroFlat is a compatibility layer for making graphical programs that work
+ * on Win16 (32-bit via OpenWatcom's Win386), MS-DOS (32-bit via DOS/32a or
+ * DOS4GW via Allegro), and possibly other platforms in the future.
+ *
+ * To use, define RETROFLT_C before including this header from your main.c.
+ *
+ * You may include this header in other .c files, as well, but RETROFLT_C
+ * should \b ONLY be declared \b ONCE in the entire program.
  */
 
 /* === Generic Includes and Defines === */
 
+/**
+ * \addtogroup maug_retroflt_retval RetroFlat API Return Values
+ * \{
+ */
+
+/*! \brief Certain functions return this when there was no problem. */
 #define RETROFLAT_OK             0x00
 #define RETROFLAT_ERROR_ENGINE   0x01
 #define RETROFLAT_ERROR_GRAPHICS 0x02
@@ -15,8 +34,26 @@
 #define RETROFLAT_ERROR_BITMAP   0x08
 #define RETROFLAT_ERROR_TIMER    0x0f
 
+/*! \} */
+
+/**
+ * \addtogroup maug_retroflt_drawing RetroFlat Drawing API
+ * \{
+ */
+
+/**
+ * \brief Flag for retroflat_rect() indicating drawn shape should be filled.
+ */
 #define RETROFLAT_FLAGS_FILL     0x01
 
+/*! \} */
+
+/**
+ * \brief Flag for g_retroflat_flags indicating that retroflat_loop() should
+ *        continue executing.
+ * \warning This flag is not used on all platforms! It should only be removed
+ *          using retroflat_quit().
+ */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
 #ifdef DEBUG
@@ -25,19 +62,86 @@
 #define assert( x )
 #endif /* DEBUG */
 
+/**
+ * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
+ * \brief Tools for loading bitmaps from disk and drawing them on-screen.
+ *
+ * Bitmaps handled by retroflat are subject to certain constraints, due to
+ * the limitations of the underyling layers:
+ *
+ * - They must have a 16-color palette.
+ * - The colors must be in the specified order.
+ * - The first color (black) is the transparency color.
+ *
+ * ::RETROFLAT_BITMAP structs loaded with retroflat_load_bitmap() should later
+ * be freed using retroflat_destroy_bitmap().
+ *
+ * \todo Specify palette order.
+ * 
+ * \{
+ */
+
+/**
+ * \brief The filename suffix to be appended with a "." to filenames passed to
+ *        retroflat_load_bitmap().
+ */
 #define RETROFLAT_BITMAP_EXT "bmp"
 
+/* Transparency background color: black by default, to match Allegro. */
+#  ifndef RETROFLAT_TXP_R
+/**
+ * \brief Compiler-define-overridable constant indicating the Red value of the
+ *        transparency color on platforms that support it (mainly Win16).
+ */
+#  define RETROFLAT_TXP_R 0x00
+#  endif /* !RETROFLAT_TXP_R */
+
+#  ifndef RETROFLAT_TXP_G
+/**
+ * \brief Compiler-define-overridable constant indicating the Green value of the
+ *        transparency color on platforms that support it (mainly Win16).
+ */
+#  define RETROFLAT_TXP_G 0x00
+#  endif /* !RETROFLAT_TXP_G */
+
+#  ifndef RETROFLAT_TXP_B
+/**
+ * \brief Compiler-define-overridable constant indicating the Blue value of the
+ *        transparency color on platforms that support it (mainly Win16).
+ */
+#  define RETROFLAT_TXP_B 0x00
+#  endif /* !RETROFLAT_TXP_B */
+
+/*! \} */
+
+/**
+ * \brief Prototype for the main loop function passed to retroflat_loop().
+ */
 typedef void (*retroflat_loop_iter)(void* data);
+
+/**
+ * \addtogroup maug_retroflt_input RetroFlat Input API
+ * \{
+ */
 
 struct RETROFLAT_INPUT {
    int mouse_x;
    int mouse_y;
 };
 
+/*! \} */
+
+/**
+ * \addtogroup maug_retroflt_drawing
+ * \{
+ */
+
 #ifndef RETROFLAT_LINE_THICKNESS
 /*! \brief Line drawing thickness (only works on some platforms). */
 #define RETROFLAT_LINE_THICKNESS 1
 #endif /* !RETROFLAT_LINE_THICKNESS */
+
+/*! \} "*/
 
 #ifndef RETROFLAT_FPS
 /* TODO: Support Allegro! */
@@ -77,7 +181,6 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_GRAY      makecol( 128, 128, 128 )
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
-
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 
@@ -170,19 +273,6 @@ typedef COLORREF RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_YELLOW       RGB(255, 255, 85)
 #  define RETROFLAT_COLOR_WHITE        RGB(255, 255, 255)
 
-/* Transparency background color: black by default, to match Allegro. */
-#  ifndef RETROFLAT_TXP_R
-#  define RETROFLAT_TXP_R 0x00
-#  endif /* !RETROFLAT_TXP_R */
-
-#  ifndef RETROFLAT_TXP_G
-#  define RETROFLAT_TXP_G 0x00
-#  endif /* !RETROFLAT_TXP_G */
-
-#  ifndef RETROFLAT_TXP_B
-#  define RETROFLAT_TXP_B 0x00
-#  endif /* !RETROFLAT_TXP_B */
-
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
@@ -271,11 +361,52 @@ typedef COLORREF RETROFLAT_COLOR;
       return main(); \
    }
 
+#else
+#  error "not implemented
+
+/**
+ * \addtogroup maug_retroflt_bitmap
+ * \{
+ */
+
+/**
+ * \brief Platform-specific bitmap structure. retroflat_bitmap_ok() can be
+ *        used on a pointer to it to determine if a valid bitmap is loaded.
+ *
+ * Please see the \ref maug_retroflt_bitmap for more information.
+ */
+struct RETROFLAT_BITMAP {};
+
+/*! \brief Check to see if a bitmap is loaded. */
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
+
+/*! \} */
+
+/*! \brief Get the current screen width in pixels. */
+#  define retroflat_screen_w()
+
+/*! \brief Get the current screen height in pixels. */
+#  define retroflat_screen_h()
+
+/**
+ * \brief This should be called in order to quit a program using RetroFlat.
+ * \param retval The return value to pass back to the operating system.
+ */
+#  define retroflat_quit( retval ) 
+
+/**
+ * \brief This should be called once in the main body of the program in order
+ *        to enter the main loop. The main loop will continuously call
+ *        loop_iter with data as an argument until retroflat_quit() is called.
+ */
+#  define retroflat_loop( loop_iter, data )
+
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #ifdef RETROFLAT_OS_DOS
 #  define RETROFLAT_PATH_SEP '\\'
 #else
+/*! \brief The valid path separator on the target platform. */
 #  define RETROFLAT_PATH_SEP '/'
 #endif /* RETROFLAT_OS_DOS */
 
@@ -286,24 +417,81 @@ typedef COLORREF RETROFLAT_COLOR;
 
 /* Declare the prototypes so that internal functions can call each other. */
 void retroflat_message( const char* title, const char* format, ... );
+
+/**
+ * \brief Initialize RetroFlat and its underlying layers. This should be
+ *        called once at the beginning of the program and should quit if
+ *        the return value indicates any failures.
+ * \param title Title to set for the main program Window if applicable on the
+ *        target platform.
+ * \param int screen_w Desired screen or window width in pixels.
+ * \param int screen_h Desired screen or window height in pixels.
+ * \return ::RETROFLAT_OK if there were no problems or other
+ *         \ref maug_retroflt_retval if there were.
+ */
 int retroflat_init( const char* title, int screen_w, int screen_h );
+
+/**
+ * \brief Deinitialize RetroFlat and its underlying layers. This should be
+ *        called once at the end of the program, after retroflat_loop().
+ * \param retval Return value from retroflat_init(), so we know what layers
+ *        are in what state.
+ */
 void retroflat_shutdown( int retval );
+
+/** 
+ * \brief Set the assets path that will be prepended to all calls to 
+ *        retroflat_load_bitmap().
+ */
 void retroflat_set_assets_path( const char* path );
-void retroflat_draw_lock();
-void retroflat_draw_flip();
+
+/**
+ * \addtogroup maug_retroflt_bitmap
+ * \{
+ */
+
+/**
+ * \brief Load a bitmap into the given ::RETROFLAT_BITMAP structure if
+ *        it is available. Bitmaps are subject to the limitations enumerated in
+ *        \ref maug_retroflt_bitmap.
+ * \param filename Filename of the bitmap under retroflat_set_assets_path(),
+ *                 with no separator, ".", or ::RETROFLAT_BITMAP_EXT.
+ * \param bmp_out Pointer to a ::RETROFLAT_BITMAP to load the bitmap into.
+ * \return ::RETROFLAT_OK if the bitmap was loaded or ::RETROFLAT_ERROR_TIMER if
+ *         there was a problem (e.g. the bitmap was not found).
+ */
 int retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h );
+
+/*! \} */
+
+/**
+ * \addtogroup maug_retroflt_drawing
+ * \{
+ */
+void retroflat_draw_lock();
+void retroflat_draw_flip();
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags );
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags );
+
+/*! \} */
+
+/**
+ * \addtogroup maug_retroflt_input
+ * \{
+ */
+
 int retroflat_poll_input();
+
+/*! \} */
 
 #ifdef RETROFLT_C
 
@@ -1088,6 +1276,8 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 }
 
 #endif /* RETROFLT_C */
+
+/*! \} */ /* maug_retroflt */
 
 #endif /* RETROFLT_H */
 
