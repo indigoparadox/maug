@@ -56,9 +56,9 @@
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
-#ifdef DEBUG
+#if defined( DEBUG )
 #include <assert.h>
-#else
+#elif !defined( DOCUMENTATION )
 #define assert( x )
 #endif /* DEBUG */
 
