@@ -4,6 +4,14 @@ body {
    color: white;
 }
 
+blockquote {
+   background: #111111 !important;
+}
+
+pre {
+   background: #111111 !important;
+}
+
 .header {
    background: black !important;
 }

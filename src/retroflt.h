@@ -19,6 +19,73 @@
  * should \b ONLY be declared \b ONCE in the entire program.
  */
 
+/**
+ * \addtogroup maug_retroflt_compiling RetroFlat Compilation
+ * \{
+ * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
+ *
+ * # Win16 (OpenWatcom)
+ *
+ * Compiling projects for Win16 requires the OpenWatcom compiler from
+ * https://github.com/open-watcom/open-watcom-v2. Other compilers may work,
+ * but this is the only one that has been tested. No other specific libraries
+ * are required. The Windows API is used directly.
+ *
+ * Outlined below is a basic GNU Makefile for using OpenWatcom to cross-compile
+ * a Win16 application under GNU/Linux. This Makefile assumes the following
+ * variable definitions from the environment:
+ *
+ * - \b $WATCOM should be set to the path where the OpenWatcom compiler has
+ *   been extracted, containing the binw, binl, h, and lib386 directories
+ *   (among others).
+ * - \b $PATH should contain $WATCOM/bin, so that the wcc386 and accompanying
+ *   tools below can be executed.
+ *
+ * The Makefile is as follows:
+ *
+ *       # A list of C files included in the project. These must be provided
+ *       # by you. In this example, our program only has one file.
+ *       EXAMPLE_C_FILES := main.c
+ *
+ *       # A basic set of defines to instruct RetroFlat to use The Win16 API on
+ *       # the (target) Windows OS.
+ *       DEFINES := -DRETROFLAT_OS_WIN -DRETROFLAT_API_WIN16
+ *     
+ *       # Including the defines above, these flags will be passed to the C
+ *       # compiler in the rules, below. The -i flags specify that we want
+ *       # to include the Windows headers from OpenWatcom, as well as the
+ *       # RetroFlat header directory located in ./maug/src. The
+ *       # -bt=windows flag specifies that we want to compile code for Win16.
+ *       CFLAGS := $(DEFINES) -bt=windows -i$(WATCOM)/h/win -imaug/src
+ *
+ *       # The only mandatory linker flag for our example is -l=win386, which
+ *       # instructs the Watcom linker to target the win386 32-bit Windows
+ *       # extender, which we will include with our executable below. This
+ *       # allows our program to run on Windows 3.x without us having to
+ *       # observe 16-bit memory constraints or deal with LocalHeaps or
+ *       # handle locking.
+ *       LDFLAGS := -l=win386
+ *      
+ *       # This rule handles compiling all object files requested by the next
+ *       # rule from their respective C code files.
+ *       %.o: %.c
+ *     	   wcc386 $(CFLAGS) -fo=$@ $(<:%.c=%)
+ *
+ *       # This rule builds the intermediate LE executable to which the win386
+ *       # extender will be prepended. The -fe flag specifies the name of the
+ *       # executable to create.
+ *       examplew.rex: $(subst .c,.o,$(EXAMPLE_C_FILES))
+ *      	   wcl386 $(LDFLAGS) -fe=$@ $^
+ *      
+ *       # This rule builds the final executable, by prepending the win386
+ *       # extender located in the OpenWatcom installation directory to the
+ *       # Intermediate file created in the previous rule.
+ *       examplew.exe: examplew.rex
+ *      	   wbind $< -s $(WATCOM)/binw/win386.ext -R $@
+ *
+ * \}
+ */
+
 /* === Generic Includes and Defines === */
 
 /**
