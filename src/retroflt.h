@@ -1154,6 +1154,10 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
       goto cleanup;
    }
 
+#     ifndef RETROFLAT_OS_DOS
+   set_window_title( title );
+#     endif /* !RETROFLAT_OS_DOS */
+
 #     ifdef RETROFLAT_MOUSE
    /* XXX: Broken in DOS. */
    if( 0 > install_mouse() ) {
