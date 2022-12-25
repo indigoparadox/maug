@@ -1096,7 +1096,6 @@ void retroflat_message( const char* title, const char* format, ... ) {
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
-   va_end( vargs );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
@@ -1105,11 +1104,13 @@ void retroflat_message( const char* title, const char* format, ... ) {
    fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    /* TODO: Dialog box crashes! */
-   /* MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL ); */
+   /* MessageBox( NULL, msg_out, title, 0 ); */
    printf( "%s\n", msg_out );
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   va_end( vargs );
 }
 
 int retroflat_init( const char* title, int screen_w, int screen_h ) {
