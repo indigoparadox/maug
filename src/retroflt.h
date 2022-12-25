@@ -408,15 +408,8 @@ typedef int RETROFLAT_COLOR;
 
 /* TODO: Handle retval. */
 #  define retroflat_quit( retval ) \
-   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING;
-
-#  define retroflat_loop( loop_iter, data ) \
-   g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING; \
-   do { \
-      loop_iter( data ); \
-   } while( \
-      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags) \
-   );
+   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+   g_retval = retval;
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -538,14 +531,6 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_quit( retval ) \
    g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING;
 
-#  define retroflat_loop( loop_iter, data ) \
-   g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING; \
-   do { \
-      loop_iter( data ); \
-   } while( \
-      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags) \
-   );
-
 #define END_OF_MAIN()
 
 #define RETROFLAT_COLOR const SDL_Color*
@@ -610,15 +595,6 @@ typedef COLORREF RETROFLAT_COLOR;
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 #  define retroflat_quit( retval ) PostQuitMessage( retval );
-
-#  define retroflat_loop( iter, data ) \
-   g_loop_iter = (retroflat_loop_iter)iter; \
-   g_loop_data = (void*)data; \
-   do { \
-      g_msg_retval = GetMessage( &g_msg, 0, 0, 0 ); \
-      TranslateMessage( &g_msg ); \
-      DispatchMessage( &g_msg ); \
-   } while( 0 < g_msg_retval );
 
 /* Create a brush and set it to the target HDC. */
 #  define retroflat_win_setup_brush( brush, old_brush, target, flags ) \
@@ -764,13 +740,6 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_quit( retval )
 
 /**
- * \brief This should be called once in the main body of the program in order
- *        to enter the main loop. The main loop will continuously call
- *        loop_iter with data as an argument until retroflat_quit() is called.
- */
-#  define retroflat_loop( loop_iter, data )
-
-/**
  * \addtogroup maug_retroflt_color RetroFlat Colors
  * \brief Color definitions RetroFlat is aware of, for use with the
  *        \ref maug_retroflt_drawing.
@@ -817,6 +786,14 @@ typedef int RETROFLAT_COLOR;
 /* === Translation Module === */
 
 /* Declare the prototypes so that internal functions can call each other. */
+
+/**
+ * \brief This should be called once in the main body of the program in order
+ *        to enter the main loop. The main loop will continuously call
+ *        loop_iter with data as an argument until retroflat_quit() is called.
+ */
+int retroflat_loop( retroflat_loop_iter iter, void* data );
+
 void retroflat_message( const char* title, const char* format, ... );
 
 /**
@@ -830,7 +807,8 @@ void retroflat_message( const char* title, const char* format, ... );
  * \return ::RETROFLAT_OK if there were no problems or other
  *         \ref maug_retroflt_retval if there were.
  */
-int retroflat_init( const char* title, int screen_w, int screen_h );
+int retroflat_init(
+   const char* title, int screen_w, int screen_h, int argc, char* argv[] );
 
 /**
  * \brief Deinitialize RetroFlat and its underlying layers. This should be
@@ -952,8 +930,8 @@ int retroflat_poll_input();
 #  include <string.h>
 #  include <stdarg.h>
 
-retroflat_loop_iter g_loop_iter = NULL;
 void* g_loop_data = NULL;
+int g_retval = 0;
 
 #  if defined( RETROFLAT_API_SDL )
 
@@ -984,6 +962,7 @@ unsigned int g_last_mouse = 0;
 unsigned int g_last_mouse_x = 0;
 unsigned int g_last_mouse_y = 0;
 unsigned char g_running;
+retroflat_loop_iter g_loop_iter = NULL;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -1093,6 +1072,38 @@ static LRESULT CALLBACK WndProc(
 
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
+
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL )
+
+   g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+   do {
+      loop_iter( data );
+   } while(
+      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags)
+   );
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* Set these to be called from WndProc later. */
+   g_loop_iter = (retroflat_loop_iter)loop_iter;
+   g_loop_data = (void*)data;
+
+   /* Handle Windows messages until quit. */
+   do {
+      g_msg_retval = GetMessage( &g_msg, 0, 0, 0 );
+      TranslateMessage( &g_msg );
+      DispatchMessage( &g_msg );
+   } while( 0 < g_msg_retval );
+
+#  else
+#     warning "not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* This should be set by retroflat_quit(). */
+   return g_retval;
+}
+
 void retroflat_message( const char* title, const char* format, ... ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
@@ -1117,7 +1128,9 @@ void retroflat_message( const char* title, const char* format, ... ) {
    va_end( vargs );
 }
 
-int retroflat_init( const char* title, int screen_w, int screen_h ) {
+int retroflat_init(
+   const char* title, int screen_w, int screen_h, int argc, char* argv[]
+) {
    int retval = 0;
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
@@ -1127,8 +1140,6 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
 #  ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
-
-   /* TODO: Set window title. */
 
    if( allegro_init() ) {
       allegro_message( "could not setup allegro!" );
@@ -1676,8 +1687,15 @@ void retroflat_blit_bitmap(
    assert( NULL != target->b );
    assert( NULL != src->b );
 
-   /* TODO: Handle partial blit. */
-   draw_sprite( target->b, src->b, d_x, d_y );
+   if(
+      0 == s_x && 0 == s_y &&
+      ((-1 == w && -1 == h ) || (src->b->w == w && src->b->h == h))
+   ) {
+      draw_sprite( target->b, src->b, d_x, d_y );
+   } else {
+      /* Handle partial blit. */
+      blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
+   }
 
 #  elif defined( RETROFLAT_API_SDL )
 
@@ -1733,7 +1751,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implimented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
