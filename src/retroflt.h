@@ -20,6 +20,111 @@
  */
 
 /**
+ * \addtogroup maug_retroflt_example RetroFlat Example
+ * \{
+ * \page maug_retroflt_example_page
+ *
+ * This is a brief example program written for the \ref maug_retroflt.
+ *
+ * This can be compiled using the Makefiles from \ref maug_retroflt_compiling.
+ *
+ *
+ *
+ *       / * RETROFLT_C must be defined before including retroflt.h ONLY
+ *         * in one project file! It must be defined once, and only once,
+ *         * project-wide! The C file where it is defined is where all the
+ *         * RetroFlat functions will be placed.
+ *         * /
+ *       #define RETROFLT_C
+ *       #include <retroflt.h>
+ *       
+ *       / * An example struct containing data fields to be retained between
+ *         * loop iterations below.
+ *         * /
+ *       struct EXAMPLE_DATA {
+ *          int example;
+ *       };
+ *       
+ *       / * This is the loop iteration which will be repeatedly called
+ *         * by retroflat_loop() below, until retroflat_quit() is called.
+ *         * /
+ *       void example_loop( struct EXAMPLE_DATA* data ) {
+ *          struct RETROFLAT_INPUT input_evt;
+ *          int input = 0;
+ *       
+ *          / * Start loop. * /
+ *          input = retroflat_poll_input( &input_evt );
+ *       
+ *          switch( input ) {
+ *          case RETROFLAT_MOUSE_B_LEFT:
+ *             / * Left mouse button was clicked, do something! * /
+ *             break;
+ *       
+ *          case RETROFLAT_KEY_Q:
+ *             / * Q key was pressed, so quit! * /
+ *             retroflat_quit( 0 );
+ *             break;
+ *          }
+ *       
+ *          / *  === Drawing === * /
+ *       
+ *          / * Lock the screen (NULL) for drawing. * /
+ *          retroflat_draw_lock( NULL );
+ *       
+ *          / * Clear the screen by drawing a big gray rectangle to NULL. * /
+ *          retroflat_rect(
+ *             NULL, RETROFLAT_COLOR_GRAY, 0, 0,
+ *             retroflat_screen_w(), retroflat_screen_h(),
+ *             RETROFLAT_FLAGS_FILL );
+ *       
+ *          / * Release the screen (NULL) from drawing. * /
+ *          retroflat_draw_release( NULL );
+ *       }
+ *       
+ *       int main() {
+ *          int retval = 0;
+ *          struct EXAMPLE_DATA data;
+ *       
+ *          / * Zero out the data holder. * /
+ *          memset( &data, '\0', sizeof( struct EXAMPLE_DATA ) );
+ *       
+ *          / * Tell retroflat where to find graphical assets. * /
+ *          retroflat_set_assets_path( "assets" );
+ *       
+ *          / * === Setup === * /
+ *          / * Create a window titled "Example Program", 320x200 pixels
+ *            * large.
+ *            * /
+ *          retval = retroflat_init( "Example Program", 320, 200 );
+ *
+ *          / * Make sure setup completed successfully! * /
+ *          if( RETROFLAT_OK != retval ) {
+ *             retroflat_message( "Error", "Could not initialize." );
+ *             goto cleanup;
+ *          }
+ *       
+ *          / * === Main Loop === * /
+ *          / * Call example_loop( data ) repeatedly, until it calls
+ *            * retroflat_quit().
+ *            * /
+ *          retroflat_loop( example_loop, &data );
+ *       
+ *       cleanup:
+ *       
+ *          / * This must be called at the end of the program! * /
+ *          retroflat_shutdown( retval );
+ *       
+ *          return retval;
+ *       }
+ *       / * This should ALWAYS be included after main(), no matter what
+ *         * platform your program is intended for.
+ *         * /
+ *       END_OF_MAIN()
+ *
+ * \}
+ */
+
+/**
  * \addtogroup maug_retroflt_compiling RetroFlat Compilation
  * \{
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
@@ -40,6 +145,8 @@
  *   (among others).
  * - \b $PATH should contain $WATCOM/bin, so that the wcc386 and accompanying
  *   tools below can be executed.
+ *
+ * For an example of the main.c file, please see \ref maug_retroflt_example.
  *
  * The Makefile is as follows:
  *
