@@ -721,7 +721,7 @@ typedef COLORREF RETROFLAT_COLOR;
    ) { \
       g_instance = hInstance; \
       g_cmd_show = nCmdShow; \
-      return main(); \
+      return main( __argc, __argv ); \
    }
 
 #else
@@ -1093,8 +1093,9 @@ void retroflat_message( const char* title, const char* format, ... ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
+   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
-   snprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
+   vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
    va_end( vargs );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
@@ -1103,7 +1104,9 @@ void retroflat_message( const char* title, const char* format, ... ) {
    /* TODO: Use a dialog box? */
    fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL );
+   /* TODO: Dialog box crashes! */
+   /* MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL ); */
+   printf( "%s\n", msg_out );
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
