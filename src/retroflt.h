@@ -352,7 +352,7 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
-#  define retroflat_bitmap_locked( bmp ) (0)
+#  define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 
@@ -924,6 +924,9 @@ void retroflat_message( const char* title, const char* format, ... ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
+#  elif defined( RETROFLAT_API_SDL )
+   /* TODO: Use a dialog box? */
+   fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL );
 #  else
@@ -1125,7 +1128,7 @@ cleanup:
 
    /* == SDL == */
 
-   if( NULL != bmp ) {
+   if( NULL != bmp && (&g_screen) != bmp ) {
       assert( NULL == bmp->renderer );
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
    }
@@ -1198,10 +1201,20 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_SDL )
 
-   if( NULL == bmp ) {
+   if( NULL == bmp || (&g_screen) == bmp ) {
       /* Flip the screen. */
       SDL_UpdateWindowSurface( g_window );
    } else {
+      /* It's a bitmap. */
+
+      /* Scrap the old texture and recreate it from the updated surface. */
+      assert( NULL != bmp->texture );
+      SDL_DestroyTexture( bmp->texture );
+      bmp->texture = SDL_CreateTextureFromSurface(
+         bmp->renderer, bmp->surface );
+      assert( NULL != bmp->texture );
+
+      /* Scrap the renderer. */
       SDL_DestroyRenderer( bmp->renderer );
       bmp->renderer = NULL;
    }
@@ -1416,6 +1429,17 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
    destroy_bitmap( bitmap->b );
    bitmap->b = NULL;
 
+#  elif defined( RETROFLAT_API_SDL )
+
+   assert( NULL != bitmap );
+   assert( NULL != bitmap->texture );
+   assert( NULL != bitmap->surface );
+
+   SDL_DestroyTexture( bitmap->texture );
+   bitmap->texture = NULL;
+   SDL_FreeSurface( bitmap->surface );
+   bitmap->texture = NULL;
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16 == */
@@ -1438,7 +1462,10 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_SDL ) || defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_SDL )
+   int lock_ret = 0;
+   int locked_target_internal = 0;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0;
    int locked_src_internal = 0;
    int locked_target_internal = 0;
@@ -1463,19 +1490,20 @@ void retroflat_blit_bitmap(
 
    /* == SDL == */
 
-   retroflat_internal_autolock_bitmap(
-      src, lock_ret, locked_src_internal );
+   SDL_Rect dest_rect = {
+      d_x, 
+      d_y,
+      w, 
+      h};
+   SDL_Rect src_rect = {
+      s_x, s_y, w, h };
+
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   /* TODO */
-   #warning TODO
+   SDL_RenderCopy( target->renderer, src->texture, &src_rect, &dest_rect );
 
 cleanup:
-
-   if( locked_src_internal ) {
-      retroflat_draw_release( src );
-   }
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
@@ -1553,20 +1581,22 @@ void retroflat_rect(
    int locked_target_internal = 0;
    int lock_ret = 0;
 
-   if( NULL != target ) {
-      retroflat_internal_autolock_bitmap(
-         target, lock_ret, locked_target_internal );
-   }
-
    area.x = x;
    area.y = y;
    area.w = w;
    area.h = h;
 
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
 
-   SDL_RenderFillRect( target->renderer, &area );
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      SDL_RenderFillRect( target->renderer, &area );
+   } else {
+      SDL_RenderDrawRect( target->renderer, &area );
+   }
 
 cleanup:
 
@@ -1608,7 +1638,10 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_SDL )
+   int lock_ret = 0,
+      locked_target_internal = 0;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
    POINT points[2];
@@ -1626,6 +1659,23 @@ void retroflat_line(
 
    assert( NULL != target->b );
    line( target->b, x1, y1, x2, y2, color );
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   SDL_SetRenderDrawColor(
+      target->renderer, color->r, color->g, color->b, 255 );
+   SDL_RenderDrawLine( target->renderer, x1, y1, x2, y2 );
+ 
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }  
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1668,7 +1718,10 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_SDL )
+   int lock_ret = 0,
+      locked_target_internal = 0;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
    HBRUSH brush = (HBRUSH)NULL;
@@ -1692,6 +1745,24 @@ void retroflat_ellipse(
    } else {
       ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
    }
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   SDL_SetRenderDrawColor(
+      target->renderer, color->r, color->g, color->b, 255 );
+
+   /* TODO: How to do an ellipse in SDL? */
+ 
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }  
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1723,6 +1794,8 @@ cleanup:
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int key_out = 0;
+
+   assert( NULL != input );
 
 #  ifdef RETROFLAT_API_ALLEGRO
 
@@ -1758,6 +1831,21 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
+
+      /* Flush key buffer to improve responsiveness. */
+      while( (eres = SDL_PollEvent( &event )) );
+
+   } else if( SDL_MOUSEBUTTONDOWN == event.type ) {
+
+      input->mouse_x = event.button.x;  
+      input->mouse_y = event.button.y;  
+
+      /* Differentiate which button was clicked. */
+      if( SDL_BUTTON_LEFT == event.button.button ) {
+         key_out = RETROFLAT_MOUSE_B_LEFT;
+      } else if( SDL_BUTTON_RIGHT == event.button.button ) {
+         key_out = RETROFLAT_MOUSE_B_RIGHT;
+      }
 
       /* Flush key buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
