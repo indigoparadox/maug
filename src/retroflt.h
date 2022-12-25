@@ -81,7 +81,7 @@
  *          retroflat_draw_release( NULL );
  *       }
  *       
- *       int main() {
+ *       int main( int argc, char* argv[] ) {
  *          int retval = 0;
  *          struct EXAMPLE_DATA data;
  *       
@@ -95,7 +95,7 @@
  *          / * Create a window titled "Example Program", 320x200 pixels
  *            * large.
  *            * /
- *          retval = retroflat_init( "Example Program", 320, 200 );
+ *          retval = retroflat_init( "Example Program", 320, 200, argc, argv );
  *
  *          / * Make sure setup completed successfully! * /
  *          if( RETROFLAT_OK != retval ) {
@@ -107,7 +107,7 @@
  *          / * Call example_loop( data ) repeatedly, until it calls
  *            * retroflat_quit().
  *            * /
- *          retroflat_loop( example_loop, &data );
+ *          retroflat_loop( (retroflat_loop_iter)example_loop, &data );
  *       
  *       cleanup:
  *       
