@@ -103,7 +103,7 @@
 #  ifndef RETROFLAT_TXP_R
 /**
  * \brief Compiler-define-overridable constant indicating the Red value of the
- *        transparency color on platforms that support it (mainly Win16).
+ *        transparency color on platforms that support it (mainly Win16/SDL).
  */
 #  define RETROFLAT_TXP_R 0x00
 #  endif /* !RETROFLAT_TXP_R */
@@ -111,7 +111,7 @@
 #  ifndef RETROFLAT_TXP_G
 /**
  * \brief Compiler-define-overridable constant indicating the Green value of the
- *        transparency color on platforms that support it (mainly Win16).
+ *        transparency color on platforms that support it (mainly Win16/SDL).
  */
 #  define RETROFLAT_TXP_G 0x00
 #  endif /* !RETROFLAT_TXP_G */
@@ -119,10 +119,20 @@
 #  ifndef RETROFLAT_TXP_B
 /**
  * \brief Compiler-define-overridable constant indicating the Blue value of the
- *        transparency color on platforms that support it (mainly Win16).
+ *        transparency color on platforms that support it (mainly Win16/SDL).
  */
 #  define RETROFLAT_TXP_B 0x00
 #  endif /* !RETROFLAT_TXP_B */
+
+/* Convenience macro for auto-locking inside of draw functions. */
+#  define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
+   if( !retroflat_bitmap_locked( bmp ) ) { \
+      lock_ret = retroflat_draw_lock( bmp ); \
+      if( RETROFLAT_OK != lock_ret ) { \
+         goto cleanup; \
+      } \
+      lock_auto = 1; \
+   }
 
 /*! \} */
 
@@ -177,6 +187,10 @@ struct RETROFLAT_INPUT {
 #define RETROFLAT_MSG_MAX 4096
 #endif /* RETROFLAT_MSG_MAX */
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif /* PATH_MAX */
+
 /* === Platform-Specific Includes and Defines === */
 
 #if defined( RETROFLAT_API_ALLEGRO )
@@ -184,10 +198,12 @@ struct RETROFLAT_INPUT {
 /* == Allegro == */
 
 #  include <allegro.h>
+
 struct RETROFLAT_BITMAP {
    unsigned char flags;
    BITMAP* b;
 };
+
 typedef int RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_BLACK        makecol(0,   0,   0)
@@ -206,8 +222,6 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_COLOR_MAGENTA      makecol(255, 85, 255)
 #  define RETROFLAT_COLOR_YELLOW       makecol(255, 255, 85)
 #  define RETROFLAT_COLOR_WHITE        makecol(255, 255, 255)
-
-
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -276,6 +290,109 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_KEY_HOME	KEY_HOME
 #  define RETROFLAT_KEY_END	KEY_END
 
+#elif defined( RETROFLAT_API_SDL )
+
+#  include <SDL.h>
+
+struct RETROFLAT_BITMAP {
+   unsigned char flags;
+   SDL_Surface* surface;
+   SDL_Texture* texture;
+   SDL_Renderer* renderer;
+};
+
+#  define RETROFLAT_KEY_UP	SDLK_UP
+#  define RETROFLAT_KEY_DOWN  SDLK_DOWN
+#  define RETROFLAT_KEY_RIGHT	SDLK_RIGHT
+#  define RETROFLAT_KEY_LEFT	SDLK_LEFT
+#  define RETROFLAT_KEY_A	   SDLK_a
+#  define RETROFLAT_KEY_B	   SDLK_b
+#  define RETROFLAT_KEY_C	   SDLK_c
+#  define RETROFLAT_KEY_D	   SDLK_d
+#  define RETROFLAT_KEY_E	   SDLK_e
+#  define RETROFLAT_KEY_F	   SDLK_f
+#  define RETROFLAT_KEY_G	   SDLK_g
+#  define RETROFLAT_KEY_H	   SDLK_h
+#  define RETROFLAT_KEY_I	   SDLK_i
+#  define RETROFLAT_KEY_J	   SDLK_j
+#  define RETROFLAT_KEY_K	   SDLK_k
+#  define RETROFLAT_KEY_L	   SDLK_l
+#  define RETROFLAT_KEY_M	   SDLK_m
+#  define RETROFLAT_KEY_N	   SDLK_n
+#  define RETROFLAT_KEY_O	   SDLK_o
+#  define RETROFLAT_KEY_P	   SDLK_p
+#  define RETROFLAT_KEY_Q	   SDLK_q
+#  define RETROFLAT_KEY_R	   SDLK_r
+#  define RETROFLAT_KEY_S	   SDLK_s
+#  define RETROFLAT_KEY_T	   SDLK_t
+#  define RETROFLAT_KEY_U	   SDLK_u
+#  define RETROFLAT_KEY_V	   SDLK_v
+#  define RETROFLAT_KEY_W	   SDLK_w
+#  define RETROFLAT_KEY_X	   SDLK_x
+#  define RETROFLAT_KEY_Y	   SDLK_y
+#  define RETROFLAT_KEY_Z	   SDLK_z
+#  define RETROFLAT_KEY_0     SDLK_0
+#  define RETROFLAT_KEY_1     SDLK_1
+#  define RETROFLAT_KEY_2     SDLK_2
+#  define RETROFLAT_KEY_3     SDLK_3
+#  define RETROFLAT_KEY_4     SDLK_4
+#  define RETROFLAT_KEY_5     SDLK_5
+#  define RETROFLAT_KEY_6     SDLK_6
+#  define RETROFLAT_KEY_7     SDLK_7
+#  define RETROFLAT_KEY_8     SDLK_8
+#  define RETROFLAT_KEY_9     SDLK_9
+#  define RETROFLAT_KEY_TAB	SDLK_TAB
+#  define RETROFLAT_KEY_SPACE	SDLK_SPACE
+#  define RETROFLAT_KEY_ESC	SDLK_ESC
+#  define RETROFLAT_KEY_ENTER	SDLK_ENTER
+#  define RETROFLAT_KEY_HOME	SDLK_HOME
+#  define RETROFLAT_KEY_END	SDLK_END
+
+#  define RETROFLAT_MOUSE_B_LEFT    -1
+#  define RETROFLAT_MOUSE_B_RIGHT   -2
+
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
+#  define retroflat_bitmap_locked( bmp ) (0)
+#  define retroflat_screen_w() g_screen_v_w
+#  define retroflat_screen_h() g_screen_v_h
+
+/* TODO: Handle retval. */
+#  define retroflat_quit( retval ) \
+   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING;
+
+#  define retroflat_loop( loop_iter, data ) \
+   g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING; \
+   do { \
+      loop_iter( data ); \
+   } while( \
+      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags) \
+   );
+
+#define END_OF_MAIN()
+
+#define RETROFLAT_COLOR const SDL_Color*
+
+const SDL_Color gc_black =       {0,   0,   0};
+const SDL_Color gc_darkblue =    {0, 0, 170};
+const SDL_Color gc_darkgreen =   {0, 170, 0};
+const SDL_Color gc_teal =        {0, 170, 170};
+const SDL_Color gc_darkred =     {170, 0, 0};
+const SDL_Color gc_violet =      {170, 0, 170};
+const SDL_Color gc_brown =       {170, 85, 0};
+const SDL_Color gc_gray =        {170, 170, 170};
+const SDL_Color gc_darkgray =    {85, 85, 85};
+const SDL_Color gc_blue =        {85, 85, 255};
+const SDL_Color gc_green =       {85, 255, 85};
+const SDL_Color gc_cyan =        {85, 255, 255};
+const SDL_Color gc_red =         {255, 85, 85};
+const SDL_Color gc_magenta =     {255, 85, 255};
+const SDL_Color gc_yellow =      {255, 255, 85};
+const SDL_Color gc_white =       {255, 255, 255};
+
+#define RETROFLAT_COLOR_BLACK    (&gc_black)
+#define RETROFLAT_COLOR_GRAY     (&gc_gray)
+#define RETROFLAT_COLOR_WHITE    (&gc_white)
+
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
 /* == Win16/Win32 == */
@@ -292,6 +409,7 @@ struct RETROFLAT_BITMAP {
 };
 
 typedef COLORREF RETROFLAT_COLOR;
+
 #  define RETROFLAT_COLOR_BLACK        RGB(0,   0,   0)
 #  define RETROFLAT_COLOR_DARKBLUE     RGB(0, 0, 170)
 #  define RETROFLAT_COLOR_DARKGREEN    RGB(0, 170, 0)
@@ -314,16 +432,6 @@ typedef COLORREF RETROFLAT_COLOR;
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 #  define retroflat_quit( retval ) PostQuitMessage( retval );
-
-/* Convenience macro for auto-locking inside of draw functions. */
-#  define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
-   if( !retroflat_bitmap_locked( bmp ) ) { \
-      lock_ret = retroflat_draw_lock( bmp ); \
-      if( RETROFLAT_OK != lock_ret ) { \
-         goto cleanup; \
-      } \
-      lock_auto = 1; \
-   }
 
 #  define retroflat_loop( iter, data ) \
    g_loop_iter = (retroflat_loop_iter)iter; \
@@ -443,7 +551,7 @@ typedef COLORREF RETROFLAT_COLOR;
    }
 
 #else
-#  error "not implemented"
+#  warning "not implemented"
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -669,7 +777,16 @@ int retroflat_poll_input();
 retroflat_loop_iter g_loop_iter = NULL;
 void* g_loop_data = NULL;
 
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_SDL )
+
+SDL_Window* g_window = NULL;
+int g_screen_w = 0;
+int g_screen_h = 0;
+int g_screen_v_w = 0;
+int g_screen_v_h = 0;
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
 /* Windows-specific global handles for the window/instance. */
 HINSTANCE g_instance;
 HWND g_window;
@@ -688,6 +805,7 @@ unsigned int g_last_mouse = 0;
 unsigned int g_last_mouse_x = 0;
 unsigned int g_last_mouse_y = 0;
 unsigned char g_running;
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* === Globals === */
@@ -809,7 +927,7 @@ void retroflat_message( const char* title, const char* format, ... ) {
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MessageBox( NULL, msg_out, title, MB_OK | MB_TASKMODAL );
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -820,6 +938,8 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifdef RETROFLAT_API_ALLEGRO
+
+   /* == Allegro == */
 
    /* TODO: Set window title. */
 
@@ -862,7 +982,40 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
       goto cleanup;
    }
 
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
+      retroflat_message(
+         "Error", "Error initializing SDL: %s", SDL_GetError() );
+   }
+
+   g_screen_v_w = screen_w;
+   g_screen_v_h = screen_h;
+   g_screen_w = screen_w;
+   g_screen_h = screen_h;
+   g_window = SDL_CreateWindow( title,
+      SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+      screen_w, screen_h, 0 );
+   if( NULL == g_window ) {
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+   g_screen.surface = SDL_GetWindowSurface( g_window );
+   if( NULL == g_screen.surface ) {
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+   g_screen.renderer = SDL_CreateSoftwareRenderer( g_screen.surface );
+   if( NULL == g_screen.renderer ) {
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
 
    g_screen_w = screen_w;
    g_screen_h = screen_h;
@@ -915,7 +1068,7 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
    ShowWindow( g_window, g_cmd_show );
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
 cleanup:
@@ -951,6 +1104,8 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
+   /* == Allegro == */
+
    if( NULL != bmp ) {
       /* Normal bitmaps don't need to be locked in allegro. */
       goto cleanup;
@@ -965,7 +1120,19 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    acquire_screen();
 
 cleanup:
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   if( NULL != bmp ) {
+      assert( NULL == bmp->renderer );
+      bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
+   }
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
 
    if( NULL == bmp ) {
       /* Do nothing. */
@@ -1000,7 +1167,7 @@ cleanup:
 
 cleanup:
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -1028,6 +1195,16 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    show_mouse( screen ); /* Enable mouse after drawing. */
 #     endif /* RETROFLAT_MOUSE */
    vsync();
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   if( NULL == bmp ) {
+      /* Flip the screen. */
+      SDL_UpdateWindowSurface( g_window );
+   } else {
+      SDL_DestroyRenderer( bmp->renderer );
+      bmp->renderer = NULL;
+   }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1058,7 +1235,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 }
 
@@ -1100,6 +1277,39 @@ int retroflat_load_bitmap(
       allegro_message( "unable to load %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
    }
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   bmp_out->renderer = NULL;
+
+   bmp_out->surface = SDL_LoadBMP( filename_path );
+   if( NULL == bmp_out->surface ) {
+      retroflat_message(
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   SDL_SetColorKey( bmp_out->surface, SDL_TRUE,
+      SDL_MapRGB( bmp_out->surface->format,
+         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+
+   bmp_out->texture =
+      SDL_CreateTextureFromSurface( g_screen.renderer, bmp_out->surface );
+   if( NULL == bmp_out->texture ) {
+      retroflat_message(
+         "Error", "SDL unable to create texture: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      if( NULL != bmp_out->surface ) {
+         SDL_FreeSurface( bmp_out->surface );
+         bmp_out->surface = NULL;
+      }
+      goto cleanup;
+   }
+
+cleanup:
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
@@ -1188,7 +1398,7 @@ cleanup:
    bmp_out->b = LoadImage( NULL, b->id, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -1218,7 +1428,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
    bitmap->b = NULL;
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 }
 
@@ -1228,27 +1438,55 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_SDL ) || defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0;
    int locked_src_internal = 0;
    int locked_target_internal = 0;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_screen);
    }
-   assert( NULL != target->b );
    assert( NULL != src );
-   assert( NULL != src->b );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
+   assert( NULL != target->b );
+   assert( NULL != src->b );
+
    /* TODO: Handle partial blit. */
    draw_sprite( target->b, src->b, d_x, d_y );
 
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   retroflat_internal_autolock_bitmap(
+      src, lock_ret, locked_src_internal );
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   /* TODO */
+   #warning TODO
+
+cleanup:
+
+   if( locked_src_internal ) {
+      retroflat_draw_release( src );
+   }
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
+   assert( NULL != src->b );
 
    retroflat_internal_autolock_bitmap(
       src, lock_ret, locked_src_internal );
@@ -1274,7 +1512,7 @@ cleanup:
    }
 
 #  else
-#     error "not implimented"
+#     warning "not implimented"
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
@@ -1297,21 +1535,50 @@ void retroflat_rect(
    if( NULL == target ) {
       target = &(g_screen);
    }
-   assert( NULL != target->b );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
+   assert( NULL != target->b );
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       rectfill( target->b, x, y, x + w, y + h, color );
    } else {
       rect( target->b, x, y, x + w, y + h, color );
    }
 
+#  elif defined( RETROFLAT_API_SDL )
+
+   SDL_Rect area;
+   int locked_target_internal = 0;
+   int lock_ret = 0;
+
+   if( NULL != target ) {
+      retroflat_internal_autolock_bitmap(
+         target, lock_ret, locked_target_internal );
+   }
+
+   area.x = x;
+   area.y = y;
+   area.w = w;
+   area.h = h;
+
+   SDL_SetRenderDrawColor(
+      target->renderer, color->r, color->g, color->b, 255 );
+
+   SDL_RenderFillRect( target->renderer, &area );
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
@@ -1331,7 +1598,7 @@ cleanup:
    }
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -1352,17 +1619,19 @@ void retroflat_line(
    if( NULL == target ) {
       target = &(g_screen);
    }
-   assert( NULL != target->b );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
+   assert( NULL != target->b );
    line( target->b, x1, y1, x2, y2, color );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
@@ -1389,7 +1658,7 @@ cleanup:
    }
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -1411,11 +1680,12 @@ void retroflat_ellipse(
    if( NULL == target ) {
       target = &(g_screen);
    }
-   assert( NULL != target->b );
 
 #  ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
+
+   assert( NULL != target->b );
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       ellipsefill( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
@@ -1426,6 +1696,8 @@ void retroflat_ellipse(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
@@ -1445,13 +1717,17 @@ cleanup:
    }
 
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+   int key_out = 0;
 
 #  ifdef RETROFLAT_API_ALLEGRO
+
+   /* == Allegro == */
+
 #     ifdef RETROFLAT_MOUSE
    /* XXX: Broken in DOS. */
    poll_mouse();
@@ -1471,9 +1747,25 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       return (readkey() >> 8);
    }
 
-   return 0;
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   int eres = 0;
+   SDL_Event event;
+
+   SDL_PollEvent( &event );
+
+   if( SDL_KEYDOWN == event.type ) {
+      key_out = event.key.keysym.sym;
+
+      /* Flush key buffer to improve responsiveness. */
+      while( (eres = SDL_PollEvent( &event )) );
+   }
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int key_out = 0;
+   
+   /* == Win16/Win32 == */
 
    if( g_last_key ) {
       /* Return g_last_key, which is set in WndProc when a keypress msg is
@@ -1499,11 +1791,11 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_last_mouse_y = 0;
    }
 
-   return key_out;
 #  else
-#     error "not implemented"
+#     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
+   return key_out;
 }
 
 #endif /* RETROFLT_C */
