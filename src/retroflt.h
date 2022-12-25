@@ -784,6 +784,7 @@ int g_screen_w = 0;
 int g_screen_h = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
+int g_mouse_state = 0;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1835,7 +1836,20 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* Flush key buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
 
+   } else if( SDL_MOUSEBUTTONUP == event.type ) {
+      /* Stop dragging. */
+      g_mouse_state = 0;
+
+   } else if( 0 != g_mouse_state ) {
+
+      /* Update coordinates and keep dragging. */
+
+      SDL_GetMouseState( &(input->mouse_x), &(input->mouse_y) );
+      key_out = g_mouse_state;
+
    } else if( SDL_MOUSEBUTTONDOWN == event.type ) {
+
+      /* Begin dragging. */
 
       input->mouse_x = event.button.x;  
       input->mouse_y = event.button.y;  
@@ -1843,8 +1857,10 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* Differentiate which button was clicked. */
       if( SDL_BUTTON_LEFT == event.button.button ) {
          key_out = RETROFLAT_MOUSE_B_LEFT;
+         g_mouse_state = RETROFLAT_MOUSE_B_LEFT;
       } else if( SDL_BUTTON_RIGHT == event.button.button ) {
          key_out = RETROFLAT_MOUSE_B_RIGHT;
+         g_mouse_state = RETROFLAT_MOUSE_B_RIGHT;
       }
 
       /* Flush key buffer to improve responsiveness. */
