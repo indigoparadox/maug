@@ -6,10 +6,12 @@ body {
 
 blockquote {
    background: #111111 !important;
+   color: white;
 }
 
 pre {
    background: #111111 !important;
+   color: white;
 }
 
 .header {
