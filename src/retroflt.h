@@ -359,11 +359,15 @@ struct RETROFLAT_INPUT {
 
 #ifndef RETROFLAT_MSG_MAX
 #define RETROFLAT_MSG_MAX 4096
-#endif /* RETROFLAT_MSG_MAX */
+#endif /* !RETROFLAT_MSG_MAX */
 
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif /* PATH_MAX */
+#ifndef RETROFLAT_PATH_MAX
+#define RETROFLAT_PATH_MAX 256
+#endif /* !RETROFLAT_PATH_MAX */
+
+#ifndef RETROFLAT_WIN_STYLE
+#define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME)
+#endif /* !RETROFLAT_WIN_STYLE */
 
 /* === Platform-Specific Includes and Defines === */
 
@@ -808,7 +812,7 @@ typedef int RETROFLAT_COLOR;
 #endif /* RETROFLAT_OS_DOS */
 
 /*! \brief Maximum size of the assets path, to allow room for appending. */
-#define RETROFLAT_ASSETS_PATH_MAX (PATH_MAX / 2)
+#define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX / 2)
 
 /* === Translation Module === */
 
@@ -1117,6 +1121,7 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
    int retval = 0;
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
+   RECT wr = { 0, 0, 0, 0 };
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifdef RETROFLAT_API_ALLEGRO
@@ -1199,6 +1204,11 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
 
    /* == Win16/Win32 == */
 
+   /* Get the *real* size of the window, including titlebar. */
+   wr.right = screen_w;
+   wr.bottom = screen_h;
+   AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
+
    g_screen_w = screen_w;
    g_screen_h = screen_h;
    g_screen_v_w = screen_w;
@@ -1226,9 +1236,9 @@ int retroflat_init( const char* title, int screen_w, int screen_h ) {
 
    g_window = CreateWindowEx(
       0, RETROFLAT_WINDOW_CLASS, title,
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
+      RETROFLAT_WIN_STYLE,
       CW_USEDEFAULT, CW_USEDEFAULT,
-      g_screen_w, g_screen_h, 0, 0, g_instance, 0
+      wr.right - wr.left, wr.bottom - wr.top, 0, 0, g_instance, 0
    );
 
    if( !g_window ) {
@@ -1436,7 +1446,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 int retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out
 ) {
-   char filename_path[PATH_MAX + 1];
+   char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = 0;
 #if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
@@ -1452,8 +1462,8 @@ int retroflat_load_bitmap(
    assert( NULL != bmp_out );
 
    /* Build the path to the bitmap. */
-   memset( filename_path, '\0', PATH_MAX + 1 );
-   snprintf( filename_path, PATH_MAX, "%s%c%s.%s",
+   memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
+   snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
       g_retroflat_assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
 
