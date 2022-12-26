@@ -1002,6 +1002,10 @@ unsigned char g_retroflat_cli_flags = 0;
 
 typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
 
+/* TODO: Don't make these arrays fully const; add a callback to add custom
+ *       command line args.
+ */
+
 #define RETROFLAT_CLI_ARG_ARG( arg, arg_sz, help, callback ) \
    arg,
 
