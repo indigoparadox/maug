@@ -84,6 +84,14 @@
  *       int main( int argc, char* argv[] ) {
  *          int retval = 0;
  *          struct EXAMPLE_DATA data;
+ *          struct RETROFLAT_ARGS args;
+ *
+ *          / * Setup the args to retroflat_init() below to create a window 
+ *            * titled "Example Program", 320x200 pixels large.
+ *            * /
+ *          args.screen_w = 320;
+ *          args.screen_h = 200;
+ *          args.title = "Example Program";
  *       
  *          / * Zero out the data holder. * /
  *          memset( &data, '\0', sizeof( struct EXAMPLE_DATA ) );
@@ -92,10 +100,8 @@
  *          retroflat_set_assets_path( "assets" );
  *       
  *          / * === Setup === * /
- *          / * Create a window titled "Example Program", 320x200 pixels
- *            * large.
- *            * /
- *          retval = retroflat_init( "Example Program", 320, 200, argc, argv );
+ *          / * Call the init with the args struct created above. * /
+ *          retval = retroflat_init( argc, argv, &args );
  *
  *          / * Make sure setup completed successfully! * /
  *          if( RETROFLAT_OK != retval ) {
@@ -235,6 +241,18 @@
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
+#ifdef RETROFLAT_NO_CLI_SZ
+#  define RETROFLAT_CLI_SZ( f )
+#else
+#  define RETROFLAT_CLI_SZ( f ) \
+   f( 10, "-x", 3, "Set the screen width.", retroflat_cli_x ) \
+   f( 11, "-y", 3, "Set the screen height.", retroflat_cli_y )
+#endif /* !RETROFLAT_NO_CLI_SZ */
+
+#define RETROFLAT_CLI( f ) \
+   f( 1, "-h", 3, "Display help and exit.", retroflat_cli_h ) \
+   RETROFLAT_CLI_SZ( f )
+
 #if defined( DEBUG )
 #include <assert.h>
 #elif !defined( DOCUMENTATION )
@@ -326,6 +344,18 @@ struct RETROFLAT_INPUT {
 };
 
 /*! \} */
+
+struct RETROFLAT_ARGS {
+   /**
+    * \brief Title to set for the main program Window if applicable on the
+    *        target platform.
+    */
+   char* title;
+   /*! \brief Desired screen or window width in pixels. */
+   int screen_w;
+   /*! \brief Desired screen or window height in pixels. */
+   int screen_h;
+};
 
 /**
  * \addtogroup maug_retroflt_drawing
@@ -800,15 +830,10 @@ void retroflat_message( const char* title, const char* format, ... );
  * \brief Initialize RetroFlat and its underlying layers. This should be
  *        called once at the beginning of the program and should quit if
  *        the return value indicates any failures.
- * \param title Title to set for the main program Window if applicable on the
- *        target platform.
- * \param int screen_w Desired screen or window width in pixels.
- * \param int screen_h Desired screen or window height in pixels.
  * \return ::RETROFLAT_OK if there were no problems or other
  *         \ref maug_retroflt_retval if there were.
  */
-int retroflat_init(
-   const char* title, int screen_w, int screen_h, int argc, char* argv[] );
+int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
 
 /**
  * \brief Deinitialize RetroFlat and its underlying layers. This should be
@@ -971,6 +996,27 @@ retroflat_loop_iter g_loop_iter = NULL;
 char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
 struct RETROFLAT_BITMAP g_screen;
 unsigned char g_retroflat_flags = 0;
+unsigned char g_retroflat_cli_flags = 0;
+
+typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
+
+#define RETROFLAT_CLI_ARG_ARG( idx, arg, arg_sz, help, callback ) \
+   arg,
+
+const char* gc_retroflat_cli_args[] = {
+   RETROFLAT_CLI( RETROFLAT_CLI_ARG_ARG )
+   NULL
+};
+
+#define RETROFLAT_CLI_ARG_SZ( idx, arg, arg_sz, help, callback ) \
+   arg_sz,
+
+const int gc_retroflat_cli_arg_sz[] = {
+   RETROFLAT_CLI( RETROFLAT_CLI_ARG_SZ )
+   0
+};
+
+/* Callback table is down below, after the statically-defined callbacks. */
 
 /* === Function Definitions === */
 
@@ -1128,14 +1174,62 @@ void retroflat_message( const char* title, const char* format, ... ) {
    va_end( vargs );
 }
 
-int retroflat_init(
-   const char* title, int screen_w, int screen_h, int argc, char* argv[]
+static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
+   return RETROFLAT_OK;
+}
+
+#define RETROFLAT_CLI_ARG_CB( idx, arg, arg_sz, help, callback ) \
+   callback,
+
+retroflat_cli_cb g_retroflat_cli_callbacks[] = {
+   RETROFLAT_CLI( RETROFLAT_CLI_ARG_CB )
+   NULL
+};
+
+static int retroflat_parse_args(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
+   int arg_i = 0,
+      const_i = 0,
+      retval = 0;
+
+   for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
+      const_i = 0;
+      while( NULL != gc_retroflat_cli_args[const_i] ) {
+         if( 0 == strncmp(
+            gc_retroflat_cli_args[const_i],
+            argv[arg_i],
+            gc_retroflat_cli_arg_sz[const_i]
+         ) ) {
+            g_retroflat_cli_callbacks[const_i]( argv[arg_i], args );
+         }
+      }
+   }
+
+   return retval;
+}
+
+int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int retval = 0;
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
    RECT wr = { 0, 0, 0, 0 };
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* Parse command line args. */
+
+   retval = retroflat_parse_args( argc, argv, args );
+   if( RETROFLAT_OK != retval ) {
+      goto cleanup;
+   }
 
 #  ifdef RETROFLAT_API_ALLEGRO
 
@@ -1155,9 +1249,9 @@ int retroflat_init(
 
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
-   if( set_gfx_mode( GFX_AUTODETECT, screen_w, screen_h, 0, 0 ) ) {
+   if( set_gfx_mode( GFX_AUTODETECT, args->screen_w, args->screen_h, 0, 0 ) ) {
 #     else
-   if( set_gfx_mode( GFX_AUTODETECT_WINDOWED, screen_w, screen_h, 0, 0 ) ) {
+   if( set_gfx_mode( GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 ) ) {
 #     endif /* RETROFLAT_OS_DOS */
 
       allegro_message( "could not setup graphics!" );
@@ -1166,7 +1260,9 @@ int retroflat_init(
    }
 
 #     ifndef RETROFLAT_OS_DOS
-   set_window_title( title );
+   if( NULL != args->title ) {
+      set_window_title( args->title );
+   }
 #     endif /* !RETROFLAT_OS_DOS */
 
 #     ifdef RETROFLAT_MOUSE
@@ -1178,7 +1274,7 @@ int retroflat_init(
    }
 #     endif /* RETROFLAT_MOUSE */
 
-   g_screen.b = create_bitmap( screen_w, screen_h );
+   g_screen.b = create_bitmap( args->screen_w, args->screen_h );
    if( NULL == g_screen.b ) {
       allegro_message( "unable to allocate screen buffer!" );
       goto cleanup;
@@ -1193,13 +1289,13 @@ int retroflat_init(
          "Error", "Error initializing SDL: %s", SDL_GetError() );
    }
 
-   g_screen_v_w = screen_w;
-   g_screen_v_h = screen_h;
-   g_screen_w = screen_w;
-   g_screen_h = screen_h;
-   g_window = SDL_CreateWindow( title,
+   g_screen_v_w = args->screen_w;
+   g_screen_v_h = args->screen_h;
+   g_screen_w = args->screen_w;
+   g_screen_h = args->screen_h;
+   g_window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-      screen_w, screen_h, 0 );
+      args->screen_w, args->screen_h, 0 );
    if( NULL == g_window ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
@@ -1220,14 +1316,14 @@ int retroflat_init(
    /* == Win16/Win32 == */
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = screen_w;
-   wr.bottom = screen_h;
+   wr.right = args->screen_w;
+   wr.bottom = args->screen_h;
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 
-   g_screen_w = screen_w;
-   g_screen_h = screen_h;
-   g_screen_v_w = screen_w;
-   g_screen_v_h = screen_h;
+   g_screen_w = args->screen_w;
+   g_screen_h = args->screen_h;
+   g_screen_v_w = args->screen_w;
+   g_screen_v_h = args->screen_h;
 
    memset( &g_screen, '\0', sizeof( struct RETROFLAT_BITMAP ) );
    memset( &wc, '\0', sizeof( WNDCLASS ) );
@@ -1250,7 +1346,7 @@ int retroflat_init(
    }
 
    g_window = CreateWindowEx(
-      0, RETROFLAT_WINDOW_CLASS, title,
+      0, RETROFLAT_WINDOW_CLASS, args->title,
       RETROFLAT_WIN_STYLE,
       CW_USEDEFAULT, CW_USEDEFAULT,
       wr.right - wr.left, wr.bottom - wr.top, 0, 0, g_instance, 0
