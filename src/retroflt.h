@@ -105,7 +105,6 @@
  *
  *          / * Make sure setup completed successfully! * /
  *          if( RETROFLAT_OK != retval ) {
- *             retroflat_message( "Error", "Could not initialize." );
  *             goto cleanup;
  *          }
  *       
@@ -241,17 +240,24 @@
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
+/**
+ * \addtogroup maug_retroflt_cli RetroFlat Command Line API
+ * \{
+ */
+
 #ifdef RETROFLAT_NO_CLI_SZ
 #  define RETROFLAT_CLI_SZ( f )
 #else
 #  define RETROFLAT_CLI_SZ( f ) \
-   f( 10, "-x", 3, "Set the screen width.", retroflat_cli_x ) \
-   f( 11, "-y", 3, "Set the screen height.", retroflat_cli_y )
+   f( "-x", 3, "Set the screen width.", retroflat_cli_x ) \
+   f( "-y", 3, "Set the screen height.", retroflat_cli_y )
 #endif /* !RETROFLAT_NO_CLI_SZ */
 
 #define RETROFLAT_CLI( f ) \
-   f( 1, "-h", 3, "Display help and exit.", retroflat_cli_h ) \
+   f( "-h", 3, "Display help and exit.", retroflat_cli_h ) \
    RETROFLAT_CLI_SZ( f )
+
+/*! \} */
 
 #if defined( DEBUG )
 #include <assert.h>
@@ -355,6 +361,7 @@ struct RETROFLAT_ARGS {
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
+   int state;
 };
 
 /**
@@ -1000,7 +1007,7 @@ unsigned char g_retroflat_cli_flags = 0;
 
 typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
 
-#define RETROFLAT_CLI_ARG_ARG( idx, arg, arg_sz, help, callback ) \
+#define RETROFLAT_CLI_ARG_ARG( arg, arg_sz, help, callback ) \
    arg,
 
 const char* gc_retroflat_cli_args[] = {
@@ -1008,12 +1015,20 @@ const char* gc_retroflat_cli_args[] = {
    NULL
 };
 
-#define RETROFLAT_CLI_ARG_SZ( idx, arg, arg_sz, help, callback ) \
+#define RETROFLAT_CLI_ARG_SZ( arg, arg_sz, help, callback ) \
    arg_sz,
 
 const int gc_retroflat_cli_arg_sz[] = {
    RETROFLAT_CLI( RETROFLAT_CLI_ARG_SZ )
    0
+};
+
+#define RETROFLAT_CLI_ARG_HELP( arg, arg_sz, help, callback ) \
+   help,
+
+const char* gc_retroflat_cli_arg_help[] = {
+   RETROFLAT_CLI( RETROFLAT_CLI_ARG_HELP )
+   NULL
 };
 
 /* Callback table is down below, after the statically-defined callbacks. */
@@ -1175,18 +1190,45 @@ void retroflat_message( const char* title, const char* format, ... ) {
 }
 
 static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
-   return RETROFLAT_OK;
+   int i = 0;
+
+   fprintf( stderr, "%s usage:\n\n", args->title );
+
+   /* Display help for all available options. */
+   while( NULL != gc_retroflat_cli_args[i] ) {
+      fprintf( stderr, "\t%s\t%s\n", gc_retroflat_cli_args[i],
+         gc_retroflat_cli_arg_help[i] );
+      i++;
+   }
+
+   fprintf( stderr, "\n" );
+
+   return RETROFLAT_ERROR_ENGINE;
 }
 
+#ifndef RETROFLAT_NO_CLI_SZ
+
 static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( "-x", arg, 3 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_w = atoi( arg );
+   }
    return RETROFLAT_OK;
 }
 
 static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( "-y", arg, 3 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_h = atoi( arg );
+   }
    return RETROFLAT_OK;
 }
 
-#define RETROFLAT_CLI_ARG_CB( idx, arg, arg_sz, help, callback ) \
+#endif /* !RETROFLAT_NO_CLI_SZ */
+
+#define RETROFLAT_CLI_ARG_CB( arg, arg_sz, help, callback ) \
    callback,
 
 retroflat_cli_cb g_retroflat_cli_callbacks[] = {
@@ -1199,7 +1241,10 @@ static int retroflat_parse_args(
 ) {
    int arg_i = 0,
       const_i = 0,
+      last_i = 0,
       retval = 0;
+
+   args->state = 0; /* Zero out at the start. */
 
    for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
       const_i = 0;
@@ -1209,10 +1254,30 @@ static int retroflat_parse_args(
             argv[arg_i],
             gc_retroflat_cli_arg_sz[const_i]
          ) ) {
-            g_retroflat_cli_callbacks[const_i]( argv[arg_i], args );
+            /* Save this matched index for the next pass. */
+            last_i = const_i;
+            retval = g_retroflat_cli_callbacks[const_i]( argv[arg_i], args );
+            if( RETROFLAT_OK != retval ) {
+               goto cleanup;
+            }
+
+            /* We found a match, so go to the next arg. */
+            break;
+         }
+         const_i++;
+      }
+
+      if( NULL == gc_retroflat_cli_args[const_i] ) {
+         /* No valid arg was found, so we must be passing data to the last one!
+          */
+         retval = g_retroflat_cli_callbacks[last_i]( argv[arg_i], args );
+         if( RETROFLAT_OK != retval ) {
+            goto cleanup;
          }
       }
    }
+
+cleanup:
 
    return retval;
 }
