@@ -87,17 +87,16 @@
  *          struct RETROFLAT_ARGS args;
  *
  *          / * Setup the args to retroflat_init() below to create a window 
- *            * titled "Example Program", 320x200 pixels large.
+ *            * titled "Example Program", 320x200 pixels large, and load
+ *            * bitmaps from the "assets" subdirectory next to the executable.
  *            * /
  *          args.screen_w = 320;
  *          args.screen_h = 200;
  *          args.title = "Example Program";
+ *          args.assets_path = "assets";
  *       
  *          / * Zero out the data holder. * /
  *          memset( &data, '\0', sizeof( struct EXAMPLE_DATA ) );
- *       
- *          / * Tell retroflat where to find graphical assets. * /
- *          retroflat_set_assets_path( "assets" );
  *       
  *          / * === Setup === * /
  *          / * Call the init with the args struct created above. * /
@@ -361,6 +360,8 @@ struct RETROFLAT_ARGS {
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
+   /*! \brief Relative path under which bitmap assets are stored. */
+   char* assets_path;
    int state;
 };
 
@@ -851,12 +852,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
 void retroflat_shutdown( int retval );
 
 /**
- * \brief Set the assets path that will be prepended to all calls to
- *        retroflat_load_bitmap().
- */
-void retroflat_set_assets_path( const char* path );
-
-/**
  * \addtogroup maug_retroflt_bitmap
  * \{
  */
@@ -865,7 +860,7 @@ void retroflat_set_assets_path( const char* path );
  * \brief Load a bitmap into the given ::RETROFLAT_BITMAP structure if
  *        it is available. Bitmaps are subject to the limitations enumerated in
  *        \ref maug_retroflt_bitmap.
- * \param filename Filename of the bitmap under retroflat_set_assets_path(),
+ * \param filename Filename of the bitmap under RETROFLAT_ARGS::assets_path
  *                 with no separator, ".", or ::RETROFLAT_BITMAP_EXT.
  * \param bmp_out Pointer to a ::RETROFLAT_BITMAP to load the bitmap into.
  * \return ::RETROFLAT_OK if the bitmap was loaded or ::RETROFLAT_ERROR_TIMER if
@@ -1290,10 +1285,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* Parse command line args. */
-
    retval = retroflat_parse_args( argc, argv, args );
    if( RETROFLAT_OK != retval ) {
       goto cleanup;
+   }
+
+   /* Set the assets path. */
+   memset( g_retroflat_assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
+   if( NULL != args->assets_path ) {
+      strncpy( g_retroflat_assets_path,
+         args->assets_path, RETROFLAT_ASSETS_PATH_MAX );
    }
 
 #  ifdef RETROFLAT_API_ALLEGRO
@@ -1456,13 +1457,6 @@ void retroflat_shutdown( int retval ) {
    retroflat_destroy_bitmap( &g_screen );
 #endif /* RETROFLAT_API_ALLEGRO */
 
-}
-
-/* === */
-
-void retroflat_set_assets_path( const char* path ) {
-   memset( g_retroflat_assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
-   strncpy( g_retroflat_assets_path, path, RETROFLAT_ASSETS_PATH_MAX );
 }
 
 /* === */
