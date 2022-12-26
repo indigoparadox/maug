@@ -199,6 +199,10 @@
 
 /* === Generic Includes and Defines === */
 
+#if defined( RETROFLAT_OS_UNIX ) || defined( RETROFLAT_OS_WIN )
+#define RETROFLAT_MOUSE
+#endif /* RETROFLAT_OS_WIN || RETROFLAT_OS_WIN */
+
 /**
  * \addtogroup maug_retroflt_retval RetroFlat API Return Values
  * \{
@@ -1617,6 +1621,48 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
+#if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
+
+static int retroflat_bitmap_win_transparency(
+   struct RETROFLAT_BITMAP* bmp_out, int w, int h  
+) {
+   int retval = RETROFLAT_OK,
+      lock_ret = 0;
+   unsigned long txp_color = 0;
+
+   /* Setup bitmap transparency mask. */
+   bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
+
+   lock_ret = retroflat_draw_lock( bmp_out );
+   if( RETROFLAT_OK != lock_ret ) {
+      goto cleanup;
+   }
+
+   /* Convert the color key into bitmap format. */
+   txp_color |= (RETROFLAT_TXP_B & 0xff);
+   txp_color <<= 8;
+   txp_color |= (RETROFLAT_TXP_G & 0xff);
+   txp_color <<= 8;
+   txp_color |= (RETROFLAT_TXP_R & 0xff);
+   SetBkColor( bmp_out->hdc_b, txp_color );
+
+   /* Create the mask from the color key. */
+   BitBlt(
+      bmp_out->hdc_mask, 0, 0, w, h, bmp_out->hdc_b, 0, 0, SRCCOPY );
+   BitBlt(
+      bmp_out->hdc_b, 0, 0, w, h, bmp_out->hdc_mask, 0, 0, SRCINVERT );
+
+cleanup:
+
+   if( RETROFLAT_OK == lock_ret ) {
+      retroflat_draw_release( bmp_out );
+   }
+
+   return retval;
+}
+
+#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
 int retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out
 ) {
@@ -1628,9 +1674,9 @@ int retroflat_load_bitmap(
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
-   unsigned long txp_color = 0;
+#if defined (RETROFLAT_API_WIN32 )
    BITMAP bm;
-   int lock_ret = 0;
+#endif /* RETROFLAT_API_WIN32 */
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
@@ -1687,7 +1733,13 @@ int retroflat_load_bitmap(
 
 cleanup:
 
-#  elif defined( RETROFLAT_API_WIN16 )
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+#     if defined( RETROFLAT_API_WIN16 )
+
+   /* Win16 has a bunch of extra involved steps for getting a bitmap from
+    * disk. These cause a crash in Win32.
+    */
 
    /* == Win16 == */
 
@@ -1722,32 +1774,26 @@ cleanup:
       bmi->bmiHeader.biHeight, &(buf[offset]), bmi,
       DIB_RGB_COLORS );
 
-   /* Setup bitmap transparency mask. */
-   bmp_out->mask = CreateBitmap(
-      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight, 1, 1, NULL );
+   retval = retroflat_bitmap_win_transparency( bmp_out,
+      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
 
-   lock_ret = retroflat_draw_lock( bmp_out );
-   if( RETROFLAT_OK != lock_ret ) {
-      goto cleanup;
-   }
+#     else
 
-   /* Convert the color key into bitmap format. */
-   txp_color |= (RETROFLAT_TXP_B & 0xff);
-   txp_color <<= 8;
-   txp_color |= (RETROFLAT_TXP_G & 0xff);
-   txp_color <<= 8;
-   txp_color |= (RETROFLAT_TXP_R & 0xff);
-   SetBkColor( bmp_out->hdc_b, txp_color );
+   /* Win32 greatly simplifies the loading portion. */
 
-   /* Create the mask from the color key. */
-   BitBlt(
-      bmp_out->hdc_mask, 0, 0,
-      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
-      bmp_out->hdc_b, 0, 0, SRCCOPY );
-   BitBlt(
-      bmp_out->hdc_b, 0, 0,
-      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight,
-      bmp_out->hdc_mask, 0, 0, SRCINVERT );
+   /* == Win32 == */
+
+   bmp_out->b = LoadImage(
+      NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
+
+   GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
+
+   retval = retroflat_bitmap_win_transparency(
+      bmp_out, bm.bmWidth, bm.bmHeight );
+
+#     endif /* RETROFLAT_API_WIN16 */
+
+   /* The transparency portion is the same for Win32 and Win16. */
 
 cleanup:
 
@@ -1762,16 +1808,6 @@ cleanup:
    if( (HDC)NULL != hdc_win ) {
       ReleaseDC( g_window, hdc_win );
    }
-
-   if( RETROFLAT_OK == lock_ret ) {
-      retroflat_draw_release( bmp_out );
-   }
-
-#  elif defined( RETROFLAT_API_WIN32 )
-
-   /* == Win32 == */
-
-   bmp_out->b = LoadImage( NULL, b->id, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 
 #  else
 #     warning "not implemented"
