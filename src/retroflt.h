@@ -356,6 +356,14 @@
 #  define RETROFLAT_BITMAP_EXT "bmp"
 #endif /* !RETROFLAT_BITMAP_EXT */
 
+/**
+ * \brief The default font to load if none is specified to retroflat_string().
+ *        Currently this only has an effect in SDL.
+ */
+#ifndef RETROFLAT_DEFAULT_FONT
+#  define RETROFLAT_DEFAULT_FONT "./Sans.ttf"
+#endif /* RETROFLAT_DEFAULT_FONT */
+
 /* Transparency background color: black by default, to match Allegro. */
 #ifndef RETROFLAT_TXP_R
 /**
@@ -630,6 +638,7 @@ typedef int RETROFLAT_COLOR;
 #elif defined( RETROFLAT_API_SDL )
 
 #  include <SDL.h>
+#  include <SDL_ttf.h>
 
 struct RETROFLAT_BITMAP {
    unsigned char flags;
@@ -694,12 +703,14 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_h() g_screen_v_h
 
 #  define retroflat_quit( retval ) \
-   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
-   g_retval = retval;
+      g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retval = retval;
 
-#define END_OF_MAIN()
+#  define END_OF_MAIN()
 
-#define RETROFLAT_COLOR const SDL_Color*
+#  define RETROFLAT_COLOR const SDL_Color*
+
+#  ifdef RETROFLT_C
 
 const SDL_Color gc_black =       {0,   0,   0};
 const SDL_Color gc_darkblue =    {0, 0, 170};
@@ -718,9 +729,43 @@ const SDL_Color gc_magenta =     {255, 85, 255};
 const SDL_Color gc_yellow =      {255, 255, 85};
 const SDL_Color gc_white =       {255, 255, 255};
 
-#define RETROFLAT_COLOR_BLACK    (&gc_black)
-#define RETROFLAT_COLOR_GRAY     (&gc_gray)
-#define RETROFLAT_COLOR_WHITE    (&gc_white)
+#  else
+
+extern const SDL_Color gc_black;
+extern const SDL_Color gc_darkblue;
+extern const SDL_Color gc_darkgreen;
+extern const SDL_Color gc_teal;
+extern const SDL_Color gc_darkred;
+extern const SDL_Color gc_violet;
+extern const SDL_Color gc_brown;
+extern const SDL_Color gc_gray;
+extern const SDL_Color gc_darkgray;
+extern const SDL_Color gc_blue;
+extern const SDL_Color gc_green;
+extern const SDL_Color gc_cyan;
+extern const SDL_Color gc_red;
+extern const SDL_Color gc_magenta;
+extern const SDL_Color gc_yellow;
+extern const SDL_Color gc_white;
+
+#  endif /* RETROFLT_C */
+
+#define RETROFLAT_COLOR_BLACK       (&gc_black)
+#define RETROFLAT_COLOR_DARKBLUE    (&gc_darkblue)
+#define RETROFLAT_COLOR_DARKGREEN   (&gc_darkgreen)
+#define RETROFLAT_COLOR_TEAL        (&gc_teal)
+#define RETROFLAT_COLOR_DARKRED     (&gc_darkred)
+#define RETROFLAT_COLOR_VIOLET      (&gc_violet)
+#define RETROFLAT_COLOR_BROWN       (&gc_brown)
+#define RETROFLAT_COLOR_GRAY        (&gc_gray)
+#define RETROFLAT_COLOR_DARKGRAY    (&gc_darkgray)
+#define RETROFLAT_COLOR_BLUE        (&gc_blue)
+#define RETROFLAT_COLOR_GREEN       (&gc_green)
+#define RETROFLAT_COLOR_CYAN        (&gc_cyan)
+#define RETROFLAT_COLOR_RED         (&gc_red)
+#define RETROFLAT_COLOR_MAGENTA     (&gc_magenta)
+#define RETROFLAT_COLOR_YELLOW      (&gc_yellow)
+#define RETROFLAT_COLOR_WHITE       (&gc_white)
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1140,11 +1185,11 @@ void retroflat_line(
 
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   int* w_out, int* h_out );
+   const char* font_str, int* w_out, int* h_out );
 
 void retroflat_string(
    struct RETROFLAT_BITMAP* target,
-   const char* str, int str_sz, int x_orig, int y_orig,
+   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
    RETROFLAT_COLOR color, unsigned char flags );
 
 /*! \} */ /* maug_retroflt_bitmap */
@@ -1570,6 +1615,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
       retroflat_message(
          "Error", "Error initializing SDL: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_ENGINE;
+      goto cleanup;
+   }
+
+   if( TTF_Init() ) {
+      retroflat_message(
+         "Error", "Error initializing SDL_TTF: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
    }
 
    g_screen_v_w = args->screen_w;
@@ -1654,7 +1708,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    ShowWindow( g_window, g_cmd_show );
 
 #  else
-#     warning "not implemented"
+#     warning "init not implemented"
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
 cleanup:
@@ -1666,13 +1720,31 @@ cleanup:
 
 void retroflat_shutdown( int retval ) {
 
-#ifdef RETROFLAT_API_ALLEGRO
+#if defined( RETROFLAT_API_ALLEGRO )
+
+   /* == Allegro == */
+
    if( RETROFLAT_ERROR_ENGINE != retval ) {
       clear_keybuf();
    }
 
    retroflat_destroy_bitmap( &g_screen );
-#endif /* RETROFLAT_API_ALLEGRO */
+
+#elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   TTF_Quit();
+
+   SDL_Quit();
+
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* TODO: Windows shutdown? */
+
+#else
+#  warning "shutdown not implemented"
+#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
 
 }
 
@@ -1746,7 +1818,7 @@ cleanup:
 
 cleanup:
 #  else
-#     warning "not implemented"
+#     warning "draw lock not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -1824,7 +1896,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
 #  else
-#     warning "not implemented"
+#     warning "draw release not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 }
 
@@ -2024,7 +2096,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "load bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -2065,7 +2137,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
    bitmap->b = NULL;
 
 #  else
-#     warning "not implemented"
+#     warning "destroy bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 }
 
@@ -2160,7 +2232,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "blit bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
@@ -2248,7 +2320,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "rect not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -2328,7 +2400,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "line not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -2408,7 +2480,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "ellipse not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -2416,13 +2488,18 @@ cleanup:
 
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   int* w_out, int* h_out
+   const char* font_str, int* w_out, int* h_out
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_ALLEGRO )
+   FONT* font_data = NULL;
+   int font_loaded = 0;
+#  elif defined( RETROFLAT_API_SDL )
+   TTF_Font* font_data = NULL;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
    SIZE sz;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_screen);
@@ -2432,7 +2509,48 @@ void retroflat_string_sz(
 
    /* == Allegro == */
 
-   /* TODO */
+   if( NULL == font_str ) {
+      font_data = font;
+   } else {
+      /* TODO: Cache loaded fonts for later use. */
+      font_data = load_font( font_str, NULL, NULL );
+   }
+   if( NULL == font_data ) {
+      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      goto cleanup;
+   }
+
+   *w_out = text_length( font_data, str );
+   *h_out = text_height( font_data );
+   
+cleanup:
+
+   if( font_loaded && NULL != font_data ) {
+      destroy_font( font_data );
+   }
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   if( NULL == font_str ) {
+      font_str = RETROFLAT_DEFAULT_FONT;
+   }
+
+   font_data = TTF_OpenFont( font_str, 12 );
+   if( NULL == font_data ) {
+      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      goto cleanup;
+   }
+
+   TTF_SizeText( font_data, str, w_out, h_out );
+
+cleanup:
+
+   if( NULL != font_data ) {
+      /* TODO: Cache loaded fonts for later use. */
+      TTF_CloseFont( font_data );
+   }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -2442,6 +2560,8 @@ void retroflat_string_sz(
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
+
+   /* TODO: Set specified font. */
 
    GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
    *w_out = sz.cx;
@@ -2454,7 +2574,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "string sz not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -2462,15 +2582,23 @@ cleanup:
 
 void retroflat_string(
    struct RETROFLAT_BITMAP* target,
-   const char* str, int str_sz, int x_orig, int y_orig,
+   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
    RETROFLAT_COLOR color, unsigned char flags
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_ALLEGRO )
+   FONT* font_data = NULL;
+   int font_loaded = 0;
+#  elif defined( RETROFLAT_API_SDL )
+   TTF_Font* font_data = NULL;
+   SDL_Surface* str_surface = NULL;
+   SDL_Texture* str_texture = NULL;
+   SDL_Rect str_rect;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
    RECT rect;
    SIZE sz;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_screen);
@@ -2480,8 +2608,71 @@ void retroflat_string(
 
    /* == Allegro == */
 
-   /* TODO */
-   textout_ex( target->b, font, str, x_orig, y_orig, color, -1 );
+   if( NULL == font_str ) {
+      font_data = font;
+   } else {
+      /* TODO: Cache loaded fonts for later use. */
+      font_data = load_font( font_str, NULL, NULL );
+   }
+   if( NULL == font_data ) {
+      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      goto cleanup;
+   }
+
+   textout_ex( target->b, font_data, str, x_orig, y_orig, color, -1 );
+
+cleanup:
+   if( font_loaded && NULL != font_data ) {
+      destroy_font( font_data );
+   }
+
+#  elif defined( RETROFLAT_API_SDL )
+
+   /* == SDL == */
+
+   if( NULL == font_str ) {
+      font_str = RETROFLAT_DEFAULT_FONT;
+   }
+
+   font_data = TTF_OpenFont( font_str, 12 );
+   if( NULL == font_data ) {
+      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      goto cleanup;
+   }
+
+   str_surface = TTF_RenderText_Solid( font_data, str, *color );
+   if( NULL == str_surface ) {
+      retroflat_message( "Error", "Unable to render string surface." );
+      goto cleanup;
+   }
+
+   str_texture = SDL_CreateTextureFromSurface( target->renderer, str_surface );
+   if( NULL == str_surface ) {
+      retroflat_message( "Error", "Unable to render string texture." );
+      goto cleanup;
+   }
+
+   str_rect.x = x_orig;
+   str_rect.y = y_orig;
+   str_rect.w = str_surface->w;
+   str_rect.h = str_surface->h;
+
+   SDL_RenderCopy( target->renderer, str_texture, NULL, &str_rect );
+
+cleanup:
+
+   if( NULL != str_surface ) {
+      SDL_FreeSurface( str_surface );
+   }
+
+   if( NULL != str_texture ) {
+      SDL_DestroyTexture( str_texture );
+   }
+
+   if( NULL != font_data ) {
+      /* TODO: Cache loaded fonts for later use. */
+      TTF_CloseFont( font_data );
+   }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -2491,6 +2682,8 @@ void retroflat_string(
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
+
+   /* TODO: Set specified font. */
 
    memset( &sz, '\0', sizeof( SIZE ) );
 
@@ -2515,7 +2708,7 @@ cleanup:
    }
 
 #  else
-#     warning "not implemented"
+#     warning "string not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -2624,7 +2817,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    }
 
 #  else
-#     warning "not implemented"
+#     warning "poll input not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return key_out;
