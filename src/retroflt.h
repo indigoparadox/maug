@@ -776,6 +776,11 @@ extern const SDL_Color gc_white;
 /* == Win16/Win32 == */
 
 #  include <windows.h>
+
+#  ifdef RETROFLAT_WING
+#     include <wing.h>
+#  endif /* RETROFLAT_WING */
+
 struct RETROFLAT_BITMAP {
    unsigned char flags;
    HBITMAP b;
@@ -1301,12 +1306,22 @@ unsigned int g_last_mouse_y = 0;
 unsigned char g_running;
 retroflat_loop_iter g_loop_iter = NULL;
 
+#  ifdef RETROFLAT_WING
+struct RETROFLAT_BMI {
+   BITMAPINFOHEADER header;
+   RGBQUAD colors[256];
+};
+
+struct RETROFLAT_BMI g_buffer_bmi;
+void far* g_buffer_bits = NULL;
+#  endif /* RETROFLAT_WING */
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* === Globals === */
 
 char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
-struct RETROFLAT_BITMAP g_screen;
+struct RETROFLAT_BITMAP g_buffer;
 unsigned char g_retroflat_flags = 0;
 unsigned char g_retroflat_cli_flags = 0;
 
@@ -1350,10 +1365,10 @@ static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
    PAINTSTRUCT ps;
-   HDC hdcScreen;
-   HDC hdcBuffer;
+   HDC hdc_win = (HDC)NULL;
    BITMAP srcBitmap;
    HBITMAP oldHbm;
+   int screen_initialized = 0;
 
    switch( message ) {
       case WM_CREATE:
@@ -1361,48 +1376,110 @@ static LRESULT CALLBACK WndProc(
 
       case WM_PAINT:
 
-         /* Create HDC for screen. */
-         hdcScreen = BeginPaint( hWnd, &ps );
-         if( (HDC)NULL == hdcScreen ) {
+         /* Create HDC for window to blit to. */
+#  ifdef RETROFLAT_WING
+         hdc_win = GetDC( hWnd );
+#  else
+         hdc_win = BeginPaint( hWnd, &ps );
+#  endif /* RETROFLAT_WING */
+         if( (HDC)NULL == hdc_win ) {
+            retroflat_message(
+               "Error", "Could not determine window device context!" );
+            g_retval = RETROFLAT_ERROR_GRAPHICS;
+            retroflat_quit( g_retval );
             break;
          }
 
-         if( !retroflat_bitmap_ok( &g_screen ) ) {
-            g_screen.b = CreateCompatibleBitmap( hdcScreen,
+         /* === First-Time Setup === */
+
+         /* Setup the buffer HDC from which to blit to the window. */
+         if( (HDC)NULL == g_buffer.hdc_b ) {
+#  ifdef RETROFLAT_WING
+            g_buffer.hdc_b = WinGCreateDC();
+#  else
+            g_buffer.hdc_b = CreateCompatibleDC( hdc_win );
+#  endif /* RETROFLAT_WING */
+         }
+         if( (HDC)NULL == g_buffer.hdc_b ) {
+            retroflat_message(
+               "Error", "Could not determine buffer device context!" );
+            g_retval = RETROFLAT_ERROR_GRAPHICS;
+            retroflat_quit( g_retval );
+            break;
+         }
+
+         /* Setup the screen buffer. */
+         if( !retroflat_bitmap_ok( &g_buffer ) ) {
+#  ifdef RETROFLAT_WING
+            /* Setup an optimal WinG hardware screen buffer bitmap. */
+            if(
+               !WinGRecommendDIBFormat( (BITMAPINFO far*)(&g_buffer_bmi) )
+            ) {
+               retroflat_message(
+                  "Error", "Could not determine recommended format!" );
+               g_retval = RETROFLAT_ERROR_GRAPHICS;
+               retroflat_quit( g_retval );
+               break;
+            }
+            g_buffer_bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+            g_buffer_bmi.header.biWidth = g_screen_w;
+            g_buffer_bmi.header.biHeight *= g_screen_h;
+            g_buffer.b = WinGCreateBitmap(
+               g_buffer.hdc_b,
+               (BITMAPINFO far*)(&g_buffer_bmi), &g_buffer_bits );
+#  else
+            g_buffer.b = CreateCompatibleBitmap( hdc_win,
                g_screen_v_w, g_screen_v_h );
+#  endif /* RETROFLAT_WING */
+            screen_initialized = 1;
          }
-         if( (HBITMAP)NULL == g_screen.b ) {
+         if( (HBITMAP)NULL == g_buffer.b ) {
+            retroflat_message( "Error", "Could not create screen buffer!" );
+            g_retval = RETROFLAT_ERROR_GRAPHICS;
+            retroflat_quit( g_retval );
             break;
          }
 
-         /* Create a new HDC for buffer and select buffer into it. */
-         hdcBuffer = CreateCompatibleDC( hdcScreen );
-         if( (HDC)NULL == hdcBuffer ) {
-            break;
+         if( screen_initialized ) {
+            /* Create a new HDC for buffer and select buffer into it. */
+            g_buffer.old_hbm_b = SelectObject( g_buffer.hdc_b, g_buffer.b );
          }
-         oldHbm = SelectObject( hdcBuffer, g_screen.b );
 
-         /* Load parameters of the buffer into info object (srcBitmap). */
-         GetObject( g_screen.b, sizeof( BITMAP ), &srcBitmap );
+         /* === End First-Time Setup === */
 
-         StretchBlt(
-            hdcScreen,
+#  ifdef RETROFLAT_WING
+         WinGStretchBlt(
+            hdc_win,
             0, 0,
             g_screen_w, g_screen_h,
-            hdcBuffer,
+            g_buffer.hdc_b,
+            0, 0,
+            srcBitmap.bmWidth,
+            srcBitmap.bmHeight
+         );
+         GdiFlush();
+#  else
+         /* Load parameters of the buffer into info object (srcBitmap). */
+         GetObject( g_buffer.b, sizeof( BITMAP ), &srcBitmap );
+
+         StretchBlt(
+            hdc_win,
+            0, 0,
+            g_screen_w, g_screen_h,
+            g_buffer.hdc_b,
             0, 0,
             srcBitmap.bmWidth,
             srcBitmap.bmHeight,
             SRCCOPY
          );
+#  endif /* RETROFLAT_WING */
 
-         /* Return the default object into the HDC. */
-         SelectObject( hdcScreen, oldHbm );
-
-         DeleteDC( hdcBuffer );
-         DeleteDC( hdcScreen );
-
+#  ifdef RETROFLAT_WING
+         ReleaseDC( g_window, hdc_win );
+#  else
+         DeleteDC( hdc_win );
          EndPaint( hWnd, &ps );
+#  endif /* RETROFLAT_WING */
          break;
 
       case WM_ERASEBKGND:
@@ -1420,8 +1497,8 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_DESTROY:
-         if( retroflat_bitmap_ok( &g_screen ) ) {
-            DeleteObject( g_screen.b );
+         if( retroflat_bitmap_ok( &g_buffer ) ) {
+            DeleteObject( g_buffer.b );
          }
          PostQuitMessage( 0 );
          break;
@@ -1652,8 +1729,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #     endif /* RETROFLAT_MOUSE */
 
-   g_screen.b = create_bitmap( args->screen_w, args->screen_h );
-   if( NULL == g_screen.b ) {
+   g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
+   if( NULL == g_buffer.b ) {
       allegro_message( "unable to allocate screen buffer!" );
       goto cleanup;
    }
@@ -1687,13 +1764,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
-   g_screen.surface = SDL_GetWindowSurface( g_window );
-   if( NULL == g_screen.surface ) {
+   g_buffer.surface = SDL_GetWindowSurface( g_window );
+   if( NULL == g_buffer.surface ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
-   g_screen.renderer = SDL_CreateSoftwareRenderer( g_screen.surface );
-   if( NULL == g_screen.renderer ) {
+   g_buffer.renderer = SDL_CreateSoftwareRenderer( g_buffer.surface );
+   if( NULL == g_buffer.renderer ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
@@ -1712,7 +1789,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
 
-   memset( &g_screen, '\0', sizeof( struct RETROFLAT_BITMAP ) );
+   memset( &g_buffer, '\0', sizeof( struct RETROFLAT_BITMAP ) );
    memset( &wc, '\0', sizeof( WNDCLASS ) );
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
@@ -1778,7 +1855,7 @@ void retroflat_shutdown( int retval ) {
       clear_keybuf();
    }
 
-   retroflat_destroy_bitmap( &g_screen );
+   retroflat_destroy_bitmap( &g_buffer );
 
 #elif defined( RETROFLAT_API_SDL )
 
@@ -1791,6 +1868,15 @@ void retroflat_shutdown( int retval ) {
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* TODO: Windows shutdown? */
+
+   if( (HDC)NULL != g_buffer.hdc_b ) {
+      /* Return the default object into the HDC. */
+      SelectObject( g_buffer.hdc_b, g_buffer.old_hbm_b );
+      DeleteDC( g_buffer.hdc_b );
+      g_buffer.hdc_b = (HDC)NULL;
+
+      /* TODO: Destroy buffer bitmap! */
+   }
 
 #else
 #  warning "shutdown not implemented"
@@ -1826,7 +1912,7 @@ cleanup:
 
    /* == SDL == */
 
-   if( NULL != bmp && (&g_screen) != bmp ) {
+   if( NULL != bmp && (&g_buffer) != bmp ) {
       assert( NULL == bmp->renderer );
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
    }
@@ -1887,7 +1973,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    /* Flip the buffer. */
-   blit( g_screen.b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
+   blit( g_buffer.b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
 
    /* Release the screen. */
    release_screen();
@@ -1899,7 +1985,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_SDL )
 
-   if( NULL == bmp || (&g_screen) == bmp ) {
+   if( NULL == bmp || (&g_buffer) == bmp ) {
       /* Flip the screen. */
       SDL_UpdateWindowSurface( g_window );
    } else {
@@ -2050,7 +2136,7 @@ int retroflat_load_bitmap(
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
    bmp_out->texture =
-      SDL_CreateTextureFromSurface( g_screen.renderer, bmp_out->surface );
+      SDL_CreateTextureFromSurface( g_buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
       retroflat_message(
          "Error", "SDL unable to create texture: %s", SDL_GetError() );
@@ -2121,6 +2207,10 @@ cleanup:
 
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
+   if( NULL == bmp_out->b ) {
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
 
@@ -2179,12 +2269,15 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
 
    /* == Win16 == */
 
-   if( NULL == bitmap->b ) {
-      return;
+   if( (HBITMAP)NULL != bitmap->b ) {
+      DeleteObject( bitmap->b );
+      bitmap->b = (HBITMAP)NULL;
    }
 
-   DeleteObject( bitmap->b );
-   bitmap->b = NULL;
+   if( (HBITMAP)NULL != bitmap->mask ) {
+      DeleteObject( bitmap->mask );
+      bitmap->mask = (HBITMAP)NULL;
+   }
 
 #  else
 #     warning "destroy bitmap not implemented"
@@ -2207,7 +2300,7 @@ void retroflat_blit_bitmap(
 #  endif /* RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
    assert( NULL != src );
 
@@ -2303,7 +2396,7 @@ void retroflat_rect(
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
 
 #  if defined( RETROFLAT_API_ALLEGRO )
@@ -2392,7 +2485,7 @@ void retroflat_line(
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
 
 #  if defined( RETROFLAT_API_ALLEGRO )
@@ -2473,7 +2566,7 @@ void retroflat_ellipse(
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
 
 #  ifdef RETROFLAT_API_ALLEGRO
@@ -2552,7 +2645,7 @@ void retroflat_string_sz(
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
 
 #  ifdef RETROFLAT_API_ALLEGRO
@@ -2651,7 +2744,7 @@ void retroflat_string(
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_screen);
+      target = &(g_buffer);
    }
 
 #  ifdef RETROFLAT_API_ALLEGRO
