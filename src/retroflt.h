@@ -277,7 +277,8 @@
  */
 
 /**
- * \brief Flag for retroflat_rect() indicating drawn shape should be filled.
+ * \brief Flag for retroflat_rect() or retroflat_ellipse(), indicating drawn
+ *        shape should be filled.
  */
 #define RETROFLAT_FLAGS_FILL     0x01
 
@@ -459,7 +460,10 @@ struct RETROFLAT_ARGS {
  */
 
 #ifndef RETROFLAT_LINE_THICKNESS
-/*! \brief Line drawing thickness (only works on some platforms). */
+/**
+ * \brief Line drawing thickness (only works on some platforms).
+ *        Is a \ref maug_retroflt_cdefs_page.
+ */
 #  define RETROFLAT_LINE_THICKNESS 1
 #endif /* !RETROFLAT_LINE_THICKNESS */
 
@@ -472,7 +476,7 @@ struct RETROFLAT_ARGS {
 
 #ifndef RETROFLAT_FPS
 /**
- * \brief Target FPS.
+ * \brief Target Frames Per Second.
  * \todo FPS currently has no effect in Allegro.
  */
 #  define RETROFLAT_FPS 15
@@ -1159,8 +1163,11 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 /**
  * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
- * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
+ *        draw to the screen buffer.
  * \param color \ref maug_retroflt_color in which to draw.
+ * \param x Left X coordinate in pixels at which to draw on the target bitmap.
+ * \param y Top Y coordinate in pixels at which to draw on the target bitmap.
  * \param flags Flags to control drawing. The following flags apply:
  *        ::RETROFLAT_FLAGS_FILL
  */
@@ -1170,8 +1177,11 @@ void retroflat_rect(
 
 /**
  * \brief Draw an ellipse onto the target ::RETROFLAT_BITMAP.
- * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
+ *        draw to the screen buffer.
  * \param color \ref maug_retroflt_color in which to draw.
+ * \param x Left X coordinate in pixels at which to draw on the target bitmap.
+ * \param y Top Y coordinate in pixels at which to draw on the target bitmap.
  * \param flags Flags to control drawing. The following flags apply:
  *        ::RETROFLAT_FLAGS_FILL
  */
@@ -1179,18 +1189,58 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags );
 
+/**
+ * \brief Draw a straight line onto the target ::RETROFLAT_BITMAP.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
+ *        draw to the screen buffer.
+ * \param x1 Left X coordinate of the line to draw on the target bitmap.
+ * \param y1 Top Y coordinate of the line to draw on the target bitmap.
+ * \param x2 Right X coordinate of the line to draw on the target bitmap.
+ * \param y2 Bottom Y coordinate of the line to draw on the target bitmap.
+ * \param color \ref maug_retroflt_color in which to draw.
+ * \param flags Flags to control drawing. No flags currently apply.
+ */
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags );
 
+/**
+ * \brief Get the size in pixels of a text string when drawn with a given font
+ *        by retroflat_string().
+ * \warning Font specifications for font_str may vary by platform, so be sure
+ *          to test with #ifdefs for each!
+ * \param target Pointer to the ::RETROFLAT_BITMAP on which drawing is planned.
+ * \param str The text string to get the size of.
+ * \param str_sz Length of the string to get the size of in characters.
+ * \param font_str Name of the font in which to size the string.
+ * \param w_out Pointer to an int in which to store the string width in pixels.
+ * \param h_out Pointer to an int in which to store the string height in pixels.
+ */
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
    const char* font_str, int* w_out, int* h_out );
 
+/**
+ * \brief Draw a text string at the specified location in the specified font
+ *        and color on the target ::RETROFLAT_BITMAP.
+ * \warning Font specifications for font_str may vary by platform, so be sure
+ *          to test with #ifdefs for each!
+ * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
+ *        draw to the screen buffer.
+ * \param color \ref maug_retroflt_color in which to draw.
+ * \param str The text string to draw to the target bitmap.
+ * \param str_sz Length of the string to draw in characters.
+ * \param font_str Name of the font in which to draw the string.
+ * \param x_orig Left X coordinate in pixels at which to draw on the target
+ *               bitmap.
+ * \param y_orig Top Y coordinate in pixels at which to draw on the target
+ *               bitmap.
+ * \param flags Flags to control drawing. No flags currently apply.
+ */
 void retroflat_string(
-   struct RETROFLAT_BITMAP* target,
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
-   RETROFLAT_COLOR color, unsigned char flags );
+   unsigned char flags );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -2581,9 +2631,9 @@ cleanup:
 /* === */
 
 void retroflat_string(
-   struct RETROFLAT_BITMAP* target,
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
-   RETROFLAT_COLOR color, unsigned char flags
+   unsigned char flags
 ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
