@@ -131,9 +131,51 @@
 /**
  * \addtogroup maug_retroflt_compiling RetroFlat Compilation
  * \{
+ * \page maug_retroflt_cdefs_page RetroFlat Compiler Definitions
+ *
+ * Certain options can be configured when a RetroFlat program is compiled by
+ * passing definitions with the compiler using the -D flag, or by #define-ing
+ * them before retroflt.h is included in the source files.
+ *
+ * ## OS Selection Definitions
+ *
+ * These are mutually exclusive. It's best to specify them, in case RetroFlat
+ * can't figure it out from the compiler options.
+ *
+ * | Define                | Description                                      |
+ * | --------------------- | ------------------------------------------------ |
+ * | RETROFLAT_OS_WIN      | Specify that the program will run on Windows.    |
+ * | RETROFLAT_OS_DOS      | Specify that the program will run on DOS.        | 
+ * | RETROFLAT_OS_UNIX     | Specify that the program will run on UNIX/Linux. |
+ *
+ * ## API/Library Selection Definitions
+ *
+ * These are mutually exclusive.
+ *
+ * | Define                | Description                                      |
+ * | --------------------- | ------------------------------------------------ |
+ * | RETROFLAT_API_ALLEGRO | Specify that the program will link Allegro.      |
+ * | RETROFLAT_API_SDL     | Specify that the program will link SDL.          |
+ * | RETROFLAT_API_WIN16   | Specify that the program will use Win 3.1x API.  |
+ * | RETROFLAT_API_WIN32   | Specify that the program will use Win32/NT API.  |
+ *
+ * ## Option Definitions
+ *
+ * These are \b NOT mutually exclusive.
+ *
+ * | Define                | Description                                       |
+ * | --------------------- | ------------------------------------------------- |
+ * | ::RETROFLAT_CLI_SIGIL | Specify the sigil prepended to command-line args. |
+ * | RETROFLAT_NO_CLI_SZ   | Disable ::RETROFLAT_CLI_SZ command-line args.     |
+ * | RETROFLAT_MOUSE       | Force-enable mouse on broken APIs (DANGEROUS!)    |
+ * | RETROFLAT_TXP_R       | Specify R component of bitmap transparent color.  |
+ * | RETROFLAT_TXP_G       | Specify G component of bitmap transparent color.  |
+ * | RETROFLAT_TXP_B       | Specify B component of bitmap transparent color.  |
+ * | RETROFLAT_BITMAP_EXT  | Specify file extension for bitmap assets.         |
+ *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *
- * # Win16 (OpenWatcom)
+ * ## Win16 (OpenWatcom)
  *
  * Compiling projects for Win16 requires the OpenWatcom compiler from
  * https://github.com/open-watcom/open-watcom-v2. Other compilers may work,
@@ -199,6 +241,7 @@
 
 /* === Generic Includes and Defines === */
 
+/* TODO: Mouse is broken under DOS/Allegro. */
 #if defined( RETROFLAT_OS_UNIX ) || defined( RETROFLAT_OS_WIN )
 #define RETROFLAT_MOUSE
 #endif /* RETROFLAT_OS_WIN || RETROFLAT_OS_WIN */
@@ -251,13 +294,18 @@
 #ifdef RETROFLAT_NO_CLI_SZ
 #  define RETROFLAT_CLI_SZ( f )
 #else
+/**
+ * \brief CLI arguments accepted if RETROFLAT_NO_CLI_SZ is not passed as a
+ *        \ref maug_retroflt_cdefs_page.
+ */
 #  define RETROFLAT_CLI_SZ( f ) \
-   f( "-x", 3, "Set the screen width.", retroflat_cli_x ) \
-   f( "-y", 3, "Set the screen height.", retroflat_cli_y )
+   f( RETROFLAT_CLI_SIGIL "x", 3, "Set the screen width.", retroflat_cli_x ) \
+   f( RETROFLAT_CLI_SIGIL "y", 3, "Set the screen height.", retroflat_cli_y )
 #endif /* !RETROFLAT_NO_CLI_SZ */
 
+/*! \brief Default CLI arguments for all RetroFlat programs. */
 #define RETROFLAT_CLI( f ) \
-   f( "-h", 3, "Display help and exit.", retroflat_cli_h ) \
+   f( RETROFLAT_CLI_SIGIL "h", 3, "Display help and exit.", retroflat_cli_h ) \
    RETROFLAT_CLI_SZ( f )
 
 /*! \} */
@@ -296,37 +344,42 @@
 
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
- *        retroflat_load_bitmap().
+ *        retroflat_load_bitmap(). Is a \ref maug_retroflt_cdefs_page.
  */
-#define RETROFLAT_BITMAP_EXT "bmp"
+#ifndef RETROFLAT_BITMAP_EXT
+#  define RETROFLAT_BITMAP_EXT "bmp"
+#endif /* !RETROFLAT_BITMAP_EXT */
 
 /* Transparency background color: black by default, to match Allegro. */
-#  ifndef RETROFLAT_TXP_R
+#ifndef RETROFLAT_TXP_R
 /**
  * \brief Compiler-define-overridable constant indicating the Red value of the
  *        transparency color on platforms that support it (mainly Win16/SDL).
+ *        Is a \ref maug_retroflt_cdefs_page.
  */
 #  define RETROFLAT_TXP_R 0x00
-#  endif /* !RETROFLAT_TXP_R */
+#endif /* !RETROFLAT_TXP_R */
 
-#  ifndef RETROFLAT_TXP_G
+#ifndef RETROFLAT_TXP_G
 /**
  * \brief Compiler-define-overridable constant indicating the Green value of the
  *        transparency color on platforms that support it (mainly Win16/SDL).
+ *        Is a \ref maug_retroflt_cdefs_page.
  */
 #  define RETROFLAT_TXP_G 0x00
-#  endif /* !RETROFLAT_TXP_G */
+#endif /* !RETROFLAT_TXP_G */
 
-#  ifndef RETROFLAT_TXP_B
+#ifndef RETROFLAT_TXP_B
 /**
  * \brief Compiler-define-overridable constant indicating the Blue value of the
  *        transparency color on platforms that support it (mainly Win16/SDL).
+ *        Is a \ref maug_retroflt_cdefs_page.
  */
 #  define RETROFLAT_TXP_B 0x00
-#  endif /* !RETROFLAT_TXP_B */
+#endif /* !RETROFLAT_TXP_B */
 
 /* Convenience macro for auto-locking inside of draw functions. */
-#  define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
+#define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
    if( !retroflat_bitmap_locked( bmp ) ) { \
       lock_ret = retroflat_draw_lock( bmp ); \
       if( RETROFLAT_OK != lock_ret ) { \
@@ -347,13 +400,28 @@ typedef void (*retroflat_loop_iter)(void* data);
  * \{
  */
 
+/*! \brief Struct passed to retroflat_poll_input() to hold return data. */
 struct RETROFLAT_INPUT {
+   /**
+    * \brief X-coordinate of the mouse pointer in pixels if the returned
+    *        event is a mouse click.
+    */
    int mouse_x;
+   /**
+    * \brief Y-coordinate of the mouse pointer in pixels if the returned
+    *        event is a mouse click.
+    */
    int mouse_y;
 };
 
 /*! \} */
 
+/**
+ * \addtogroup maug_retroflt_cli
+ * \{
+ */
+
+/*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
    /**
     * \brief Title to set for the main program Window if applicable on the
@@ -366,8 +434,9 @@ struct RETROFLAT_ARGS {
    int screen_h;
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
-   int state;
 };
+
+/*! \} */
 
 /**
  * \addtogroup maug_retroflt_drawing
@@ -376,40 +445,72 @@ struct RETROFLAT_ARGS {
 
 #ifndef RETROFLAT_LINE_THICKNESS
 /*! \brief Line drawing thickness (only works on some platforms). */
-#define RETROFLAT_LINE_THICKNESS 1
+#  define RETROFLAT_LINE_THICKNESS 1
 #endif /* !RETROFLAT_LINE_THICKNESS */
 
 /*! \} "*/
 
 #ifndef RETROFLAT_FPS
-/* TODO: Support Allegro! */
-/*! \brief Target FPS. */
-#define RETROFLAT_FPS 15
+/**
+ * \brief Target FPS.
+ * \todo FPS currently has no effect in Allegro.
+ */
+#  define RETROFLAT_FPS 15
 #endif /* !RETROFLAT_FPS */
 
 #ifndef RETROFLAT_WINDOW_CLASS
-/*! \brief Unique window class to use on some platforms (e.g. Win32). */
-#define RETROFLAT_WINDOW_CLASS "RetroFlatWindowClass"
+/**
+ * \brief Unique window class to use on some platforms (e.g. Win32).
+ *        Is a \ref maug_retroflt_cdefs_page.
+ */
+#  define RETROFLAT_WINDOW_CLASS "RetroFlatWindowClass"
 #endif /* !RETROFLAT_WINDOW_CLASS */
 
 #ifndef RETROFLAT_WIN_GFX_TIMER_ID
 /**
  * \brief Unique ID for the timer that execute graphics ticks in Win16/Win32.
+ *        Is a \ref maug_retroflt_cdefs_page.
  */
-#define RETROFLAT_WIN_GFX_TIMER_ID 6001
+#  define RETROFLAT_WIN_GFX_TIMER_ID 6001
 #endif /* !RETROFLAT_WIN_GFX_TIMER_ID */
 
 #ifndef RETROFLAT_MSG_MAX
-#define RETROFLAT_MSG_MAX 4096
+/**
+ * \brief Maximum number of characters possible in a message using
+ *        retroflat_message(). Is a \ref maug_retroflt_cdefs_page.
+ */
+#  define RETROFLAT_MSG_MAX 4096
 #endif /* !RETROFLAT_MSG_MAX */
 
 #ifndef RETROFLAT_PATH_MAX
-#define RETROFLAT_PATH_MAX 256
+/*! \brief Maximum size allocated for asset paths. */
+#  define RETROFLAT_PATH_MAX 256
 #endif /* !RETROFLAT_PATH_MAX */
 
-#ifndef RETROFLAT_WIN_STYLE
-#define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME)
-#endif /* !RETROFLAT_WIN_STYLE */
+#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if !defined( RETROFLAT_WIN_STYLE )
+#     define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME)
+#  endif /* !RETROFLAT_WIN_STYLE */
+#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+/**
+ * \addtogroup maug_retroflt_cli
+ * \{
+ */
+
+#if !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_WIN )
+#  define RETROFLAT_CLI_SIGIL "/"
+#elif !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_DOS )
+#  define RETROFLAT_CLI_SIGIL "/"
+#elif !defined( RETROFLAT_CLI_SIGIL )
+/**
+ * \brief Default flag to prepend to CLI arguments. Is "/" on Windows/DOS and
+ *        "-" on other platforms. Can be overridden with a -D flag or define.
+ */
+#  define RETROFLAT_CLI_SIGIL "-"
+#endif /* !RETROFLAT_CLI_SIGIL */
+
+/*! \} */
 
 /* === Platform-Specific Includes and Defines === */
 
@@ -448,7 +549,6 @@ typedef int RETROFLAT_COLOR;
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 
-/* TODO: Handle retval. */
 #  define retroflat_quit( retval ) \
    g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
    g_retval = retval;
@@ -569,9 +669,9 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 
-/* TODO: Handle retval. */
 #  define retroflat_quit( retval ) \
-   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING;
+   g_retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+   g_retval = retval;
 
 #define END_OF_MAIN()
 
@@ -961,6 +1061,8 @@ int retroflat_poll_input();
 #  include <string.h>
 #  include <stdarg.h>
 
+/* TODO: Declare externs in ifelse section for multi-file projects. */
+
 void* g_loop_data = NULL;
 int g_retval = 0;
 
@@ -1212,7 +1314,7 @@ static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
 #ifndef RETROFLAT_NO_CLI_SZ
 
 static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( "-x", arg, 3 ) ) {
+   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "x", arg, 3 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
@@ -1221,7 +1323,7 @@ static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
 }
 
 static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( "-y", arg, 3 ) ) {
+   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "y", arg, 3 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
@@ -1246,8 +1348,6 @@ static int retroflat_parse_args(
       const_i = 0,
       last_i = 0,
       retval = 0;
-
-   args->state = 0; /* Zero out at the start. */
 
    for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
       const_i = 0;
@@ -1769,6 +1869,11 @@ cleanup:
    hdc_win = GetDC( g_window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
+   if( NULL == bmp_out->b ) {
+      retroflat_message( "Error", "Error loading bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
 
    SetDIBits( hdc_win, bmp_out->b, 0,
       bmi->bmiHeader.biHeight, &(buf[offset]), bmi,
