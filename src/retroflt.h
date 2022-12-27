@@ -1138,6 +1138,15 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags );
 
+void retroflat_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
+   int* w_out, int* h_out );
+
+void retroflat_string(
+   struct RETROFLAT_BITMAP* target,
+   const char* str, int str_sz, int x_orig, int y_orig,
+   RETROFLAT_COLOR color, unsigned char flags );
+
 /*! \} */ /* maug_retroflt_bitmap */
 
 /**
@@ -2400,8 +2409,117 @@ cleanup:
 
 #  else
 #     warning "not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
+
+/* === */
+
+void retroflat_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
+   int* w_out, int* h_out
+) {
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   int lock_ret = 0,
+      locked_target_internal = 0;
+   SIZE sz;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( NULL == target ) {
+      target = &(g_screen);
+   }
+
+#  ifdef RETROFLAT_API_ALLEGRO
+
+   /* == Allegro == */
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
+   *w_out = sz.cx;
+   *h_out = sz.cy;
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
+#  else
+#     warning "not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+}
+
+/* === */
+
+void retroflat_string(
+   struct RETROFLAT_BITMAP* target,
+   const char* str, int str_sz, int x_orig, int y_orig,
+   RETROFLAT_COLOR color, unsigned char flags
+) {
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   int lock_ret = 0,
+      locked_target_internal = 0;
+   RECT rect;
+   SIZE sz;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( NULL == target ) {
+      target = &(g_screen);
+   }
+
+#  ifdef RETROFLAT_API_ALLEGRO
+
+   /* == Allegro == */
+
+   /* TODO */
+   textout_ex( target->b, font, str, x_orig, y_orig, color, -1 );
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
+
+   assert( NULL != target->b );
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   memset( &sz, '\0', sizeof( SIZE ) );
+
+   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
+   rect.left = x_orig;
+   rect.top = y_orig;
+   rect.right = (x_orig + sz.cx);
+   rect.bottom = (y_orig + sz.cy);
+
+   SetTextColor( target->hdc_b, color );
+   SetBkMode( target->hdc_b, TRANSPARENT );
+
+   DrawText( target->hdc_b, str, str_sz, &rect, 0 );
+
+cleanup:
+
+   SetBkMode( target->hdc_b, OPAQUE );
+   SetTextColor( target->hdc_b, RETROFLAT_COLOR_BLACK );
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
+#  else
+#     warning "not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+}
+
+/* === */
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int key_out = 0;
