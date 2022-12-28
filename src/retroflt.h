@@ -175,6 +175,7 @@
  * | RETROFLAT_TXP_G       | Specify G component of bitmap transparent color.  |
  * | RETROFLAT_TXP_B       | Specify B component of bitmap transparent color.  |
  * | RETROFLAT_BITMAP_EXT  | Specify file extension for bitmap assets.         |
+ * | RETROFLAT_RESIZABLE   | Allow resizing the RetroFlat window.              |
  *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *
@@ -423,6 +424,10 @@
 
 /*! \} */ /* maug_retroflt_bitmap */
 
+#define retroflat_on_resize( w, h ) \
+   g_screen_w = w; \
+   g_screen_h = h;
+
 /**
  * \brief Prototype for the main loop function passed to retroflat_loop().
  */
@@ -534,6 +539,14 @@ struct RETROFLAT_ARGS {
 #     define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME)
 #  endif /* !RETROFLAT_WIN_STYLE */
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+#if defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_RESIZABLE )
+#     define RETROFLAT_WIN_FLAGS SDL_WINDOW_RESIZABLE
+#  else
+#     define RETROFLAT_WIN_FLAGS 0
+#  endif /* RETROFLAT_RESIZABLE */
+#endif /* RETROFLAT_API_SDL */
 
 #ifdef RETROFLAT_OS_DOS
 #  define RETROFLAT_PATH_SEP '\\'
@@ -1321,12 +1334,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 void* g_loop_data = NULL;
 int g_retval = 0;
+int g_screen_w = 0;
+int g_screen_h = 0;
 
 #  if defined( RETROFLAT_API_SDL )
 
 SDL_Window* g_window = NULL;
-int g_screen_w = 0;
-int g_screen_h = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 int g_mouse_state = 0;
@@ -1338,8 +1351,6 @@ HINSTANCE g_instance;
 HWND g_window;
 MSG g_msg;
 int g_msg_retval = 0;
-int g_screen_w = 0;
-int g_screen_h = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 int g_cmd_show = 0;
@@ -1548,6 +1559,10 @@ static LRESULT CALLBACK WndProc(
             DeleteObject( g_buffer.b );
          }
          PostQuitMessage( 0 );
+         break;
+
+      case WM_SIZE:
+         retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
          break;
 
       case WM_TIMER:
@@ -1804,23 +1819,28 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_h = args->screen_h;
    g_screen_w = args->screen_w;
    g_screen_h = args->screen_h;
+
+   /* Create the main window. */
    g_window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-      args->screen_w, args->screen_h, 0 );
+      args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
    if( NULL == g_window ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
-   g_buffer.surface = SDL_GetWindowSurface( g_window );
-   if( NULL == g_buffer.surface ) {
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
-   g_buffer.renderer = SDL_CreateSoftwareRenderer( g_buffer.surface );
+
+   /* Create the main renderer. */
+   g_buffer.renderer = SDL_CreateRenderer(
+      g_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
    if( NULL == g_buffer.renderer ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
+
+   /* Create the buffer texture. */
+   g_buffer.texture = SDL_CreateTexture( g_buffer.renderer,
+      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      g_screen_w, g_screen_h );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1969,6 +1989,9 @@ cleanup:
    if( NULL != bmp && (&g_buffer) != bmp ) {
       assert( NULL == bmp->renderer );
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
+   } else {
+      /* Target is the screen buffer. */
+      SDL_SetRenderTarget( g_buffer.renderer, g_buffer.texture );
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2041,7 +2064,10 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL == bmp || (&g_buffer) == bmp ) {
       /* Flip the screen. */
-      SDL_UpdateWindowSurface( g_window );
+      SDL_SetRenderTarget( g_buffer.renderer, NULL );
+      SDL_RenderCopyEx(
+         g_buffer.renderer, g_buffer.texture, NULL, NULL, 0, NULL, 0 );
+      SDL_RenderPresent( g_buffer.renderer );
    } else {
       /* It's a bitmap. */
 
@@ -2979,6 +3005,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
       /* Flush key buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
+
+   } else if( SDL_WINDOWEVENT == event.type ) {
+      switch( event.window.event ) {
+      case SDL_WINDOWEVENT_RESIZED:
+         retroflat_on_resize( event.window.data1, event.window.data2 );
+      }
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3015,6 +3047,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    return key_out;
 }
+
+#else
+
+extern int g_retval;
+extern int g_screen_w;
+extern int g_screen_h;
 
 #endif /* RETROFLT_C */
 
