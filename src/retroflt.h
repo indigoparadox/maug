@@ -158,7 +158,8 @@
  * | Define                | Description                                      |
  * | --------------------- | ------------------------------------------------ |
  * | RETROFLAT_API_ALLEGRO | Specify that the program will link Allegro.      |
- * | RETROFLAT_API_SDL     | Specify that the program will link SDL.          |
+ * | RETROFLAT_API_SDL1    | Specify that the program will link SDL 1.2.      |
+ * | RETROFLAT_API_SDL2    | Specify that the program will link SDL 2.        |
  * | RETROFLAT_API_WIN16   | Specify that the program will use Win 3.1x API.  |
  * | RETROFLAT_API_WIN32   | Specify that the program will use Win32/NT API.  |
  *
@@ -540,13 +541,19 @@ struct RETROFLAT_ARGS {
 #  endif /* !RETROFLAT_WIN_STYLE */
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#if defined( RETROFLAT_API_SDL )
+#if defined( RETROFLAT_API_SDL2 )
 #  if defined( RETROFLAT_RESIZABLE )
 #     define RETROFLAT_WIN_FLAGS SDL_WINDOW_RESIZABLE
 #  else
 #     define RETROFLAT_WIN_FLAGS 0
 #  endif /* RETROFLAT_RESIZABLE */
-#endif /* RETROFLAT_API_SDL */
+#endif /* RETROFLAT_API_SDL2 */
+
+#if defined( RETROFLAT_API_SDL1 )
+#  define RETROFLAT_SDL_CC_FLAGS (SDL_RLEACCEL | SDL_SRCCOLORKEY)
+#elif defined( RETROFLAT_API_SDL2 )
+#  define RETROFLAT_SDL_CC_FLAGS (SDL_TRUE)
+#endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
 #ifdef RETROFLAT_OS_DOS
 #  define RETROFLAT_PATH_SEP '\\'
@@ -670,7 +677,7 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_KEY_HOME	KEY_HOME
 #  define RETROFLAT_KEY_END	KEY_END
 
-#elif defined( RETROFLAT_API_SDL )
+#elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #  include <SDL.h>
 #  include <SDL_ttf.h>
@@ -678,8 +685,10 @@ typedef int RETROFLAT_COLOR;
 struct RETROFLAT_BITMAP {
    unsigned char flags;
    SDL_Surface* surface;
+#ifndef RETROFLAT_API_SDL1
    SDL_Texture* texture;
    SDL_Renderer* renderer;
+#endif /* !RETROFLAT_API_SDL1 */
 };
 
 #  define RETROFLAT_KEY_UP	SDLK_UP
@@ -1337,9 +1346,11 @@ int g_retval = 0;
 int g_screen_w = 0;
 int g_screen_h = 0;
 
-#  if defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
+#     ifndef RETROFLAT_API_SDL1
 SDL_Window* g_window = NULL;
+#     endif /* !RETROFLAT_API_SDL1 */
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 int g_mouse_state = 0;
@@ -1583,7 +1594,7 @@ static LRESULT CALLBACK WndProc(
 
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
-#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
@@ -1606,8 +1617,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    } while( 0 < g_msg_retval );
 
 #  else
-#     warning "not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#     warning "loop not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
    return g_retval;
@@ -1623,7 +1634,7 @@ void retroflat_message( const char* title, const char* format, ... ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    /* TODO: Use a dialog box? */
    fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -1794,12 +1805,26 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
    if( NULL == g_buffer.b ) {
       allegro_message( "unable to allocate screen buffer!" );
+      retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 )
 
-   /* == SDL == */
+   /* == SDL1 == */
+
+   g_buffer.surface = SDL_SetVideoMode( args->screen_w, args->screen_h, 8,
+      SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT );
+   if( NULL == g_buffer.surface ) {
+      retroflat_message(
+         "Error", "unable to allocate screen buffer: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
 
    if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
       retroflat_message(
@@ -1928,9 +1953,13 @@ void retroflat_shutdown( int retval ) {
 
    retroflat_destroy_bitmap( &g_buffer );
 
-#elif defined( RETROFLAT_API_SDL )
+#elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
+
+#  ifndef RETROFLAT_API_SDL1
+   SDL_DestroyWindow( g_window );
+#  endif /* !RETROFLAT_API_SDL1 */
 
    TTF_Quit();
 
@@ -1954,7 +1983,7 @@ void retroflat_shutdown( int retval ) {
 
 #else
 #  warning "shutdown not implemented"
-#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
+#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
 }
 
@@ -1982,9 +2011,13 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 cleanup:
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 )
 
-   /* == SDL == */
+   /* == SDL1 == */
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
 
    if( NULL != bmp && (&g_buffer) != bmp ) {
       assert( NULL == bmp->renderer );
@@ -2060,7 +2093,21 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif /* RETROFLAT_MOUSE */
    vsync();
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
+   if( NULL == bmp ) {
+      bmp = (&g_buffer);
+   }
+
+   if( (&g_buffer) == bmp ) {
+      SDL_Flip( bmp->surface );
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
 
    if( NULL == bmp || (&g_buffer) == bmp ) {
       /* Flip the screen. */
@@ -2165,7 +2212,9 @@ int retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = 0;
-#if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
+#if defined( RETROFLAT_API_SDL1 )
+   SDL_Surface* tmp_surface = NULL;
+#elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
    long i, x, y, w, h, bpp, offset, sz, read;
    char* buf = NULL;
@@ -2197,13 +2246,25 @@ int retroflat_load_bitmap(
       retval = RETROFLAT_ERROR_BITMAP;
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
-   bmp_out->renderer = NULL;
+#     ifdef RETROFLAT_API_SDL1
+   tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
+   if( NULL == tmp_surface ) {
+      retroflat_message(
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = 0;
+      goto cleanup;
+   }
 
+   bmp_out->surface = SDL_DisplayFormat( tmp_surface );
+#     else
+   bmp_out->renderer = NULL;
+   
    bmp_out->surface = SDL_LoadBMP( filename_path );
+#     endif /* RETROFLAT_API_SDL1 */
    if( NULL == bmp_out->surface ) {
       retroflat_message(
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -2211,10 +2272,11 @@ int retroflat_load_bitmap(
       goto cleanup;
    }
 
-   SDL_SetColorKey( bmp_out->surface, SDL_TRUE,
+   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
+#     ifndef RETROFLAT_API_SDL1
    bmp_out->texture =
       SDL_CreateTextureFromSurface( g_buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
@@ -2227,8 +2289,15 @@ int retroflat_load_bitmap(
       }
       goto cleanup;
    }
+#     endif /* !RETROFLAT_API_SDL1 */
 
 cleanup:
+
+#     ifdef RETROFLAT_API_SDL1
+   if( NULL != tmp_surface ) {
+      SDL_FreeSurface( tmp_surface );
+   }
+#     endif /* RETROFLAT_API_SDL1 */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -2334,16 +2403,20 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
    destroy_bitmap( bitmap->b );
    bitmap->b = NULL;
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    assert( NULL != bitmap );
-   assert( NULL != bitmap->texture );
    assert( NULL != bitmap->surface );
+
+#     ifndef RETROFLAT_API_SDL1
+   assert( NULL != bitmap->texture );
 
    SDL_DestroyTexture( bitmap->texture );
    bitmap->texture = NULL;
+#     endif /* !RETROFLAT_API_SDL1 */
+
    SDL_FreeSurface( bitmap->surface );
-   bitmap->texture = NULL;
+   bitmap->surface = NULL;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -2361,7 +2434,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
 
 #  else
 #     warning "destroy bitmap not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 /* === */
@@ -2370,14 +2443,14 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0;
    int locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0;
    int locked_src_internal = 0;
    int locked_target_internal = 0;
-#  endif /* RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_buffer);
@@ -2401,7 +2474,7 @@ void retroflat_blit_bitmap(
       blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -2413,16 +2486,22 @@ void retroflat_blit_bitmap(
    SDL_Rect src_rect = {
       s_x, s_y, w, h };
 
+#     ifdef RETROFLAT_API_SDL1
+   SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
+#     else
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
    SDL_RenderCopy( target->renderer, src->texture, &src_rect, &dest_rect );
+#     endif /* RETROFLAT_API_SDL1 */
 
+#     ifndef RETROFLAT_API_SDL1
 cleanup:
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
    }
+#     endif /* !RETROFLAT_API_SDL1 */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -2488,7 +2567,7 @@ void retroflat_rect(
       rect( target->b, x, y, x + w, y + h, color );
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
 
    SDL_Rect area;
    int locked_target_internal = 0;
@@ -2551,7 +2630,7 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags
 ) {
-#  if defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
       locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2573,7 +2652,7 @@ void retroflat_line(
    assert( NULL != target->b );
    line( target->b, x1, y1, x2, y2, color );
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -2631,7 +2710,7 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, unsigned char flags
 ) {
-#  if defined( RETROFLAT_API_SDL )
+#  if defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
       locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2657,7 +2736,7 @@ void retroflat_ellipse(
       ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -2700,7 +2779,7 @@ cleanup:
 
 #  else
 #     warning "ellipse not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 /* === */
@@ -2712,13 +2791,13 @@ void retroflat_string_sz(
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
    TTF_Font* font_data = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
    SIZE sz;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_buffer);
@@ -2748,7 +2827,7 @@ cleanup:
       destroy_font( font_data );
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -2794,7 +2873,7 @@ cleanup:
 
 #  else
 #     warning "string sz not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 /* === */
@@ -2807,7 +2886,7 @@ void retroflat_string(
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
    TTF_Font* font_data = NULL;
    SDL_Surface* str_surface = NULL;
    SDL_Texture* str_texture = NULL;
@@ -2817,7 +2896,7 @@ void retroflat_string(
       locked_target_internal = 0;
    RECT rect;
    SIZE sz;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
       target = &(g_buffer);
@@ -2845,7 +2924,7 @@ cleanup:
       destroy_font( font_data );
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -2928,7 +3007,7 @@ cleanup:
 
 #  else
 #     warning "string not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 /* === */
@@ -2961,7 +3040,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       return (readkey() >> 8);
    }
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL2 ) || defined( RETROFLAT_API_SDL1 )
 
    /* == SDL == */
 
@@ -3006,11 +3085,13 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* Flush key buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
 
+#  if !defined( RETROFLAT_API_SDL1 )
    } else if( SDL_WINDOWEVENT == event.type ) {
       switch( event.window.event ) {
       case SDL_WINDOWEVENT_RESIZED:
          retroflat_on_resize( event.window.data1, event.window.data2 );
       }
+#  endif /* !RETROFLAT_API_SDL1 */
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3043,7 +3124,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #  else
 #     warning "poll input not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return key_out;
 }
