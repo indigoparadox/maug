@@ -594,6 +594,11 @@ struct RETROFLAT_ARGS {
 
 #  include <allegro.h>
 
+#  ifdef RETROFLAT_OS_DOS
+#     include <dos.h>
+#     include <conio.h>
+#  endif /* RETROFLAT_OS_DOS */
+
 struct RETROFLAT_BITMAP {
    unsigned char flags;
    BITMAP* b;
@@ -1173,6 +1178,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
  */
 void retroflat_shutdown( int retval );
 
+unsigned long int retroflat_get_ms();
+
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{
@@ -1278,6 +1285,8 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, unsigned char flags );
 
+void retroflat_cursor( struct RETROFLAT_BITMAP* target, unsigned char flags );
+
 /**
  * \brief Get the size in pixels of a text string when drawn with a given font
  *        by retroflat_string().
@@ -1346,7 +1355,14 @@ int g_retval = 0;
 int g_screen_w = 0;
 int g_screen_h = 0;
 
-#  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  if defined( RETROFLAT_API_ALLEGRO )
+
+unsigned int g_last_mouse = 0;
+unsigned int g_last_mouse_x = 0;
+unsigned int g_last_mouse_y = 0;
+volatile unsigned long g_ms;
+
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #     ifndef RETROFLAT_API_SDL1
 SDL_Window* g_window = NULL;
@@ -1739,9 +1755,22 @@ cleanup:
    return retval;
 }
 
+#ifdef RETROFLAT_API_ALLEGRO
+
+void retroflat_ms_tick() {
+   g_ms++;
+}
+
+#endif /* RETROFLAT_API_ALLEGRO */
+
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int retval = 0;
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
+# if 0
+   union REGS regs;
+   struct SREGS sregs;
+#endif
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
    RECT wr = { 0, 0, 0, 0 };
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -1770,10 +1799,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    install_keyboard();
-#     ifdef RETROFLAT_MOUSE
+#     if !defined( RETROFLAT_OS_DOS )
    /* XXX: Broken in DOS. */
    install_timer();
-#     endif /* RETROFLAT_MOUSE */
+   install_int( retroflat_ms_tick, 1 );
+#     endif /* RETROFLAT_OS_DOS */
 
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
@@ -1791,16 +1821,25 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( NULL != args->title ) {
       set_window_title( args->title );
    }
-#     endif /* !RETROFLAT_OS_DOS */
 
-#     ifdef RETROFLAT_MOUSE
    /* XXX: Broken in DOS. */
    if( 0 > install_mouse() ) {
       allegro_message( "could not setup mouse!" );
       retval = RETROFLAT_ERROR_MOUSE;
       goto cleanup;
    }
-#     endif /* RETROFLAT_MOUSE */
+#     endif /* !RETROFLAT_OS_DOS */
+
+#     ifdef RETROFLAT_OS_DOS
+#if 0
+   regs.w.ax = 0x9;
+   regs.w.bx = 0x0;
+   regs.w.cx = 0x0;
+   regs.x.edx = FP_OFF( g_mouse_cursor );
+   sregs.es = FP_SEG( g_mouse_cursor );
+   int386x( 0x33, &regs, &regs, &sregs );
+#endif
+#     endif /* RETROFLAT_OS_DOS */
 
    g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
    if( NULL == g_buffer.b ) {
@@ -1985,6 +2024,30 @@ void retroflat_shutdown( int retval ) {
 #  warning "shutdown not implemented"
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
+}
+
+/* === */
+
+unsigned long int retroflat_get_ms() {
+#  if defined( RETROFLAT_API_ALLEGRO )
+
+   /* == Allegro == */
+
+   return g_ms;
+
+#  elif defined( RETROFLAT_API_SDL )
+   
+   /* == SDL == */
+
+   return SDL_GetTicks();
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/32 == */
+
+   return g_ms;
+
+#  endif /* RETROFLAT_API_* */
 }
 
 /* === */
@@ -2784,6 +2847,23 @@ cleanup:
 
 /* === */
 
+void retroflat_cursor( struct RETROFLAT_BITMAP* target, unsigned char flags ) {
+#if 0
+   char mouse_str[11] = "";
+
+   snprintf( mouse_str, 10, "%02d, %02d", g_last_mouse_x, g_last_mouse_y );
+
+   retroflat_string(
+      target, RETROFLAT_COLOR_BLACK,
+      mouse_str, 10, NULL, 0, 0, 0 );
+   retroflat_rect(
+      target, RETROFLAT_COLOR_BLACK,
+      g_last_mouse_x - 5, g_last_mouse_y - 5, 10, 10, 0 );
+#endif
+}
+
+/* === */
+
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
    const char* font_str, int* w_out, int* h_out
@@ -3013,6 +3093,10 @@ cleanup:
 /* === */
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+#  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
+   union REGS inregs;
+   union REGS outregs;
+#  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
    int key_out = 0;
 
    assert( NULL != input );
@@ -3021,8 +3105,32 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* == Allegro == */
 
-#     ifdef RETROFLAT_MOUSE
-   /* XXX: Broken in DOS. */
+#     ifdef RETROFLAT_OS_DOS
+
+   /* Poll the mouse. */
+   inregs.w.ax = 3;
+   int386( 0x33, &inregs, &outregs );
+
+   if(
+      1 == outregs.x.ebx && /* Left button clicked. */
+      outregs.w.cx != g_last_mouse_x &&
+      outregs.w.dx != g_last_mouse_y
+   ) { 
+      input->mouse_x = outregs.w.cx;
+      input->mouse_y = outregs.w.dx;
+
+      /* Prevent repeated clicks. */
+      g_last_mouse_x = input->mouse_x;
+      g_last_mouse_y = input->mouse_y;
+
+      return RETROFLAT_MOUSE_B_LEFT;
+   } else {
+      g_last_mouse_x = outregs.w.cx;
+      g_last_mouse_y = outregs.w.dx;
+   }
+
+#     else
+   /* Allegro mouse is broken in DOS. */
    poll_mouse();
    if( mouse_b & 0x01 ) {
       input->mouse_x = mouse_x;
@@ -3033,7 +3141,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       input->mouse_y = mouse_y;
       return RETROFLAT_MOUSE_B_RIGHT;
    }
-#     endif /* RETROFLAT_MOUSE */
+#     endif /* RETROFLAT_OS_DOS */
 
    poll_keyboard();
    if( keypressed() ) {
@@ -3134,6 +3242,9 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 extern int g_retval;
 extern int g_screen_w;
 extern int g_screen_h;
+extern int g_screen_v_w;
+extern int g_screen_v_h;
+extern unsigned char g_retroflat_flags;
 
 #endif /* RETROFLT_C */
 
