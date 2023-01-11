@@ -2982,6 +2982,10 @@ void retroflat_string(
       target = &(g_buffer);
    }
 
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
 #  ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
