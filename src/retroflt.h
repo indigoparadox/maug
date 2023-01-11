@@ -244,6 +244,8 @@
  * \}
  */
 
+#  include <stdarg.h>
+
 /* === Generic Includes and Defines === */
 
 #define RETROFLAT_COLOR_TABLE( f ) \
@@ -467,6 +469,18 @@ struct RETROFLAT_INPUT {
 };
 
 /*! \} */ /* maug_retroflt_input */
+
+#ifndef RETROFLAT_ITOA_DIGITS_MAX
+#define RETROFLAT_ITOA_DIGITS_MAX 32
+#endif /* !RETROFLAT_ITOA_DIGITS_MAX */
+
+union RETROFLAT_FMT_SPEC {
+   int d;
+   char c;
+   unsigned char x;
+   void* p;
+   char* s;
+};
 
 /**
  * \addtogroup maug_retroflt_cli
@@ -1043,9 +1057,16 @@ extern int gc_retroflat_win_rgbs[];
       HINSTANCE hInstance, HINSTANCE hPrevInstance, \
       LPSTR lpCmdLine, int nCmdShow \
    ) { \
+      const char* cmd_line; \
+      char** rf_argv = NULL; \
+      int rf_argc = 0; \
+      int retval = 0; \
       g_instance = hInstance; \
       g_cmd_show = nCmdShow; \
-      return main( __argc, __argv ); \
+      rf_argv = retroflat_win_cli( lpCmdLine, &rf_argc ); \
+      retval = main( rf_argc, rf_argv ); \
+      free( rf_argv ); \
+      return retval; \
    }
 
 #else
@@ -1202,6 +1223,26 @@ typedef int RETROFLAT_COLOR;
  *        loop_iter with data as an argument until retroflat_quit() is called.
  */
 int retroflat_loop( retroflat_loop_iter iter, void* data );
+
+#define retroflat_bufcat( c, buf, buf_idx, buf_sz, cleanup ) \
+   buf[buf_idx++] = c; \
+   if( buf_idx >= buf_sz ) { goto cleanup; }
+
+#define retroflat_bufpad( pad_c, pad_sz, i, buf, buf_idx, buf_sz, cleanup ) \
+   i = 0; \
+   while( i < pad_sz ) { \
+      retroflat_bufcat( pad_c, buffer, buffer_idx, buffer_sz, cleanup ); \
+      i++; \
+   }
+
+int retroflat_digits( int num, int base );
+
+int retroflat_itoa( int num, char* dest, int dest_sz, int base );
+
+void retroflat_vsnprintf(
+   char* buffer, int buffer_sz, const char* fmt, va_list vargs );
+
+void retroflat_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
 
 /**
  * \brief Display a message in a dialog box and/or on stderr.
@@ -1415,7 +1456,6 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>
-#  include <stdarg.h>
 
 /* TODO: Declare externs in ifelse section for multi-file projects. */
 
@@ -1673,7 +1713,67 @@ static LRESULT CALLBACK WndProc(
    return 0;
 }
 
+char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
+   char** argv_out = NULL;
+   int i = 0,
+      arg_iter = 0,
+      arg_start = 0,
+      arg_idx = 0,
+      arg_longest = 10; /* Program name. */
+
+   /* Get the number of args. */
+   *argc_out = 1; /* Program name. */
+   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
+      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
+         arg_iter++;
+      } else if( 0 < i ) {
+         (*argc_out)++;
+         if( arg_iter > arg_longest ) {
+            /* This is the new longest arg. */
+            arg_longest = arg_iter;
+         }
+         arg_iter = 0;
+      }
+   }
+
+   argv_out = calloc( *argc_out, sizeof( char* ) );
+   assert( NULL != argv_out );
+
+   /* NULL program name. */
+   argv_out[0] = calloc( 1, sizeof( char ) );
+
+   /* Copy args into array. */
+   arg_idx = 1;
+   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
+      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
+         /* If this isn't a WS char, it's an arg. */
+         if( 0 < i && ' ' == cmd_line[i - 1] ) {
+            /* If this is first non-WS char, it's start of a new arg. */
+            arg_start = i;
+            arg_iter = 0;
+         }
+         arg_iter++;
+         continue;
+      }
+
+      if( 0 < i && ' ' != cmd_line[i - 1] ) {
+         /* If this is first WS char, it's the end of an arg. */
+         assert( NULL == argv_out[arg_idx] );
+         argv_out[arg_idx] = calloc( arg_iter + 1, sizeof( char ) );
+         assert( NULL != argv_out[arg_idx] );
+         strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
+         arg_idx++; /* Start next arg. */
+         arg_iter = 0; /* New arg is 0 long. */
+         arg_start = i; /* New arg starts here (maybe). */
+      }
+   }
+
+   return argv_out;
+}
+
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+/* === */
 
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
@@ -1707,13 +1807,219 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    return g_retval;
 }
 
+/* === */
+
+int retroflat_digits( int num, int base ) {
+   int digits = 0;
+   int negative = 0;
+
+   if( 0 > num ) {
+      num *= -1;
+      negative = 1;
+   }
+
+   while( 0 < num ) {
+      num /= base;
+      digits++;
+   }
+
+   if( 0 == digits ) {
+      digits = 1; /* 0 */
+   }
+
+   if( negative ) {
+      digits++; /* - symbol */
+   }
+
+   return digits;
+}
+
+/* === */
+
+int retroflat_itoa( int num, char* dest, int dest_sz, int base ) {
+   int rem;
+   int digits;
+   int digits_done = 0;
+   int dest_idx = 0;
+   int negative = 0;
+
+   digits = retroflat_digits( num, base );
+   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
+   assert( digits < dest_sz );
+
+   /* Handle 0 explicitly, otherwise empty string is printed for 0. */
+   if( 0 == num ) {
+      dest[0] = '0';
+      digits_done++;
+   } else if( 0 > num ) {
+      num *= -1;
+      negative = 1;
+   }
+
+   dest_idx += digits;
+   while( 0 != num ) {
+      /* Get the 1's place. */
+      rem = num % base;
+      dest[--dest_idx] = (9 < rem) ? 
+         /* > 10, so it's a letter. */
+         (rem - 10) + 'a' :
+         /* < 10, so it's a number. */
+         rem + '0';
+      /* Move the next place value into range. */
+      num /= base;
+      digits_done++;
+   }
+   while( digits_done < digits ) {
+      dest[--dest_idx] = '0';
+      digits_done++;
+   }
+   if( negative ) {
+      dest[dest_idx] = '-';
+   }
+   dest[digits] = '\0';
+
+   return digits;
+}
+
+/* === */
+
+void retroflat_vsnprintf(
+   char* buffer, int buffer_sz, const char* fmt, va_list vargs
+) {
+   int i = 0, j = 0;
+   char last = '\0';
+   union RETROFLAT_FMT_SPEC spec;
+   int pad_len = 0;
+   char c;
+   char pad_char = ' ';
+   int buffer_idx = 0;
+
+   for( i = 0 ; '\0' != fmt[i] ; i++ ) {
+      c = fmt[i]; /* Separate so we can play tricks below. */
+ 
+      if( '%' == last ) {
+         /* Conversion specifier encountered. */
+         memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) );
+         switch( fmt[i] ) {
+            case 's':
+               spec.s = va_arg( vargs, char* );
+
+               /* Print string. */
+               j = 0;
+               while( '\0' != spec.s[j] ) {
+                  retroflat_bufcat( spec.s[j++], buffer, buffer_idx,
+                     buffer_sz, cleanup );
+               }
+               break;
+
+            case 'u':
+            case 'd':
+               spec.d = va_arg( vargs, int );
+               
+               /* Print padding. */
+               pad_len -= retroflat_digits( spec.d, 10 );
+               retroflat_bufpad( pad_char, pad_len, j,
+                  buffer, buffer_idx, buffer_sz, cleanup );
+
+               /* Print number. */
+               buffer_idx += retroflat_itoa(
+                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
+               break;
+
+            case 'x':
+               spec.d = va_arg( vargs, int );
+
+               /* Print padding. */
+               pad_len -= retroflat_digits( spec.d, 16 );
+               retroflat_bufpad( pad_char, pad_len, j,
+                  buffer, buffer_idx, buffer_sz, cleanup );
+
+               /* Print number. */
+               buffer_idx += retroflat_itoa(
+                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 16 );
+               break;
+
+            case 'c':
+               spec.c = va_arg( vargs, int );
+
+               /* Print padding. */
+               pad_len -= 1;
+               retroflat_bufpad( pad_char, pad_len, j,
+                  buffer, buffer_idx, buffer_sz, cleanup );
+
+               /* Print char. */
+               retroflat_bufcat( spec.c, buffer, buffer_idx,
+                  buffer_sz, cleanup );
+               break;
+
+            case '%':
+               /* Literal % */
+               last = '\0';
+               retroflat_bufcat( '%', buffer, buffer_idx, buffer_sz, cleanup );
+               break;
+
+            case '0':
+               /* If we haven't started counting padding with a non-zero number,
+                * this must be a 0-padding signifier.
+                */
+               if( 0 >= pad_len ) {
+                  pad_char = '0';
+                  c = '%';
+                  break;
+               }
+               /* If we've already started parsing padding count digits, then
+                * fall through below as a regular number.
+                */
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+               /* Handle multi-digit qty padding. */
+               pad_len *= 10;
+               pad_len += (c - '0'); /* Convert from char to int. */
+               c = '%';
+               break;
+         }
+      } else if( '%' != c ) {
+         pad_char = ' '; /* Reset padding. */
+         pad_len = 0; /* Reset padding. */
+
+         /* Print non-escape characters verbatim. */
+         retroflat_bufcat( c, buffer, buffer_idx,
+            buffer_sz, cleanup );
+      }
+
+      last = c;
+   }
+
+cleanup:
+   return;
+}
+
+/* === */
+
+void retroflat_snprintf( char* buffer, int buffer_sz, const char* fmt, ... ) {
+   va_list vargs;
+
+   va_start( vargs, fmt );
+   retroflat_vsnprintf( buffer, buffer_sz, fmt, vargs );
+   va_end( vargs );
+}
+
+/* === */
+
 void retroflat_message( const char* title, const char* format, ... ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
-   vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
+   retroflat_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
@@ -1730,6 +2036,8 @@ void retroflat_message( const char* title, const char* format, ... ) {
 
    va_end( vargs );
 }
+
+/* === */
 
 static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
    int i = 0;
@@ -2410,7 +2718,7 @@ int retroflat_load_bitmap(
 
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
-   snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
+   retroflat_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
       g_retroflat_assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
 
@@ -2969,7 +3277,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, unsigned char flags ) {
 #if 0
    char mouse_str[11] = "";
 
-   snprintf( mouse_str, 10, "%02d, %02d", g_last_mouse_x, g_last_mouse_y );
+   retroflat_snprintf(
+      mouse_str, 10, "%02d, %02d", g_last_mouse_x, g_last_mouse_y );
 
    retroflat_string(
       target, RETROFLAT_COLOR_BLACK,
