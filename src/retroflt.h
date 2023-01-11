@@ -1053,7 +1053,6 @@ extern int gc_retroflat_win_rgbs[];
       HINSTANCE hInstance, HINSTANCE hPrevInstance, \
       LPSTR lpCmdLine, int nCmdShow \
    ) { \
-      const char* cmd_line; \
       char** rf_argv = NULL; \
       int rf_argc = 0; \
       int retval = 0; \
@@ -2701,13 +2700,14 @@ int retroflat_load_bitmap(
    SDL_Surface* tmp_surface = NULL;
 #elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
-   long i, x, y, w, h, bpp, offset, sz, read;
+#  if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
-#if defined (RETROFLAT_API_WIN32 )
+   long int i, x, y, w, h, bpp, offset, sz, read;
+#  elif defined( RETROFLAT_API_WIN32 )
    BITMAP bm;
-#endif /* RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_WIN32 */
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
@@ -2857,6 +2857,7 @@ cleanup:
 
 cleanup:
 
+#     ifdef RETROFLAT_API_WIN16
    if( NULL != buf ) {
       free( buf );
    }
@@ -2868,6 +2869,7 @@ cleanup:
    if( (HDC)NULL != hdc_win ) {
       ReleaseDC( g_window, hdc_win );
    }
+#     endif /* RETROFLAT_API_WIN16 */
 
 #  else
 #     warning "load bitmap not implemented"
@@ -3256,7 +3258,7 @@ cleanup:
 cleanup:
 
    retroflat_win_cleanup_brush( old_brush, target )
-   retroflat_win_cleanup_pen( old_brush, target )
+   retroflat_win_cleanup_pen( old_pen, target )
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
