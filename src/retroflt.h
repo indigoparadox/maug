@@ -470,10 +470,6 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_input */
 
-#ifndef RETROFLAT_ITOA_DIGITS_MAX
-#define RETROFLAT_ITOA_DIGITS_MAX 32
-#endif /* !RETROFLAT_ITOA_DIGITS_MAX */
-
 union RETROFLAT_FMT_SPEC {
    int d;
    char c;
