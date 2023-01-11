@@ -1554,7 +1554,6 @@ static LRESULT CALLBACK WndProc(
    PAINTSTRUCT ps;
    HDC hdc_win = (HDC)NULL;
    BITMAP srcBitmap;
-   HBITMAP oldHbm;
    int screen_initialized = 0;
 
    switch( message ) {
