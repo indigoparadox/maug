@@ -852,10 +852,22 @@ struct RETROFLAT_BITMAP {
 
 typedef COLORREF RETROFLAT_COLOR;
 
+
+#ifdef RETROFLT_C
+
 #  define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
 const int RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
+
+#else
+
+#  define RETROFLAT_COLOR_TABLE_WIN_EXT( idx, name_l, name_u, r, g, b ) \
+extern const int RETROFLAT_COLOR_ ## name_u;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_EXT )
+
+#endif /* RETROFLT_C */
 
 /* === Setup Brush Cache === */
 
@@ -872,9 +884,17 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
       gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
    }
 
+#ifdef RETROFLT_C
+
 HBRUSH gc_retroflat_win_brushes[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRUSHES )
 };
+
+#else
+
+extern HBRUSH gc_retroflat_win_brushes[];
+
+#endif /* RETROFLT_C */
 
 /* === End Setup Brush Cache === */
 
@@ -893,9 +913,17 @@ HBRUSH gc_retroflat_win_brushes[] = {
       gc_retroflat_win_pens[idx] = (HPEN)NULL; \
    }
 
+#ifdef RETROFLT_C
+
 HPEN gc_retroflat_win_pens[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENS )
 };
+
+#else
+
+extern gc_retroflat_win_pens[];
+
+#endif /* RETROFLT_C */
 
 /* === End Setup Pen Cache === */
 
@@ -905,9 +933,17 @@ HPEN gc_retroflat_win_pens[] = {
 #  define RETROFLAT_COLOR_TABLE_WIN_RGBS( idx, name_l, name_u, r, g, b ) \
    gc_retroflat_win_rgbs[idx] = RGB( r, g, b );
 
+#ifdef RETROFLT_C
+
 int gc_retroflat_win_rgbs[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS_INIT )
 };
+
+#else
+
+extern int gc_retroflat_win_rgbs[];
+
+#endif /* RETROFLT_C */
 
 /* Create a brush and set it to the target HDC. */
 #  define retroflat_win_setup_brush( old_brush, target, color, flags ) \
@@ -1786,12 +1822,15 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 void retroflat_add_arg(
    const char* arg, int arg_sz, const char* help, int help_sz,
    retroflat_cli_cb cb
 ) {
    int slot_idx = 0;
 
+   /* Find empty arg slot. */
    while(
       '\0' != g_retroflat_cli_args[slot_idx][0] &&
       RETROFLAT_CLI_ARG_LIST_SZ_MAX > slot_idx
@@ -1799,6 +1838,7 @@ void retroflat_add_arg(
       slot_idx++;
    }
 
+   /* Sanity checking and sizing. */
    if( RETROFLAT_CLI_ARG_LIST_SZ_MAX <= slot_idx ) {
       retroflat_message( "Error", "Too many command line args requested!" );
       return;
@@ -1814,6 +1854,8 @@ void retroflat_add_arg(
    }
    assert( help_sz < RETROFLAT_CLI_ARG_HELP_SZ_MAX );
 
+   /* Add arg to arrays. */
+
    strncpy( g_retroflat_cli_args[slot_idx], arg, arg_sz );
    g_retroflat_cli_args[slot_idx + 1][0] = '\0';
    
@@ -1827,6 +1869,8 @@ void retroflat_add_arg(
    g_retroflat_cli_callbacks[slot_idx + 1] = NULL;
 }
 
+/* === */
+
 #ifdef RETROFLAT_API_ALLEGRO
 
 void retroflat_ms_tick() {
@@ -1834,6 +1878,8 @@ void retroflat_ms_tick() {
 }
 
 #endif /* RETROFLAT_API_ALLEGRO */
+
+/* === */
 
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int retval = 0;
