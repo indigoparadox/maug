@@ -471,9 +471,9 @@ struct RETROFLAT_INPUT {
 /*! \} */ /* maug_retroflt_input */
 
 union RETROFLAT_FMT_SPEC {
-   int d;
+   long int d;
+   long unsigned int u;
    char c;
-   unsigned char x;
    void* p;
    char* s;
 };
@@ -1230,9 +1230,30 @@ int retroflat_loop( retroflat_loop_iter iter, void* data );
       i++; \
    }
 
-int retroflat_digits( int num, int base );
+int retroflat_digits( long int num, int base );
 
-int retroflat_itoa( int num, char* dest, int dest_sz, int base );
+#define retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad ) \
+   dest_idx += digits; \
+   while( 0 != num ) { \
+      /* Get the 1's place. */ \
+      rem = num % base; \
+      dest[--dest_idx] = (9 < rem) ? \
+         /* > 10, so it's a letter. */ \
+         (rem - 10) + 'a' : \
+         /* < 10, so it's a number. */ \
+         rem + '0'; \
+      /* Move the next place value into range. */ \
+      num /= base; \
+      digits_done++; \
+   } \
+   while( digits_done < digits ) { \
+      dest[--dest_idx] = '0'; \
+      digits_done++; \
+   }
+
+int retroflat_itoa( long int num, char* dest, int dest_sz, int base );
+
+int retroflat_utoa( long unsigned int num, char* dest, int dest_sz, int base );
 
 void retroflat_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
@@ -1803,7 +1824,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 /* === */
 
-int retroflat_digits( int num, int base ) {
+int retroflat_digits( long int num, int base ) {
    int digits = 0;
    int negative = 0;
 
@@ -1830,8 +1851,8 @@ int retroflat_digits( int num, int base ) {
 
 /* === */
 
-int retroflat_itoa( int num, char* dest, int dest_sz, int base ) {
-   int rem;
+int retroflat_itoa( long int num, char* dest, int dest_sz, int base ) {
+   long int rem;
    int digits;
    int digits_done = 0;
    int dest_idx = 0;
@@ -1850,26 +1871,35 @@ int retroflat_itoa( int num, char* dest, int dest_sz, int base ) {
       negative = 1;
    }
 
-   dest_idx += digits;
-   while( 0 != num ) {
-      /* Get the 1's place. */
-      rem = num % base;
-      dest[--dest_idx] = (9 < rem) ? 
-         /* > 10, so it's a letter. */
-         (rem - 10) + 'a' :
-         /* < 10, so it's a number. */
-         rem + '0';
-      /* Move the next place value into range. */
-      num /= base;
-      digits_done++;
-   }
-   while( digits_done < digits ) {
-      dest[--dest_idx] = '0';
-      digits_done++;
-   }
+   retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad );
+
    if( negative ) {
       dest[dest_idx] = '-';
    }
+   dest[digits] = '\0';
+
+   return digits;
+}
+
+/* === */
+
+int retroflat_utoa( unsigned long int num, char* dest, int dest_sz, int base ) {
+   long int rem;
+   int digits;
+   int digits_done = 0;
+   int dest_idx = 0;
+
+   digits = retroflat_digits( num, base );
+   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
+   assert( digits < dest_sz );
+
+   /* Handle 0 explicitly, otherwise empty string is printed for 0. */
+   if( 0 == num ) {
+      dest[0] = '0';
+      digits_done++;
+   }
+
+   retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad );
    dest[digits] = '\0';
 
    return digits;
@@ -1887,6 +1917,7 @@ void retroflat_vsnprintf(
    char c;
    char pad_char = ' ';
    int buffer_idx = 0;
+   int spec_is_long = 0;
 
    for( i = 0 ; '\0' != fmt[i] ; i++ ) {
       c = fmt[i]; /* Separate so we can play tricks below. */
@@ -1895,6 +1926,11 @@ void retroflat_vsnprintf(
          /* Conversion specifier encountered. */
          memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) );
          switch( fmt[i] ) {
+            case 'l':
+               spec_is_long = 1;
+               /* Skip resetting the last char. */
+               continue;
+
             case 's':
                spec.s = va_arg( vargs, char* );
 
@@ -1907,8 +1943,28 @@ void retroflat_vsnprintf(
                break;
 
             case 'u':
+               if( spec_is_long ) {
+                  spec.u = va_arg( vargs, long unsigned int );
+               } else {
+                  spec.u = va_arg( vargs, unsigned int );
+               }
+               
+               /* Print padding. */
+               pad_len -= retroflat_digits( spec.d, 10 );
+               retroflat_bufpad( pad_char, pad_len, j,
+                  buffer, buffer_idx, buffer_sz, cleanup );
+
+               /* Print number. */
+               buffer_idx += retroflat_itoa(
+                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
+               break;
+
             case 'd':
-               spec.d = va_arg( vargs, int );
+               if( spec_is_long ) {
+                  spec.d = va_arg( vargs, long int );
+               } else {
+                  spec.d = va_arg( vargs, int );
+               }
                
                /* Print padding. */
                pad_len -= retroflat_digits( spec.d, 10 );
@@ -1982,6 +2038,7 @@ void retroflat_vsnprintf(
       } else if( '%' != c ) {
          pad_char = ' '; /* Reset padding. */
          pad_len = 0; /* Reset padding. */
+         spec_is_long = 0;
 
          /* Print non-escape characters verbatim. */
          retroflat_bufcat( c, buffer, buffer_idx,
