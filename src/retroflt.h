@@ -1883,8 +1883,9 @@ int retroflat_itoa( long int num, char* dest, int dest_sz, int base ) {
 
 /* === */
 
+/* TODO: Seems to force 16-bit in Borland... why? */
 int retroflat_utoa( unsigned long int num, char* dest, int dest_sz, int base ) {
-   long int rem;
+   unsigned long int rem;
    int digits;
    int digits_done = 0;
    int dest_idx = 0;
@@ -1955,7 +1956,7 @@ void retroflat_vsnprintf(
                   buffer, buffer_idx, buffer_sz, cleanup );
 
                /* Print number. */
-               buffer_idx += retroflat_itoa(
+               buffer_idx += retroflat_utoa(
                   spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
                break;
 
@@ -1985,7 +1986,7 @@ void retroflat_vsnprintf(
                   buffer, buffer_idx, buffer_sz, cleanup );
 
                /* Print number. */
-               buffer_idx += retroflat_itoa(
+               buffer_idx += retroflat_utoa(
                   spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 16 );
                break;
 
