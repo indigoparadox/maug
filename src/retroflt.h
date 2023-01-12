@@ -399,6 +399,10 @@
 #  define RETROFLAT_DEFAULT_FONT "./Sans.ttf"
 #endif /* RETROFLAT_DEFAULT_FONT */
 
+#ifndef RETROFLAT_OPENGL_BPP
+#  define RETROFLAT_OPENGL_BPP 32
+#endif /* !RETROFLAT_OPENGL_BPP */
+
 /* Transparency background color: black by default, to match Allegro. */
 #ifndef RETROFLAT_TXP_R
 /**
@@ -1208,6 +1212,12 @@ typedef int RETROFLAT_COLOR;
 
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+/* OpenGL can be called from almost any API. */
+#  ifdef RETROFLAT_OPENGL
+#     include <GL/gl.h>
+#     include <GL/glu.h>
+#  endif /* RETROFLAT_OPENGL */
+
 /* === Translation Module === */
 
 /* Declare the prototypes so that internal functions can call each other. */
@@ -1573,18 +1583,52 @@ static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
    PAINTSTRUCT ps;
-   HDC hdc_win = (HDC)NULL;
+   static HDC hdc_win = (HDC)NULL;
    BITMAP srcBitmap;
    int screen_initialized = 0;
+#  if defined( RETROFLAT_OPENGL )
+   int pixel_fmt_int = 0;
+   static HGLRC hrc_win = NULL;
+   static PIXELFORMATDESCRIPTOR pixel_fmt = {
+      sizeof( PIXELFORMATDESCRIPTOR ),
+      1,
+      PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+      PFD_TYPE_RGBA,
+      RETROFLAT_OPENGL_BPP,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      16,
+      0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
+   };
+#  endif /* RETROFLAT_OPENGL */
 
    switch( message ) {
       case WM_CREATE:
+#  if defined( RETROFLAT_OPENGL )
+         hdc_win = GetDC( hWnd );
+
+         pixel_fmt_int = ChoosePixelFormat( hdc_win, &pixel_fmt );
+         SetPixelFormat( hdc_win, pixel_fmt_int, &pixel_fmt );
+
+         hrc_win = wglCreateContext( hdc_win );
+         wglMakeCurrent( hdc_win, hrc_win );
+#  endif /* RETROFLAT_OPENGL */
          break;
 
+      case WM_CLOSE:
+#  if defined( RETROFLAT_OPENGL )
+         wglMakeCurrent( hdc_win, NULL );
+         wglDeleteContext( hrc_win );
+#  endif /* RETROFLAT_OPENGL */
+
+         /* Quit on window close. */
+         PostQuitMessage( 0 );
+         break;
+
+#  if !defined( RETROFLAT_OPENGL )
       case WM_PAINT:
 
          /* Create HDC for window to blit to. */
-#  ifdef RETROFLAT_WING
+#  if defined( RETROFLAT_WING )
          hdc_win = GetDC( hWnd );
 #  else
          hdc_win = BeginPaint( hWnd, &ps );
@@ -1686,8 +1730,11 @@ static LRESULT CALLBACK WndProc(
 #  else
          DeleteDC( hdc_win );
          EndPaint( hWnd, &ps );
+         hdc_win = (HDC)NULL;
 #  endif /* RETROFLAT_WING */
          break;
+
+#  endif /* !RETROFLAT_OPENGL */
 
       case WM_ERASEBKGND:
          return 1;
