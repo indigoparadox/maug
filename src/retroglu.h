@@ -14,13 +14,18 @@
 #define RETROGLU_PARSER_STATE_VERTEX_Z 3
 #define RETROGLU_PARSER_STATE_COMMENT 4
 #define RETROGLU_PARSER_STATE_FACE_TOKEN 5
-#define RETROGLU_PARSER_STATE_FACE_VERTICES 6
-#define RETROGLU_PARSER_STATE_FACE_TEXTURES 7
-#define RETROGLU_PARSER_STATE_FACE_NORMALS 8
+#define RETROGLU_PARSER_STATE_FACE_VERTEX 6
+#define RETROGLU_PARSER_STATE_FACE_TEXTURE 7
+#define RETROGLU_PARSER_STATE_FACE_NORMAL 8
+#define RETROGLU_PARSER_STATE_FACE_MATERIAL 9
 
 #ifndef RETROGLU_FACE_VERTICES_SZ_MAX
 #  define RETROGLU_FACE_VERTICES_SZ_MAX 3
 #endif /* !RETROGLU_FACE_VERTICES_SZ_MAX */
+
+#ifndef RETROGLU_FACE_MATERIAL_SZ_MAX
+#  define RETROGLU_FACE_MATERIAL_SZ_MAX 32
+#endif /* !RETROGLU_FACE_MATERIAL_SZ_MAX */
 
 struct RETROGLU_VERTEX {
    float x;
@@ -37,6 +42,7 @@ struct RETROGLU_FACE {
     */
    int vertice_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
    int vertice_idxs_sz;
+   char material[RETROGLU_FACE_MATERIAL_SZ_MAX];
 };
 
 struct RETROGLU_PARSER {
@@ -53,6 +59,7 @@ struct RETROGLU_PARSER {
    int faces_sz_max;
    int faces_sz;
    int state;
+   char material[RETROGLU_FACE_MATERIAL_SZ_MAX];
    char token[RETROGLU_PARSER_TOKEN_SZ_MAX];
    int token_sz;
 };
@@ -70,7 +77,7 @@ void retroglu_parse_init(
 
 int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
-#define RETROGLU_OBJ_TOKENS( f ) f( "v", retroglu_token_vertice ) f( "f", retroglu_token_face )
+#define RETROGLU_OBJ_TOKENS( f ) f( "v", retroglu_token_vertice ) f( "f", retroglu_token_face ) f( "usemtl", retroglu_token_usemtl )
 
 #ifdef RETROGLU_C
 
@@ -82,8 +89,13 @@ int retroglu_token_vertice( struct RETROGLU_PARSER* parser ) {
 }
 
 int retroglu_token_face( struct RETROGLU_PARSER* parser ) {
-   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTICES );
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTEX );
    parser->faces[parser->faces_sz].vertice_idxs_sz = 0;
+   return RETROFLAT_OK;
+}
+
+int retroglu_token_usemtl( struct RETROGLU_PARSER* parser ) {
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_MATERIAL );
    return RETROFLAT_OK;
 }
 
@@ -118,12 +130,14 @@ void retroglu_null_e( struct RETROGLU_PARSER* parser ) {
    int i = 0;
 
    /* Look for an 'E-nnn' in a floating point number and chop it off. */
+   /*
    for( i = 0 ; parser->token_sz > i ; i++ ) {
       if( 'E' == parser->token[i] ) {
          parser->token[i] = '\0';
          break;
       }
    }
+   */
 }
 
 int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
@@ -144,7 +158,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       /* First number after "v", probably the X. */
       /* TODO: Validation. */
       retroglu_null_e( parser );
-      parser->vertices[parser->vertices_sz].x = atof( parser->token );
+      parser->vertices[parser->vertices_sz].x = strtod( parser->token, NULL );
       printf( "vertice %d X: %f\n",
          parser->vertices_sz, parser->vertices[parser->vertices_sz].x );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VERTEX_Y );
@@ -153,7 +167,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       /* Number after X, probably Y. */
       /* TODO: Validation. */
       retroglu_null_e( parser );
-      parser->vertices[parser->vertices_sz].y = atof( parser->token );
+      parser->vertices[parser->vertices_sz].y = strtod( parser->token, NULL );
       printf( "vertice %d Y: %f\n",
          parser->vertices_sz, parser->vertices[parser->vertices_sz].y );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VERTEX_Z );
@@ -162,7 +176,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       /* Number after Y, probably Z. */
       /* TODO: Validation. */
       retroglu_null_e( parser );
-      parser->vertices[parser->vertices_sz].z = atof( parser->token );
+      parser->vertices[parser->vertices_sz].z = strtod( parser->token, NULL );
       printf( "vertice %d Z: %f\n",
          parser->vertices_sz, parser->vertices[parser->vertices_sz].z );
       parser->vertices_sz++;
@@ -170,18 +184,24 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
       /* TODO: Handle W. */
 
-   } else if( RETROGLU_PARSER_STATE_FACE_VERTICES == parser->state ) {
-      /* Parsing face vertex indices. */
+   } else if( RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ) {
+      /* Parsing face vertex index. */
       parser->faces[parser->faces_sz].vertice_idxs[
          parser->faces[parser->faces_sz].vertice_idxs_sz] =
             atoi( parser->token );
 
-      printf( "face %d, vertice %d: %d\n",
+      printf( "face %d, vertex %d: %d\n",
          parser->faces_sz, parser->faces[parser->faces_sz].vertice_idxs_sz,
          parser->faces[parser->faces_sz].vertice_idxs[
             parser->faces[parser->faces_sz].vertice_idxs_sz] );
 
       parser->faces[parser->faces_sz].vertice_idxs_sz++;
+
+   } else if( RETROGLU_PARSER_STATE_FACE_MATERIAL == parser->state ) {
+
+      strncpy( parser->material, parser->token, RETROGLU_FACE_MATERIAL_SZ_MAX );
+      printf( "parser material: %s", parser->faces[parser->faces_sz].material );
+      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
 
    } else {
       /* Check against generic tokens. */
@@ -242,23 +262,23 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          return RETROFLAT_OK;
 
       } else if(
-         RETROGLU_PARSER_STATE_FACE_VERTICES == parser->state
+         RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ||
+         RETROGLU_PARSER_STATE_FACE_TEXTURE == parser->state ||
+         RETROGLU_PARSER_STATE_FACE_NORMAL == parser->state
       ) {
+         /* End of face. */
          retval = retroglu_parse_token( parser );
          retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
+
+         /* Use current parser material. */
+         strncpy(
+            parser->faces[parser->faces_sz].material,
+            parser->material, RETROGLU_FACE_MATERIAL_SZ_MAX );
+
+         /* Move to next face. */
          parser->faces_sz++; /* Newline means this face is done. */
          return retval;
          
-      } else if(
-         RETROGLU_PARSER_STATE_FACE_TEXTURES == parser->state ||
-         RETROGLU_PARSER_STATE_FACE_NORMALS == parser->state
-      ) {
-         /* TODO: These are not handled yet, otherwise they could go above. */
-         parser->token_sz = 0;
-         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
-         parser->faces_sz++; /* Newline means this face is done. */
-         return RETROFLAT_OK;
-
       } else {
          return retroglu_parse_token( parser );
       }
@@ -270,40 +290,34 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          /* Do nothing on spaces in comments. */
          return RETROFLAT_OK;
 
-      } else if( RETROGLU_PARSER_STATE_FACE_TOKEN == parser->state ) {
-         /* Just advance to parsing vertices. */
-         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTICES );
-         return RETROFLAT_OK;
-      
-      } else if( RETROGLU_PARSER_STATE_FACE_VERTICES == parser->state ) {
+      } else if(
+         RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ||
+         RETROGLU_PARSER_STATE_FACE_TEXTURE == parser->state ||
+         RETROGLU_PARSER_STATE_FACE_NORMAL == parser->state
+      ) {
+         /* A space means we're moving on to the next vertex! */
          retval = retroglu_parse_token( parser );
-         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_TEXTURES );
+         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTEX );
          return retval;
-
-      } else if( RETROGLU_PARSER_STATE_FACE_TEXTURES == parser->state ) {
-         /* TODO: Handle texture tokens. */
-         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_NORMALS );
-         parser->token_sz = 0;
-         return RETROFLAT_OK;
-
-      } else if( RETROGLU_PARSER_STATE_FACE_NORMALS == parser->state ) {
-         /* TODO: Handle normal tokens. */
-         parser->token_sz = 0;
-         return RETROFLAT_OK;
 
       } else {
          return retroglu_parse_token( parser );
       }
 
    case '/':
-      if(
-         RETROGLU_PARSER_STATE_FACE_VERTICES == parser->state ||
-         RETROGLU_PARSER_STATE_FACE_TEXTURES == parser->state ||
-         RETROGLU_PARSER_STATE_FACE_NORMALS == parser->state
-      ) {
-         /* Move to next number inside of face v/t/n. */
-         return retroglu_parse_token( parser );
+      if( RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ) {
+         retval = retroglu_parse_token( parser );
+         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_TEXTURE );
+         return retval;
+
+      } else if( RETROGLU_PARSER_STATE_FACE_TEXTURE == parser->state ) {
+         /* TODO: Handle textures. */
+         retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_TEXTURE );
       }
+      
+      /* v/vt/vn/??? */
+      assert( RETROGLU_PARSER_STATE_FACE_NORMAL != parser->state );
+
       /* If not part of a face, fall through to default append. */
       return retroglu_append_token( parser, c );
 
