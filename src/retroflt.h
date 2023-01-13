@@ -460,6 +460,7 @@ typedef void (*retroflat_loop_iter)(void* data);
 
 /*! \brief Struct passed to retroflat_poll_input() to hold return data. */
 struct RETROFLAT_INPUT {
+   int allow_repeat;
    /**
     * \brief X-coordinate of the mouse pointer in pixels if the returned
     *        event is a mouse click.
@@ -3750,7 +3751,9 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       key_out = event.key.keysym.sym;
 
       /* Flush key buffer to improve responsiveness. */
-      while( (eres = SDL_PollEvent( &event )) );
+      if( !input->allow_repeat ) {
+         while( (eres = SDL_PollEvent( &event )) );
+      }
 
    } else if( SDL_MOUSEBUTTONUP == event.type ) {
       /* Stop dragging. */
