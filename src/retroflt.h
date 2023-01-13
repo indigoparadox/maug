@@ -531,8 +531,10 @@ typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
  * \brief Target Frames Per Second.
  * \todo FPS currently has no effect in Allegro.
  */
-#  define RETROFLAT_FPS 15
+#  define RETROFLAT_FPS 30
 #endif /* !RETROFLAT_FPS */
+
+#define retroflat_fps_next() (1000 / RETROFLAT_FPS)
 
 #ifndef RETROFLAT_WINDOW_CLASS
 /**
@@ -1512,6 +1514,7 @@ int g_mouse_state = 0;
 HINSTANCE g_instance;
 HWND g_window;
 MSG g_msg;
+HDC g_hdc_win = (HDC)NULL;
 int g_msg_retval = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
@@ -1583,7 +1586,9 @@ static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
    PAINTSTRUCT ps;
-   static HDC hdc_win = (HDC)NULL;
+#ifndef RETROFLAT_OPENGL
+   HDC hdc_win = (HDC)NULL;
+#endif /* RETROFLAT_OPENGL */
    BITMAP srcBitmap;
    int screen_initialized = 0;
 #  if defined( RETROFLAT_OPENGL )
@@ -1604,19 +1609,19 @@ static LRESULT CALLBACK WndProc(
    switch( message ) {
       case WM_CREATE:
 #  if defined( RETROFLAT_OPENGL )
-         hdc_win = GetDC( hWnd );
+         g_hdc_win = GetDC( hWnd );
 
-         pixel_fmt_int = ChoosePixelFormat( hdc_win, &pixel_fmt );
-         SetPixelFormat( hdc_win, pixel_fmt_int, &pixel_fmt );
+         pixel_fmt_int = ChoosePixelFormat( g_hdc_win, &pixel_fmt );
+         SetPixelFormat( g_hdc_win, pixel_fmt_int, &pixel_fmt );
 
-         hrc_win = wglCreateContext( hdc_win );
-         wglMakeCurrent( hdc_win, hrc_win );
+         hrc_win = wglCreateContext( g_hdc_win );
+         wglMakeCurrent( g_hdc_win, hrc_win );
 #  endif /* RETROFLAT_OPENGL */
          break;
 
       case WM_CLOSE:
 #  if defined( RETROFLAT_OPENGL )
-         wglMakeCurrent( hdc_win, NULL );
+         wglMakeCurrent( g_hdc_win, NULL );
          wglDeleteContext( hrc_win );
 #  endif /* RETROFLAT_OPENGL */
 
@@ -2298,6 +2303,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
    RECT wr = { 0, 0, 0, 0 };
+#  elif defined( RETROFLAT_API_SDL1 )
+#  if defined( RETROFLAT_OPENGL )
+   SDL_VideoInfo* info = NULL;
+#  endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* Parse command line args. */
@@ -2377,8 +2386,31 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == SDL1 == */
 
-   g_buffer.surface = SDL_SetVideoMode( args->screen_w, args->screen_h, 8,
-      SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT );
+   if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
+      retroflat_message(
+         "Error", "Error initializing SDL: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_ENGINE;
+      goto cleanup;
+   }
+
+   info = SDL_GetVideoInfo();
+   assert( NULL != info );
+
+#     ifdef RETROFLAT_OPENGL
+   SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+#     endif /* RETROFLAT_OPENGL */
+
+   g_buffer.surface = SDL_SetVideoMode(
+      args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
+      SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
+#     ifdef RETROFLAT_OPENGL
+      | SDL_OPENGL
+#     endif /* RETROFLAT_OPENGL */
+   );
    if( NULL == g_buffer.surface ) {
       retroflat_message(
          "Error", "unable to allocate screen buffer: %s", SDL_GetError() );
@@ -2560,7 +2592,7 @@ unsigned long int retroflat_get_ms() {
 
    return g_ms;
 
-#  elif defined( RETROFLAT_API_SDL )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    
    /* == SDL == */
 
@@ -2572,6 +2604,8 @@ unsigned long int retroflat_get_ms() {
 
    return g_ms;
 
+#  else
+#  warning "get_ms not implemented"
 #  endif /* RETROFLAT_API_* */
 }
 
@@ -2690,7 +2724,11 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( (&g_buffer) == bmp ) {
+#     ifdef RETROFLAT_OPENGL
+      SDL_GL_SwapBuffers();
+#     else
       SDL_Flip( bmp->surface );
+#     endif /* RETROFLAT_OPENGL */
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
@@ -2725,7 +2763,11 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp  ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_window ) {
+#     ifdef RETROFLAT_OPENGL
+         SwapBuffers( g_hdc_win );
+#     else
          InvalidateRect( g_window, 0, TRUE );
+#     endif /* RETROFLAT_OPENGL */
       }
       return;
    }
@@ -3689,6 +3731,8 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    SDL_Event event;
 
    SDL_PollEvent( &event );
+
+   /* TODO: Handle SDL window close. */
 
    if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
