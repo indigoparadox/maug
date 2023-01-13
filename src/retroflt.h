@@ -620,6 +620,10 @@ typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
 
 #if defined( RETROFLAT_API_ALLEGRO )
 
+#  ifdef RETROFLAT_OPENGL
+#     warning "opengl support not implemented for allegro"
+#  endif /* RETROFLAT_OPENGL */
+
 /* == Allegro == */
 
 #  include <allegro.h>
@@ -713,6 +717,10 @@ typedef int RETROFLAT_COLOR;
 #  define RETROFLAT_KEY_END	KEY_END
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+
+#  if defined( RETROFLAT_API_SDL2 ) && defined( RETROFLAT_OPENGL )
+#     warning "opengl support not implemented for SDL 2"
+#  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
 #  include <SDL.h>
 #  include <SDL_ttf.h>
@@ -849,6 +857,10 @@ extern const SDL_Color gc_white;
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
 /* == Win16/Win32 == */
+
+#  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
+#     warning "opengl support not implemented for win16"
+#  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
 #  include <windows.h>
 
@@ -1214,7 +1226,7 @@ typedef int RETROFLAT_COLOR;
 
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-/* OpenGL can be called from almost any API. */
+/* OpenGL can be called from several different APIs. */
 #  ifdef RETROFLAT_OPENGL
 #     include <GL/gl.h>
 #     include <GL/glu.h>
