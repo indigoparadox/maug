@@ -2,11 +2,30 @@
 #ifndef RETROGLU_H
 #define RETROGLU_H
 
+/**
+ * \addtogroup maug_retroglu RetroGLU API
+ * \brief Library of tools for working with RetroFlat and OpenGL.
+ * \{
+ *
+ * \file retroglu.h
+ * \brief Library of tools for working with RetroFlat and OpenGL.
+ */
+
 #define RETROGLU_PARSER_ERROR -1
 
 #ifndef RETROGLU_PARSER_TOKEN_SZ_MAX
 #  define RETROGLU_PARSER_TOKEN_SZ_MAX 32
 #endif /* !RETROGLU_PARSER_TOKEN_SZ_MAX */
+
+/**
+ * \addtogroup maug_retroglu_obj_fsm RetroGLU OBJ Parser
+ * \{
+ */
+
+/**
+ * \addtogroup maug_retroglu_obj_fsm_states RetroGLU OBJ Parser States
+ * \{
+ */
 
 #define RETROGLU_PARSER_STATE_NONE 0
 #define RETROGLU_PARSER_STATE_VERTEX_X 1
@@ -23,15 +42,19 @@
 #define RETROGLU_PARSER_STATE_MATERIAL_DIF 12
 #define RETROGLU_PARSER_STATE_MATERIAL_SPEC 13
 #define RETROGLU_PARSER_STATE_MATERIAL_LIB 14
-#define RETROGLU_PARSER_STATE_MATERIAL_KD_R 15
-#define RETROGLU_PARSER_STATE_MATERIAL_KD_G 16
-#define RETROGLU_PARSER_STATE_MATERIAL_KD_B 17
+#define RETROGLU_PARSER_STATE_MTL_KD_R 15
+#define RETROGLU_PARSER_STATE_MTL_KD_G 16
+#define RETROGLU_PARSER_STATE_MTL_KD_B 17
 #define RETROGLU_PARSER_STATE_VNORMAL_X 18
 #define RETROGLU_PARSER_STATE_VNORMAL_Y 19
 #define RETROGLU_PARSER_STATE_VNORMAL_Z 20
 #define RETROGLU_PARSER_STATE_VTEXTURE_X 21
 #define RETROGLU_PARSER_STATE_VTEXTURE_Y 22
 #define RETROGLU_PARSER_STATE_VTEXTURE_Z 23
+
+/*! \} */ /* maug_retroglu_obj_fsm_states */
+
+/*! \} */ /* maug_retroglu_obj_fsm */
 
 #ifndef RETROGLU_FACE_VERTICES_SZ_MAX
 #  define RETROGLU_FACE_VERTICES_SZ_MAX 3
@@ -72,11 +95,45 @@ struct RETROGLU_FACE {
    int material_idx;
 };
 
+/**
+ * \addtogroup maug_retroglu_obj_fsm
+ * \{
+ */
+
+/**
+ * \brief Change the parser state.
+ * \param Pointer to the ::RETROGLU_PARSER to modify.
+ * \param new_state \ref maug_retroglu_obj_fsm_states to set the parser to.
+ */
+#define retroglu_parser_state( parser, new_state ) \
+   printf( "changing parser to state: %d\n", new_state ); \
+   (parser)->state = new_state;
+
+/**
+ * \brief Table of OBJ file tokens understood by the parser.
+ */
+#define RETROGLU_OBJ_TOKENS( f ) \
+   f( "v", retroglu_token_vertice ) \
+   f( "vn", retroglu_token_vnormal ) \
+   f( "f", retroglu_token_face ) \
+   f( "usemtl", retroglu_token_usemtl ) \
+   f( "newmtl", retroglu_token_newmtl ) \
+   f( "mtllib", retroglu_token_mtllib ) \
+   f( "Kd", retroglu_token_kd )
+
 struct RETROGLU_PARSER;
 
+/**
+ * \brief Callback to execute when its associate in ::RETROGLU_OBJ_TOKENS is
+ *        found in an OBJ file.
+ */
 typedef int (*retroglu_mtl_cb)(
    const char* filename, struct RETROGLU_PARSER* parser, void* data );
 
+/**
+ * \brief As retroglu_parse_obj_c() parses OBJ data, it populates this struct
+ *        with object information.
+ */
 struct RETROGLU_PARSER {
    struct RETROGLU_VERTEX* vertices;
    int vertices_sz_max;
@@ -107,6 +164,12 @@ struct RETROGLU_PARSER {
 
 typedef int (*retroglu_token_cb)( struct RETROGLU_PARSER* parser );
 
+/**
+ * \related RETROGLU_PARSER
+ * \brief Initialize a ::RETROGLU_PARSER.
+ * \warning This should be run before retroglu_parse_obj_c() is called on the
+ *          parser!
+ */
 void retroglu_parse_init(
    struct RETROGLU_PARSER* parser, 
    struct RETROGLU_VERTEX* vertices, int vertices_sz, int vertices_sz_max,
@@ -117,11 +180,15 @@ void retroglu_parse_init(
    retroglu_mtl_cb load_mtl, void* load_mtl_data
 );
 
-#define retroglu_parser_state( parser, new_state ) \
-   printf( "changing parser to state: %d\n", new_state ); \
-   (parser)->state = new_state;
-
+/**
+ * \related RETROGLU_PARSER
+ * \brief Parse OBJ data into a parser, one character at a time.
+ *
+ * Generally, this should loop over a character array loaded from an OBJ file.
+ */
 int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
+
+/*! \} */ /* maug_retroglu_obj_fsm */
 
 void retroglu_draw_poly(
    struct RETROGLU_VERTEX* vertices, int vertices_sz,
@@ -129,15 +196,6 @@ void retroglu_draw_poly(
    struct RETROGLU_VERTEX* vtextures, int vtextures_sz,
    struct RETROGLU_FACE* faces, int faces_sz,
    struct RETROGLU_MATERIAL* materials, int materials_sz );
-
-#define RETROGLU_OBJ_TOKENS( f ) \
-   f( "v", retroglu_token_vertice ) \
-   f( "vn", retroglu_token_vnormal ) \
-   f( "f", retroglu_token_face ) \
-   f( "usemtl", retroglu_token_usemtl ) \
-   f( "newmtl", retroglu_token_newmtl ) \
-   f( "mtllib", retroglu_token_mtllib ) \
-   f( "Kd", retroglu_token_kd )
 
 #ifdef RETROGLU_C
 
@@ -176,7 +234,7 @@ int retroglu_token_mtllib( struct RETROGLU_PARSER* parser ) {
 }
 
 int retroglu_token_kd( struct RETROGLU_PARSER* parser ) {
-   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_KD_R );
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_KD_R );
    return RETROFLAT_OK;
 }
 
@@ -225,6 +283,24 @@ void retroglu_parse_init(
    parser->token_sz = 0;
 }
 
+#define RETROGLU_TOKENS_VF( f ) \
+   f( "X", VERTEX_X, vertices, vertices_sz, x, VERTEX_Y ) \
+   f( "Y", VERTEX_Y, vertices, vertices_sz, y, VERTEX_Z ) \
+   f( "Z", VERTEX_Z, vertices, vertices_sz, z, NONE ) \
+   f( "normal X", VNORMAL_X, vnormals, vnormals_sz, x, VNORMAL_Y ) \
+   f( "normal Y", VNORMAL_Y, vnormals, vnormals_sz, y, VNORMAL_Z ) \
+   f( "normal Z", VNORMAL_Z, vnormals, vnormals_sz, z, NONE ) \
+   f( "mtl Kd R", MTL_KD_R, materials, materials_sz-1, diffuse[0], MTL_KD_G ) \
+   f( "mtl Kd G", MTL_KD_G, materials, materials_sz-1, diffuse[1], MTL_KD_B ) \
+   f( "mtl Kd B", MTL_KD_B, materials, materials_sz-1, diffuse[2], NONE )
+
+#define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
+   } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
+      parser->array[parser->sz].val = strtod( parser->token, NULL ); \
+      printf( "vertex %d " desc ": %f\n", \
+         parser->sz, parser->array[parser->sz].val ); \
+      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
+
 int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    int i = 0;
    int retval = RETROFLAT_OK;
@@ -239,87 +315,17 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
    printf( "token: %s\n", parser->token );
 
-   if( RETROGLU_PARSER_STATE_VERTEX_X == parser->state ) {
-      /* First number after "v", probably the X. */
-      /* TODO: Validation. */
-      parser->vertices[parser->vertices_sz].x = strtod( parser->token, NULL );
-      printf( "vertex %d X: %f\n",
-         parser->vertices_sz, parser->vertices[parser->vertices_sz].x );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VERTEX_Y );
+   if( RETROGLU_PARSER_STATE_MATERIAL_LIB == parser->state ) {
 
-   } else if( RETROGLU_PARSER_STATE_VERTEX_Y == parser->state ) {
-      /* Number after X, probably Y. */
-      /* TODO: Validation. */
-      parser->vertices[parser->vertices_sz].y = strtod( parser->token, NULL );
-      printf( "vertex %d Y: %f\n",
-         parser->vertices_sz, parser->vertices[parser->vertices_sz].y );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VERTEX_Z );
-
-   } else if( RETROGLU_PARSER_STATE_VERTEX_Z == parser->state ) {
-      /* Number after Y, probably Z. */
-      /* TODO: Validation. */
-      parser->vertices[parser->vertices_sz].z = strtod( parser->token, NULL );
-      printf( "vertex %d Z: %f\n",
-         parser->vertices_sz, parser->vertices[parser->vertices_sz].z );
-      parser->vertices_sz++;
+      printf( "parsing material lib: %s\n", parser->token );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
+      assert( NULL != parser->load_mtl );
+      return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
+
+   RETROGLU_TOKENS_VF( RETROGLU_TOKEN_PARSE_VF )
 
       /* TODO: Handle W. */
-
-   } else if( RETROGLU_PARSER_STATE_VNORMAL_X == parser->state ) {
-
-      parser->vnormals[parser->vnormals_sz].x = strtod( parser->token, NULL );
-      printf( "vnormal %d X: %f\n",
-         parser->vnormals_sz, parser->vnormals[parser->vnormals_sz].x );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VNORMAL_Y );
-
-   } else if( RETROGLU_PARSER_STATE_VNORMAL_Y == parser->state ) {
-
-      parser->vnormals[parser->vnormals_sz].y = strtod( parser->token, NULL );
-      printf( "vnormal %d Y: %f\n",
-         parser->vnormals_sz, parser->vnormals[parser->vnormals_sz].y );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_VNORMAL_Z );
-
-   } else if( RETROGLU_PARSER_STATE_VNORMAL_Z == parser->state ) {
-
-      parser->vnormals[parser->vnormals_sz].z = strtod( parser->token, NULL );
-      printf( "vnormal %d Z: %f\n",
-         parser->vnormals_sz, parser->vnormals[parser->vnormals_sz].z );
-      parser->vnormals_sz++;
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
-
-   } else if( RETROGLU_PARSER_STATE_MATERIAL_KD_R == parser->state ) {
-      
-      parser->materials[parser->materials_sz - 1].diffuse[0] =
-         strtod( parser->token, NULL );
-      printf( "material \"%s\" (%d) R: %f\n",
-         parser->materials[parser->materials_sz - 1].name,
-         parser->materials_sz - 1,
-         parser->materials[parser->materials_sz - 1].diffuse[0] );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_KD_G );
-
-   } else if( RETROGLU_PARSER_STATE_MATERIAL_KD_G == parser->state ) {
-
-      parser->materials[parser->materials_sz - 1].diffuse[1] =
-         strtod( parser->token, NULL );
-      printf( "material \"%s\" (%d) G: %f\n",
-         parser->materials[parser->materials_sz - 1].name,
-         parser->materials_sz - 1,
-         parser->materials[parser->materials_sz - 1].diffuse[1] );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_KD_B );
-
-   } else if( RETROGLU_PARSER_STATE_MATERIAL_KD_B == parser->state ) {
-
-      parser->materials[parser->materials_sz - 1].diffuse[2] =
-         strtod( parser->token, NULL );
-      printf( "material \"%s\" (%d) B: %f\n",
-         parser->materials[parser->materials_sz - 1].name,
-         parser->materials_sz - 1,
-         parser->materials[parser->materials_sz - 1].diffuse[2] );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
-
-      /* TODO */
-      parser->materials[parser->materials_sz - 1].diffuse[3] = 1.0;
+      /* TODO: Append 1.0 to materials. */
 
    } else if( RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ) {
       /* Parsing face vertex index. */
@@ -402,13 +408,6 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          RETROGLU_MATERIAL_NAME_SZ_MAX );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
 
-   } else if( RETROGLU_PARSER_STATE_MATERIAL_LIB == parser->state ) {
-
-      printf( "parsing material lib: %s\n", parser->token );
-      retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
-      assert( NULL != parser->load_mtl );
-      return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
-
    } else {
       /* Check against generic tokens. */
       while( '\0' != g_retroglu_token_strings[i][0] ) {
@@ -483,6 +482,20 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          parser->faces[parser->faces_sz].vertex_idxs_sz++;
          parser->faces_sz++; /* Newline means this face is done. */
          return retval;
+
+      } else if( RETROGLU_PARSER_STATE_VNORMAL_Z == parser->state ) {
+
+         retval = retroglu_parse_token( parser );
+         /* End of vertex. */
+         parser->vnormals_sz++;
+         return retval;
+
+      } else if( RETROGLU_PARSER_STATE_VERTEX_Z == parser->state ) {
+
+         retval = retroglu_parse_token( parser );
+         /* End of vertex. */
+         parser->vertices_sz++;
+         return retval;
          
       } else {
          return retroglu_parse_token( parser );
@@ -504,6 +517,20 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          retval = retroglu_parse_token( parser );
          parser->faces[parser->faces_sz].vertex_idxs_sz++;
          retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTEX );
+         return retval;
+
+      } else if( RETROGLU_PARSER_STATE_VNORMAL_Z == parser->state ) {
+
+         retval = retroglu_parse_token( parser );
+         /* End of vertex. */
+         parser->vnormals_sz++;
+         return retval;
+
+      } else if( RETROGLU_PARSER_STATE_VERTEX_Z == parser->state ) {
+
+         retval = retroglu_parse_token( parser );
+         /* End of vertex. */
+         parser->vertices_sz++;
          return retval;
 
       } else {
@@ -572,6 +599,8 @@ void retroglu_draw_poly(
 }
 
 #endif /* RETROGLU_C */
+
+/*! \} */ /* maug_retroglu */
 
 #endif /* !RETROGLU_H */
 

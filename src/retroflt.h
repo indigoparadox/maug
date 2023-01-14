@@ -4,6 +4,7 @@
 
 /**
  * \addtogroup maug_retroflt RetroFlat API
+ * \brief Abstraction layer header for retro systems.
  * \{
  *
  * \file retroflt.h
