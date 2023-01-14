@@ -2329,7 +2329,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    RECT wr = { 0, 0, 0, 0 };
 #  elif defined( RETROFLAT_API_SDL1 )
 #  if defined( RETROFLAT_OPENGL )
-   SDL_VideoInfo* info = NULL;
+   const SDL_VideoInfo* info = NULL;
 #  endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 

@@ -123,6 +123,13 @@ void retroglu_parse_init(
 
 int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
+void retroglu_draw_poly(
+   struct RETROGLU_VERTEX* vertices, int vertices_sz,
+   struct RETROGLU_VERTEX* vnormals, int vnormals_sz,
+   struct RETROGLU_VERTEX* vtextures, int vtextures_sz,
+   struct RETROGLU_FACE* faces, int faces_sz,
+   struct RETROGLU_MATERIAL* materials, int materials_sz );
+
 #define RETROGLU_OBJ_TOKENS( f ) \
    f( "v", retroglu_token_vertice ) \
    f( "vn", retroglu_token_vnormal ) \
@@ -526,6 +533,42 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
    }
 
    return RETROFLAT_OK;
+}
+
+void retroglu_draw_poly(
+   struct RETROGLU_VERTEX* vertices, int vertices_sz,
+   struct RETROGLU_VERTEX* vnormals, int vnormals_sz,
+   struct RETROGLU_VERTEX* vtextures, int vtextures_sz,
+   struct RETROGLU_FACE* faces, int faces_sz,
+   struct RETROGLU_MATERIAL* materials, int materials_sz
+) {
+   int i = 0;
+   int j = 0;
+
+   glBegin( GL_TRIANGLES );
+   for( i = 0 ; faces_sz > i ; i++ ) {
+   
+      glMaterialfv( GL_FRONT, GL_DIFFUSE,
+         materials[faces[i].material_idx].diffuse );
+      glMaterialf( GL_FRONT, GL_SHININESS, 100.0f );
+   
+      for( j = 0 ; faces[i].vertex_idxs_sz > j ; j++ ) {
+         assert( 0 < faces[i].vertex_idxs[j] );
+         assert( 3 == faces[i].vertex_idxs_sz );
+
+         glNormal3f(
+            vnormals[faces[i].vnormal_idxs[j] - 1].x,
+            vnormals[faces[i].vnormal_idxs[j] - 1].y,
+            vnormals[faces[i].vnormal_idxs[j] - 1].z );
+
+         glVertex3f(
+            vertices[faces[i].vertex_idxs[j] - 1].x,
+            vertices[faces[i].vertex_idxs[j] - 1].y,
+            vertices[faces[i].vertex_idxs[j] - 1].z );
+      }
+
+   }
+   glEnd();
 }
 
 #endif /* RETROGLU_C */
