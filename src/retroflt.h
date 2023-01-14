@@ -603,6 +603,8 @@ typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
  * \{
  */
 
+#define RETROFLAT_CLI_SIGIL_SZ 1
+
 #if !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_WIN )
 #  define RETROFLAT_CLI_SIGIL "/"
 #elif !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_DOS )
@@ -1618,6 +1620,7 @@ static LRESULT CALLBACK WndProc(
       0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
    };
 #  endif /* RETROFLAT_OPENGL */
+   static unsigned long int next = 0;
 
    switch( message ) {
       case WM_CREATE:
@@ -1780,7 +1783,10 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_TIMER:
-         g_loop_iter( g_loop_data );
+         if( next <= retroflat_get_ms() ) {
+            g_loop_iter( g_loop_data );
+            next = retroflat_get_ms() + retroflat_fps_next();
+         }
 
          /* Kind of a hack so that we can have a cheap timer. */
          g_ms += 100;
@@ -1858,10 +1864,15 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   unsigned long int next = 0;
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
+      if( retroflat_get_ms() < next ) {
+         continue;
+      }
       loop_iter( data );
+      next = retroflat_get_ms() + retroflat_fps_next();
    } while(
       RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags)
    );
