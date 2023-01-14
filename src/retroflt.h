@@ -2,6 +2,8 @@
 #ifndef RETROFLT_H
 #define RETROFLT_H
 
+#include <mtypes.h>
+
 /**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.
@@ -293,6 +295,8 @@
 
 /*! \} */ /* maug_retroflt_retval */
 
+#define bmp_read_uint32( b ) (*((uint32_t*)(b)))
+
 /**
  * \addtogroup maug_retroflt_drawing RetroFlat Drawing API
  * \brief Functions for drawing primitives on-screen.
@@ -478,7 +482,7 @@ struct RETROFLAT_INPUT {
 
 union RETROFLAT_FMT_SPEC {
    long int d;
-   long unsigned int u;
+   uint32_t u;
    char c;
    void* p;
    char* s;
@@ -638,7 +642,7 @@ typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
 #  endif /* RETROFLAT_OS_DOS */
 
 struct RETROFLAT_BITMAP {
-   unsigned char flags;
+   uint8_t flags;
    BITMAP* b;
 };
 
@@ -730,7 +734,7 @@ typedef int RETROFLAT_COLOR;
 #  include <SDL_ttf.h>
 
 struct RETROFLAT_BITMAP {
-   unsigned char flags;
+   uint8_t flags;
    SDL_Surface* surface;
 #ifndef RETROFLAT_API_SDL1
    SDL_Texture* texture;
@@ -873,7 +877,7 @@ extern const SDL_Color gc_white;
 #  endif /* RETROFLAT_WING */
 
 struct RETROFLAT_BITMAP {
-   unsigned char flags;
+   uint8_t flags;
    HBITMAP b;
    HBITMAP mask;
    HDC hdc_b;
@@ -1101,7 +1105,7 @@ extern int gc_retroflat_win_rgbs[];
  * Please see the \ref maug_retroflt_bitmap for more information.
  */
 struct RETROFLAT_BITMAP {
-   unsigned char flags;
+   uint8_t flags;
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
@@ -1247,47 +1251,6 @@ typedef int RETROFLAT_COLOR;
  */
 int retroflat_loop( retroflat_loop_iter iter, void* data );
 
-#define retroflat_bufcat( c, buf, buf_idx, buf_sz, cleanup ) \
-   buf[buf_idx++] = c; \
-   if( buf_idx >= buf_sz ) { goto cleanup; }
-
-#define retroflat_bufpad( pad_c, pad_sz, i, buf, buf_idx, buf_sz, cleanup ) \
-   i = 0; \
-   while( i < pad_sz ) { \
-      retroflat_bufcat( pad_c, buffer, buffer_idx, buffer_sz, cleanup ); \
-      i++; \
-   }
-
-int retroflat_digits( long int num, int base );
-
-#define retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad ) \
-   dest_idx += digits; \
-   while( 0 != num ) { \
-      /* Get the 1's place. */ \
-      rem = num % base; \
-      dest[--dest_idx] = (9 < rem) ? \
-         /* > 10, so it's a letter. */ \
-         (rem - 10) + 'a' : \
-         /* < 10, so it's a number. */ \
-         rem + '0'; \
-      /* Move the next place value into range. */ \
-      num /= base; \
-      digits_done++; \
-   } \
-   while( digits_done < digits ) { \
-      dest[--dest_idx] = '0'; \
-      digits_done++; \
-   }
-
-int retroflat_itoa( long int num, char* dest, int dest_sz, int base );
-
-int retroflat_utoa( long unsigned int num, char* dest, int dest_sz, int base );
-
-void retroflat_vsnprintf(
-   char* buffer, int buffer_sz, const char* fmt, va_list vargs );
-
-void retroflat_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
-
 /**
  * \brief Display a message in a dialog box and/or on stderr.
  * \param title A string with the title to use for a dialog box.
@@ -1332,7 +1295,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
  */
 void retroflat_shutdown( int retval );
 
-unsigned long int retroflat_get_ms();
+uint32_t retroflat_get_ms();
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -1408,7 +1371,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
  */
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, unsigned char flags );
+   int x, int y, int w, int h, uint8_t flags );
 
 /**
  * \brief Draw an ellipse onto the target ::RETROFLAT_BITMAP.
@@ -1422,7 +1385,7 @@ void retroflat_rect(
  */
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, unsigned char flags );
+   int x, int y, int w, int h, uint8_t flags );
 
 /**
  * \brief Draw a straight line onto the target ::RETROFLAT_BITMAP.
@@ -1437,9 +1400,9 @@ void retroflat_ellipse(
  */
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, unsigned char flags );
+   int x1, int y1, int x2, int y2, uint8_t flags );
 
-void retroflat_cursor( struct RETROFLAT_BITMAP* target, unsigned char flags );
+void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
 
 /**
  * \brief Get the size in pixels of a text string when drawn with a given font
@@ -1477,7 +1440,7 @@ void retroflat_string_sz(
 void retroflat_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
-   unsigned char flags );
+   uint8_t flags );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -1496,6 +1459,9 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 /*! \} */ /* maug_retroflt_input */
 
 #ifdef RETROFLT_C
+
+#define UPRINTF_C
+#include <uprintf.h>
 
 #  include <stdio.h>
 #  include <stdlib.h>
@@ -1538,11 +1504,11 @@ int g_cmd_show = 0;
 const long gc_ms_target = 1000 / RETROFLAT_FPS;
 static unsigned long g_ms_start = 0;
 volatile unsigned long g_ms;
-unsigned char g_last_key = 0;
+uint8_t g_last_key = 0;
 unsigned int g_last_mouse = 0;
 unsigned int g_last_mouse_x = 0;
 unsigned int g_last_mouse_y = 0;
-unsigned char g_running;
+uint8_t g_running;
 retroflat_loop_iter g_loop_iter = NULL;
 
 #  ifdef RETROFLAT_WING
@@ -1561,8 +1527,8 @@ void far* g_buffer_bits = NULL;
 
 char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
 struct RETROFLAT_BITMAP g_buffer;
-unsigned char g_retroflat_flags = 0;
-unsigned char g_retroflat_cli_flags = 0;
+uint8_t g_retroflat_flags = 0;
+uint8_t g_retroflat_cli_flags = 0;
 
 /* TODO: Don't make these arrays fully const; add a callback to add custom
  *       command line args.
@@ -1621,7 +1587,7 @@ static LRESULT CALLBACK WndProc(
       0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
    };
 #  endif /* RETROFLAT_OPENGL */
-   static unsigned long int next = 0;
+   static uint32_t next = 0;
 
    switch( message ) {
       case WM_CREATE:
@@ -1865,7 +1831,7 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-   unsigned long int next = 0;
+   uint32_t next = 0;
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
@@ -1901,254 +1867,13 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 /* === */
 
-int retroflat_digits( long int num, int base ) {
-   int digits = 0;
-   int negative = 0;
-
-   if( 0 > num ) {
-      num *= -1;
-      negative = 1;
-   }
-
-   while( 0 < num ) {
-      num /= base;
-      digits++;
-   }
-
-   if( 0 == digits ) {
-      digits = 1; /* 0 */
-   }
-
-   if( negative ) {
-      digits++; /* - symbol */
-   }
-
-   return digits;
-}
-
-/* === */
-
-int retroflat_itoa( long int num, char* dest, int dest_sz, int base ) {
-   long int rem;
-   int digits;
-   int digits_done = 0;
-   int dest_idx = 0;
-   int negative = 0;
-
-   digits = retroflat_digits( num, base );
-   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
-   assert( digits < dest_sz );
-
-   /* Handle 0 explicitly, otherwise empty string is printed for 0. */
-   if( 0 == num ) {
-      dest[0] = '0';
-      digits_done++;
-   } else if( 0 > num ) {
-      num *= -1;
-      negative = 1;
-   }
-
-   retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad );
-
-   if( negative ) {
-      dest[dest_idx] = '-';
-   }
-   dest[digits] = '\0';
-
-   return digits;
-}
-
-/* === */
-
-/* TODO: Seems to force 16-bit in Borland... why? */
-int retroflat_utoa( unsigned long int num, char* dest, int dest_sz, int base ) {
-   unsigned long int rem;
-   int digits;
-   int digits_done = 0;
-   int dest_idx = 0;
-
-   digits = retroflat_digits( num, base );
-   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
-   assert( digits < dest_sz );
-
-   /* Handle 0 explicitly, otherwise empty string is printed for 0. */
-   if( 0 == num ) {
-      dest[0] = '0';
-      digits_done++;
-   }
-
-   retroflat_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad );
-   dest[digits] = '\0';
-
-   return digits;
-}
-
-/* === */
-
-void retroflat_vsnprintf(
-   char* buffer, int buffer_sz, const char* fmt, va_list vargs
-) {
-   int i = 0, j = 0;
-   char last = '\0';
-   union RETROFLAT_FMT_SPEC spec;
-   int pad_len = 0;
-   char c;
-   char pad_char = ' ';
-   int buffer_idx = 0;
-   int spec_is_long = 0;
-
-   for( i = 0 ; '\0' != fmt[i] ; i++ ) {
-      c = fmt[i]; /* Separate so we can play tricks below. */
- 
-      if( '%' == last ) {
-         /* Conversion specifier encountered. */
-         memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) );
-         switch( fmt[i] ) {
-            case 'l':
-               spec_is_long = 1;
-               /* Skip resetting the last char. */
-               continue;
-
-            case 's':
-               spec.s = va_arg( vargs, char* );
-
-               /* Print string. */
-               j = 0;
-               while( '\0' != spec.s[j] ) {
-                  retroflat_bufcat( spec.s[j++], buffer, buffer_idx,
-                     buffer_sz, cleanup );
-               }
-               break;
-
-            case 'u':
-               if( spec_is_long ) {
-                  spec.u = va_arg( vargs, long unsigned int );
-               } else {
-                  spec.u = va_arg( vargs, unsigned int );
-               }
-               
-               /* Print padding. */
-               pad_len -= retroflat_digits( spec.d, 10 );
-               retroflat_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += retroflat_utoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
-               break;
-
-            case 'd':
-               if( spec_is_long ) {
-                  spec.d = va_arg( vargs, long int );
-               } else {
-                  spec.d = va_arg( vargs, int );
-               }
-               
-               /* Print padding. */
-               pad_len -= retroflat_digits( spec.d, 10 );
-               retroflat_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += retroflat_itoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
-               break;
-
-            case 'x':
-               spec.d = va_arg( vargs, int );
-
-               /* Print padding. */
-               pad_len -= retroflat_digits( spec.d, 16 );
-               retroflat_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += retroflat_utoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 16 );
-               break;
-
-            case 'c':
-               spec.c = va_arg( vargs, int );
-
-               /* Print padding. */
-               pad_len -= 1;
-               retroflat_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print char. */
-               retroflat_bufcat( spec.c, buffer, buffer_idx,
-                  buffer_sz, cleanup );
-               break;
-
-            case '%':
-               /* Literal % */
-               last = '\0';
-               retroflat_bufcat( '%', buffer, buffer_idx, buffer_sz, cleanup );
-               break;
-
-            case '0':
-               /* If we haven't started counting padding with a non-zero number,
-                * this must be a 0-padding signifier.
-                */
-               if( 0 >= pad_len ) {
-                  pad_char = '0';
-                  c = '%';
-                  break;
-               }
-               /* If we've already started parsing padding count digits, then
-                * fall through below as a regular number.
-                */
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-               /* Handle multi-digit qty padding. */
-               pad_len *= 10;
-               pad_len += (c - '0'); /* Convert from char to int. */
-               c = '%';
-               break;
-         }
-      } else if( '%' != c ) {
-         pad_char = ' '; /* Reset padding. */
-         pad_len = 0; /* Reset padding. */
-         spec_is_long = 0;
-
-         /* Print non-escape characters verbatim. */
-         retroflat_bufcat( c, buffer, buffer_idx,
-            buffer_sz, cleanup );
-      }
-
-      last = c;
-   }
-
-cleanup:
-   return;
-}
-
-/* === */
-
-void retroflat_snprintf( char* buffer, int buffer_sz, const char* fmt, ... ) {
-   va_list vargs;
-
-   va_start( vargs, fmt );
-   retroflat_vsnprintf( buffer, buffer_sz, fmt, vargs );
-   va_end( vargs );
-}
-
-/* === */
-
 void retroflat_message( const char* title, const char* format, ... ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
-   retroflat_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
+   maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
@@ -2333,6 +2058,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    const SDL_VideoInfo* info = NULL;
 #  endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* System sanity checks. */
+   assert( 4 == sizeof( uint32_t ) );
 
    /* Parse command line args. */
    retval = retroflat_parse_args( argc, argv, args );
@@ -2610,7 +2338,7 @@ void retroflat_shutdown( int retval ) {
 
 /* === */
 
-unsigned long int retroflat_get_ms() {
+uint32_t retroflat_get_ms() {
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
@@ -2885,7 +2613,7 @@ int retroflat_load_bitmap(
 
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
-   retroflat_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
+   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
       g_retroflat_assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
 
@@ -3201,7 +2929,7 @@ cleanup:
 
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, unsigned char flags
+   int x, int y, int w, int h, uint8_t flags
 ) {
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HBRUSH old_brush = (HBRUSH)NULL;
@@ -3286,7 +3014,7 @@ cleanup:
 
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, unsigned char flags
+   int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 #  if defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
@@ -3366,7 +3094,7 @@ cleanup:
 
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, unsigned char flags
+   int x, int y, int w, int h, uint8_t flags
 ) {
 #  if defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
@@ -3442,11 +3170,11 @@ cleanup:
 
 /* === */
 
-void retroflat_cursor( struct RETROFLAT_BITMAP* target, unsigned char flags ) {
+void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 #if 0
    char mouse_str[11] = "";
 
-   retroflat_snprintf(
+   maug_snprintf(
       mouse_str, 10, "%02d, %02d", g_last_mouse_x, g_last_mouse_y );
 
    retroflat_string(
@@ -3557,7 +3285,7 @@ cleanup:
 void retroflat_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
-   unsigned char flags
+   uint8_t flags
 ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
@@ -3843,12 +3571,14 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #else
 
+#include <uprintf.h>
+
 extern int g_retval;
 extern int g_screen_w;
 extern int g_screen_h;
 extern int g_screen_v_w;
 extern int g_screen_v_h;
-extern unsigned char g_retroflat_flags;
+extern uint8_t g_retroflat_flags;
 
 #endif /* RETROFLT_C */
 
