@@ -290,7 +290,7 @@ void maug_vsnprintf(
  
       if( '%' == last ) {
          /* Conversion specifier encountered. */
-         memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) );
+         /* memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) ); */
          switch( fmt[i] ) {
             case 'l':
                spec_is_long = 1;
