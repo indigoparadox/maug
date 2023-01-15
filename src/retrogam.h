@@ -59,6 +59,8 @@ void retrogam_generate_diamond_square_iter(
    int16_t iter_x = 0,
       iter_y = 0,
       iter_depth = 0;
+   int16_t corners_x[2][2];
+   int16_t corners_y[2][2];
    int32_t avg = 0;
    struct RETROGAM_GENDATA_DSQUARE data_ds_sub;
    struct RETROGAM_GENDATA_DSQUARE* data_ds = NULL;
@@ -74,6 +76,15 @@ void retrogam_generate_diamond_square_iter(
 
    /* Trivial case; end recursion. */
    if( 0 == data_ds->sect_w ) {
+      debug_printf( 0, "%d return: null sector", iter_depth );
+      goto cleanup;
+   }
+
+   if(
+      data_ds->sect_x + data_ds->sect_w > map_w ||
+      data_ds->sect_y + data_ds->sect_h > map_h
+   ) {
+      debug_printf( 0, "%d return: overflow sector", iter_depth );
       goto cleanup;
    }
 
@@ -82,56 +93,70 @@ void retrogam_generate_diamond_square_iter(
    /* Generate missing corner data. */
    for( iter_y = 0 ; iter_y < 2 ; iter_y++ ) {
       for( iter_x = 0 ; iter_x < 2 ; iter_x++ ) {
-         /* Multiply data_ds->sect_w by iter_x to get the corners
-          * (0, 0) (0, w), (w, 0), (w, w), then subtract iter_w so that
-          * left corners (0, *) stay in bounds as 0, but right corners
-          * get 1 shaved off to stay in bounds as (w - 1).
-          */
-         if(
-            -1 ==
-            map[retrogam_idx(
-               (data_ds->sect_x + (iter_x * data_ds->sect_w)) - iter_x,
-               (data_ds->sect_y + (iter_y * data_ds->sect_h)) - iter_y, map_w )]
-         ) {
-            avg = min_z + (rand() % (max_z - min_z));
-            debug_printf( 0, "coord %d x %d: rand: %d",
-               (data_ds->sect_x + (iter_x * data_ds->sect_w)) - iter_x,
-               (data_ds->sect_y + (iter_y * data_ds->sect_h)) - iter_y,
-               avg );
-            assert( min_z <= avg );
-            map[retrogam_idx(
-               (data_ds->sect_x + (iter_x * data_ds->sect_w)) - iter_x,
-               (data_ds->sect_y + (iter_y * data_ds->sect_h)) - iter_y, map_w )] = avg;
-            assert( min_z <= map[retrogam_idx(
-               (data_ds->sect_x + (iter_x * data_ds->sect_w)) - iter_x,
-               (data_ds->sect_y + (iter_y * data_ds->sect_h)) - iter_y, map_w )] );
-            assert( 127 >= map[retrogam_idx(
-               (data_ds->sect_x + (iter_x * data_ds->sect_w)) - iter_x,
-               (data_ds->sect_y + (iter_y * data_ds->sect_h)) - iter_y, map_w )] );
+         /* Make sure corner X is in bounds. */
+         corners_x[iter_x][iter_y] =
+            (data_ds->sect_x - 1) + (iter_x * data_ds->sect_w);
+         if( 0 > corners_x[iter_x][iter_y] ) {
+            corners_x[iter_x][iter_y] += 1;
          }
+
+         /* Make sure corner Y is in bounds. */
+         corners_y[iter_x][iter_y] =
+            (data_ds->sect_y - 1) + (iter_y * data_ds->sect_h);
+         if( 0 > corners_y[iter_x][iter_y] ) {
+            corners_y[iter_x][iter_y] += 1;
+         }
+
+         if(
+            -1 != map[retrogam_idx(
+               corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], map_w )]
+         ) {
+            debug_printf( 0, "corner coord %d x %d present: %d",
+               corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
+               map[retrogam_idx( 
+                  corners_x[iter_x][iter_y],
+                  corners_y[iter_x][iter_y], map_w )]
+            );
+            continue;
+         }
+
+         /* Fill in missing corner. */
+         avg = min_z + (rand() % (max_z - min_z));
+         debug_printf( 0, "missing corner coord %d x %d: rand: %d",
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], avg );
+         
+         assert( min_z <= avg );
+
+         map[retrogam_idx( 
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], map_w )]
+               = avg;
       }
    }
 
    if( 2 == data_ds->sect_w && 2 == data_ds->sect_h ) {
       /* Nothing to average, this sector is just corners! */
+      debug_printf( 0, "%d return: reached innermost point", iter_depth );
       goto cleanup;
    }
    
    /* Average corner data. */
-   avg = map[retrogam_idx( data_ds->sect_x, data_ds->sect_y, map_w )] +
-      map[retrogam_idx( data_ds->sect_x, data_ds->sect_y + (data_ds->sect_h - 1), map_w )] +
-      map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w - 1), data_ds->sect_y, map_w )] +
-      map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w - 1), data_ds->sect_y + (data_ds->sect_h - 1), map_w )];
-   avg /= 4;
-   debug_printf( 0, "%d: coords: %d x %d: avg of %d, %d, %d, %d: %d",
-      iter_depth,
-      data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2),
-      map[retrogam_idx( data_ds->sect_x, data_ds->sect_y, map_w )],
-      map[retrogam_idx( data_ds->sect_x, data_ds->sect_y + (data_ds->sect_h - 1), map_w )],
-      map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w - 1), data_ds->sect_y, map_w )],
-      map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w - 1), data_ds->sect_y + (data_ds->sect_h - 1), map_w )],
-      avg );
+   for( iter_y = 0 ; 2 > iter_y ; iter_y++ ) {
+      for( iter_x = 0 ; 2 > iter_x ; iter_x++ ) {
+         debug_printf( 0, "%d: adding from coords %d x %d: %d",
+            iter_depth,
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
+            map[retrogam_idx( 
+               corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], map_w )]
+         );
+         avg += map[retrogam_idx( 
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], map_w )];
+      }
+   }
 
+   avg /= 4;
+   debug_printf( 0, "%d: avg: %d", iter_depth, avg );
+
+   assert( -1 == map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )] );
    map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )] =
       avg;
 
@@ -140,16 +165,11 @@ void retrogam_generate_diamond_square_iter(
    );
 
    /* Recurse into subsectors. */
-   for( iter_y = 0 ; iter_y < 2 ; iter_y++ ) {
-      for( iter_x = 0 ; iter_x < 2 ; iter_x++ ) {
-         assert( 0 == data_ds->sect_w % 2 || 0 == data_ds->sect_w );
-         assert( 0 == data_ds->sect_h % 2 || 0 == data_ds->sect_h );
+   for( iter_y = data_ds->sect_y ; iter_y < (data_ds->sect_y + data_ds->sect_h) ; iter_y++ ) {
+      for( iter_x = data_ds->sect_x ; iter_x < (data_ds->sect_x + data_ds->sect_w) ; iter_x++ ) {
+         data_ds_sub.sect_x = data_ds->sect_x + iter_x;
 
-         data_ds_sub.sect_x =
-            data_ds->sect_x + (iter_x * (data_ds->sect_w / 2));
-
-         data_ds_sub.sect_y =
-            data_ds->sect_y + (iter_y * (data_ds->sect_h / 2));
+         data_ds_sub.sect_y = data_ds->sect_y + iter_y;
 
          data_ds_sub.sect_w = data_ds->sect_w / 2;
          data_ds_sub.sect_h = data_ds->sect_h / 2;
@@ -163,14 +183,14 @@ void retrogam_generate_diamond_square_iter(
       }
    }
 
+   debug_printf( 0, "%d return: all sectors complete", iter_depth );
+
 cleanup:
 
    if( NULL == data && NULL != data_ds ) {
       /* We must've alloced this internally. */
       free( data_ds );
    }
-
-   debug_printf( 0, "%d return", iter_depth );
 
    return;
 }
