@@ -5,6 +5,23 @@
 #include <mtypes.h>
 #include <uprintf.h>
 
+/**
+ * \addtogroup maug_retrogam RetroGam API
+ * \{
+ *
+ * \file retrogam.h
+ */
+
+#define retrogam_idx( x, y, w ) (((y) * (w)) + (x))
+
+/**
+ * \addtogroup maug_retrogam_terrain RetroGam Terrain Generation
+ * \{
+ */
+
+/**
+ * \brief Parameter data structure for retrogam_generate_diamond_square_iter().
+ */
 struct RETROGAM_GENDATA_DSQUARE {
    int16_t sect_x;
    int16_t sect_y;
@@ -16,16 +33,22 @@ typedef void (*retrogam_generator)(
    int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
    void* data );
 
-#define retrogam_idx( x, y, w ) (((y) * (w)) + (x))
-
 #define retrogam_generate_diamond_square( map, min_z, max_z, map_w, map_h ) \
    memset( map, -1, map_w * map_h ); \
    retrogam_generate_diamond_square_iter( \
       map, min_z, max_z, map_w, map_h, NULL );
 
+/**
+ * \brief Diamond-square terrain generator.
+ *
+ * This generator creates random numbers in the corners of progressively
+ * smaller map sectors while averaging between them for continuity.
+ */
 void retrogam_generate_diamond_square_iter(
    int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
    void* data );
+
+/*! \} */ /* maug_retrogam_terrain */
 
 #ifdef RETROGAM_C
 
@@ -153,6 +176,8 @@ cleanup:
 }
 
 #endif /* RETROGAM_C */
+
+/*! \} */ /* maug_retrogam */
 
 #endif /* !RETROGAM_H */
 
