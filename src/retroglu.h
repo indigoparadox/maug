@@ -106,7 +106,7 @@ struct RETROGLU_FACE {
  * \param new_state \ref maug_retroglu_obj_fsm_states to set the parser to.
  */
 #define retroglu_parser_state( parser, new_state ) \
-   printf( "changing parser to state: %d\n", new_state ); \
+   debug_printf( 0, "changing parser to state: %d\n", new_state ); \
    (parser)->state = new_state;
 
 /**
@@ -301,7 +301,7 @@ void retroglu_parse_init(
 #define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
       parser->array[parser->sz].val = strtod( parser->token, NULL ); \
-      printf( "vertex %d " desc ": %f\n", \
+      debug_printf( 0, "vertex %d " desc ": %f\n", \
          parser->sz, parser->array[parser->sz].val ); \
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
 
@@ -317,11 +317,11 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    /* NULL-terminate token. */
    parser->token[parser->token_sz] = '\0';
 
-   printf( "token: %s\n", parser->token );
+   debug_printf( 0, "token: %s\n", parser->token );
 
    if( RETROGLU_PARSER_STATE_MATERIAL_LIB == parser->state ) {
 
-      printf( "parsing material lib: %s\n", parser->token );
+      debug_printf( 0, "parsing material lib: %s\n", parser->token );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
       assert( NULL != parser->load_mtl );
       return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
@@ -337,7 +337,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->faces[parser->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      printf( "face %d, vertex %d: %d\n",
+      debug_printf( 0, "face %d, vertex %d: %d\n",
          parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
          parser->faces[parser->faces_sz].vertex_idxs[
             parser->faces[parser->faces_sz].vertex_idxs_sz] );
@@ -355,7 +355,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->faces[parser->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      printf( "face %d, normal %d: %d\n",
+      debug_printf( 0, "face %d, normal %d: %d\n",
          parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
          parser->faces[parser->faces_sz].vnormal_idxs[
             parser->faces[parser->faces_sz].vertex_idxs_sz] );
@@ -373,7 +373,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->faces[parser->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      printf( "face %d, texture %d: %d\n",
+      debug_printf( 0, "face %d, texture %d: %d\n",
          parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
          parser->faces[parser->faces_sz].vtexture_idxs[
             parser->faces[parser->faces_sz].vertex_idxs_sz] );
@@ -389,12 +389,13 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
       /* Find the material index and assign it to the parser. */
       for( i = 0 ; parser->materials_sz > i ; i++ ) {
-         printf( "%s vs %s\n", parser->materials[i].name, parser->token );
+         debug_printf(
+            0, "%s vs %s\n", parser->materials[i].name, parser->token );
          if( 0 == strncmp(
             parser->materials[i].name, parser->token,
             RETROGLU_MATERIAL_NAME_SZ_MAX
          ) ) {
-            printf( "using material: \"%s\" (%d)\n",
+            debug_printf( 0, "using material: \"%s\" (%d)\n",
                parser->materials[i].name, i );
             parser->material_idx = i;
             break;
@@ -404,7 +405,7 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
    } else if( RETROGLU_PARSER_STATE_MATERIAL_NAME == parser->state ) {
 
-      printf( "adding material: \"%s\" at idx: %d\n",
+      debug_printf( 0, "adding material: \"%s\" at idx: %d\n",
          parser->token, parser->materials_sz - 1 );
       strncpy(
          parser->materials[parser->materials_sz - 1].name,
@@ -440,7 +441,7 @@ int retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
 
    /* Protect against token overflow. */
    if( parser->token_sz >= RETROGLU_PARSER_TOKEN_SZ_MAX ) {
-      printf( "token out of bounds!\n" );
+      debug_printf( 0, "token out of bounds!\n" );
       return RETROGLU_PARSER_ERROR;
    }
 
@@ -499,6 +500,14 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          retval = retroglu_parse_token( parser );
          /* End of vertex. */
          parser->vertices_sz++;
+         return retval;
+
+      } else if( RETROGLU_PARSER_STATE_MTL_KD_B == parser->state ) {
+         retval = retroglu_parse_token( parser );
+         /* This tuple ended with a newline after blue, so assume alpha is 1.0.
+          */
+         debug_printf( 0, "setting material alpha to 1.0" );
+         parser->materials[parser->materials_sz].diffuse[3] = 1.0;
          return retval;
          
       } else {
@@ -572,6 +581,9 @@ int retroglu_load_tex_bmp(
 ) {
    uint32_t bmp_offset = 0;
    uint32_t bmp_bpp = 0;
+   uint32_t bmp_px_sz = 0;
+   uint8_t* bmp_px = NULL;
+   int16_t i = 0;
 
    /* Offsets hardcoded based on windows bitmap. */
    /* TODO: More flexibility. */
@@ -582,20 +594,45 @@ int retroglu_load_tex_bmp(
    }
 
    bmp_offset = bmp_read_uint32( &(bmp_buf[0x0a]) );
+   bmp_px_sz = bmp_buf_sz - bmp_offset;
    *p_bmp_w = bmp_read_uint32( &(bmp_buf[0x12]) );
    *p_bmp_h = bmp_read_uint32( &(bmp_buf[0x16]) );
    bmp_bpp = bmp_read_uint32( &(bmp_buf[0x1c]) );
+   assert( 24 == bmp_bpp );
 
    debug_printf( 1,
       "bitmap " UPRINTF_U32 " x " UPRINTF_U32 " x " UPRINTF_U32
       " starting at " UPRINTF_U32 " bytes",
       *p_bmp_w, *p_bmp_h, bmp_bpp, bmp_offset );
 
+   /* Allocate temporary buffer for unpacking. */
+   bmp_px = calloc( *p_bmp_w * *p_bmp_h, 4 );
+   assert( NULL != bmp_px );
+
+   /* Unpack bitmap BGR into BGRA with color key. */
+   for( i = 0 ; bmp_px_sz / 3 > i ; i++ ) {
+      bmp_px[i * 4] = bmp_buf[bmp_offset + (i * 3) + 2];
+      bmp_px[(i * 4) + 1] = bmp_buf[bmp_offset + (i * 3) + 1];
+      bmp_px[(i * 4) + 2] = bmp_buf[bmp_offset + (i * 3)];
+      if(
+         RETROFLAT_TXP_R == bmp_buf[bmp_offset + (i * 3) + 2] &&
+         RETROFLAT_TXP_G == bmp_buf[bmp_offset + (i * 3) + 1] &&
+         RETROFLAT_TXP_B == bmp_buf[bmp_offset + (i * 3)]
+      ) {
+         /* Transparent pixel found. */
+         bmp_px[(i * 4) + 3] = 0x00;
+      } else {
+         bmp_px[(i * 4) + 3] = 0xff;
+      }
+   }
+
    glGenTextures( 1, p_texture_id );
    glBindTexture( GL_TEXTURE_2D, *p_texture_id );
-   glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, *p_bmp_w, *p_bmp_h, 0,
-      GL_BGR_EXT, GL_UNSIGNED_BYTE, &(bmp_buf[bmp_offset]) ); 
+   /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, *p_bmp_w, *p_bmp_h, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
+
+   free( bmp_px );
 
    return RETROFLAT_OK;
 }
