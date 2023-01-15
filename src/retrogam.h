@@ -30,7 +30,7 @@ struct RETROGAM_GENDATA_DSQUARE {
 };
 
 struct RETROGAM_GENDATA_VORONOI {
-   int16_t sectors;
+   int16_t spb;
    int16_t drift;
 };
 
@@ -236,19 +236,107 @@ void retrogam_generate_voronoi_iter(
    int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
    void* data
 ) {
+   int16_t x = 0,
+      y = 0,
+      offset_x = 0,
+      offset_y = 0,
+      finished = 0;
    struct RETROGAM_GENDATA_VORONOI* data_v = NULL;
 
    if( NULL == data ) {
       data_v = calloc( sizeof( struct RETROGAM_GENDATA_VORONOI ), 1 );
-      data_v->sectors = map_w / RETROGAM_VORONOI_DEFAULT_SPB;
+      data_v->spb = RETROGAM_VORONOI_DEFAULT_SPB;
       data_v->drift = RETROGAM_VORONOI_DEFAULT_DRIFT;
    } else {
       data_v = (struct RETROGAM_GENDATA_VORONOI*)data;
    }
 
-   
+   /* Generate the initial sector starting points. */
+   for( y = 0 ; map_h > y ; y += data_v->spb ) {
+      for( x = 0 ; map_w > x ; x += data_v->spb ) {
+         offset_x = x + ((data_v->drift * -1) + (rand() % data_v->drift));
+         offset_y = y + ((data_v->drift * -1) + (rand() % data_v->drift));
 
-cleanup:
+         /* Clamp sector offsets onto map borders. */
+         if( 0 > offset_x ) {
+            offset_x = 0;
+         }
+         if( offset_x >= map_w ) {
+            offset_x = map_w - 1;
+         }
+         if( 0 > offset_y ) {
+            offset_y = 0;
+         }
+         if( offset_y >= map_h ) {
+            offset_y = map_h - 1;
+         }
+
+         map[(offset_y * map_w) + offset_x] = min_z + (rand() % max_z);
+      }
+   }
+
+   /* Grow the sector starting points. */
+   while( !finished ) {
+      finished = 1;
+      for( y = 0 ; map_h > y ; y++ ) {
+         for( x = 0 ; map_w > x ; x++ ) {
+            if( -1 != map[(y * map_w) + x] ) {
+               continue;
+            }
+
+            /* This pass still did work, so not finished yet! */
+            finished = 0;
+            
+            if( /* y + 1 */
+               map_h - 1 > y && -1 != map[((y + 1) * map_w) + x]
+            ) {
+               map[(y * map_w) + x] = map[((y + 1) * map_w) + x];
+            
+            } else if( /* x - 1 */
+               0 < x && -1 != map[(y * map_w) + (x - 1)]
+            ) {
+               map[(y * map_w) + x] = map[(y * map_w) + (x - 1)];
+            
+            } else if( /* x + 1 */
+               map_w - 1 > x && -1 != map[(y * map_w) + (x + 1)]
+            ) {
+               map[(y * map_w) + x] = map[(y * map_w) + (x + 1)];
+            
+            } else if( /* y - 1 */
+               0 < y && -1 != map[((y - 1) * map_w) + x]
+            ) {
+               map[(y * map_w) + x] = map[((y - 1) * map_w) + x];
+
+#ifdef RETROGAM_VORONOI_DIAGONAL
+            } else if( /* y + 1, x + 1 */
+               map_w - 1 > x && map_h - 1 > y &&
+               -1 != map[((y + 1) * map_w) + (x + 1)]
+            ) {
+               map[(y * map_w) + x] = map[((y + 1) * map_w) + (x + 1)];
+            
+            } else if( /* y + 1, x - 1 */
+               0 < x && map_h - 1 > y &&
+               -1 != map[((y + 1) * map_w) + (x - 1)]
+            ) {
+               map[(y * map_w) + x] = map[((y + 1) * map_w) + (x - 1)];
+            
+            } else if( /* y - 1, x + 1 */
+               map_w - 1 > x && 0 < y &&
+               -1 != map[((y - 1) * map_w) + (x + 1)]
+            ) {
+               map[(y * map_w) + x] = map[((y - 1) * map_w) + (x + 1)];
+            
+            } else if( /* y - 1, x - 1 */
+               0 < x && 0 < y &&
+               -1 != map[((y - 1) * map_w) + (x - 1)]
+            ) {
+               map[(y * map_w) + x] = map[((y - 1) * map_w) + (x - 1)];
+#endif /* RETROGAM_VORONOI_DIAGONAL */
+            }
+         }
+      }
+   }
+
 
    if( NULL == data ) {
       /* We must've alloced this internally. */
