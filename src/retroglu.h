@@ -227,6 +227,10 @@ int retroglu_token_usemtl( struct RETROGLU_PARSER* parser ) {
 }
 
 int retroglu_token_newmtl( struct RETROGLU_PARSER* parser ) {
+   /* Set default lighting alpha to non-transparent. */
+   parser->materials[parser->materials_sz].ambient[3] = 1.0f;
+   parser->materials[parser->materials_sz].diffuse[3] = 1.0f;
+   parser->materials[parser->materials_sz].specular[3] = 1.0f;
    parser->materials_sz++;
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_NAME );
    return RETROFLAT_OK;
@@ -329,7 +333,6 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    RETROGLU_TOKENS_VF( RETROGLU_TOKEN_PARSE_VF )
 
       /* TODO: Handle W. */
-      /* TODO: Append 1.0 to materials. */
 
    } else if( RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ) {
       /* Parsing face vertex index. */
@@ -502,14 +505,6 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          parser->vertices_sz++;
          return retval;
 
-      } else if( RETROGLU_PARSER_STATE_MTL_KD_B == parser->state ) {
-         retval = retroglu_parse_token( parser );
-         /* This tuple ended with a newline after blue, so assume alpha is 1.0.
-          */
-         debug_printf( 0, "setting material alpha to 1.0" );
-         parser->materials[parser->materials_sz].diffuse[3] = 1.0;
-         return retval;
-         
       } else {
          return retroglu_parse_token( parser );
       }
@@ -546,6 +541,12 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          parser->vertices_sz++;
          return retval;
 
+      } else if( RETROGLU_PARSER_STATE_MTL_KD_B == parser->state ) {
+         retval = retroglu_parse_token( parser );
+         /* This tuple has a space after blue, so maybe alpha? */
+         /* TODO: Set alpha state. */
+         return retval;
+         
       } else {
          return retroglu_parse_token( parser );
       }
