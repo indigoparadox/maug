@@ -29,6 +29,20 @@ struct RETROGAM_GENDATA_DSQUARE {
    int16_t sect_h;
 };
 
+struct RETROGAM_GENDATA_VORONOI {
+   int16_t sectors;
+   int16_t drift;
+};
+
+/*! \brief Default sector per blocks if not specified.  */
+#ifndef RETROGAM_VORONOI_DEFAULT_SPB
+#  define RETROGAM_VORONOI_DEFAULT_SPB 8
+#endif /* !RETROGAM_VORONOI_DEFAULT_SPB */
+
+#ifndef RETROGAM_VORONOI_DEFAULT_DRIFT
+#  define RETROGAM_VORONOI_DEFAULT_DRIFT 2
+#endif /* !RETROGAM_VORONOI_DEFAULT_DRIFT */
+
 typedef void (*retrogam_generator)(
    int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
    void* data );
@@ -38,6 +52,11 @@ typedef void (*retrogam_generator)(
    retrogam_generate_diamond_square_iter( \
       map, min_z, max_z, map_w, map_h, NULL );
 
+#define retrogam_generate_voronoi( map, min_z, max_z, map_w, map_h ) \
+   memset( map, -1, map_w * map_h ); \
+   retrogam_generate_voronoi_iter( \
+      map, min_z, max_z, map_w, map_h, NULL );
+
 /**
  * \brief Diamond-square terrain generator.
  *
@@ -45,6 +64,10 @@ typedef void (*retrogam_generator)(
  * smaller map sectors while averaging between them for continuity.
  */
 void retrogam_generate_diamond_square_iter(
+   int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
+   void* data );
+
+void retrogam_generate_voronoi_iter(
    int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
    void* data );
 
@@ -204,6 +227,32 @@ cleanup:
    if( NULL == data && NULL != data_ds ) {
       /* We must've alloced this internally. */
       free( data_ds );
+   }
+
+   return;
+}
+
+void retrogam_generate_voronoi_iter(
+   int8_t* map, int8_t min_z, int8_t max_z, int16_t map_w, int16_t map_h,
+   void* data
+) {
+   struct RETROGAM_GENDATA_VORONOI* data_v = NULL;
+
+   if( NULL == data ) {
+      data_v = calloc( sizeof( struct RETROGAM_GENDATA_VORONOI ), 1 );
+      data_v->sectors = map_w / RETROGAM_VORONOI_DEFAULT_SPB;
+      data_v->drift = RETROGAM_VORONOI_DEFAULT_DRIFT;
+   } else {
+      data_v = (struct RETROGAM_GENDATA_VORONOI*)data;
+   }
+
+   
+
+cleanup:
+
+   if( NULL == data ) {
+      /* We must've alloced this internally. */
+      free( data_v );
    }
 
    return;
