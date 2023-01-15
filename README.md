@@ -2,7 +2,19 @@
 
 Augmented minimal standard library for C89 and legacy compilers.
 
-## retroflt
+## Design Constraints
+
+Maug has the following design goals and constraints:
+
+- Must work in C89 compilers. C99-like features like stdint or snprintf are
+  available by internal implementation.
+- Memory allocation uses a flat model (calloc/free), with no handle management.
+- Standard library calls are allowed, so long as they are universally
+  available even in very old C89 compilers.
+
+## Modules
+
+### retroflt
 
 `#include <retroflt.h>`
 
@@ -10,7 +22,7 @@ RetroFlat is a rough, quick-and-dirty compatibility layer for making graphical p
 
 This documentation is also available at [https://indigoparadox.github.io/maug/group__maug__retroflt.html](https://indigoparadox.github.io/maug/group__maug__retroflt.html).
 
-## mtypes
+### mtypes
 
 `#include <mtypes.h>`
 
@@ -27,7 +39,7 @@ Includes common types from stdint.h, guaranteed to be of the named size:
 
 When using this header, do not include stdint.h. This header will include it if the current platform supports it. Otherwise, it will improvise.
 
-## uprintf
+### uprintf
 
 `#include <uprintf.h>`
 
