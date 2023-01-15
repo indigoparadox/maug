@@ -190,6 +190,10 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
 /*! \} */ /* maug_retroglu_obj_fsm */
 
+int retroglu_load_tex_bmp(
+   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, GLuint* p_texture_id,
+   uint32_t* p_bmp_w, uint32_t* p_bmp_h );
+
 void retroglu_draw_poly(
    struct RETROGLU_VERTEX* vertices, int vertices_sz,
    struct RETROGLU_VERTEX* vnormals, int vnormals_sz,
@@ -558,6 +562,40 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
    default:
       return retroglu_append_token( parser, c );
    }
+
+   return RETROFLAT_OK;
+}
+
+int retroglu_load_tex_bmp(
+   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, GLuint* p_texture_id,
+   uint32_t* p_bmp_w, uint32_t* p_bmp_h
+) {
+   uint32_t bmp_offset = 0;
+   uint32_t bmp_bpp = 0;
+
+   /* Offsets hardcoded based on windows bitmap. */
+   /* TODO: More flexibility. */
+
+   if( 40 != bmp_read_uint32( &(bmp_buf[0x0e]) ) ) {
+      error_printf( "unable to determine texture bitmap format" );
+      return RETROFLAT_ERROR_BITMAP;
+   }
+
+   bmp_offset = bmp_read_uint32( &(bmp_buf[0x0a]) );
+   *p_bmp_w = bmp_read_uint32( &(bmp_buf[0x12]) );
+   *p_bmp_h = bmp_read_uint32( &(bmp_buf[0x16]) );
+   bmp_bpp = bmp_read_uint32( &(bmp_buf[0x1c]) );
+
+   debug_printf( 1,
+      "bitmap " UPRINTF_U32 " x " UPRINTF_U32 " x " UPRINTF_U32
+      " starting at " UPRINTF_U32 " bytes",
+      *p_bmp_w, *p_bmp_h, bmp_bpp, bmp_offset );
+
+   glGenTextures( 1, p_texture_id );
+   glBindTexture( GL_TEXTURE_2D, *p_texture_id );
+   glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, *p_bmp_w, *p_bmp_h, 0,
+      GL_BGR_EXT, GL_UNSIGNED_BYTE, &(bmp_buf[bmp_offset]) ); 
 
    return RETROFLAT_OK;
 }
