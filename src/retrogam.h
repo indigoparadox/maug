@@ -2,6 +2,9 @@
 #ifndef RETROGAM_H
 #define RETROGAM_H
 
+/* For memset */
+#include <string.h>
+
 #include <mtypes.h>
 #include <uprintf.h>
 
