@@ -40,7 +40,7 @@ struct RETROGAM_GENDATA_VORONOI {
 #endif /* !RETROGAM_VORONOI_DEFAULT_SPB */
 
 #ifndef RETROGAM_VORONOI_DEFAULT_DRIFT
-#  define RETROGAM_VORONOI_DEFAULT_DRIFT 2
+#  define RETROGAM_VORONOI_DEFAULT_DRIFT 4
 #endif /* !RETROGAM_VORONOI_DEFAULT_DRIFT */
 
 typedef void (*retrogam_generator)(
@@ -182,7 +182,7 @@ void retrogam_generate_diamond_square_iter(
    if(
       -1 != map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )]
    ) {
-      error_printf( "avg already present at %d x %d!",
+      debug_printf( 0, "avg already present at %d x %d!",
          data_ds->sect_x + (data_ds->sect_w / 2),
          data_ds->sect_y + (data_ds->sect_h / 2) );
    }
@@ -240,7 +240,8 @@ void retrogam_generate_voronoi_iter(
       y = 0,
       offset_x = 0,
       offset_y = 0,
-      finished = 0;
+      finished = 0,
+      pass_done = 0;
    struct RETROGAM_GENDATA_VORONOI* data_v = NULL;
 
    if( NULL == data ) {
@@ -278,8 +279,10 @@ void retrogam_generate_voronoi_iter(
    /* Grow the sector starting points. */
    while( !finished ) {
       finished = 1;
+      printf( "pass\n" );
       for( y = 0 ; map_h > y ; y++ ) {
-         for( x = 0 ; map_w > x ; x++ ) {
+         pass_done = 0;
+         for( x = 0 ; map_w > x && !pass_done ; x++ ) {
             if( -1 != map[(y * map_w) + x] ) {
                continue;
             }
@@ -332,7 +335,13 @@ void retrogam_generate_voronoi_iter(
             ) {
                map[(y * map_w) + x] = map[((y - 1) * map_w) + (x - 1)];
 #endif /* RETROGAM_VORONOI_DIAGONAL */
+
+            } else {
+               /* Nothing done, so skip pass_done below. */
+               continue;
             }
+
+            pass_done = 1;
          }
       }
    }
