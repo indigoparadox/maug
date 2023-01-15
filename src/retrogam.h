@@ -156,7 +156,13 @@ void retrogam_generate_diamond_square_iter(
    avg /= 4;
    debug_printf( 0, "%d: avg: %d", iter_depth, avg );
 
-   assert( -1 == map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )] );
+   if(
+      -1 != map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )]
+   ) {
+      error_printf( "avg already present at %d x %d!",
+         data_ds->sect_x + (data_ds->sect_w / 2),
+         data_ds->sect_y + (data_ds->sect_h / 2) );
+   }
    map[retrogam_idx( data_ds->sect_x + (data_ds->sect_w / 2), data_ds->sect_y + (data_ds->sect_h / 2), map_w )] =
       avg;
 
@@ -165,8 +171,16 @@ void retrogam_generate_diamond_square_iter(
    );
 
    /* Recurse into subsectors. */
-   for( iter_y = data_ds->sect_y ; iter_y < (data_ds->sect_y + data_ds->sect_h) ; iter_y++ ) {
-      for( iter_x = data_ds->sect_x ; iter_x < (data_ds->sect_x + data_ds->sect_w) ; iter_x++ ) {
+   for(
+      iter_y = data_ds->sect_y ;
+      iter_y < (data_ds->sect_y + data_ds->sect_h) ;
+      iter_y++
+   ) {
+      for(
+         iter_x = data_ds->sect_x ;
+         iter_x < (data_ds->sect_x + data_ds->sect_w) ;
+         iter_x++
+      ) {
          data_ds_sub.sect_x = data_ds->sect_x + iter_x;
 
          data_ds_sub.sect_y = data_ds->sect_y + iter_y;
@@ -174,7 +188,7 @@ void retrogam_generate_diamond_square_iter(
          data_ds_sub.sect_w = data_ds->sect_w / 2;
          data_ds_sub.sect_h = data_ds->sect_h / 2;
 
-         debug_printf( 0, "%d: child sector at %d, %d, %d wide",
+         debug_printf( 0, "%d: child sector at %d x %d, %d wide",
             iter_depth,
             data_ds_sub.sect_x, data_ds_sub.sect_y, data_ds_sub.sect_w );
 
