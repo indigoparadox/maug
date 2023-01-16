@@ -2157,6 +2157,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 #     endif /* RETROFLAT_OPENGL */
 
+   g_screen_v_w = args->screen_w;
+   g_screen_v_h = args->screen_h;
+
    g_buffer.surface = SDL_SetVideoMode(
       args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
