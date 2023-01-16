@@ -96,6 +96,21 @@ struct RETROGLU_FACE {
 };
 
 /**
+ * \addtogroup maug_retroglu_sprite RetroGLU Sprites
+ * \{
+ */
+
+struct RETROGLU_SPRITE {
+   float vertices_front[6][2];
+   float vtexture_front[6][2];
+   float vertices_back[6][2];
+   float vtexture_back[6][2];
+   GLuint texture_id;
+};
+
+/*! \} */ /* maug_retroglu_sprite */
+
+/**
  * \addtogroup maug_retroglu_obj_fsm
  * \{
  */
@@ -671,6 +686,29 @@ void retroglu_draw_poly(
       }
 
    }
+   glEnd();
+}
+
+void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite, int x, int y ) {
+   int i = 0;
+   
+   glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
+   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+   glBegin( GL_TRIANGLES );
+
+   for( i = 0 ; 6 > i ; i++ ) {
+      glTexCoord2fv( sprite->vtexture_front[i] );
+      glVertex2fv( sprite->vertices_front[i] );
+   }
+
+   for( i = 0 ; 6 > i ; i++ ) {
+      glTexCoord2fv( sprite->vtexture_back[i] );
+      glVertex2fv( sprite->vertices_back[i] );
+   }
+
    glEnd();
 }
 
