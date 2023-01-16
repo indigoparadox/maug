@@ -1479,7 +1479,8 @@ int g_screen_h = 0;
 unsigned int g_last_mouse = 0;
 unsigned int g_last_mouse_x = 0;
 unsigned int g_last_mouse_y = 0;
-volatile unsigned long g_ms;
+unsigned int g_close_button = 0;
+volatile unsigned long g_ms = 0;
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -1609,7 +1610,7 @@ static LRESULT CALLBACK WndProc(
 #  endif /* RETROFLAT_OPENGL */
 
          /* Quit on window close. */
-         PostQuitMessage( 0 );
+         retroflat_quit( 0 );
          break;
 
 #  if !defined( RETROFLAT_OPENGL )
@@ -2035,9 +2036,14 @@ void retroflat_add_arg(
 
 #ifdef RETROFLAT_API_ALLEGRO
 
-void retroflat_ms_tick() {
+void retroflat_on_ms_tick() {
    g_ms++;
 }
+
+void retroflat_on_close_button() {
+   g_close_button = 1;
+}
+END_OF_FUNCTION( retroflat_on_close_button )
 
 #endif /* RETROFLAT_API_ALLEGRO */
 
@@ -2089,7 +2095,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     if !defined( RETROFLAT_OS_DOS )
    /* XXX: Broken in DOS. */
    install_timer();
-   install_int( retroflat_ms_tick, 1 );
+   install_int( retroflat_on_ms_tick, 1 );
 #     endif /* RETROFLAT_OS_DOS */
 
 #     ifdef RETROFLAT_OS_DOS
@@ -2103,6 +2109,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
+
+   LOCK_FUNCTION( retroflat_on_close_button );
+   set_close_button_callback( retroflat_on_close_button );
 
 #     ifndef RETROFLAT_OS_DOS
    if( NULL != args->title ) {
@@ -3436,6 +3445,11 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* == Allegro == */
 
+   if( g_close_button ) {
+      retroflat_quit( 0 );
+      return 0;
+   }
+
 #     ifdef RETROFLAT_OS_DOS
 
    /* Poll the mouse. */
@@ -3490,7 +3504,9 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* TODO: Handle SDL window close. */
 
-   if( SDL_KEYDOWN == event.type ) {
+   if( SDL_QUIT == event.type ) {
+      retroflat_quit( 0 );
+   } else if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
 
       /* Flush key buffer to improve responsiveness. */
