@@ -115,6 +115,7 @@ struct RETROGLU_SPRITE {
    float screen_clip_wf;
    /*! \brief Height of clipped sprite on screen. */
    float screen_clip_hf;
+   float rotate_y;
 };
 
 /*! \} */ /* maug_retroglu_sprite */
@@ -775,60 +776,54 @@ void retroglu_set_sprite_pos(
    /* Setup the sprite vertices. */
 
    /* Lower-Left */
-   sprite->vertices_front[0][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   sprite->vertices_front[0][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = 0;
    
    /* Lower-Right */
-   sprite->vertices_front[1][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   sprite->vertices_front[1][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = 0;
    
    /* Upper-Right */
-   sprite->vertices_front[2][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_front[2][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   sprite->vertices_front[2][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
    /* Upper-Right */
-   sprite->vertices_front[3][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_front[3][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   sprite->vertices_front[3][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
    /* Upper-Left */
-   sprite->vertices_front[4][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_front[4][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   sprite->vertices_front[4][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
    /* Lower-Left */
-   sprite->vertices_front[5][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   sprite->vertices_front[5][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = 0;
 
    /* Back face. */
 
-   sprite->vertices_back[0][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   /* Lower-Right */
+   sprite->vertices_back[0][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = 0;
 
-   sprite->vertices_back[1][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   /* Lower-Left */
+   sprite->vertices_back[1][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = 0;
 
-   sprite->vertices_back[2][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_back[2][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   /* Upper-Left */
+   sprite->vertices_back[2][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
-   sprite->vertices_back[3][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
-   sprite->vertices_back[3][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   /* Upper-Left */
+   sprite->vertices_back[3][RETROGLU_SPRITE_X] = 0;
+   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
-   sprite->vertices_back[4][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_back[4][RETROGLU_SPRITE_Y] =
-      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+   /* Upper-Right */
+   sprite->vertices_back[4][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
 
-   sprite->vertices_back[5][RETROGLU_SPRITE_X] =
-      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
-   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   /* Lower-Right */
+   sprite->vertices_back[5][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
+   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = 0;
 }
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
@@ -839,6 +834,18 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
+   /* Save the current (presumably unmodified model view matrix. */
+   glPushMatrix();
+
+   /* Set the matrix to translate/rotate/scale based on sprite props. */
+   glTranslatef( 0.5, 0, 0 );
+   
+   /* DEBUG: Look down-front. */
+   glRotatef( 45, 1.0f, 0, 0 );
+
+   /* TODO: Sprite is rotating around left side, not center. */
+   glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
+
    glBegin( GL_TRIANGLES );
 
    for( i = 0 ; 6 > i ; i++ ) {
@@ -846,14 +853,14 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
       glVertex2fv( sprite->vertices_front[i] );
    }
 
-   /*
    for( i = 0 ; 6 > i ; i++ ) {
       glTexCoord2fv( sprite->vtexture_back[i] );
       glVertex2fv( sprite->vertices_back[i] );
    }
-   */
 
    glEnd();
+
+   glPopMatrix();
 }
 
 #endif /* RETROGLU_C */
