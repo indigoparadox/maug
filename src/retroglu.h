@@ -115,6 +115,10 @@ struct RETROGLU_SPRITE {
    float screen_clip_wf;
    /*! \brief Height of clipped sprite on screen. */
    float screen_clip_hf;
+   float translate_x;
+   float translate_y;
+   float scale_x;
+   float scale_y;
    float rotate_y;
 };
 
@@ -707,29 +711,45 @@ void retroglu_draw_poly(
    glEnd();
 }
 
-#if 0
 int16_t retroglu_set_sprite_tex(
-   struct RETROGLU_SPRITE* sprite, uint8_t* bmp_buf, uint32_t* bmp_buf_sz
+   struct RETROGLU_SPRITE* sprite, uint8_t* bmp_buf, uint32_t bmp_buf_sz
 ) {
    uint32_t bmp_w = 0,
       bmp_h = 0;
+   GLuint texture_id = 0;
+   int16_t retval = RETROFLAT_OK;
 
-   retroglu_load_tex_bmp(
-      bmp_buf, bmp_buf_sz, p_texture_id,
-      p_bmp_w, p_bmp_h );
-#endif
+   retval = retroglu_load_tex_bmp(
+      bmp_buf, bmp_buf_sz, &texture_id, &bmp_w, &bmp_h );
+   if( RETROFLAT_OK != retval ) {
+      return retval; 
+   }
 
-void retroglu_set_sprite_zoom(
-   struct RETROGLU_SPRITE* sprite, uint32_t pw, uint32_t ph
-) {
-   sprite->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
-   sprite->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
+   /* Set sprite properties based on texture. */
+   sprite->texture_id = texture_id;
+   sprite->texture_w = bmp_w;
+   sprite->texture_h = bmp_h;
+   sprite->scale_x = 1.0f;
+   sprite->scale_y = 1.0f;
+
 }
 
 void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
    uint32_t px, uint32_t py, uint32_t pw, uint32_t ph
 ) {
+   /* Set vertices in terms of half the clip size so that rotation is around
+    * the midpoint of the sprite, not the side!
+    */
+   float clip_half_x = 0;
+   float clip_half_y = 0;
+
+   sprite->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
+   sprite->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
+   clip_half_x = sprite->screen_clip_wf / 2;
+   clip_half_y = sprite->screen_clip_hf / 2;
+
+   /* Setup texture spritesheet. */
 
    sprite->vtexture_front[0][RETROGLU_SPRITE_X] = 0;
    sprite->vtexture_front[0][RETROGLU_SPRITE_Y] = 0.75;
@@ -768,16 +788,6 @@ void retroglu_set_sprite_clip(
 
    sprite->vtexture_back[5][RETROGLU_SPRITE_X] = 0;
    sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = 0.5;
-}
-
-void retroglu_set_sprite_pos(
-   struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py
-) {
-   /* Set vertices in terms of half the clip size so that rotation is around
-    * the midpoint of the sprite, not the side!
-    */
-   float clip_half_x = sprite->screen_clip_wf / 2;
-   float clip_half_y = sprite->screen_clip_hf / 2;
 
    /* Setup the sprite vertices. */
 
@@ -832,6 +842,13 @@ void retroglu_set_sprite_pos(
    sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 }
 
+void retroglu_set_sprite_pos(
+   struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py
+) {
+   sprite->translate_x = retroglu_scr_px_x_to_f( px );
+   sprite->translate_y = retroglu_scr_px_y_to_f( py );
+}
+
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
    
@@ -845,13 +862,7 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
 
    /* Set the matrix to translate/rotate/scale based on sprite props. */
    glTranslatef( 0.5, 0, 0 );
-   
-   /* DEBUG: Look down-front. */
-   /*
-   glRotatef( 45, 1.0f, 0, 0 );
-   */
-
-   /* TODO: Sprite is rotating around left side, not center. */
+   glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
    glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
 
    glBegin( GL_TRIANGLES );
