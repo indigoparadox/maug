@@ -100,15 +100,32 @@ struct RETROGLU_FACE {
  * \{
  */
 
+#define RETROGLU_SPRITE_X 0
+#define RETROGLU_SPRITE_Y 1
+
 struct RETROGLU_SPRITE {
    float vertices_front[6][2];
    float vtexture_front[6][2];
    float vertices_back[6][2];
    float vtexture_back[6][2];
    GLuint texture_id;
+   int texture_w;
+   int texture_h;
+   /*! \brief Width of clipped sprite on screen. */
+   float screen_clip_wf;
+   /*! \brief Height of clipped sprite on screen. */
+   float screen_clip_hf;
 };
 
 /*! \} */ /* maug_retroglu_sprite */
+
+#define retroglu_tex_px_x_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_w)
+#define retroglu_tex_px_y_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_h)
+
+#define retroglu_scr_px_x_to_f( px ) \
+   (float)(((px) * 1.0 / (retroflat_screen_w() / 2)) - 1.0)
+#define retroglu_scr_px_y_to_f( py ) \
+   (float)(((py) * 1.0 / (retroflat_screen_h() / 2)) - 1.0)
 
 /**
  * \addtogroup maug_retroglu_obj_fsm
@@ -689,7 +706,132 @@ void retroglu_draw_poly(
    glEnd();
 }
 
-void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite, int x, int y ) {
+#if 0
+int16_t retroglu_set_sprite_tex(
+   struct RETROGLU_SPRITE* sprite, uint8_t* bmp_buf, uint32_t* bmp_buf_sz
+) {
+   uint32_t bmp_w = 0,
+      bmp_h = 0;
+
+   retroglu_load_tex_bmp(
+      bmp_buf, bmp_buf_sz, p_texture_id,
+      p_bmp_w, p_bmp_h );
+#endif
+
+void retroglu_set_sprite_zoom(
+   struct RETROGLU_SPRITE* sprite, uint32_t pw, uint32_t ph
+) {
+   sprite->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
+   sprite->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
+}
+
+void retroglu_set_sprite_clip(
+   struct RETROGLU_SPRITE* sprite,
+   uint32_t px, uint32_t py, uint32_t pw, uint32_t ph
+) {
+
+   sprite->vtexture_front[0][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_front[0][RETROGLU_SPRITE_Y] = 0.75;
+
+   sprite->vtexture_front[1][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_front[1][RETROGLU_SPRITE_Y] = 0.75;
+
+   sprite->vtexture_front[2][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_front[2][RETROGLU_SPRITE_Y] = 1.0;
+
+   sprite->vtexture_front[3][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_front[3][RETROGLU_SPRITE_Y] = 1.0;
+
+   sprite->vtexture_front[4][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_front[4][RETROGLU_SPRITE_Y] = 1.0;
+
+   sprite->vtexture_front[5][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_front[5][RETROGLU_SPRITE_Y] = 0.75;
+
+   /* Back face. */
+
+   sprite->vtexture_back[0][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_back[0][RETROGLU_SPRITE_Y] = 0.5;
+
+   sprite->vtexture_back[1][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_back[1][RETROGLU_SPRITE_Y] = 0.5;
+
+   sprite->vtexture_back[2][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_back[2][RETROGLU_SPRITE_Y] = 0.75;
+
+   sprite->vtexture_back[3][RETROGLU_SPRITE_X] = 0 + 0.5;
+   sprite->vtexture_back[3][RETROGLU_SPRITE_Y] = 0.75;
+
+   sprite->vtexture_back[4][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_back[4][RETROGLU_SPRITE_Y] = 0.75;
+
+   sprite->vtexture_back[5][RETROGLU_SPRITE_X] = 0;
+   sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = 0.5;
+}
+
+void retroglu_set_sprite_pos(
+   struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py
+) {
+   /* Setup the sprite vertices. */
+
+   /* Lower-Left */
+   sprite->vertices_front[0][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   
+   /* Lower-Right */
+   sprite->vertices_front[1][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+   
+   /* Upper-Right */
+   sprite->vertices_front[2][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_front[2][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   /* Upper-Right */
+   sprite->vertices_front[3][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_front[3][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   /* Upper-Left */
+   sprite->vertices_front[4][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_front[4][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   /* Lower-Left */
+   sprite->vertices_front[5][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+
+   /* Back face. */
+
+   sprite->vertices_back[0][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+
+   sprite->vertices_back[1][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+
+   sprite->vertices_back[2][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_back[2][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   sprite->vertices_back[3][RETROGLU_SPRITE_X] = retroglu_scr_px_x_to_f( px );
+   sprite->vertices_back[3][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   sprite->vertices_back[4][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_back[4][RETROGLU_SPRITE_Y] =
+      retroglu_scr_px_y_to_f( py ) + sprite->screen_clip_hf;
+
+   sprite->vertices_back[5][RETROGLU_SPRITE_X] =
+      retroglu_scr_px_x_to_f( px ) + sprite->screen_clip_wf;
+   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = retroglu_scr_px_y_to_f( py );
+}
+
+void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
    
    glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
@@ -704,10 +846,12 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite, int x, int y ) {
       glVertex2fv( sprite->vertices_front[i] );
    }
 
+   /*
    for( i = 0 ; 6 > i ; i++ ) {
       glTexCoord2fv( sprite->vtexture_back[i] );
       glVertex2fv( sprite->vertices_back[i] );
    }
+   */
 
    glEnd();
 }
