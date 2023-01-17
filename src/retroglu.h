@@ -773,57 +773,63 @@ void retroglu_set_sprite_clip(
 void retroglu_set_sprite_pos(
    struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py
 ) {
+   /* Set vertices in terms of half the clip size so that rotation is around
+    * the midpoint of the sprite, not the side!
+    */
+   float clip_half_x = sprite->screen_clip_wf / 2;
+   float clip_half_y = sprite->screen_clip_hf / 2;
+
    /* Setup the sprite vertices. */
 
    /* Lower-Left */
-   sprite->vertices_front[0][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
    
    /* Lower-Right */
-   sprite->vertices_front[1][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_front[1][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
    
    /* Upper-Right */
-   sprite->vertices_front[2][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_front[2][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Upper-Right */
-   sprite->vertices_front[3][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_front[3][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Upper-Left */
-   sprite->vertices_front[4][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_front[4][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Lower-Left */
-   sprite->vertices_front[5][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 
    /* Back face. */
 
    /* Lower-Right */
-   sprite->vertices_back[0][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_back[0][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 
    /* Lower-Left */
-   sprite->vertices_back[1][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_back[1][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 
    /* Upper-Left */
-   sprite->vertices_back[2][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_back[2][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Upper-Left */
-   sprite->vertices_back[3][RETROGLU_SPRITE_X] = 0;
-   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_back[3][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Upper-Right */
-   sprite->vertices_back[4][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = sprite->screen_clip_hf;
+   sprite->vertices_back[4][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = clip_half_y;
 
    /* Lower-Right */
-   sprite->vertices_back[5][RETROGLU_SPRITE_X] = sprite->screen_clip_wf;
-   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = 0;
+   sprite->vertices_back[5][RETROGLU_SPRITE_X] = clip_half_x;
+   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 }
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
@@ -841,7 +847,9 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glTranslatef( 0.5, 0, 0 );
    
    /* DEBUG: Look down-front. */
+   /*
    glRotatef( 45, 1.0f, 0, 0 );
+   */
 
    /* TODO: Sprite is rotating around left side, not center. */
    glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
