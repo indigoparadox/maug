@@ -119,7 +119,7 @@ struct RETROGLU_SPRITE {
    float translate_y;
    float scale_x;
    float scale_y;
-   float rotate_y;
+   int rotate_y;
 };
 
 /*! \} */ /* maug_retroglu_sprite */
@@ -722,7 +722,7 @@ int16_t retroglu_set_sprite_tex(
    retval = retroglu_load_tex_bmp(
       bmp_buf, bmp_buf_sz, &texture_id, &bmp_w, &bmp_h );
    if( RETROFLAT_OK != retval ) {
-      return retval; 
+      goto cleanup;
    }
 
    /* Set sprite properties based on texture. */
@@ -732,17 +732,27 @@ int16_t retroglu_set_sprite_tex(
    sprite->scale_x = 1.0f;
    sprite->scale_y = 1.0f;
 
+cleanup:
+
+   return retval;
 }
 
 void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
-   uint32_t px, uint32_t py, uint32_t pw, uint32_t ph
+   uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
+   uint32_t pw, uint32_t ph
 ) {
    /* Set vertices in terms of half the clip size so that rotation is around
     * the midpoint of the sprite, not the side!
     */
-   float clip_half_x = 0;
-   float clip_half_y = 0;
+   float clip_half_x = 0,
+      clip_half_y = 0;
+   float clip_tex_fx = 0, /* Front tex X */
+      clip_tex_fy = 0, /* Front tex Y */
+      clip_tex_bx = 0, /* Back tex X */
+      clip_tex_by = 0, /* Back tex Y */
+      clip_tex_w = 0,
+      clip_tex_h = 0;
 
    sprite->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
    sprite->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
@@ -751,45 +761,66 @@ void retroglu_set_sprite_clip(
 
    /* Setup texture spritesheet. */
 
-   sprite->vtexture_front[0][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_front[0][RETROGLU_SPRITE_Y] = 0.75;
+   clip_tex_fx = retroglu_tex_px_x_to_f( front_px, sprite ); 
+   clip_tex_fy = retroglu_tex_px_y_to_f( front_py, sprite ); 
+   clip_tex_bx = retroglu_tex_px_x_to_f( back_px, sprite ); 
+   clip_tex_by = retroglu_tex_px_y_to_f( back_py, sprite ); 
+   clip_tex_w = retroglu_tex_px_x_to_f( pw, sprite );
+   clip_tex_h = retroglu_tex_px_y_to_f( ph, sprite );
 
-   sprite->vtexture_front[1][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_front[1][RETROGLU_SPRITE_Y] = 0.75;
+   /* == Front Face Textures == */
 
-   sprite->vtexture_front[2][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_front[2][RETROGLU_SPRITE_Y] = 1.0;
+   /* Lower Left */
+   sprite->vtexture_front[0][RETROGLU_SPRITE_X] = clip_tex_fx;
+   sprite->vtexture_front[0][RETROGLU_SPRITE_Y] = clip_tex_fy;
 
-   sprite->vtexture_front[3][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_front[3][RETROGLU_SPRITE_Y] = 1.0;
+   /* Lower Right */
+   sprite->vtexture_front[1][RETROGLU_SPRITE_X] = clip_tex_fx + clip_tex_w;
+   sprite->vtexture_front[1][RETROGLU_SPRITE_Y] = clip_tex_fy;
 
-   sprite->vtexture_front[4][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_front[4][RETROGLU_SPRITE_Y] = 1.0;
+   /* Upper Right */
+   sprite->vtexture_front[2][RETROGLU_SPRITE_X] = clip_tex_fx + clip_tex_w;
+   sprite->vtexture_front[2][RETROGLU_SPRITE_Y] = clip_tex_fy + clip_tex_h;
 
-   sprite->vtexture_front[5][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_front[5][RETROGLU_SPRITE_Y] = 0.75;
+   /* Upper Right */
+   sprite->vtexture_front[3][RETROGLU_SPRITE_X] = clip_tex_fx + clip_tex_w;
+   sprite->vtexture_front[3][RETROGLU_SPRITE_Y] = clip_tex_fy + clip_tex_h;
 
-   /* Back face. */
+   /* Upper Left */
+   sprite->vtexture_front[4][RETROGLU_SPRITE_X] = clip_tex_fx;
+   sprite->vtexture_front[4][RETROGLU_SPRITE_Y] = clip_tex_fy + clip_tex_h;
 
-   sprite->vtexture_back[0][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_back[0][RETROGLU_SPRITE_Y] = 0.5;
+   /* Lower Left */
+   sprite->vtexture_front[5][RETROGLU_SPRITE_X] = clip_tex_fx;
+   sprite->vtexture_front[5][RETROGLU_SPRITE_Y] = clip_tex_fy;
 
-   sprite->vtexture_back[1][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_back[1][RETROGLU_SPRITE_Y] = 0.5;
+   /* == Back face Textures == */
 
-   sprite->vtexture_back[2][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_back[2][RETROGLU_SPRITE_Y] = 0.75;
+   /* Lower Left */
+   sprite->vtexture_back[0][RETROGLU_SPRITE_X] = clip_tex_bx;
+   sprite->vtexture_back[0][RETROGLU_SPRITE_Y] = clip_tex_by;
 
-   sprite->vtexture_back[3][RETROGLU_SPRITE_X] = 0 + 0.5;
-   sprite->vtexture_back[3][RETROGLU_SPRITE_Y] = 0.75;
+   /* Lower Right */
+   sprite->vtexture_back[1][RETROGLU_SPRITE_X] = clip_tex_bx + clip_tex_w;
+   sprite->vtexture_back[1][RETROGLU_SPRITE_Y] = clip_tex_by;
 
-   sprite->vtexture_back[4][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_back[4][RETROGLU_SPRITE_Y] = 0.75;
+   /* Upper Right */
+   sprite->vtexture_back[2][RETROGLU_SPRITE_X] = clip_tex_bx + clip_tex_w;
+   sprite->vtexture_back[2][RETROGLU_SPRITE_Y] = clip_tex_by + clip_tex_h;
 
-   sprite->vtexture_back[5][RETROGLU_SPRITE_X] = 0;
-   sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = 0.5;
+   /* Upper Right */
+   sprite->vtexture_back[3][RETROGLU_SPRITE_X] = clip_tex_bx + clip_tex_w;
+   sprite->vtexture_back[3][RETROGLU_SPRITE_Y] = clip_tex_by + clip_tex_h;
 
-   /* Setup the sprite vertices. */
+   /* Upper Left */
+   sprite->vtexture_back[4][RETROGLU_SPRITE_X] = clip_tex_bx;
+   sprite->vtexture_back[4][RETROGLU_SPRITE_Y] = clip_tex_by + clip_tex_h;
+
+   /* Lower Left */
+   sprite->vtexture_back[5][RETROGLU_SPRITE_X] = clip_tex_bx;
+   sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = clip_tex_by;
+
+   /* == Front Face Vertices == */
 
    /* Lower-Left */
    sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1 * clip_half_x;
@@ -815,7 +846,7 @@ void retroglu_set_sprite_clip(
    sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1 * clip_half_x;
    sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
 
-   /* Back face. */
+   /* == Back Face Vertices == */
 
    /* Lower-Right */
    sprite->vertices_back[0][RETROGLU_SPRITE_X] = clip_half_x;
@@ -861,7 +892,7 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glPushMatrix();
 
    /* Set the matrix to translate/rotate/scale based on sprite props. */
-   glTranslatef( 0.5, 0, 0 );
+   glTranslatef( sprite->translate_x, sprite->translate_y, 0 );
    glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
    glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
 
