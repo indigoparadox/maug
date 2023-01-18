@@ -331,7 +331,8 @@
 
 #ifdef RETROFLAT_SCREENSAVER
 #   define RETROFLAT_CLI_SCRSAV( f ) \
-	f( RETROFLAT_CLI_SIGIL "p", 3, "Preview screensaver", retroflat_cli_p )
+	f( RETROFLAT_CLI_SIGIL "p", 3, "Preview screensaver", retroflat_cli_p ) \
+	f( RETROFLAT_CLI_SIGIL "s", 3, "Launch screensaver", retroflat_cli_s )
 #else
 #   define RETROFLAT_CLI_SCRSAV( f )
 #endif /* RETROFLAT_SCREENSAVER */
@@ -1071,6 +1072,8 @@ extern int gc_retroflat_win_rgbs[];
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
 
+#define main( argc, argv ) retroflat_main( argc, argv )
+
 /* Improvise a rough WinMain to call main(). */
 #define END_OF_MAIN() \
    int WINXAPI WinMain( \
@@ -1083,7 +1086,7 @@ extern int gc_retroflat_win_rgbs[];
       g_instance = hInstance; \
       g_cmd_show = nCmdShow; \
       rf_argv = retroflat_win_cli( lpCmdLine, &rf_argc ); \
-      retval = main( rf_argc, rf_argv ); \
+      retval = retroflat_main( rf_argc, rf_argv ); \
       free( rf_argv ); \
       return retval; \
    }
@@ -1491,7 +1494,10 @@ int g_mouse_state = 0;
 /* Windows-specific global handles for the window/instance. */
 HINSTANCE g_instance;
 HWND g_window;
+#ifdef RETROFLAT_SCREENSAVER
 HWND g_parent = (HWND)0;
+int g_screensaver = 0;
+#endif /* RETROFLAT_SCREENSAVER */
 MSG g_msg;
 HDC g_hdc_win = (HDC)NULL;
 int g_msg_retval = 0;
@@ -1916,8 +1922,14 @@ static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( RETROFLAT_CLI_SIGIL "p", arg, 3 ) ) {
       /* The next arg must be the new var. */
    } else {
-      g_parent = atoi( arg );
+      g_parent = (HWND)atoi( arg );
    }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
+   debug_printf( 3, "using screensaver mode..." );
+   g_screensaver = 1;
    return RETROFLAT_OK;
 }
 
@@ -2072,6 +2084,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
    RECT wr = { 0, 0, 0, 0 };
+   DWORD window_style = RETROFLAT_WIN_STYLE;
+   DWORD window_style_ex = 0;
+   int wx = CW_USEDEFAULT,
+      wy = CW_USEDEFAULT;
 #  elif defined( RETROFLAT_API_SDL1 )
 #  if defined( RETROFLAT_OPENGL )
    const SDL_VideoInfo* info = NULL;
@@ -2284,14 +2300,38 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    debug_printf( 1, "retroflat: creating window..." );
-
-   debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32, g_parent );
+   
+#ifdef RETROFLAT_SCREENSAVER
+   if( (HWND)0 != g_parent ) {
+      /* Shrink the child window into the parent. */
+      debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32,
+         g_parent );
+      window_style = WS_CHILD;
+      GetClientRect( g_parent, &wr );
+   } else if( g_screensaver ) {
+      /* Make window fullscreen and on top. */
+      window_style_ex = WS_EX_TOPMOST;
+      window_style = WS_POPUP | WS_VISIBLE;
+      wx = 0;
+      wy = 0;
+      wr.left = 0;
+      wr.top = 0;
+      wr.right = GetSystemMetrics( SM_CXSCREEN );
+      wr.bottom = GetSystemMetrics( SM_CYSCREEN );
+   }
+#endif /* RETROFLAT_SCREENSAVER */
 
    g_window = CreateWindowEx(
-      0, RETROFLAT_WINDOW_CLASS, args->title,
-      RETROFLAT_WIN_STYLE,
-      CW_USEDEFAULT, CW_USEDEFAULT,
-      wr.right - wr.left, wr.bottom - wr.top, g_parent, 0, g_instance, 0
+      window_style_ex, RETROFLAT_WINDOW_CLASS, args->title,
+      window_style,
+      wx, wy,
+      wr.right - wr.left, wr.bottom - wr.top,
+#ifdef RETROFLAT_SCREENSAVER
+      g_parent
+#else
+      0
+#endif /* RETROFLAT_SCREENSAVER */
+      , 0, g_instance, 0
    );
 
    if( !g_window ) {
@@ -3607,6 +3647,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_last_mouse_x = 0;
       g_last_mouse_y = 0;
    }
+
+#ifdef RETROFLAT_SCREENSAVER
+   if( g_screensaver && 0 != key_out ) {
+      retroflat_quit( 0 );
+   }
+#endif /* RETROFLAT_SCREENSAVER */
 
 #  else
 #     warning "poll input not implemented"
