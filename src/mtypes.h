@@ -9,7 +9,11 @@
  * implementation that can be called from legacy projects.
  */
 
-#if defined( PLATFORM_PALM )
+#ifndef MAUG_NO_LEGACY
+#  include <mlegacy.h>
+#endif /* !MAUG_NO_LEGACY */
+
+#if defined( MAUG_OS_PALM )
 
 typedef UInt8 uint8_t;
 typedef Int8 int8_t;
@@ -18,7 +22,7 @@ typedef Int16 int16_t;
 typedef UInt32 uint32_t;
 typedef Int32 int32_t;
 
-#elif defined( PLATFORM_WIN )
+#elif defined( MAUG_OS_WIN )
 
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
@@ -31,7 +35,7 @@ typedef unsigned long uint32_t;
 
 #include <stdint.h>
 
-#endif /* PLATFORM_PALM || PLATFORM_WIN */
+#endif /* MAUG_OS_* */
 
 #endif /* !MTYPES_H */
 
