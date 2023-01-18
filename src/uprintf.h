@@ -144,6 +144,17 @@ static void error_printf( const char* fmt, ... ) {
 #  define size_multi_printf( lvl, name, sz, max ) internal_debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
+#else /* !DEBUG_LOG, !ANCIENT_C */
+/* ! */
+
+/* TODO: Stub these without vargarg macros. */
+
+#  define debug_printf( ... )
+#  define error_printf( ... )
+#  define size_printf( ... )
+#  define size_multi_printf( ... )
+
+/* ! */
 #endif /* DEBUG_LOG, ANCIENT_C */
 /* ! */
 
