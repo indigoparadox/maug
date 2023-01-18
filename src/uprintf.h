@@ -2,17 +2,39 @@
 #ifndef UPRINTF_H
 #define UPRINTF_H
 
-#if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ )
-#  define UPRINTF_S32 "%ld"
-#  define UPRINTF_U32 "%lu"
-#elif __LONG_WIDTH__ == 64
-#  define UPRINTF_S32 "%d"
-#  define UPRINTF_U32 "%u"
-#endif /* __LONG_WIDTH__ */
+#include <mtypes.h>
+
+#include <stdio.h>
+#include <stdarg.h>
+
+#ifndef MAUG_NO_LEGACY
+#  include <mlegacy.h>
+#endif /* !MAUG_NO_LEGACY */
+
+/* == Autodetection == */
+
+#ifndef UPRINTF_S32
+#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ )
+#     define UPRINTF_S32 "%ld"
+#  elif __LONG_WIDTH__ == 64
+#     define UPRINTF_S32 "%d"
+#  endif /* __LONG_WIDTH__ */
+#endif /* !UPRINTF_S32 */
+
+#ifndef UPRINTF_U32
+#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ )
+#     define UPRINTF_U32 "%lu"
+#  elif __LONG_WIDTH__ == 64
+#     define UPRINTF_U32 "%u"
+#  endif /* __LONG_WIDTH__ */
+#endif /* !UPRINTF_U32 */
 
 #ifndef NEWLINE_STR
+/* TODO: Autodetect. */
 #define NEWLINE_STR "\n"
 #endif /* !NEWLINE_STR */
+
+/* == Manual Config == */
 
 #ifndef UPRINTF_BUFFER_SZ_MAX
 #  define UPRINTF_BUFFER_SZ_MAX 1024
@@ -25,6 +47,10 @@
 #ifndef platform_fprintf
 #   define platform_fprintf fprintf
 #endif /* !platform_fprintf */
+
+#ifndef platform_vfprintf
+#   define platform_vfprintf vfprintf
+#endif /* !platform_vfprintf */
 
 #ifndef platform_fopen
 #   define platform_fopen fopen
@@ -59,11 +85,17 @@
 #  define DEBUG_THRESHOLD 1
 #endif /* DEBUG_LOG && !DEBUG_THRESHOLD */
 
+union MAUG_FMT_SPEC {
+   long int d;
+   uint32_t u;
+   char c;
+   void* p;
+   char* s;
+};
+
 /* ! */
 #if defined( ANCIENT_C )
 /* ! */
-
-#include <stdarg.h>
 
 static void debug_printf( int level, const char* fmt, ... ) {
    va_list argp;
@@ -93,8 +125,6 @@ static void error_printf( const char* fmt, ... ) {
 #elif defined( DEBUG_LOG )
 /* ! */
 
-#  include <stdio.h>
-
 #  ifdef NO_DEBUG_LINE_NUMBER
 #     define LINE_NUMBER() 0
 #  else
@@ -114,15 +144,6 @@ static void error_printf( const char* fmt, ... ) {
 #  define size_multi_printf( lvl, name, sz, max ) internal_debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
-#else /* !DEBUG_LOG, !ANCIENT_C */
-/* ! */
-
-#  define debug_printf( ... )
-#  define error_printf( ... )
-#  define size_printf( ... )
-#  define size_multi_printf( ... )
-
-/* ! */
 #endif /* DEBUG_LOG, ANCIENT_C */
 /* ! */
 
@@ -131,11 +152,11 @@ static void error_printf( const char* fmt, ... ) {
 #  define logging_init() g_log_file = platform_fopen( LOG_FILE_NAME, "w" );
 #  define logging_shutdown() platform_fclose( g_log_file );
 
-#  ifdef MAIN_C
+#  if defined( MAIN_C ) || defined( UPRINTF_C )
 platform_file g_log_file = NULL;
-#  else /* !MAIN_C */
+#  else
 extern platform_file g_log_file;
-#  endif /* MAIN_C */
+#  endif /* MAIN_C || UPRINTF_C */
 
 #else
 
@@ -278,7 +299,7 @@ void maug_vsnprintf(
 ) {
    int i = 0, j = 0;
    char last = '\0';
-   union RETROFLAT_FMT_SPEC spec;
+   union MAUG_FMT_SPEC spec;
    int pad_len = 0;
    char c;
    char pad_char = ' ';
@@ -290,7 +311,6 @@ void maug_vsnprintf(
  
       if( '%' == last ) {
          /* Conversion specifier encountered. */
-         /* memset( &spec, '\0', sizeof( union RETROFLAT_FMT_SPEC ) ); */
          switch( fmt[i] ) {
             case 'l':
                spec_is_long = 1;
@@ -437,6 +457,37 @@ void maug_printf( const char* fmt, ... ) {
    va_start( vargs, fmt );
    maug_vsnprintf( buffer, UPRINTF_BUFFER_SZ_MAX, fmt, vargs );
    va_end( vargs );
+
+   /* TODO */
+}
+
+/* === */
+
+void maug_debug_printf(
+   FILE* out, uint8_t flags, const char* src_name, uint32_t line, int16_t lvl,
+   const char* fmt, ...
+) {
+   va_list vargs;
+
+   if( NULL == out ) {
+#ifdef MAUG_LOG_FILE
+      out = g_log_file;
+#else
+      out = stdout;
+#endif /* MAUG_LOG_FILE */
+   }
+
+   if( lvl >= DEBUG_THRESHOLD ) {
+      platform_fprintf( out, "(%d) %s : %d: ",
+         lvl, src_name, line );
+      
+      va_start( vargs, fmt );
+      platform_vfprintf( out, fmt, vargs );
+      va_end( vargs );
+
+      platform_fprintf( out, NEWLINE_STR );
+      platform_fflush( out );
+   }
 }
 
 #endif /* UPRINTF_C */

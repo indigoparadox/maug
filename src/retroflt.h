@@ -300,6 +300,10 @@
 /**
  * \addtogroup maug_retroflt_drawing RetroFlat Drawing API
  * \brief Functions for drawing primitives on-screen.
+ * \warning Drawing functions should not be used outside of the context of
+ *          the main loop, as the platform may not have fully initialized
+ *          the drawing window until the main loop is called for the first
+ *          time!
  * \{
  */
 
@@ -325,6 +329,13 @@
  * \{
  */
 
+#ifdef RETROFLAT_SCREENSAVER
+#   define RETROFLAT_CLI_SCRSAV( f ) \
+	f( RETROFLAT_CLI_SIGIL "p", 3, "Preview screensaver", retroflat_cli_p )
+#else
+#   define RETROFLAT_CLI_SCRSAV( f )
+#endif /* RETROFLAT_SCREENSAVER */
+
 #ifdef RETROFLAT_NO_CLI_SZ
 #  define RETROFLAT_CLI_SZ( f )
 #else
@@ -340,7 +351,8 @@
 /*! \brief Default CLI arguments for all RetroFlat programs. */
 #define RETROFLAT_CLI( f ) \
    f( RETROFLAT_CLI_SIGIL "h", 3, "Display help and exit.", retroflat_cli_h ) \
-   RETROFLAT_CLI_SZ( f )
+   RETROFLAT_CLI_SZ( f ) \
+   RETROFLAT_CLI_SCRSAV( f )
 
 #ifndef RETROFLAT_CLI_ARG_LIST_SZ_MAX
 #  define RETROFLAT_CLI_ARG_LIST_SZ_MAX 50
@@ -355,12 +367,6 @@
 #endif /* !RETROFLAT_CLI_ARG_SZ_MAX */
 
 /*! \} */ /* maug_retroflt_cdefs_page */
-
-#if defined( DEBUG )
-#include <assert.h>
-#elif !defined( DOCUMENTATION )
-#define assert( x )
-#endif /* DEBUG */
 
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
@@ -479,14 +485,6 @@ struct RETROFLAT_INPUT {
 };
 
 /*! \} */ /* maug_retroflt_input */
-
-union RETROFLAT_FMT_SPEC {
-   long int d;
-   uint32_t u;
-   char c;
-   void* p;
-   char* s;
-};
 
 /**
  * \addtogroup maug_retroflt_cli
@@ -1460,9 +1458,6 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 #ifdef RETROFLT_C
 
-#define UPRINTF_C
-#include <uprintf.h>
-
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>
@@ -1496,6 +1491,7 @@ int g_mouse_state = 0;
 /* Windows-specific global handles for the window/instance. */
 HINSTANCE g_instance;
 HWND g_window;
+HWND g_parent = (HWND)0;
 MSG g_msg;
 HDC g_hdc_win = (HDC)NULL;
 int g_msg_retval = 0;
@@ -1668,6 +1664,7 @@ static LRESULT CALLBACK WndProc(
                g_buffer.hdc_b,
                (BITMAPINFO far*)(&g_buffer_bmi), &g_buffer_bits );
 #  else
+            debug_printf( 1, "retroflat: creating window buffer..." );
             g_buffer.b = CreateCompatibleBitmap( hdc_win,
                g_screen_v_w, g_screen_v_h );
 #  endif /* RETROFLAT_WING */
@@ -1774,6 +1771,8 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
       arg_start = 0,
       arg_idx = 0,
       arg_longest = 10; /* Program name. */
+
+   debug_printf( 1, "retroflat: win cli: %s", cmd_line );
 
    /* Get the number of args. */
    *argc_out = 1; /* Program name. */
@@ -1911,6 +1910,19 @@ static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_ERROR_ENGINE;
 }
 
+#ifdef RETROFLAT_SCREENSAVER
+
+static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "p", arg, 3 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      g_parent = atoi( arg );
+   }
+   return RETROFLAT_OK;
+}
+
+#endif /* RETROFLAT_SCREENSAVER */
+
 #ifndef RETROFLAT_NO_CLI_SZ
 
 static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
@@ -1950,6 +1962,7 @@ static int retroflat_parse_args(
       retval = 0;
 
    for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
+      debug_printf( 1, "found arg: %s", argv[arg_i] );
       const_i = 0;
       while( '\0' != g_retroflat_cli_args[const_i][0] ) {
          if( 0 == strncmp(
@@ -2065,14 +2078,20 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+   debug_printf( 1, "retroflat: initializing..." );
+
    /* System sanity checks. */
    assert( 4 == sizeof( uint32_t ) );
+
+   debug_printf( 1, "retroflat: parsing args..." );
 
    /* Parse command line args. */
    retval = retroflat_parse_args( argc, argv, args );
    if( RETROFLAT_OK != retval ) {
       goto cleanup;
    }
+
+   debug_printf( 1, "retroflat: setting config..." );
 
    /* Set the assets path. */
    memset( g_retroflat_assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
@@ -2232,6 +2251,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == Win16/Win32 == */
 
+   debug_printf( 1, "retroflat: creating window class..." );
+
    /* Get the *real* size of the window, including titlebar. */
    wr.right = args->screen_w;
    wr.bottom = args->screen_h;
@@ -2262,11 +2283,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+   debug_printf( 1, "retroflat: creating window..." );
+
+   debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32, g_parent );
+
    g_window = CreateWindowEx(
       0, RETROFLAT_WINDOW_CLASS, args->title,
       RETROFLAT_WIN_STYLE,
       CW_USEDEFAULT, CW_USEDEFAULT,
-      wr.right - wr.left, wr.bottom - wr.top, 0, 0, g_instance, 0
+      wr.right - wr.left, wr.bottom - wr.top, g_parent, 0, g_instance, 0
    );
 
    if( !g_window ) {
@@ -2628,6 +2653,8 @@ int retroflat_load_bitmap(
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
       g_retroflat_assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
+
+   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
 #  ifdef RETROFLAT_API_ALLEGRO
 
