@@ -1387,9 +1387,9 @@ static volatile unsigned long g_ms = 0;
 
 #     ifndef RETROFLAT_API_SDL1
 SDL_Window* g_window = NULL;
-#     endif /* !RETROFLAT_API_SDL1 */
 static int g_screen_w = 0;
 static int g_screen_h = 0;
+#     endif /* !RETROFLAT_API_SDL1 */
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 static int g_mouse_state = 0;

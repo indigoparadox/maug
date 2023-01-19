@@ -47,7 +47,7 @@
 #  define MAUG_CLI_ARG_SZ_MAX 50
 #endif /* !MAUG_CLI_ARG_SZ_MAX */
 
-typedef int (*maug_cli_cb)( const char* arg, void* data );
+typedef MERROR_RETVAL (*maug_cli_cb)( const char* arg, void* data );
 
 /*! \brief Default CLI arguments for all RetroFlat programs. */
 #define MAUG_CLI( f ) \
