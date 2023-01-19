@@ -818,7 +818,6 @@ struct RETROFLAT_BITMAP {
 
 typedef COLORREF RETROFLAT_COLOR;
 
-
 #ifdef RETROFLT_C
 
 #  define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
@@ -881,13 +880,9 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #ifdef RETROFLT_C
 
-HPEN gc_retroflat_win_pens[] = {
+static HPEN gc_retroflat_win_pens[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENS )
 };
-
-#else
-
-extern gc_retroflat_win_pens[];
 
 #endif /* RETROFLT_C */
 
@@ -901,13 +896,9 @@ extern gc_retroflat_win_pens[];
 
 #ifdef RETROFLT_C
 
-int gc_retroflat_win_rgbs[] = {
+static int gc_retroflat_win_rgbs[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS_INIT )
 };
-
-#else
-
-extern int gc_retroflat_win_rgbs[];
 
 #endif /* RETROFLT_C */
 
@@ -1181,7 +1172,7 @@ typedef int RETROFLAT_COLOR;
  *        to enter the main loop. The main loop will continuously call
  *        loop_iter with data as an argument until retroflat_quit() is called.
  */
-int retroflat_loop( retroflat_loop_iter iter, void* data );
+MERROR_RETVAL retroflat_loop( retroflat_loop_iter iter, void* data );
 
 /**
  * \brief Display a message in a dialog box and/or on stderr.
@@ -1198,7 +1189,7 @@ void retroflat_message( const char* title, const char* format, ... );
  * \return ::RETROFLAT_OK if there were no problems or other
  *         \ref maug_retroflt_retval if there were.
  */
-int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
+MERROR_RETVAL retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args );
 
 /**
  * \brief Deinitialize RetroFlat and its underlying layers. This should be
@@ -1225,7 +1216,7 @@ uint32_t retroflat_get_ms();
  * \return ::RETROFLAT_OK if the bitmap was loaded or ::RETROFLAT_ERROR_TIMER if
  *         there was a problem (e.g. the bitmap was not found).
  */
-int retroflat_load_bitmap(
+MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
 
 /**
@@ -1268,7 +1259,7 @@ void retroflat_blit_bitmap(
  * \return ::RETROFLAT_OK if lock was successful or \ref maug_retroflt_retval
  *         otherwise.
  */
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
@@ -1380,26 +1371,28 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 /* TODO: Declare externs in ifelse section for multi-file projects. */
 
 void* g_loop_data = NULL;
-int g_retval = 0;
-int g_screen_w = 0;
-int g_screen_h = 0;
+MERROR_RETVAL g_retval = 0;
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
-unsigned int g_last_mouse = 0;
-unsigned int g_last_mouse_x = 0;
-unsigned int g_last_mouse_y = 0;
-unsigned int g_close_button = 0;
-volatile unsigned long g_ms = 0;
+#     ifdef RETROFLAT_OS_DOS
+static unsigned int g_last_mouse = 0;
+static unsigned int g_last_mouse_x = 0;
+static unsigned int g_last_mouse_y = 0;
+#     endif /* RETROFLAT_OS_DOS */
+static unsigned int g_close_button = 0;
+static volatile unsigned long g_ms = 0;
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #     ifndef RETROFLAT_API_SDL1
 SDL_Window* g_window = NULL;
 #     endif /* !RETROFLAT_API_SDL1 */
+static int g_screen_w = 0;
+static int g_screen_h = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
-int g_mouse_state = 0;
+static int g_mouse_state = 0;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1407,22 +1400,23 @@ int g_mouse_state = 0;
 HINSTANCE g_instance;
 HWND g_window;
 #ifdef RETROFLAT_SCREENSAVER
-HWND g_parent = (HWND)0;
-int g_screensaver = 0;
+static HWND g_parent = (HWND)0;
+static int g_screensaver = 0;
 #endif /* RETROFLAT_SCREENSAVER */
 MSG g_msg;
 HDC g_hdc_win = (HDC)NULL;
-int g_msg_retval = 0;
+static int g_msg_retval = 0;
 int g_screen_v_w = 0;
 int g_screen_v_h = 0;
 int g_cmd_show = 0;
-const long gc_ms_target = 1000 / RETROFLAT_FPS;
+static int g_screen_w = 0;
+static int g_screen_h = 0;
 static unsigned long g_ms_start = 0;
-volatile unsigned long g_ms;
-uint8_t g_last_key = 0;
-unsigned int g_last_mouse = 0;
-unsigned int g_last_mouse_x = 0;
-unsigned int g_last_mouse_y = 0;
+static volatile unsigned long g_ms;
+static uint8_t g_last_key = 0;
+static unsigned int g_last_mouse = 0;
+static unsigned int g_last_mouse_x = 0;
+static unsigned int g_last_mouse_y = 0;
 uint8_t g_running;
 retroflat_loop_iter g_loop_iter = NULL;
 
@@ -2445,7 +2439,7 @@ cleanup:
 
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-int retroflat_load_bitmap(
+MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];

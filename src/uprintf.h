@@ -11,6 +11,16 @@
 #  include <mlegacy.h>
 #endif /* !MAUG_NO_LEGACY */
 
+/**
+ * \addtogroup maug_uprintf Micro-PrintF API
+ * \brief Independently-implemented printf API for old compilers.
+ * \{
+ */
+
+/**
+ * \file uprintf.h
+ */
+
 /* == Autodetection == */
 
 #ifndef UPRINTF_S32
@@ -220,6 +230,8 @@ void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
 void maug_printf( const char* fmt, ... );
 
 #ifdef UPRINTF_C
+
+uint32_t g_maug_printf_line = 0;
 
 int maug_digits( long int num, int base ) {
    int digits = 0;
@@ -501,7 +513,13 @@ void maug_debug_printf(
    }
 }
 
+#else
+
+extern uint32_t g_maug_printf_line;
+
 #endif /* UPRINTF_C */
+
+/*! \} */ /* maug_uprintf */
 
 #endif /* !UPRINTF_H */
 
