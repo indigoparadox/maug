@@ -172,8 +172,6 @@
  *
  * | Define                | Description                                       |
  * | --------------------- | ------------------------------------------------- |
- * | ::RETROFLAT_CLI_SIGIL | Specify the sigil prepended to command-line args. |
- * | RETROFLAT_NO_CLI_SZ   | Disable ::RETROFLAT_CLI_SZ command-line args.     |
  * | RETROFLAT_MOUSE       | Force-enable mouse on broken APIs (DANGEROUS!)    |
  * | RETROFLAT_TXP_R       | Specify R component of bitmap transparent color.  |
  * | RETROFLAT_TXP_G       | Specify G component of bitmap transparent color.  |
@@ -249,6 +247,8 @@
 
 #  include <stdarg.h>
 
+#  include <marge.h>
+
 /* === Generic Includes and Defines === */
 
 #define RETROFLAT_COLOR_TABLE( f ) \
@@ -322,52 +322,6 @@
  *          using retroflat_quit().
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
-
-/**
- * \addtogroup maug_retroflt_cli RetroFlat Command Line API
- * \brief Tools for parsing command line arguments in RetroFlat programs.
- * \{
- */
-
-#ifdef RETROFLAT_SCREENSAVER
-#   define RETROFLAT_CLI_SCRSAV( f ) \
-	f( RETROFLAT_CLI_SIGIL "p", 3, "Preview screensaver", retroflat_cli_p ) \
-	f( RETROFLAT_CLI_SIGIL "s", 3, "Launch screensaver", retroflat_cli_s )
-#else
-#   define RETROFLAT_CLI_SCRSAV( f )
-#endif /* RETROFLAT_SCREENSAVER */
-
-#ifdef RETROFLAT_NO_CLI_SZ
-#  define RETROFLAT_CLI_SZ( f )
-#else
-/**
- * \brief CLI arguments accepted if RETROFLAT_NO_CLI_SZ is not passed as a
- *        \ref maug_retroflt_cdefs_page.
- */
-#  define RETROFLAT_CLI_SZ( f ) \
-   f( RETROFLAT_CLI_SIGIL "x", 3, "Set the screen width.", retroflat_cli_x ) \
-   f( RETROFLAT_CLI_SIGIL "y", 3, "Set the screen height.", retroflat_cli_y )
-#endif /* !RETROFLAT_NO_CLI_SZ */
-
-/*! \brief Default CLI arguments for all RetroFlat programs. */
-#define RETROFLAT_CLI( f ) \
-   f( RETROFLAT_CLI_SIGIL "h", 3, "Display help and exit.", retroflat_cli_h ) \
-   RETROFLAT_CLI_SZ( f ) \
-   RETROFLAT_CLI_SCRSAV( f )
-
-#ifndef RETROFLAT_CLI_ARG_LIST_SZ_MAX
-#  define RETROFLAT_CLI_ARG_LIST_SZ_MAX 50
-#endif /* !RETROFLAT_CLI_ARG_LIST_SZ_MAX */
-
-#ifndef RETROFLAT_CLI_ARG_HELP_SZ_MAX
-#  define RETROFLAT_CLI_ARG_HELP_SZ_MAX 255
-#endif /* !RETROFLAT_CLI_ARG_HELP_SZ_MAX */
-
-#ifndef RETROFLAT_CLI_ARG_SZ_MAX
-#  define RETROFLAT_CLI_ARG_SZ_MAX 50
-#endif /* !RETROFLAT_CLI_ARG_SZ_MAX */
-
-/*! \} */ /* maug_retroflt_cdefs_page */
 
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
@@ -487,11 +441,6 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_input */
 
-/**
- * \addtogroup maug_retroflt_cli
- * \{
- */
-
 /*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
    /**
@@ -506,10 +455,6 @@ struct RETROFLAT_ARGS {
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
 };
-
-typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
-
-/*! \} */ /* maug_retroflt_cli */
 
 /**
  * \addtogroup maug_retroflt_drawing
@@ -606,20 +551,6 @@ typedef int (*retroflat_cli_cb)( const char* arg, struct RETROFLAT_ARGS* data );
  * \addtogroup maug_retroflt_cli
  * \{
  */
-
-#define RETROFLAT_CLI_SIGIL_SZ 1
-
-#if !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_WIN )
-#  define RETROFLAT_CLI_SIGIL "/"
-#elif !defined( RETROFLAT_CLI_SIGIL ) && defined( RETROFLAT_OS_DOS )
-#  define RETROFLAT_CLI_SIGIL "/"
-#elif !defined( RETROFLAT_CLI_SIGIL )
-/**
- * \brief Default flag to prepend to CLI arguments. Is "/" on Windows/DOS and
- *        "-" on other platforms. Can be overridden with a -D flag or define.
- */
-#  define RETROFLAT_CLI_SIGIL "-"
-#endif /* !RETROFLAT_CLI_SIGIL */
 
 /*! \} */ /* maug_retroflt_cli */
 
@@ -1261,25 +1192,6 @@ int retroflat_loop( retroflat_loop_iter iter, void* data );
 void retroflat_message( const char* title, const char* format, ... );
 
 /**
- * \addtogroup maug_retroflt_cli RetroFlat Command Line API
- * \{
- */
-
-/**
- * \brief Add a command-line argument to the built-in parser.
- * \param arg String containing the argument to look for.
- * \param arg_sz Length of arg in chars or 0 to autodetect.
- * \param help Help text for the arg when -h is invoked.
- * \param help_sz Length of help in chars or 0 to autodetect.
- * \param cb ::retroflat_cli_cb to invoke when arg is found.
- */
-void retroflat_add_arg(
-   const char* arg, int arg_sz, const char* help, int help_sz,
-   retroflat_cli_cb cb );
-
-/*! \} */ /* maug_retroflt_cli */
-
-/**
  * \brief Initialize RetroFlat and its underlying layers. This should be
  *        called once at the beginning of the program and should quit if
  *        the return value indicates any failures.
@@ -1531,35 +1443,6 @@ void far* g_buffer_bits = NULL;
 char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
 struct RETROFLAT_BITMAP g_buffer;
 uint8_t g_retroflat_flags = 0;
-uint8_t g_retroflat_cli_flags = 0;
-
-/* TODO: Don't make these arrays fully const; add a callback to add custom
- *       command line args.
- */
-
-#define RETROFLAT_CLI_ARG_ARG( arg, arg_sz, help, callback ) \
-   arg,
-
-char g_retroflat_cli_args[RETROFLAT_CLI_ARG_LIST_SZ_MAX][RETROFLAT_CLI_ARG_SZ_MAX] = {
-   RETROFLAT_CLI( RETROFLAT_CLI_ARG_ARG )
-   ""
-};
-
-#define RETROFLAT_CLI_ARG_SZ( arg, arg_sz, help, callback ) \
-   arg_sz,
-
-int g_retroflat_cli_arg_sz[RETROFLAT_CLI_ARG_LIST_SZ_MAX] = {
-   RETROFLAT_CLI( RETROFLAT_CLI_ARG_SZ )
-   0
-};
-
-#define RETROFLAT_CLI_ARG_HELP( arg, arg_sz, help, callback ) \
-   help,
-
-char g_retroflat_cli_arg_help[RETROFLAT_CLI_ARG_LIST_SZ_MAX][RETROFLAT_CLI_ARG_HELP_SZ_MAX] = {
-   RETROFLAT_CLI( RETROFLAT_CLI_ARG_HELP )
-   ""
-};
 
 /* Callback table is down below, after the statically-defined callbacks. */
 
@@ -1897,29 +1780,10 @@ void retroflat_message( const char* title, const char* format, ... ) {
    va_end( vargs );
 }
 
-/* === */
-
-static int retroflat_cli_h( const char* arg, struct RETROFLAT_ARGS* args ) {
-   int i = 0;
-
-   fprintf( stderr, "%s usage:\n\n", args->title );
-
-   /* Display help for all available options. */
-   while( '\0' != g_retroflat_cli_args[i][0] ) {
-      fprintf( stderr, "\t%s\t%s\n", g_retroflat_cli_args[i],
-         g_retroflat_cli_arg_help[i] );
-      i++;
-   }
-
-   fprintf( stderr, "\n" );
-
-   return RETROFLAT_ERROR_ENGINE;
-}
-
 #ifdef RETROFLAT_SCREENSAVER
 
 static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "p", arg, 3 ) ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "p", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
       /* The next arg must be the new var. */
    } else {
       g_parent = (HWND)atoi( arg );
@@ -1938,7 +1802,7 @@ static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
 #ifndef RETROFLAT_NO_CLI_SZ
 
 static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "x", arg, 3 ) ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "x", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
@@ -1947,7 +1811,7 @@ static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
 }
 
 static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( RETROFLAT_CLI_SIGIL "y", arg, 3 ) ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "y", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
@@ -1956,106 +1820,6 @@ static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
 }
 
 #endif /* !RETROFLAT_NO_CLI_SZ */
-
-#define RETROFLAT_CLI_ARG_CB( arg, arg_sz, help, callback ) \
-   callback,
-
-retroflat_cli_cb g_retroflat_cli_callbacks[RETROFLAT_CLI_ARG_LIST_SZ_MAX] = {
-   RETROFLAT_CLI( RETROFLAT_CLI_ARG_CB )
-   NULL
-};
-
-static int retroflat_parse_args(
-   int argc, char* argv[], struct RETROFLAT_ARGS* args
-) {
-   int arg_i = 0,
-      const_i = 0,
-      last_i = 0,
-      retval = 0;
-
-   for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
-      debug_printf( 1, "found arg: %s", argv[arg_i] );
-      const_i = 0;
-      while( '\0' != g_retroflat_cli_args[const_i][0] ) {
-         if( 0 == strncmp(
-            g_retroflat_cli_args[const_i],
-            argv[arg_i],
-            g_retroflat_cli_arg_sz[const_i]
-         ) ) {
-            /* Save this matched index for the next pass. */
-            last_i = const_i;
-            retval = g_retroflat_cli_callbacks[const_i]( argv[arg_i], args );
-            if( RETROFLAT_OK != retval ) {
-               goto cleanup;
-            }
-
-            /* We found a match, so go to the next arg. */
-            break;
-         }
-         const_i++;
-      }
-
-      if( '\0' == g_retroflat_cli_args[const_i][0] ) {
-         /* No valid arg was found, so we must be passing data to the last one!
-          */
-         retval = g_retroflat_cli_callbacks[last_i]( argv[arg_i], args );
-         if( RETROFLAT_OK != retval ) {
-            goto cleanup;
-         }
-      }
-   }
-
-cleanup:
-
-   return retval;
-}
-
-/* === */
-
-void retroflat_add_arg(
-   const char* arg, int arg_sz, const char* help, int help_sz,
-   retroflat_cli_cb cb
-) {
-   int slot_idx = 0;
-
-   /* Find empty arg slot. */
-   while(
-      '\0' != g_retroflat_cli_args[slot_idx][0] &&
-      RETROFLAT_CLI_ARG_LIST_SZ_MAX > slot_idx
-   ) {
-      slot_idx++;
-   }
-
-   /* Sanity checking and sizing. */
-   if( RETROFLAT_CLI_ARG_LIST_SZ_MAX <= slot_idx ) {
-      retroflat_message( "Error", "Too many command line args requested!" );
-      return;
-   }
-
-   if( 0 >= arg_sz ) {
-      arg_sz = strlen( arg );
-   }
-   assert( arg_sz < RETROFLAT_CLI_ARG_SZ_MAX );
-
-   if( 0 >= help_sz ) {
-      help_sz = strlen( help );
-   }
-   assert( help_sz < RETROFLAT_CLI_ARG_HELP_SZ_MAX );
-
-   /* Add arg to arrays. */
-
-   strncpy( g_retroflat_cli_args[slot_idx], arg, arg_sz );
-   g_retroflat_cli_args[slot_idx + 1][0] = '\0';
-   
-   strncpy( g_retroflat_cli_arg_help[slot_idx], help, help_sz );
-   g_retroflat_cli_arg_help[slot_idx + 1][0] = '\0';
-   
-   g_retroflat_cli_arg_sz[slot_idx] = arg_sz;
-   g_retroflat_cli_arg_sz[slot_idx + 1] = 0;
-   
-   g_retroflat_cli_callbacks[slot_idx] = cb;
-   g_retroflat_cli_callbacks[slot_idx + 1] = NULL;
-}
 
 /* === */
 
@@ -2101,8 +1865,22 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    debug_printf( 1, "retroflat: parsing args..." );
 
+#ifdef RETROFLAT_SCREENSAVER
+	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 1,
+      "Preview screensaver", 0, (maug_cli_cb)retroflat_cli_p, args );
+	maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 1,
+      "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, args );
+#endif /* RETROFLAT_SCREENSAVER */
+
+#ifndef RETROFLAT_NO_CLI_SZ
+   maug_add_arg( MAUG_CLI_SIGIL "x", MAUG_CLI_SIGIL_SZ + 1,
+      "Set the screen width.", 0, (maug_cli_cb)retroflat_cli_x, args );
+   maug_add_arg( MAUG_CLI_SIGIL "y", MAUG_CLI_SIGIL_SZ + 1,
+      "Set the screen height.", 0, (maug_cli_cb)retroflat_cli_y, args );
+#endif /* !RETROFLAT_NO_CLI_SZ */
+
    /* Parse command line args. */
-   retval = retroflat_parse_args( argc, argv, args );
+   retval = maug_parse_args( argc, argv );
    if( RETROFLAT_OK != retval ) {
       goto cleanup;
    }

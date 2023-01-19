@@ -2,6 +2,8 @@
 
 Augmented minimal standard library for C89 and legacy compilers.
 
+**The API is currently in flux and is not yet completely final!**
+
 ## Design Constraints
 
 Maug has the following design goals and constraints:
@@ -11,6 +13,16 @@ Maug has the following design goals and constraints:
 - Memory allocation uses a flat model (calloc/free), with no handle management.
 - Standard library calls are allowed, so long as they are universally
   available even in very old C89 compilers.
+
+## Roadmap
+
+- Rename Retroflat functions with maug\_ to create a coherent namespace.
+
+- Clearly enumerate which headers rely on which to create modular hierarchy.
+
+- Solidify API.
+
+- Setup Makefile to compile .solib/.dll/.ovl dynamic libs.
 
 ## Modules
 
