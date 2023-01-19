@@ -75,9 +75,9 @@
 #endif /* !platform_fclose */
 
 #ifdef LOG_TO_FILE
-#  ifndef DEBUG_LOG
-#     define DEBUG_LOG
-#  endif /* !DEBUG_LOG */
+#  ifndef UPRINTF_LOG
+#     define UPRINTF_LOG
+#  endif /* !UPRINTF_LOG */
 #  define LOG_ERR_TARGET g_log_file
 #  define LOG_STD_TARGET g_log_file
 #else
@@ -91,9 +91,9 @@
 #  define SIZE_T_FMT "%u"
 #endif /* __GNUC__ */
 
-#if defined( DEBUG_LOG ) && !defined( DEBUG_THRESHOLD )
+#if !defined( DEBUG_THRESHOLD )
 #  define DEBUG_THRESHOLD 1
-#endif /* DEBUG_LOG && !DEBUG_THRESHOLD */
+#endif /* !DEBUG_THRESHOLD */
 
 union MAUG_FMT_SPEC {
    long int d;
@@ -104,8 +104,10 @@ union MAUG_FMT_SPEC {
 };
 
 /* ! */
-#if defined( ANCIENT_C )
+#if defined( UPRINTF_ANCIENT_C )
 /* ! */
+
+/* TODO: Figure out a way to get the calling line number for a function. */
 
 static void debug_printf( int level, const char* fmt, ... ) {
    va_list argp;
@@ -132,7 +134,7 @@ static void error_printf( const char* fmt, ... ) {
 #  define size_multi_printf( lvl, name, sz, max ) debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
-#elif defined( DEBUG_LOG )
+#elif defined( UPRINTF_LOG )
 /* ! */
 
 #  ifdef NO_DEBUG_LINE_NUMBER
@@ -154,7 +156,7 @@ static void error_printf( const char* fmt, ... ) {
 #  define size_multi_printf( lvl, name, sz, max ) internal_debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 /* ! */
-#else /* !DEBUG_LOG, !ANCIENT_C */
+#else /* !UPRINTF_LOG, !UPRINTF_ANCIENT_C */
 /* ! */
 
 /* TODO: Stub these without vargarg macros. */
@@ -165,7 +167,7 @@ static void error_printf( const char* fmt, ... ) {
 #  define size_multi_printf( ... )
 
 /* ! */
-#endif /* DEBUG_LOG, ANCIENT_C */
+#endif /* UPRINTF_LOG, UPRINTF_ANCIENT_C */
 /* ! */
 
 #ifdef LOG_TO_FILE
@@ -232,6 +234,7 @@ void maug_printf( const char* fmt, ... );
 #ifdef UPRINTF_C
 
 uint32_t g_maug_printf_line = 0;
+int g_maug_uprintf_threshold = DEBUG_THRESHOLD;
 
 int maug_digits( long int num, int base ) {
    int digits = 0;
@@ -500,7 +503,7 @@ void maug_debug_printf(
 #endif /* MAUG_LOG_FILE */
    }
 
-   if( lvl >= DEBUG_THRESHOLD ) {
+   if( lvl >= g_maug_uprintf_threshold ) {
       platform_fprintf( out, "(%d) %s : %d: ",
          lvl, src_name, line );
       
