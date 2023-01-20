@@ -24,7 +24,7 @@
 /* == Autodetection == */
 
 #ifndef UPRINTF_S32
-#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ )
+#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
 #     define UPRINTF_S32 "%ld"
 #  elif __LONG_WIDTH__ == 64
 #     define UPRINTF_S32 "%d"
@@ -32,7 +32,7 @@
 #endif /* !UPRINTF_S32 */
 
 #ifndef UPRINTF_U32
-#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ )
+#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
 #     define UPRINTF_U32 "%lu"
 #  elif __LONG_WIDTH__ == 64
 #     define UPRINTF_U32 "%u"
