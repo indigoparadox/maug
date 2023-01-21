@@ -51,6 +51,16 @@
 #define RETROGLU_PARSER_STATE_VTEXTURE_X 21
 #define RETROGLU_PARSER_STATE_VTEXTURE_Y 22
 #define RETROGLU_PARSER_STATE_VTEXTURE_Z 23
+#define RETROGLU_PARSER_STATE_MTL_KA_R 24
+#define RETROGLU_PARSER_STATE_MTL_KA_G 25
+#define RETROGLU_PARSER_STATE_MTL_KA_B 26
+#define RETROGLU_PARSER_STATE_MTL_KS_R 27
+#define RETROGLU_PARSER_STATE_MTL_KS_G 28
+#define RETROGLU_PARSER_STATE_MTL_KS_B 29
+#define RETROGLU_PARSER_STATE_MTL_KE_R 30
+#define RETROGLU_PARSER_STATE_MTL_KE_G 31
+#define RETROGLU_PARSER_STATE_MTL_KE_B 32
+#define RETROGLU_PARSER_STATE_MTL_NS 33
 
 /*! \} */ /* maug_retroglu_obj_fsm_states */
 
@@ -78,6 +88,8 @@ struct RETROGLU_MATERIAL {
    float ambient[4];
    float diffuse[4];
    float specular[4];
+   float emissive[4];
+   float specular_exp;
    char name[RETROGLU_MATERIAL_NAME_SZ_MAX];
 };
 
@@ -108,7 +120,7 @@ struct RETROGLU_SPRITE {
    float vtexture_front[6][2];
    float vertices_back[6][2];
    float vtexture_back[6][2];
-   GLuint texture_id;
+   uint32_t texture_id;
    int texture_w;
    int texture_h;
    /*! \brief Width of clipped sprite on screen. */
@@ -156,7 +168,11 @@ struct RETROGLU_SPRITE {
    f( "usemtl", retroglu_token_usemtl ) \
    f( "newmtl", retroglu_token_newmtl ) \
    f( "mtllib", retroglu_token_mtllib ) \
-   f( "Kd", retroglu_token_kd )
+   f( "Kd", retroglu_token_kd ) \
+   f( "Ka", retroglu_token_ka ) \
+   f( "Ks", retroglu_token_ks ) \
+   f( "Ke", retroglu_token_ks ) \
+   f( "Ns", retroglu_token_ns )
 
 struct RETROGLU_PARSER;
 
@@ -228,7 +244,7 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 /*! \} */ /* maug_retroglu_obj_fsm */
 
 int retroglu_load_tex_bmp(
-   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, GLuint* p_texture_id,
+   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h );
 
 void retroglu_draw_poly(
@@ -268,6 +284,8 @@ int retroglu_token_newmtl( struct RETROGLU_PARSER* parser ) {
    parser->materials[parser->materials_sz].ambient[3] = 1.0f;
    parser->materials[parser->materials_sz].diffuse[3] = 1.0f;
    parser->materials[parser->materials_sz].specular[3] = 1.0f;
+   parser->materials[parser->materials_sz].emissive[3] = 1.0f;
+   parser->materials[parser->materials_sz].specular_exp = 0;
    parser->materials_sz++;
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_NAME );
    return RETROFLAT_OK;
@@ -280,6 +298,26 @@ int retroglu_token_mtllib( struct RETROGLU_PARSER* parser ) {
 
 int retroglu_token_kd( struct RETROGLU_PARSER* parser ) {
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_KD_R );
+   return RETROFLAT_OK;
+}
+
+int retroglu_token_ka( struct RETROGLU_PARSER* parser ) {
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_KA_R );
+   return RETROFLAT_OK;
+}
+
+int retroglu_token_ks( struct RETROGLU_PARSER* parser ) {
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_KS_R );
+   return RETROFLAT_OK;
+}
+
+int retroglu_token_ke( struct RETROGLU_PARSER* parser ) {
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_KE_R );
+   return RETROFLAT_OK;
+}
+
+int retroglu_token_ns( struct RETROGLU_PARSER* parser ) {
+   retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MTL_NS );
    return RETROFLAT_OK;
 }
 
@@ -337,7 +375,17 @@ void retroglu_parse_init(
    f( "normal Z", VNORMAL_Z, vnormals, vnormals_sz, z, NONE ) \
    f( "mtl Kd R", MTL_KD_R, materials, materials_sz-1, diffuse[0], MTL_KD_G ) \
    f( "mtl Kd G", MTL_KD_G, materials, materials_sz-1, diffuse[1], MTL_KD_B ) \
-   f( "mtl Kd B", MTL_KD_B, materials, materials_sz-1, diffuse[2], NONE )
+   f( "mtl Kd B", MTL_KD_B, materials, materials_sz-1, diffuse[2], NONE ) \
+   f( "mtl Ka R", MTL_KA_R, materials, materials_sz-1, ambient[0], MTL_KA_G ) \
+   f( "mtl Ka G", MTL_KA_G, materials, materials_sz-1, ambient[1], MTL_KA_B ) \
+   f( "mtl Ka B", MTL_KA_B, materials, materials_sz-1, ambient[2], NONE ) \
+   f( "mtl Ks R", MTL_KS_R, materials, materials_sz-1, specular[0], MTL_KS_G ) \
+   f( "mtl Ks G", MTL_KS_G, materials, materials_sz-1, specular[1], MTL_KS_B ) \
+   f( "mtl Ks B", MTL_KS_B, materials, materials_sz-1, specular[2], NONE ) \
+   f( "mtl Ke R", MTL_KE_R, materials, materials_sz-1, emissive[0], MTL_KE_G ) \
+   f( "mtl Ke G", MTL_KE_G, materials, materials_sz-1, emissive[1], MTL_KE_B ) \
+   f( "mtl Ke B", MTL_KE_B, materials, materials_sz-1, emissive[2], NONE ) \
+   f( "mtl Ns", MTL_NS, materials, materials_sz-1, specular_exp, NONE )
 
 #define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
@@ -614,7 +662,7 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
 }
 
 int retroglu_load_tex_bmp(
-   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, GLuint* p_texture_id,
+   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
 ) {
    uint32_t bmp_offset = 0;
@@ -690,7 +738,16 @@ void retroglu_draw_poly(
    
       glMaterialfv( GL_FRONT, GL_DIFFUSE,
          materials[faces[i].material_idx].diffuse );
-      glMaterialf( GL_FRONT, GL_SHININESS, 100.0f );
+         /*
+      glMaterialfv( GL_FRONT, GL_AMBIENT,
+         materials[faces[i].material_idx].ambient );
+         */
+      glMaterialfv( GL_FRONT, GL_SPECULAR,
+         materials[faces[i].material_idx].specular );
+      glMaterialfv( GL_FRONT, GL_EMISSION,
+         materials[faces[i].material_idx].emissive );
+      glMaterialf( GL_FRONT, GL_SHININESS, 
+         materials[faces[i].material_idx].specular_exp );
    
       for( j = 0 ; faces[i].vertex_idxs_sz > j ; j++ ) {
          assert( 0 < faces[i].vertex_idxs[j] );
@@ -716,7 +773,7 @@ int16_t retroglu_set_sprite_tex(
 ) {
    uint32_t bmp_w = 0,
       bmp_h = 0;
-   GLuint texture_id = 0;
+   uint32_t texture_id = 0;
    int16_t retval = RETROFLAT_OK;
 
    retval = retroglu_load_tex_bmp(
