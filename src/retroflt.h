@@ -1856,6 +1856,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* System sanity checks. */
    assert( 4 == sizeof( uint32_t ) );
+   assert( 4 == sizeof( int32_t ) );
+   assert( 2 == sizeof( uint16_t ) );
+   assert( 2 == sizeof( int16_t ) );
+   assert( 1 == sizeof( uint8_t ) );
+   assert( 1 == sizeof( int8_t ) );
 
    debug_printf( 1, "retroflat: parsing args..." );
 
