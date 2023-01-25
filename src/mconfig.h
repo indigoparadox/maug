@@ -40,7 +40,7 @@ int maug_config_read_str(
    if( ERROR_SUCCESS != RegOpenKeyExA(
       HKEY_CURRENT_USER, 
 #  else
-#     warning "read str not implemented"
+/* #     warning "read str not implemented" */
 #  endif
 
    return retval;
