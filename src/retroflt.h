@@ -1795,8 +1795,8 @@ static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 #ifndef RETROFLAT_NO_CLI_SZ
 
-static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "x", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
+static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
@@ -1804,8 +1804,15 @@ static int retroflat_cli_x( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "y", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
+static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_w ) {
+      args->screen_w = 320;
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
@@ -1813,7 +1820,29 @@ static int retroflat_cli_y( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
+static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_h ) {
+      args->screen_h = 200;
+   }
+   return RETROFLAT_OK;
+}
+
 #endif /* !RETROFLAT_NO_CLI_SZ */
+
+static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      debug_printf( 1, "setting config path to: %s", arg );
+      maug_config_init( arg, strlen( arg ) );
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   maug_config_init( args->title, strlen( arg ) );
+   return RETROFLAT_OK;
+}
 
 /* === */
 
@@ -1861,22 +1890,31 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 2 == sizeof( int16_t ) );
    assert( 1 == sizeof( uint8_t ) );
    assert( 1 == sizeof( int8_t ) );
+   assert( NULL != args );
 
    debug_printf( 1, "retroflat: parsing args..." );
 
 #ifdef RETROFLAT_SCREENSAVER
-	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 1,
-      "Preview screensaver", 0, (maug_cli_cb)retroflat_cli_p, args );
-	maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 1,
-      "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, args );
+	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
+      "Preview screensaver", 0, (maug_cli_cb)retroflat_cli_p, NULL, args );
+	maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 2,
+      "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, NULL, args );
 #endif /* RETROFLAT_SCREENSAVER */
 
 #ifndef RETROFLAT_NO_CLI_SZ
-   maug_add_arg( MAUG_CLI_SIGIL "x", MAUG_CLI_SIGIL_SZ + 1,
-      "Set the screen width.", 0, (maug_cli_cb)retroflat_cli_x, args );
-   maug_add_arg( MAUG_CLI_SIGIL "y", MAUG_CLI_SIGIL_SZ + 1,
-      "Set the screen height.", 0, (maug_cli_cb)retroflat_cli_y, args );
+   maug_add_arg( MAUG_CLI_SIGIL "rfw", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the screen width.", 0,
+      (maug_cli_cb)retroflat_cli_rfw,
+      (maug_cli_cb)retroflat_cli_rfw_def, args );
+   maug_add_arg( MAUG_CLI_SIGIL "rfh", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the screen height.", 0,
+      (maug_cli_cb)retroflat_cli_rfh,
+      (maug_cli_cb)retroflat_cli_rfh_def, args );
 #endif /* !RETROFLAT_NO_CLI_SZ */
+
+   maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the config path.", 0,
+      (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
 
    /* Parse command line args. */
    retval = maug_parse_args( argc, argv );

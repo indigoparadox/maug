@@ -14,5 +14,10 @@
 #endif /* MAUG_C */
 #include <marge.h>
 
+#ifdef MAUG_C
+#  define MCONFIG_C
+#endif /* MAUG_C */
+#include <mconfig.h>
+
 #endif /* MAUG_H */
 
