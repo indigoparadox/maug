@@ -2,6 +2,11 @@
 #ifndef MCONFIG_H
 #define MCONFIG_H
 
+#if !defined( MAUG_WINDOWS_H ) && defined( MAUG_OS_WIN )
+#  include <windows.h>
+#  define MAUG_WINDOWS_H
+#endif /* !MAUG_WINDOWS_H */
+
 MERROR_RETVAL maug_config_init( const char* app_name, uint16_t app_name_sz );
 
 int maug_config_read_str(

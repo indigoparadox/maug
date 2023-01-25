@@ -800,7 +800,10 @@ extern const SDL_Color gc_white;
 #     warning "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
+#ifndef MAUG_WINDOWS_H
 #  include <windows.h>
+#  define MAUG_WINDOWS_H
+#endif /* !MAUG_WINDOWS_H */
 
 #  ifdef RETROFLAT_WING
 #     include <wing.h>
