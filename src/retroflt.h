@@ -4,6 +4,8 @@
 
 #include <mtypes.h>
 
+#include <math.h>
+
 /**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.
@@ -350,6 +352,11 @@
  */
 
 /**
+ * \relates RETROFLAT_BITMAP
+ */
+#define RETROFLAT_FLAGS_LOCK     0x01
+
+/**
  * \brief The filename suffix to be appended with a "." to filenames passed to
  *        retroflat_load_bitmap(). Is a \ref maug_retroflt_cdefs_page.
  */
@@ -468,6 +475,8 @@ struct RETROFLAT_ARGS {
  */
 #  define RETROFLAT_LINE_THICKNESS 1
 #endif /* !RETROFLAT_LINE_THICKNESS */
+
+#define RETROFLAT_PI 3.14159
 
 /*! \} */ /* maug_retroflt_drawing */
 
@@ -723,7 +732,12 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
-#  define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
+#  ifdef RETROFLAT_API_SDL1
+#     define retroflat_bitmap_locked( bmp ) \
+         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+#  else
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
+#  endif
 #  define retroflat_screen_w() g_screen_v_w
 #  define retroflat_screen_h() g_screen_v_h
 
@@ -1265,6 +1279,10 @@ void retroflat_blit_bitmap(
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
+
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x, int y, uint8_t flags );
 
 /**
  * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
@@ -1879,9 +1897,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int wx = CW_USEDEFAULT,
       wy = CW_USEDEFAULT;
 #  elif defined( RETROFLAT_API_SDL1 )
-#  if defined( RETROFLAT_OPENGL )
    const SDL_VideoInfo* info = NULL;
-#  endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    debug_printf( 1, "retroflat: initializing..." );
@@ -2285,6 +2301,14 @@ cleanup:
 
    /* == SDL1 == */
 
+   if( NULL == bmp ) {
+      bmp = (&g_buffer);
+   }
+
+   assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
+   bmp->flags |= RETROFLAT_FLAGS_LOCK;
+   SDL_LockSurface( bmp->surface );
+
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
@@ -2370,6 +2394,10 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp ) {
       bmp = (&g_buffer);
    }
+
+   assert( RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
+   bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+   SDL_UnlockSurface( bmp->surface );
 
    if( (&g_buffer) == bmp ) {
 #     ifdef RETROFLAT_OPENGL
@@ -2824,11 +2852,89 @@ cleanup:
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x, int y, uint8_t flags
+) {
+#  if defined( RETROFLAT_API_SDL1 )
+   int offset = 0;
+   uint8_t* px_1 = NULL;
+   uint16_t* px_2 = NULL;
+   uint32_t* px_4 = NULL;
+#  elif defined( RETROFLAT_API_SDL2 )
+   int locked_target_internal = 0;
+   int lock_ret = 0;
+#  endif /* RETROFLAT_API_SDL1 */
+
+   if( NULL == target ) {
+      target = &(g_buffer);
+   }
+
+   if(
+      x < 0 || x >= retroflat_screen_w() ||
+      y < 0 || y >= retroflat_screen_h()
+   ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_API_ALLEGRO )
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   offset = (y * target->surface->pitch) +
+      (x * target->surface->format->BytesPerPixel);
+
+   switch( target->surface->format->BytesPerPixel ) {
+   case 4:
+      px_4 = (uint32_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_4 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+
+   case 2:
+      px_2 = (uint16_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_2 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+
+   case 1:
+      px_1 = (uint8_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_1 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   SDL_SetRenderDrawColor(
+      target->renderer,  color->r, color->g, color->b, 255 );
+   SDL_RenderDrawPoint( target->renderer, x, y );
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  else
+#     warning "px not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+}
+
+/* === */
+
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
-#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   SDL_Rect area;
+   int locked_target_internal = 0;
+   int lock_ret = 0;
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HBRUSH old_brush = (HBRUSH)NULL;
    int lock_ret = 0,
       locked_target_internal = 0;
@@ -2850,11 +2956,40 @@ void retroflat_rect(
       rect( target->b, x, y, x + w, y + h, color );
    }
 
-#  elif defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_SDL1 )
 
-   SDL_Rect area;
-   int locked_target_internal = 0;
-   int lock_ret = 0;
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   area.x = x;
+   area.y = y;
+   area.w = w;
+   area.h = h;
+
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+
+      /* Full-screen blank requested. */
+      SDL_FillRect( target->surface, &area,
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b ) );
+
+   } else {
+      /* Top */
+      retroflat_line( target, color, x, y, x + w, y, 0 );
+      /* Right */
+      retroflat_line( target, color, x + w, y, x + w, y + h, 0 );
+      /* Bottom */
+      retroflat_line( target, color, x, y + h, x + w, y + h, 0 );
+      /* Left */
+      retroflat_line( target, color, x, y, x, y + h, 0 );
+   }
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
 
    area.x = x;
    area.y = y;
@@ -2909,6 +3044,88 @@ cleanup:
 
 /* === */
 
+void retroflat_soft_line_up(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x1, int y1, int x2, int y2, uint8_t flags
+) {
+   int16_t dist_x = x2 - x1,
+      dist_y = y2 - y1,
+      x_inc = 1,
+      delta = 0,
+      x = x1,
+      y = 0;
+
+   if( 0 > dist_x ) {
+      x_inc = -1;
+      dist_x *= -1;
+   }
+
+   delta = (2 * dist_x) - dist_y;
+   for( y = y1 ; y2 > y ; y++ ) {
+      retroflat_px( target, color, x, y, 0 );
+
+      if( 0 < delta ) {
+         x += x_inc;
+         delta += (2 * (dist_x - dist_y));
+      } else {
+         delta += (2 * dist_x);
+      }
+   }
+}
+
+void retroflat_soft_line_down(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x1, int y1, int x2, int y2, uint8_t flags
+) {
+}
+
+void retroflat_soft_line(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x1, int y1, int x2, int y2, uint8_t flags
+) {
+   #define LINE_AXIS_X 0
+   #define LINE_AXIS_Y 1
+
+   int16_t delta[2],
+      distance[2],
+      start[2],
+      end[2],
+      iter[2],
+      delta_p = 0;
+   uint8_t inc_axis = 0,
+      off_axis = 0;
+   int lock_ret = 0,
+      locked_target_internal = 0;
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   /* TODO: Handle thickness. */
+
+   /* Keep coordinates positive. */
+   if( abs( y2 - y1 ) < abs( x2 - x1 ) ) {
+      if( x1 > x2 ) {
+         retroflat_soft_line_down( target, color, x2, y2, x1, y1, 0 );
+      } else {
+         retroflat_soft_line_down( target, color, x1, y1, x2, y2, 0 );
+      }
+   } else {
+      if( y2 < y1 ) {
+         retroflat_soft_line_up( target, color, x2, y2, x1, y1, 0 );
+      } else {
+         retroflat_soft_line_up( target, color, x1, y1, x2, y2, 0 );
+      }
+   }
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }  
+}
+
+/* === */
+
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
@@ -2935,9 +3152,14 @@ void retroflat_line(
    assert( NULL != target->b );
    line( target->b, x1, y1, x2, y2, color );
 
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+   retroflat_soft_line( target, color, x1, y1, x2, y2, flags );
+
 #  elif defined( RETROFLAT_API_SDL2 )
 
-   /* == SDL == */
+   /* == SDL2 == */
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
@@ -2989,6 +3211,39 @@ cleanup:
 
 /* === */
 
+void retroflat_soft_ellipse(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x, int y, int w, int h, uint8_t flags
+) {
+   float i = 0;
+   int lock_ret = 0,
+      locked_target_internal = 0,
+      px_x = 0,
+      px_y = 0;
+
+   retroflat_internal_autolock_bitmap(
+      target, lock_ret, locked_target_internal );
+
+   /* TODO: More efficiently determine stepping. */
+   for( i = 0 ; 2 * RETROFLAT_PI > i ; i += 0.1 ) {
+      px_x = x + (w / 2) + (cos( i ) * (w / 2));
+      px_y = y + (h / 2) + sin( i ) * (h / 2);
+
+      assert( 0 <= px_x );
+      assert( 0 <= px_y );
+
+      retroflat_px( target, color, px_x, px_y, 0 );  
+   }
+
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }  
+}
+
+/* === */
+
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
@@ -3018,6 +3273,10 @@ void retroflat_ellipse(
    } else {
       ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
    }
+
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   retroflat_soft_ellipse( target, color, x, y, w, h, flags );
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
