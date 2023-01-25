@@ -2,6 +2,10 @@
 #ifndef MLEGACY_H
 #define MLEGACY_H
 
+#ifdef RETROFLAT_OS_WIN
+#  define MAUG_OS_WIN
+#endif /* RETROFLAT_OS_WIN */
+
 #ifdef PATH_MAX
 #  define MAUG_PATH_SZ_MAX PATH_MAX
 #else

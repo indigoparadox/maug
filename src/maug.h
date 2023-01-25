@@ -2,6 +2,13 @@
 #ifndef MAUG_H
 #define MAUG_H
 
+#include <mlegacy.h>
+
+#if !defined( MAUG_WINDOWS_H ) && defined( MAUG_OS_WIN )
+#  include <windows.h>
+#  define MAUG_WINDOWS_H
+#endif /* !MAUG_WINDOWS_H */
+
 #include <merror.h>
 
 #ifdef MAUG_C
