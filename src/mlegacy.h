@@ -2,6 +2,9 @@
 #ifndef MLEGACY_H
 #define MLEGACY_H
 
+/* TODO: Remove me. */
+#define MAUG_NO_CONFIG
+
 #ifdef RETROFLAT_OS_WIN
 #  define MAUG_OS_WIN
 #endif /* RETROFLAT_OS_WIN */
