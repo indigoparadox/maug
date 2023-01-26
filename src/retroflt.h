@@ -3044,53 +3044,21 @@ cleanup:
 
 /* === */
 
-#define LINE_X 0
-#define LINE_Y 1
-
-#define LINE_OFF (1 - for_axis)
-
-void retroflat_soft_line_x(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, int for_axis, uint8_t flags
-) {
-   int16_t dist[2] = { x2 - x1, y2 - y1 },
-      start[2] = { x1, y1 },
-      end[2] = { x2, y2 },
-      iter[2] = { x1, y1 },
-      inc = 1,
-      delta = 0;
-
-   if( 0 > dist[LINE_OFF] ) {
-      inc = -1;
-      dist[LINE_OFF] *= -1;
-   }
-
-   delta = (2 * dist[LINE_OFF]) - dist[for_axis];
-   for(
-      iter[for_axis] = start[for_axis] ;
-      end[for_axis] > iter[for_axis] ;
-      iter[for_axis]++
-   ) {
-      retroflat_px( target, color, iter[LINE_X], iter[LINE_Y], 0 );
-
-      if( 0 < delta ) {
-         iter[LINE_OFF] += inc;
-         delta += (2 * (dist[LINE_OFF] - dist[for_axis]));
-      } else {
-         delta += (2 * dist[LINE_OFF]);
-      }
-   }
-}
-
 void retroflat_soft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
-   #define LINE_AXIS_X 0
-   #define LINE_AXIS_Y 1
+   #define RETROFLAT_LINE_X 0
+   #define RETROFLAT_LINE_Y 1
 
-   uint8_t inc_axis = 0,
+   uint8_t for_axis = 0,
       off_axis = 0;
+   int16_t dist[2],
+      start[2],
+      end[2],
+      iter[2],
+      inc = 1,
+      delta = 0;
    int lock_ret = 0,
       locked_target_internal = 0;
 
@@ -3099,18 +3067,65 @@ void retroflat_soft_line(
 
    /* TODO: Handle thickness. */
 
-   /* Keep coordinates positive. */
+   /* Figure out strategy based on line slope. */
    if( abs( y2 - y1 ) < abs( x2 - x1 ) ) {
       if( x1 > x2 ) {
-         retroflat_soft_line_x( target, color, x2, y2, x1, y1, LINE_X, 0 );
+         start[RETROFLAT_LINE_X] = x2;
+         start[RETROFLAT_LINE_Y] = y2;
+         end[RETROFLAT_LINE_X] = x1;
+         end[RETROFLAT_LINE_Y] = y1;
+         for_axis = RETROFLAT_LINE_X;
       } else {
-         retroflat_soft_line_x( target, color, x1, y1, x2, y2, LINE_X, 0 );
+         start[RETROFLAT_LINE_X] = x1;
+         start[RETROFLAT_LINE_Y] = y1;
+         end[RETROFLAT_LINE_X] = x2;
+         end[RETROFLAT_LINE_Y] = y2;
+         for_axis = RETROFLAT_LINE_X;
       }
    } else {
       if( y2 < y1 ) {
-         retroflat_soft_line_x( target, color, x2, y2, x1, y1, LINE_Y, 0 );
+         start[RETROFLAT_LINE_X] = x2;
+         start[RETROFLAT_LINE_Y] = y2;
+         end[RETROFLAT_LINE_X] = x1;
+         end[RETROFLAT_LINE_Y] = y1;
+         for_axis = RETROFLAT_LINE_Y;
       } else {
-         retroflat_soft_line_x( target, color, x1, y1, x2, y2, LINE_Y, 0 );
+         start[RETROFLAT_LINE_X] = x1;
+         start[RETROFLAT_LINE_Y] = y1;
+         end[RETROFLAT_LINE_X] = x2;
+         end[RETROFLAT_LINE_Y] = y2;
+         for_axis = RETROFLAT_LINE_Y;
+      }
+   }
+
+   /* C89 requires const initializers, so do math down here. */
+   off_axis = 1 - for_axis;
+   iter[RETROFLAT_LINE_X] = start[RETROFLAT_LINE_X];
+   iter[RETROFLAT_LINE_Y] = start[RETROFLAT_LINE_Y];
+   dist[RETROFLAT_LINE_X] = end[RETROFLAT_LINE_X] - start[RETROFLAT_LINE_X];
+   dist[RETROFLAT_LINE_Y] = end[RETROFLAT_LINE_Y] - start[RETROFLAT_LINE_Y];
+
+   /* Adjust delta/slope for off-axis. */
+   delta = (2 * dist[off_axis]) - dist[for_axis];
+   if( 0 > dist[off_axis] ) {
+      inc = -1;
+      dist[off_axis] *= -1;
+   }
+
+   for(
+      iter[for_axis] = start[for_axis] ;
+      end[for_axis] > iter[for_axis] ;
+      iter[for_axis]++
+   ) {
+      retroflat_px(
+         target, color, iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
+
+      /* Increment off-axis based on for-axis. */
+      if( 0 < delta ) {
+         iter[off_axis] += inc;
+         delta += (2 * (dist[off_axis] - dist[for_axis]));
+      } else {
+         delta += (2 * dist[off_axis]);
       }
    }
 
