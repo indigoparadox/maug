@@ -1850,6 +1850,8 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
 
 #endif /* !RETROFLAT_NO_CLI_SZ */
 
+#ifndef MAUG_NO_CONFIG
+
 static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
@@ -1864,6 +1866,8 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    maug_config_init( args->title, strlen( arg ) );
    return RETROFLAT_OK;
 }
+
+#endif /* !MAUG_CLI_SIGIL_SZ */
 
 /* === */
 
@@ -1931,9 +1935,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfh_def, args );
 #endif /* !RETROFLAT_NO_CLI_SZ */
 
+#ifndef MAUG_NO_CONFIG
    maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
       "Set the config path.", 0,
       (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
+#endif /* !MAUG_NO_CONFIG */
 
    /* Parse command line args. */
    retval = maug_parse_args( argc, argv );

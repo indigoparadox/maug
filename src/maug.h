@@ -21,10 +21,12 @@
 #endif /* MAUG_C */
 #include <marge.h>
 
+#ifndef MAUG_NO_CONFIG
 #ifdef MAUG_C
 #  define MCONFIG_C
 #endif /* MAUG_C */
 #include <mconfig.h>
+#endif /* !MAUG_NO_CONFIG */
 
 #endif /* MAUG_H */
 

@@ -29,12 +29,14 @@ int maug_config_read_str(
    int retval = 0;
 #  if defined( MAUG_API_WIN32 )
    HKEY key = (HKEY)NULL;
+#  else
+   char config_path[MAUG_PATH_SZ_MAX];
 #  endif /* MAUG_API_WIN32 */
 
 #  if defined( MAUG_API_WIN16 )
    retval = GetPrivateProfileString(
       sect_name, key_name, def_out, buffer_out, buffer_sz,
-      g_retroflat_config_filename );
+      g_maug_config_filename );
 #  elif defined( MAUG_API_WIN32 )
    /* TODO */
    if( ERROR_SUCCESS != RegOpenKeyExA(
