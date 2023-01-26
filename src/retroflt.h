@@ -3044,39 +3044,42 @@ cleanup:
 
 /* === */
 
-void retroflat_soft_line_up(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, uint8_t flags
-) {
-   int16_t dist_x = x2 - x1,
-      dist_y = y2 - y1,
-      x_inc = 1,
-      delta = 0,
-      x = x1,
-      y = 0;
+#define LINE_X 0
+#define LINE_Y 1
 
-   if( 0 > dist_x ) {
-      x_inc = -1;
-      dist_x *= -1;
+#define LINE_OFF (1 - for_axis)
+
+void retroflat_soft_line_x(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   int x1, int y1, int x2, int y2, int for_axis, uint8_t flags
+) {
+   int16_t dist[2] = { x2 - x1, y2 - y1 },
+      start[2] = { x1, y1 },
+      end[2] = { x2, y2 },
+      iter[2] = { x1, y1 },
+      inc = 1,
+      delta = 0;
+
+   if( 0 > dist[LINE_OFF] ) {
+      inc = -1;
+      dist[LINE_OFF] *= -1;
    }
 
-   delta = (2 * dist_x) - dist_y;
-   for( y = y1 ; y2 > y ; y++ ) {
-      retroflat_px( target, color, x, y, 0 );
+   delta = (2 * dist[LINE_OFF]) - dist[for_axis];
+   for(
+      iter[for_axis] = start[for_axis] ;
+      end[for_axis] > iter[for_axis] ;
+      iter[for_axis]++
+   ) {
+      retroflat_px( target, color, iter[LINE_X], iter[LINE_Y], 0 );
 
       if( 0 < delta ) {
-         x += x_inc;
-         delta += (2 * (dist_x - dist_y));
+         iter[LINE_OFF] += inc;
+         delta += (2 * (dist[LINE_OFF] - dist[for_axis]));
       } else {
-         delta += (2 * dist_x);
+         delta += (2 * dist[LINE_OFF]);
       }
    }
-}
-
-void retroflat_soft_line_down(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, uint8_t flags
-) {
 }
 
 void retroflat_soft_line(
@@ -3086,12 +3089,6 @@ void retroflat_soft_line(
    #define LINE_AXIS_X 0
    #define LINE_AXIS_Y 1
 
-   int16_t delta[2],
-      distance[2],
-      start[2],
-      end[2],
-      iter[2],
-      delta_p = 0;
    uint8_t inc_axis = 0,
       off_axis = 0;
    int lock_ret = 0,
@@ -3105,15 +3102,15 @@ void retroflat_soft_line(
    /* Keep coordinates positive. */
    if( abs( y2 - y1 ) < abs( x2 - x1 ) ) {
       if( x1 > x2 ) {
-         retroflat_soft_line_down( target, color, x2, y2, x1, y1, 0 );
+         retroflat_soft_line_x( target, color, x2, y2, x1, y1, LINE_X, 0 );
       } else {
-         retroflat_soft_line_down( target, color, x1, y1, x2, y2, 0 );
+         retroflat_soft_line_x( target, color, x1, y1, x2, y2, LINE_X, 0 );
       }
    } else {
       if( y2 < y1 ) {
-         retroflat_soft_line_up( target, color, x2, y2, x1, y1, 0 );
+         retroflat_soft_line_x( target, color, x2, y2, x1, y1, LINE_Y, 0 );
       } else {
-         retroflat_soft_line_up( target, color, x1, y1, x2, y2, 0 );
+         retroflat_soft_line_x( target, color, x1, y1, x2, y2, LINE_Y, 0 );
       }
    }
 
