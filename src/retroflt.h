@@ -669,6 +669,10 @@ typedef int RETROFLAT_COLOR;
 #     warning "opengl support not implemented for SDL 2"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
+#  if defined( RETROFLAT_OS_WASM )
+#     include <emscripten.h>
+#  endif /* RETROFLAT_OS_WASM */
+
 #  include <SDL.h>
 #  include <SDL_ttf.h>
 
@@ -1734,7 +1738,12 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
 
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
-#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  if defined( RETROFLAT_OS_WASM )
+
+   emscripten_cancel_main_loop();
+   emscripten_set_main_loop_arg( loop_iter, data, 0, 0 );
+
+#  elif defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    uint32_t next = 0;
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
@@ -2023,7 +2032,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == SDL1 == */
 
-   if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
+   if( SDL_Init( SDL_INIT_VIDEO ) ) {
       retroflat_message(
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
@@ -2062,7 +2071,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == SDL2 == */
 
-   if( SDL_Init( SDL_INIT_EVERYTHING ) ) {
+   if( SDL_Init( SDL_INIT_VIDEO ) ) {
       retroflat_message(
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
@@ -2209,7 +2218,10 @@ cleanup:
 
 void retroflat_shutdown( int retval ) {
 
-#if defined( RETROFLAT_API_ALLEGRO )
+#if defined( RETROFLAT_OS_WASM )
+   /* Do nothing, start the main loop later. */
+   return;
+#elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
