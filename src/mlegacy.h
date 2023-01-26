@@ -15,7 +15,7 @@
 #  define MAUG_PATH_SZ_MAX 255
 #endif /* PATH_MAX */
 
-#ifdef ANCIENT_C
+#if defined( ANCIENT_C ) || defined( MAUG_ANCIENT_C )
 #define  UPRINTF_ANCIENT_C
 #endif /* ANCIENT_C */
 
