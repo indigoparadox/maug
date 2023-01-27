@@ -3348,10 +3348,7 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
-#  if defined( RETROFLAT_API_SDL2 )
-   int lock_ret = 0,
-      locked_target_internal = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
    int lock_ret = 0,
@@ -3382,19 +3379,7 @@ void retroflat_ellipse(
 
    /* == SDL == */
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
-
-   SDL_SetRenderDrawColor(
-      target->renderer, color->r, color->g, color->b, 255 );
-
-   /* TODO: How to do an ellipse in SDL? */
- 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }  
+   retroflat_soft_ellipse( target, color, x, y, w, h, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -3786,7 +3771,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       }
 
       /* Flush key buffer to improve responsiveness. */
-      while( (eres = SDL_PollEvent( &event )) );
+      /*while( (eres = SDL_PollEvent( &event )) );*/
 
 #  if !defined( RETROFLAT_API_SDL1 )
    } else if( SDL_WINDOWEVENT == event.type ) {
