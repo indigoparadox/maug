@@ -31,11 +31,11 @@
 
 #if defined( RETROFLAT_API_WIN16 )
 #  define MAUG_API_WIN16
-#elif defined( RETROFLAT_API_WIN32 )
+#elif defined( RETROFLAT_API_WIN32 ) || defined( RETROFLAT_API_WINCE )
 #  define MAUG_API_WIN32
 #endif /* RETROFLAT_API_WIN32 || RETROFLAT_API_WIN16 */
 
-#if defined( DEBUG )
+#if defined( DEBUG ) && !defined( MAUG_NO_ASSERT )
 #include <assert.h>
 #elif !defined( DOCUMENTATION )
 #define assert( x )
