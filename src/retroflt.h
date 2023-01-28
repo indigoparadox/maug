@@ -361,6 +361,8 @@
  */
 #define RETROFLAT_FLAGS_LOCK     0x01
 
+#define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
+
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
  *        retroflat_load_bitmap(). Is a \ref maug_retroflt_cdefs_page.
@@ -2387,13 +2389,32 @@ cleanup:
 
    /* == SDL1 == */
 
-   if( NULL == bmp ) {
+   if( NULL == bmp || &g_buffer == bmp ) {
+      /* Special case: Attempting to lock the screen. */
       bmp = (&g_buffer);
-   }
 
-   assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
-   bmp->flags |= RETROFLAT_FLAGS_LOCK;
-   SDL_LockSurface( bmp->surface );
+      if(
+         RETROFLAT_FLAGS_SCREEN_LOCK !=
+         (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags)
+      ) {
+         /* Do a perfunctory "screen lock" since programs are supposed to
+          * lock the screen before doing any drawing.
+          */
+         bmp->flags |= RETROFLAT_FLAGS_SCREEN_LOCK;
+
+      } else {
+         /* We actually want to lock the buffer for pixel manipulation. */
+         assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
+         bmp->flags |= RETROFLAT_FLAGS_LOCK;
+         SDL_LockSurface( bmp->surface );
+      }
+
+   } else {
+      /* Locking a bitmap for pixel drawing. */
+      assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
+      bmp->flags |= RETROFLAT_FLAGS_LOCK;
+      SDL_LockSurface( bmp->surface );
+   }
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
@@ -2478,20 +2499,35 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* == SDL1 == */
 
-   if( NULL == bmp ) {
+   if( NULL == bmp || &g_buffer == bmp ) {
+      /* Special case: Attempting to release the screen. */
       bmp = (&g_buffer);
-   }
 
-   assert( RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
-   bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
-   SDL_UnlockSurface( bmp->surface );
+      if(
+         RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags)
+      ) {
+         /* The screen was locked for pixel manipulation. */
+         bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+         SDL_UnlockSurface( bmp->surface );
 
-   if( (&g_buffer) == bmp ) {
+      } else {
+         assert( 
+            RETROFLAT_FLAGS_SCREEN_LOCK ==
+            (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
+         bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
+
 #     ifdef RETROFLAT_OPENGL
-      SDL_GL_SwapBuffers();
+         SDL_GL_SwapBuffers();
 #     else
-      SDL_Flip( bmp->surface );
+         SDL_Flip( bmp->surface );
 #     endif /* RETROFLAT_OPENGL */
+      }
+
+   } else {
+      /* Releasing a bitmap. */
+      assert( RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
+      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+      SDL_UnlockSurface( bmp->surface );
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
@@ -3048,7 +3084,9 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_SDL2 )
+#  if defined( RETROFLAT_API_SDL1 )
+   int retval = 0;
+#  elif defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0;
    int locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3083,6 +3121,8 @@ void retroflat_blit_bitmap(
 
    /* == SDL == */
 
+   assert( !retroflat_bitmap_locked( src ) );
+
    SDL_Rect dest_rect = {
       d_x, 
       d_y,
@@ -3092,7 +3132,12 @@ void retroflat_blit_bitmap(
       s_x, s_y, w, h };
 
 #     ifdef RETROFLAT_API_SDL1
-   SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
+   assert( !retroflat_bitmap_locked( target ) );
+   retval = 
+      SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
+   if( 0 != retval ) {
+      error_printf( "could not blit surface: %s", SDL_GetError() );
+   }
 #     else
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
