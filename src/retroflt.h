@@ -2543,21 +2543,20 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    } else {
       /* It's a bitmap. */
 
+      /* Scrap the software renderer. */
+      SDL_RenderPresent( bmp->renderer );
+      SDL_DestroyRenderer( bmp->renderer );
+      bmp->renderer = NULL;
+
       /* Scrap the old texture and recreate it from the updated surface. */
       /* The renderer should be a software renderer pointing to the surface,
        * created in retroflat_lock() above.
        */
       assert( NULL != bmp->texture );
-      SDL_RenderPresent( bmp->renderer );
       SDL_DestroyTexture( bmp->texture );
       bmp->texture = SDL_CreateTextureFromSurface(
-         bmp->renderer, bmp->surface );
+         g_buffer.renderer, bmp->surface );
       assert( NULL != bmp->texture );
-
-      /* Scrap the renderer. */
-      /* SDL_RenderPresent( bmp->renderer ); */
-      SDL_DestroyRenderer( bmp->renderer );
-      bmp->renderer = NULL;
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2865,15 +2864,9 @@ MERROR_RETVAL retroflat_create_bitmap(
       goto cleanup;
    }
    clear_bitmap( bmp_out->b );
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_SDL1 )
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       32, 0, 0, 0, 0 );
-      /*
-      g_buffer.surface->format->Rmask,
-      g_buffer.surface->format->Gmask,
-      g_buffer.surface->format->Bmask,
-      g_buffer.surface->format->Amask );
-      */
    if( NULL == bmp_out->surface ) {
       retroflat_message( "Error", "Error creating bitmap!" );
       retval = RETROFLAT_ERROR_BITMAP;
@@ -2882,20 +2875,25 @@ MERROR_RETVAL retroflat_create_bitmap(
    SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-#     if !defined( RETROFLAT_API_SDL1 )
-   bmp_out->renderer = SDL_CreateSoftwareRenderer( bmp_out->surface );
-   assert( NULL != bmp_out->renderer );
+#  elif defined( RETROFLAT_API_SDL2 )
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      32, 0, 0, 0, 0 );
+   if( NULL == bmp_out->surface ) {
+      retroflat_message( "Error", "Error creating bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+      SDL_MapRGB( bmp_out->surface->format,
+         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
    bmp_out->texture = SDL_CreateTextureFromSurface(
-      bmp_out->renderer, bmp_out->surface );
-   SDL_DestroyRenderer( bmp_out->renderer );
-   bmp_out->renderer = NULL;
+      g_buffer.renderer, bmp_out->surface );
       
    if( NULL == bmp_out->texture ) {
       retroflat_message( "Error", "Error creating bitmap!" );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
-#     endif /* !RETROFLAT_API_SDL1 */
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
 
@@ -3087,6 +3085,7 @@ void retroflat_blit_bitmap(
 #  if defined( RETROFLAT_API_SDL1 )
    int retval = 0;
 #  elif defined( RETROFLAT_API_SDL2 )
+   int retval = 0;
    int lock_ret = 0;
    int locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3142,7 +3141,11 @@ void retroflat_blit_bitmap(
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   SDL_RenderCopy( target->renderer, src->texture, &src_rect, &dest_rect );
+   retval = SDL_RenderCopy(
+      target->renderer, src->texture, &src_rect, &dest_rect );
+   if( 0 != retval ) {
+      error_printf( "could not blit surface: %s", SDL_GetError() );
+   }
 
 cleanup:
 
