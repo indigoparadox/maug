@@ -5,9 +5,10 @@ define DIRTOXPMS
 
 $(1)_BITMAPS := $(wildcard $(1)/*)
 
-$(1)_xpm.h: $$($(1)_BITMAPS)
+$(2)/$(1)_xpm.h: $$($(1)_BITMAPS)
 	# Add include guard.
-	echo "#ifndef $(1)_H\n#define $(1)_H\n\n" > $$@
+	echo "#ifndef $(1)_H\n#define $(1)_H\n" > $$@
+	echo "#define RETROFLAT_XPM\n" >> $$@
 
 	# Convert files into xpms and concat them into the header.
 	for f in $$^; do \

@@ -1272,6 +1272,12 @@ uint32_t retroflat_get_rand();
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
 
+MERROR_RETVAL retroflat_create_bitmap(
+   int w, int h, struct RETROFLAT_BITMAP* bmp_out );
+
+MERROR_RETVAL retroflat_load_xpm(
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out );
+
 /**
  * \brief Unload a bitmap from a ::RETROFLAT_BITMAP struct. The struct, itself,
  *        is not freed (in case it is on the stack).
@@ -2395,6 +2401,7 @@ cleanup:
 
    if( NULL != bmp && (&g_buffer) != bmp ) {
       assert( NULL == bmp->renderer );
+      assert( NULL != bmp->surface );
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
    } else {
       /* Target is the screen buffer. */
@@ -2501,13 +2508,18 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* It's a bitmap. */
 
       /* Scrap the old texture and recreate it from the updated surface. */
+      /* The renderer should be a software renderer pointing to the surface,
+       * created in retroflat_lock() above.
+       */
       assert( NULL != bmp->texture );
+      SDL_RenderPresent( bmp->renderer );
       SDL_DestroyTexture( bmp->texture );
       bmp->texture = SDL_CreateTextureFromSurface(
          bmp->renderer, bmp->surface );
       assert( NULL != bmp->texture );
 
       /* Scrap the renderer. */
+      /* SDL_RenderPresent( bmp->renderer ); */
       SDL_DestroyRenderer( bmp->renderer );
       bmp->renderer = NULL;
    }
@@ -2786,6 +2798,188 @@ cleanup:
    return retval;
 }
 
+/* === */
+
+MERROR_RETVAL retroflat_create_bitmap(
+   int w, int h, struct RETROFLAT_BITMAP* bmp_out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROFLAT_API_ALLEGRO )
+   bmp_out->b = create_bitmap( w, h );
+   if( NULL == bmp_out->b ) {
+      retroflat_message( "Error", "Error creating bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+   clear_bitmap( bmp_out->b );
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      32, 0, 0, 0, 0 );
+      /*
+      g_buffer.surface->format->Rmask,
+      g_buffer.surface->format->Gmask,
+      g_buffer.surface->format->Bmask,
+      g_buffer.surface->format->Amask );
+      */
+   if( NULL == bmp_out->surface ) {
+      retroflat_message( "Error", "Error creating bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+      SDL_MapRGB( bmp_out->surface->format,
+         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+#     if !defined( RETROFLAT_API_SDL1 )
+   bmp_out->renderer = SDL_CreateSoftwareRenderer( bmp_out->surface );
+   assert( NULL != bmp_out->renderer );
+   bmp_out->texture = SDL_CreateTextureFromSurface(
+      bmp_out->renderer, bmp_out->surface );
+   SDL_DestroyRenderer( bmp_out->renderer );
+   bmp_out->renderer = NULL;
+      
+   if( NULL == bmp_out->texture ) {
+      retroflat_message( "Error", "Error creating bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+#     endif /* !RETROFLAT_API_SDL1 */
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   HDC hdc_win = (HDC)NULL;
+
+   hdc_win = GetDC( g_window );
+   bmp_out->b = CreateCompatibleBitmap( hdc_win, w, h );
+   if( NULL == bmp_out->b ) {
+      retroflat_message( "Error", "Error creating bitmap!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+#  else
+#     warning "create bitmap not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+cleanup:
+   return retval;
+}
+
+/* === */
+
+#ifdef RETROFLAT_XPM
+
+MERROR_RETVAL retroflat_load_xpm(
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   RETROFLAT_COLOR color;
+   int xpm_idx = 0,
+      x = 0,
+      y = 0,
+      bmp_w = 0,
+      bmp_h = 0,
+      bmp_colors,
+      bmp_bypp;
+
+   /* Hunt for the requested XPM in the compiled directory. */
+   while( '\0' != gc_xpm_filenames[xpm_idx][0] ) {
+      if( 0 == strcmp( filename, gc_xpm_filenames[xpm_idx] ) ) {
+         goto xpm_found;
+      }
+      xpm_idx++;
+   }
+
+   retval = RETROFLAT_ERROR_BITMAP;
+   goto cleanup;
+
+xpm_found:
+
+   debug_printf( 2, "found xpm: %s", gc_xpm_filenames[xpm_idx] );
+
+   /* Load XPM and draw it to a new bitmap. */
+
+   sscanf( gc_xpm_data[xpm_idx][0], "%d %d %d %d",
+      &bmp_w, &bmp_h, &bmp_colors, &bmp_bypp );
+
+   assert( 16 == bmp_colors );
+   assert( 1 == bmp_bypp );
+
+   retval = retroflat_create_bitmap( bmp_w, bmp_h, bmp_out );
+   if( MERROR_OK != retval ) {
+      goto cleanup;
+   }
+
+   debug_printf( 1, "created empty canvas: %dx%d", bmp_w, bmp_h );
+
+   /* TODO: Draw XPM pixels to canvas. */
+
+   retroflat_draw_lock( bmp_out );
+
+   for( y = 0 ; bmp_h > y ; y++ ) {
+      for( x = 0 ; bmp_w > x ; x++ ) {
+         switch( gc_xpm_data[xpm_idx][17 + y][x] ) {
+         case ' ':
+            /* Transparent. */
+            continue;
+         case '.':
+            color = RETROFLAT_COLOR_DARKBLUE;
+            break;
+         case 'X':
+            color = RETROFLAT_COLOR_DARKGREEN;
+            break;
+         case 'o':
+            color = RETROFLAT_COLOR_TEAL;
+            break;
+         case 'O':
+            color = RETROFLAT_COLOR_DARKRED;
+            break;
+         case '+':
+            color = RETROFLAT_COLOR_VIOLET;
+            break;
+         case '@':
+            color = RETROFLAT_COLOR_BROWN;
+            break;
+         case '#':
+            color = RETROFLAT_COLOR_GRAY;
+            break;
+         case '$':
+            color = RETROFLAT_COLOR_DARKGRAY;
+            break;
+         case '%':
+            color = RETROFLAT_COLOR_BLUE;
+            break;
+         case '&':
+            color = RETROFLAT_COLOR_GREEN;
+            break;
+         case '*':
+            color = RETROFLAT_COLOR_CYAN;
+            break;
+         case '=':
+            color = RETROFLAT_COLOR_RED;
+            break;
+         case '-':
+            color = RETROFLAT_COLOR_MAGENTA;
+            break;
+         case ';':
+            color = RETROFLAT_COLOR_YELLOW;
+            break;
+         case ':':
+            color = RETROFLAT_COLOR_WHITE;
+            break;
+         }
+
+         retroflat_px( bmp_out, color, x, y, 0 );
+      }
+   }
+
+   retroflat_draw_release( bmp_out );
+
+cleanup:
+   return retval;
+}
+
+/* === */
+
+#endif /* RETROFLAT_XPM */
+
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
 
@@ -2964,6 +3158,9 @@ void retroflat_px(
       target, lock_ret, locked_target_internal );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
+
+   putpixel( target->b, x, y, color );
+
 #  elif defined( RETROFLAT_API_SDL1 )
 
    offset = (y * target->surface->pitch) +
@@ -3482,7 +3679,8 @@ cleanup:
 
    font_data = TTF_OpenFont( font_str, 12 );
    if( NULL == font_data ) {
-      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      /* TODO: FIXME */
+      /* retroflat_message( "Error", "Unable to load font: %s", font_str ); */
       goto cleanup;
    }
 
@@ -3583,7 +3781,10 @@ cleanup:
 
    font_data = TTF_OpenFont( font_str, 12 );
    if( NULL == font_data ) {
+      /* TODO: FIXME */
+      /*
       retroflat_message( "Error", "Unable to load font: %s", font_str );
+      */
       goto cleanup;
    }
 
