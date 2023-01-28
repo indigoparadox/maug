@@ -1277,8 +1277,17 @@ MERROR_RETVAL retroflat_load_bitmap(
 MERROR_RETVAL retroflat_create_bitmap(
    int w, int h, struct RETROFLAT_BITMAP* bmp_out );
 
+#if defined( RETROFLAT_XPM ) || defined( DOCUMENTATION )
+
+/**
+ * \brief Load a compiled-in XPM image into an API-specific bitmap context.
+ * \warn The XPM must have been generated from a bitmap using the rather
+ *       restrictive \ref maug_retroflt_bitmap rules.
+ */
 MERROR_RETVAL retroflat_load_xpm(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
+
+#endif /* RETROFLAT_XPM || defined( DOCUMENTATION ) */
 
 /**
  * \brief Unload a bitmap from a ::RETROFLAT_BITMAP struct. The struct, itself,
