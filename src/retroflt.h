@@ -2647,11 +2647,10 @@ MERROR_RETVAL retroflat_load_bitmap(
       retval = RETROFLAT_ERROR_BITMAP;
    }
 
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_SDL1 )
 
-   /* == SDL == */
+   /* == SDL1 == */
 
-#     ifdef RETROFLAT_API_SDL1
    tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
    if( NULL == tmp_surface ) {
       retroflat_message(
@@ -2660,12 +2659,37 @@ MERROR_RETVAL retroflat_load_bitmap(
       goto cleanup;
    }
 
+   debug_printf( 1, "loaded bitmap: %d x %d", tmp_surface->w, tmp_surface->h );
+
    bmp_out->surface = SDL_DisplayFormat( tmp_surface );
-#     else
+   if( NULL == bmp_out->surface ) {
+      retroflat_message(
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   debug_printf( 1, "converted bitmap: %d x %d",
+      bmp_out->surface->w, bmp_out->surface->h );
+
+   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+      SDL_MapRGB( bmp_out->surface->format,
+         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+
+cleanup:
+
+   if( NULL != tmp_surface ) {
+      SDL_FreeSurface( tmp_surface );
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
    bmp_out->renderer = NULL;
    
    bmp_out->surface = SDL_LoadBMP( filename_path );
-#     endif /* RETROFLAT_API_SDL1 */
+
    if( NULL == bmp_out->surface ) {
       retroflat_message(
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -2677,7 +2701,6 @@ MERROR_RETVAL retroflat_load_bitmap(
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
-#     ifndef RETROFLAT_API_SDL1
    bmp_out->texture =
       SDL_CreateTextureFromSurface( g_buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
@@ -2690,15 +2713,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       }
       goto cleanup;
    }
-#     endif /* !RETROFLAT_API_SDL1 */
 
 cleanup:
-
-#     ifdef RETROFLAT_API_SDL1
-   if( NULL != tmp_surface ) {
-      SDL_FreeSurface( tmp_surface );
-   }
-#     endif /* RETROFLAT_API_SDL1 */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -3082,9 +3098,7 @@ void retroflat_blit_bitmap(
       target, lock_ret, locked_target_internal );
 
    SDL_RenderCopy( target->renderer, src->texture, &src_rect, &dest_rect );
-#     endif /* RETROFLAT_API_SDL1 */
 
-#     ifndef RETROFLAT_API_SDL1
 cleanup:
 
    if( locked_target_internal ) {
