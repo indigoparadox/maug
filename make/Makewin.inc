@@ -29,13 +29,13 @@ $(1)nt.exe: $$(addprefix obj/nt/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM) name $$@ \
 		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_NT) fil {$$^}
 
-obj/nt/%.o: %.c
+obj/nt/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
-	$$(CC_WATCOM)
+	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_NT) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)nt.exe
+CLEAN_TARGETS += $(1)nt.exe $(2)
 
 endef
 
@@ -53,12 +53,13 @@ $(1)w.rex: $(addprefix obj/win16/,$(subst .c,.o,$(C_FILES)))
 $(1)w.exe: $(1)w.rex
 	wbind $$< -s $$(WATCOM)/binw/win386.ext -R $$@
 
-obj/win16/%.o: %.c
+obj/win16/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
-	wcc386 $$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_386) \
+	$$(CC_WATCOM) \
+		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_386) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)w.exe $(1)w.rex
+CLEAN_TARGETS += $(1)w.exe $(1)w.rex $(2)
 
 endef
 

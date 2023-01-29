@@ -34,12 +34,12 @@ $(1).sdl: $$(addprefix obj/$$(shell uname -s)-sdl/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_SDL)
 
-obj/$$(shell uname -s)-sdl/%.o: %.c
+obj/$$(shell uname -s)-sdl/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL)
 
-CLEAN_TARGETS += $(1).sdl
+CLEAN_TARGETS += $(1).sdl $(2)
 
 endef
 
@@ -54,12 +54,12 @@ $(1).ale: $$(addprefix obj/$$(shell uname -s)-ale/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_ALLEGRO)
 
-obj/$$(shell uname -s)-ale/%.o: %.c
+obj/$$(shell uname -s)-ale/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_ALLEGRO)
 
-CLEAN_TARGETS += $(1).ale
+CLEAN_TARGETS += $(1).ale $(2)
 
 endef
 

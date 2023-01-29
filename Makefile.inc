@@ -7,6 +7,8 @@ LDFLAGS_GCC := -lm
 
 CLEAN_TARGETS := obj *.err
 
+#DEFINES_GLOBAL = -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+
 # Build debug unless release specified.
 ifneq ("$(RELEASE)","RELEASE")
 	CFLAGS_WATCOM += -we -d3
