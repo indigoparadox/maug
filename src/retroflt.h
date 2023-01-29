@@ -4105,6 +4105,7 @@ extern int g_screen_h;
 extern int g_screen_v_w;
 extern int g_screen_v_h;
 extern uint8_t g_retroflat_flags;
+extern char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
 
 #endif /* RETROFLT_C */
 

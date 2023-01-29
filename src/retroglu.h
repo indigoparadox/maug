@@ -144,6 +144,13 @@ struct RETROGLU_SPRITE {
 #define retroglu_scr_px_y_to_f( py ) \
    (float)(((py) * 1.0 / (retroflat_screen_h() / 2)) - 1.0)
 
+#define retroglu_set_sprite_tex( sprite, texture_id, bmp_w, bmp_h ) \
+   sprite->texture_id = texture_id; \
+   sprite->texture_w = bmp_w; \
+   sprite->texture_h = bmp_h; \
+   sprite->scale_x = 1.0f; \
+   sprite->scale_y = 1.0f;
+
 /**
  * \addtogroup maug_retroglu_obj_fsm
  * \{
@@ -243,7 +250,7 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
 /*! \} */ /* maug_retroglu_obj_fsm */
 
-int retroglu_load_tex_bmp(
+int retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h );
 
@@ -661,7 +668,50 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
    return RETROFLAT_OK;
 }
 
-int retroglu_load_tex_bmp(
+MERROR_RETVAL retroglu_load_tex_bmp(
+   const char* filename, uint32_t* p_texture_id,
+   uint32_t* p_bmp_w, uint32_t* p_bmp_h
+) {
+   uint8_t* bmp_buf = NULL;
+   uint32_t bmp_buf_sz = 0;
+   uint32_t bmp_read = 0;
+   FILE* bmp_file;
+   MERROR_RETVAL retval = MERROR_OK;
+   char filename_path[RETROFLAT_PATH_MAX + 1];
+
+   /* Build the path to the bitmap. */
+   memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
+   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
+      g_retroflat_assets_path, RETROFLAT_PATH_SEP,
+      filename, RETROFLAT_BITMAP_EXT );
+
+   /* Open the file and allocate the buffer. */
+   debug_printf( 3, "opening %s...", filename_path );
+   bmp_file = fopen( filename_path, "rb" );
+   assert( NULL != bmp_file );
+   fseek( bmp_file, 0, SEEK_END );
+   bmp_buf_sz = ftell( bmp_file );
+   fseek( bmp_file, 0, SEEK_SET );
+   debug_printf( 2, "opened %s, " UPRINTF_U32 " bytes",
+      filename_path, bmp_buf_sz );
+   assert( NULL == bmp_buf );
+   bmp_buf = calloc( 1, bmp_buf_sz );
+   assert( NULL != bmp_buf );
+   bmp_read = fread( bmp_buf, 1, bmp_buf_sz, bmp_file );
+   assert( bmp_read == bmp_buf_sz );
+   fclose( bmp_file );
+
+   retval = retroglu_load_tex_bmp_data(
+      bmp_buf, bmp_buf_sz, p_texture_id, p_bmp_w, p_bmp_h );
+
+   if( NULL != bmp_buf ) {
+      free( bmp_buf );
+   }
+
+   return retval;
+}
+
+MERROR_RETVAL retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
 ) {
@@ -712,7 +762,7 @@ int retroglu_load_tex_bmp(
       }
    }
 
-   glGenTextures( 1, p_texture_id );
+   glGenTextures( 1, (GLuint*)p_texture_id );
    glBindTexture( GL_TEXTURE_2D, *p_texture_id );
    /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, *p_bmp_w, *p_bmp_h, 0,
@@ -766,32 +816,6 @@ void retroglu_draw_poly(
 
    }
    glEnd();
-}
-
-int16_t retroglu_set_sprite_tex(
-   struct RETROGLU_SPRITE* sprite, uint8_t* bmp_buf, uint32_t bmp_buf_sz
-) {
-   uint32_t bmp_w = 0,
-      bmp_h = 0;
-   uint32_t texture_id = 0;
-   int16_t retval = RETROFLAT_OK;
-
-   retval = retroglu_load_tex_bmp(
-      bmp_buf, bmp_buf_sz, &texture_id, &bmp_w, &bmp_h );
-   if( RETROFLAT_OK != retval ) {
-      goto cleanup;
-   }
-
-   /* Set sprite properties based on texture. */
-   sprite->texture_id = texture_id;
-   sprite->texture_w = bmp_w;
-   sprite->texture_h = bmp_h;
-   sprite->scale_x = 1.0f;
-   sprite->scale_y = 1.0f;
-
-cleanup:
-
-   return retval;
 }
 
 void retroglu_set_sprite_clip(
