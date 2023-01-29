@@ -2780,7 +2780,15 @@ cleanup:
    fseek( bmp_file, 0, SEEK_END );
    sz = ftell( bmp_file );
    fseek( bmp_file, 0, SEEK_SET );
-   read = fread( buf, sz, 1, bmp_file );
+
+   buf = calloc( sz, 1 );
+   if( NULL == buf ) {
+      retroflat_message( "Error", "Could not allocate bitmap buffer!" );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
 
    bmi = (BITMAPINFO*)&(buf[sizeof( BITMAPFILEHEADER )]);
