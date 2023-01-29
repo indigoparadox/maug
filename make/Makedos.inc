@@ -20,13 +20,13 @@ $(1)d.exe: $$(addprefix obj/dos/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM) name $$@ \
 		$$(LDFLAGS_WATCOM_DOS) $$(LDFLAGS_WATCOM_DOS_ALLEGRO) fil {$$^}
 
-obj/dos/%.o: %.c
+obj/dos/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) $$(CFLAGS_WATCOM_DOS_ALLEGRO) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)d.exe
+CLEAN_TARGETS += $(1)d.exe $(2)
 
 endef
 
