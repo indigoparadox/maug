@@ -5,6 +5,8 @@ CFLAGS_GCC := $(GLOBAL_DEFINES) -Imaug/src
 CFLAGS_WATCOM := $(GLOBAL_DEFINES) -imaug/src
 LDFLAGS_GCC := -lm
 
+CLEAN_TARGETS := obj *.err
+
 # Build debug unless release specified.
 ifneq ("$(RELEASE)","RELEASE")
 	CFLAGS_WATCOM += -we -d3
@@ -32,4 +34,5 @@ include maug/make/Makexpm.inc
 include maug/make/Makeunix.inc
 include maug/make/Makewin.inc
 include maug/make/Makewasm.inc
+include maug/make/Makedos.inc
 

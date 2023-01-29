@@ -23,5 +23,7 @@ obj/wasm/%.o: %.c
 	$$(MD) $$(dir $$@)
 	$$(EMCC) -c -o $$@ $$< $$(EMCC_FLAGS_SDL)
 
+CLEAN_TARGETS += $(1).html $(1).js $(1).wasm
+
 endef
 
