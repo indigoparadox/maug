@@ -11,8 +11,8 @@ CLEAN_TARGETS := obj *.err
 
 # Build debug unless release specified.
 ifneq ("$(RELEASE)","RELEASE")
-	CFLAGS_WATCOM += -we -d3
-	CFLAGS_GCC += -DDEBUG -Wall -g -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	CFLAGS_WATCOM += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
+	CFLAGS_GCC += -DDEBUG -Wall -g -fsanitize=address -fsanitize=leak -fsanitize=undefined -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
 	LDFLAGS_GCC += -g -fsanitize=address -fsanitize=leak -fsanitize=undefined
 endif
 

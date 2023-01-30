@@ -1472,11 +1472,12 @@ static int g_mouse_state = 0;
 
 /* Windows-specific global handles for the window/instance. */
 HINSTANCE g_instance;
-HWND g_window;
-#ifdef RETROFLAT_SCREENSAVER
+HWND g_window = (HWND)NULL;
+int16_t g_last_idc = 0; /* Last clicked button. */
+#     ifdef RETROFLAT_SCREENSAVER
 static HWND g_parent = (HWND)0;
 static int g_screensaver = 0;
-#endif /* RETROFLAT_SCREENSAVER */
+#     endif /* RETROFLAT_SCREENSAVER */
 MSG g_msg;
 HDC g_hdc_win = (HDC)NULL;
 static int g_msg_retval = 0;
@@ -1494,7 +1495,7 @@ static unsigned int g_last_mouse_y = 0;
 uint8_t g_running;
 retroflat_loop_iter g_loop_iter = NULL;
 
-#  ifdef RETROFLAT_WING
+#     ifdef RETROFLAT_WING
 struct RETROFLAT_BMI {
    BITMAPINFOHEADER header;
    RGBQUAD colors[256];
@@ -1502,7 +1503,7 @@ struct RETROFLAT_BMI {
 
 struct RETROFLAT_BMI g_buffer_bmi;
 void far* g_buffer_bits = NULL;
-#  endif /* RETROFLAT_WING */
+#     endif /* RETROFLAT_WING */
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -1712,6 +1713,10 @@ static LRESULT CALLBACK WndProc(
 
          /* Kind of a hack so that we can have a cheap timer. */
          g_ms += 100;
+         break;
+
+      case WM_COMMAND:
+         g_last_idc = LOWORD( wParam );
          break;
 
       default:
@@ -4105,7 +4110,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #else
 
-#include <uprintf.h>
+#  include <uprintf.h>
 
 extern int g_retval;
 extern int g_screen_w;
@@ -4114,6 +4119,10 @@ extern int g_screen_v_w;
 extern int g_screen_v_h;
 extern uint8_t g_retroflat_flags;
 extern char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+extern HWND g_window;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #endif /* RETROFLT_C */
 
