@@ -4,8 +4,6 @@
 
 #include <mtypes.h>
 
-#include <math.h>
-
 /**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.
@@ -690,6 +688,8 @@ typedef int RETROFLAT_COLOR;
 
 #  include <SDL.h>
 #  include <SDL_ttf.h>
+
+#  define RETROFLAT_SOFT_SHAPES
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1516,6 +1516,175 @@ uint8_t g_retroflat_flags = 0;
 /* Callback table is down below, after the statically-defined callbacks. */
 
 /* === Function Definitions === */
+
+#ifdef RETROFLAT_SOFT_SHAPES
+
+#define RETROFLAT_SOFT_PI (3141)
+
+int16_t g_retroflat_soft_cos[] = {
+   1000,
+   995,
+   980,
+   955,
+   921,
+   877,
+   825,
+   764,
+   696,
+   621,
+   540,
+   453,
+   362,
+   267,
+   169,
+   70,
+   -29,
+   -128,
+   -227,
+   -323,
+   -416,
+   -504,
+   -588,
+   -666,
+   -737,
+   -801,
+   -856,
+   -904,
+   -942,
+   -970,
+   -989,
+   -999,
+   -998,
+   -987,
+   -966,
+   -936,
+   -896,
+   -848,
+   -790,
+   -725,
+   -653,
+   -574,
+   -490,
+   -400,
+   -307,
+   -210,
+   -112,
+   -12,
+   87,
+   186,
+   283,
+   377,
+   468,
+   554,
+   634,
+   708,
+   775,
+   834,
+   885,
+   927,
+   960,
+   983,
+   996,
+};
+
+int16_t g_retroflat_soft_sin[] = {
+   0,
+   99,
+   198,
+   295,
+   389,
+   479,
+   564,
+   644,
+   717,
+   783,
+   841,
+   891,
+   932,
+   963,
+   985,
+   997,
+   999,
+   991,
+   973,
+   946,
+   909,
+   863,
+   808,
+   745,
+   675,
+   598,
+   515,
+   427,
+   334,
+   239,
+   141,
+   41,
+   -58,
+   -157,
+   -255,
+   -350,
+   -442,
+   -529,
+   -611,
+   -687,
+   -756,
+   -818,
+   -871,
+   -916,
+   -951,
+   -977,
+   -993,
+   -999,
+   -996,
+   -982,
+   -958,
+   -925,
+   -883,
+   -832,
+   -772,
+   -705,
+   -631,
+   -550,
+   -464,
+   -373,
+   -279,
+   -182,
+   -83,
+};
+
+int16_t retroflat_soft_lut( const int16_t* lut, int16_t num, int16_t mult ) {
+   int16_t cos_out;
+   uint8_t neg = 0;
+
+   /* Can't take an index of a negative number, so hold on to neg for later. */
+   if( num < 0 ) {
+      neg = 1;
+      num *= -1;
+   }
+
+   /* cos/sin repeat after every 2PI. */
+   if( num >= (2 * RETROFLAT_SOFT_PI) ) {
+      num -= (2 * RETROFLAT_SOFT_PI);
+   }
+
+   /* Remove num precision to get index. */
+   num /= 100;
+   cos_out = lut[num];
+
+   /* Multiply by multiplier before removing precision. */
+   cos_out *= mult;
+   cos_out /= 1000;
+
+   /* Restore neg taken earlier. */
+   if( neg ) {
+      cos_out *= -1;
+   }
+
+   return (int16_t)cos_out;
+}
+
+#endif /* RETROFLAT_SOFT_SHAPES */
 
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -3413,6 +3582,8 @@ cleanup:
 
 /* === */
 
+#ifdef RETROFLAT_SOFT_SHAPES
+
 void retroflat_soft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
@@ -3505,6 +3676,8 @@ cleanup:
    }  
 }
 
+#endif /* RETROFLAT_SOFT_SHAPES */
+
 /* === */
 
 void retroflat_line(
@@ -3592,28 +3765,41 @@ cleanup:
 
 /* === */
 
+#ifdef RETROFLAT_SOFT_SHAPES
+
 void retroflat_soft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
-   float i = 0;
-   int lock_ret = 0,
+   int32_t i = 0,
+      i_prev = 0;
+   int16_t lock_ret = 0,
       locked_target_internal = 0,
-      px_x = 0,
-      px_y = 0;
+      px_x1 = 0,
+      px_y1 = 0,
+      px_x2 = 0,
+      px_y2 = 0;
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   /* TODO: More efficiently determine stepping. */
-   for( i = 0 ; 2 * RETROFLAT_PI > i ; i += 0.1 ) {
-      px_x = x + (w / 2) + (cos( i ) * (w / 2));
-      px_y = y + (h / 2) + sin( i ) * (h / 2);
+   /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
+   for( i = 100 ; 2 * RETROFLAT_SOFT_PI + 100 > i ; i += 100 ) {
+      i_prev = i - 100;
 
-      assert( 0 <= px_x );
-      assert( 0 <= px_y );
+      px_x1 = x + (w / 2) + retroflat_soft_lut(
+         g_retroflat_soft_cos, i_prev, w / 2 );
+      px_y1 = y + (h / 2) + retroflat_soft_lut(
+         g_retroflat_soft_sin, i_prev, h / 2 );
+      px_x2 = x + (w / 2) + retroflat_soft_lut(
+         g_retroflat_soft_cos, i, w / 2 );
+      px_y2 = y + (h / 2) + retroflat_soft_lut(
+         g_retroflat_soft_sin, i, h / 2 );
 
-      retroflat_px( target, color, px_x, px_y, 0 );  
+      assert( 0 <= px_x1 );
+      assert( 0 <= px_y1 );
+
+      retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
    }
 
 cleanup:
@@ -3622,6 +3808,8 @@ cleanup:
       retroflat_draw_release( target );
    }  
 }
+
+#endif /* RETROFLAT_SOFT_SHAPES */
 
 /* === */
 
