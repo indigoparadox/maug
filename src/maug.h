@@ -4,6 +4,13 @@
 
 #include <mlegacy.h>
 
+#ifdef MAUG_OS_PALM
+/* PalmOS doesn't work with const. */
+#  define MAUG_CONST
+#else
+#  define MAUG_CONST const
+#endif /* MAUG_OS_PALM */
+
 #if !defined( MAUG_WINDOWS_H ) && defined( MAUG_OS_WIN )
 #  include <windows.h>
 #  define MAUG_WINDOWS_H
