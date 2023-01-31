@@ -3,7 +3,7 @@
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) -Imaug/src
 CFLAGS_WATCOM := $(GLOBAL_DEFINES) -imaug/src
-LDFLAGS_GCC := -lm
+LDFLAGS_GCC := 
 
 CLEAN_TARGETS := obj *.err
 
