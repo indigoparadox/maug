@@ -30,4 +30,3 @@ CLEAN_TARGETS += $(1)d.exe $(2)
 
 endef
 
-

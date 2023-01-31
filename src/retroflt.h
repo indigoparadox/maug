@@ -328,6 +328,8 @@
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
+#define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
+
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
@@ -466,6 +468,7 @@ struct RETROFLAT_ARGS {
    int screen_h;
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
+   uint8_t unlock_fps;
 };
 
 /**
@@ -689,7 +692,9 @@ typedef int RETROFLAT_COLOR;
 #  include <SDL.h>
 #  include <SDL_ttf.h>
 
-#  define RETROFLAT_SOFT_SHAPES
+#  ifndef RETROFLAT_SOFT_SHAPES
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1436,6 +1441,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
+#ifdef RETROFLAT_SOFT_SHAPES
+
+int16_t retroflat_soft_lut( const int16_t* lut, int16_t num, int16_t mult );
+
+#endif /* RETROFLAT_SOFT_SHAPES */
+
 #ifdef RETROFLT_C
 
 #  include <stdio.h>
@@ -1521,7 +1532,7 @@ uint8_t g_retroflat_flags = 0;
 
 #define RETROFLAT_SOFT_PI (3141)
 
-int16_t g_retroflat_soft_cos[] = {
+MAUG_CONST int16_t g_retroflat_soft_cos[] = {
    1000,
    995,
    980,
@@ -1587,7 +1598,7 @@ int16_t g_retroflat_soft_cos[] = {
    996,
 };
 
-int16_t g_retroflat_soft_sin[] = {
+MAUG_CONST int16_t g_retroflat_soft_sin[] = {
    0,
    99,
    198,
@@ -1971,7 +1982,11 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
-      if( retroflat_get_ms() < next ) {
+      if(
+         RETROFLAT_FLAGS_UNLOCK_FPS !=
+         (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_flags) &&
+         retroflat_get_ms() < next
+      ) {
          continue;
       }
       loop_iter( data );
@@ -2101,6 +2116,20 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 #endif /* !MAUG_CLI_SIGIL_SZ */
 
+static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      debug_printf( 1, "unlocking FPS..." );
+      args->unlock_fps = 1;
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_u_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   args->unlock_fps = 0;
+   return RETROFLAT_OK;
+}
+
+
 /* === */
 
 #ifdef RETROFLAT_API_ALLEGRO
@@ -2173,10 +2202,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
 #endif /* !MAUG_NO_CONFIG */
 
+   maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
+      "Unlock FPS.", 0,
+      (maug_cli_cb)retroflat_cli_u, (maug_cli_cb)retroflat_cli_u_def, args );
+
    /* Parse command line args. */
    retval = maug_parse_args( argc, argv );
    if( RETROFLAT_OK != retval ) {
       goto cleanup;
+   }
+
+   if( args->unlock_fps ) {
+      g_retroflat_flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
    }
 
    debug_printf( 1, "retroflat: setting config..." );
@@ -4307,6 +4344,11 @@ extern int g_screen_v_w;
 extern int g_screen_v_h;
 extern uint8_t g_retroflat_flags;
 extern char g_retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+
+#ifdef RETROFLAT_SOFT_SHAPES
+extern int16_t g_retroflat_soft_cos[];
+extern int16_t g_retroflat_soft_sin[];
+#endif /* RETROFLAT_SOFT_SHAPES */
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 extern HWND g_window;
