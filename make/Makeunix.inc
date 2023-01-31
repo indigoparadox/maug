@@ -15,6 +15,14 @@ endif
 
 # ---
 
+# Target: UNIX OS/SDL API
+# Variables:
+# - SDL_VER_UNIX
+# - OPENGL
+# Parameters:
+# 1. Target name. Will have ".sdl" appended to it.
+# 2. Source dependencies. Used for e.g. dynamically generated headers.
+# Both of these will be added to CLEAN_TARGETS!
 define TGTUNIXSDL
 
 ifeq ("$$(SDL_VER_UNIX)","1")
@@ -45,6 +53,12 @@ endef
 
 # ---
 
+# Target: UNIX OS/Allegro API
+# Variables:
+# Parameters:
+# 1. Target name. Will have ".sdl" appended to it.
+# 2. Source dependencies. Used for e.g. dynamically generated headers.
+# Both of these will be added to CLEAN_TARGETS!
 define TGTUNIXALE
 
 CFLAGS_GCC_UNIX_ALLEGRO := -DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags)
