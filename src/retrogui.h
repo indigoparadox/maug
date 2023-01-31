@@ -148,11 +148,13 @@ MERROR_RETVAL retrogui_add_listbox(
    listbox->idc = idc;
    listbox->ctl_type = RETROGUI_CTL_LISTBOX;
 
+   /* Add listbox items. */
    for( i = 0 ; text_list_sz > i ; i++ ) {
       SendMessage( listbox->hwnd, LB_ADDSTRING, 0, (LPARAM)text_list[i] );
    }
 
-   /* TODO: Select sel_idx. */
+   /* Select sel_idx. */
+   SendMessage( listbox->hwnd, LB_SETCURSEL, sel_idx, 0 );
 
 cleanup:
 
@@ -167,6 +169,8 @@ cleanup:
    listbox->idc = idc;
    listbox->text_list = calloc( text_list_sz, sizeof( char* ) );
    listbox->text_list_sz = text_list_sz;
+
+   /* Add listbox items. */
    for( i = 0 ; text_list_sz > i ; i++ ) {
       listbox->text_list[i] =
          calloc( strlen( text_list[i] ) + 1, sizeof( char ) );
@@ -220,7 +224,6 @@ RETROGUI_IDC retrogui_poll_ctls(
             }
          } else if( RETROGUI_CTL_LISTBOX == ctls[i].ctl_type ) {
             /* Figure out the item clicked. */
-            /* TODO */
             for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
                retroflat_string_sz(
                   NULL, ctls[i].text_list[j], -1, NULL, &w, &h );
