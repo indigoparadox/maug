@@ -26,6 +26,10 @@ Maug has the following design goals and constraints:
 
 ## Modules
 
+### Makefiles
+
+Inside of the `make` subdirectory are a number of Makefiles that can be included from a project's Makefile in order to more conveniently build assets.
+
 ### retroflt
 
 `#include <retroflt.h>`
