@@ -5,14 +5,14 @@ define(`dexea', `$1d.exe')
 divert(0)
 `#' vim: ft=make noexpandtab
 
-C_FILES := src/main.c src/template.c
+C_FILES := src/main.c
 
 include maug/Makefile.inc
 
 # Target-specific options.
 .PHONY: clean
 
-all: template.ale template.sdl dexea(templated) wexea(template) ntexea(template) template.html
+all: template.ale template.sdl dexea(template) wexea(template) ntexea(template) template.html
 
 # Unix (Allegro)
 
