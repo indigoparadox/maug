@@ -1068,6 +1068,13 @@ void retroglu_set_sprite_pos(
    sprite->translate_y = retroglu_scr_px_y_to_f( py );
 }
 
+void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
+   /* Set the matrix to translate/rotate/scale based on sprite props. */
+   glTranslatef( sprite->translate_x, sprite->translate_y, 0 );
+   glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
+   glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
+}
+
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
    
@@ -1075,14 +1082,6 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-
-   /* Save the current (presumably unmodified model view matrix. */
-   glPushMatrix();
-
-   /* Set the matrix to translate/rotate/scale based on sprite props. */
-   glTranslatef( sprite->translate_x, sprite->translate_y, 0 );
-   glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
-   glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
 
    glBegin( GL_TRIANGLES );
 
@@ -1097,8 +1096,6 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    }
 
    glEnd();
-
-   glPopMatrix();
 }
 
 #endif /* RETROGLU_C */
