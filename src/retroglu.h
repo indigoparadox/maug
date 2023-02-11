@@ -17,6 +17,8 @@
 #  define RETROGLU_PARSER_TOKEN_SZ_MAX 32
 #endif /* !RETROGLU_PARSER_TOKEN_SZ_MAX */
 
+#define RETROGLU_FLAGS_INIT_VERTICES 0x01
+
 /**
  * \addtogroup maug_retroglu_obj_fsm RetroGLU OBJ Parser
  * \{
@@ -133,6 +135,20 @@ struct RETROGLU_SPRITE {
    float scale_y;
    int rotate_y;
 };
+
+struct RETROGLU_TILE {
+   float vertices[6][2];
+   float vtexture[6][2];
+   uint32_t texture_id;
+   int texture_w;
+   int texture_h;
+   /*! \brief Width of clipped sprite on screen. */
+   float screen_clip_wf;
+   /*! \brief Height of clipped sprite on screen. */
+   float screen_clip_hf;
+   int rotate_x;
+};
+
 
 /*! \} */ /* maug_retroglu_sprite */
 
@@ -818,10 +834,95 @@ void retroglu_draw_poly(
    glEnd();
 }
 
+void retroglu_set_tile_clip(
+   struct RETROGLU_TILE* tile,
+   uint32_t px, uint32_t py, uint32_t pw, uint32_t ph, uint8_t flags
+) {
+   /* Set vertices in terms of half the clip size so that rotation is around
+    * the midpoint of the sprite, not the side!
+    */
+   float clip_half_x = 0,
+      clip_half_y = 0;
+   float clip_tex_x = 0, /* Front tex X */
+      clip_tex_y = 0, /* Front tex Y */
+      clip_tex_w = 0,
+      clip_tex_h = 0;
+
+   tile->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
+   tile->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
+   clip_half_x = tile->screen_clip_wf / 2;
+   clip_half_y = tile->screen_clip_hf / 2;
+
+   /* Setup texture tilesheet. */
+
+   clip_tex_x = retroglu_tex_px_x_to_f( px, tile ); 
+   clip_tex_y = retroglu_tex_px_y_to_f( py, tile ); 
+   clip_tex_w = retroglu_tex_px_x_to_f( pw, tile );
+   clip_tex_h = retroglu_tex_px_y_to_f( ph, tile );
+
+   /* == Front Face Textures == */
+
+   /* Lower Left */
+   tile->vtexture[0][RETROGLU_SPRITE_X] = clip_tex_x;
+   tile->vtexture[0][RETROGLU_SPRITE_Y] = clip_tex_y;
+
+   /* Lower Right */
+   tile->vtexture[1][RETROGLU_SPRITE_X] = clip_tex_x + clip_tex_w;
+   tile->vtexture[1][RETROGLU_SPRITE_Y] = clip_tex_y;
+
+   /* Upper Right */
+   tile->vtexture[2][RETROGLU_SPRITE_X] = clip_tex_x + clip_tex_w;
+   tile->vtexture[2][RETROGLU_SPRITE_Y] = clip_tex_y + clip_tex_h;
+
+   /* Upper Right */
+   tile->vtexture[3][RETROGLU_SPRITE_X] = clip_tex_x + clip_tex_w;
+   tile->vtexture[3][RETROGLU_SPRITE_Y] = clip_tex_y + clip_tex_h;
+
+   /* Upper Left */
+   tile->vtexture[4][RETROGLU_SPRITE_X] = clip_tex_x;
+   tile->vtexture[4][RETROGLU_SPRITE_Y] = clip_tex_y + clip_tex_h;
+
+   /* Lower Left */
+   tile->vtexture[5][RETROGLU_SPRITE_X] = clip_tex_x;
+   tile->vtexture[5][RETROGLU_SPRITE_Y] = clip_tex_y;
+
+   if(
+      RETROGLU_FLAGS_INIT_VERTICES != (RETROGLU_FLAGS_INIT_VERTICES & flags)
+   ) {
+      return;
+   }
+
+   /* == Front Face Vertices == */
+
+   /* Lower-Left */
+   tile->vertices[0][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   tile->vertices[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   
+   /* Lower-Right */
+   tile->vertices[1][RETROGLU_SPRITE_X] = clip_half_x;
+   tile->vertices[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   
+   /* Upper-Right */
+   tile->vertices[2][RETROGLU_SPRITE_X] = clip_half_x;
+   tile->vertices[2][RETROGLU_SPRITE_Y] = clip_half_y;
+
+   /* Upper-Right */
+   tile->vertices[3][RETROGLU_SPRITE_X] = clip_half_x;
+   tile->vertices[3][RETROGLU_SPRITE_Y] = clip_half_y;
+
+   /* Upper-Left */
+   tile->vertices[4][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   tile->vertices[4][RETROGLU_SPRITE_Y] = clip_half_y;
+
+   /* Lower-Left */
+   tile->vertices[5][RETROGLU_SPRITE_X] = -1 * clip_half_x;
+   tile->vertices[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+}
+
 void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
    uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
-   uint32_t pw, uint32_t ph
+   uint32_t pw, uint32_t ph, uint8_t flags
 ) {
    /* Set vertices in terms of half the clip size so that rotation is around
     * the midpoint of the sprite, not the side!
@@ -900,6 +1001,12 @@ void retroglu_set_sprite_clip(
    /* Lower Left */
    sprite->vtexture_back[5][RETROGLU_SPRITE_X] = clip_tex_bx;
    sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = clip_tex_by;
+
+   if(
+      RETROGLU_FLAGS_INIT_VERTICES != (RETROGLU_FLAGS_INIT_VERTICES & flags)
+   ) {
+      return;
+   }
 
    /* == Front Face Vertices == */
 
