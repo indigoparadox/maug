@@ -125,10 +125,6 @@ struct RETROGLU_SPRITE {
    uint32_t texture_id;
    int texture_w;
    int texture_h;
-   /*! \brief Width of clipped sprite on screen. */
-   float screen_clip_wf;
-   /*! \brief Height of clipped sprite on screen. */
-   float screen_clip_hf;
    float translate_x;
    float translate_y;
    float scale_x;
@@ -142,15 +138,21 @@ struct RETROGLU_TILE {
    uint32_t texture_id;
    int texture_w;
    int texture_h;
-   /*! \brief Width of clipped sprite on screen. */
-   float screen_clip_wf;
-   /*! \brief Height of clipped sprite on screen. */
-   float screen_clip_hf;
    int rotate_x;
 };
 
 
 /*! \} */ /* maug_retroglu_sprite */
+
+#define RETROGLU_INIT_LIGHTS 1
+
+#define RETROGLU_PROJ_ORTHO 0
+#define RETROGLU_PROJ_FRUSTUM 1
+
+struct RETROGLU_PROJ_ARGS {
+   uint8_t proj;
+   float rzoom;
+};
 
 #define retroglu_tex_px_x_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_w)
 #define retroglu_tex_px_y_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_h)
@@ -239,6 +241,9 @@ struct RETROGLU_PARSER {
 };
 
 typedef int (*retroglu_token_cb)( struct RETROGLU_PARSER* parser );
+
+void retroglu_init_scene( uint8_t flags );
+void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
 
 /**
  * \related RETROGLU_PARSER
@@ -355,6 +360,71 @@ retroglu_token_cb g_retroglu_token_callbacks[] = {
    RETROGLU_OBJ_TOKENS( RETROGLU_OBJ_TOKEN_CALLBACKS )  
    NULL
 };
+
+void retroglu_init_scene( uint8_t flags ) {
+   debug_printf( 3, "initializing..." );
+   glEnable( GL_CULL_FACE );
+   glShadeModel( GL_SMOOTH );
+
+   if( RETROGLU_INIT_LIGHTS == (RETROGLU_INIT_LIGHTS & flags) ) {
+      glEnable( GL_NORMALIZE );
+      glEnable( GL_LIGHTING );
+      glEnable( GL_LIGHT0 );
+   }
+
+   /* Setup texture transparency. */
+   glEnable( GL_TEXTURE_2D );
+   glEnable( GL_BLEND );
+   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+   /* Setup depth buffer so triangles in back are hidden. */
+   glEnable( GL_DEPTH_TEST );
+   glDepthMask( GL_TRUE );
+   glDepthFunc( GL_LESS );
+   glDepthRange( 0.0f, 1.0f );
+}
+
+void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
+   float aspect_ratio = 0;
+
+   /* Setup projection. */
+   glViewport(
+      0, 0, (GLint)retroflat_screen_w(), (GLint)retroflat_screen_h() );
+
+   aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
+
+   /* Switch to projection matrix for setup. */
+   glMatrixMode( GL_PROJECTION );
+
+   /* Zero everything out. */
+   glLoadIdentity();
+
+   switch( args->proj ) {
+   case RETROGLU_PROJ_FRUSTUM:
+      /* This is really tweaky, and when it breaks, polygons seem to get drawn
+         * out of order? Still experimenting/researching. */
+      debug_printf( 1, "aspect ratio: %f", aspect_ratio );
+      glFrustum(
+         /* The smaller these are, the closer it lets us get to the camera? */
+         -1.0f * args->rzoom * aspect_ratio, args->rzoom * aspect_ratio,
+         -1.0f * args->rzoom, args->rzoom,
+         /* Near plane can't be zero! */
+         0.5f, 10.0f );
+      break;
+
+   case RETROGLU_PROJ_ORTHO:
+      /* This is much simpler/more forgiving than frustum. */
+      glOrtho(
+         -1.0f * args->rzoom * aspect_ratio,
+         args->rzoom * aspect_ratio,
+         -1.0f * args->rzoom, args->rzoom,
+         -100.0, 100.0 );
+      break;
+   }
+
+   /* Revert to model matrix for later instructions (out of this scope). */
+   glMatrixMode( GL_MODELVIEW );
+}
 
 void retroglu_parse_init(
    struct RETROGLU_PARSER* parser, 
@@ -841,17 +911,10 @@ void retroglu_set_tile_clip(
    /* Set vertices in terms of half the clip size so that rotation is around
     * the midpoint of the sprite, not the side!
     */
-   float clip_half_x = 0,
-      clip_half_y = 0;
    float clip_tex_x = 0, /* Front tex X */
       clip_tex_y = 0, /* Front tex Y */
       clip_tex_w = 0,
       clip_tex_h = 0;
-
-   tile->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
-   tile->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
-   clip_half_x = tile->screen_clip_wf / 2;
-   clip_half_y = tile->screen_clip_hf / 2;
 
    /* Setup texture tilesheet. */
 
@@ -895,28 +958,28 @@ void retroglu_set_tile_clip(
    /* == Front Face Vertices == */
 
    /* Lower-Left */
-   tile->vertices[0][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   tile->vertices[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   tile->vertices[0][RETROGLU_SPRITE_X] = -1;
+   tile->vertices[0][RETROGLU_SPRITE_Y] = -1;
    
    /* Lower-Right */
-   tile->vertices[1][RETROGLU_SPRITE_X] = clip_half_x;
-   tile->vertices[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   tile->vertices[1][RETROGLU_SPRITE_X] = 1;
+   tile->vertices[1][RETROGLU_SPRITE_Y] = -1;
    
    /* Upper-Right */
-   tile->vertices[2][RETROGLU_SPRITE_X] = clip_half_x;
-   tile->vertices[2][RETROGLU_SPRITE_Y] = clip_half_y;
+   tile->vertices[2][RETROGLU_SPRITE_X] = 1;
+   tile->vertices[2][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Right */
-   tile->vertices[3][RETROGLU_SPRITE_X] = clip_half_x;
-   tile->vertices[3][RETROGLU_SPRITE_Y] = clip_half_y;
+   tile->vertices[3][RETROGLU_SPRITE_X] = 1;
+   tile->vertices[3][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Left */
-   tile->vertices[4][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   tile->vertices[4][RETROGLU_SPRITE_Y] = clip_half_y;
+   tile->vertices[4][RETROGLU_SPRITE_X] = -1;
+   tile->vertices[4][RETROGLU_SPRITE_Y] = 1;
 
    /* Lower-Left */
-   tile->vertices[5][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   tile->vertices[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   tile->vertices[5][RETROGLU_SPRITE_X] = -1;
+   tile->vertices[5][RETROGLU_SPRITE_Y] = -1;
 }
 
 void retroglu_set_sprite_clip(
@@ -927,19 +990,12 @@ void retroglu_set_sprite_clip(
    /* Set vertices in terms of half the clip size so that rotation is around
     * the midpoint of the sprite, not the side!
     */
-   float clip_half_x = 0,
-      clip_half_y = 0;
    float clip_tex_fx = 0, /* Front tex X */
       clip_tex_fy = 0, /* Front tex Y */
       clip_tex_bx = 0, /* Back tex X */
       clip_tex_by = 0, /* Back tex Y */
       clip_tex_w = 0,
       clip_tex_h = 0;
-
-   sprite->screen_clip_wf = (pw) * 1.0 / retroflat_screen_w();
-   sprite->screen_clip_hf = (ph) * 1.0 / retroflat_screen_h();
-   clip_half_x = sprite->screen_clip_wf / 2;
-   clip_half_y = sprite->screen_clip_hf / 2;
 
    /* Setup texture spritesheet. */
 
@@ -1011,54 +1067,54 @@ void retroglu_set_sprite_clip(
    /* == Front Face Vertices == */
 
    /* Lower-Left */
-   sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = -1;
    
    /* Lower-Right */
-   sprite->vertices_front[1][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_front[1][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = -1;
    
    /* Upper-Right */
-   sprite->vertices_front[2][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_front[2][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Right */
-   sprite->vertices_front[3][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_front[3][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Left */
-   sprite->vertices_front[4][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_front[4][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = 1;
 
    /* Lower-Left */
-   sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1;
 
    /* == Back Face Vertices == */
 
    /* Lower-Right */
-   sprite->vertices_back[0][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_back[0][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = -1;
 
    /* Lower-Left */
-   sprite->vertices_back[1][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_back[1][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = -1;
 
    /* Upper-Left */
-   sprite->vertices_back[2][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_back[2][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Left */
-   sprite->vertices_back[3][RETROGLU_SPRITE_X] = -1 * clip_half_x;
-   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_back[3][RETROGLU_SPRITE_X] = -1;
+   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = 1;
 
    /* Upper-Right */
-   sprite->vertices_back[4][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = clip_half_y;
+   sprite->vertices_back[4][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = 1;
 
    /* Lower-Right */
-   sprite->vertices_back[5][RETROGLU_SPRITE_X] = clip_half_x;
-   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1 * clip_half_y;
+   sprite->vertices_back[5][RETROGLU_SPRITE_X] = 1;
+   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1;
 }
 
 void retroglu_set_sprite_pos(
