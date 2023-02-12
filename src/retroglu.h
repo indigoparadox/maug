@@ -401,7 +401,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    glLoadIdentity();
 
    /* Near plane can't be zero for frustum! */
-   assert( 0 < args->near_plane );
+   assert( 0 != args->near_plane );
 
    switch( args->proj ) {
    case RETROGLU_PROJ_FRUSTUM:
