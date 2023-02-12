@@ -152,6 +152,8 @@ struct RETROGLU_TILE {
 struct RETROGLU_PROJ_ARGS {
    uint8_t proj;
    float rzoom;
+   float near_plane;
+   float far_plane;
 };
 
 #define retroglu_tex_px_x_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_w)
@@ -398,6 +400,9 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    /* Zero everything out. */
    glLoadIdentity();
 
+   /* Near plane can't be zero for frustum! */
+   assert( 0 < args->near_plane );
+
    switch( args->proj ) {
    case RETROGLU_PROJ_FRUSTUM:
       /* This is really tweaky, and when it breaks, polygons seem to get drawn
@@ -407,8 +412,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
          /* The smaller these are, the closer it lets us get to the camera? */
          -1.0f * args->rzoom * aspect_ratio, args->rzoom * aspect_ratio,
          -1.0f * args->rzoom, args->rzoom,
-         /* Near plane can't be zero! */
-         0.5f, 10.0f );
+         args->near_plane, args->far_plane );
       break;
 
    case RETROGLU_PROJ_ORTHO:
@@ -417,7 +421,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
          -1.0f * args->rzoom * aspect_ratio,
          args->rzoom * aspect_ratio,
          -1.0f * args->rzoom, args->rzoom,
-         -100.0, 100.0 );
+         args->near_plane, args->far_plane );
       break;
    }
 
