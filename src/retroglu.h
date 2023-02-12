@@ -369,7 +369,6 @@ void retroglu_init_scene( uint8_t flags ) {
    if( RETROGLU_INIT_LIGHTS == (RETROGLU_INIT_LIGHTS & flags) ) {
       glEnable( GL_NORMALIZE );
       glEnable( GL_LIGHTING );
-      glEnable( GL_LIGHT0 );
    }
 
    /* Setup texture transparency. */
