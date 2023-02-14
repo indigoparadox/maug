@@ -2,6 +2,11 @@
 #ifndef RETROGLU_H
 #define RETROGLU_H
 
+/* TODO */
+#ifndef MAUG_CONST
+#  define MAUG_CONST const
+#endif /* !MAUG_CONST */
+
 /**
  * \addtogroup maug_retroglu RetroGLU API
  * \brief Library of tools for working with RetroFlat and OpenGL.
@@ -285,6 +290,14 @@ void retroglu_draw_poly(
    struct RETROGLU_MATERIAL* materials, int materials_sz );
 
 #ifdef RETROGLU_C
+
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+   MAUG_CONST float RETROGLU_COLOR_ ## name_u[] = { \
+      (float)((float)r * 1.0f / 255.0f), \
+      (float)((float)g * 1.0f / 255.0f), \
+      (float)((float)b * 1.0f / 255.0f) };
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GL )
 
 #  define RETROGLU_OBJ_TOKEN_STRINGS( token, callback ) token,
 
@@ -1156,6 +1169,13 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
 
    glEnd();
 }
+
+#else
+
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+   extern MAUG_CONST float RETROGLU_COLOR_ ## name_u[];
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GL )
 
 #endif /* RETROGLU_C */
 
