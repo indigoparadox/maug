@@ -37,4 +37,5 @@ include maug/make/Makeunix.inc
 include maug/make/Makewin.inc
 include maug/make/Makewasm.inc
 include maug/make/Makedos.inc
+include maug/make/Makends.inc
 

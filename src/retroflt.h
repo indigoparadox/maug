@@ -1071,6 +1071,8 @@ static int gc_retroflat_win_rgbs[] = {
       return retval; \
    }
 
+#elif defined( RETROFLAT_API_NDS )
+
 #else
 #  warning "not implemented"
 
