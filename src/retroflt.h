@@ -330,6 +330,8 @@
 
 #define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
 
+#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
+
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
@@ -468,7 +470,7 @@ struct RETROFLAT_ARGS {
    int screen_h;
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
-   uint8_t unlock_fps;
+   uint8_t flags;
 };
 
 /**
@@ -2128,13 +2130,13 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       debug_printf( 1, "unlocking FPS..." );
-      args->unlock_fps = 1;
+      args->flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
    }
    return RETROFLAT_OK;
 }
 
 static int retroflat_cli_u_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   args->unlock_fps = 0;
+   args->flags &= ~RETROFLAT_FLAGS_UNLOCK_FPS;
    return RETROFLAT_OK;
 }
 
@@ -2221,7 +2223,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-   if( args->unlock_fps ) {
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+   ) {
       g_retroflat_flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
    }
 
@@ -2339,6 +2343,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
          "Error", "unable to allocate screen buffer: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
+   }
+
+   if(
+      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
+   ) {
+      if( 0 != SDL_EnableKeyRepeat(
+         1, SDL_DEFAULT_REPEAT_INTERVAL
+      ) ) {
+         error_printf( "could not enable key repeat!" );
+      } else {
+         debug_printf( 3, "key repeat enabled" );
+      }
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
@@ -4255,7 +4271,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    if( SDL_QUIT == event.type ) {
       retroflat_quit( 0 );
-   } else if( SDL_KEYDOWN == event.type ) {
+   } else if(
+      SDL_KEYDOWN == event.type
+#     ifndef RETROFLAT_API_SDL1
+      && ( !event.key.repeat || input->allow_repeat )
+#     endif /* !RETROFLAT_API_SDL1 */
+   ) {
       key_out = event.key.keysym.sym;
 
       /* Flush key buffer to improve responsiveness. */
