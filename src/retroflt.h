@@ -1451,12 +1451,6 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
-#ifdef RETROFLAT_SOFT_SHAPES
-
-int16_t retroflat_soft_lut( const int16_t* lut, int16_t num, int16_t mult );
-
-#endif /* RETROFLAT_SOFT_SHAPES */
-
 #ifdef RETROFLT_C
 
 #  include <stdio.h>
@@ -1508,7 +1502,7 @@ int g_cmd_show = 0;
 static int g_screen_w = 0;
 static int g_screen_h = 0;
 static unsigned long g_ms_start = 0;
-static volatile unsigned long g_ms;
+static volatile unsigned long g_ms = 0;
 static uint8_t g_last_key = 0;
 static unsigned int g_last_mouse = 0;
 static unsigned int g_last_mouse_x = 0;
@@ -1539,172 +1533,10 @@ uint8_t g_retroflat_flags = 0;
 /* === Function Definitions === */
 
 #ifdef RETROFLAT_SOFT_SHAPES
-
-#define RETROFLAT_SOFT_PI (3141)
-
-MAUG_CONST int16_t g_retroflat_soft_cos[] = {
-   1000,
-   995,
-   980,
-   955,
-   921,
-   877,
-   825,
-   764,
-   696,
-   621,
-   540,
-   453,
-   362,
-   267,
-   169,
-   70,
-   -29,
-   -128,
-   -227,
-   -323,
-   -416,
-   -504,
-   -588,
-   -666,
-   -737,
-   -801,
-   -856,
-   -904,
-   -942,
-   -970,
-   -989,
-   -999,
-   -998,
-   -987,
-   -966,
-   -936,
-   -896,
-   -848,
-   -790,
-   -725,
-   -653,
-   -574,
-   -490,
-   -400,
-   -307,
-   -210,
-   -112,
-   -12,
-   87,
-   186,
-   283,
-   377,
-   468,
-   554,
-   634,
-   708,
-   775,
-   834,
-   885,
-   927,
-   960,
-   983,
-   996,
-};
-
-MAUG_CONST int16_t g_retroflat_soft_sin[] = {
-   0,
-   99,
-   198,
-   295,
-   389,
-   479,
-   564,
-   644,
-   717,
-   783,
-   841,
-   891,
-   932,
-   963,
-   985,
-   997,
-   999,
-   991,
-   973,
-   946,
-   909,
-   863,
-   808,
-   745,
-   675,
-   598,
-   515,
-   427,
-   334,
-   239,
-   141,
-   41,
-   -58,
-   -157,
-   -255,
-   -350,
-   -442,
-   -529,
-   -611,
-   -687,
-   -756,
-   -818,
-   -871,
-   -916,
-   -951,
-   -977,
-   -993,
-   -999,
-   -996,
-   -982,
-   -958,
-   -925,
-   -883,
-   -832,
-   -772,
-   -705,
-   -631,
-   -550,
-   -464,
-   -373,
-   -279,
-   -182,
-   -83,
-};
-
-int16_t retroflat_soft_lut( const int16_t* lut, int16_t num, int16_t mult ) {
-   int16_t cos_out;
-   uint8_t neg = 0;
-
-   /* Can't take an index of a negative number, so hold on to neg for later. */
-   if( num < 0 ) {
-      neg = 1;
-      num *= -1;
-   }
-
-   /* cos/sin repeat after every 2PI. */
-   if( num >= (2 * RETROFLAT_SOFT_PI) ) {
-      num -= (2 * RETROFLAT_SOFT_PI);
-   }
-
-   /* Remove num precision to get index. */
-   num /= 100;
-   cos_out = lut[num];
-
-   /* Multiply by multiplier before removing precision. */
-   cos_out *= mult;
-   cos_out /= 1000;
-
-   /* Restore neg taken earlier. */
-   if( neg ) {
-      cos_out *= -1;
-   }
-
-   return (int16_t)cos_out;
-}
-
+#  ifdef RETROFLT_C
+#     define RETROFP_C
+#  endif /* RETROFLT_C */
+#  include <retrofp.h>
 #endif /* RETROFLAT_SOFT_SHAPES */
 
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3849,17 +3681,13 @@ void retroflat_soft_ellipse(
       target, lock_ret, locked_target_internal );
 
    /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
-   for( i = 100 ; 2 * RETROFLAT_SOFT_PI + 100 > i ; i += 100 ) {
+   for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
       i_prev = i - 100;
 
-      px_x1 = x + (w / 2) + retroflat_soft_lut(
-         g_retroflat_soft_cos, i_prev, w / 2 );
-      px_y1 = y + (h / 2) + retroflat_soft_lut(
-         g_retroflat_soft_sin, i_prev, h / 2 );
-      px_x2 = x + (w / 2) + retroflat_soft_lut(
-         g_retroflat_soft_cos, i, w / 2 );
-      px_y2 = y + (h / 2) + retroflat_soft_lut(
-         g_retroflat_soft_sin, i, h / 2 );
+      px_x1 = x + (w / 2) + retrofp_cos( i_prev, w / 2 );
+      px_y1 = y + (h / 2) + retrofp_sin( i_prev, h / 2 );
+      px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
+      px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
 
       assert( 0 <= px_x1 );
       assert( 0 <= px_y1 );
