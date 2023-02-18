@@ -1856,6 +1856,21 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
 MRESULT EXPENTRY WndProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2 ) {
 
    switch( msg ) {
+      case WM_CLOSE:
+         /* Quit on window close. */
+         retroflat_quit( 0 );
+         break;
+
+      case WM_ERASEBACKGROUND:
+         return MRFROMSHORT( TRUE );
+
+      case WM_DESTROY:
+         if( retroflat_bitmap_ok( &g_buffer ) ) {
+            DeleteObject( g_buffer.b );
+         }
+         PostQuitMessage( 0 );
+         break;
+
       case WM_TIMER:
          if( next <= retroflat_get_ms() ) {
             g_loop_iter( g_loop_data );
