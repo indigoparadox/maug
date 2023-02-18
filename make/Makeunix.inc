@@ -34,8 +34,8 @@ else
 endif
 
 ifeq ("$$(OPENGL)","1")
-	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_OPENGL
-	LDFLAGS_GCC_UNIX_SDL += $(shell pkg-config opengl --libs)
+	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_OPENGL $(shell pkg-config gl --cflags)
+	LDFLAGS_GCC_UNIX_SDL += $(shell pkg-config gl --libs)
 endif
 
 $(1).sdl: $$(addprefix obj/$$(shell uname -s)-sdl/,$$(subst .c,.o,$$(C_FILES)))
