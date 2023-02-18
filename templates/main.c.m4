@@ -1,5 +1,6 @@
 divert(-1)
 define(`loopa', `$1_loop')
+define(`dataa', `$1_DATA')
 divert(0)
 `#'define MAUG_C
 `#'include <maug.h>
@@ -7,11 +8,11 @@ divert(0)
 `#'define RETROFLT_C
 `#'include <retroflt.h>
 
-struct TEMPLATE_DATA {
+struct dataa(TEMPLATE) {
    int init;
 };
 
-void loopa(template)( struct TEMPLATE_DATA* data ) {
+void loopa(template)( struct dataa(TEMPLATE)* data ) {
    int input = 0;
    struct RETROFLAT_INPUT input_evt;
 
@@ -40,7 +41,7 @@ void loopa(template)( struct TEMPLATE_DATA* data ) {
 int main( int argc, char** argv ) {
    int retval = 0;
    struct RETROFLAT_ARGS args;
-   struct TEMPLATE_DATA data;
+   struct dataa(TEMPLATE) data;
 
    /* === Setup === */
 
