@@ -442,7 +442,6 @@ typedef void (*retroflat_loop_iter)(void* data);
 
 /*! \brief Struct passed to retroflat_poll_input() to hold return data. */
 struct RETROFLAT_INPUT {
-   int allow_repeat;
    /**
     * \brief X-coordinate of the mouse pointer in pixels if the returned
     *        event is a mouse click.
@@ -2333,6 +2332,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
 
+   SDL_WM_SetCaption( args->title, NULL );
+
    g_buffer.surface = SDL_SetVideoMode(
       args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
@@ -2347,6 +2348,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+   /* Setup key repeat. */
    if(
       RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
    ) {
@@ -4273,16 +4275,14 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    if( SDL_QUIT == event.type ) {
       retroflat_quit( 0 );
-   } else if(
-      SDL_KEYDOWN == event.type
-#     ifndef RETROFLAT_API_SDL1
-      && ( !event.key.repeat || input->allow_repeat )
-#     endif /* !RETROFLAT_API_SDL1 */
-   ) {
+   } else if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
 
       /* Flush key buffer to improve responsiveness. */
-      if( !input->allow_repeat ) {
+      if(
+         RETROFLAT_FLAGS_KEY_REPEAT !=
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_flags)
+      ) {
          while( (eres = SDL_PollEvent( &event )) );
       }
 
