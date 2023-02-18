@@ -512,6 +512,10 @@ struct RETROFLAT_ARGS {
 #  define RETROFLAT_WINDOW_CLASS "RetroFlatWindowClass"
 #endif /* !RETROFLAT_WINDOW_CLASS */
 
+#ifndef RETROFLAT_WINDOW_ID
+#  define RETROFLAT_WINDOW_ID 1000
+#endif /* !RETROFLAT_WINDOW_ID */
+
 #ifndef RETROFLAT_WIN_GFX_TIMER_ID
 /**
  * \brief Unique ID for the timer that execute graphics ticks in Win16/Win32.
@@ -1081,6 +1085,34 @@ static int gc_retroflat_win_rgbs[] = {
       return retval; \
    }
 
+#elif defined( RETROFLAT_API_OS2 )
+
+/* == OS/2 == */
+
+#define INCL_WIN
+#include <os2.h>
+
+typedef int RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_BLACK        CLR_BLACK
+#  define RETROFLAT_COLOR_DARKBLUE     CLR_DARKBLUE
+#  define RETROFLAT_COLOR_DARKGREEN    CLR_DARKGREEN
+#  define RETROFLAT_COLOR_TEAL         CLR_DARKCYAN
+#  define RETROFLAT_COLOR_DARKRED      CLR_DARKRED
+#  define RETROFLAT_COLOR_VIOLET       CLR_DARKPINK
+#  define RETROFLAT_COLOR_BROWN        CLR_BROWN
+#  define RETROFLAT_COLOR_GRAY         CLR_PALEGRAY
+#  define RETROFLAT_COLOR_DARKGRAY     CLR_DARKGRAY
+#  define RETROFLAT_COLOR_BLUE         CLR_BLUE
+#  define RETROFLAT_COLOR_GREEN        CLR_GREEN
+#  define RETROFLAT_COLOR_CYAN         CLR_CYAN
+#  define RETROFLAT_COLOR_RED          CLR_RED
+#  define RETROFLAT_COLOR_MAGENTA      CLR_PINK
+#  define RETROFLAT_COLOR_YELLOW       CLR_YELLOW
+#  define RETROFLAT_COLOR_WHITE        CLR_WHITE
+
+#define END_OF_MAIN()
+
 #else
 #  warning "not implemented"
 
@@ -1520,6 +1552,17 @@ struct RETROFLAT_BMI g_buffer_bmi;
 void far* g_buffer_bits = NULL;
 #     endif /* RETROFLAT_WING */
 
+#  elif defined( RETROFLAT_API_OS2 )
+
+QMSG g_msg;
+HAB g_hab;
+HMQ g_hmq;
+BOOL g_msg_retval;
+retroflat_loop_iter g_loop_iter = NULL;
+static volatile unsigned long g_ms = 0;
+HWND g_window;
+ULONG g_win_flags = FCF_TITLEBAR | FCF_SYSMENU | FCF_TASKLIST | FCF_ICON;
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* === Globals === */
@@ -1808,6 +1851,25 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
    return argv_out;
 }
 
+#elif defined( RETROFLAT_API_OS2 )
+
+MRESULT EXPENTRY WndProc( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2 ) {
+
+   switch( msg ) {
+      case WM_TIMER:
+         if( next <= retroflat_get_ms() ) {
+            g_loop_iter( g_loop_data );
+            next = retroflat_get_ms() + retroflat_fps_next();
+         }
+
+         /* Kind of a hack so that we can have a cheap timer. */
+         g_ms += 100;
+         break;
+   }
+
+   return WinDefWindowProc( hwnd, msg, mp1, mp2 );
+}
+
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* === */
@@ -1850,6 +1912,18 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
       DispatchMessage( &g_msg );
    } while( 0 < g_msg_retval );
 
+#  elif defined( RETROFLAT_API_OS2 )
+
+   /* Set these to be called from WndProc later. */
+   g_loop_iter = (retroflat_loop_iter)loop_iter;
+   g_loop_data = (void*)data;
+
+   /* Handle Windows messages until quit. */
+   do {
+      g_msg_retval = WinGetMsg( g_hab, &g_msg, NULLHANDLE, 0, 0 );
+      WinDispatchMsg( g_hab, &g_msg );
+   } while( 0 < g_msg_retval );
+
 #  else
 #     warning "loop not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -1876,6 +1950,9 @@ void retroflat_message( const char* title, const char* format, ... ) {
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    /* TODO: Dialog box crashes! */
    /* MessageBox( NULL, msg_out, title, 0 ); */
+   printf( "%s\n", msg_out );
+#  elif defined( RETROFLAT_API_OS2 )
+   /* TODO: Dialog box crashes! */
    printf( "%s\n", msg_out );
 #  else
 #     warning "not implemented"
@@ -2349,6 +2426,33 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    ShowWindow( g_window, g_cmd_show );
 
+#  elif defined( RETROFLAT_API_OS2 )
+
+   /* == OS/2 == */
+
+   g_hab = WinInitialize( 0 );
+   g_hmq = WinCreateMsgQueue( g_hab, 0 );
+
+   WinRegisterClass(
+      g_hab,
+      RETROFLAT_WINDOW_CLASS,
+      WndProc,
+      CS_SIZEREDRAW, /* TODO */
+      0 );
+
+   WinCreateStdWindow( HWND_DESKTOP, WS_VISIBLE,
+      &g_win_flags,
+      RETROFLAT_WINDOW_CLASS,
+      args->title, 0, 0, RETROFLAT_WINDOW_ID, &g_window );
+
+   assert( NULL != g_window );
+
+   WinStartTimer(
+      g_hab,
+      g_window,
+      RETROFLAT_WIN_GFX_TIMER_ID, 
+      (int)(1000 / RETROFLAT_FPS) );
+
 #  else
 #     warning "init not implemented"
 #  endif  /* RETROFLAT_API_ALLEGRO */
@@ -2403,6 +2507,13 @@ void retroflat_shutdown( int retval ) {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRCLEANUP )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENCLEANUP )
 
+#elif defined( RETROFLAT_API_OS2 )
+
+   /* == OS/2 == */
+
+   WinDestroyMsgQueue( g_hmq );
+   WinTerminate( g_hab );
+
 #else
 #  warning "shutdown not implemented"
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
@@ -2412,7 +2523,10 @@ void retroflat_shutdown( int retval ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_WIN16 ) || \
+   defined( RETROFLAT_API_WIN32 ) || \
+   defined( RETROFLAT_API_OS2 )
 
    /* == Allegro == */
 
@@ -2423,12 +2537,6 @@ uint32_t retroflat_get_ms() {
    /* == SDL == */
 
    return SDL_GetTicks();
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/32 == */
-
-   return g_ms;
 
 #  else
 #  warning "get_ms not implemented"
