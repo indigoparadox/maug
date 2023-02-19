@@ -1081,7 +1081,33 @@ static int gc_retroflat_win_rgbs[] = {
       return retval; \
    }
 
-#elif defined( RETROFLAT_API_NDS )
+#elif defined( RETROFLAT_API_LIBNDS )
+
+/* == Nintendo DS == */
+
+#  include <nds.h>
+
+
+struct RETROFLAT_BITMAP {
+   uint16_t* b;
+};
+
+typedef int RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
+   RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = 0;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
+
+#  define RETROFLAT_KEY_LEFT        KEY_LEFT
+#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
+#  define RETROFLAT_KEY_UP          KEY_UP
+#  define RETROFLAT_KEY_DOWN        KEY_DOWN
+#  define RETROFLAT_KEY_ESC         KEY_B
+#  define RETROFLAT_MOUSE_B_LEFT    (-1)
+#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
+
+#define END_OF_MAIN()
 
 #else
 #  warning "not implemented"
@@ -1816,12 +1842,12 @@ char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
 
 int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
-#  if defined( RETROFLAT_OS_WASM )
+#if defined( RETROFLAT_OS_WASM )
 
    emscripten_cancel_main_loop();
    emscripten_set_main_loop_arg( loop_iter, data, 0, 0 );
 
-#  elif defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#elif defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    uint32_t next = 0;
 
    g_retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
@@ -1839,7 +1865,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
       RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_flags)
    );
 
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* Set these to be called from WndProc later. */
    g_loop_iter = (retroflat_loop_iter)loop_iter;
@@ -1852,9 +1878,9 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
       DispatchMessage( &g_msg );
    } while( 0 < g_msg_retval );
 
-#  else
-#     warning "loop not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#else
+#  warning "loop not implemented"
+#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
    return g_retval;
@@ -1993,21 +2019,21 @@ END_OF_FUNCTION( retroflat_on_close_button )
 
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int retval = 0;
-#  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
+#if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
 # if 0
    union REGS regs;
    struct SREGS sregs;
 #endif
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    WNDCLASS wc = { 0 };
    RECT wr = { 0, 0, 0, 0 };
    DWORD window_style = RETROFLAT_WIN_STYLE;
    DWORD window_style_ex = 0;
    int wx = CW_USEDEFAULT,
       wy = CW_USEDEFAULT;
-#  elif defined( RETROFLAT_API_SDL1 )
+#elif defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    debug_printf( 1, "retroflat: initializing..." );
 
@@ -2071,7 +2097,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
          args->assets_path, RETROFLAT_ASSETS_PATH_MAX );
    }
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
 
@@ -2084,11 +2110,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    install_keyboard();
-#     if !defined( RETROFLAT_OS_DOS )
+#  if !defined( RETROFLAT_OS_DOS )
    /* XXX: Broken in DOS. */
    install_timer();
    install_int( retroflat_on_ms_tick, 1 );
-#     endif /* RETROFLAT_OS_DOS */
+#  endif /* RETROFLAT_OS_DOS */
 
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
@@ -2116,9 +2142,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       retval = RETROFLAT_ERROR_MOUSE;
       goto cleanup;
    }
-#     endif /* !RETROFLAT_OS_DOS */
+#  endif /* !RETROFLAT_OS_DOS */
 
-#     ifdef RETROFLAT_OS_DOS
+#  ifdef RETROFLAT_OS_DOS
 #if 0
    regs.w.ax = 0x9;
    regs.w.bx = 0x0;
@@ -2127,7 +2153,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    sregs.es = FP_SEG( g_mouse_cursor );
    int386x( 0x33, &regs, &regs, &sregs );
 #endif
-#     endif /* RETROFLAT_OS_DOS */
+#  endif /* RETROFLAT_OS_DOS */
 
    g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
    if( NULL == g_buffer.b ) {
@@ -2136,7 +2162,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-#  elif defined( RETROFLAT_API_SDL1 )
+#elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
 
@@ -2152,14 +2178,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    info = SDL_GetVideoInfo();
    assert( NULL != info );
 
-#     ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_OPENGL
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
    /* TODO: Retry with smaller depth buffers if this fails. */
    SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-#     endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_OPENGL */
 
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
@@ -2169,9 +2195,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_buffer.surface = SDL_SetVideoMode(
       args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
-#     ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_OPENGL
       | SDL_OPENGL
-#     endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_OPENGL */
    );
    if( NULL == g_buffer.surface ) {
       retroflat_message(
@@ -2193,7 +2219,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       }
    }
 
-#  elif defined( RETROFLAT_API_SDL2 )
+#elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
 
@@ -2240,15 +2266,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_screen_w, g_screen_h );
 
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
 
-#     ifdef RETROFLAT_API_WINCE
+#  ifdef RETROFLAT_API_WINCE
    srand( GetTickCount() );
-#     else
+#  else
    srand( time( NULL ) );
-#     endif /* RETROFLAT_API_WINCE */
+#  endif /* RETROFLAT_API_WINCE */
 
    debug_printf( 1, "retroflat: creating window class..." );
 
@@ -2350,6 +2376,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENSETUP )
 
    ShowWindow( g_window, g_cmd_show );
+
+#elif defined( RETROFLAT_API_LIBNDS )
+
+   /* == Nintendo DS == */
+
+#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
+         RETROFLAT_COLOR_ ## name_u = ARGB16( 1, r, g, b );
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
 
 #  else
 #     warning "init not implemented"
