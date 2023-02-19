@@ -1097,9 +1097,14 @@ static int gc_retroflat_win_rgbs[] = {
 
 #  include <nds.h>
 
-#define BG_TILE_W_PX 8
-#define BG_TILE_H_PX 8
-#define BG_W_TILES 32
+/* NDS doesn't have primitives. */
+#  ifndef RETROFLAT_SOFT_SHAPES
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
+#  define BG_TILE_W_PX 8
+#  define BG_TILE_H_PX 8
+#  define BG_W_TILES 32
 
 struct RETROFLAT_BITMAP {
    uint16_t* b;
@@ -1125,10 +1130,13 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 #  define RETROFLAT_MOUSE_B_LEFT    (-1)
 #  define RETROFLAT_MOUSE_B_RIGHT   (-2)
 
-#define retroflat_screen_w() (256)
-#define retroflat_screen_h() (192)
+/* TODO */
+#  define retroflat_bitmap_locked( bmp ) (0)
 
-#define END_OF_MAIN()
+#  define retroflat_screen_w() (256)
+#  define retroflat_screen_h() (192)
+
+#  define END_OF_MAIN()
 
 /* TODO? */
 #  define retroflat_quit( retval )
@@ -1884,7 +1892,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 #  elif defined( RETROFLAT_API_ALLEGRO ) || \
    defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 )
+   defined( RETROFLAT_API_SDL2 ) || \
+   defined( RETROFLAT_API_LIBNDS )
 
    uint32_t next = 0;
 
@@ -1895,6 +1904,10 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_flags) &&
          retroflat_get_ms() < next
       ) {
+         /* Sleep/low power for a bid. */
+#     ifdef RETROFLAT_API_LIBNDS
+         swiWaitForVBlank();
+#     endif /* RETROFLAT_API_LIBNDS */
          continue;
       }
       loop_iter( data );
@@ -2548,7 +2561,9 @@ void retroflat_shutdown( int retval ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_WIN16 ) || \
+   defined( RETROFLAT_API_WIN32 )
 
    /* == Allegro == */
 
@@ -2560,11 +2575,9 @@ uint32_t retroflat_get_ms() {
 
    return SDL_GetTicks();
 
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  elif defined( RETROFLAT_API_LIBNDS )
 
-   /* == Win16/32 == */
-
-   return g_ms;
+   return ((TIMER1_DATA * (1 << 16)) + TIMER0_DATA) / 32;
 
 #  else
 #  warning "get_ms not implemented"
@@ -3445,9 +3458,13 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
+   /* == Allegro == */
+
    putpixel( target->b, x, y, color );
 
 #  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
 
    offset = (y * target->surface->pitch) +
       (x * target->surface->format->BytesPerPixel);
@@ -3474,15 +3491,26 @@ void retroflat_px(
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
+   /* == SDL2 == */
+
    SDL_SetRenderDrawColor(
       target->renderer,  color->r, color->g, color->b, 255 );
    SDL_RenderDrawPoint( target->renderer, x, y );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   /* Win16/Win32 */
+   /* == Win16/Win32 == */
 
    SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
+
+#  elif defined( RETROFLAT_API_LIBNDS )
+
+   /* == Nintendo DS == */
+
+   uint16_t* px_ptr = NULL;
+
+   px_ptr = bgGetGfxPtr( g_px_id );
+   px_ptr[(y * 256) + x] = color;
 
 #  else
 #     warning "px not implemented"
@@ -3732,17 +3760,16 @@ void retroflat_line(
       target = &(g_buffer);
    }
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_SOFT_SHAPES )
+
+   retroflat_soft_line( target, color, x1, y1, x2, y2, flags );
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
    assert( NULL != target->b );
    line( target->b, x1, y1, x2, y2, color );
-
-#  elif defined( RETROFLAT_API_SDL1 )
-
-   /* == SDL1 == */
-   retroflat_soft_line( target, color, x1, y1, x2, y2, flags );
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
@@ -3846,6 +3873,7 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
+
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
@@ -3857,7 +3885,11 @@ void retroflat_ellipse(
       target = &(g_buffer);
    }
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  if defined( RETROFLAT_SOFT_SHAPES )
+
+   retroflat_soft_ellipse( target, color, x, y, w, h, flags );
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3868,16 +3900,6 @@ void retroflat_ellipse(
    } else {
       ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
    }
-
-#  elif defined( RETROFLAT_API_SDL1 )
-
-   retroflat_soft_ellipse( target, color, x, y, w, h, flags );
-
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL == */
-
-   retroflat_soft_ellipse( target, color, x, y, w, h, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 

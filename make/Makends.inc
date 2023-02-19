@@ -28,7 +28,7 @@ endif
 define TGTNDSLIBN
 
 $(1).nds: obj/nds-libnds/$(1).elf
-	$$(NDSTOOL) -c $$@ -9 $$< "$(1);$(1);$(1)"
+	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(3)" "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: $(addprefix obj/nds-libnds/,$(subst .c,.o,$(C_FILES)))
 	PATH="$(DEVKITPPRO)/tools/bin:$(DEVKITPRO)/devkitARM/bin:$(PATH)" \
