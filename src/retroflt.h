@@ -567,6 +567,16 @@ struct RETROFLAT_ARGS {
 /*! \brief Maximum size of the assets path, to allow room for appending. */
 #define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX / 2)
 
+#ifndef NDS_OAM_ACTIVE
+/*! \brief Active sprite engine screen on Nintendo DS. */
+#  define NDS_OAM_ACTIVE &oamMain
+#endif /* !NDS_OAM_ACTIVE */
+
+#ifndef NDS_SPRITES_ACTIVE
+/*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
+#  define NDS_SPRITES_ACTIVE 24
+#endif /* !NDS_SPRITES_ACTIVE */
+
 /*! \} */ /* maug_retroflt_compiling */
 
 /**
@@ -1087,6 +1097,9 @@ static int gc_retroflat_win_rgbs[] = {
 
 #  include <nds.h>
 
+#define BG_TILE_W_PX 8
+#define BG_TILE_H_PX 8
+#define BG_W_TILES 32
 
 struct RETROFLAT_BITMAP {
    uint16_t* b;
@@ -1558,6 +1571,17 @@ struct RETROFLAT_BMI {
 struct RETROFLAT_BMI g_buffer_bmi;
 void far* g_buffer_bits = NULL;
 #     endif /* RETROFLAT_WING */
+
+#  elif defined( RETROFLAT_API_LIBNDS )
+
+static uint16_t* g_sprite_frames[NDS_SPRITES_ACTIVE];
+static int g_bg_id = 0;
+static uint8_t g_bg_bmp_changed = 0;
+static uint8_t g_window_bmp_changed = 0;
+static int g_window_id = 0;
+static int g_px_id = 0;
+static uint16_t g_bg_tiles[1024];
+static uint16_t g_window_tiles[1024];
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2037,6 +2061,9 @@ END_OF_FUNCTION( retroflat_on_close_button )
 /* Still inside RETROFLT_C! */
 
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
+
+   /* = Begin Init = */
+
    int retval = 0;
 #  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
 #     if 0
@@ -2052,6 +2079,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       wy = CW_USEDEFAULT;
 #  elif defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
+#  elif defined( RETROFLAT_API_LIBNDS )
+   int i = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    debug_printf( 1, "retroflat: initializing..." );
@@ -2410,6 +2439,51 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Force screen size. */
    args->screen_w = 256;
    args->screen_h = 192;
+
+   powerOn( POWER_ALL );
+   
+   videoSetMode( MODE_5_2D );
+	videoSetModeSub( MODE_0_2D );
+
+   /* Setup the upper screen for background and sprites. */
+	vramSetBankA( VRAM_A_MAIN_BG );
+	vramSetBankB( VRAM_B_MAIN_SPRITE );
+
+   /* Setup the lower screen for background and sprites. */
+	vramSetBankC( VRAM_C_MAIN_BG );
+	vramSetBankD( VRAM_D_SUB_SPRITE );
+
+   bgExtPaletteEnable();
+
+   /* Setup the background engine. */
+
+   /* Put map at base 2, but stow tiles up after the bitmap BG at base 7. */
+   g_bg_id = bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
+   dmaFillWords( 0, g_bg_tiles, sizeof( g_bg_tiles ) );
+   bgSetPriority( g_bg_id, 2 );
+
+   /* Put map at base 3, and tiles at base 0. */
+   g_window_id = bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
+   dmaFillWords( 0, g_window_tiles, sizeof( g_window_tiles ) );
+   bgSetPriority( g_window_id, 1 );
+
+   /* Put bitmap BG at base 1, leaving map-addressable space at base 0. */
+   g_px_id = bgInit( 2, BgType_Bmp16, BgSize_B16_256x256, 1, 0 );
+   bgSetPriority( g_px_id, 0 );
+
+   /* Setup the sprite engines. */
+	oamInit( NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
+
+   /* Allocate sprite frame memory. */
+   for( i = 0 ; NDS_SPRITES_ACTIVE > i ; i++ ) {
+      g_sprite_frames[i] = oamAllocateGfx(
+         NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
+   }
+
+   /* Setup the timer. */
+   TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
+   TIMER1_CR = TIMER_ENABLE | TIMER_CASCADE;
+
 
 #  else
 #     warning "init not implemented"
