@@ -1094,8 +1094,13 @@ struct RETROFLAT_BITMAP {
 
 typedef int RETROFLAT_COLOR;
 
-#  define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
-   RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = 0;
+#  ifdef RETROFLT_C
+#     define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
+         RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = 0;
+#  else
+#     define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
+         extern RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
+#  endif /* RETROFLT_C */
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 
@@ -1107,7 +1112,13 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 #  define RETROFLAT_MOUSE_B_LEFT    (-1)
 #  define RETROFLAT_MOUSE_B_RIGHT   (-2)
 
+#define retroflat_screen_w() (256)
+#define retroflat_screen_h() (192)
+
 #define END_OF_MAIN()
+
+/* TODO? */
+#  define retroflat_quit( retval )
 
 #else
 #  warning "not implemented"
@@ -2391,9 +2402,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == Nintendo DS == */
 
+   /* Setup color constants. */
 #  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
          RETROFLAT_COLOR_ ## name_u = ARGB16( 1, r, g, b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
+
+   /* Force screen size. */
+   args->screen_w = 256;
+   args->screen_h = 192;
 
 #  else
 #     warning "init not implemented"

@@ -22,7 +22,7 @@ ifeq ("$(LDFLAGS_GCC_NDS)","")
 endif
 
 ifeq ("$(LDFLAGS_GCC_NDS_LIBNDS)","")
-	LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map
+	LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map -L$(DEVKITPRO)/libnds/lib -lnds9
 endif
 
 define TGTNDSLIBN
@@ -31,12 +31,15 @@ $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c $$@ -9 $$< "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: $(addprefix obj/nds-libnds/,$(subst .c,.o,$(C_FILES)))
-	$$(CC_GCC_NDS) -o $$@ $$^ $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
+	PATH="$(DEVKITPPRO)/tools/bin:$(DEVKITPRO)/devkitARM/bin:$(PATH)" \
+	$$(CC_GCC_NDS) -o $$@ $$^ \
+		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
 obj/nds-libnds/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
-		$$(CFLAGS_GCC) $$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS)
+		$$(INCLUDES_GCC) $$(DEFINES_GCC) \
+		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS)
 
 CLEAN_TARGETS += $(1).nds
 
