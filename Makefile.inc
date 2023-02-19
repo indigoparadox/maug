@@ -1,13 +1,9 @@
 
 # vim: ft=make noexpandtab
 
-INCLUDES_GCC += -Imaug/src
-INCLUDES_WATCOM += -i=maug/src
-
-CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
-CFLAGS_WATCOM := $(GLOBAL_DEFINES) $(INCLUDES_WATCOM) $(DEFINES_WATCOM)
-LDFLAGS_GCC :=  $(LIBS_GCC)
-LDFLAGS_WATCOM :=  $(LIBS_WATCOM)
+CFLAGS_GCC := $(GLOBAL_DEFINES) -Imaug/src
+CFLAGS_WATCOM := $(GLOBAL_DEFINES) -imaug/src
+LDFLAGS_GCC := 
 
 CLEAN_TARGETS := obj *.err
 
@@ -41,5 +37,5 @@ include maug/make/Makeunix.inc
 include maug/make/Makewin.inc
 include maug/make/Makewasm.inc
 include maug/make/Makedos.inc
-include maug/make/Makends.inc
+include maug/make/Makeos2.inc
 

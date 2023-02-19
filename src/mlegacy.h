@@ -7,8 +7,6 @@
 
 #ifdef RETROFLAT_OS_WIN
 #  define MAUG_OS_WIN
-#elif defined( RETROFLAT_OS_NDS )
-#  define MAUG_OS_NDS
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef PATH_MAX
@@ -25,9 +23,7 @@
 #  define UPRINTF_LOG
 #endif /* DEBUG_LOG */
 
-#if defined( PLATFORM_NDS )
-#  define MAUG_OS_NDS
-#elif defined( PLATFORM_PALM )
+#if defined( PLATFORM_PALM )
 #  define MAUG_OS_PALM
 #elif defined( PLATFORM_WIN ) || defined( RETROFLAT_OS_WIN )
 #  define MAUG_OS_WIN

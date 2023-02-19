@@ -103,37 +103,8 @@ union MAUG_FMT_SPEC {
    char* s;
 };
 
-#if defined( MAUG_OS_NDS )
-
-/* TODO: Figure out a way to get the calling line number for a function. */
-
-static void debug_printf( int level, const char* fmt, ... ) {
-   va_list argp;
-   char buffer[UPRINTF_BUFFER_SZ_MAX + 1];
-
-   if( level >= DEBUG_THRESHOLD ) {
-      va_start( argp, fmt );
-      vsnprintf( buffer, UPRINTF_BUFFER_SZ_MAX, fmt, argp );
-      va_end( argp );
-      nocashMessage( buffer );
-      nocashMessage( "\n" );
-   }
-}
-
-static void error_printf( const char* fmt, ... ) {
-   va_list argp;
-   char buffer[UPRINTF_BUFFER_SZ_MAX + 1];
-
-   va_start( argp, fmt );
-   vsnprintf( buffer, UPRINTF_BUFFER_SZ_MAX, fmt, argp );
-   va_end( argp );
-
-   nocashMessage( buffer );
-   nocashMessage( "\n" );
-}
-
 /* ! */
-#elif defined( UPRINTF_ANCIENT_C )
+#if defined( UPRINTF_ANCIENT_C )
 /* ! */
 
 /* TODO: Figure out a way to get the calling line number for a function. */
