@@ -3840,6 +3840,8 @@ void retroflat_soft_ellipse(
       px_x2 = 0,
       px_y2 = 0;
 
+   /* TODO: Switch to Bresenham algorithm. */
+
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
