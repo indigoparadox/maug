@@ -14,7 +14,7 @@ ifeq ("$(CFLAGS_GCC_NDS)","")
 endif
 
 ifeq ("$(CFLAGS_GCC_NDS_LIBNDS)","")
-	CFLAGS_GCC_NDS_LIBNDS := -I $(DEVKITPRO)/libnds/include
+	CFLAGS_GCC_NDS_LIBNDS := -I$(DEVKITPRO)/libnds/include -DRETROFLAT_API_LIBNDS
 endif
 
 ifeq ("$(LDFLAGS_GCC_NDS)","")
