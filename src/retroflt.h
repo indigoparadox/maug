@@ -1051,7 +1051,7 @@ static int gc_retroflat_win_rgbs[] = {
 #  define RETROFLAT_KEY_TAB	VK_TAB
 #  define RETROFLAT_KEY_SPACE	VK_SPACE
 #  define RETROFLAT_KEY_ESC	VK_ESCAPE
-#  define RETROFLAT_KEY_ENTER	VK_ENTER
+#  define RETROFLAT_KEY_ENTER	VK_RETURN
 #  define RETROFLAT_KEY_HOME	VK_HOME
 #  define RETROFLAT_KEY_END	VK_END
 #  define RETROFLAT_KEY_DELETE   VK_DELETE
@@ -1295,7 +1295,7 @@ typedef int RETROFLAT_COLOR;
 #endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* OpenGL can be called from several different APIs. */
-#  ifdef RETROFLAT_OPENGL
+#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_API_LIBNDS )
 #     include <GL/gl.h>
 #     include <GL/glu.h>
 #  endif /* RETROFLAT_OPENGL */
@@ -2465,6 +2465,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    powerOn( POWER_ALL );
 
 #     ifdef RETROFLAT_OPENGL
+
+   debug_printf( 3, "setting up GL subsystem..." );
+
+   videoSetMode( MODE_0_3D );
+
+   vramSetBankA( VRAM_A_TEXTURE );
+
+   glInit();
    
       /* TODO: Setup NDS 3D engine! */
 
