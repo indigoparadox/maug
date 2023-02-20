@@ -24,6 +24,13 @@
 
 #define RETROGLU_FLAGS_INIT_VERTICES 0x01
 
+#ifdef MAUG_OS_NDS
+typedef int GLint;
+#  define glPopMatrix() glPopMatrix( 1 )
+#  define glFlush() glFlush( 0 )
+#  define glPolygonMode( sides, mode )
+#endif /* MAUG_OS_NDS */
+
 /**
  * \addtogroup maug_retroglu_obj_fsm RetroGLU OBJ Parser
  * \{

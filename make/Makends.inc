@@ -9,21 +9,29 @@ ifeq ("$(NDSTOOL)","")
 	NDSTOOL := ndstool
 endif
 
-ifeq ("$(CFLAGS_GCC_NDS)","")
-	CFLAGS_GCC_NDS := -DRETROFLAT_OS_NDS -DARM9 --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math -mlittle-endian -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
-endif
+# Setup CFLAGS_GCC_NDS
 
-ifeq ("$(CFLAGS_GCC_NDS_LIBNDS)","")
-	CFLAGS_GCC_NDS_LIBNDS := -I$(DEVKITPRO)/libnds/include -DRETROFLAT_API_LIBNDS
-endif
+DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9
+INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
 
-ifeq ("$(LDFLAGS_GCC_NDS)","")
-	LDFLAGS_GCC_NDS := -specs=ds_arm9.specs -mlittle-endian
-endif
+CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math -mlittle-endian
 
-ifeq ("$(LDFLAGS_GCC_NDS_LIBNDS)","")
-	LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map -L$(DEVKITPRO)/libnds/lib -lnds9
-endif
+# Setup CFLAGS_GCC_NDS_LIBNDS
+
+DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS
+INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include
+
+CFLAGS_GCC_NDS_LIBNDS := $(DEFINES_GCC_NDS_LIBNDS) $(INCLUDES_GCC_NDS_LIBNDS)
+
+# Setup LDFLAGS_GCC_NDS
+
+LDFLAGS_GCC_NDS := -specs=ds_arm9.specs -mlittle-endian $(LIBS_GCC_NDS)
+
+# Setup LDFLAGS_GCC_NDS_LIBNDS
+
+LIBS_GCC_NDS_LIBNDS += -L$(DEVKITPRO)/libnds/lib -lnds9
+
+LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS)
 
 define TGTNDSLIBN
 
