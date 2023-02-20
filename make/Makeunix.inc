@@ -34,7 +34,7 @@ else
 endif
 
 ifeq ("$$(OPENGL)","1")
-	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_OPENGL $(shell pkg-config gl --cflags)
+	CFLAGS_GCC_UNIX_SDL += $(shell pkg-config gl --cflags)
 	LDFLAGS_GCC_UNIX_SDL += $(shell pkg-config gl --libs)
 endif
 

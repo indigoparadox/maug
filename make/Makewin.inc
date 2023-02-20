@@ -21,7 +21,6 @@ CFLAGS_WATCOM_WIN_NT := -bt=nt -i$$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM_WIN_NT := system nt_win
 
 ifeq ("$$(OPENGL)","1")
-	CFLAGS_WATCOM_WIN_NT += -DRETROFLAT_OPENGL
 	LDFLAGS_WATCOM_WIN_NT += libr opengl32
 endif
 
