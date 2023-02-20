@@ -29,6 +29,15 @@ typedef int GLint;
 #  define glPopMatrix() glPopMatrix( 1 )
 #  define glFlush() glFlush( 0 )
 #  define glPolygonMode( sides, mode )
+#  define glClear( bits )
+#  define glTexCoord2fv( arr )
+#  define glMaterialfv( side, light, rgb ) \
+      glMaterialf( light, ARGB16( 1, (int)rgb[0], (int)rgb[1], (int)rgb[2] ) )
+#  define glShininessf( side, light, f ) glMaterialf( light, f )
+#  define glColor3fv( rgb ) glColor3f( rgb[0], rgb[1], rgb[2] )
+#  define glVertex2fv( xy ) glVertex3f( xy[0], xy[1], 0 )
+#else
+#  define glShininessf( side, light, f ) glMaterialf( side, light, f )
 #endif /* MAUG_OS_NDS */
 
 /**
@@ -385,6 +394,8 @@ retroglu_token_cb g_retroglu_token_callbacks[] = {
 
 void retroglu_init_scene( uint8_t flags ) {
    debug_printf( 3, "initializing..." );
+
+#ifndef MAUG_OS_NDS
    glEnable( GL_CULL_FACE );
    glShadeModel( GL_SMOOTH );
 
@@ -403,6 +414,7 @@ void retroglu_init_scene( uint8_t flags ) {
    glDepthMask( GL_TRUE );
    glDepthFunc( GL_LESS );
    glDepthRange( 0.0f, 1.0f );
+#endif /* !MAUG_OS_NDS */
 }
 
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
@@ -410,7 +422,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
 
    /* Setup projection. */
    glViewport(
-      0, 0, (GLint)retroflat_screen_w(), (GLint)retroflat_screen_h() );
+      0, 0, (uint32_t)retroflat_screen_w(), (uint32_t)retroflat_screen_h() );
 
    aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
 
@@ -824,6 +836,9 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
 ) {
+#ifndef MAUG_OS_NDS
+   /* TODO: Fix for NDS! */
+
    uint32_t bmp_offset = 0;
    uint32_t bmp_bpp = 0;
    uint32_t bmp_px_sz = 0;
@@ -878,6 +893,7 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
 
    free( bmp_px );
+#endif /* !MAUG_OS_NDS */
 
    return RETROFLAT_OK;
 }
@@ -895,6 +911,7 @@ void retroglu_draw_poly(
    glBegin( GL_TRIANGLES );
    for( i = 0 ; faces_sz > i ; i++ ) {
    
+      /* TODO: Handle material on NDS. */
       glMaterialfv( GL_FRONT, GL_DIFFUSE,
          materials[faces[i].material_idx].diffuse );
          /*
@@ -905,9 +922,11 @@ void retroglu_draw_poly(
          materials[faces[i].material_idx].specular );
       glMaterialfv( GL_FRONT, GL_EMISSION,
          materials[faces[i].material_idx].emissive );
-      glMaterialf( GL_FRONT, GL_SHININESS, 
+
+      /* Use a specific macro here that can be overridden for e.g. the NDS. */
+      glShininessf( GL_FRONT, GL_SHININESS, 
          materials[faces[i].material_idx].specular_exp );
-   
+
       for( j = 0 ; faces[i].vertex_idxs_sz > j ; j++ ) {
          assert( 0 < faces[i].vertex_idxs[j] );
          assert( 3 == faces[i].vertex_idxs_sz );
@@ -1158,9 +1177,11 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
    
    glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
+#ifndef MAUG_OS_NDS
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+#endif /* !MAUG_OS_NDS */
 
    glBegin( GL_TRIANGLES );
 

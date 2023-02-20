@@ -762,7 +762,7 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_TAB	SDLK_TAB
 #  define RETROFLAT_KEY_SPACE	SDLK_SPACE
 #  define RETROFLAT_KEY_ESC	SDLK_ESCAPE
-#  define RETROFLAT_KEY_ENTER	SDLK_ENTER
+#  define RETROFLAT_KEY_ENTER	SDLK_RETURN
 #  define RETROFLAT_KEY_HOME	SDLK_HOME
 #  define RETROFLAT_KEY_END	SDLK_END
 #  define RETROFLAT_KEY_DELETE   SDLK_DELETE
@@ -1122,10 +1122,19 @@ typedef int RETROFLAT_COLOR;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 
-#  define RETROFLAT_KEY_LEFT        KEY_LEFT
-#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#  define RETROFLAT_KEY_UP          KEY_UP
-#  define RETROFLAT_KEY_DOWN        KEY_DOWN
+#  ifdef RETROFLAT_NDS_WASD
+#     define RETROFLAT_KEY_A           KEY_LEFT
+#     define RETROFLAT_KEY_D           KEY_RIGHT
+#     define RETROFLAT_KEY_W           KEY_UP
+#     define RETROFLAT_KEY_S           KEY_DOWN
+#  else
+#     define RETROFLAT_KEY_LEFT        KEY_LEFT
+#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
+#     define RETROFLAT_KEY_UP          KEY_UP
+#     define RETROFLAT_KEY_DOWN        KEY_DOWN
+#  endif /* RETROFLAT_NDS_WASD */
+#  define RETROFLAT_KEY_ENTER       KEY_START
+#  define RETROFLAT_KEY_SPACE       KEY_A
 #  define RETROFLAT_KEY_ESC         KEY_B
 #  define RETROFLAT_MOUSE_B_LEFT    (-1)
 #  define RETROFLAT_MOUSE_B_RIGHT   (-2)
@@ -2454,7 +2463,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    args->screen_h = 192;
 
    powerOn( POWER_ALL );
+
+#     ifdef RETROFLAT_OPENGL
    
+      /* TODO: Setup NDS 3D engine! */
+
+#     else
    videoSetMode( MODE_5_2D );
 	videoSetModeSub( MODE_0_2D );
 
@@ -2492,6 +2506,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_sprite_frames[i] = oamAllocateGfx(
          NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
    }
+
+#     endif /* RETROFLAT_OPENGL */
 
    /* Setup the timer. */
    TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
