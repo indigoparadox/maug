@@ -32,7 +32,7 @@ typedef int GLint;
 #  define glClear( bits )
 #  define glTexCoord2fv( arr )
 #  define glMaterialfv( side, light, rgb ) \
-      glMaterialf( light, ARGB16( 1, (int)rgb[0], (int)rgb[1], (int)rgb[2] ) )
+      glMaterialf( light, RGB15( (int)rgb[0], (int)rgb[1], (int)rgb[2] ) )
 #  define glShininessf( side, light, f ) glMaterialf( light, f )
 #  define glColor3fv( rgb ) glColor3f( rgb[0], rgb[1], rgb[2] )
 #  define glVertex2fv( xy ) glVertex3f( xy[0], xy[1], 0 )
@@ -395,7 +395,10 @@ retroglu_token_cb g_retroglu_token_callbacks[] = {
 void retroglu_init_scene( uint8_t flags ) {
    debug_printf( 3, "initializing..." );
 
-#ifndef MAUG_OS_NDS
+#ifdef MAUG_OS_NDS
+   glMaterialShinyness();
+   glPolyFmt( POLY_ALPHA( 15 ) | POLY_CULL_BACK  | POLY_FORMAT_LIGHT0 );
+#else
    glEnable( GL_CULL_FACE );
    glShadeModel( GL_SMOOTH );
 
@@ -421,9 +424,12 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    float aspect_ratio = 0;
 
    /* Setup projection. */
+#ifdef MAUG_OS_NDS
+   glViewport( 0, 0, 255, 191 );
+#else
    glViewport(
       0, 0, (uint32_t)retroflat_screen_w(), (uint32_t)retroflat_screen_h() );
-
+#endif
    aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
 
    /* Switch to projection matrix for setup. */
