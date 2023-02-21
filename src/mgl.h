@@ -10,9 +10,16 @@
 #  define MGL_TRI_STACK_SZ_MAX 128
 #endif /* !MGL_TRI_STACK_SZ_MAX */
 
+/**
+ * \addtogroup maug_mgl_gl
+ * \{
+ */
+
 #define glVertex2d( x, y ) glVertex3d( x, y, 0 )
 
 #define GL_TRIANGLES 1
+
+/*! \} */ /* maug_mgl_gl */
 
 struct MGL_VERTEX {
    int16_t x;
@@ -26,9 +33,20 @@ struct MGL_TRIANGLE {
    int16_t sz;
 };
 
+/**
+ * \brief Detect if a coordinate is inside of a line defined by two other
+ *        coordinates.
+ * \return Return is positive if the point is inside the line or 0/negative if
+ *         it is not.
+ */
 int mglt_vertex_inside(
    int16_t x0, int16_t y0, int16_t x1, int16_t y1,
    int16_t tx, int16_t ty );
+
+/**
+ * \addtogroup maug_mgl_gl MiniGL Interface
+ * \{
+ */
 
 void glBegin( int16_t gl_poly_type );
 
@@ -37,6 +55,8 @@ void glEnd();
 void glVertex3d( int16_t x, int16_t y, int16_t z );
 
 void glFlush();
+
+/*! \} */ /* maug_mgl_gl */
 
 #ifdef MGL_C
 
