@@ -3769,7 +3769,7 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
-#  if defined( RETROFLAT_API_SDL2 )
+#  if !defined( RETROFLAT_SOFT_SHAPES ) && defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
       locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
