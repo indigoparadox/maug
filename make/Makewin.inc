@@ -94,17 +94,17 @@ ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC_WIN_NT += -lopengl32
 endif
 
-$(1)nt.exe: $$(addprefix obj/nt/,$$(subst .c,.o,$$(C_FILES)))
+$(1)ntg.exe: $$(addprefix obj/ntgcc/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_GCC_MINGW) -o $$@ $$^ $$(LDFLAGS_GCC_WIN) $$(LDFLAGS_GCC_WIN_NT)
 
-obj/nt/%.o: %.c | $(2)
+obj/ntgcc/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_MINGW) \
 		$$(GLOBAL_DEFINES) $$(INCLUDES_GCC) $$(DEFINES_GCC) \
 		$$(CFLAGS_GCC_WIN) $$(CFLAGS_GCC_WIN_NT) \
 		-o $$@ -c $$<
 
-CLEAN_TARGETS += $(1)nt.exe $(2)
+CLEAN_TARGETS += $(1)ntg.exe $(2)
 
 endef
 
