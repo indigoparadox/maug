@@ -36,7 +36,28 @@ endif
 
 # ---
 
+ifeq ("$(TGTWINICO)","")
+define TGTWINICO
+
+$(1).ico: $(1).bmp
+	convert $$< $$@
+
+$(1)nt.rc: $(1).ico
+	echo "1000       ICON    DISCARDABLE     \"$(1).ico\"" > $$@
+
+$(1)nt.res: $(1)nt.rc
+	wrc -r $$< -bt=nt -fo=$$@
+
+CLEAN_TARGETS += $(1).ico $(1)nt.res $(1)nt.rc
+
+endef
+endif
+
+# ---
+
 define TGTWINNT
+
+$(eval $(call TGTWINICO,$(1)))
 
 CFLAGS_WATCOM_WIN_NT := -bt=nt -i$$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM_WIN_NT := system nt_win
@@ -45,9 +66,16 @@ ifeq ("$$(OPENGL)","1")
 	LDFLAGS_WATCOM_WIN_NT += libr opengl32
 endif
 
-$(1)nt.exe: $$(addprefix obj/nt/,$$(subst .c,.o,$$(C_FILES)))
+ifneq ("$$(wildcard $(1).bmp)","")
+	RES_WATCOM_WIN_NT_DEP=$(1)nt.res
+	RES_WATCOM_WIN_NT=resource {$$(RES_WATCOM_WIN_NT_DEP)}
+endif
+
+$(1)nt.exe: $$(addprefix obj/nt/,$$(subst .c,.o,$$(C_FILES))) | \
+$$(RES_WATCOM_WIN_NT_DEP)
 	$$(LD_WATCOM) name $$@ \
-		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_NT) fil {$$^}
+		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_NT) fil {$$^} \
+		$$(RES_WATCOM_WIN_NT)
 
 obj/nt/%.o: %.c | $(2)
 	$$(MD) $$(dir $$@)
