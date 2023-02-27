@@ -308,11 +308,6 @@ int maug_zdigits( size_t num, int base ) {
    int digits = 0;
    int negative = 0;
 
-   if( 0 > num ) {
-      num *= -1;
-      negative = 1;
-   }
-
    while( 0 < num ) {
       num /= base;
       digits++;
