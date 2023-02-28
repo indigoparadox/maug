@@ -5,23 +5,32 @@
 ifeq ("$(CFLAGS_WATCOM_WIN)","")
 	CFLAGS_WATCOM_WIN := -DRETROFLAT_OS_WIN 
 endif
-ifeq ("$(LDFLAGS_WATCOM_WIN)","")
-	LDFLAGS_WATCOM_WIN :=
-endif
 ifeq ("$(CFLAGS_GCC_WIN)","")
 	CFLAGS_GCC_WIN := -march=i486 -DRETROFLAT_OS_WIN 
+endif
+ifeq ("$(CFLAGS_GCC64_WIN)","")
+	CFLAGS_GCC64_WIN := -DRETROFLAT_OS_WIN 
+endif
+ifeq ("$(LDFLAGS_WATCOM_WIN)","")
+	LDFLAGS_WATCOM_WIN :=
 endif
 ifeq ("$(LDFLAGS_GCC_WIN)","")
 	LDFLAGS_GCC_WIN := -mwindows -lgdi32
 endif
+ifeq ("$(LDFLAGS_GCC64_WIN)","")
+	LDFLAGS_GCC64_WIN := -mwindows -lgdi32
+endif
+
 
 ifeq ("$(RELEASE)","RELEASE")
 	CFLAGS_GCC_WIN += -O2
+	CFLAGS_GCC64_WIN += -O2
 endif
 
 ifeq ("$(SCREENSAVER)","1")
 	CFLAGS_WATCOM_WIN += -DRETROFLAT_SCREENSAVER
 	CFLAGS_GCC_WIN += -DRETROFLAT_SCREENSAVER
+	CFLAGS_GCC64_WIN += -DRETROFLAT_SCREENSAVER
 endif
 
 ifeq ("$(CC_GCC_MINGW)","")
@@ -218,7 +227,7 @@ $$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $(2)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW64) -m64 \
 		$$(GLOBAL_DEFINES) $$(INCLUDES_GCC) $$(DEFINES_GCC) \
-		$$(CFLAGS_GCC_WIN) $$(CFLAGS_GCC64_WIN_WIN32) \
+		$$(CFLAGS_GCC64_WIN) $$(CFLAGS_GCC64_WIN_WIN32) \
 		-o $$@ -c $$<
 
 CLEAN_TARGETS += $(1)64.exe $(2)
