@@ -9,10 +9,14 @@ ifeq ("$(LDFLAGS_WATCOM_WIN)","")
 	LDFLAGS_WATCOM_WIN :=
 endif
 ifeq ("$(CFLAGS_GCC_WIN)","")
-	CFLAGS_GCC_WIN := -DRETROFLAT_OS_WIN 
+	CFLAGS_GCC_WIN := -march=i486 -DRETROFLAT_OS_WIN 
 endif
 ifeq ("$(LDFLAGS_GCC_WIN)","")
-	LDFLAGS_GCC_WIN :=
+	LDFLAGS_GCC_WIN := -mwindows -lgdi32
+endif
+
+ifeq ("$(RELEASE)","RELEASE")
+	CFLAGS_GCC_WIN += -O2
 endif
 
 ifeq ("$(SCREENSAVER)","1")
@@ -49,9 +53,7 @@ LDFLAGS_WATCOM386_WIN_WIN16 := system win386
 CFLAGS_WATCOM_WIN_WIN32 := -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM_WIN_WIN32 := system nt_win
 CFLAGS_GCC_WIN_WIN32 := -DRETROFLAT_API_WIN32
-LDFLAGS_GCC_WIN_WIN32 := -lgdi32
 CFLAGS_GCC64_WIN_WIN32 := -DRETROFLAT_API_WIN32
-LDFLAGS_GCC64_WIN_WIN32 := -lgdi32
 
 OBJDIR_WATCOM_WIN_WIN32=obj/watcom-win-win32
 OBJDIR_WATCOM386_WIN_WIN16=obj/watcom386-win-win16
@@ -146,7 +148,7 @@ TGTWINNT=$(TGT_WATCOM_WIN_WIN32)
 
 # ---
 
-define TGTWIN386
+define TGT_WATCOM386_WIN_WIN16
 
 $(1)w.rex: \
 $(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
@@ -167,6 +169,9 @@ $$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(2)
 CLEAN_TARGETS += $(1)w.exe $(1)w.rex $(2)
 
 endef
+
+# Legacy
+TGTWIN386=$(TGT_WATCOM386_WIN_WIN16)
 
 #---
 

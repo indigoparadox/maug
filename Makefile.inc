@@ -19,7 +19,10 @@ CLEAN_TARGETS := obj *.err
 #DEFINES_GLOBAL = -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 
 # Build debug unless release specified.
-ifneq ("$(RELEASE)","RELEASE")
+ifeq ("$(RELEASE)","RELEASE")
+	CFLAGS_WATCOM += -ot
+	CFLAGS_GCC += -O2
+else
 	CFLAGS_WATCOM += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
 	CFLAGS_GCC += -DDEBUG -Wall -g -fsanitize=address -fsanitize=leak -fsanitize=undefined -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
 	LDFLAGS_GCC += -g -fsanitize=address -fsanitize=leak -fsanitize=undefined
