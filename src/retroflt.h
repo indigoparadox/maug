@@ -887,7 +887,7 @@ typedef COLORREF RETROFLAT_COLOR;
 #ifdef RETROFLT_C
 
 #  define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
-const int RETROFLAT_COLOR_ ## name_u = idx;
+const uint32_t RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
 
@@ -907,7 +907,7 @@ void* calloc( size_t n, size_t s ) {
 #else
 
 #  define RETROFLAT_COLOR_TABLE_WIN_EXT( idx, name_l, name_u, r, g, b ) \
-extern const int RETROFLAT_COLOR_ ## name_u;
+extern const uint32_t RETROFLAT_COLOR_ ## name_u;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_EXT )
 
@@ -975,7 +975,7 @@ static HPEN gc_retroflat_win_pens[] = {
 
 #ifdef RETROFLT_C
 
-static int gc_retroflat_win_rgbs[] = {
+static uint32_t gc_retroflat_win_rgbs[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS_INIT )
 };
 
@@ -1084,7 +1084,7 @@ static int gc_retroflat_win_rgbs[] = {
       HINSTANCE hInstance, HINSTANCE hPrevInstance, \
       LPSTR lpCmdLine, int nCmdShow \
    ) { \
-      char** rf_argv = NULL; \
+      LPSTR* rf_argv = NULL; \
       int rf_argc = 0; \
       int retval = 0; \
       g_instance = hInstance; \
@@ -1831,8 +1831,8 @@ static LRESULT CALLBACK WndProc(
    return 0;
 }
 
-char** retroflat_win_cli( char* cmd_line, int* argc_out ) {
-   char** argv_out = NULL;
+LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
+   LPSTR* argv_out = NULL;
    int i = 0,
       arg_iter = 0,
       arg_start = 0,

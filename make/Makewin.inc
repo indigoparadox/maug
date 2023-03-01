@@ -55,17 +55,21 @@ endif
 # Common Variables
 
 CFLAGS_WATCOM386_WIN_WIN16 := \
-	-bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
-	$(DEFINES_WATCOM386_WIN_WIN16)
-LDFLAGS_WATCOM386_WIN_WIN16 := system win386 \
-	$(LIBS_WATCOM386_WIN_WIN16)
+	-bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16
+LDFLAGS_WATCOM386_WIN_WIN16 := system win386
+
+CFLAGS_WATCOM_WIN_WIN16 := \
+	-ml -bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16
+LDFLAGS_WATCOM_WIN_WIN16 := system windows
 
 CFLAGS_WATCOM_WIN_WIN32 := -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM_WIN_WIN32 := system nt_win
+
 CFLAGS_GCC_WIN_WIN32 := -DRETROFLAT_API_WIN32
 CFLAGS_GCC64_WIN_WIN32 := -DRETROFLAT_API_WIN32
 
 OBJDIR_WATCOM_WIN_WIN32=obj/watcom-win-win32
+OBJDIR_WATCOM_WIN_WIN16=obj/watcom-win-win16
 OBJDIR_WATCOM386_WIN_WIN16=obj/watcom386-win-win16
 OBJDIR_GCC_WIN_WIN32=obj/gcc-win-win32
 OBJDIR_GCC64_WIN_WIN32=obj/gcc64-win-win32
@@ -97,6 +101,34 @@ endef
 
 # Legacy
 TGTWINNT=$(TGT_WATCOM_WIN_WIN32)
+
+# ---
+
+define TGT_WATCOM_WIN_WIN16
+
+ifeq ("$$(WING)","1")
+	CFLAGS_WATCOM_WIN_WIN16 += -DRETROFLAT_WING
+	LDFLAGS_WATCOM_WIN_WIN16 += libr wing.lib
+endif
+
+$(1)w3.exe: \
+$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
+$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).rc
+	$$(LD_WATCOM) name $$@ \
+		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^}
+
+$$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
+	$$(MD) "$$(dir $$@)"
+	wcc \
+		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN16) \
+		-fo="$$@" "$$(<:%.c=%)"
+
+CLEAN_TARGETS += $(1)w3.exe
+
+endef
+
+# Legacy
+TGTWIN16=$(TGT_WATCOM_WIN_WIN16)
 
 # ---
 

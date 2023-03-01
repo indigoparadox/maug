@@ -28,7 +28,15 @@ $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico
 $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc
 	wrc -r $$< -bt=nt -fo=$$@
 
-# Watcom386-Win-Win32
+# Watcom-Win-Win16
+
+$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).ico: $(1).bmp
+	convert "$$<" "$$@"
+
+$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).rc: $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).ico
+	echo "$$(WIN_ICO_RES_ID)   ICON   \"$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).ico\"" > $$@
+
+# Watcom386-Win-Win16
 
 $$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).ico: $(1).bmp
 	convert "$$<" "$$@"
