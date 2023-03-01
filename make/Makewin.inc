@@ -118,9 +118,10 @@ endif
 
 $(1)w3.exe: \
 $(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
-$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).rc
+$$(RES_WATCOM_WIN_WIN16_DEP)
 	$$(LD_WATCOM) name $$@ \
-		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^}
+		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^} \
+		$$(RES_WATCOM_WIN_WIN16)
 
 $$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
@@ -141,13 +142,13 @@ define TGT_WATCOM386_WIN_WIN16
 
 $(1)w.rex: \
 $(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
-$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc
+$$(RES_WATCOM386_WIN_WIN16_DEP)
 	$$(LD_WATCOM) name $$@ \
 		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM386_WIN_WIN16) fil {$$^}
 
 $(1)w.exe: $(1)w.rex
 	wbind "$$<" -s "$$(WATCOM)/binw/win386.ext" -R \
-	$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc "$$@"
+	$$(RES_WATCOM386_WIN_WIN16_DEP) "$$@"
 
 $$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
