@@ -2273,15 +2273,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
 
+   SDL_WM_SetCaption( args->title, NULL );
 #     ifdef RETROFLAT_SDL_ICO
-
    debug_printf( 1, "setting SDL window icon..." );
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
-   SDL_WM_SetCaption( args->title, icon );
-#     else
-   SDL_WM_SetCaption( args->title, NULL );
+   SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
 #     endif /* RETROFLAT_SDL_ICO */
 
    g_buffer.surface = SDL_SetVideoMode(
