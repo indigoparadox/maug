@@ -21,7 +21,6 @@ ifeq ("$(LDFLAGS_GCC64_WIN)","")
 	LDFLAGS_GCC64_WIN := -mwindows -lgdi32
 endif
 
-
 ifeq ("$(RELEASE)","RELEASE")
 	CFLAGS_GCC_WIN += -O2
 	CFLAGS_GCC64_WIN += -O2
@@ -56,8 +55,10 @@ endif
 # Common Variables
 
 CFLAGS_WATCOM386_WIN_WIN16 := \
-	-bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16
-LDFLAGS_WATCOM386_WIN_WIN16 := system win386
+	-bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
+	$(DEFINES_WATCOM386_WIN_WIN16)
+LDFLAGS_WATCOM386_WIN_WIN16 := system win386 \
+	$(LIBS_WATCOM386_WIN_WIN16)
 
 CFLAGS_WATCOM_WIN_WIN32 := -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM_WIN_WIN32 := system nt_win
@@ -68,64 +69,6 @@ OBJDIR_WATCOM_WIN_WIN32=obj/watcom-win-win32
 OBJDIR_WATCOM386_WIN_WIN16=obj/watcom386-win-win16
 OBJDIR_GCC_WIN_WIN32=obj/gcc-win-win32
 OBJDIR_GCC64_WIN_WIN32=obj/gcc64-win-win32
-
-# ---
-
-ifeq ("$(TGTWINICO)","")
-define TGTWINICO
-
-# Create icon and resource file.
-
-# Watcom-Win-Win32
-
-RES_WATCOM_WIN_WIN32_DEP=$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).res
-RES_WATCOM_WIN_WIN32=resource {$$(RES_WATCOM_WIN_WIN32_DEP)}
-
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico: $(1).bmp
-	convert "$$<" "$$@"
-
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico
-	echo "1000   ICON   \"$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico\"" > $$@
-
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc
-	wrc -r $$< -bt=nt -fo=$$@
-
-# Watcom386-Win-Win32
-
-$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).ico: $(1).bmp
-	convert "$$<" "$$@"
-
-$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc: $$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).ico
-	echo "1000   ICON   \"$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).ico\"" > $$@
-
-# GCC-Win-Win32
-
-RES_GCC_WIN_WIN32_DEP=$$(OBJDIR_GCC_WIN_WIN32)/$(1).res
-
-$$(OBJDIR_GCC_WIN_WIN32)/$(1).ico: $(1).bmp
-	convert "$$<" "$$@"
-
-$$(OBJDIR_GCC_WIN_WIN32)/$(1).rc: $$(OBJDIR_GCC_WIN_WIN32)/$(1).ico
-	echo "1000   ICON   \"$$(OBJDIR_GCC_WIN_WIN32)/$(1).ico\"" > $$@
-
-$$(OBJDIR_GCC_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC_WIN_WIN32)/$(1).rc
-	$(WINDRES_GCC_MINGW) "$$<" -O coff -o "$$@"
-
-# GCC64-Win-Win32
-
-RES_GCC64_WIN_WIN32_DEP=$$(OBJDIR_GCC64_WIN_WIN32)/$(1).res
-
-$$(OBJDIR_GCC64_WIN_WIN32)/$(1).ico: $(1).bmp
-	convert "$$<" "$$@"
-
-$$(OBJDIR_GCC64_WIN_WIN32)/$(1).rc: $$(OBJDIR_GCC64_WIN_WIN32)/$(1).ico
-	echo "1000   ICON   \"$$(OBJDIR_GCC64_WIN_WIN32)/$(1).ico\"" > $$@
-
-$$(OBJDIR_GCC64_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC64_WIN_WIN32)/$(1).rc
-	$(WINDRES_GCC64_MINGW) "$$<" -O coff -o "$$@"
-
-endef
-endif
 
 # ---
 
@@ -142,13 +85,13 @@ $$(RES_WATCOM_WIN_WIN32_DEP)
 		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_WIN32) fil {$$^} \
 		$$(RES_WATCOM_WIN_WIN32)
 
-$$(OBJDIR_WATCOM_WIN_WIN32)/%.o: %.c | $(2)
+$$(OBJDIR_WATCOM_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN32) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)nt.exe $(2)
+CLEAN_TARGETS += $(1)nt.exe
 
 endef
 
@@ -169,13 +112,13 @@ $(1)w.exe: $(1)w.rex
 	wbind "$$<" -s "$$(WATCOM)/binw/win386.ext" -R \
 	$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc "$$@"
 
-$$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(2)
+$$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM386_WIN_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
-CLEAN_TARGETS += $(1)w.exe $(1)w.rex $(2)
+CLEAN_TARGETS += $(1)w.exe $(1)w.rex
 
 endef
 
@@ -195,14 +138,14 @@ $$(addprefix $$(OBJDIR_GCC_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
 $$(RES_GCC_WIN_WIN32_DEP)
 	$$(LD_GCC_MINGW) -o $$@ $$^ $$(LDFLAGS_GCC_WIN) $$(LDFLAGS_GCC_WIN_WIN32)
 
-$$(OBJDIR_GCC_WIN_WIN32)/%.o: %.c | $(2)
+$$(OBJDIR_GCC_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW) \
 		$$(GLOBAL_DEFINES) $$(INCLUDES_GCC) $$(DEFINES_GCC) \
 		$$(CFLAGS_GCC_WIN) $$(CFLAGS_GCC_WIN_WIN32) \
 		-o $$@ -c $$<
 
-CLEAN_TARGETS += $(1)ntg.exe $(2)
+CLEAN_TARGETS += $(1)ntg.exe
 
 endef
 
@@ -223,14 +166,14 @@ $$(RES_GCC64_WIN_WIN32_DEP)
 	$$(LD_GCC_MINGW64) -m64 -o $$@ $$^ \
 		$$(LDFLAGS_GCC_WIN) $$(LDFLAGS_GCC64_WIN_WIN32)
 
-$$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $(2)
+$$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW64) -m64 \
 		$$(GLOBAL_DEFINES) $$(INCLUDES_GCC) $$(DEFINES_GCC) \
 		$$(CFLAGS_GCC64_WIN) $$(CFLAGS_GCC64_WIN_WIN32) \
 		-o $$@ -c $$<
 
-CLEAN_TARGETS += $(1)64.exe $(2)
+CLEAN_TARGETS += $(1)64.exe
 
 endef
 

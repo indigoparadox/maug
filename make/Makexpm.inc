@@ -35,5 +35,8 @@ $(2)/$(1)_xpm.h: $$($(1)_BITMAPS)
 	# Close include guard.
 	echo "\n#endif" >> $$@
 
+MAUG_DEPS += $(2)/$(1)_xpm.h
+CLEAN_TARGETS += $(2)/$(1)_xpm.h
+
 endef
 
