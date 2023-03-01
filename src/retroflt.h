@@ -1621,6 +1621,42 @@ uint8_t g_retroflat_flags = 0;
 #     include <retrofp.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
+#  ifdef RETROFLAT_WING
+
+static HBITMAP retroflat_wing_buffer_setup( HDC hdc_win ) {
+   PALETTEENTRY palette[256];
+   int i = 0;
+
+   /* Setup an optimal WinG hardware screen buffer bitmap. */
+   debug_printf( 1, "retroflat: creating WinG buffer..." );
+   if(
+      !WinGRecommendDIBFormat( (BITMAPINFO far*)(&g_buffer_bmi) )
+   ) {
+      retroflat_message(
+         "Error", "Could not determine recommended format!" );
+      g_retval = RETROFLAT_ERROR_GRAPHICS;
+      retroflat_quit( g_retval );
+      return NULL;
+   }
+   g_buffer_bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+   g_buffer_bmi.header.biWidth = g_screen_w;
+   g_buffer_bmi.header.biHeight *= g_screen_h;
+
+   GetSystemPaletteEntries( hdc_win, 0, 256, palette );
+   for( i = 0 ; 256 > i ; i++ ) {
+      g_buffer_bmi.colors[i].rgbRed = palette[i].peRed;
+      g_buffer_bmi.colors[i].rgbGreen = palette[i].peGreen;
+      g_buffer_bmi.colors[i].rgbBlue = palette[i].peBlue;
+      g_buffer_bmi.colors[i].rgbReserved = 0;
+   }
+
+   return WinGCreateBitmap(
+      g_buffer.hdc_b,
+      (BITMAPINFO far*)(&g_buffer_bmi), &g_buffer_bits );
+}
+
+#  endif /* RETROFLAT_WING */
+
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
 static LRESULT CALLBACK WndProc(
@@ -1675,11 +1711,7 @@ static LRESULT CALLBACK WndProc(
       case WM_PAINT:
 
          /* Create HDC for window to blit to. */
-#        if defined( RETROFLAT_WING )
-         hdc_win = GetDC( hWnd );
-#        else
          hdc_win = BeginPaint( hWnd, &ps );
-#        endif /* RETROFLAT_WING */
          if( (HDC)NULL == hdc_win ) {
             retroflat_message(
                "Error", "Could not determine window device context!" );
@@ -1692,6 +1724,7 @@ static LRESULT CALLBACK WndProc(
 
          /* Setup the buffer HDC from which to blit to the window. */
          if( (HDC)NULL == g_buffer.hdc_b ) {
+            debug_printf( 1, "retroflat: creating screen buffer HDC..." );
 #        ifdef RETROFLAT_WING
             g_buffer.hdc_b = WinGCreateDC();
 #        else
@@ -1709,23 +1742,10 @@ static LRESULT CALLBACK WndProc(
          /* Setup the screen buffer. */
          if( !retroflat_bitmap_ok( &g_buffer ) ) {
 #        ifdef RETROFLAT_WING
-            /* Setup an optimal WinG hardware screen buffer bitmap. */
-            debug_printf( 1, "retroflat: creating WinG buffer..." );
-            if(
-               !WinGRecommendDIBFormat( (BITMAPINFO far*)(&g_buffer_bmi) )
-            ) {
-               retroflat_message(
-                  "Error", "Could not determine recommended format!" );
-               g_retval = RETROFLAT_ERROR_GRAPHICS;
-               retroflat_quit( g_retval );
-               break;
-            }
-            g_buffer_bmi.header.biSize = sizeof( BITMAPINFOHEADER );
-            g_buffer_bmi.header.biWidth = g_screen_w;
-            g_buffer_bmi.header.biHeight *= g_screen_h;
-            g_buffer.b = WinGCreateBitmap(
-               g_buffer.hdc_b,
-               (BITMAPINFO far*)(&g_buffer_bmi), &g_buffer_bits );
+         /* Do this in its own function so a one-time setup isn't using stack
+          * in our WndProc!
+          */
+         g_buffer.b = retroflat_wing_buffer_setup( hdc_win );
 #        else
             debug_printf( 1, "retroflat: creating window buffer..." );
             g_buffer.b = CreateCompatibleBitmap( hdc_win,
@@ -1747,6 +1767,9 @@ static LRESULT CALLBACK WndProc(
 
          /* === End First-Time Setup === */
 
+         /* Load parameters of the buffer into info object (srcBitmap). */
+         GetObject( g_buffer.b, sizeof( BITMAP ), &srcBitmap );
+
 #        ifdef RETROFLAT_WING
          WinGStretchBlt(
             hdc_win,
@@ -1757,11 +1780,10 @@ static LRESULT CALLBACK WndProc(
             srcBitmap.bmWidth,
             srcBitmap.bmHeight
          );
-         /* GdiFlush(); */
+#           ifdef RETROFLAT_API_WIN32
+         GdiFlush();
+#           endif /* RETROFLAT_API_WIN32 */
 #        else
-         /* Load parameters of the buffer into info object (srcBitmap). */
-         GetObject( g_buffer.b, sizeof( BITMAP ), &srcBitmap );
-
          StretchBlt(
             hdc_win,
             0, 0,
@@ -1774,13 +1796,9 @@ static LRESULT CALLBACK WndProc(
          );
 #        endif /* RETROFLAT_WING */
 
-#        ifdef RETROFLAT_WING
-         ReleaseDC( g_window, hdc_win );
-#        else
          DeleteDC( hdc_win );
          EndPaint( hWnd, &ps );
          hdc_win = (HDC)NULL;
-#        endif /* RETROFLAT_WING */
          break;
 
 #     endif /* !RETROFLAT_OPENGL */
@@ -2464,6 +2482,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    assert( (HWND)NULL != g_window );
 
+   debug_printf( 1, "setting up graphics timer every %d ms...",
+      (int)(1000 / RETROFLAT_FPS) );
    if( !SetTimer(
       g_window, RETROFLAT_WIN_GFX_TIMER_ID, (int)(1000 / RETROFLAT_FPS), NULL )
    ) {
@@ -2718,6 +2738,8 @@ cleanup:
    if( NULL == bmp ) {
       /* Do nothing. */
       /* TODO: Handle screen locking? */
+      /* The WinG HDC or whatever should be created already by WndProc. */
+      assert( (HDC)NULL != g_buffer.hdc_b );
       goto cleanup;
    }
 
