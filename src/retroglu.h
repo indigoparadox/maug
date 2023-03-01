@@ -123,11 +123,26 @@ struct RETROGLU_FACE {
     *
     * The size of this array is fixed to simplify allocation of arrays.
     */
-   int vertex_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vnormal_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vtexture_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vertex_idxs_sz;
-   int material_idx;
+   uint16_t vertex_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vnormal_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vtexture_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vertex_idxs_sz;
+   uint16_t material_idx;
+};
+
+struct RETROGLU_OBJ {
+   uint8_t flags;
+   struct RETROGLU_VERTEX vertices[DEMO_VERTICES_SZ_MAX];
+   uint16_t vertices_sz;
+   struct RETROGLU_VERTEX vnormals[DEMO_VERTICES_SZ_MAX];
+   uint16_t vnormals_sz;
+   struct RETROGLU_VERTEX vtextures[DEMO_VERTICES_SZ_MAX];
+   uint16_t vtextures_sz;
+   struct RETROGLU_FACE faces[DEMO_FACES_SZ_MAX];
+   uint16_t faces_sz;
+   struct RETROGLU_MATERIAL materials[DEMO_MATERIALS_SZ_MAX];
+   uint16_t materials_sz;
+   int32_t obj_list;
 };
 
 /**
