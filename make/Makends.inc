@@ -36,14 +36,14 @@ LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS
 define TGTNDSLIBN
 
 $(1).nds: obj/nds-libnds/$(1).elf
-	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(3)" "$(1);$(1);$(1)"
+	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: $(addprefix obj/nds-libnds/,$(subst .c,.o,$(C_FILES)))
 	PATH="$(DEVKITPPRO)/tools/bin:$(DEVKITPRO)/devkitARM/bin:$(PATH)" \
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
-obj/nds-libnds/%.o: %.c | $(2)
+obj/nds-libnds/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		$$(INCLUDES_GCC) $$(DEFINES_GCC) \

@@ -792,6 +792,10 @@ struct RETROFLAT_BITMAP {
 
 #  ifdef RETROFLT_C
 
+#  ifdef RETROFLAT_SDL_ICO
+#     include <sdl_ico.h>
+#  endif /* RETROFLAT_SDL_ICO */
+
 const SDL_Color gc_black =       {0,   0,   0};
 const SDL_Color gc_darkblue =    {0, 0, 170};
 const SDL_Color gc_darkgreen =   {0, 170, 0};
@@ -1706,6 +1710,7 @@ static LRESULT CALLBACK WndProc(
          if( !retroflat_bitmap_ok( &g_buffer ) ) {
 #        ifdef RETROFLAT_WING
             /* Setup an optimal WinG hardware screen buffer bitmap. */
+            debug_printf( 1, "retroflat: creating WinG buffer..." );
             if(
                !WinGRecommendDIBFormat( (BITMAPINFO far*)(&g_buffer_bmi) )
             ) {
@@ -1752,7 +1757,7 @@ static LRESULT CALLBACK WndProc(
             srcBitmap.bmWidth,
             srcBitmap.bmHeight
          );
-         GdiFlush();
+         /* GdiFlush(); */
 #        else
          /* Load parameters of the buffer into info object (srcBitmap). */
          GetObject( g_buffer.b, sizeof( BITMAP ), &srcBitmap );
@@ -2105,6 +2110,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+#  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#     if defined( RETROFLAT_SDL_ICO )
+   SDL_Surface* icon = NULL;
+#     endif /* RETROFLAT_SDL_ICO */
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+   
    debug_printf( 1, "retroflat: initializing..." );
 
    /* System sanity checks. */
@@ -2338,6 +2349,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_screen_w, g_screen_h );
 
+#     ifdef RETROFLAT_SDL_ICO
+
+   debug_printf( 1, "setting SDL window icon..." );
+   icon = SDL_LoadBMP_RW(
+      SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
+      obj_ico_sdl_ico_bmp_len ), 1 );
+   SDL_SetWindowIcon( g_window, icon );
+
+#     endif /* RETROFLAT_SDL_ICO */
+
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
@@ -2367,11 +2388,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
    wc.hInstance     = g_instance;
-   /* TODO: Window icon. */
-   /*
-   wc.hIcon         = LoadIcon( g_instance, MAKEINTRESOURCE(
-      g_graphics_args.icon_res ) );
-   */
+#     ifdef RETROFLAT_ICO_RES_ID
+   wc.hIcon         = LoadIcon(
+      g_instance, MAKEINTRESOURCE( RETROFLAT_ICO_RES_ID ) );
+#     endif /* RETROFLAT_ICO_RES_ID */
    wc.hCursor       = LoadCursor( 0, IDC_ARROW );
    wc.hbrBackground = (HBRUSH)( COLOR_BTNFACE + 1 );
    /* wc.lpszMenuName  = MAKEINTRESOURCE( IDR_MAINMENU ); */

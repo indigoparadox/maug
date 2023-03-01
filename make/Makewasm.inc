@@ -19,11 +19,11 @@ endif
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))
 	$$(EMCC) -o $$@ $$^ $$(EMCC_FLAGS_SDL)
 
-obj/wasm/%.o: %.c | $(2)
+obj/wasm/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(EMCC) -c -o $$@ $$< $$(EMCC_FLAGS_SDL)
 
-CLEAN_TARGETS += $(1).html $(1).js $(1).wasm $(2)
+CLEAN_TARGETS += $(1).html $(1).js $(1).wasm
 
 endef
 
