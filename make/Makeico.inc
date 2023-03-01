@@ -16,16 +16,16 @@ endif
 # Watcom-Win-Win32
 
 # Don't use MAUG_DEPS since these have to be passed directly to the compiler.
-RES_WATCOM_WIN_WIN32_DEP=$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).res
-RES_WATCOM_WIN_WIN32=resource {$$(RES_WATCOM_WIN_WIN32_DEP)}
+RES_WATCOM386_WIN_WIN32_DEP=$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res
+RES_WATCOM386_WIN_WIN32=resource {$$(RES_WATCOM386_WIN_WIN32_DEP)}
 
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico: $(1).bmp
+$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).ico: $(1).bmp
 	convert "$$<" "$$@"
 
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico
-	echo "$$(WIN_ICO_RES_ID)   ICON   \"$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).ico\"" > $$@
+$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).rc: $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).ico
+	echo "$$(WIN_ICO_RES_ID)   ICON   \"$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).ico\"" > $$@
 
-$$(OBJDIR_WATCOM_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM_WIN_WIN32)/$(1).rc
+$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).rc
 	wrc -r $$< -bt=nt -fo=$$@
 
 # Watcom-Win-Win16
