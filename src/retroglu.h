@@ -123,11 +123,33 @@ struct RETROGLU_FACE {
     *
     * The size of this array is fixed to simplify allocation of arrays.
     */
-   int vertex_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vnormal_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vtexture_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
-   int vertex_idxs_sz;
-   int material_idx;
+   uint16_t vertex_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vnormal_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vtexture_idxs[RETROGLU_FACE_VERTICES_SZ_MAX];
+   uint16_t vertex_idxs_sz;
+   uint16_t material_idx;
+};
+
+#define RETROGLU_VERTICES_SZ_MAX 1024
+#define RETROGLU_FACES_SZ_MAX 1024
+#define RETROGLU_MATERIALS_SZ_MAX 1024
+
+struct RETROGLU_OBJ {
+   uint8_t flags;
+   struct RETROGLU_VERTEX vertices[RETROGLU_VERTICES_SZ_MAX];
+   uint16_t vertices_sz;
+   struct RETROGLU_VERTEX vnormals[RETROGLU_VERTICES_SZ_MAX];
+   uint16_t vnormals_sz;
+   struct RETROGLU_VERTEX vtextures[RETROGLU_VERTICES_SZ_MAX];
+   uint16_t vtextures_sz;
+   /**
+    * \brief List of faces from an OBJ file. Faces comprise a list of polygons
+    *        denoted by index of the vertices in RETROGLU_PARSER::vertices.
+    */
+   struct RETROGLU_FACE faces[RETROGLU_FACES_SZ_MAX];
+   uint16_t faces_sz;
+   struct RETROGLU_MATERIAL materials[RETROGLU_MATERIALS_SZ_MAX];
+   uint16_t materials_sz;
 };
 
 /**
@@ -236,29 +258,11 @@ typedef int (*retroglu_mtl_cb)(
  *        with object information.
  */
 struct RETROGLU_PARSER {
-   struct RETROGLU_VERTEX* vertices;
-   int vertices_sz_max;
-   int vertices_sz;
-   struct RETROGLU_VERTEX* vnormals;
-   int vnormals_sz;
-   int vnormals_sz_max;
-   struct RETROGLU_VERTEX* vtextures;
-   int vtextures_sz;
-   int vtextures_sz_max;
-   /**
-    * \brief List of faces from an OBJ file. Faces comprise a list of polygons
-    *        denoted by index of the vertices in RETROGLU_PARSER::vertices.
-    */
-   struct RETROGLU_FACE* faces;
-   int faces_sz_max;
-   int faces_sz;
+   struct RETROGLU_OBJ* obj;
    int state;
    int material_idx;
    char token[RETROGLU_PARSER_TOKEN_SZ_MAX];
    int token_sz;
-   struct RETROGLU_MATERIAL* materials;
-   int materials_sz;
-   int materials_sz_max;
    retroglu_mtl_cb load_mtl;
    void* load_mtl_data;
 };
@@ -275,12 +279,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
  *          parser!
  */
 void retroglu_parse_init(
-   struct RETROGLU_PARSER* parser, 
-   struct RETROGLU_VERTEX* vertices, int vertices_sz, int vertices_sz_max,
-   struct RETROGLU_VERTEX* vnormals, int vnormals_sz, int vnormals_sz_max,
-   struct RETROGLU_VERTEX* vtextures, int vtextures_sz, int vtextures_sz_max,
-   struct RETROGLU_FACE* faces, int faces_sz, int faces_sz_max,
-   struct RETROGLU_MATERIAL* materials, int materials_sz, int materials_sz_max,
+   struct RETROGLU_PARSER* parser, struct RETROGLU_OBJ* obj,
    retroglu_mtl_cb load_mtl, void* load_mtl_data
 );
 
@@ -298,12 +297,7 @@ int retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h );
 
-void retroglu_draw_poly(
-   struct RETROGLU_VERTEX* vertices, int vertices_sz,
-   struct RETROGLU_VERTEX* vnormals, int vnormals_sz,
-   struct RETROGLU_VERTEX* vtextures, int vtextures_sz,
-   struct RETROGLU_FACE* faces, int faces_sz,
-   struct RETROGLU_MATERIAL* materials, int materials_sz );
+void retroglu_draw_poly( struct RETROGLU_OBJ* obj );
 
 #ifdef RETROGLU_C
 
@@ -329,7 +323,7 @@ int retroglu_token_vnormal( struct RETROGLU_PARSER* parser ) {
 
 int retroglu_token_face( struct RETROGLU_PARSER* parser ) {
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTEX );
-   parser->faces[parser->faces_sz].vertex_idxs_sz = 0;
+   parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz = 0;
    return RETROFLAT_OK;
 }
 
@@ -340,12 +334,13 @@ int retroglu_token_usemtl( struct RETROGLU_PARSER* parser ) {
 
 int retroglu_token_newmtl( struct RETROGLU_PARSER* parser ) {
    /* Set default lighting alpha to non-transparent. */
-   parser->materials[parser->materials_sz].ambient[3] = 1.0f;
-   parser->materials[parser->materials_sz].diffuse[3] = 1.0f;
-   parser->materials[parser->materials_sz].specular[3] = 1.0f;
-   parser->materials[parser->materials_sz].emissive[3] = 1.0f;
-   parser->materials[parser->materials_sz].specular_exp = 0;
-   parser->materials_sz++;
+   parser->obj->materials[parser->obj->materials_sz].ambient[3] = 1.0f;
+   parser->obj->materials[parser->obj->materials_sz].diffuse[3] = 1.0f;
+   parser->obj->materials[parser->obj->materials_sz].specular[3] = 1.0f;
+   parser->obj->materials[parser->obj->materials_sz].emissive[3] = 1.0f;
+   parser->obj->materials[parser->obj->materials_sz].specular_exp = 0;
+   parser->obj->materials_sz++;
+   assert( parser->obj->materials_sz <= RETROGLU_MATERIALS_SZ_MAX );
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_MATERIAL_NAME );
    return RETROFLAT_OK;
 }
@@ -468,34 +463,13 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
 }
 
 void retroglu_parse_init(
-   struct RETROGLU_PARSER* parser, 
-   struct RETROGLU_VERTEX* vertices, int vertices_sz, int vertices_sz_max,
-   struct RETROGLU_VERTEX* vnormals, int vnormals_sz, int vnormals_sz_max,
-   struct RETROGLU_VERTEX* vtextures, int vtextures_sz, int vtextures_sz_max,
-   struct RETROGLU_FACE* faces, int faces_sz, int faces_sz_max,
-   struct RETROGLU_MATERIAL* materials, int materials_sz, int materials_sz_max,
+   struct RETROGLU_PARSER* parser, struct RETROGLU_OBJ* obj,
    retroglu_mtl_cb load_mtl, void* load_mtl_data
 ) {
-   parser->vertices = vertices;
-   parser->vertices_sz = vertices_sz;
-   parser->vertices_sz_max = vertices_sz_max;
-   parser->vnormals = vnormals;
-   parser->vnormals_sz = vnormals_sz;
-   parser->vnormals_sz_max = vnormals_sz_max;
-   parser->vtextures = vtextures;
-   parser->vtextures_sz = vtextures_sz;
-   parser->vtextures_sz_max = vtextures_sz_max;
-   parser->faces = faces;
-   parser->faces_sz = faces_sz;
-   parser->faces_sz_max = faces_sz_max;
-   parser->materials = materials;
-   parser->materials_sz = materials_sz;
-   parser->materials_sz_max = materials_sz_max;
    parser->load_mtl = load_mtl;
    parser->load_mtl_data = load_mtl_data;
-   assert( NULL != parser->vertices );
-   assert( NULL != parser->faces );
-   assert( NULL != parser->materials );
+   parser->obj = obj;
+   assert( NULL != parser->obj );
    retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
    parser->token_sz = 0;
 }
@@ -523,9 +497,9 @@ void retroglu_parse_init(
 
 #define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
-      parser->array[parser->sz].val = strtod( parser->token, NULL ); \
+      parser->obj->array[parser->obj->sz].val = strtod( parser->token, NULL ); \
       debug_printf( 0, "vertex %d " desc ": %f\n", \
-         parser->sz, parser->array[parser->sz].val ); \
+         parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
 
 int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
@@ -555,14 +529,14 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
    } else if( RETROGLU_PARSER_STATE_FACE_VERTEX == parser->state ) {
       /* Parsing face vertex index. */
-      parser->faces[parser->faces_sz].vertex_idxs[
-         parser->faces[parser->faces_sz].vertex_idxs_sz] =
+      parser->obj->faces[parser->obj->faces_sz].vertex_idxs[
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
       debug_printf( 0, "face %d, vertex %d: %d\n",
-         parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
-         parser->faces[parser->faces_sz].vertex_idxs[
-            parser->faces[parser->faces_sz].vertex_idxs_sz] );
+         parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs[
+            parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
 
       /* The new state is set in the parser below, as it could become
        * RETROGLU_PARSER_STATE_FACE_NORMAL or RETROGLU_PARSER_STATE_NONE,
@@ -573,14 +547,14 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    } else if( RETROGLU_PARSER_STATE_FACE_NORMAL == parser->state ) {
 
       /* Parsing face normal index. */
-      parser->faces[parser->faces_sz].vnormal_idxs[
-         parser->faces[parser->faces_sz].vertex_idxs_sz] =
+      parser->obj->faces[parser->obj->faces_sz].vnormal_idxs[
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
       debug_printf( 0, "face %d, normal %d: %d\n",
-         parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
-         parser->faces[parser->faces_sz].vnormal_idxs[
-            parser->faces[parser->faces_sz].vertex_idxs_sz] );
+         parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
+         parser->obj->faces[parser->obj->faces_sz].vnormal_idxs[
+            parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
 
       /* The new state is set in the parser below, as it could become
        * RETROGLU_PARSER_STATE_FACE_NORMAL or RETROGLU_PARSER_STATE_NONE,
@@ -591,14 +565,14 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    } else if( RETROGLU_PARSER_STATE_FACE_TEXTURE == parser->state ) {
 
       /* Parsing face texture index. */
-      parser->faces[parser->faces_sz].vtexture_idxs[
-         parser->faces[parser->faces_sz].vertex_idxs_sz] =
+      parser->obj->faces[parser->obj->faces_sz].vtexture_idxs[
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
       debug_printf( 0, "face %d, texture %d: %d\n",
-         parser->faces_sz, parser->faces[parser->faces_sz].vertex_idxs_sz,
-         parser->faces[parser->faces_sz].vtexture_idxs[
-            parser->faces[parser->faces_sz].vertex_idxs_sz] );
+         parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
+         parser->obj->faces[parser->obj->faces_sz].vtexture_idxs[
+            parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
 
       /* The new state is set in the parser below, as it could become
        * RETROGLU_PARSER_STATE_FACE_NORMAL or RETROGLU_PARSER_STATE_NONE,
@@ -610,15 +584,15 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    } else if( RETROGLU_PARSER_STATE_FACE_MATERIAL == parser->state ) {
 
       /* Find the material index and assign it to the parser. */
-      for( i = 0 ; parser->materials_sz > i ; i++ ) {
+      for( i = 0 ; parser->obj->materials_sz > i ; i++ ) {
          debug_printf(
-            0, "%s vs %s\n", parser->materials[i].name, parser->token );
+            0, "%s vs %s\n", parser->obj->materials[i].name, parser->token );
          if( 0 == strncmp(
-            parser->materials[i].name, parser->token,
+            parser->obj->materials[i].name, parser->token,
             RETROGLU_MATERIAL_NAME_SZ_MAX
          ) ) {
             debug_printf( 0, "using material: \"%s\" (%d)\n",
-               parser->materials[i].name, i );
+               parser->obj->materials[i].name, i );
             parser->material_idx = i;
             break;
          }
@@ -628,9 +602,9 @@ int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    } else if( RETROGLU_PARSER_STATE_MATERIAL_NAME == parser->state ) {
 
       debug_printf( 0, "adding material: \"%s\" at idx: %d\n",
-         parser->token, parser->materials_sz - 1 );
+         parser->token, parser->obj->materials_sz - 1 );
       strncpy(
-         parser->materials[parser->materials_sz - 1].name,
+         parser->obj->materials[parser->obj->materials_sz - 1].name,
          parser->token,
          RETROGLU_MATERIAL_NAME_SZ_MAX );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
@@ -703,25 +677,29 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
          retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
 
          /* Use current parser material. */
-         parser->faces[parser->faces_sz].material_idx = parser->material_idx;
+         parser->obj->faces[parser->obj->faces_sz].material_idx = 
+            parser->material_idx;
 
          /* Move to next face. */
-         parser->faces[parser->faces_sz].vertex_idxs_sz++;
-         parser->faces_sz++; /* Newline means this face is done. */
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz++;
+         parser->obj->faces_sz++; /* Newline means this face is done. */
+         assert( parser->obj->faces_sz <= RETROGLU_FACES_SZ_MAX );
          return retval;
 
       } else if( RETROGLU_PARSER_STATE_VNORMAL_Z == parser->state ) {
 
          retval = retroglu_parse_token( parser );
          /* End of vertex. */
-         parser->vnormals_sz++;
+         parser->obj->vnormals_sz++;
+         assert( parser->obj->vnormals_sz <= RETROGLU_VERTICES_SZ_MAX );
          return retval;
 
       } else if( RETROGLU_PARSER_STATE_VERTEX_Z == parser->state ) {
 
          retval = retroglu_parse_token( parser );
          /* End of vertex. */
-         parser->vertices_sz++;
+         parser->obj->vertices_sz++;
+         assert( parser->obj->vertices_sz <= RETROGLU_VERTICES_SZ_MAX );
          return retval;
 
       } else {
@@ -742,7 +720,7 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
       ) {
          /* A space means we're moving on to the next vertex! */
          retval = retroglu_parse_token( parser );
-         parser->faces[parser->faces_sz].vertex_idxs_sz++;
+         parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz++;
          retroglu_parser_state( parser, RETROGLU_PARSER_STATE_FACE_VERTEX );
          return retval;
 
@@ -750,14 +728,16 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
 
          retval = retroglu_parse_token( parser );
          /* End of vertex. */
-         parser->vnormals_sz++;
+         parser->obj->vnormals_sz++;
+         assert( parser->obj->vnormals_sz <= RETROGLU_VERTICES_SZ_MAX );
          return retval;
 
       } else if( RETROGLU_PARSER_STATE_VERTEX_Z == parser->state ) {
 
          retval = retroglu_parse_token( parser );
          /* End of vertex. */
-         parser->vertices_sz++;
+         parser->obj->vertices_sz++;
+         assert( parser->obj->vertices_sz <= RETROGLU_VERTICES_SZ_MAX );
          return retval;
 
       } else if( RETROGLU_PARSER_STATE_MTL_KD_B == parser->state ) {
@@ -904,48 +884,42 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    return RETROFLAT_OK;
 }
 
-void retroglu_draw_poly(
-   struct RETROGLU_VERTEX* vertices, int vertices_sz,
-   struct RETROGLU_VERTEX* vnormals, int vnormals_sz,
-   struct RETROGLU_VERTEX* vtextures, int vtextures_sz,
-   struct RETROGLU_FACE* faces, int faces_sz,
-   struct RETROGLU_MATERIAL* materials, int materials_sz
-) {
+void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
    int i = 0;
    int j = 0;
 
    glBegin( GL_TRIANGLES );
-   for( i = 0 ; faces_sz > i ; i++ ) {
+   for( i = 0 ; obj->faces_sz > i ; i++ ) {
    
       /* TODO: Handle material on NDS. */
       glMaterialfv( GL_FRONT, GL_DIFFUSE,
-         materials[faces[i].material_idx].diffuse );
+         obj->materials[obj->faces[i].material_idx].diffuse );
          /*
       glMaterialfv( GL_FRONT, GL_AMBIENT,
-         materials[faces[i].material_idx].ambient );
+         obj->materials[faces[i].material_idx].ambient );
          */
       glMaterialfv( GL_FRONT, GL_SPECULAR,
-         materials[faces[i].material_idx].specular );
+         obj->materials[obj->faces[i].material_idx].specular );
       glMaterialfv( GL_FRONT, GL_EMISSION,
-         materials[faces[i].material_idx].emissive );
+         obj->materials[obj->faces[i].material_idx].emissive );
 
       /* Use a specific macro here that can be overridden for e.g. the NDS. */
       glShininessf( GL_FRONT, GL_SHININESS, 
-         materials[faces[i].material_idx].specular_exp );
+         obj->materials[obj->faces[i].material_idx].specular_exp );
 
-      for( j = 0 ; faces[i].vertex_idxs_sz > j ; j++ ) {
-         assert( 0 < faces[i].vertex_idxs[j] );
-         assert( 3 == faces[i].vertex_idxs_sz );
+      for( j = 0 ; obj->faces[i].vertex_idxs_sz > j ; j++ ) {
+         assert( 0 < obj->faces[i].vertex_idxs[j] );
+         assert( 3 == obj->faces[i].vertex_idxs_sz );
 
          glNormal3f(
-            vnormals[faces[i].vnormal_idxs[j] - 1].x,
-            vnormals[faces[i].vnormal_idxs[j] - 1].y,
-            vnormals[faces[i].vnormal_idxs[j] - 1].z );
+            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].x,
+            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].y,
+            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].z );
 
          glVertex3f(
-            vertices[faces[i].vertex_idxs[j] - 1].x,
-            vertices[faces[i].vertex_idxs[j] - 1].y,
-            vertices[faces[i].vertex_idxs[j] - 1].z );
+            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].x,
+            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].y,
+            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].z );
       }
 
    }
