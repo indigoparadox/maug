@@ -970,6 +970,8 @@ void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
       glMaterialfv( GL_FRONT, GL_EMISSION,
          obj->materials[obj->faces[i].material_idx].emissive );
 
+      glColor3fv( obj->materials[obj->faces[i].material_idx].diffuse );
+
       /* Use a specific macro here that can be overridden for e.g. the NDS. */
       glShininessf( GL_FRONT, GL_SHININESS, 
          obj->materials[obj->faces[i].material_idx].specular_exp );
