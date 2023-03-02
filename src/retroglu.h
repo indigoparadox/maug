@@ -291,6 +291,10 @@ void retroglu_parse_init(
  */
 int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
+int retroglu_parse_obj_file(
+   const char* filename, struct RETROGLU_PARSER* parser,
+   struct RETROGLU_OBJ* obj );
+
 /*! \} */ /* maug_retroglu_obj_fsm */
 
 int retroglu_load_tex_bmp_data(
@@ -774,6 +778,57 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
 
    return RETROFLAT_OK;
 }
+
+int retroglu_parse_obj_file(
+   const char* filename, struct RETROGLU_PARSER* parser,
+   struct RETROGLU_OBJ* obj
+) {
+   FILE* obj_file = NULL;
+   uint32_t i = 0; /* Index in file buffer, so long. */
+   long int obj_read = 0;
+   int auto_parser = 0; /* Did we provision parser? */
+   uint8_t* obj_buf = NULL;
+   uint32_t obj_buf_sz = 0;
+
+   if( NULL == parser ) {
+      parser = calloc( 1, sizeof( struct RETROGLU_PARSER ) );
+      assert( NULL != parser );
+      auto_parser = 1;
+   }
+
+   /* Open the file and allocate the buffer. */
+   obj_file = fopen( filename, "r" );
+   assert( NULL != obj_file );
+   fseek( obj_file, 0, SEEK_END );
+   obj_buf_sz = ftell( obj_file );
+   fseek( obj_file, 0, SEEK_SET );
+   debug_printf( 3, "opened %s, " UPRINTF_U32 " bytes", filename, obj_buf_sz );
+   obj_buf = calloc( 1, obj_buf_sz );
+   assert( NULL != obj_buf );
+   obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
+   assert( obj_read == obj_buf_sz );
+   fclose( obj_file );
+
+   retroglu_parse_init( 
+      parser, obj, (retroglu_mtl_cb)retroglu_parse_obj_file, obj );
+
+   /* Parse the obj, byte by byte. */
+   for( i = 0 ; obj_buf_sz > i ; i++ ) {
+      obj_read = retroglu_parse_obj_c( parser, obj_buf[i] );
+      assert( 0 <= obj_read );
+   }
+   free( obj_buf );
+   obj_buf = NULL;
+   obj_buf_sz = 0;
+
+   if( auto_parser ) {
+      free( parser );
+      parser = NULL;
+   }
+
+   return RETROFLAT_OK;
+}
+
 
 MERROR_RETVAL retroglu_load_tex_bmp(
    const char* filename, uint32_t* p_texture_id,
