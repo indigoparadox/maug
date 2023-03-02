@@ -789,6 +789,7 @@ int retroglu_parse_obj_file(
    int auto_parser = 0; /* Did we provision parser? */
    uint8_t* obj_buf = NULL;
    uint32_t obj_buf_sz = 0;
+   char filename_path[RETROFLAT_PATH_MAX + 1];
 
    if( NULL == parser ) {
       parser = calloc( 1, sizeof( struct RETROGLU_PARSER ) );
@@ -796,13 +797,20 @@ int retroglu_parse_obj_file(
       auto_parser = 1;
    }
 
+   /* Build the path to the obj. */
+   memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
+   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s",
+      g_retroflat_assets_path, RETROFLAT_PATH_SEP, filename );
+
    /* Open the file and allocate the buffer. */
-   obj_file = fopen( filename, "r" );
+   debug_printf( 3, "opening %s...", filename_path );
+   obj_file = fopen( filename_path, "r" );
    assert( NULL != obj_file );
    fseek( obj_file, 0, SEEK_END );
    obj_buf_sz = ftell( obj_file );
    fseek( obj_file, 0, SEEK_SET );
-   debug_printf( 3, "opened %s, " UPRINTF_U32 " bytes", filename, obj_buf_sz );
+   debug_printf(
+      3, "opened %s, " UPRINTF_U32 " bytes", filename_path, obj_buf_sz );
    obj_buf = calloc( 1, obj_buf_sz );
    assert( NULL != obj_buf );
    obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
