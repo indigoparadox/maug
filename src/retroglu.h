@@ -803,14 +803,14 @@ int retroglu_parse_obj_file(
       g_retroflat_assets_path, RETROFLAT_PATH_SEP, filename );
 
    /* Open the file and allocate the buffer. */
-   debug_printf( 3, "opening %s...", filename_path );
+   debug_printf( 2, "opening %s...", filename_path );
    obj_file = fopen( filename_path, "r" );
    assert( NULL != obj_file );
    fseek( obj_file, 0, SEEK_END );
    obj_buf_sz = ftell( obj_file );
    fseek( obj_file, 0, SEEK_SET );
    debug_printf(
-      3, "opened %s, " UPRINTF_U32 " bytes", filename_path, obj_buf_sz );
+      2, "opened %s, " UPRINTF_U32 " bytes", filename_path, obj_buf_sz );
    obj_buf = calloc( 1, obj_buf_sz );
    assert( NULL != obj_buf );
    obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
@@ -833,6 +833,10 @@ int retroglu_parse_obj_file(
       free( parser );
       parser = NULL;
    }
+
+   debug_printf(
+      2, "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
+      filename_path, obj->vertices_sz, obj->materials_sz );
 
    return RETROFLAT_OK;
 }
