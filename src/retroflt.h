@@ -2736,8 +2736,10 @@ cleanup:
    if( NULL == bmp ) {
       /* Do nothing. */
       /* TODO: Handle screen locking? */
+#     ifdef RETROFLAT_WING
       /* The WinG HDC or whatever should be created already by WndProc. */
       assert( (HDC)NULL != g_buffer.hdc_b );
+#     endif /* RETROFLAT_WING */
       goto cleanup;
    }
 
