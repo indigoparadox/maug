@@ -289,9 +289,10 @@ void retroglu_parse_init(
  *
  * Generally, this should loop over a character array loaded from an OBJ file.
  */
-int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
+MERROR_RETVAL
+retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c );
 
-int retroglu_parse_obj_file(
+MERROR_RETVAL retroglu_parse_obj_file(
    const char* filename, struct RETROGLU_PARSER* parser,
    struct RETROGLU_OBJ* obj );
 
@@ -506,9 +507,10 @@ void retroglu_parse_init(
          parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
 
-int retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
+MERROR_RETVAL
+retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    int i = 0;
-   int retval = RETROFLAT_OK;
+   MERROR_RETVAL retval = RETROFLAT_OK;
 
    if( 0 == parser->token_sz ) {
       /* Empty token. */
@@ -636,7 +638,8 @@ cleanup:
    return retval;
 }
 
-int retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
+MERROR_RETVAL 
+retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
    parser->token[parser->token_sz++] = c;
 
    /* Protect against token overflow. */
@@ -648,8 +651,9 @@ int retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
    return RETROFLAT_OK;
 }
 
-int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
-   int retval = RETROFLAT_OK;
+MERROR_RETVAL
+retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
+   MERROR_RETVAL retval = RETROFLAT_OK;
 
    if(
       RETROGLU_PARSER_STATE_COMMENT == parser->state && '\r' != c && '\n' != c
@@ -779,17 +783,18 @@ int retroglu_parse_obj_c( struct RETROGLU_PARSER* parser, unsigned char c ) {
    return RETROFLAT_OK;
 }
 
-int retroglu_parse_obj_file(
+MERROR_RETVAL retroglu_parse_obj_file(
    const char* filename, struct RETROGLU_PARSER* parser,
    struct RETROGLU_OBJ* obj
 ) {
    FILE* obj_file = NULL;
    uint32_t i = 0; /* Index in file buffer, so long. */
-   long int obj_read = 0;
+   size_t obj_read = 0;
    int auto_parser = 0; /* Did we provision parser? */
    uint8_t* obj_buf = NULL;
-   uint32_t obj_buf_sz = 0;
+   size_t obj_buf_sz = 0;
    char filename_path[RETROFLAT_PATH_MAX + 1];
+   MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == parser ) {
       parser = calloc( 1, sizeof( struct RETROGLU_PARSER ) );
@@ -810,10 +815,11 @@ int retroglu_parse_obj_file(
    obj_buf_sz = ftell( obj_file );
    fseek( obj_file, 0, SEEK_SET );
    debug_printf(
-      2, "opened %s, " UPRINTF_U32 " bytes", filename_path, obj_buf_sz );
+      2, "opened %s, " SIZE_T_FMT " bytes", filename_path, obj_buf_sz );
    obj_buf = calloc( 1, obj_buf_sz );
    assert( NULL != obj_buf );
    obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
+   debug_printf( 1, "read " SIZE_T_FMT " bytes", obj_read );
    assert( obj_read == obj_buf_sz );
    fclose( obj_file );
 
@@ -822,8 +828,8 @@ int retroglu_parse_obj_file(
 
    /* Parse the obj, byte by byte. */
    for( i = 0 ; obj_buf_sz > i ; i++ ) {
-      obj_read = retroglu_parse_obj_c( parser, obj_buf[i] );
-      assert( 0 <= obj_read );
+      retval = retroglu_parse_obj_c( parser, obj_buf[i] );
+      assert( 0 <= retval );
    }
    free( obj_buf );
    obj_buf = NULL;
@@ -838,7 +844,7 @@ int retroglu_parse_obj_file(
       2, "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
       filename_path, obj->vertices_sz, obj->materials_sz );
 
-   return RETROFLAT_OK;
+   return retval;
 }
 
 

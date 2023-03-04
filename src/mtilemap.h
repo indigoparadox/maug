@@ -99,17 +99,17 @@ struct MTILEMAP_PARSER {
 
 #define MTILEMAP_PARSER_MSTATE_TABLE( f ) \
    f( MTILEMAP_MSTATE_NONE,         0, "", 0 ) \
-   f( MTILEMAP_MSTATE_HEIGHT,       1, "height", 0 ) \
-   f( MTILEMAP_MSTATE_WIDTH,        2, "width", 0 ) \
-   f( MTILEMAP_MSTATE_LAYERS,       3, "layers", 0 ) \
-   f( MTILEMAP_MSTATE_LAYER_DATA,   4, "data", MTILEMAP_MSTATE_LAYERS ) \
-   f( MTILEMAP_MSTATE_LAYER_NAME,   5, "name", MTILEMAP_MSTATE_LAYERS ) \
-   f( MTILEMAP_MSTATE_TILES,        6, "tiles", 0 ) \
-   f( MTILEMAP_MSTATE_TILES_ID,     7, "id", MTILEMAP_MSTATE_TILES ) \
-   f( MTILEMAP_MSTATE_TILES_IMAGE,  8, "image", MTILEMAP_MSTATE_TILES ) \
+   f( MTILEMAP_MSTATE_HEIGHT,       1, "height",   0 ) \
+   f( MTILEMAP_MSTATE_WIDTH,        2, "width",    0 ) \
+   f( MTILEMAP_MSTATE_LAYERS,       3, "layers",   0 ) \
+   f( MTILEMAP_MSTATE_LAYER_DATA,   4, "data",     3 /* MSTATE_LAYERS */ ) \
+   f( MTILEMAP_MSTATE_LAYER_NAME,   5, "name",     3 /* MSTATE_LAYERS */ ) \
+   f( MTILEMAP_MSTATE_TILES,        6, "tiles",    0 ) \
+   f( MTILEMAP_MSTATE_TILES_ID,     7, "id",       6 /* MSTATE_TILES */ ) \
+   f( MTILEMAP_MSTATE_TILES_IMAGE,  8, "image",    6 /* MSTATE_TILES */ ) \
    f( MTILEMAP_MSTATE_TILESETS,     9, "tilesets", 0 ) \
-   f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source", MTILEMAP_MSTATE_TILESETS ) \
-   f( MTILEMAP_MSTATE_GRID,         11, "grid", 0 )
+   f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source",  9 /* MSTATE_TILESETS */ ) \
+   f( MTILEMAP_MSTATE_GRID,         11, "grid",    0 )
 
 MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
@@ -273,7 +273,7 @@ MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "c: %c", c );
+   /* debug_printf( 1, "c: %c", c ); */
 
    switch( c ) {
    case '\r':
