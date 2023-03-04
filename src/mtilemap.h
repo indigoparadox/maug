@@ -37,7 +37,7 @@
 #endif /* MTILEMAP_TILESET_DEFS_SZ_MAX */
 
 #ifndef MTILEMAP_TILESET_IMAGE_STR_SZ_MAX
-#  define MTILEMAP_TILESET_IMAGE_STR_SZ_MAX 32
+#  define MTILEMAP_TILESET_IMAGE_STR_SZ_MAX 48
 #endif /* !MTILEMAP_TILESET_IMAGE_STR_SZ_MAX */
 
 #ifndef MTILEMAP_TILE_SCALE
@@ -71,8 +71,9 @@ struct MTILEMAP {
    char name[MTILEMAP_NAME_SZ_MAX];
    struct MTILEMAP_PROP* cprops;
    uint8_t cprops_sz;
+   size_t tileset_fgid;
    struct MTILEMAP_TILE_DEF tile_defs[MTILEMAP_TILESET_DEFS_SZ_MAX];
-   uint8_t tiles[MTILEMAP_D_MAX][MTILEMAP_WH_MAX];
+   size_t tiles[MTILEMAP_D_MAX][MTILEMAP_WH_MAX];
    size_t tiles_sz[MTILEMAP_D_MAX];
    uint8_t tiles_h;
    uint8_t tiles_w;
@@ -116,7 +117,8 @@ struct MTILEMAP_PARSER {
    f( MTILEMAP_MSTATE_TILES_IMAGE,  8, "image",    6 /* MSTATE_TILES */ ) \
    f( MTILEMAP_MSTATE_TILESETS,     9, "tilesets", 0 ) \
    f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source",  9 /* MSTATE_TILESETS */ ) \
-   f( MTILEMAP_MSTATE_GRID,         11, "grid",    0 )
+   f( MTILEMAP_MSTATE_TILESETS_FGID,11, "firstgid",9 /* MSTATE_TILESETS */ ) \
+   f( MTILEMAP_MSTATE_GRID,         12, "grid",    0 )
 
 MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
@@ -232,7 +234,13 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser ) ) {
-      if( MTILEMAP_MSTATE_TILESETS_SRC == parser->mstate ) {
+      if( MTILEMAP_MSTATE_TILESETS_FGID == parser->mstate ) {
+         parser->t->tileset_fgid = atoi( parser->token );
+         debug_printf( 1, "tileset FGID set to: " SIZE_T_FMT,
+            parser->t->tileset_fgid );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
+
+      } else if( MTILEMAP_MSTATE_TILESETS_SRC == parser->mstate ) {
          debug_printf( 1, "parsing %s...", parser->token );
          parser->tj_parse_cb( parser->token, parser->t );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
@@ -532,29 +540,37 @@ MERROR_RETVAL mtilemap_xform_obj_path(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
       obj_i = 0;
-   char* uscore_pos = NULL;
+   char* uscore_pos = NULL,
+      * basename_pos = NULL;
 
    memset( obj_path, '\0', obj_path_sz );
 
+   /* Figure out the file basename start. */
+   basename_pos = strchr( image_path, '/' );
+   assert( NULL != basename_pos );
+   basename_pos++;
+
+   debug_printf( 1, "basename: %s", basename_pos );
+
    /* Figure out where rotation indicator e.g. _NE is... */
-   uscore_pos = strrchr( image_path, '_' );
+   uscore_pos = strrchr( basename_pos, '_' );
    assert( NULL != uscore_pos );
 
    for( i = 0 ; obj_path_sz > i ; i++ ) {
-      if( '\0' == image_path[i] ) {
+      if( '\0' == basename_pos[i] ) {
          /* Stop copying on NULL. */
          break;
       }
-      if( '\\' == image_path[i] ) {
+      if( '\\' == basename_pos[i] ) {
          /* Skip escape char. */
          continue;
       }
-      if( uscore_pos == &(image_path[i]) ) {
+      if( uscore_pos == &(basename_pos[i]) ) {
          /* Stop before copying r/ext. */
          break;
       }
 
-      obj_path[obj_i++] = image_path[i];
+      obj_path[obj_i++] = basename_pos[i];
    }
 
    obj_path[obj_i++] = '.';
@@ -596,8 +612,15 @@ void mtilemap_load_tiles( struct MTILEMAP* t ) {
    debug_printf( 2, "loading models..." );
    for( y = 0 ; t->tiles_d > y ; y++ ) {
       for( i = 0 ; t->tiles_sz[y] > i ; i++ ) {
-
          tile_idx = t->tiles[y][i];
+
+         /* 0 is always empty. */
+         if( 0 == tile_idx ) {
+            continue;
+         }
+
+         /* Convert to local tile ID. */
+         tile_idx -= t->tileset_fgid;
 
          /* Skip loaded tiles. */
          if(
@@ -626,25 +649,27 @@ void mtilemap_load_tiles( struct MTILEMAP* t ) {
          }
 
          debug_printf( 1, "biggest outlying vertex coord: %f", vert_greatest );
-         t->tile_defs[i].scale_f = MTILEMAP_TILE_SCALE / vert_greatest;
+         t->tile_defs[tile_idx].scale_f = MTILEMAP_TILE_SCALE / vert_greatest;
 
    #ifdef MTILEMAP_NO_LISTS
-         t->tile_defs[i].obj = calloc( sizeof( struct RETROGLU_OBJ ), 1 );
-         assert( NULL != t->tile_defs[i].obj );
-         memcpy( t->tile_defs[i].obj, obj, sizeof( struct RETROGLU_OBJ ) );
+         t->tile_defs[tile_idx].obj = calloc( sizeof( struct RETROGLU_OBJ ), 1 );
+         assert( NULL != t->tile_defs[tile_idx].obj );
+         memcpy( t->tile_defs[tile_idx].obj, obj, sizeof( struct RETROGLU_OBJ ) );
    #else
          /* Setup display list. */
-         t->tile_defs[i].list = glGenLists( 1 );
-         glNewList( t->tile_defs[i].list, GL_COMPILE );
+         t->tile_defs[tile_idx].list = glGenLists( 1 );
+         glNewList( t->tile_defs[tile_idx].list, GL_COMPILE );
          glPushMatrix();
          glScalef( /* Scale before drawing. */
-            t->tile_defs[i].scale_f,
-            t->tile_defs[i].scale_f,
-            t->tile_defs[i].scale_f );
+            t->tile_defs[tile_idx].scale_f,
+            t->tile_defs[tile_idx].scale_f,
+            t->tile_defs[tile_idx].scale_f );
          retroglu_draw_poly( &obj );
          glPopMatrix();
          glEndList();
    #endif /* MTILEMAP_NO_LISTS */
+
+         t->tile_defs[tile_idx].flags |= MTILEMAP_FLAG_ACTIVE;
       }
    }
 }
