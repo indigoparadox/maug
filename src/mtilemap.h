@@ -474,7 +474,7 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
-   snprintf( filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
+   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
 
    /* Open and get the file buffer size. */
    debug_printf( 2, "opening tilemap file %s...", filename_path );

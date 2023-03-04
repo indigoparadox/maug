@@ -26,6 +26,7 @@
 
 #ifdef MAUG_OS_NDS
 typedef int GLint;
+#  define RETROGLU_NO_TEXTURES
 #  define glPopMatrix() glPopMatrix( 1 )
 #  define glFlush() glFlush( 0 )
 #  define glPolygonMode( sides, mode )
@@ -895,7 +896,7 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
 ) {
-#ifndef MAUG_OS_NDS
+#ifndef RETROGLU_NO_TEXTURES
    /* TODO: Fix for NDS! */
 
    uint32_t bmp_offset = 0;
@@ -952,7 +953,7 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
 
    free( bmp_px );
-#endif /* !MAUG_OS_NDS */
+#endif /* !RETROGLU_NO_TEXTURES */
 
    return RETROFLAT_OK;
 }
@@ -1231,7 +1232,9 @@ void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
    
+#ifndef RETROGLU_NO_TEXTURES
    glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
+#endif /* !RETROGLU_NO_TEXTURES */
 #ifndef MAUG_OS_NDS
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
