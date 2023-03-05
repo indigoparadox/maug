@@ -533,6 +533,10 @@ struct RETROFLAT_ARGS {
 #  define RETROFLAT_PATH_MAX 256
 #endif /* !RETROFLAT_PATH_MAX */
 
+#ifndef RETROFLAT_TITLE_MAX
+#  define RETROFLAT_TITLE_MAX 255
+#endif /* !RETROFLAT_TITLE_MAX */
+
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 #  if !defined( RETROFLAT_WIN_STYLE )
 #     if defined( RETROFLAT_API_WINCE )
@@ -1339,6 +1343,8 @@ MERROR_RETVAL retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* arg
  *        are in what state.
  */
 void retroflat_shutdown( int retval );
+
+void retroflat_set_title( const char* format, ... );
 
 uint32_t retroflat_get_ms();
 
@@ -2234,7 +2240,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #     ifndef RETROFLAT_OS_DOS
    if( NULL != args->title ) {
-      set_window_title( args->title );
+      retroflat_set_title( args->title );
    }
 
    /* XXX: Broken in DOS. */
@@ -2291,7 +2297,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
 
-   SDL_WM_SetCaption( args->title, NULL );
+   if( NULL != args->title ) {
+      retroflat_set_title( args->title );
+   }
+
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
    icon = SDL_LoadBMP_RW(
@@ -2627,6 +2636,34 @@ void retroflat_shutdown( int retval ) {
 #     warning "shutdown not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
+}
+
+/* === */
+
+void retroflat_set_title( const char* format, ... ) {
+   char title[RETROFLAT_TITLE_MAX + 1];
+   va_list vargs;
+
+   /* Build the title. */
+   va_start( vargs, format );
+   memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
+   maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
+
+#if defined( RETROFLAT_API_ALLEGRO )
+   set_window_title( title );
+#elif defined( RETROFLAT_API_SDL1 )
+   SDL_WM_SetCaption( title, NULL );
+#elif defined( RETROFLAT_API_SDL2 )
+   SDL_SetWindowTitle( g_window, title );
+#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   SetWindowText( g_window, title );
+#elif defined( RETROFLAT_API_LIBNDS )
+   /* Do nothing. */
+#else
+#     warning "set title implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
+
+   va_end( vargs );
 }
 
 /* === */
