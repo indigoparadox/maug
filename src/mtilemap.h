@@ -61,6 +61,7 @@ struct MTILEMAP_CPROP {
 
 struct MTILEMAP_TILE_DEF {
    uint8_t flags;
+   int32_t rotate_f;
    float scale_f;
    struct RETROGLU_OBJ* obj;
    int32_t list;
@@ -127,7 +128,7 @@ MERROR_RETVAL
 mtilemap_parse_json_file( const char* filename, struct MTILEMAP* m );
 
 MERROR_RETVAL mtilemap_xform_obj_path(
-   char* obj_path, size_t obj_path_sz, float* r_out, const char* image_path );
+   char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path );
 
 void mtilemap_load_tiles( struct MTILEMAP* t );
 
@@ -535,7 +536,7 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 /* === */
 
 MERROR_RETVAL mtilemap_xform_obj_path(
-   char* obj_path, size_t obj_path_sz, float* r_out, const char* image_path
+   char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
@@ -579,10 +580,17 @@ MERROR_RETVAL mtilemap_xform_obj_path(
    obj_path[obj_i++] = 'j';
    obj_path[obj_i++] = '\0';
 
-   /* TODO: Translate uscore_pos into rotation value. */
-
-   debug_printf( 1, "%s", obj_path );
-
+   /* Translate uscore_pos into rotation value. */
+   if( 0 == strncmp( uscore_pos, "_SW", 3 ) ) {
+      *r_out = 180; 
+   } else if( 0 == strncmp( uscore_pos, "_SE", 3 ) ) {
+      *r_out = 270; /* ! */
+   } else if( 0 == strncmp( uscore_pos, "_NW", 3 ) ) {
+      *r_out = 90; /* ! */
+   } else {
+      *r_out = 0;
+   }
+   debug_printf( 1, "uscore_pos: %s, r: %d", uscore_pos, *r_out );
 
    return retval;
 }
@@ -604,8 +612,7 @@ void mtilemap_load_tiles( struct MTILEMAP* t ) {
       y = 0;
    size_t tile_idx;
    float vert_test = 0,
-      vert_greatest = 0,
-      r = 0;
+      vert_greatest = 0;
    struct RETROGLU_OBJ obj;
    char obj_path[RETROFLAT_PATH_MAX];
 
@@ -632,7 +639,7 @@ void mtilemap_load_tiles( struct MTILEMAP* t ) {
 
          /* Break down the image path to get obj path. */
          mtilemap_xform_obj_path(
-            obj_path, RETROFLAT_PATH_MAX, &r,
+            obj_path, RETROFLAT_PATH_MAX, &(t->tile_defs[tile_idx].rotate_f),
             t->tile_defs[tile_idx].image_path );
 
          /* Load the model. */
@@ -652,18 +659,22 @@ void mtilemap_load_tiles( struct MTILEMAP* t ) {
          t->tile_defs[tile_idx].scale_f = MTILEMAP_TILE_SCALE / vert_greatest;
 
    #ifdef MTILEMAP_NO_LISTS
-         t->tile_defs[tile_idx].obj = calloc( sizeof( struct RETROGLU_OBJ ), 1 );
+         t->tile_defs[tile_idx].obj =
+            calloc( sizeof( struct RETROGLU_OBJ ), 1 );
          assert( NULL != t->tile_defs[tile_idx].obj );
-         memcpy( t->tile_defs[tile_idx].obj, obj, sizeof( struct RETROGLU_OBJ ) );
+         memcpy(
+            t->tile_defs[tile_idx].obj, obj, sizeof( struct RETROGLU_OBJ ) );
    #else
          /* Setup display list. */
          t->tile_defs[tile_idx].list = glGenLists( 1 );
          glNewList( t->tile_defs[tile_idx].list, GL_COMPILE );
          glPushMatrix();
+         #if 0
          glScalef( /* Scale before drawing. */
             t->tile_defs[tile_idx].scale_f,
             t->tile_defs[tile_idx].scale_f,
             t->tile_defs[tile_idx].scale_f );
+         #endif
          retroglu_draw_poly( &obj );
          glPopMatrix();
          glEndList();
