@@ -44,6 +44,10 @@
 #  define MTILEMAP_TILE_SCALE 1.0f
 #endif /* !MTILEMAP_TILE_SCALE */
 
+#ifndef MTILEMAP_TILE_SCALE_Y
+#  define MTILEMAP_TILE_SCALE_Y 0.5f
+#endif /* !MTILEMAP_TILE_SCALE_Y */
+
 #define MTILEMAP_FLAG_ACTIVE 0x1
 
 union MTILEMAP_CPROP_VAL {
@@ -581,12 +585,20 @@ MERROR_RETVAL mtilemap_xform_obj_path(
    obj_path[obj_i++] = '\0';
 
    /* Translate uscore_pos into rotation value. */
-   if( 0 == strncmp( uscore_pos, "_SW", 3 ) ) {
+   if( 0 == strncmp( uscore_pos, "_NW.", 4 ) ) {
+      *r_out = 90;
+   } else if( 0 == strncmp( uscore_pos, "_SW.", 4 ) ) {
       *r_out = 180; 
-   } else if( 0 == strncmp( uscore_pos, "_SE", 3 ) ) {
-      *r_out = 270; /* ! */
-   } else if( 0 == strncmp( uscore_pos, "_NW", 3 ) ) {
-      *r_out = 90; /* ! */
+   } else if( 0 == strncmp( uscore_pos, "_SE.", 4 ) ) {
+      *r_out = 270;
+
+   } else if( 0 == strncmp( uscore_pos, "_W.", 3 ) ) {
+      *r_out = 90;
+   } else if( 0 == strncmp( uscore_pos, "_S.", 3 ) ) {
+      *r_out = 180;
+   } else if( 0 == strncmp( uscore_pos, "_E.", 3 ) ) {
+      *r_out = 270;
+
    } else {
       *r_out = 0;
    }
