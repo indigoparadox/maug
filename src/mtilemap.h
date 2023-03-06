@@ -48,34 +48,49 @@
 #  define MTILEMAP_TILE_SCALE_Y 0.5f
 #endif /* !MTILEMAP_TILE_SCALE_Y */
 
+#ifndef MTILEMAP_CPROP_STR_SZ_MAX
+#  define MTILEMAP_CPROP_STR_SZ_MAX 32
+#endif /* !MTILEMAP_CPROP_STR_SZ_MAX */
+
 #define MTILEMAP_FLAG_ACTIVE 0x1
+
+#define MTILEMAP_CPROP_TYPE_NONE    0
+#define MTILEMAP_CPROP_TYPE_INT     1
+#define MTILEMAP_CPROP_TYPE_FLOAT   2
+#define MTILEMAP_CPROP_TYPE_STR     3
+#define MTILEMAP_CPROP_TYPE_BOOL    4
 
 union MTILEMAP_CPROP_VAL {
    uint32_t u32;
    int32_t i32;
-   char str[32];
+   float f32;
+   char str[MTILEMAP_CPROP_STR_SZ_MAX];
    void* data;
 };
 
 struct MTILEMAP_CPROP {
    uint8_t type;
-   char key[32];
+   char key[MTILEMAP_CPROP_STR_SZ_MAX];
    union MTILEMAP_CPROP_VAL value;
 };
 
 struct MTILEMAP_TILE_DEF {
    uint8_t flags;
    int32_t rotate_f;
+#if 0
    float scale_f;
+#endif
    struct RETROGLU_OBJ* obj;
    int32_t list;
+   struct MTILEMAP_CPROP* cprops;
+   size_t cprops_sz;
    char image_path[MTILEMAP_TILESET_IMAGE_STR_SZ_MAX];
 };
 
 struct MTILEMAP {
    char name[MTILEMAP_NAME_SZ_MAX];
-   struct MTILEMAP_PROP* cprops;
-   uint8_t cprops_sz;
+   struct MTILEMAP_CPROP* cprops;
+   size_t cprops_sz;
    size_t tileset_fgid;
    struct MTILEMAP_TILE_DEF tile_defs[MTILEMAP_TILESET_DEFS_SZ_MAX];
    size_t tiles[MTILEMAP_D_MAX][MTILEMAP_WH_MAX];
@@ -123,7 +138,12 @@ struct MTILEMAP_PARSER {
    f( MTILEMAP_MSTATE_TILESETS,     9, "tilesets", 0 ) \
    f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source",  9 /* MSTATE_TILESETS */ ) \
    f( MTILEMAP_MSTATE_TILESETS_FGID,11, "firstgid",9 /* MSTATE_TILESETS */ ) \
-   f( MTILEMAP_MSTATE_GRID,         12, "grid",    0 )
+   f( MTILEMAP_MSTATE_TILESETS_PROP,12, "firstgid",9 /* MSTATE_TILESETS */ ) \
+   f( MTILEMAP_MSTATE_GRID,         13, "grid",    0 ) \
+   f( MTILEMAP_MSTATE_TILES_PROP,   14, "properties",6 /* MSTATE_TILES */ ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_N, 15, "name",14 /* M_TILES_PROP */ ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_T, 16, "type",14 /* M_TILES_PROP */ ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_V, 17, "value",14 /* M_TILES_PROP */ ) \
 
 MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
@@ -134,7 +154,7 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* m );
 MERROR_RETVAL mtilemap_xform_obj_path(
    char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path );
 
-void mtilemap_load_tiles( struct MTILEMAP* t );
+void mtilemap_free( struct MTILEMAP* t );
 
 #ifdef MTILEMAP_C
 
@@ -234,6 +254,114 @@ mtilemap_parse_reset_token( struct MTILEMAP_PARSER* parser ) {
    debug_printf( 1, "reset token" );
 }
 
+MERROR_RETVAL mtilemap_parser_tile_set_cprop_name(
+   struct MTILEMAP_TILE_DEF* tile_def, const char* name
+) {
+   struct MTILEMAP_CPROP* cprops_new = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Allocate new cprop, as name is assumed to always be the first field. */
+   if( 0 == tile_def->cprops_sz ) {
+      assert( NULL == tile_def->cprops );
+      tile_def->cprops = calloc( 1, sizeof( struct MTILEMAP_CPROP ) );
+      assert( NULL != tile_def->cprops );
+
+   } else {
+      cprops_new = realloc(
+         tile_def->cprops,
+         (tile_def->cprops_sz + 1) * sizeof( struct MTILEMAP_CPROP ) );
+      assert( NULL != cprops_new );
+      tile_def->cprops = cprops_new;
+   }
+
+   strncpy(
+      tile_def->cprops[tile_def->cprops_sz].key,
+      name,
+      MTILEMAP_CPROP_STR_SZ_MAX );
+
+   debug_printf( 1, "set cprop #" SIZE_T_FMT " key: %s",
+      tile_def->cprops_sz, tile_def->cprops[tile_def->cprops_sz].key );
+
+   tile_def->cprops_sz++;
+
+   return retval;
+}
+
+MERROR_RETVAL mtilemap_parser_tile_set_cprop_type(
+   struct MTILEMAP_TILE_DEF* tile_def, const char* type
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Parse type. */
+   if( 0 == strncmp( type, "int", 3 ) ) {
+      tile_def->cprops[tile_def->cprops_sz - 1].type =
+         MTILEMAP_CPROP_TYPE_INT;
+
+   } else if( 0 == strncmp( type, "float", 5 ) ) {
+      tile_def->cprops[tile_def->cprops_sz - 1].type =
+         MTILEMAP_CPROP_TYPE_FLOAT;
+
+   } else if( 0 == strncmp( type, "str", 3 ) ) {
+      tile_def->cprops[tile_def->cprops_sz - 1].type =
+         MTILEMAP_CPROP_TYPE_STR;
+
+   } else if( 0 == strncmp( type, "bool", 4 ) ) {
+      tile_def->cprops[tile_def->cprops_sz - 1].type =
+         MTILEMAP_CPROP_TYPE_BOOL;
+
+   }
+
+   debug_printf( 1, "set cprop #" SIZE_T_FMT " type: %d",
+      tile_def->cprops_sz - 1,
+      tile_def->cprops[tile_def->cprops_sz - 1].type );
+
+   return retval;
+}
+
+MERROR_RETVAL mtilemap_parser_tile_set_cprop_value(
+   struct MTILEMAP_TILE_DEF* tile_def, const char* val
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO: Parse value. */
+   switch( tile_def->cprops[tile_def->cprops_sz - 1].type ) {
+   case MTILEMAP_CPROP_TYPE_INT:
+      tile_def->cprops[tile_def->cprops_sz - 1].value.i32 = atoi( val );
+      debug_printf( 1, "set cprop #" SIZE_T_FMT " value: %d",
+         tile_def->cprops_sz - 1,
+         tile_def->cprops[tile_def->cprops_sz - 1].value.i32 );
+      break;
+      
+   case MTILEMAP_CPROP_TYPE_FLOAT:
+      tile_def->cprops[tile_def->cprops_sz - 1].value.f32 = atof( val );
+      debug_printf( 1, "set cprop #" SIZE_T_FMT " value: %f",
+         tile_def->cprops_sz - 1,
+         tile_def->cprops[tile_def->cprops_sz - 1].value.f32 );
+      break;
+
+   case MTILEMAP_CPROP_TYPE_STR:
+      strncpy(
+         tile_def->cprops[tile_def->cprops_sz - 1].value.str,
+         val,
+         MTILEMAP_CPROP_STR_SZ_MAX );
+      debug_printf( 1, "set cprop #" SIZE_T_FMT " value: %s",
+         tile_def->cprops_sz - 1,
+         tile_def->cprops[tile_def->cprops_sz - 1].value.str );
+      break;
+
+   case MTILEMAP_CPROP_TYPE_BOOL:
+      /* TODO */
+      break;
+
+   default:
+      error_printf( "invalid cprop value!" );
+      retval = 1;
+      break;
+   }
+
+   return retval;
+}
+
 MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
    size_t j = 1;
    MERROR_RETVAL retval = MERROR_OK;
@@ -250,6 +378,43 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
          parser->tj_parse_cb( parser->token, parser->t );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
 
+      } else if( MTILEMAP_MSTATE_TILES_ID == parser->mstate ) {
+         /* Parse tile ID. */
+         parser->tileset_id_cur = atoi( parser->token );
+         debug_printf(
+            1, "select tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES );
+
+      } else if( MTILEMAP_MSTATE_TILES_IMAGE == parser->mstate ) {
+         /* Parse tile image. */
+         strncpy(
+            parser->t->tile_defs[parser->tileset_id_cur].image_path,
+            parser->token,
+            MTILEMAP_TILESET_IMAGE_STR_SZ_MAX );
+
+         debug_printf( 1, "set tile ID " SIZE_T_FMT " to: %s",
+            parser->tileset_id_cur,
+            parser->t->tile_defs[parser->tileset_id_cur].image_path );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES );
+
+      } else if( MTILEMAP_MSTATE_TILES_PROP == parser->mstate ) {
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES );
+
+      } else if( MTILEMAP_MSTATE_TILES_PROP_N == parser->mstate ) {
+         mtilemap_parser_tile_set_cprop_name(
+            &(parser->t->tile_defs[parser->tileset_id_cur]), parser->token );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
+
+      } else if( MTILEMAP_MSTATE_TILES_PROP_T == parser->mstate ) {
+         mtilemap_parser_tile_set_cprop_type(
+            &(parser->t->tile_defs[parser->tileset_id_cur]), parser->token );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
+
+      } else if( MTILEMAP_MSTATE_TILES_PROP_V == parser->mstate ) {
+         mtilemap_parser_tile_set_cprop_value(
+            &(parser->t->tile_defs[parser->tileset_id_cur]), parser->token );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
+
       } else if( MTILEMAP_MSTATE_HEIGHT == parser->mstate ) {
          parser->t->tiles_h = atoi( parser->token );
          debug_printf( 1, "tilemap height: %d", parser->t->tiles_h );
@@ -264,6 +429,12 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
          /* TODO: Store */
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
          
+      } else if( MTILEMAP_MSTATE_GRID == parser->mstate ) {
+         /* This only has an mstate to differentiate its height/width children
+            * from those in the tileset root.
+            */
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
+
       }
       goto cleanup;
    }
@@ -336,15 +507,9 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
          mtilemap_parser_pstate_pop( parser ); /* Pop key */
          mtilemap_parse_reset_token( parser );
 
-         if( MTILEMAP_MSTATE_GRID == parser->mstate ) {
-            /* This only has an mstate to differentiate its height/width children
-               * from those in the tileset root.
-               */
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
-         }
-
-
-      } else if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
+      } else if(
+         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
+      ) {
          mtilemap_parse_append_token( parser, c );
 
       } else {
@@ -421,27 +586,6 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
          mtilemap_parser_pstate_pop( parser );
          mtilemap_parser_pstate_pop( parser ); /* Pop key */
          mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
-
-         if( MTILEMAP_MSTATE_TILES_ID == parser->mstate ) {
-            /* Parse tile ID. */
-            parser->tileset_id_cur = atoi( parser->token );
-            debug_printf(
-               1, "select tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES );
-
-         } else if( MTILEMAP_MSTATE_TILES_IMAGE == parser->mstate ) {
-            /* Parse tile image. */
-            strncpy(
-               parser->t->tile_defs[parser->tileset_id_cur].image_path,
-               parser->token,
-               MTILEMAP_TILESET_IMAGE_STR_SZ_MAX );
-
-            debug_printf( 1, "set tile ID " SIZE_T_FMT " to: %s",
-               parser->tileset_id_cur,
-               parser->t->tile_defs[parser->tileset_id_cur].image_path );
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES );
-         }
-
          mtilemap_parse_reset_token( parser );
 
       } else if( MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ) {
@@ -609,90 +753,24 @@ MERROR_RETVAL mtilemap_xform_obj_path(
 
 /* === */
 
-#define tilemap_test_vert( obj, coord, vert_test, vert_greatest ) \
-   vert_test = obj.vertices[j].coord; \
-   if( vert_test < 0 ) { \
-      vert_test *= 1; \
-   } \
-   if( vert_test > vert_greatest ) { \
-      vert_greatest = vert_test; \
-   }
+void mtilemap_free( struct MTILEMAP* t ) {
+   size_t i = 0;
 
-void mtilemap_load_tiles( struct MTILEMAP* t ) {
-   int i = 0,
-      j = 0,
-      y = 0;
-   size_t tile_idx;
-   float vert_test = 0,
-      vert_greatest = 0;
-   struct RETROGLU_OBJ obj;
-   char obj_path[RETROFLAT_PATH_MAX];
+   for( i = 0 ; MTILEMAP_TILESET_DEFS_SZ_MAX > i ; i++ ) {
+      if( NULL != t->tile_defs[i].obj ) {
+         free( t->tile_defs[i].obj );
+         t->tile_defs[i].obj = NULL;
+      }
 
-   debug_printf( 2, "loading models..." );
-   for( y = 0 ; t->tiles_d > y ; y++ ) {
-      for( i = 0 ; t->tiles_sz[y] > i ; i++ ) {
-         tile_idx = t->tiles[y][i];
+      if( 0 < t->tile_defs[i].list ) {
+         glDeleteLists( t->tile_defs[i].list, 1 );
+         t->tile_defs[i].list = 0;
+      }
 
-         /* 0 is always empty. */
-         if( 0 == tile_idx ) {
-            continue;
-         }
-
-         /* Convert to local tile ID. */
-         tile_idx -= t->tileset_fgid;
-
-         /* Skip loaded tiles. */
-         if(
-            MTILEMAP_FLAG_ACTIVE ==
-               (MTILEMAP_FLAG_ACTIVE & t->tile_defs[tile_idx].flags)
-         ) {
-            continue;
-         }
-
-         /* Break down the image path to get obj path. */
-         mtilemap_xform_obj_path(
-            obj_path, RETROFLAT_PATH_MAX, &(t->tile_defs[tile_idx].rotate_f),
-            t->tile_defs[tile_idx].image_path );
-
-         /* Load the model. */
-         debug_printf( 1, "loading model %s (" SIZE_T_FMT ")...",
-            obj_path, tile_idx );
-         memset( &obj, '\0', sizeof( struct RETROGLU_OBJ ) );
-         retroglu_parse_obj_file( obj_path, NULL, &obj );
-
-         /* Find the most-outlying vertex coord. */
-         for( j = 0 ; obj.vertices_sz > j ; j++ ) {
-            tilemap_test_vert( obj, x, vert_test, vert_greatest )
-            tilemap_test_vert( obj, y, vert_test, vert_greatest )
-            tilemap_test_vert( obj, z, vert_test, vert_greatest )
-         }
-
-         debug_printf( 1, "biggest outlying vertex coord: %f", vert_greatest );
-         t->tile_defs[tile_idx].scale_f = MTILEMAP_TILE_SCALE / vert_greatest;
-
-   #ifdef MTILEMAP_NO_LISTS
-         t->tile_defs[tile_idx].obj =
-            calloc( sizeof( struct RETROGLU_OBJ ), 1 );
-         assert( NULL != t->tile_defs[tile_idx].obj );
-         memcpy(
-            t->tile_defs[tile_idx].obj, obj, sizeof( struct RETROGLU_OBJ ) );
-   #else
-         /* Setup display list. */
-         t->tile_defs[tile_idx].list = glGenLists( 1 );
-         glNewList( t->tile_defs[tile_idx].list, GL_COMPILE );
-         glPushMatrix();
-         #if 0
-         glScalef( /* Scale before drawing. */
-            t->tile_defs[tile_idx].scale_f,
-            t->tile_defs[tile_idx].scale_f,
-            t->tile_defs[tile_idx].scale_f );
-         #endif
-         retroglu_draw_poly( &obj );
-         glPopMatrix();
-         glEndList();
-   #endif /* MTILEMAP_NO_LISTS */
-
-         t->tile_defs[tile_idx].flags |= MTILEMAP_FLAG_ACTIVE;
+      if( NULL != t->tile_defs[i].cprops ) {
+         free( t->tile_defs[i].cprops );
+         t->tile_defs[i].cprops = NULL;
+         t->tile_defs[i].cprops_sz = 0;
       }
    }
 }
