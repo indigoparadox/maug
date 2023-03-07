@@ -1425,7 +1425,7 @@ void retroflat_blit_bitmap(
  */
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
-void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
+MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -1862,6 +1862,7 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
       arg_start = 0,
       arg_idx = 0,
       arg_longest = 10; /* Program name. */
+   MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( 1, "retroflat: win cli: %s", cmd_line );
 
@@ -1881,10 +1882,11 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
    }
 
    argv_out = calloc( *argc_out, sizeof( char* ) );
-   assert( NULL != argv_out );
+   maug_cleanup_if_null_alloc( char**, argv_out );
 
    /* NULL program name. */
    argv_out[0] = calloc( 1, sizeof( char ) );
+   maug_cleanup_if_null_alloc( char*, argv_out[0] );
 
    /* Copy args into array. */
    arg_idx = 1;
@@ -1904,12 +1906,23 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
          /* If this is first WS char, it's the end of an arg. */
          assert( NULL == argv_out[arg_idx] );
          argv_out[arg_idx] = calloc( arg_iter + 1, sizeof( char ) );
-         assert( NULL != argv_out[arg_idx] );
+         maug_cleanup_if_null_alloc( char*, argv_out[arg_idx] );
          strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
          arg_idx++; /* Start next arg. */
          arg_iter = 0; /* New arg is 0 long. */
          arg_start = i; /* New arg starts here (maybe). */
       }
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval && NULL != argv_out ) {
+      for( i = 0 ; *argc_out > i ; i++ ) {
+         free( argv_out[i] );
+         argv_out[i] = NULL;
+      }
+      free( argv_out );
+      argv_out = NULL;
    }
 
    return argv_out;
@@ -2225,9 +2238,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
-   if( set_gfx_mode( GFX_AUTODETECT, args->screen_w, args->screen_h, 0, 0 ) ) {
+   if(
+      set_gfx_mode( GFX_AUTODETECT, args->screen_w, args->screen_h, 0, 0 )
+   ) {
 #     else
-   if( set_gfx_mode( GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 ) ) {
+   if( 
+      set_gfx_mode(
+         GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 )
+   ) {
 #     endif /* RETROFLAT_OS_DOS */
 
       allegro_message( "could not setup graphics!" );
@@ -2263,11 +2281,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OS_DOS */
 
    g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
-   if( NULL == g_buffer.b ) {
-      allegro_message( "unable to allocate screen buffer!" );
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( BITMAP*, g_buffer.b, RETROFLAT_ERROR_GRAPHICS );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -2283,7 +2297,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    info = SDL_GetVideoInfo();
-   assert( NULL != info );
+   maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
 
 #     ifdef RETROFLAT_OPENGL
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
@@ -2306,6 +2320,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
+   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
    SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
 #     endif /* RETROFLAT_SDL_ICO */
 
@@ -2316,12 +2331,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       | SDL_OPENGL
 #     endif /* RETROFLAT_OPENGL */
    );
-   if( NULL == g_buffer.surface ) {
-      retroflat_message(
-         "Error", "unable to allocate screen buffer: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
+   maug_cleanup_if_null(
+      SDL_Surface*, g_buffer.surface, RETROFLAT_ERROR_GRAPHICS );
 
    /* Setup key repeat. */
    if(
@@ -2365,18 +2376,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
       args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
-   if( NULL == g_window ) {
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( SDL_Window*, g_window, RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the main renderer. */
    g_buffer.renderer = SDL_CreateRenderer(
       g_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
-   if( NULL == g_buffer.renderer ) {
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
+   maug_cleanup_if_null(
+      SDL_Renderer*, g_buffer.renderer, RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the buffer texture. */
    g_buffer.texture = SDL_CreateTexture( g_buffer.renderer,
@@ -2384,13 +2390,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_screen_w, g_screen_h );
 
 #     ifdef RETROFLAT_SDL_ICO
-
    debug_printf( 1, "setting SDL window icon..." );
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
+   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
    SDL_SetWindowIcon( g_window, icon );
-
 #     endif /* RETROFLAT_SDL_ICO */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2487,7 +2492,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-   assert( (HWND)NULL != g_window );
+   maug_cleanup_if_null_alloc( HWND, g_window );
 
    debug_printf( 1, "setting up graphics timer every %d ms...",
       (int)(1000 / RETROFLAT_FPS) );
@@ -2788,19 +2793,11 @@ cleanup:
 
    /* Create HDC for source bitmap compatible with the buffer. */
    bmp->hdc_b = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == bmp->hdc_b ) {
-      retroflat_message( "Error", "Error locking bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( HDC, bmp->hdc_b, RETROFLAT_ERROR_BITMAP );
 
    /* Create HDC for source mask compatible with the buffer. */
    bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
-   if( (HDC)NULL == bmp->hdc_mask ) {
-      retroflat_message( "Error", "Error locking bitmap mask!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
 
    bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
    bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
@@ -2815,14 +2812,16 @@ cleanup:
 
 /* === */
 
-void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
    if( NULL != bmp ) {
       /* Don't need to lock bitmaps in Allegro. */
-      return;
+      goto cleanup;
    }
 
    /* Flip the buffer. */
@@ -2836,6 +2835,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif /* RETROFLAT_MOUSE */
    vsync();
 
+cleanup:
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -2897,9 +2897,11 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       SDL_DestroyTexture( bmp->texture );
       bmp->texture = SDL_CreateTextureFromSurface(
          g_buffer.renderer, bmp->surface );
-      assert( NULL != bmp->texture );
+      maug_cleanup_if_null(
+         SDL_Texture*, bmp->texture, RETROFLAT_ERROR_BITMAP );
    }
 
+cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
@@ -2913,7 +2915,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          InvalidateRect( g_window, 0, TRUE );
 #     endif /* RETROFLAT_OPENGL */
       }
-      return;
+      goto cleanup;
    }
 
    /* Unlock the bitmap. */
@@ -2932,9 +2934,12 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       bmp->old_hbm_mask = (HBITMAP)NULL;
    }
 
+cleanup:
 #  else
 #     warning "draw release not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
+
+   return retval;
 }
 
 /* === */
@@ -2950,9 +2955,11 @@ static int retroflat_bitmap_win_transparency(
 
    /* Setup bitmap transparency mask. */
    bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
+   maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
 
    lock_ret = retroflat_draw_lock( bmp_out );
    if( RETROFLAT_OK != lock_ret ) {
+      retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
 
@@ -2985,7 +2992,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
-   int retval = 0;
+   int retval = MERROR_OK;
 #if defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
 #elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
@@ -3016,9 +3023,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->b = load_bitmap( filename_path, NULL );
 
-   if( NULL != bmp_out->b ) {
-      retval = RETROFLAT_OK;
-   } else {
+   /* TODO: maug_cleanup_if_null()? */
+   if( NULL == bmp_out->b ) {
       allegro_message( "unable to load %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
    }
@@ -3028,6 +3034,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* == SDL1 == */
 
    tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
+   /* TODO: maug_cleanup_if_null()? */
    if( NULL == tmp_surface ) {
       retroflat_message(
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -3066,6 +3073,7 @@ cleanup:
    
    bmp_out->surface = SDL_LoadBMP( filename_path );
 
+   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->surface ) {
       retroflat_message(
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -3079,6 +3087,7 @@ cleanup:
 
    bmp_out->texture =
       SDL_CreateTextureFromSurface( g_buffer.renderer, bmp_out->surface );
+   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->texture ) {
       retroflat_message(
          "Error", "SDL unable to create texture: %s", SDL_GetError() );
@@ -3104,6 +3113,7 @@ cleanup:
 
    /* Load the bitmap file from disk. */
    bmp_file = fopen( filename_path, "rb" );
+   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_file ) {
       retroflat_message( "Error", "Could not load bitmap: %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
@@ -3114,11 +3124,7 @@ cleanup:
    fseek( bmp_file, 0, SEEK_SET );
 
    buf = calloc( sz, 1 );
-   if( NULL == buf ) {
-      retroflat_message( "Error", "Could not allocate bitmap buffer!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null_alloc( char*, buf );
 
    read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
@@ -3136,11 +3142,7 @@ cleanup:
    hdc_win = GetDC( g_window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
-   if( NULL == bmp_out->b ) {
-      retroflat_message( "Error", "Error loading bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
    SetDIBits( hdc_win, bmp_out->b, 0,
       bmi->bmiHeader.biHeight, &(buf[offset]), bmi,
@@ -3161,6 +3163,7 @@ cleanup:
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 #        endif /* RETROFLAT_API_WINCE */
+   /* TODO: Error with bitmap path. */
    if( NULL == bmp_out->b ) {
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
@@ -3206,53 +3209,55 @@ MERROR_RETVAL retroflat_create_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 
 #  if defined( RETROFLAT_API_ALLEGRO )
+   
+   /* == Allegro == */
+
    bmp_out->b = create_bitmap( w, h );
-   if( NULL == bmp_out->b ) {
-      retroflat_message( "Error", "Error creating bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( BITMAP*, bmp_out->b, RETROFLAT_ERROR_BITMAP );
    clear_bitmap( bmp_out->b );
+
 #  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       32, 0, 0, 0, 0 );
-   if( NULL == bmp_out->surface ) {
-      retroflat_message( "Error", "Error creating bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null(
+      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
    SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+
 #  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   /* Create surface. */
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      /* TODO: Are these masks right? */
       32, 0, 0, 0, 0 );
-   if( NULL == bmp_out->surface ) {
-      retroflat_message( "Error", "Error creating bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null(
+      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
    SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+
+   /* Convert new surface to texture. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_buffer.renderer, bmp_out->surface );
+   maug_cleanup_if_null(
+      SDL_Texture*, bmp_out->texture, RETROFLAT_ERROR_BITMAP );
       
-   if( NULL == bmp_out->texture ) {
-      retroflat_message( "Error", "Error creating bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16 / Win32 == */
+
    HDC hdc_win = (HDC)NULL;
 
    hdc_win = GetDC( g_window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win, w, h );
-   if( NULL == bmp_out->b ) {
-      retroflat_message( "Error", "Error creating bitmap!" );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+
 #  else
 #     warning "create bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
