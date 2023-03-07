@@ -21,8 +21,10 @@
 #define MTILEMAP_WH_MAX ((MTILEMAP_W_MAX) * (MTILEMAP_H_MAX))
 
 #ifndef MTILEMAP_D_MAX
-#  define MTILEMAP_D_MAX 4
+#  define MTILEMAP_D_MAX 6
 #endif /* !MTILEMAP_D_MAX */
+
+#define MTILEMAP_TILES_SZ_MAX ((MTILEMAP_WH_MAX) * (MTILEMAP_D_MAX))
 
 #ifndef MTILEMAP_TOKEN_SZ_MAX
 #  define MTILEMAP_TOKEN_SZ_MAX 4096
@@ -43,10 +45,6 @@
 #ifndef MTILEMAP_TILE_SCALE
 #  define MTILEMAP_TILE_SCALE 1.0f
 #endif /* !MTILEMAP_TILE_SCALE */
-
-#ifndef MTILEMAP_TILE_SCALE_Y
-#  define MTILEMAP_TILE_SCALE_Y 0.5f
-#endif /* !MTILEMAP_TILE_SCALE_Y */
 
 #ifndef MTILEMAP_CPROP_STR_SZ_MAX
 #  define MTILEMAP_CPROP_STR_SZ_MAX 32
@@ -94,7 +92,7 @@ struct MTILEMAP {
    size_t tileset_fgid;
    struct MTILEMAP_TILE_DEF tile_defs[MTILEMAP_TILESET_DEFS_SZ_MAX];
    size_t tiles[MTILEMAP_D_MAX][MTILEMAP_WH_MAX];
-   size_t tiles_sz[MTILEMAP_D_MAX];
+   size_t tiles_sz[MTILEMAP_TILES_SZ_MAX];
    uint8_t tiles_h;
    uint8_t tiles_w;
    uint8_t tiles_d;
