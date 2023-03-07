@@ -119,14 +119,13 @@ endif
 $(1)w3.exe: \
 $(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
 $$(RES_WATCOM_WIN_WIN16_DEP)
-	$$(LD_WATCOM) name $$@ \
+	wlink name $$@ \
 		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^} \
 		$$(RES_WATCOM_WIN_WIN16)
 
 $$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
-	wcc \
-		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN16) \
+	wcc $$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
 CLEAN_TARGETS += $(1)w3.exe
