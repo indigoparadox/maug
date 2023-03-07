@@ -1425,7 +1425,7 @@ void retroflat_blit_bitmap(
  */
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
-void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
+MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -2281,7 +2281,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OS_DOS */
 
    g_buffer.b = create_bitmap( args->screen_w, args->screen_h );
-   maug_cleanup_if_null( (BITMAP*), g_buffer.b, RETROFLAT_ERROR_GRAPHICS );
+   maug_cleanup_if_null( BITMAP*, g_buffer.b, RETROFLAT_ERROR_GRAPHICS );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -2812,14 +2812,16 @@ cleanup:
 
 /* === */
 
-void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
    if( NULL != bmp ) {
       /* Don't need to lock bitmaps in Allegro. */
-      return;
+      goto cleanup;
    }
 
    /* Flip the buffer. */
@@ -2833,6 +2835,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif /* RETROFLAT_MOUSE */
    vsync();
 
+cleanup:
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -2898,6 +2901,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          SDL_Texture*, bmp->texture, RETROFLAT_ERROR_BITMAP );
    }
 
+cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
@@ -2911,7 +2915,7 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          InvalidateRect( g_window, 0, TRUE );
 #     endif /* RETROFLAT_OPENGL */
       }
-      return;
+      goto cleanup;
    }
 
    /* Unlock the bitmap. */
@@ -2930,9 +2934,12 @@ void retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       bmp->old_hbm_mask = (HBITMAP)NULL;
    }
 
+cleanup:
 #  else
 #     warning "draw release not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
+
+   return retval;
 }
 
 /* === */
