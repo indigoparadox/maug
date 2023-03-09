@@ -102,6 +102,8 @@ typedef int GLint;
 #  define RETROGLU_MATERIAL_LIB_SZ_MAX 32
 #endif /* !RETROGLU_MATERIAL_LIB_SZ_MAX */
 
+typedef float RETROGLU_COLOR[4];
+
 struct RETROGLU_VERTEX {
    float x;
    float y;
@@ -174,6 +176,7 @@ struct RETROGLU_SPRITE {
    float scale_x;
    float scale_y;
    int rotate_y;
+   RETROGLU_COLOR color;
 };
 
 struct RETROGLU_TILE {
@@ -187,8 +190,6 @@ struct RETROGLU_TILE {
 
 
 /*! \} */ /* maug_retroglu_sprite */
-
-#define RETROGLU_INIT_LIGHTS 1
 
 #define RETROGLU_PROJ_ORTHO 0
 #define RETROGLU_PROJ_FRUSTUM 1
@@ -214,6 +215,9 @@ struct RETROGLU_PROJ_ARGS {
    sprite->texture_h = bmp_h; \
    sprite->scale_x = 1.0f; \
    sprite->scale_y = 1.0f;
+
+#define retroglu_set_sprite_color( sprite, color_in ) \
+   memcpy( (sprite)->color, (color_in), 3 * sizeof( float ) )
 
 /**
  * \addtogroup maug_retroglu_obj_fsm
@@ -269,8 +273,6 @@ struct RETROGLU_PARSER {
 };
 
 typedef int (*retroglu_token_cb)( struct RETROGLU_PARSER* parser );
-
-typedef float RETROGLU_COLOR[4];
 
 void retroglu_init_scene( uint8_t flags );
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
@@ -430,11 +432,6 @@ void retroglu_init_scene( uint8_t flags ) {
 #else
    glEnable( GL_CULL_FACE );
    glShadeModel( GL_SMOOTH );
-
-   if( RETROGLU_INIT_LIGHTS == (RETROGLU_INIT_LIGHTS & flags) ) {
-      glEnable( GL_NORMALIZE );
-      glEnable( GL_LIGHTING );
-   }
 
    /* Setup texture transparency. */
    glEnable( GL_TEXTURE_2D );
@@ -876,7 +873,6 @@ MERROR_RETVAL retroglu_parse_obj_file(
    return retval;
 }
 
-
 MERROR_RETVAL retroglu_load_tex_bmp(
    const char* filename, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
@@ -932,13 +928,16 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    uint32_t bmp_px_sz = 0;
    uint8_t* bmp_px = NULL;
    int16_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
 
    /* Offsets hardcoded based on windows bitmap. */
    /* TODO: More flexibility. */
 
    if( 40 != bmp_read_uint32( &(bmp_buf[0x0e]) ) ) {
-      error_printf( "unable to determine texture bitmap format" );
-      return RETROFLAT_ERROR_BITMAP;
+      error_printf( "unable to determine texture bitmap format: %d",
+         bmp_buf[0x0e] );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
    }
 
    bmp_offset = bmp_read_uint32( &(bmp_buf[0x0a]) );
@@ -946,7 +945,11 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    *p_bmp_w = bmp_read_uint32( &(bmp_buf[0x12]) );
    *p_bmp_h = bmp_read_uint32( &(bmp_buf[0x16]) );
    bmp_bpp = bmp_read_uint32( &(bmp_buf[0x1c]) );
-   assert( 24 == bmp_bpp );
+   if( 24 != bmp_bpp ) {
+      error_printf( "invalid texture bitmap depth: %d", bmp_bpp );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
 
    debug_printf( 1,
       "bitmap " UPRINTF_U32 " x " UPRINTF_U32 " x " UPRINTF_U32
@@ -955,7 +958,7 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
 
    /* Allocate temporary buffer for unpacking. */
    bmp_px = calloc( *p_bmp_w * *p_bmp_h, 4 );
-   assert( NULL != bmp_px );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
 
    /* Unpack bitmap BGR into BGRA with color key. */
    for( i = 0 ; bmp_px_sz / 3 > i ; i++ ) {
@@ -980,10 +983,14 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, *p_bmp_w, *p_bmp_h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
 
-   free( bmp_px );
+cleanup:
+
+   if( NULL != bmp_px ) {
+      free( bmp_px );
+   }
 #endif /* !RETROGLU_NO_TEXTURES */
 
-   return RETROFLAT_OK;
+   return retval;
 }
 
 void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
@@ -1259,6 +1266,8 @@ void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
+
+   glColor3fv( sprite->color );
    
 #ifndef RETROGLU_NO_TEXTURES
    glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
@@ -1282,6 +1291,10 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    }
 
    glEnd();
+
+#ifndef RETROGLU_NO_TEXTURES
+   glBindTexture( GL_TEXTURE_2D, 0 );
+#endif /* !RETROGLU_NO_TEXTURES */
 }
 
 /* === */
@@ -1307,19 +1320,21 @@ MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
    /* Draw font to texture. */
    for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
       for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
-         i = (y * RETROSOFT_GLYPH_W_SZ) + x;
+         i = ((RETROSOFT_GLYPH_H_SZ - y - 1) * RETROSOFT_GLYPH_W_SZ) + x;
          assert( i < RETROSOFT_GLYPH_W_SZ * RETROSOFT_GLYPH_H_SZ * 4 );
 
          if( 1 == ((glyph_dots[y] >> x) & 0x01) ) {
-            bmp_px[i * 4] = 1;
-            bmp_px[(i * 4) + 1] = 1;
-            bmp_px[(i * 4) + 2] = 1;
+            bmp_px[i * 4] = 0xff;
+            bmp_px[(i * 4) + 1] = 0xff;
+            bmp_px[(i * 4) + 2] = 0xff;
             bmp_px[(i * 4) + 3] = 0xff;
          }
       }
    }
 
+   assert( 0 == g_retroglu_font_tex[set_idx][glyph_idx] );
    glGenTextures( 1, (GLuint*)&(g_retroglu_font_tex[set_idx][glyph_idx]) );
+   assert( 0 < g_retroglu_font_tex[set_idx][glyph_idx] );
    glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[set_idx][glyph_idx] );
    /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
@@ -1342,14 +1357,14 @@ MERROR_RETVAL retroglu_init_glyph_tex() {
    size_t i = 0,
       j = 0;
 
+   debug_printf( 1, "loading glyph textures..." );
+
    for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
       for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
          retval = retroglu_load_glyph( i, j );
          maug_cleanup_if_not_ok();
       }
    }
-
-   debug_printf( 1, "loading glyph textures..." );
 
 cleanup:
 
@@ -1360,11 +1375,43 @@ cleanup:
 
 /* === */
 
+#define RETROGLU_FONT_W 0.05f
+
 void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
    const char* str, int str_sz, const char* font_str, uint8_t flags
 ) {
+   size_t i = 0;
    /* TODO */
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      /* Stop drawing on NULL. */
+      if( '\0' == str[i] ) {
+         break;
+      }
+
+      glColor3fv( color );
+      glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[0][str[i] - ' '] );
+      glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+      
+      glBegin( GL_QUADS );
+
+      glTexCoord2f( 0, 0 );
+      glVertex2f( x + (RETROGLU_FONT_W * i), y );
+      glTexCoord2f( 1, 0 );
+      glVertex2f( x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W, y );
+      glTexCoord2f( 1, 1 );
+      glVertex2f(
+         x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W, y + RETROGLU_FONT_W );
+      glTexCoord2f( 0, 1 );
+      glVertex2f( x + (RETROGLU_FONT_W * i), y + RETROGLU_FONT_W );
+      
+      glEnd();
+
+      glBindTexture( GL_TEXTURE_2D, 0 );
+   }
 }
 
 #else
