@@ -2,6 +2,18 @@
 #ifndef RETROSFT_H
 #define RETROSFT_H
 
+#define RETROSOFT_SETS_COUNT 2
+#define RETROSOFT_GLYPHS_COUNT 95
+#define RETROSOFT_GLYPH_W_SZ 8
+#define RETROSOFT_GLYPH_H_SZ 8
+
+MERROR_RETVAL retrosoft_load_glyph(
+   size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp );
+
+MERROR_RETVAL retrosoft_init();
+
+void retrosoft_shutdown();
+
 void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
@@ -14,7 +26,92 @@ void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
+void retrosoft_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
+   const char* font_str, int* w_out, int* h_out );
+
+void retrosoft_string(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   uint8_t flags );
+
 #ifdef RETROSFT_C
+
+#  include "mfont8x8.h"
+
+static struct RETROFLAT_BITMAP
+gc_font_bmps[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
+
+/* === */
+
+MERROR_RETVAL retrosoft_load_glyph(
+   size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int x = 0,
+      y = 0;
+   const char* glyph_dots = gc_font8x8[set_idx][glyph_idx];
+   
+   /* Create a transparent bitmap to draw on. */
+   retval = retroflat_create_bitmap(
+      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp );
+   maug_cleanup_if_not_ok();
+
+   /* Draw the glyph onto the bitmap. */
+   for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
+      for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
+         if( 1 == ((glyph_dots[y] >> x) & 0x01) ) {
+            retroflat_px( bmp, RETROFLAT_COLOR_WHITE, x, y, 0 );
+         }
+      }
+   }
+
+   /*
+   retroflat_rect(
+      bmp, RETROFLAT_COLOR_RED, 0, 0, 
+      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, RETROFLAT_FLAGS_FILL );
+   */
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrosoft_init() {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0,
+      j = 0;
+
+   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+         retval = retrosoft_load_glyph( i, j, &(gc_font_bmps[i][j]) );
+         maug_cleanup_if_not_ok();
+      }
+   }
+
+cleanup:
+
+   /* TODO: Unload loaded bitmaps if retval not OK. */
+
+   return retval;
+}
+
+/* === */
+
+void retrosoft_shutdown() {
+   size_t i = 0,
+      j = 0;
+
+   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+         retroflat_destroy_bitmap( &(gc_font_bmps[i][j]) );
+      }
+   }
+}
+
+/* === */
 
 void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -150,9 +247,47 @@ cleanup:
    }  
 }
 
+/* === */
+
+void retrosoft_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
+   const char* font_str, int* w_out, int* h_out
+) {
+   /* TODO: Put a little more effort into sizing. */
+   *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
+   *h_out = RETROSOFT_GLYPH_H_SZ;
+}
+
+/* === */
+
+void retrosoft_string(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   uint8_t flags
+) {
+   size_t i = 0,
+      glyph_idx = 0;
+   int x = x_orig;
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      /* Terminate prematurely at null. */
+      if( '\0' == str[i] ) {
+         break;
+      }
+
+      /* Fonts start at character after space. */
+      glyph_idx = str[i] - ' ';
+
+      retroflat_blit_bitmap(
+         target, &(gc_font_bmps[0][glyph_idx]), 0, 0, x, y_orig,
+         RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ );
+
+      x += 8;
+   }
+}
+
 #else
-extern int16_t g_retroflat_soft_cos[];
-extern int16_t g_retroflat_soft_sin[];
+
 #endif /* RETROSFT_C */
 
 #endif /* !RETROSFT_H */
