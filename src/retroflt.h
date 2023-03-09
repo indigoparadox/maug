@@ -2589,6 +2589,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     warning "init not implemented"
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
+#  if defined( RETROFLAT_SOFT_SHAPES )
+   retval = retrosoft_init();
+   maug_cleanup_if_not_ok();
+#  endif /* RETROFLAT_SOFT_SHAPES */
+
 cleanup:
 
    return retval;
@@ -2597,6 +2602,10 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+#  if defined( RETROFLAT_SOFT_SHAPES )
+   retrosoft_shutdown();
+#  endif /* RETROFLAT_SOFT_SHAPES */
 
 #  if defined( RETROFLAT_OS_WASM )
    /* Do nothing, start the main loop later. */
@@ -4029,11 +4038,6 @@ void retroflat_string(
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
-#  elif defined( RETROFLAT_API_SDL2 )
-   TTF_Font* font_data = NULL;
-   SDL_Surface* str_surface = NULL;
-   SDL_Texture* str_texture = NULL;
-   SDL_Rect str_rect;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
@@ -4075,52 +4079,8 @@ cleanup:
 
    /* == SDL == */
 
-   if( NULL == font_str ) {
-      font_str = RETROFLAT_DEFAULT_FONT;
-   }
-
-   font_data = TTF_OpenFont( font_str, 12 );
-   if( NULL == font_data ) {
-      /* TODO: FIXME */
-      /*
-      retroflat_message( "Error", "Unable to load font: %s", font_str );
-      */
-      goto cleanup;
-   }
-
-   str_surface = TTF_RenderText_Solid( font_data, str, *color );
-   if( NULL == str_surface ) {
-      retroflat_message( "Error", "Unable to render string surface." );
-      goto cleanup;
-   }
-
-   str_texture = SDL_CreateTextureFromSurface( target->renderer, str_surface );
-   if( NULL == str_surface ) {
-      retroflat_message( "Error", "Unable to render string texture." );
-      goto cleanup;
-   }
-
-   str_rect.x = x_orig;
-   str_rect.y = y_orig;
-   str_rect.w = str_surface->w;
-   str_rect.h = str_surface->h;
-
-   SDL_RenderCopy( target->renderer, str_texture, NULL, &str_rect );
-
-cleanup:
-
-   if( NULL != str_surface ) {
-      SDL_FreeSurface( str_surface );
-   }
-
-   if( NULL != str_texture ) {
-      SDL_DestroyTexture( str_texture );
-   }
-
-   if( NULL != font_data ) {
-      /* TODO: Cache loaded fonts for later use. */
-      TTF_CloseFont( font_data );
-   }
+   retrosoft_string(
+      target, color, str, str_sz, font_str, x_orig, y_orig, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 

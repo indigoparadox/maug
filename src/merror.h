@@ -20,5 +20,10 @@ typedef int MERROR_RETVAL;
 #define maug_cleanup_if_null_alloc( type, ptr ) \
    maug_cleanup_if_null( type, ptr, MERROR_ALLOC )
 
+#define maug_cleanup_if_not_ok() \
+   if( MERROR_OK != retval ) { \
+      goto cleanup; \
+   }
+
 #endif /* MERROR_H */
 
