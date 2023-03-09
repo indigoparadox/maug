@@ -35,5 +35,12 @@
 #include <mconfig.h>
 #endif /* !MAUG_NO_CONFIG */
 
+#ifndef MAUG_NO_RETRO
+#ifdef MAUG_C
+#  define RETROFLT_C
+#endif /* MAUG_C */
+#include <retroflt.h>
+#endif /* !MAUG_NO_RETRO */
+
 #endif /* MAUG_H */
 

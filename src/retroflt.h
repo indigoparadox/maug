@@ -710,7 +710,7 @@ typedef int RETROFLAT_COLOR;
 #  include <SDL.h>
 #  include <SDL_ttf.h>
 
-#  ifndef RETROFLAT_SOFT_SHAPES
+#  if !defined( RETROFLAT_SOFT_SHAPES ) && !defined( RETROFLAT_OPENGL )
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
@@ -1490,7 +1490,7 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
  */
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out );
+   const char* font_str, int* w_out, int* h_out, uint8_t flags );
 
 /**
  * \brief Draw a text string at the specified location in the specified font
@@ -1622,12 +1622,18 @@ uint8_t g_retroflat_flags = 0;
 
 /* === Function Definitions === */
 
-#  ifdef RETROFLAT_SOFT_SHAPES
+#  if defined( RETROFLAT_SOFT_SHAPES ) && !defined( MAUG_NO_AUTO_C )
+/* TODO: Define _C here? */
 #     define RETROFP_C
 #     include <retrofp.h>
 #     define RETROSFT_C
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
+
+#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#     define RETROGLU_C
+#     include <retroglu.h>
+#  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_WING
 
@@ -2593,6 +2599,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    retval = retrosoft_init();
    maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_SOFT_SHAPES */
+
+#  if defined( RETROFLAT_OPENGL )
+   retval = retroglu_init_glyph_tex();
+   maug_cleanup_if_not_ok();
+#  endif /* RETROFLAT_OPENGL */
 
 cleanup:
 
@@ -3794,6 +3805,10 @@ void retroflat_line(
 
    retrosoft_line( target, color, x1, y1, x2, y2, flags );
 
+#  elif defined( RETROFLAT_OPENGL )
+
+   /* Do nothing. */
+
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
@@ -3875,6 +3890,10 @@ void retroflat_ellipse(
 
    retrosoft_ellipse( target, color, x, y, w, h, flags );
 
+#  elif defined( RETROFLAT_OPENGL )
+
+   /* Do nothing. */
+
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
@@ -3937,7 +3956,7 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out
+   const char* font_str, int* w_out, int* h_out, uint8_t flags
 ) {
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
@@ -3954,7 +3973,15 @@ void retroflat_string_sz(
       target = &(g_buffer);
    }
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  if defined( RETROFLAT_SOFT_SHAPES )
+
+   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
+
+#  elif defined( RETROFLAT_OPENGL )
+
+   /* Do nothing. */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3976,30 +4003,6 @@ cleanup:
 
    if( font_loaded && NULL != font_data ) {
       destroy_font( font_data );
-   }
-
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL == */
-
-   if( NULL == font_str ) {
-      font_str = RETROFLAT_DEFAULT_FONT;
-   }
-
-   font_data = TTF_OpenFont( font_str, 12 );
-   if( NULL == font_data ) {
-      /* TODO: FIXME */
-      /* retroflat_message( "Error", "Unable to load font: %s", font_str ); */
-      goto cleanup;
-   }
-
-   TTF_SizeText( font_data, str, w_out, h_out );
-
-cleanup:
-
-   if( NULL != font_data ) {
-      /* TODO: Cache loaded fonts for later use. */
-      TTF_CloseFont( font_data );
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4053,7 +4056,16 @@ void retroflat_string(
       str_sz = strlen( str );
    }
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  if defined( RETROFLAT_SOFT_SHAPES )
+
+   retrosoft_string(
+      target, color, str, str_sz, font_str, x_orig, y_orig, flags );
+
+#  elif defined( RETROFLAT_OPENGL )
+
+   /* Do nothing. */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4074,13 +4086,6 @@ cleanup:
    if( font_loaded && NULL != font_data ) {
       destroy_font( font_data );
    }
-
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL == */
-
-   retrosoft_string(
-      target, color, str, str_sz, font_str, x_orig, y_orig, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -4183,7 +4188,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       return (readkey() >> 8);
    }
 
-#  elif defined( RETROFLAT_API_SDL2 ) || defined( RETROFLAT_API_SDL1 )
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
 
@@ -4290,6 +4295,15 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #else
 
 #  include <uprintf.h>
+
+#  if defined( RETROFLAT_SOFT_SHAPES ) && !defined( MAUG_NO_AUTO_C )
+#     include <retrofp.h>
+#     include <retrosft.h>
+#  endif /* RETROFLAT_SOFT_SHAPES */
+
+#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#     include <retroglu.h>
+#  endif /* RETROFLAT_OPENGL */
 
 extern int g_retval;
 extern int g_screen_w;

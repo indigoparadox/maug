@@ -2,11 +2,6 @@
 #ifndef RETROSFT_H
 #define RETROSFT_H
 
-#define RETROSOFT_SETS_COUNT 2
-#define RETROSOFT_GLYPHS_COUNT 95
-#define RETROSOFT_GLYPH_W_SZ 8
-#define RETROSOFT_GLYPH_H_SZ 8
-
 MERROR_RETVAL retrosoft_load_glyph(
    size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp );
 
@@ -28,7 +23,7 @@ void retrosoft_ellipse(
 
 void retrosoft_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out );
+   const char* font_str, int* w_out, int* h_out, uint8_t flags );
 
 void retrosoft_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -251,7 +246,7 @@ cleanup:
 
 void retrosoft_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out
+   const char* font_str, int* w_out, int* h_out, uint8_t flags
 ) {
    /* TODO: Put a little more effort into sizing. */
    *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;

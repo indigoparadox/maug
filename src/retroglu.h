@@ -270,6 +270,8 @@ struct RETROGLU_PARSER {
 
 typedef int (*retroglu_token_cb)( struct RETROGLU_PARSER* parser );
 
+typedef float RETROGLU_COLOR[4];
+
 void retroglu_init_scene( uint8_t flags );
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
 
@@ -299,11 +301,37 @@ MERROR_RETVAL retroglu_parse_obj_file(
 
 /*! \} */ /* maug_retroglu_obj_fsm */
 
+MERROR_RETVAL retroglu_load_tex_bmp(
+   const char* filename, uint32_t* p_texture_id,
+   uint32_t* p_bmp_w, uint32_t* p_bmp_h );
+
 int retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h );
 
 void retroglu_draw_poly( struct RETROGLU_OBJ* obj );
+
+void retroglu_set_tile_clip(
+   struct RETROGLU_TILE* tile,
+   uint32_t px, uint32_t py, uint32_t pw, uint32_t ph, uint8_t flags );
+
+void retroglu_set_sprite_clip(
+   struct RETROGLU_SPRITE* sprite,
+   uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
+   uint32_t pw, uint32_t ph, uint8_t flags );
+
+void retroglu_set_sprite_pos(
+   struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py );
+
+void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite );
+
+void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite );
+
+MERROR_RETVAL retroglu_init_glyph_tex();
+
+void retroglu_string(
+   float x, float y, float z, const RETROGLU_COLOR color,
+   const char* str, int str_sz, const char* font_str, uint8_t flags );
 
 #ifdef RETROGLU_C
 
@@ -1254,6 +1282,89 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    }
 
    glEnd();
+}
+
+/* === */
+
+#  include "mfont8x8.h"
+
+static
+uint32_t g_retroglu_font_tex[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
+
+MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
+   uint8_t* bmp_px = NULL;
+   int16_t i = 0,
+      x = 0,
+      y = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   const char* glyph_dots = gc_font8x8[set_idx][glyph_idx];
+
+   /* Allocate temporary buffer for drawing. */
+   bmp_px = calloc( RETROSOFT_GLYPH_W_SZ * RETROSOFT_GLYPH_H_SZ, 4 );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
+   assert( NULL != bmp_px );
+
+   /* Draw font to texture. */
+   for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
+      for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
+         i = (y * RETROSOFT_GLYPH_W_SZ) + x;
+         assert( i < RETROSOFT_GLYPH_W_SZ * RETROSOFT_GLYPH_H_SZ * 4 );
+
+         if( 1 == ((glyph_dots[y] >> x) & 0x01) ) {
+            bmp_px[i * 4] = 1;
+            bmp_px[(i * 4) + 1] = 1;
+            bmp_px[(i * 4) + 2] = 1;
+            bmp_px[(i * 4) + 3] = 0xff;
+         }
+      }
+   }
+
+   glGenTextures( 1, (GLuint*)&(g_retroglu_font_tex[set_idx][glyph_idx]) );
+   glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[set_idx][glyph_idx] );
+   /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
+      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
+
+cleanup:
+
+   if( NULL != bmp_px ) {
+      free( bmp_px );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroglu_init_glyph_tex() {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0,
+      j = 0;
+
+   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+         retval = retroglu_load_glyph( i, j );
+         maug_cleanup_if_not_ok();
+      }
+   }
+
+   debug_printf( 1, "loading glyph textures..." );
+
+cleanup:
+
+   /* TODO: Destroy loaded textures if failure. */
+
+   return retval;
+}
+
+/* === */
+
+void retroglu_string(
+   float x, float y, float z, const RETROGLU_COLOR color,
+   const char* str, int str_sz, const char* font_str, uint8_t flags
+) {
+   /* TODO */
 }
 
 #else
