@@ -226,7 +226,7 @@ RETROGUI_IDC retrogui_poll_ctls(
             /* Figure out the item clicked. */
             for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
                retroflat_string_sz(
-                  NULL, ctls[i].text_list[j], -1, NULL, &w, &h );
+                  NULL, ctls[i].text_list[j], -1, NULL, &w, &h, 0 );
                if(
                   input_evt->mouse_y < 
                   ctls[i].y + ((j + 1) * (h + RETROGUI_PADDING))
@@ -262,7 +262,8 @@ void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, int ctls_sz ) {
          ctls[i].x, ctls[i].y, ctls[i].w, ctls[i].h, RETROFLAT_FLAGS_FILL );
 
       for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
-         retroflat_string_sz( NULL, ctls[i].text_list[j], -1, NULL, &w, &h );
+         retroflat_string_sz(
+            NULL, ctls[i].text_list[j], -1, NULL, &w, &h, 0 );
          if( j == ctls[i].sel_idx ) {
             /* TODO: Configurable selection colors. */
             retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
