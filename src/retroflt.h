@@ -49,6 +49,8 @@
  *       struct EXAMPLE_DATA {
  *          int example;
  *       };
+ *
+ *       struct EXAMPLE_DATA* g_data = NULL;
  *       
  *       / * This is the loop iteration which will be repeatedly called
  *         * by retroflat_loop() below, until retroflat_quit() is called.
@@ -85,10 +87,13 @@
  *          / * Release the screen (NULL) from drawing. * /
  *          retroflat_draw_release( NULL );
  *       }
+ *
+ *       void example_shutdown() :
+ *          free( g_data );
+ *       }
  *       
  *       int main( int argc, char* argv[] ) {
  *          int retval = 0;
- *          struct EXAMPLE_DATA data;
  *          struct RETROFLAT_ARGS args;
  *
  *          / * Setup the args to retroflat_init() below to create a window 
@@ -99,9 +104,10 @@
  *          args.screen_h = 200;
  *          args.title = "Example Program";
  *          args.assets_path = "assets";
+ *          args.shutdown_cb = example_shutdown;
  *       
  *          / * Zero out the data holder. * /
- *          memset( &data, '\0', sizeof( struct EXAMPLE_DATA ) );
+ *          g_data = calloc( 1, sizeof( struct EXAMPLE_DATA ) );
  *       
  *          / * === Setup === * /
  *          / * Call the init with the args struct created above. * /
@@ -119,9 +125,6 @@
  *          retroflat_loop( (retroflat_loop_iter)example_loop, &data );
  *       
  *       cleanup:
- *       
- *          / * This must be called at the end of the program! * /
- *          retroflat_shutdown( retval );
  *       
  *          return retval;
  *       }
@@ -333,6 +336,12 @@
 #define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
 /**
+ * \brief Flag for g_retroflat_flags indicating that shutdown has completed
+ *        and all further calls to retroflat_shutdown() are NOOPs.
+ */
+#define RETROFLAT_FLAGS_SHUTDOWN  0x08
+
+/**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
  *
@@ -456,6 +465,8 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_input */
 
+typedef void (*retroflat_shutdown_cb)();
+
 /*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
    /**
@@ -470,6 +481,7 @@ struct RETROFLAT_ARGS {
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
    uint8_t flags;
+   retroflat_shutdown_cb shutdown_cb;
 };
 
 /**
@@ -2482,13 +2494,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-   if( TTF_Init() ) {
-      retroflat_message(
-         "Error", "Error initializing SDL_TTF: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
-
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
    g_screen_w = args->screen_w;
@@ -2731,6 +2736,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_OPENGL */
 
+   if( NULL != args->shutdown_cb ) {
+      atexit( args->shutdown_cb );
+   }
+
 cleanup:
 
    return retval;
@@ -2739,6 +2748,19 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+   /* Put this guard here since some older programs might still call
+    * shutdown manually.
+    */
+   if(
+      RETROFLAT_FLAGS_SHUTDOWN ==
+      (RETROFLAT_FLAGS_SHUTDOWN & g_retroflat_flags)
+   ) {
+      /* Do nothing. */
+      return;
+   }
+
+   g_retroflat_flags |= RETROFLAT_FLAGS_SHUTDOWN;
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
    retrosoft_shutdown();
@@ -2764,8 +2786,6 @@ void retroflat_shutdown( int retval ) {
 #     ifndef RETROFLAT_API_SDL1
    SDL_DestroyWindow( g_window );
 #     endif /* !RETROFLAT_API_SDL1 */
-
-   TTF_Quit();
 
    SDL_Quit();
 
@@ -4105,8 +4125,6 @@ void retroflat_string_sz(
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
-#  elif defined( RETROFLAT_API_SDL2 )
-   TTF_Font* font_data = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
