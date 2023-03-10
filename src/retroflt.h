@@ -373,14 +373,6 @@
 #  define RETROFLAT_BITMAP_EXT "bmp"
 #endif /* !RETROFLAT_BITMAP_EXT */
 
-/**
- * \brief The default font to load if none is specified to retroflat_string().
- *        Currently this only has an effect in SDL.
- */
-#ifndef RETROFLAT_DEFAULT_FONT
-#  define RETROFLAT_DEFAULT_FONT "./Sans.ttf"
-#endif /* RETROFLAT_DEFAULT_FONT */
-
 #ifndef RETROFLAT_OPENGL_BPP
 #  define RETROFLAT_OPENGL_BPP 32
 #endif /* !RETROFLAT_OPENGL_BPP */
@@ -708,7 +700,6 @@ typedef int RETROFLAT_COLOR;
 #  endif /* RETROFLAT_OS_WASM */
 
 #  include <SDL.h>
-#  include <SDL_ttf.h>
 
 #  if !defined( RETROFLAT_SOFT_SHAPES ) && !defined( RETROFLAT_OPENGL )
 #     define RETROFLAT_SOFT_SHAPES
@@ -2482,13 +2473,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-   if( TTF_Init() ) {
-      retroflat_message(
-         "Error", "Error initializing SDL_TTF: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_GRAPHICS;
-      goto cleanup;
-   }
-
    g_screen_v_w = args->screen_w;
    g_screen_v_h = args->screen_h;
    g_screen_w = args->screen_w;
@@ -2764,8 +2748,6 @@ void retroflat_shutdown( int retval ) {
 #     ifndef RETROFLAT_API_SDL1
    SDL_DestroyWindow( g_window );
 #     endif /* !RETROFLAT_API_SDL1 */
-
-   TTF_Quit();
 
    SDL_Quit();
 
@@ -4105,8 +4087,6 @@ void retroflat_string_sz(
 #  if defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
-#  elif defined( RETROFLAT_API_SDL2 )
-   TTF_Font* font_data = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0,
       locked_target_internal = 0;
