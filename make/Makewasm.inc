@@ -11,9 +11,9 @@ ifeq ("$$(OPENGL)","1")
 endif
 
 ifeq ("$$(WASM_SDL_VER)","1")
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_TTF=1
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1
 else
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_TTF=2
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))
