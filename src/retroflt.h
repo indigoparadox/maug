@@ -1158,6 +1158,80 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 /* TODO? */
 #  define retroflat_quit( retval )
 
+#elif defined( RETROFLAT_API_GLUT )
+
+#ifndef RETROFLAT_OPENGL
+#  define RETROFLAT_OPENGL
+#endif /* !RETROFLAT_OPENGL */
+
+#include <GL/glut.h>
+
+typedef int RETROFLAT_COLOR;
+
+struct RETROFLAT_BITMAP {
+   uint8_t flags;
+};
+
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
+#  define retroflat_bitmap_locked( bmp ) 0
+#  define retroflat_screen_w() g_screen_v_w
+#  define retroflat_screen_h() g_screen_v_h
+#  define retroflat_quit( retval ) glutDestroyWindow( glutGetWindow() )
+#  define END_OF_MAIN()
+
+#  define GLUT_SPECIAL_KEY_OFFSET 0x80
+
+#  define RETROFLAT_KEY_UP	      (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_UP)
+#  define RETROFLAT_KEY_DOWN     (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_DOWN)
+#  define RETROFLAT_KEY_RIGHT	   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_RIGHT)
+#  define RETROFLAT_KEY_LEFT	   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_LEFT)
+#  define RETROFLAT_KEY_HOME	   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_HOME)
+#  define RETROFLAT_KEY_END	   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_END)
+#  define RETROFLAT_KEY_PGUP     (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_PAGE_UP)
+#  define RETROFLAT_KEY_PGDN     \
+   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_PAGE_DOWN)
+#  define RETROFLAT_KEY_DELETE   0x7f
+#  define RETROFLAT_KEY_ESC      0x1b
+#  define RETROFLAT_KEY_ENTER    0x0d
+#  define RETROFLAT_KEY_TAB	   '\t'
+#  define RETROFLAT_KEY_SPACE	   ' '
+#  define RETROFLAT_KEY_A		   'a'
+#  define RETROFLAT_KEY_B		   'b'
+#  define RETROFLAT_KEY_C		   'c'
+#  define RETROFLAT_KEY_D		   'd'
+#  define RETROFLAT_KEY_E		   'e'
+#  define RETROFLAT_KEY_F		   'f'
+#  define RETROFLAT_KEY_G		   'g'
+#  define RETROFLAT_KEY_H		   'h'
+#  define RETROFLAT_KEY_I		   'i'
+#  define RETROFLAT_KEY_J		   'j'
+#  define RETROFLAT_KEY_K		   'k'
+#  define RETROFLAT_KEY_L		   'l'
+#  define RETROFLAT_KEY_M		   'm'
+#  define RETROFLAT_KEY_N		   'n'
+#  define RETROFLAT_KEY_O		   'o'
+#  define RETROFLAT_KEY_P		   'p'
+#  define RETROFLAT_KEY_Q		   'q'
+#  define RETROFLAT_KEY_R		   'r'
+#  define RETROFLAT_KEY_S		   's'
+#  define RETROFLAT_KEY_T		   't'
+#  define RETROFLAT_KEY_U		   'u'
+#  define RETROFLAT_KEY_V		   'v'
+#  define RETROFLAT_KEY_W		   'w'
+#  define RETROFLAT_KEY_X		   'x'
+#  define RETROFLAT_KEY_Y		   'y'
+#  define RETROFLAT_KEY_Z		   'z'
+#  define RETROFLAT_KEY_0		   '0'
+#  define RETROFLAT_KEY_1		   '1'
+#  define RETROFLAT_KEY_2		   '2'
+#  define RETROFLAT_KEY_3		   '3'
+#  define RETROFLAT_KEY_4		   '4'
+#  define RETROFLAT_KEY_5		   '5'
+#  define RETROFLAT_KEY_6		   '6'
+#  define RETROFLAT_KEY_7		   '7'
+#  define RETROFLAT_KEY_8		   '8'
+#  define RETROFLAT_KEY_9		   '9'
+
 #else
 #  warning "not implemented"
 
@@ -1610,6 +1684,14 @@ static int g_px_id = 0;
 static uint16_t g_bg_tiles[1024];
 static uint16_t g_window_tiles[1024];
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+int g_screen_v_w = 0;
+int g_screen_v_h = 0;
+size_t g_retroflat_next = 0;
+retroflat_loop_iter g_loop_iter = NULL;
+int16_t g_retroflat_last_key = 0;
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* === Globals === */
@@ -1936,6 +2018,32 @@ cleanup:
    return argv_out;
 }
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+void retroflat_glut_display() {
+   if( NULL != g_loop_iter ) {
+      g_loop_iter( g_loop_data );
+   }
+}
+
+void retroflat_glut_idle() {
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS !=
+      (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_flags) &&
+      retroflat_get_ms() < g_retroflat_next
+   ) {
+      return;
+   }
+   
+   glutPostRedisplay();
+
+   g_retroflat_next = retroflat_get_ms() + retroflat_fps_next();
+}
+
+void retroflat_glut_key( unsigned char key, int x, int y ) {
+   g_retroflat_last_key = key;
+}
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* Still inside RETROFLT_C! */
@@ -1987,6 +2095,12 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
       TranslateMessage( &g_msg );
       DispatchMessage( &g_msg );
    } while( 0 < g_msg_retval );
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   g_loop_iter = (retroflat_loop_iter)loop_iter;
+   g_loop_data = (void*)data;
+   glutMainLoop();
 
 #  else
 #     warning "loop not implemented"
@@ -2590,6 +2704,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
    TIMER1_CR = TIMER_ENABLE | TIMER_CASCADE;
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   g_screen_v_w = args->screen_w;
+   g_screen_v_h = args->screen_h;
+
+   glutInit( &argc, argv );
+   glutInitDisplayMode( GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA );
+   glutInitWindowSize( g_screen_v_w, g_screen_v_h );
+   glutCreateWindow( args->title );
+   glutIdleFunc( retroflat_glut_idle );
+   glutDisplayFunc( retroflat_glut_display );
+   glutKeyboardFunc( retroflat_glut_key );
 
 #  else
 #     warning "init not implemented"
@@ -2712,7 +2838,15 @@ uint32_t retroflat_get_ms() {
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
+   /* == libNDS == */
+
    return ((TIMER1_DATA * (1 << 16)) + TIMER0_DATA) / 32;
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* == GLUT == */
+
+   return glutGet( GLUT_ELAPSED_TIME );
 
 #  else
 #  warning "get_ms not implemented"
@@ -2957,6 +3091,16 @@ cleanup:
    }
 
 cleanup:
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* == GLUT == */
+
+   if( NULL == bmp || &g_buffer == bmp ) {
+      /* Special case: Attempting to release the screen. */
+      glutSwapBuffers();
+   }
+
 #  else
 #     warning "draw release not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4285,6 +4429,11 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    }
 #endif /* RETROFLAT_SCREENSAVER */
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   key_out = g_retroflat_last_key;
+   g_retroflat_last_key = 0;
+
 #  else
 #     warning "poll input not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -4292,7 +4441,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
-#else
+#else /* End of RETROFLT_C */
 
 #  include <uprintf.h>
 
