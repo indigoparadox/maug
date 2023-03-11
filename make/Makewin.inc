@@ -167,7 +167,7 @@ $$(OBJDIR_WATCOM386_WIN_SDL)/%.o: %.c | $(MAUG_DEPS)
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM386_WIN_SDL) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)nt.exe
+CLEAN_TARGETS += $(1)nts.exe
 
 endef
 
