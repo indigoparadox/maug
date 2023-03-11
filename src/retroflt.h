@@ -2011,13 +2011,23 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_GLUT )
 
-void retroflat_glut_display() {
+#ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#else
+void
+#endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_display( void ) {
    if( NULL != g_loop_iter ) {
       g_loop_iter( g_loop_data );
    }
 }
 
-void retroflat_glut_idle() {
+#ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#else
+void
+#endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_idle( void ) {
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS !=
       (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_flags) &&
@@ -2031,7 +2041,12 @@ void retroflat_glut_idle() {
    g_retroflat_next = retroflat_get_ms() + retroflat_fps_next();
 }
 
-void retroflat_glut_key( unsigned char key, int x, int y ) {
+#ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#else
+void
+#endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_key( unsigned char key, int x, int y ) {
    g_retroflat_last_key = key;
 }
 
