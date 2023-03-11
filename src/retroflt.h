@@ -3629,10 +3629,14 @@ void retroflat_blit_bitmap(
 ) {
 #  if defined( RETROFLAT_API_SDL1 )
    int retval = 0;
+   SDL_Rect src_rect;
+   SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )
    int retval = 0;
    int lock_ret = 0;
    int locked_target_internal = 0;
+   SDL_Rect src_rect = { s_x, s_y, w, h };
+   SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int lock_ret = 0;
    int locked_src_internal = 0;
@@ -3667,13 +3671,14 @@ void retroflat_blit_bitmap(
 
    assert( !retroflat_bitmap_locked( src ) );
 
-   SDL_Rect dest_rect = {
-      d_x, 
-      d_y,
-      w, 
-      h};
-   SDL_Rect src_rect = {
-      s_x, s_y, w, h };
+   src_rect.x = s_x;
+   src_rect.y = s_y;
+   src_rect.w = w;
+   src_rect.h = h;
+   dest_rect.x = d_x;
+   dest_rect.y = d_y;
+   dest_rect.w = w;
+   dest_rect.h = h;
 
 #     ifdef RETROFLAT_API_SDL1
    assert( !retroflat_bitmap_locked( target ) );
@@ -4310,6 +4315,9 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
    union REGS inregs;
    union REGS outregs;
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   int eres = 0;
+   SDL_Event event;
 #  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
    int key_out = 0;
 
@@ -4370,9 +4378,6 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
-
-   int eres = 0;
-   SDL_Event event;
 
    SDL_PollEvent( &event );
 
