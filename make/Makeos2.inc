@@ -57,7 +57,7 @@ $$(OBJDIR_WATCOM386_OS2_SDL)/%.o: %.c | $(MAUG_DEPS)
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_OS2) $$(CFLAGS_WATCOM386_OS2_SDL) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)o32gl.exe
+CLEAN_TARGETS += $(1)o32s.exe
 
 endef
 
