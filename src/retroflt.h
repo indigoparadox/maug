@@ -2120,6 +2120,8 @@ void retroflat_message( const char* title, const char* format, ... ) {
    /* TODO: Dialog box crashes! */
    /* MessageBox( NULL, msg_out, title, 0 ); */
    printf( "%s\n", msg_out );
+#  elif defined( RETROFLAT_API_GLUT )
+   /* TODO */
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -2767,6 +2769,10 @@ void retroflat_shutdown( int retval ) {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRCLEANUP )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENCLEANUP )
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "shutdown not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
@@ -2794,6 +2800,8 @@ void retroflat_set_title( const char* format, ... ) {
    SetWindowText( g_window, title );
 #elif defined( RETROFLAT_API_LIBNDS )
    /* Do nothing. */
+#elif defined( RETROFLAT_API_GLUT )
+   glutSetWindowTitle( title );
 #else
 #     warning "set title implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
@@ -2941,6 +2949,11 @@ cleanup:
    bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
 
 cleanup:
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "draw lock not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3342,6 +3355,10 @@ cleanup:
    }
 #     endif /* RETROFLAT_API_WIN16 */
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "load bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3364,6 +3381,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_cleanup_if_null( BITMAP*, bmp_out->b, RETROFLAT_ERROR_BITMAP );
    clear_bitmap( bmp_out->b );
 
+cleanup:
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -3376,6 +3394,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
+cleanup:
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
@@ -3396,6 +3415,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_cleanup_if_null(
       SDL_Texture*, bmp_out->texture, RETROFLAT_ERROR_BITMAP );
       
+cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16 / Win32 == */
@@ -3406,11 +3426,15 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->b = CreateCompatibleBitmap( hdc_win, w, h );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
+cleanup:
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "create bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-cleanup:
    return retval;
 }
 
@@ -3573,6 +3597,10 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
       bitmap->mask = (HBITMAP)NULL;
    }
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "destroy bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -3686,6 +3714,10 @@ cleanup:
       retroflat_draw_release( target );
    }
 
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
+
 #  else
 #     warning "blit bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3776,6 +3808,10 @@ void retroflat_px(
 
    px_ptr = bgGetGfxPtr( g_px_id );
    px_ptr[(y * 256) + x] = color;
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
 
 #  else
 #     warning "px not implemented"
@@ -3900,6 +3936,10 @@ cleanup:
    if( locked_target_internal ) {
       retroflat_draw_release( target );
    }
+
+#  elif defined( RETROFLAT_API_GLUT )
+
+   /* TODO */
 
 #  else
 #     warning "rect not implemented"

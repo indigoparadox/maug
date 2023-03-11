@@ -66,10 +66,15 @@ CFLAGS_WATCOM386_WIN_WIN32 := \
 	-mf -5r -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
 LDFLAGS_WATCOM386_WIN_WIN32 := system nt_win
 
+CFLAGS_WATCOM386_WIN_GLUT := \
+	-mf -5r -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
+LDFLAGS_WATCOM386_WIN_GLUT := system nt_win
+
 CFLAGS_GCC_WIN_WIN32 := -DRETROFLAT_API_WIN32
 CFLAGS_GCC64_WIN_WIN32 := -DRETROFLAT_API_WIN32
 
 OBJDIR_WATCOM386_WIN_WIN32=obj/watcom-win-win32
+OBJDIR_WATCOM386_WIN_GLUT=obj/watcom-win-glut
 OBJDIR_WATCOM_WIN_WIN16=obj/watcom-win-win16
 OBJDIR_WATCOM386_WIN_WIN16=obj/watcom386-win-win16
 OBJDIR_GCC_WIN_WIN32=obj/gcc-win-win32
@@ -107,6 +112,34 @@ endef
 
 # Legacy
 TGTWINNT=$(TGT_WATCOM386_WIN_WIN32)
+
+# ---
+
+define TGT_WATCOM386_WIN_GLUT
+
+ifeq ("$$(OPENGL)","1")
+	LDFLAGS_WATCOM386_WIN_GLUT += libr {opengl32}
+endif
+
+$(1)ntgl.exe: \
+$$(addprefix $$(OBJDIR_WATCOM386_WIN_GLUT)/,$$(subst .c,.o,$$(C_FILES))) | \
+$$(RES_WATCOM386_WIN_GLUT_DEP)
+	$$(LD_WATCOM) name $$@ \
+		$$(LDFLAGS_WATCOM_WIN) $$(LDFLAGS_WATCOM386_WIN_GLUT) fil {$$^} \
+		$$(RES_WATCOM386_WIN_GLUT)
+
+$$(OBJDIR_WATCOM386_WIN_GLUT)/%.o: %.c | $(MAUG_DEPS)
+	$$(MD) "$$(dir $$@)"
+	$$(CC_WATCOM) \
+		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM386_WIN_GLUT) \
+		-fo=$$@ $$(<:%.c=%)
+
+CLEAN_TARGETS += $(1)nt.exe
+
+endef
+
+# Legacy
+TGTWINNTGL=$(TGT_WATCOM386_WIN_GLUT)
 
 # ---
 
