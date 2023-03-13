@@ -79,7 +79,6 @@ struct MTILEMAP_TILE_DEF {
    float scale_f;
 #endif
    struct RETROGLU_OBJ* obj;
-   int32_t display_list;
    struct MTILEMAP_CPROP* cprops;
    size_t cprops_sz;
    char image_path[MTILEMAP_TILESET_IMAGE_STR_SZ_MAX];
@@ -153,6 +152,12 @@ MERROR_RETVAL mtilemap_xform_obj_path(
    char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path );
 
 void mtilemap_free( struct MTILEMAP* t );
+
+size_t mtilemap_lock_tile(
+   struct MTILEMAP* t, size_t x, size_t y, size_t z );
+
+struct MTILEMAP_TILE_DEF* mtilemap_lock_tile_def(
+   struct MTILEMAP* t, size_t tile_idx );
 
 #ifdef MTILEMAP_C
 
@@ -761,11 +766,6 @@ void mtilemap_free( struct MTILEMAP* t ) {
          t->tile_defs[i].obj = NULL;
       }
 
-      if( 0 < t->tile_defs[i].display_list ) {
-         glDeleteLists( t->tile_defs[i].display_list, 1 );
-         t->tile_defs[i].display_list = 0;
-      }
-
       if( NULL != t->tile_defs[i].cprops ) {
          free( t->tile_defs[i].cprops );
          t->tile_defs[i].cprops = NULL;
@@ -776,21 +776,32 @@ void mtilemap_free( struct MTILEMAP* t ) {
 
 /* === */
 
-struct MTILEMAP_TILE_DEF* mtilemap_lock_tile(
+size_t mtilemap_lock_tile(
    struct MTILEMAP* t, size_t x, size_t y, size_t z
 ) {
-   struct MTILEMAP_TILE_DEF* tile_out = NULL;
    size_t tile_idx = 0;
+
+   /* TODO: Lock tiles if not locked. */
 
    tile_idx = t->tiles[z][(y * t->tiles_w) + x];
 
    /* Convert to local tile ID. */
-   tile_idx -= t->tileset_fgid;
-   assert( tile_idx < t->tiles_sz[z] );
+   if( 0 < tile_idx ) {
+      tile_idx -= t->tileset_fgid;
+   }
+   assert( tile_idx < MTILEMAP_TILESET_DEFS_SZ_MAX );
+
+   return tile_idx;
+}
+
+struct MTILEMAP_TILE_DEF* mtilemap_lock_tile_def(
+   struct MTILEMAP* t, size_t tile_idx
+) {
+   struct MTILEMAP_TILE_DEF* tile_out = NULL;
+
+   /* TODO: Lock tile defs if not locked. */
 
    tile_out = &(t->tile_defs[tile_idx]);
-
-cleanup:
 
    return tile_out;
 }
