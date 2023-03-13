@@ -78,7 +78,6 @@ struct MTILEMAP_TILE_DEF {
 #if 0
    float scale_f;
 #endif
-   struct RETROGLU_OBJ* obj;
    struct MTILEMAP_CPROP* cprops;
    size_t cprops_sz;
    char image_path[MTILEMAP_TILESET_IMAGE_STR_SZ_MAX];
@@ -147,9 +146,6 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
 
 MERROR_RETVAL
 mtilemap_parse_json_file( const char* filename, struct MTILEMAP* m );
-
-MERROR_RETVAL mtilemap_xform_obj_path(
-   char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path );
 
 void mtilemap_free( struct MTILEMAP* t );
 
@@ -688,84 +684,10 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
 /* === */
 
-MERROR_RETVAL mtilemap_xform_obj_path(
-   char* obj_path, size_t obj_path_sz, int32_t* r_out, const char* image_path
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0,
-      obj_i = 0;
-   char* uscore_pos = NULL,
-      * basename_pos = NULL;
-
-   memset( obj_path, '\0', obj_path_sz );
-
-   /* Figure out the file basename start. */
-   basename_pos = strchr( image_path, '/' );
-   assert( NULL != basename_pos );
-   basename_pos++;
-
-   debug_printf( MTILEMAP_TRACE_LVL, "basename: %s", basename_pos );
-
-   /* Figure out where rotation indicator e.g. _NE is... */
-   uscore_pos = strrchr( basename_pos, '_' );
-   assert( NULL != uscore_pos );
-
-   for( i = 0 ; obj_path_sz > i ; i++ ) {
-      if( '\0' == basename_pos[i] ) {
-         /* Stop copying on NULL. */
-         break;
-      }
-      if( '\\' == basename_pos[i] ) {
-         /* Skip escape char. */
-         continue;
-      }
-      if( uscore_pos == &(basename_pos[i]) ) {
-         /* Stop before copying r/ext. */
-         break;
-      }
-
-      obj_path[obj_i++] = basename_pos[i];
-   }
-
-   obj_path[obj_i++] = '.';
-   obj_path[obj_i++] = 'o';
-   obj_path[obj_i++] = 'b';
-   obj_path[obj_i++] = 'j';
-   obj_path[obj_i++] = '\0';
-
-   /* Translate uscore_pos into rotation value. */
-   if( 0 == strncmp( uscore_pos, "_NW.", 4 ) ) {
-      *r_out = 90;
-   } else if( 0 == strncmp( uscore_pos, "_SW.", 4 ) ) {
-      *r_out = 180; 
-   } else if( 0 == strncmp( uscore_pos, "_SE.", 4 ) ) {
-      *r_out = 270;
-
-   } else if( 0 == strncmp( uscore_pos, "_W.", 3 ) ) {
-      *r_out = 90;
-   } else if( 0 == strncmp( uscore_pos, "_S.", 3 ) ) {
-      *r_out = 180;
-   } else if( 0 == strncmp( uscore_pos, "_E.", 3 ) ) {
-      *r_out = 270;
-
-   } else {
-      *r_out = 0;
-   }
-
-   return retval;
-}
-
-/* === */
-
 void mtilemap_free( struct MTILEMAP* t ) {
    size_t i = 0;
 
    for( i = 0 ; MTILEMAP_TILESET_DEFS_SZ_MAX > i ; i++ ) {
-      if( NULL != t->tile_defs[i].obj ) {
-         free( t->tile_defs[i].obj );
-         t->tile_defs[i].obj = NULL;
-      }
-
       if( NULL != t->tile_defs[i].cprops ) {
          free( t->tile_defs[i].cprops );
          t->tile_defs[i].cprops = NULL;
