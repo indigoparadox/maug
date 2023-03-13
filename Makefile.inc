@@ -10,9 +10,13 @@ ifeq ("$(OPENGL)","1")
 endif
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
+CFLAGS_GCC64 := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
 CFLAGS_WATCOM := $(GLOBAL_DEFINES) $(INCLUDES_WATCOM) $(DEFINES_WATCOM)
+CFLAGS_WATCOM386 := $(GLOBAL_DEFINES) $(INCLUDES_WATCOM) $(DEFINES_WATCOM)
 LDFLAGS_GCC :=  $(LIBS_GCC)
+LDFLAGS_GCC64 :=  $(LIBS_GCC)
 LDFLAGS_WATCOM :=  $(LIBS_WATCOM)
+LDFLAGS_WATCOM386 :=  $(LIBS_WATCOM)
 
 CLEAN_TARGETS := obj *.err
 
@@ -21,11 +25,16 @@ CLEAN_TARGETS := obj *.err
 # Build debug unless release specified.
 ifeq ("$(RELEASE)","RELEASE")
 	CFLAGS_WATCOM += -ot
+	CFLAGS_WATCOM386 += -ot
 	CFLAGS_GCC += -O2
+	CFLAGS_GCC64 += -O2
 else
 	CFLAGS_WATCOM += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
-	CFLAGS_GCC += -DDEBUG -Wall -g -fsanitize=address -fsanitize=leak -fsanitize=undefined -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
-	LDFLAGS_GCC += -g -fsanitize=address -fsanitize=leak -fsanitize=undefined
+	CFLAGS_WATCOM386 += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
+	CFLAGS_GCC += -DDEBUG -Wall -g
+	CFLAGS_GCC64 += -DDEBUG -Wall -g
+	LDFLAGS_GCC += -g
+	LDFLAGS_GCC64 += -g
 endif
 
 # Default compiler specs.
@@ -33,10 +42,16 @@ ifeq ("$(CC_GCC)","")
 	CC_GCC := gcc
 endif
 ifeq ("$(CC_WATCOM)","")
-	CC_WATCOM := wcc386
+	CC_WATCOM := wcc
 endif
 ifeq ("$(LD_WATCOM)","")
 	LD_WATCOM := wlink
+endif
+ifeq ("$(CC_WATCOM386)","")
+	CC_WATCOM386 := wcc386
+endif
+ifeq ("$(LD_WATCOM386)","")
+	LD_WATCOM386 := wlink
 endif
 ifeq ("$(EMCC)","")
 	EMCC := emcc
