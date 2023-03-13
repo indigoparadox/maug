@@ -31,8 +31,9 @@ ifeq ("$(OPENGL)","1")
 	CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
 	LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
 else
-ifeq("$(SDL_VER_UNIX)","")
-	SDL_VER_UNIX := 2
+	ifeq ("$(SDL_VER_UNIX)","")
+		SDL_VER_UNIX := 2
+	endif
 endif
 
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$(shell uname -s)-sdl$(SDL_VER_UNIX)

@@ -24,12 +24,12 @@ endif
 
 $(1)d.exe: $$(addprefix obj/dos/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM386) name $$@ \
-		$$(LD_WATCOM386) $$(LDFLAGS_WATCOM386_DOS) \
+		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_DOS) \
 		$$(LDFLAGS_WATCOM386_DOS_ALLEGRO) fil {$$^}
 
 obj/dos/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
-	$$(CC_WATCOM) \
+	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_DOS) \
 		$$(CFLAGS_WATCOM386_DOS_ALLEGRO) \
 		-fo=$$@ $$(<:%.c=%)
