@@ -22,6 +22,10 @@
 #  define RETROGLU_PARSER_TOKEN_SZ_MAX 32
 #endif /* !RETROGLU_PARSER_TOKEN_SZ_MAX */
 
+#ifndef RETROGLU_TRACE_LVL
+#  define RETROGLU_TRACE_LVL 0
+#endif /* !RETROGLU_TRACE_LVL */
+
 #define RETROGLU_FLAGS_INIT_VERTICES 0x01
 
 #ifdef MAUG_OS_NDS
@@ -230,7 +234,8 @@ struct RETROGLU_PROJ_ARGS {
  * \param new_state \ref maug_retroglu_obj_fsm_states to set the parser to.
  */
 #define retroglu_parser_state( parser, new_state ) \
-   debug_printf( 0, "changing parser to state: %d\n", new_state ); \
+   debug_printf( \
+      RETROGLU_TRACE_LVL, "changing parser to state: %d\n", new_state ); \
    (parser)->state = new_state;
 
 /**
@@ -424,7 +429,7 @@ retroglu_token_cb g_retroglu_token_callbacks[] = {
 };
 
 void retroglu_init_scene( uint8_t flags ) {
-   debug_printf( 3, "initializing..." );
+   debug_printf( RETROGLU_TRACE_LVL, "initializing..." );
 
 #ifdef MAUG_OS_NDS
    glMaterialShinyness();
@@ -471,7 +476,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    case RETROGLU_PROJ_FRUSTUM:
       /* This is really tweaky, and when it breaks, polygons seem to get drawn
          * out of order? Still experimenting/researching. */
-      debug_printf( 1, "aspect ratio: %f", aspect_ratio );
+      debug_printf( RETROGLU_TRACE_LVL, "aspect ratio: %f", aspect_ratio );
       glFrustum(
          /* The smaller these are, the closer it lets us get to the camera? */
          -1.0f * args->rzoom * aspect_ratio, args->rzoom * aspect_ratio,
@@ -529,7 +534,7 @@ void retroglu_parse_init(
 #define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
       parser->obj->array[parser->obj->sz].val = strtod( parser->token, NULL ); \
-      debug_printf( 0, "vertex %d " desc ": %f\n", \
+      debug_printf( RETROGLU_TRACE_LVL, "vertex %d " desc ": %f\n", \
          parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
 
@@ -546,11 +551,12 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    /* NULL-terminate token. */
    parser->token[parser->token_sz] = '\0';
 
-   debug_printf( 0, "token: %s\n", parser->token );
+   debug_printf( RETROGLU_TRACE_LVL, "token: %s\n", parser->token );
 
    if( RETROGLU_PARSER_STATE_MATERIAL_LIB == parser->state ) {
 
-      debug_printf( 0, "parsing material lib: %s\n", parser->token );
+      debug_printf(
+         RETROGLU_TRACE_LVL, "parsing material lib: %s\n", parser->token );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
       assert( NULL != parser->load_mtl );
       return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
@@ -565,7 +571,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( 0, "face %d, vertex %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, vertex %d: %d\n",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -583,7 +589,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( 0, "face %d, normal %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, normal %d: %d\n",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vnormal_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -601,7 +607,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( 0, "face %d, texture %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, texture %d: %d\n",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vtexture_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -618,12 +624,13 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       /* Find the material index and assign it to the parser. */
       for( i = 0 ; parser->obj->materials_sz > i ; i++ ) {
          debug_printf(
-            0, "%s vs %s\n", parser->obj->materials[i].name, parser->token );
+            RETROGLU_TRACE_LVL,
+            "%s vs %s\n", parser->obj->materials[i].name, parser->token );
          if( 0 == strncmp(
             parser->obj->materials[i].name, parser->token,
             RETROGLU_MATERIAL_NAME_SZ_MAX
          ) ) {
-            debug_printf( 0, "using material: \"%s\" (%d)\n",
+            debug_printf( RETROGLU_TRACE_LVL, "using material: \"%s\" (%d)\n",
                parser->obj->materials[i].name, i );
             parser->material_idx = i;
             break;
@@ -633,7 +640,8 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
 
    } else if( RETROGLU_PARSER_STATE_MATERIAL_NAME == parser->state ) {
 
-      debug_printf( 0, "adding material: \"%s\" at idx: %d\n",
+      debug_printf(
+         RETROGLU_TRACE_LVL, "adding material: \"%s\" at idx: %d\n",
          parser->token, parser->obj->materials_sz - 1 );
       strncpy(
          parser->obj->materials[parser->obj->materials_sz - 1].name,
@@ -670,7 +678,7 @@ retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
 
    /* Protect against token overflow. */
    if( parser->token_sz >= RETROGLU_PARSER_TOKEN_SZ_MAX ) {
-      debug_printf( 0, "token out of bounds!\n" );
+      debug_printf( RETROGLU_TRACE_LVL, "token out of bounds!\n" );
       return RETROGLU_PARSER_ERROR;
    }
 
@@ -834,18 +842,19 @@ MERROR_RETVAL retroglu_parse_obj_file(
       g_retroflat_assets_path, RETROFLAT_PATH_SEP, filename );
 
    /* Open the file and allocate the buffer. */
-   debug_printf( 2, "opening %s...", filename_path );
+   debug_printf( RETROGLU_TRACE_LVL, "opening %s...", filename_path );
    obj_file = fopen( filename_path, "r" );
    assert( NULL != obj_file );
    fseek( obj_file, 0, SEEK_END );
    obj_buf_sz = ftell( obj_file );
    fseek( obj_file, 0, SEEK_SET );
    debug_printf(
-      2, "opened %s, " SIZE_T_FMT " bytes", filename_path, obj_buf_sz );
+      RETROGLU_TRACE_LVL,
+      "opened %s, " SIZE_T_FMT " bytes", filename_path, obj_buf_sz );
    obj_buf = calloc( 1, obj_buf_sz );
    assert( NULL != obj_buf );
    obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
-   debug_printf( 1, "read " SIZE_T_FMT " bytes", obj_read );
+   debug_printf( RETROGLU_TRACE_LVL, "read " SIZE_T_FMT " bytes", obj_read );
    assert( obj_read == obj_buf_sz );
    fclose( obj_file );
 
@@ -867,7 +876,8 @@ MERROR_RETVAL retroglu_parse_obj_file(
    }
 
    debug_printf(
-      2, "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
+      RETROGLU_TRACE_LVL,
+      "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
       filename_path, obj->vertices_sz, obj->materials_sz );
 
    return retval;
@@ -891,13 +901,13 @@ MERROR_RETVAL retroglu_load_tex_bmp(
       filename, RETROFLAT_BITMAP_EXT );
 
    /* Open the file and allocate the buffer. */
-   debug_printf( 3, "opening %s...", filename_path );
+   debug_printf( RETROGLU_TRACE_LVL, "opening %s...", filename_path );
    bmp_file = fopen( filename_path, "rb" );
    assert( NULL != bmp_file );
    fseek( bmp_file, 0, SEEK_END );
    bmp_buf_sz = ftell( bmp_file );
    fseek( bmp_file, 0, SEEK_SET );
-   debug_printf( 2, "opened %s, " UPRINTF_U32 " bytes",
+   debug_printf( RETROGLU_TRACE_LVL, "opened %s, " UPRINTF_U32 " bytes",
       filename_path, bmp_buf_sz );
    assert( NULL == bmp_buf );
    bmp_buf = calloc( 1, bmp_buf_sz );
@@ -951,7 +961,7 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
       goto cleanup;
    }
 
-   debug_printf( 1,
+   debug_printf( RETROGLU_TRACE_LVL,
       "bitmap " UPRINTF_U32 " x " UPRINTF_U32 " x " UPRINTF_U32
       " starting at " UPRINTF_U32 " bytes",
       *p_bmp_w, *p_bmp_h, bmp_bpp, bmp_offset );
@@ -1357,7 +1367,7 @@ MERROR_RETVAL retroglu_init_glyph_tex() {
    size_t i = 0,
       j = 0;
 
-   debug_printf( 1, "loading glyph textures..." );
+   debug_printf( RETROGLU_TRACE_LVL, "loading glyph textures..." );
 
    for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
       for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
