@@ -10,6 +10,8 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_ALLOC 2
 
+#define MERROR_OVERFLOW 4
+
 #define maug_cleanup_if_null( type, ptr, err ) \
    if( (type)NULL == ptr ) { \
       error_printf( "failed to allocate " #ptr "!" ); \
