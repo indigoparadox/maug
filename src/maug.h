@@ -18,6 +18,8 @@
 
 #include <merror.h>
 
+#include <mmem.h>
+
 #ifdef MAUG_C
 #  define UPRINTF_C
 #endif /* MAUG_C */

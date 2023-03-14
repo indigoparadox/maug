@@ -793,11 +793,11 @@ WARN_LOGFILE           =
 INPUT                  = \
    src/retroflt.h \
    src/retroglu.h \
-   src/retrogam.h \
    src/retrofp.h \
    src/marge.h \
    src/merror.h \
    src/uprintf.h \
+   src/mmem.h \
    README.md
 
 # This tag can be used to specify the character encoding of the source files
