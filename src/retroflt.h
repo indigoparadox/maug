@@ -783,68 +783,71 @@ struct RETROFLAT_BITMAP {
 
 #  define END_OF_MAIN()
 
-#  define RETROFLAT_COLOR const SDL_Color*
-
-#  ifdef RETROFLT_C
-
-#  ifdef RETROFLAT_SDL_ICO
+   /* SDL Icon */
+#  if defined( RETROFLT_C ) && defined( RETROFLAT_SDL_ICO )
 #     include <sdl_ico.h>
-#  endif /* RETROFLAT_SDL_ICO */
+#  endif /* RETROFLT_C && RETROFLAT_SDL_ICO */
 
-const SDL_Color gc_black =       {0,   0,   0};
-const SDL_Color gc_darkblue =    {0, 0, 170};
-const SDL_Color gc_darkgreen =   {0, 170, 0};
-const SDL_Color gc_teal =        {0, 170, 170};
-const SDL_Color gc_darkred =     {170, 0, 0};
-const SDL_Color gc_violet =      {170, 0, 170};
-const SDL_Color gc_brown =       {170, 85, 0};
-const SDL_Color gc_gray =        {170, 170, 170};
-const SDL_Color gc_darkgray =    {85, 85, 85};
-const SDL_Color gc_blue =        {85, 85, 255};
-const SDL_Color gc_green =       {85, 255, 85};
-const SDL_Color gc_cyan =        {85, 255, 255};
-const SDL_Color gc_red =         {255, 85, 85};
-const SDL_Color gc_magenta =     {255, 85, 255};
-const SDL_Color gc_yellow =      {255, 255, 85};
-const SDL_Color gc_white =       {255, 255, 255};
+   /* SDL Colors */
+#  ifdef RETROFLAT_OPENGL
 
-#  else
+typedef float RETROFLAT_COLOR[4];
 
-extern const SDL_Color gc_black;
-extern const SDL_Color gc_darkblue;
-extern const SDL_Color gc_darkgreen;
-extern const SDL_Color gc_teal;
-extern const SDL_Color gc_darkred;
-extern const SDL_Color gc_violet;
-extern const SDL_Color gc_brown;
-extern const SDL_Color gc_gray;
-extern const SDL_Color gc_darkgray;
-extern const SDL_Color gc_blue;
-extern const SDL_Color gc_green;
-extern const SDL_Color gc_cyan;
-extern const SDL_Color gc_red;
-extern const SDL_Color gc_magenta;
-extern const SDL_Color gc_yellow;
-extern const SDL_Color gc_white;
+#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
+#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
+#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
+#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
+#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
+#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
+#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
+#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
+#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
+#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
+#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
+#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
+#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
+#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
+#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
+#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
 
-#  endif /* RETROFLT_C */
+#else
 
-#define RETROFLAT_COLOR_BLACK       (&gc_black)
-#define RETROFLAT_COLOR_DARKBLUE    (&gc_darkblue)
-#define RETROFLAT_COLOR_DARKGREEN   (&gc_darkgreen)
-#define RETROFLAT_COLOR_TEAL        (&gc_teal)
-#define RETROFLAT_COLOR_DARKRED     (&gc_darkred)
-#define RETROFLAT_COLOR_VIOLET      (&gc_violet)
-#define RETROFLAT_COLOR_BROWN       (&gc_brown)
-#define RETROFLAT_COLOR_GRAY        (&gc_gray)
-#define RETROFLAT_COLOR_DARKGRAY    (&gc_darkgray)
-#define RETROFLAT_COLOR_BLUE        (&gc_blue)
-#define RETROFLAT_COLOR_GREEN       (&gc_green)
-#define RETROFLAT_COLOR_CYAN        (&gc_cyan)
-#define RETROFLAT_COLOR_RED         (&gc_red)
-#define RETROFLAT_COLOR_MAGENTA     (&gc_magenta)
-#define RETROFLAT_COLOR_YELLOW      (&gc_yellow)
-#define RETROFLAT_COLOR_WHITE       (&gc_white)
+#     ifdef RETROFLT_C
+
+#        define RETROFLAT_COLOR const SDL_Color*
+
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+            MAUG_CONST SDL_Color gc_retroflat_color_ ## name_l = {r, g, b};
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
+#     else
+
+#        define RETROFLAT_COLOR_TABLE_SDL_EXT( idx, n_l, n_u, r, g, b ) \
+               extern MAUG_CONST SDL_Color gc_retroflat_color_ ## n_l;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_EXT )
+
+#     endif /* RETROFLT_C */
+
+#     define RETROFLAT_COLOR_BLACK       (&gc_retroflat_color_black)
+#     define RETROFLAT_COLOR_DARKBLUE    (&gc_retroflat_color_darkblue)
+#     define RETROFLAT_COLOR_DARKGREEN   (&gc_retroflat_color_darkgreen)
+#     define RETROFLAT_COLOR_TEAL        (&gc_retroflat_color_teal)
+#     define RETROFLAT_COLOR_DARKRED     (&gc_retroflat_color_darkred)
+#     define RETROFLAT_COLOR_VIOLET      (&gc_retroflat_color_violet)
+#     define RETROFLAT_COLOR_BROWN       (&gc_retroflat_color_brown)
+#     define RETROFLAT_COLOR_GRAY        (&gc_retroflat_color_gray)
+#     define RETROFLAT_COLOR_DARKGRAY    (&gc_retroflat_color_darkgray)
+#     define RETROFLAT_COLOR_BLUE        (&gc_retroflat_color_blue)
+#     define RETROFLAT_COLOR_GREEN       (&gc_retroflat_color_green)
+#     define RETROFLAT_COLOR_CYAN        (&gc_retroflat_color_cyan)
+#     define RETROFLAT_COLOR_RED         (&gc_retroflat_color_red)
+#     define RETROFLAT_COLOR_MAGENTA     (&gc_retroflat_color_magenta)
+#     define RETROFLAT_COLOR_YELLOW      (&gc_retroflat_color_yellow)
+#     define RETROFLAT_COLOR_WHITE       (&gc_retroflat_color_white)
+
+#  endif /* RETROFLAT_OPENGL */
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1494,7 +1497,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, uint8_t flags );
 
 /**
@@ -1508,7 +1511,7 @@ void retroflat_px(
  *        ::RETROFLAT_FLAGS_FILL
  */
 void retroflat_rect(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
 /**
@@ -1522,7 +1525,7 @@ void retroflat_rect(
  *        ::RETROFLAT_FLAGS_FILL
  */
 void retroflat_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
 /**
@@ -1537,7 +1540,7 @@ void retroflat_ellipse(
  * \param flags Flags to control drawing. No flags currently apply.
  */
 void retroflat_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
@@ -1576,7 +1579,7 @@ void retroflat_string_sz(
  * \param flags Flags to control drawing. No flags currently apply.
  */
 void retroflat_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags );
 
@@ -3170,19 +3173,20 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = MERROR_OK;
-#if defined( RETROFLAT_API_SDL1 )
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
-#elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
+#  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
    HDC hdc_win = (HDC)NULL;
-#  if defined( RETROFLAT_API_WIN16 )
+#     if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
    long int i, x, y, w, h, bpp, offset, sz, read;
-#  elif defined( RETROFLAT_API_WIN32 )
+#     elif defined( RETROFLAT_API_WIN32 )
    BITMAP bm;
-#  endif /* RETROFLAT_API_WIN32 */
-#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#     endif /* RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
 
@@ -3194,7 +3198,11 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  ifdef RETROFLAT_OPENGL
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3748,12 +3756,13 @@ cleanup:
 /* === */
 
 void retroflat_px(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, uint8_t flags
 ) {
    int locked_target_internal = 0;
    int lock_ret = 0;
-#  if defined( RETROFLAT_API_SDL1 )
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_API_SDL1 )
    int offset = 0;
    uint8_t* px_1 = NULL;
    uint16_t* px_2 = NULL;
@@ -3774,7 +3783,11 @@ void retroflat_px(
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3848,10 +3861,16 @@ cleanup:
 /* === */
 
 void retroflat_rect(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
-#if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#if defined( RETROFLAT_OPENGL )
+   float aspect_ratio = 0;
+   float screen_x = 0,
+      screen_y = 0,
+      screen_w = 0,
+      screen_h = 0;
+#elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    SDL_Rect area;
    int locked_target_internal = 0;
    int lock_ret = 0;
@@ -3866,7 +3885,46 @@ void retroflat_rect(
       target = &(g_buffer);
    }
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* Switch to projection setup. */
+   glMatrixMode( GL_PROJECTION );
+   glPushMatrix();
+
+   /* Lighting makes overlay text hard to see. */
+   glDisable( GL_LIGHTING );
+   
+   /* Use ortho for overlay. */
+   glLoadIdentity();
+   aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
+   glOrtho( -1.0f * aspect_ratio, aspect_ratio, -1.0f, 1.0f, 0, 10.0f );
+
+   /* -1 to 1 is 2! */
+   aspect_ratio *= 2.0f;
+
+   /* Assuming width > height for aspect ratio. */
+   screen_x =
+      ((x) * aspect_ratio / retroflat_screen_w()) - (aspect_ratio / 2);
+   screen_w = ((w) * aspect_ratio / retroflat_screen_w());
+
+   /* Vertical coords also need to be inverted because OpenGL. */
+   screen_y = 1.0f - ((y) * 2.0f / retroflat_screen_h());
+   screen_h = ((h) * 2.0f / retroflat_screen_h());
+
+   /* TODO: Use triangles! */
+   glBegin( GL_QUADS );
+   glColor3fv( color );
+   glVertex2f( screen_x,            screen_y );
+   glVertex2f( screen_x,            screen_y - screen_h  );
+   glVertex2f( screen_x + screen_w, screen_y - screen_h );
+   glVertex2f( screen_x + screen_w, screen_y );
+   glEnd();
+   
+   /* Restore modelview. */
+   glPopMatrix();
+   glMatrixMode( GL_MODELVIEW );
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3958,10 +4016,6 @@ cleanup:
       retroflat_draw_release( target );
    }
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "rect not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -3970,7 +4024,7 @@ cleanup:
 /* === */
 
 void retroflat_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 #  if !defined( RETROFLAT_SOFT_SHAPES ) && defined( RETROFLAT_API_SDL2 )
@@ -4058,7 +4112,7 @@ cleanup:
 /* === */
 
 void retroflat_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
 
@@ -4219,7 +4273,7 @@ cleanup:
 /* === */
 
 void retroflat_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags
 ) {
