@@ -47,7 +47,7 @@ typedef int MERROR_RETVAL;
 
 #define maug_cleanup_if_lt( a, b, fmt, err ) \
    if( (a) < (b) ) { \
-      error_printf( fmt " is less than " fmt "!" ); \
+      error_printf( fmt " is less than " fmt "!", a, b ); \
       retval = err; \
       goto cleanup; \
    }
