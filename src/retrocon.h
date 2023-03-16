@@ -24,6 +24,7 @@ struct RETROCON {
    int debounce_wait;
    char sbuffer[RETROCON_SBUFFER_SZ];
    char lbuffer[RETROCON_LBUFFER_SZ];
+   size_t lbuffer_sz;
 };
 
 MERROR_RETVAL retrocon_display(
@@ -46,7 +47,7 @@ MERROR_RETVAL retrocon_display(
       NULL, RETROFLAT_COLOR_WHITE, 10, 10, 300, 110, RETROFLAT_FLAGS_FILL );
 
    retroflat_string(
-      NULL, RETROFLAT_COLOR_BLACK, "Hello!", -1, NULL, 15, 20, 0 );
+      NULL, RETROFLAT_COLOR_BLACK, con->lbuffer, -1, NULL, 15, 20, 0 );
 
 cleanup:
 
@@ -54,19 +55,19 @@ cleanup:
 }
 
 int retrocon_debounce( struct RETROCON* con, int c ) {
+   if( 0 == c ) {
+      return 0;
+   }
+
    /* Debounce/disallow repeat even if it's allowed outside. */
-   if( con->input_prev == c || 0 == c ) {
-      if( 0 < con->debounce_wait ) {
-         con->debounce_wait--;
-         return 0;
-      } else if( con->input_prev == c ) {
-         return 0;
-      } else {
-         con->input_prev = c;
-      }
+   if( con->input_prev == c && 0 < con->debounce_wait ) {
+      con->debounce_wait--;
+      debug_printf( 0, "dbwait (%d)", con->debounce_wait );
+      return 0;
    } else {
       con->input_prev = c;
       con->debounce_wait = RETROCON_DEBOUNCE_WAIT;
+      debug_printf( 0, "new prev: %c", c );
    }
 
    return c;
@@ -74,43 +75,48 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
 
 MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int c = 0;
 
-   if(
-      RETROCON_ACTIVE_KEY != *p_c &&
-      RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & con->flags)
-   ) {
-      /* None of our business! */
-      goto cleanup;
+   /* Put keycode on retrocon track. Clear pass-track if console active. */
+   c = *p_c;
+   if( RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags) ) {
+      *p_c = 0;
+   }
 
-   } else if( !retrocon_debounce( con, *p_c ) ) {
+   /* Debounce retrocon track only! */
+   if( !retrocon_debounce( con, c ) ) {
       goto cleanup;
    }
 
-   debug_printf( 1, "conp: %c", (char)*p_c );
-
    /* Process input. */
-   switch( *p_c ) {
+   switch( c ) {
    case RETROCON_ACTIVE_KEY:
       if( RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags) ) {
          con->flags &= ~RETROCON_FLAG_ACTIVE;
       } else {
          con->flags |= RETROCON_FLAG_ACTIVE;
       }
-      *p_c = 0;
       break;
 
    case 0:
       break;
 
+   case '\r':
+   case '\n':
+      con->lbuffer_sz = 0;
+      con->lbuffer[con->lbuffer_sz] = '\0';
+      break;
+
    default:
-      if( RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags) ) {
-         *p_c = 0;
-         debug_printf( 1, "no! %d", *p_c );
+      if(
+         RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags)  &&
+         0x1f < c && 0x7e > c
+      ) {
+         con->lbuffer[con->lbuffer_sz++] = c;
+         con->lbuffer[con->lbuffer_sz] = '\0';
       }
       break;
    }
-
-   con->input_prev = 0;
 
 cleanup:
 
