@@ -14,6 +14,8 @@
 
 #else
 
+#  include <stdlib.h> /* For *alloc() */
+
 typedef void* MAUG_MHANDLE;
 
 #define maug_malloc( nmemb, sz ) malloc( sz * nmemb )

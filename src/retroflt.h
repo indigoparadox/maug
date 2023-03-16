@@ -587,7 +587,7 @@ struct RETROFLAT_ARGS {
 #if defined( RETROFLAT_API_ALLEGRO )
 
 #  ifdef RETROFLAT_OPENGL
-#     warning "opengl support not implemented for allegro"
+#     error "opengl support not implemented for allegro"
 #  endif /* RETROFLAT_OPENGL */
 
 /* == Allegro == */
@@ -608,22 +608,21 @@ struct RETROFLAT_BITMAP {
 
 typedef int RETROFLAT_COLOR;
 
-#  define RETROFLAT_COLOR_BLACK        makecol(0,   0,   0)
-#  define RETROFLAT_COLOR_DARKBLUE     makecol(0, 0, 170)
-#  define RETROFLAT_COLOR_DARKGREEN    makecol(0, 170, 0)
-#  define RETROFLAT_COLOR_TEAL         makecol(0, 170, 170)
-#  define RETROFLAT_COLOR_DARKRED      makecol(170, 0, 0)
-#  define RETROFLAT_COLOR_VIOLET       makecol(170, 0, 170)
-#  define RETROFLAT_COLOR_BROWN        makecol(170, 85, 0)
-#  define RETROFLAT_COLOR_GRAY         makecol(170, 170, 170)
-#  define RETROFLAT_COLOR_DARKGRAY     makecol(85, 85, 85)
-#  define RETROFLAT_COLOR_BLUE         makecol(85, 85, 255)
-#  define RETROFLAT_COLOR_GREEN        makecol(85, 255, 85)
-#  define RETROFLAT_COLOR_CYAN         makecol(85, 255, 255)
-#  define RETROFLAT_COLOR_RED          makecol(255, 85, 85)
-#  define RETROFLAT_COLOR_MAGENTA      makecol(255, 85, 255)
-#  define RETROFLAT_COLOR_YELLOW       makecol(255, 255, 85)
-#  define RETROFLAT_COLOR_WHITE        makecol(255, 255, 255)
+#  ifdef RETROFLT_C
+
+#  define RETROFLAT_COLOR_TABLE_ALLEGRO( idx, name_l, name_u, r, g, b ) \
+      int RETROFLAT_COLOR_ ## name_u;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO )
+
+#  else
+
+#  define RETROFLAT_COLOR_TABLE_ALLEGRO_EXT( idx, name_l, name_u, r, g, b ) \
+      extern int RETROFLAT_COLOR_ ## name_u;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
+
+#  endif /* RETROFLT_C */
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -793,6 +792,7 @@ struct RETROFLAT_BITMAP {
 
 typedef float RETROFLAT_COLOR[4];
 
+/* TODO: Generate with table macro. */
 #     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
 #     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
 #     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
@@ -812,14 +812,20 @@ typedef float RETROFLAT_COLOR[4];
 
 #else
 
-#     ifdef RETROFLT_C
+typedef SDL_Color MAUG_CONST* RETROFLAT_COLOR;
 
-#        define RETROFLAT_COLOR const SDL_Color*
+#     ifdef RETROFLT_C
 
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
             MAUG_CONST SDL_Color gc_retroflat_color_ ## name_l = {r, g, b};
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
+#        define RETROFLAT_COLOR_TABLE_SDL_P( idx, name_l, name_u, r, g, b ) \
+            MAUG_CONST SDL_Color* RETROFLAT_COLOR_ ## name_u = \
+               &gc_retroflat_color_ ## name_l;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P )
 
 #     else
 
@@ -828,24 +834,12 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_EXT )
 
-#     endif /* RETROFLT_C */
+#        define RETROFLAT_COLOR_TABLE_SDL_P_EXT( idx, n_l, n_u, r, g, b ) \
+            extern MAUG_CONST SDL_Color* RETROFLAT_COLOR_ ## n_u;
 
-#     define RETROFLAT_COLOR_BLACK       (&gc_retroflat_color_black)
-#     define RETROFLAT_COLOR_DARKBLUE    (&gc_retroflat_color_darkblue)
-#     define RETROFLAT_COLOR_DARKGREEN   (&gc_retroflat_color_darkgreen)
-#     define RETROFLAT_COLOR_TEAL        (&gc_retroflat_color_teal)
-#     define RETROFLAT_COLOR_DARKRED     (&gc_retroflat_color_darkred)
-#     define RETROFLAT_COLOR_VIOLET      (&gc_retroflat_color_violet)
-#     define RETROFLAT_COLOR_BROWN       (&gc_retroflat_color_brown)
-#     define RETROFLAT_COLOR_GRAY        (&gc_retroflat_color_gray)
-#     define RETROFLAT_COLOR_DARKGRAY    (&gc_retroflat_color_darkgray)
-#     define RETROFLAT_COLOR_BLUE        (&gc_retroflat_color_blue)
-#     define RETROFLAT_COLOR_GREEN       (&gc_retroflat_color_green)
-#     define RETROFLAT_COLOR_CYAN        (&gc_retroflat_color_cyan)
-#     define RETROFLAT_COLOR_RED         (&gc_retroflat_color_red)
-#     define RETROFLAT_COLOR_MAGENTA     (&gc_retroflat_color_magenta)
-#     define RETROFLAT_COLOR_YELLOW      (&gc_retroflat_color_yellow)
-#     define RETROFLAT_COLOR_WHITE       (&gc_retroflat_color_white)
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
+
+#     endif /* RETROFLT_C */
 
 #  endif /* RETROFLAT_OPENGL */
 
@@ -2386,6 +2380,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
+
+#  define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( idx, name_l, name_u, r, g, b ) \
+   RETROFLAT_COLOR_ ## name_u = makecol( r, g, b );
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
 
    LOCK_FUNCTION( retroflat_on_close_button );
    set_close_button_callback( retroflat_on_close_button );
