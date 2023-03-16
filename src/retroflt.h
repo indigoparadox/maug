@@ -417,6 +417,10 @@
 
 /*! \} */ /* maug_retroflt_bitmap */
 
+#ifndef RETROFLAT_GL_Z
+#  define RETROFLAT_GL_Z -0.001
+#endif /* !RETROFLAT_GL_Z */
+
 #define retroflat_on_resize( w, h ) \
    g_screen_w = w; \
    g_screen_h = h;
@@ -689,7 +693,7 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #  if defined( RETROFLAT_API_SDL2 ) && defined( RETROFLAT_OPENGL )
-#     warning "opengl support not implemented for SDL 2"
+#     error "opengl support not implemented for SDL 2"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
 #  include <time.h> /* For srand() */
@@ -848,7 +852,7 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 /* == Win16/Win32 == */
 
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
-#     warning "opengl support not implemented for win16"
+#     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
 #ifndef MAUG_WINDOWS_H
@@ -1149,7 +1153,7 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 #elif defined( RETROFLAT_API_GLUT )
 
 #ifndef RETROFLAT_OPENGL
-#  warning "RETROFLAT_API_GLUT specified without RETROFLAT_OPENGL!"
+#  error "RETROFLAT_API_GLUT specified without RETROFLAT_OPENGL!"
 #  define RETROFLAT_OPENGL
 #endif /* !RETROFLAT_OPENGL */
 
@@ -1412,6 +1416,32 @@ void retroflat_set_title( const char* format, ... );
 uint32_t retroflat_get_ms();
 
 uint32_t retroflat_get_rand();
+
+#define retroflat_opengl_push( x, y, x_f, y_f, aspect_f ) \
+   /* Switch to projection setup. */ \
+   glMatrixMode( GL_PROJECTION ); \
+   glPushMatrix(); \
+   /* Lighting makes overlay text hard to see. */ \
+   glDisable( GL_LIGHTING ); \
+   /* Use ortho for overlay. */ \
+   glLoadIdentity(); \
+   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
+   glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f ); \
+   /* -1 to 1 is 2! */ \
+   aspect_f *= 2.0f; \
+   /* Assuming width > height for aspect ratio. */ \
+   x_f = ((x) * aspect_f / retroflat_screen_w()) - (aspect_f / 2); \
+   /* Vertical coords also need to be inverted because OpenGL. */ \
+   y_f = 1.0f - ((y) * 2.0f / retroflat_screen_h()); \
+
+#define retroflat_opengl_whf( w, h, w_f, h_f, aspect_f ) \
+   w_f = ((w) * aspect_f / retroflat_screen_w()); \
+   h_f = ((h) * 2.0f / retroflat_screen_h());
+
+#define retroflat_opengl_pop() \
+   /* Restore modelview. */ \
+   glPopMatrix(); \
+   glMatrixMode( GL_MODELVIEW );
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -3864,8 +3894,8 @@ void retroflat_rect(
    int x, int y, int w, int h, uint8_t flags
 ) {
 #if defined( RETROFLAT_OPENGL )
-   float aspect_ratio = 0;
-   float screen_x = 0,
+   float aspect_ratio = 0,
+      screen_x = 0,
       screen_y = 0,
       screen_w = 0,
       screen_h = 0;
@@ -3886,42 +3916,19 @@ void retroflat_rect(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* Switch to projection setup. */
-   glMatrixMode( GL_PROJECTION );
-   glPushMatrix();
-
-   /* Lighting makes overlay text hard to see. */
-   glDisable( GL_LIGHTING );
-   
-   /* Use ortho for overlay. */
-   glLoadIdentity();
-   aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
-   glOrtho( -1.0f * aspect_ratio, aspect_ratio, -1.0f, 1.0f, 0, 10.0f );
-
-   /* -1 to 1 is 2! */
-   aspect_ratio *= 2.0f;
-
-   /* Assuming width > height for aspect ratio. */
-   screen_x =
-      ((x) * aspect_ratio / retroflat_screen_w()) - (aspect_ratio / 2);
-   screen_w = ((w) * aspect_ratio / retroflat_screen_w());
-
-   /* Vertical coords also need to be inverted because OpenGL. */
-   screen_y = 1.0f - ((y) * 2.0f / retroflat_screen_h());
-   screen_h = ((h) * 2.0f / retroflat_screen_h());
+   retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
+   retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
 
    /* TODO: Use triangles! */
    glBegin( GL_QUADS );
    glColor3fv( color );
-   glVertex2f( screen_x,            screen_y );
-   glVertex2f( screen_x,            screen_y - screen_h  );
-   glVertex2f( screen_x + screen_w, screen_y - screen_h );
-   glVertex2f( screen_x + screen_w, screen_y );
+   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+   glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
+   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+   glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
    glEnd();
    
-   /* Restore modelview. */
-   glPopMatrix();
-   glMatrixMode( GL_MODELVIEW );
+   retroflat_opengl_pop();
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4276,7 +4283,11 @@ void retroflat_string(
    const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags
 ) {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+   float aspect_ratio = 0,
+      screen_x = 0,
+      screen_y = 0;
+#  elif defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4294,14 +4305,19 @@ void retroflat_string(
       str_sz = strlen( str );
    }
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_OPENGL )
+
+   retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
+
+   retroglu_string(
+      screen_x, screen_y, 0, color, str, str_sz, font_str, flags );
+
+   retroflat_opengl_pop();
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
 
    retrosoft_string(
       target, color, str, str_sz, font_str, x_orig, y_orig, flags );
-
-#  elif defined( RETROFLAT_OPENGL )
-
-   /* Do nothing. */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 

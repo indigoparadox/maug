@@ -1409,14 +1409,15 @@ void retroglu_string(
       glBegin( GL_QUADS );
 
       glTexCoord2f( 0, 0 );
-      glVertex2f( x + (RETROGLU_FONT_W * i), y );
+      glVertex3f( x + (RETROGLU_FONT_W * i), y, z );
       glTexCoord2f( 1, 0 );
-      glVertex2f( x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W, y );
+      glVertex3f( x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W, y, z );
       glTexCoord2f( 1, 1 );
-      glVertex2f(
-         x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W, y + RETROGLU_FONT_W );
+      glVertex3f(
+         x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W,
+         y + RETROGLU_FONT_W, z );
       glTexCoord2f( 0, 1 );
-      glVertex2f( x + (RETROGLU_FONT_W * i), y + RETROGLU_FONT_W );
+      glVertex3f( x + (RETROGLU_FONT_W * i), y + RETROGLU_FONT_W, z );
       
       glEnd();
 
