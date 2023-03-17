@@ -3919,13 +3919,15 @@ void retroflat_rect(
    retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
    retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
 
-   /* TODO: Use triangles! */
-   glBegin( GL_QUADS );
+   glBegin( GL_TRIANGLES );
    glColor3fv( color );
    glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
    glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
    glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+
+   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
    glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
+   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
    glEnd();
    
    retroflat_opengl_pop();
