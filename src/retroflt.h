@@ -794,7 +794,7 @@ struct RETROFLAT_BITMAP {
    /* SDL Colors */
 #  ifdef RETROFLAT_OPENGL
 
-typedef float RETROFLAT_COLOR[4];
+typedef float MAUG_CONST* RETROFLAT_COLOR;
 
 /* TODO: Generate with table macro. */
 #     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
