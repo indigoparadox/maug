@@ -15,7 +15,7 @@
 #endif /* !RETROCON_LBUFFER_SZ_MAX */
 
 #ifndef RETROCON_ACTIVE_KEY
-#  define RETROCON_ACTIVE_KEY '`'
+#  define RETROCON_ACTIVE_KEY RETROFLAT_KEY_GRAVE
 #endif /* !RETROCON_ACTIVE_KEY */
 
 #ifndef RETROCON_CB_NAME_SZ_MAX
@@ -58,6 +58,11 @@ struct RETROCON {
    RETROFLAT_COLOR bg_color;
 };
 
+MERROR_RETVAL retrocon_init( struct RETROCON* con );
+
+MERROR_RETVAL retrocon_add_command(
+   struct RETROCON* con, const char* cmd, retrocon_cb cb, void* cb_data );
+
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* display );
 
@@ -71,6 +76,57 @@ int retrocon_debounce( struct RETROCON* con, int c );
 MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c );
 
 #ifdef RETROCON_C
+
+static MERROR_RETVAL retrocon_cmd_print(
+   struct RETROCON* con, const char* line, size_t line_sz, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* print_line = NULL;
+
+   print_line = strchr( line, ' ' );
+   if( NULL == print_line ) {
+      /* Not technically an error. */
+      goto cleanup;
+   }
+
+   /* Skip space. */
+   print_line++;
+   
+   retrocon_print_line( con, print_line );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL retrocon_init( struct RETROCON* con ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = retrocon_add_command( con, "print", retrocon_cmd_print, NULL );
+
+   return retval;
+}
+
+MERROR_RETVAL retrocon_add_command(
+   struct RETROCON* con, const char* cmd, retrocon_cb cb, void* cb_data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   maug_cleanup_if_ge_overflow( con->callbacks_sz + 1, RETROCON_CB_SZ_MAX );
+
+   strncpy(
+      con->callback_names[con->callbacks_sz], cmd, RETROCON_CB_NAME_SZ_MAX );
+
+   con->callbacks[con->callbacks_sz] = cb;
+
+   con->callback_data[con->callbacks_sz] = cb_data;
+
+   con->callbacks_sz++;
+
+cleanup:
+
+   return retval;
+}
 
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* display
@@ -153,7 +209,9 @@ MERROR_RETVAL retrocon_exec_line(
    /* Find callback with name starting line. */
    for( i = 0 ; con->callbacks_sz > i ; i++ ) {
       if(
-         0 == strncmp( con->callback_names[i], line, RETROCON_CB_NAME_SZ_MAX )
+         0 == strncmp(
+            /* TODO: Compare up to first space in line. */
+            con->callback_names[i], line, strlen( con->callback_names[i] ) )
       ) {
          retval = con->callbacks[i](
             con, line, line_sz, con->callback_data[i] );

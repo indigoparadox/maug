@@ -65,7 +65,7 @@ typedef int MERROR_RETVAL;
    }
 
 #define maug_cleanup_if_ge_overflow( a, b ) \
-   maug_cleanup_if_ge( a, b, SIZE_T_FMT, MERROR_OVERFLOW )
+   maug_cleanup_if_ge( a, (size_t)(b), SIZE_T_FMT, MERROR_OVERFLOW )
 
 
 /*! \} */ /* maug_error */
