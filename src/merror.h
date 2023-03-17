@@ -26,6 +26,8 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_OVERFLOW 4
 
+#define MERROR_USR      8
+
 /*! \} */ /* maug_error_retvals */
 
 #define MERROR_OVERFLOW 4

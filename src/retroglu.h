@@ -1392,7 +1392,10 @@ void retroglu_string(
    const char* str, int str_sz, const char* font_str, uint8_t flags
 ) {
    size_t i = 0;
-   /* TODO */
+
+   if( str_sz <= 0 ) {
+      str_sz = strlen( str );
+   }
 
    for( i = 0 ; str_sz > i ; i++ ) {
       /* Stop drawing on NULL. */
