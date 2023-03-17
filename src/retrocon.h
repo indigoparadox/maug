@@ -147,10 +147,21 @@ cleanup:
    return retval;
 }
 
+static MERROR_RETVAL retrocon_cmd_quit(
+   struct RETROCON* con, const char* line, size_t line_sz, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retroflat_quit( 0 );
+
+   return retval;
+}
+
 MERROR_RETVAL retrocon_init( struct RETROCON* con ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
+   retval = retrocon_add_command( con, "QUIT", retrocon_cmd_quit, NULL );
 
    return retval;
 }

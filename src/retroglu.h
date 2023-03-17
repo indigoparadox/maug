@@ -930,7 +930,8 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
    uint32_t* p_bmp_w, uint32_t* p_bmp_h
 ) {
-#ifndef RETROGLU_NO_TEXTURES
+   MERROR_RETVAL retval = MERROR_OK;
+
    /* TODO: Fix for NDS! */
 
    uint32_t bmp_offset = 0;
@@ -938,7 +939,6 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
    uint32_t bmp_px_sz = 0;
    uint8_t* bmp_px = NULL;
    int16_t i = 0;
-   MERROR_RETVAL retval = MERROR_OK;
 
    /* Offsets hardcoded based on windows bitmap. */
    /* TODO: More flexibility. */
@@ -987,8 +987,10 @@ MERROR_RETVAL retroglu_load_tex_bmp_data(
       }
    }
 
+#ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)p_texture_id );
    glBindTexture( GL_TEXTURE_2D, *p_texture_id );
+#endif /* !RETROGLU_NO_TEXTURES */
    /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, *p_bmp_w, *p_bmp_h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
@@ -998,7 +1000,6 @@ cleanup:
    if( NULL != bmp_px ) {
       free( bmp_px );
    }
-#endif /* !RETROGLU_NO_TEXTURES */
 
    return retval;
 }
@@ -1315,11 +1316,12 @@ static
 uint32_t g_retroglu_font_tex[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
 
 MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
    uint8_t* bmp_px = NULL;
    int16_t i = 0,
       x = 0,
       y = 0;
-   MERROR_RETVAL retval = MERROR_OK;
    const char* glyph_dots = gc_font8x8[set_idx][glyph_idx];
 
    /* Allocate temporary buffer for drawing. */
@@ -1342,10 +1344,12 @@ MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
       }
    }
 
+#ifndef RETROGLU_NO_TEXTURES
    assert( 0 == g_retroglu_font_tex[set_idx][glyph_idx] );
    glGenTextures( 1, (GLuint*)&(g_retroglu_font_tex[set_idx][glyph_idx]) );
    assert( 0 < g_retroglu_font_tex[set_idx][glyph_idx] );
    glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[set_idx][glyph_idx] );
+#endif /* !RETROGLU_NO_TEXTURES */
    /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
       RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
@@ -1364,8 +1368,13 @@ cleanup:
 
 MERROR_RETVAL retroglu_init_glyph_tex() {
    MERROR_RETVAL retval = MERROR_OK;
+
+#ifndef RETROGLU_NO_TEXTURES
    size_t i = 0,
       j = 0;
+
+   /* Only precache textures we we support glBindTexture(). Otherwise, we'll
+    * have to forcibly load them as we use them later on. */
 
    debug_printf( RETROGLU_TRACE_LVL, "loading glyph textures..." );
 
@@ -1375,6 +1384,7 @@ MERROR_RETVAL retroglu_init_glyph_tex() {
          maug_cleanup_if_not_ok();
       }
    }
+#endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
 
@@ -1392,6 +1402,9 @@ void retroglu_string(
    const char* str, int str_sz, const char* font_str, uint8_t flags
 ) {
    size_t i = 0;
+#ifdef RETROGLU_NO_TEXTURES
+   MERROR_RETVAL retval = MERROR_OK;
+#endif /* RETROGLU_NO_TEXTURES */
 
    if( str_sz <= 0 ) {
       str_sz = strlen( str );
@@ -1404,7 +1417,13 @@ void retroglu_string(
       }
 
       glColor3fv( color );
+
+#ifdef RETROGLU_NO_TEXTURES
+      retval = retroglu_load_glyph( 0, str[i] - ' ' );
+      maug_cleanup_if_not_ok();
+#else
       glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[0][str[i] - ' '] );
+#endif /* RETROGLU_NO_TEXTURES */
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1431,8 +1450,19 @@ void retroglu_string(
       
       glEnd();
 
+#ifdef RETROGLU_NO_TEXTURES
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
+         0, 0, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, NULL ); 
+#else
       glBindTexture( GL_TEXTURE_2D, 0 );
+#endif /* !RETROGLU_NO_TEXTURES */
    }
+
+#ifdef RETROGLU_NO_TEXTURES
+cleanup:
+   return;
+#endif /* RETROGLU_NO_TEXTURES */
 }
 
 #else

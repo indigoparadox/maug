@@ -1042,6 +1042,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
 
+#  ifndef VK_OEM_3
+#     define VK_OEM_3 0xc0
+#  endif /* !VK_OEM_3 */
+
 #  define RETROFLAT_KEY_GRAVE VK_OEM_3
 #  define RETROFLAT_KEY_SLASH VK_OEM_2
 #  define RETROFLAT_KEY_UP	   VK_UP
