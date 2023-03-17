@@ -689,6 +689,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
 #  define RETROFLAT_KEY_DELETE   KEY_DEL
 #  define RETROFLAT_KEY_PGUP     KEY_PGUP
 #  define RETROFLAT_KEY_PGDN     KEY_PGDN
+#  define RETROFLAT_KEY_GRAVE    KEY_BACKQUOTE
+#  define RETROFLAT_KEY_SLASH    KEY_SLASH
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -766,6 +768,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_DELETE   SDLK_DELETE
 #  define RETROFLAT_KEY_PGUP     SDLK_PAGEUP
 #  define RETROFLAT_KEY_PGDN     SDLK_PAGEDOWN
+#  define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
+#  define RETROFLAT_KEY_SLASH SDLK_SLASH
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -878,17 +882,8 @@ struct RETROFLAT_BITMAP {
    HBITMAP old_hbm_mask;
 };
 
-typedef COLORREF RETROFLAT_COLOR;
-
-#ifdef RETROFLT_C
-
-#  define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
-const uint32_t RETROFLAT_COLOR_ ## name_u = idx;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
-
-#  ifdef RETROFLAT_API_WINCE
-
+/* TODO: Remove this in favor of mmem.h. */
+#  if defined( RETROFLAT_C ) && defined( RETROFLAT_API_WINCE )
 void* calloc( size_t n, size_t s ) {
    void* out = NULL;
 
@@ -897,18 +892,51 @@ void* calloc( size_t n, size_t s ) {
 
    return out;
 }
-
 #  endif /* RETROFLAT_API_WINCE */
+
+#  ifdef RETROFLAT_OPENGL
+
+typedef float MAUG_CONST* RETROFLAT_COLOR;
+
+/* TODO: Generate with table macro. */
+#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
+#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
+#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
+#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
+#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
+#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
+#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
+#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
+#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
+#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
+#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
+#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
+#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
+#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
+#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
+#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
 
 #else
 
-#  define RETROFLAT_COLOR_TABLE_WIN_EXT( idx, name_l, name_u, r, g, b ) \
-extern const uint32_t RETROFLAT_COLOR_ ## name_u;
+typedef COLORREF RETROFLAT_COLOR;
 
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_EXT )
+#     ifdef RETROFLT_C
 
-#endif /* RETROFLT_C */
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+            const uint32_t RETROFLAT_COLOR_ ## name_u = idx;
 
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
+
+#     else
+
+#        define RETROFLAT_COLOR_TABLE_W_EXT( idx, name_l, name_u, r, g, b ) \
+            extern const uint32_t RETROFLAT_COLOR_ ## name_u;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
+
+#     endif /* RETROFLT_C */
+
+/* XXX: Fix indentation until RETROFLAT_OPENGL endif. */
 /* === Setup Brush Cache === */
 
 /* This will be initialized in setup, so just preserve the number. */
@@ -1000,6 +1028,8 @@ static uint32_t gc_retroflat_win_rgbs[] = {
       SelectObject( target->hdc_b, old_pen ); \
    }
 
+#endif /* RETROFLAT_OPENGL */
+
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 #  define retroflat_screen_w() g_screen_v_w
@@ -1008,6 +1038,8 @@ static uint32_t gc_retroflat_win_rgbs[] = {
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
 
+#  define RETROFLAT_KEY_GRAVE VK_OEM_3
+#  define RETROFLAT_KEY_SLASH VK_OEM_2
 #  define RETROFLAT_KEY_UP	   VK_UP
 #  define RETROFLAT_KEY_DOWN	VK_DOWN
 #  define RETROFLAT_KEY_RIGHT	VK_RIGHT
@@ -1188,6 +1220,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_ENTER    0x0d
 #  define RETROFLAT_KEY_TAB	   '\t'
 #  define RETROFLAT_KEY_SPACE	   ' '
+#  define RETROFLAT_KEY_GRAVE    '`'
+#  define RETROFLAT_KEY_SLASH    '/'
 #  define RETROFLAT_KEY_A		   'a'
 #  define RETROFLAT_KEY_B		   'b'
 #  define RETROFLAT_KEY_C		   'c'
@@ -2660,9 +2694,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+#ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRSETUP )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENSETUP )
+#endif /* !RETROFLAT_OPENGL */
 
    ShowWindow( g_window, g_cmd_show );
 
@@ -2814,8 +2850,10 @@ void retroflat_shutdown( int retval ) {
       /* TODO: Destroy buffer bitmap! */
    }
 
+#ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRCLEANUP )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENCLEANUP )
+#endif /* !RETROFLAT_OPENGL */
 
 #  elif defined( RETROFLAT_API_GLUT )
 
