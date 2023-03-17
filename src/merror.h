@@ -57,6 +57,17 @@ typedef int MERROR_RETVAL;
 #define maug_cleanup_if_lt_overflow( a, b ) \
    maug_cleanup_if_lt( a, b, SIZE_T_FMT, MERROR_OVERFLOW )
 
+#define maug_cleanup_if_ge( a, b, fmt, err ) \
+   if( (a) >= (b) ) { \
+      error_printf( fmt " is greater or equal to " fmt "!", a, b ); \
+      retval = err; \
+      goto cleanup; \
+   }
+
+#define maug_cleanup_if_ge_overflow( a, b ) \
+   maug_cleanup_if_ge( a, b, SIZE_T_FMT, MERROR_OVERFLOW )
+
+
 /*! \} */ /* maug_error */
 
 #endif /* MERROR_H */

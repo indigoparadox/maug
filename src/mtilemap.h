@@ -263,14 +263,21 @@ static MAUG_CONST uint8_t gc_mtilemap_mstate_parents[] = {
 
 /* === */
 
-static void
+static MERROR_RETVAL
 mtilemap_parse_append_token( struct MTILEMAP_PARSER* parser, char c ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
    parser->token[parser->token_sz++] = c;
    parser->token[parser->token_sz] = '\0';
-   assert( parser->token_sz <= MTILEMAP_TOKEN_SZ_MAX );
 
-   /* TODO: If size greater than max, return error indicating more buffer
-    *       space needed. */
+   /* If size greater than max, return error indicating more buffer space
+    * needed. */
+   maug_cleanup_if_ge_overflow(
+      parser->token_sz + 1, (size_t)MTILEMAP_TOKEN_SZ_MAX );
+
+cleanup:
+
+   return retval;
 }
 
 static void
@@ -621,7 +628,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
    case '\t':
    case ' ':
       if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
       }
       break;
 
@@ -635,7 +643,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
          mtilemap_parse_reset_token( parser );
 
       } else if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -653,7 +662,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
       } else if(
          MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
       ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -672,7 +682,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
       } else if(
          MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
       ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -700,7 +711,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
       } else if(
          MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
       ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -741,7 +753,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
       } else if(
          MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
       ) {
-         mtilemap_parse_append_token( parser, c );
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -755,8 +768,11 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
          mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_VAL );
          mtilemap_parse_reset_token( parser );
 
-      } else if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         mtilemap_parse_append_token( parser, c );
+      } else if(
+         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
+      ) {
+         retval = mtilemap_parse_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mtilemap_parser_invalid_c( parser, c, retval );
@@ -764,7 +780,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
       break;
 
    default:
-      mtilemap_parse_append_token( parser, c );
+      retval = mtilemap_parse_append_token( parser, c );
+      maug_cleanup_if_not_ok();
       break;
    }
 
@@ -811,6 +828,8 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
    for( parser->i = 0 ; parser->buffer_sz > parser->i ; parser->i++ ) {
       retval = mtilemap_parse_json_c( parser, parser->buffer[parser->i] );
+      /* TODO: Enlarge token buffer if OVERFLOW received? */
+      /* TODO: Don't load entire file into RAM at once! */
       maug_cleanup_if_not_ok();
    }
 
