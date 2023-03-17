@@ -53,6 +53,9 @@ struct RETROCON {
    char callback_names[RETROCON_CB_SZ_MAX][RETROCON_CB_NAME_SZ_MAX + 1];
    retrocon_cb callbacks[RETROCON_CB_SZ_MAX];
    size_t callbacks_sz;
+   RETROFLAT_COLOR lbuffer_color;
+   RETROFLAT_COLOR sbuffer_color;
+   RETROFLAT_COLOR bg_color;
 };
 
 MERROR_RETVAL retrocon_display(
@@ -81,11 +84,11 @@ MERROR_RETVAL retrocon_display(
    }
 
    retroflat_rect(
-      NULL, RETROFLAT_COLOR_WHITE, 10, 10,
+      NULL, con->bg_color, 10, 10,
       300, RETROCON_WIN_H, RETROFLAT_FLAGS_FILL );
 
    retroflat_string(
-      NULL, RETROFLAT_COLOR_DARKBLUE, con->lbuffer, -1, NULL,
+      NULL, con->lbuffer_color, con->lbuffer, -1, NULL,
       15, 15, 0 );
 
    /* Draw each line, one by one. */
@@ -97,7 +100,7 @@ MERROR_RETVAL retrocon_display(
       }
       
       retroflat_string(
-         NULL, RETROFLAT_COLOR_BLACK,
+         NULL, con->sbuffer_color,
          &(con->sbuffer[con->sbuffer_lines[i]]), line_sz, NULL,
          15, 25 + (i * 10), 0 );
    }
