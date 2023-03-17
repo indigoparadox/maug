@@ -1409,7 +1409,7 @@ void retroglu_string(
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
       
-      glBegin( GL_QUADS );
+      glBegin( GL_TRIANGLES );
 
       glTexCoord2f( 0, 0 );
       glVertex3f( x + (RETROGLU_FONT_W * i), y, z );
@@ -1419,8 +1419,15 @@ void retroglu_string(
       glVertex3f(
          x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W,
          y + RETROGLU_FONT_W, z );
+
+      glTexCoord2f( 1, 1 );
+      glVertex3f(
+         x + (RETROGLU_FONT_W * i) + RETROGLU_FONT_W,
+         y + RETROGLU_FONT_W, z );
       glTexCoord2f( 0, 1 );
       glVertex3f( x + (RETROGLU_FONT_W * i), y + RETROGLU_FONT_W, z );
+      glTexCoord2f( 0, 0 );
+      glVertex3f( x + (RETROGLU_FONT_W * i), y, z );
       
       glEnd();
 
