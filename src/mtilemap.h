@@ -967,10 +967,13 @@ cleanup:
 MERROR_RETVAL mtilemap_free( struct MTILEMAP* t ) {
    size_t i = 0;
    struct MTILEMAP_TILE_DEF* tile_defs = NULL;
+   struct MTILEMAP_LAYER* layers = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
    maug_mlock( t->tile_defs, tile_defs );
-   maug_cleanup_if_null_alloc( struct MTILEMAP_TILE_DEF*, tile_defs );
+   if( NULL == tile_defs ) {
+      goto free_layers;
+   }
 
    for( i = 0 ; t->tile_defs_sz > i ; i++ ) {
       if( NULL != tile_defs[i].cprops ) {
@@ -982,11 +985,22 @@ MERROR_RETVAL mtilemap_free( struct MTILEMAP* t ) {
    maug_munlock( t->tile_defs, tile_defs );
    maug_mfree( t->tile_defs );
 
-cleanup:
+free_layers:
 
-   if( NULL != tile_defs ) {
-      maug_munlock( t->tile_defs, tile_defs );
+   maug_mlock( t->layers, layers );
+   maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
+
+   for( i = 0 ; t->layers_sz > i ; i++ ) {
+      if( NULL != layers[i].tiles ) {
+         maug_mfree( layers[i].tiles );
+         layers[i].tiles_sz = 0;
+      }
    }
+ 
+   maug_munlock( t->layers, layers );
+   maug_mfree( t->layers );
+
+cleanup:
 
    return retval;
 }
