@@ -623,6 +623,8 @@ struct RETROFLAT_ARGS {
 
 #include <time.h> /* For srand() */
 
+typedef FILE* RETROFLAT_CONFIG;
+
 struct RETROFLAT_BITMAP {
    uint8_t flags;
    BITMAP* b;
@@ -728,6 +730,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
 #  if !defined( RETROFLAT_SOFT_SHAPES ) && !defined( RETROFLAT_OPENGL )
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
+
+typedef FILE* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -891,6 +895,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 #  ifdef RETROFLAT_WING
 #     include <wing.h>
 #  endif /* RETROFLAT_WING */
+
+typedef HKEY RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1217,6 +1223,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 #endif /* !RETROFLAT_OPENGL */
 
 #include <GL/glut.h>
+
+typedef FILE* RETROFLAT_CONFIG;
 
 typedef int RETROFLAT_COLOR;
 
@@ -1685,7 +1693,12 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
+MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config );
+
+void retroflat_config_close( RETROFLAT_CONFIG* config );
+
 size_t retroflat_config_read(
+   RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
    void* buffer_out, size_t buffer_out_sz_max,
    const void* default_out, size_t default_out_sz );
@@ -4640,18 +4653,76 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 /* === */
 
+MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROFLAT_API_WIN16 )
+
+   /* == Win16 (.ini file) == */
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_WIN32 )
+
+   /* == Win32 (Registry) == */
+
+   /* TODO */
+   if( ERROR_SUCCESS != RegOpenKeyExA(
+      HKEY_CURRENT_USER, 
+
+#  elif defined( RETROFLAT_API_SDL1 ) || \
+   defined( RETROFLAT_API_SDL2 ) || \
+   defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_GLUT )
+   debug_printf( 1, "opening config file %s...", g_retroflat_config_path );
+
+   *config = fopen( g_retroflat_config_path, "r" );
+   maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
+
+cleanup:
+#endif
+
+   return retval;
+}
+
+/* === */
+
+void retroflat_config_close( RETROFLAT_CONFIG* config ) {
+
+#  if defined( RETROFLAT_API_WIN16 )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_WIN32 )
+
+   /* == Win32 (Registry) == */
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_SDL1 ) || \
+   defined( RETROFLAT_API_SDL2 ) || \
+   defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_GLUT )
+
+   debug_printf( 1, "closing config file..." );
+   fclose( *config );
+   *config = NULL;
+
+#  endif
+}
+
+/* === */
+
 size_t retroflat_config_read(
+   RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
    void* buffer_out, size_t buffer_out_sz_max,
    const void* default_out, size_t default_out_sz
 ) {
    size_t retval = 0;
-#  if defined( RETROFLAT_API_WIN32 )
-   HKEY key = (HKEY)NULL;
-#  elif defined( RETROFLAT_API_SDL1 ) || \
+#  if defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
    defined( RETROFLAT_API_ALLEGRO )
-   FILE* config_file = NULL;
    char line[RETROFLAT_CONFIG_LN_SZ_MAX + 1];
    char* line_val = NULL;
    size_t line_sz = 0;
@@ -4676,16 +4747,12 @@ size_t retroflat_config_read(
 
 #  elif defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO )
+   defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_GLUT )
 
    /* == SDL / Allegro == */
 
-   debug_printf( 1, "opening config file %s...", g_retroflat_config_path );
-
-   config_file = fopen( g_retroflat_config_path, "r" );
-   maug_cleanup_if_null( FILE*, config_file, MERROR_FILE );
-
-   while( fgets( line, RETROFLAT_CONFIG_LN_SZ_MAX, config_file ) ) {
+   while( fgets( line, RETROFLAT_CONFIG_LN_SZ_MAX, *config ) ) {
       /* Size check. */
       line_sz = strlen( line );
       if( 1 >= line_sz || RETROFLAT_CONFIG_LN_SZ_MAX <= line_sz ) {
@@ -4746,10 +4813,7 @@ size_t retroflat_config_read(
 
 cleanup:
 
-   if( NULL != config_file ) {
-      debug_printf( 1, "closing config file..." );
-      fclose( config_file );
-   }
+   fseek( *config, 0, SEEK_SET );
 
 #  else
 #     warning "config read not implemented"
