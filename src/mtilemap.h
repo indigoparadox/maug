@@ -63,6 +63,7 @@ union MTILEMAP_CPROP_VAL {
    int32_t i32;
    float f32;
    char str[MTILEMAP_CPROP_STR_SZ_MAX];
+   uint8_t bool;
 };
 
 struct MTILEMAP_CPROP {
@@ -410,7 +411,11 @@ MERROR_RETVAL mtilemap_parser_tile_set_cprop_value(
       break;
 
    case MTILEMAP_CPROP_TYPE_BOOL:
-      /* TODO */
+      cprops[tile_def->cprops_sz - 1].value.bool =
+         (0 == strncmp( "true", val, 4 ) ? 1 : 0);
+      debug_printf( MTILEMAP_TRACE_LVL, "set cprop #" SIZE_T_FMT " value: %s",
+         tile_def->cprops_sz - 1,
+         cprops[tile_def->cprops_sz - 1].value.bool ? "true" : "false" );
       break;
 
    default:
