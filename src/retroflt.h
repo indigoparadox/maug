@@ -332,6 +332,14 @@
 
 #define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
+#define RETROFLAT_BUFFER_INT 0x00
+
+#define RETROFLAT_BUFFER_STRING 0x01
+
+#define RETROFLAT_BUFFER_FLOAT 0x02
+
+#define RETROFLAT_BUFFER_BOOL 0x04
+
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
@@ -466,6 +474,8 @@ struct RETROFLAT_ARGS {
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
    uint8_t flags;
+   /*! \brief Relative path of local config file (if not using registry). */
+   char* config_path;
 };
 
 /**
@@ -576,6 +586,14 @@ struct RETROFLAT_ARGS {
 /*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
 #  define NDS_SPRITES_ACTIVE 24
 #endif /* !NDS_SPRITES_ACTIVE */
+
+#ifndef RETROFLAT_CONFIG_LN_SZ_MAX
+#  define RETROFLAT_CONFIG_LN_SZ_MAX 255
+#endif /* !RETROFLAT_CONFIG_LN_SZ_MAX */
+
+#ifndef RETROFLAT_CONFIG_EXT
+#  define RETROFLAT_CONFIG_EXT ".ini"
+#endif /* !RETROFLAT_CONFIG_EXT */
 
 /*! \} */ /* maug_retroflt_compiling */
 
@@ -1667,6 +1685,11 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
+size_t retroflat_config_read(
+   const char* sect_name, const char* key_name, uint8_t buffer_type,
+   void* buffer_out, size_t buffer_out_sz_max,
+   const void* default_out, size_t default_out_sz );
+
 #ifdef RETROFLT_C
 
 #  include <stdio.h>
@@ -1677,6 +1700,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 void* g_loop_data = NULL;
 MERROR_RETVAL g_retval = 0;
+char g_retroflat_config_path[RETROFLAT_PATH_MAX + 1];
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
@@ -2280,13 +2304,26 @@ static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       debug_printf( 1, "setting config path to: %s", arg );
-      maug_config_init( arg, strlen( arg ) );
+      strncpy( g_retroflat_config_path, arg, RETROFLAT_PATH_MAX );
    }
    return RETROFLAT_OK;
 }
 
 static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   maug_config_init( args->title, strlen( arg ) );
+   memset( g_retroflat_config_path, '\0', RETROFLAT_PATH_MAX + 1 );
+
+   if( NULL != args->config_path ) {
+      debug_printf( 1, "setting config path to: %s", args->config_path );
+      strncpy(
+         g_retroflat_config_path, args->config_path, RETROFLAT_PATH_MAX );
+   } else {
+      debug_printf( 1, "setting config path to: %s%s",
+         args->title, RETROFLAT_CONFIG_EXT );
+      strncpy( g_retroflat_config_path, args->title, RETROFLAT_PATH_MAX );
+      strncat(
+         g_retroflat_config_path, RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
+   }
+
    return RETROFLAT_OK;
 }
 
@@ -4599,6 +4636,126 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return key_out;
+}
+
+/* === */
+
+size_t retroflat_config_read(
+   const char* sect_name, const char* key_name, uint8_t buffer_type,
+   void* buffer_out, size_t buffer_out_sz_max,
+   const void* default_out, size_t default_out_sz
+) {
+   size_t retval = 0;
+#  if defined( RETROFLAT_API_WIN32 )
+   HKEY key = (HKEY)NULL;
+#  elif defined( RETROFLAT_API_SDL1 ) || \
+   defined( RETROFLAT_API_SDL2 ) || \
+   defined( RETROFLAT_API_ALLEGRO )
+   FILE* config_file = NULL;
+   char line[RETROFLAT_CONFIG_LN_SZ_MAX + 1];
+   char* line_val = NULL;
+   size_t line_sz = 0;
+   int sect_match = 1;
+#  endif /* RETROFLAT_API_WIN32 */
+
+#  if defined( RETROFLAT_API_WIN16 )
+
+   /* == Win16 (.ini file) == */
+
+   retval = GetPrivateProfileString(
+      sect_name, key_name, def_out, buffer_out, buffer_sz,
+      g_maug_config_filename );
+
+#  elif defined( RETROFLAT_API_WIN32 )
+
+   /* == Win32 (Registry) == */
+
+   /* TODO */
+   if( ERROR_SUCCESS != RegOpenKeyExA(
+      HKEY_CURRENT_USER, 
+
+#  elif defined( RETROFLAT_API_SDL1 ) || \
+   defined( RETROFLAT_API_SDL2 ) || \
+   defined( RETROFLAT_API_ALLEGRO )
+
+   /* == SDL / Allegro == */
+
+   debug_printf( 1, "opening config file %s...", g_retroflat_config_path );
+
+   config_file = fopen( g_retroflat_config_path, "r" );
+   maug_cleanup_if_null( FILE*, config_file, MERROR_FILE );
+
+   while( fgets( line, RETROFLAT_CONFIG_LN_SZ_MAX, config_file ) ) {
+      /* Size check. */
+      line_sz = strlen( line );
+      if( 1 >= line_sz || RETROFLAT_CONFIG_LN_SZ_MAX <= line_sz ) {
+         error_printf( "invalid line sz: " SIZE_T_FMT, line_sz );
+         continue;
+      }
+      
+      /* Strip off trailing newline. */
+      if( '\n' == line[line_sz - 1] || '\r' == line[line_sz - 1] ) {
+         debug_printf( 1, "stripping newline!" );
+         line_sz--;
+         line[line_sz] = '\0'; /* NULL goes after strlen() finishes! */
+      }
+
+      /* Section check. */
+      if( '[' == line[0] ) {
+         /* TODO: Tokenize at closing bracket. */
+         line[line_sz - 1] = '\0';
+         sect_match = strncmp( sect_name, &(line[1]), line_sz - 1 );
+         debug_printf( 1, "found section: %s (match: %d)",
+            &(line[1]), sect_match );
+         continue;
+      }
+      
+      /* Split up key/value pair. */
+      line_val = strchr( line, '=' );
+      if( NULL == line_val || line_val == line ) {
+         error_printf( "invalid line: %s", line );
+         continue;
+      }
+
+      /* Terminate key. */
+      line_val[0] = '\0';
+      line_val++;
+
+      if( 0 == sect_match && 0 == strcmp( key_name, line ) ) {
+         debug_printf( 1, "found %s: %s", line, line_val );
+
+         switch( buffer_type ) {
+         case RETROFLAT_BUFFER_INT:
+            *((int*)buffer_out) = atoi( line_val );
+            goto cleanup;
+
+         case RETROFLAT_BUFFER_FLOAT:
+            *((float*)buffer_out) = atof( line_val );
+            goto cleanup;
+
+         case RETROFLAT_BUFFER_STRING:
+            strncpy( (char*)buffer_out, line_val, buffer_out_sz_max );
+            goto cleanup;
+
+         case RETROFLAT_BUFFER_BOOL:
+            /* TODO */
+            goto cleanup;
+         }
+      }
+   }
+
+cleanup:
+
+   if( NULL != config_file ) {
+      debug_printf( 1, "closing config file..." );
+      fclose( config_file );
+   }
+
+#  else
+#     warning "config read not implemented"
+#  endif
+
+   return retval;
 }
 
 #else /* End of RETROFLT_C */
