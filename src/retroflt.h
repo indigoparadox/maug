@@ -896,7 +896,11 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 #     include <wing.h>
 #  endif /* RETROFLAT_WING */
 
+#  ifdef RETROFLAT_API_WIN32
 typedef HKEY RETROFLAT_CONFIG;
+#  else
+typedef int RETROFLAT_CONFIG;
+#  endif /* RETROFLAT_API_WIN32 */
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1715,6 +1719,11 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config );
 
 void retroflat_config_close( RETROFLAT_CONFIG* config );
 
+size_t retroflat_config_write(
+   RETROFLAT_CONFIG* config,
+   const char* sect_name, const char* key_name, uint8_t buffer_type,
+   void* buffer, size_t buffer_sz_max );
+
 size_t retroflat_config_read(
    RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
@@ -1772,7 +1781,6 @@ int g_screen_v_h = 0;
 int g_cmd_show = 0;
 static int g_screen_w = 0;
 static int g_screen_h = 0;
-static unsigned long g_ms_start = 0;
 static volatile unsigned long g_ms = 0;
 static uint8_t g_last_key = 0;
 static unsigned int g_last_mouse = 0;
@@ -3322,8 +3330,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
-   HDC hdc_win = (HDC)NULL;
 #     if defined( RETROFLAT_API_WIN16 )
+   HDC hdc_win = (HDC)NULL;
    char* buf = NULL;
    BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
@@ -4151,7 +4159,9 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
-#  if !defined( RETROFLAT_SOFT_SHAPES ) && defined( RETROFLAT_API_SDL2 )
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
       locked_target_internal = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4166,13 +4176,13 @@ void retroflat_line(
       target = &(g_buffer);
    }
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
 
    retrosoft_line( target, color, x1, y1, x2, y2, flags );
-
-#  elif defined( RETROFLAT_OPENGL )
-
-   /* Do nothing. */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4239,8 +4249,9 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
-
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
    int lock_ret = 0,
@@ -4251,13 +4262,13 @@ void retroflat_ellipse(
       target = &(g_buffer);
    }
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
 
    retrosoft_ellipse( target, color, x, y, w, h, flags );
-
-#  elif defined( RETROFLAT_OPENGL )
-
-   /* Do nothing. */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4323,7 +4334,9 @@ void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
    const char* font_str, int* w_out, int* h_out, uint8_t flags
 ) {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4336,13 +4349,13 @@ void retroflat_string_sz(
       target = &(g_buffer);
    }
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
 
    retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
-
-#  elif defined( RETROFLAT_OPENGL )
-
-   /* Do nothing. */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4405,6 +4418,7 @@ void retroflat_string(
    float aspect_ratio = 0,
       screen_x = 0,
       screen_y = 0;
+#  elif defined( RETROFLAT_SOFT_SHAPES )
 #  elif defined( RETROFLAT_API_ALLEGRO )
    FONT* font_data = NULL;
    int font_loaded = 0;
@@ -4684,7 +4698,7 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
 
    /* == Win32 (Registry) == */
 
-   char key_path[RETROFLAT_PATH_MAX] = "SOFTWARE\\";
+   char key_path[RETROFLAT_PATH_MAX + 1] = "SOFTWARE\\";
 
    /* TODO */
    strncat( key_path, "RetroFlat", RETROFLAT_PATH_MAX );
@@ -4741,6 +4755,19 @@ void retroflat_config_close( RETROFLAT_CONFIG* config ) {
 
 /* === */
 
+size_t retroflat_config_write(
+   RETROFLAT_CONFIG* config,
+   const char* sect_name, const char* key_name, uint8_t buffer_type,
+   void* buffer, size_t buffer_sz_max
+) {
+   size_t retval = 0;
+
+
+   return retval;
+}
+
+/* === */
+
 size_t retroflat_config_read(
    RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
@@ -4763,8 +4790,8 @@ size_t retroflat_config_read(
    /* == Win16 (.ini file) == */
 
    retval = GetPrivateProfileString(
-      sect_name, key_name, def_out, buffer_out, buffer_sz,
-      g_maug_config_filename );
+      sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
+      g_retroflat_config_path );
 
 #  elif defined( RETROFLAT_API_WIN32 )
 

@@ -86,7 +86,11 @@
 #endif /* LOG_TO_FILE */
 
 #ifdef __GNUC__
-#  define SIZE_T_FMT "%lu"
+#  ifdef _WIN64 /* __SIZE_WIDTH__ == 64 */
+#     define SIZE_T_FMT "%I64u"
+#  else
+#     define SIZE_T_FMT "%lu"
+#  endif /* __LONG_WIDTH__ */
 #else
 #  define SIZE_T_FMT "%u"
 #endif /* __GNUC__ */
@@ -595,7 +599,7 @@ void maug_printf( const char* fmt, ... ) {
 /* === */
 
 void maug_debug_printf(
-   FILE* out, uint8_t flags, const char* src_name, uint32_t line, int16_t lvl,
+   FILE* out, uint8_t flags, const char* src_name, size_t line, int16_t lvl,
    const char* fmt, ...
 ) {
    va_list vargs;
@@ -609,7 +613,7 @@ void maug_debug_printf(
    }
 
    if( lvl >= g_maug_uprintf_threshold ) {
-      platform_fprintf( out, "(%d) %s : %d: ",
+      platform_fprintf( out, "(%d) %s : " SIZE_T_FMT ": ",
          lvl, src_name, line );
       
       va_start( vargs, fmt );
