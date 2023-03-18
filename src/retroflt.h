@@ -4666,9 +4666,19 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
 
    /* == Win32 (Registry) == */
 
+   char key_path[RETROFLAT_PATH_MAX] = "SOFTWARE\\";
+
    /* TODO */
-   if( ERROR_SUCCESS != RegOpenKeyExA(
+   strncat( key_path, "RetroFlat", RETROFLAT_PATH_MAX );
+
+   /* TODO */
+   if( ERROR_SUCCESS != RegOpenKey(
       HKEY_CURRENT_USER, 
+      key_path,
+      (HKEY*)config
+   ) ) {
+      retval = MERROR_FILE;
+   }
 
 #  elif defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
@@ -4742,8 +4752,6 @@ size_t retroflat_config_read(
    /* == Win32 (Registry) == */
 
    /* TODO */
-   if( ERROR_SUCCESS != RegOpenKeyExA(
-      HKEY_CURRENT_USER, 
 
 #  elif defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
