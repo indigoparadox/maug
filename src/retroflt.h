@@ -623,6 +623,10 @@ struct RETROFLAT_ARGS {
 
 #include <time.h> /* For srand() */
 
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
+
 typedef FILE* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
@@ -724,6 +728,10 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
 #  if defined( RETROFLAT_OS_WASM )
 #     include <emscripten.h>
 #  endif /* RETROFLAT_OS_WASM */
+
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 #  include <SDL.h>
 
@@ -1227,6 +1235,10 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 #endif /* !RETROFLAT_OPENGL */
 
 #include <GL/glut.h>
+
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef FILE* RETROFLAT_CONFIG;
 
@@ -4665,11 +4677,11 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_last_mouse_y = 0;
    }
 
-#ifdef RETROFLAT_SCREENSAVER
+#     ifdef RETROFLAT_SCREENSAVER
    if( g_screensaver && 0 != key_out ) {
       retroflat_quit( 0 );
    }
-#endif /* RETROFLAT_SCREENSAVER */
+#     endif /* RETROFLAT_SCREENSAVER */
 
 #  elif defined( RETROFLAT_API_GLUT )
 
@@ -4688,7 +4700,15 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#  if defined( RETROFLAT_API_WIN16 )
+#  if defined( RETROFLAT_CONFIG_USE_FILE )
+
+   debug_printf( 1, "opening config file %s...", g_retroflat_config_path );
+
+   *config = fopen( g_retroflat_config_path, "r" );
+   maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
+
+cleanup:
+#  elif defined( RETROFLAT_API_WIN16 )
 
    /* == Win16 (.ini file) == */
 
@@ -4712,17 +4732,9 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
       retval = MERROR_FILE;
    }
 
-#  elif defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_GLUT )
-   debug_printf( 1, "opening config file %s...", g_retroflat_config_path );
-
-   *config = fopen( g_retroflat_config_path, "r" );
-   maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
-
-cleanup:
-#endif
+#  else
+#     warning "config close not implemented"
+#  endif
 
    return retval;
 }
@@ -4731,7 +4743,13 @@ cleanup:
 
 void retroflat_config_close( RETROFLAT_CONFIG* config ) {
 
-#  if defined( RETROFLAT_API_WIN16 )
+#  if defined( RETROFLAT_CONFIG_USE_FILE )
+
+   debug_printf( 1, "closing config file..." );
+   fclose( *config );
+   *config = NULL;
+
+#  elif defined( RETROFLAT_API_WIN16 )
 
    /* TODO */
 
@@ -4741,17 +4759,40 @@ void retroflat_config_close( RETROFLAT_CONFIG* config ) {
 
    /* TODO */
 
-#  elif defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_GLUT )
-
-   debug_printf( 1, "closing config file..." );
-   fclose( *config );
-   *config = NULL;
-
+#  else
+#     warning "config close not implemented"
 #  endif
+
 }
+
+/* === */
+
+#ifdef RETROFLAT_CONFIG_USE_FILE
+
+/**
+ * \param sect_match Pointer to size_t to hold strncmp() result.
+ * \return Unmodified line if *any* section is found, with brackets stripped
+ *         if sect_name is found.
+ */
+static char* retroflat_config_tok_sect(
+   char* line, size_t line_sz, const char* sect_name, size_t* sect_match
+) {
+
+   /* Section check. */
+   if( '[' == line[0] ) {
+      *sect_match = strncmp( sect_name, &(line[1]), line_sz - 2 );
+      if( 0 == *sect_match ) {
+         /* TODO: Tokenize at closing bracket. */
+         line[line_sz - 1] = '\0';
+         debug_printf( 1, "found section: %s", &(line[1]) );
+      }
+      return line;
+   }
+
+   return NULL;
+}  
+
+#endif /* RETROFLAT_CONFIG_USE_FILE */
 
 /* === */
 
@@ -4775,34 +4816,14 @@ size_t retroflat_config_read(
    const void* default_out, size_t default_out_sz
 ) {
    size_t retval = 0;
-#  if defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_GLUT )
+#  if defined( RETROFLAT_CONFIG_USE_FILE )
    char line[RETROFLAT_CONFIG_LN_SZ_MAX + 1];
    char* line_val = NULL;
    size_t line_sz = 0;
-   int sect_match = 1;
+   size_t sect_match = 1;
 #  endif /* RETROFLAT_API_WIN32 */
 
-#  if defined( RETROFLAT_API_WIN16 )
-
-   /* == Win16 (.ini file) == */
-
-   retval = GetPrivateProfileString(
-      sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
-      g_retroflat_config_path );
-
-#  elif defined( RETROFLAT_API_WIN32 )
-
-   /* == Win32 (Registry) == */
-
-   /* TODO */
-
-#  elif defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_GLUT )
+#  if defined( RETROFLAT_CONFIG_USE_FILE )
 
    /* == SDL / Allegro == */
 
@@ -4822,12 +4843,9 @@ size_t retroflat_config_read(
       }
 
       /* Section check. */
-      if( '[' == line[0] ) {
-         /* TODO: Tokenize at closing bracket. */
-         line[line_sz - 1] = '\0';
-         sect_match = strncmp( sect_name, &(line[1]), line_sz - 1 );
-         debug_printf( 1, "found section: %s (match: %d)",
-            &(line[1]), sect_match );
+      if(
+         retroflat_config_tok_sect( line, line_sz, sect_name, &sect_match )
+      ) {
          continue;
       }
       
@@ -4868,6 +4886,20 @@ size_t retroflat_config_read(
 cleanup:
 
    fseek( *config, 0, SEEK_SET );
+
+#  elif defined( RETROFLAT_API_WIN16 )
+
+   /* == Win16 (.ini file) == */
+
+   retval = GetPrivateProfileString(
+      sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
+      g_retroflat_config_path );
+
+#  elif defined( RETROFLAT_API_WIN32 )
+
+   /* == Win32 (Registry) == */
+
+   /* TODO */
 
 #  else
 #     warning "config read not implemented"
