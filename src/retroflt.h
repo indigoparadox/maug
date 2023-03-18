@@ -1226,7 +1226,25 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 
 typedef FILE* RETROFLAT_CONFIG;
 
-typedef int RETROFLAT_COLOR;
+typedef float MAUG_CONST* RETROFLAT_COLOR;
+
+/* TODO: Generate with table macro. */
+#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
+#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
+#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
+#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
+#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
+#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
+#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
+#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
+#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
+#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
+#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
+#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
+#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
+#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
+#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
+#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -4732,7 +4750,8 @@ size_t retroflat_config_read(
    size_t retval = 0;
 #  if defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_ALLEGRO )
+   defined( RETROFLAT_API_ALLEGRO ) || \
+   defined( RETROFLAT_API_GLUT )
    char line[RETROFLAT_CONFIG_LN_SZ_MAX + 1];
    char* line_val = NULL;
    size_t line_sz = 0;
