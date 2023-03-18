@@ -198,7 +198,7 @@ MERROR_RETVAL retrocon_display(
       goto cleanup;
    }
 
-   if( NULL == con->bg_color ) {
+   if( (RETROFLAT_COLOR)0 == con->bg_color ) {
       error_printf( "colors not set!" );
       goto cleanup;
    }
