@@ -18,19 +18,19 @@
  */
 typedef int MERROR_RETVAL;
 
-#define MERROR_OK       0
+#define MERROR_OK       0x00
 
-#define MERROR_MARGE    1
+#define MERROR_MARGE    0x01
 
-#define MERROR_ALLOC    2
+#define MERROR_ALLOC    0x02
 
-#define MERROR_OVERFLOW 4
+#define MERROR_OVERFLOW 0x04
 
-#define MERROR_USR      8
+#define MERROR_FILE     0x08
+
+#define MERROR_USR      0x0f
 
 /*! \} */ /* maug_error_retvals */
-
-#define MERROR_OVERFLOW 4
 
 #define maug_cleanup_if_null( type, ptr, err ) \
    if( (type)NULL == ptr ) { \
