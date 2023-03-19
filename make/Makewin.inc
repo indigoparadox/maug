@@ -6,21 +6,21 @@ ifeq ("$(CFLAGS_WATCOM_WIN)","")
 	CFLAGS_WATCOM_WIN := -DRETROFLAT_OS_WIN 
 endif
 ifeq ("$(LDFLAGS_WATCOM_WIN)","")
-	LDFLAGS_WATCOM_WIN :=
+	LDFLAGS_WATCOM_WIN := libr winmm
 endif
 
 ifeq ("$(CFLAGS_WATCOM386_WIN)","")
 	CFLAGS_WATCOM386_WIN := -DRETROFLAT_OS_WIN 
 endif
 ifeq ("$(LDFLAGS_WATCOM386_WIN)","")
-	LDFLAGS_WATCOM386_WIN :=
+	LDFLAGS_WATCOM386_WIN := libr winmm
 endif
 
 ifeq ("$(CFLAGS_GCC_WIN)","")
 	CFLAGS_GCC_WIN := -march=i486 -DRETROFLAT_OS_WIN 
 endif
 ifeq ("$(LDFLAGS_GCC_WIN)","")
-	LDFLAGS_GCC_WIN := -mwindows -lgdi32
+	LDFLAGS_GCC_WIN := -mwindows -lgdi32 -lwinmm
 endif
 
 ifeq ("$(CFLAGS_GCC64_WIN)","")
