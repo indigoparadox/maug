@@ -2,6 +2,11 @@
 #ifndef RETROCON_H
 #define RETROCON_H
 
+/**
+ * \addtogroup maug_console In-Situ Console API
+ * \{
+ */
+
 #ifndef RETROCON_SBUFFER_SZ_MAX
 #  define RETROCON_SBUFFER_SZ_MAX 4096
 #endif /* !RETROCON_SBUFFER_SZ_MAX */
@@ -374,6 +379,8 @@ cleanup:
 }
 
 #endif /* RETROCON_C */
+
+/*! \} */ /* maug_console */
 
 #endif /* !RETROCON_H */
 
