@@ -880,6 +880,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 #  define MAUG_WINDOWS_H
 #endif /* !MAUG_WINDOWS_H */
 
+#  include <mmsystem.h>
+
 #  ifndef RETROFLAT_API_WINCE
 #     include <time.h> /* For srand() */
 #  endif /* !RETROFLAT_API_WINCE */
