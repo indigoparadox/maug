@@ -94,8 +94,8 @@ MERROR_RETVAL retrogui_add_button(
 
    button->hwnd = CreateWindow(
       "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-      x, y, w, h, g_window, (HMENU)idc, g_instance, NULL );
-   if( NULL == button->hwnd ) {
+      x, y, w, h, g_retroflat_state.window, (HMENU)idc, g_retroflat_instance, NULL );
+   if( (HWND)NULL == button->hwnd ) {
       error_printf( "could not create button: %s", text );
       goto cleanup;
    }
@@ -140,8 +140,9 @@ MERROR_RETVAL retrogui_add_listbox(
 
    listbox->hwnd = CreateWindow(
       "LISTBOX", NULL, WS_CHILD | WS_VISIBLE | LBS_STANDARD,
-      x, y, w, h, g_window, (HMENU)idc, g_instance, NULL );
-   if( NULL == listbox->hwnd ) {
+      x, y, w, h, g_retroflat_state.window, (HMENU)idc,
+      g_retroflat_instance, NULL );
+   if( (HWND)NULL == listbox->hwnd ) {
       error_printf( "could not create listbox" );
       goto cleanup;
    }
@@ -194,8 +195,8 @@ RETROGUI_IDC retrogui_poll_ctls(
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    for( i = 0 ; ctls_sz > i ; i++ ) {
-      if( ctls[i].idc == g_last_idc ) {
-         g_last_idc = 0;
+      if( ctls[i].idc == g_retroflat_state.last_idc ) {
+         g_retroflat_state.last_idc = 0;
          return ctls[i].idc;
       }
    }
