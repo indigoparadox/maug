@@ -3047,9 +3047,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_WIN16 ) || \
-   defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3060,6 +3058,10 @@ uint32_t retroflat_get_ms() {
    /* == SDL == */
 
    return SDL_GetTicks();
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   return timeGetTime();
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
