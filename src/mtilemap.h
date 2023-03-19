@@ -2,31 +2,23 @@
 #ifndef MTILEMAP_H
 #define MTILEMAP_H
 
+/**
+ * \addtogroup maug_tilemap Tilemap API
+ * \brief Functions and structures for working with tilemaps/grids.
+ * \{
+ * \file mtilemap.h
+ */
+
 #ifndef MTILEMAP_NAME_SZ_MAX
 #  define MTILEMAP_NAME_SZ_MAX 10
 #endif /* !MTILEMAP_NAME_SZ_MAX */
-
-#ifndef MTILEMAP_W_MAX
-#  define MTILEMAP_W_MAX 128
-#endif /* !MTILEMAP_W_MAX */
-
-#ifndef MTILEMAP_H_MAX
-#  define MTILEMAP_H_MAX 128
-#endif /* !MTILEMAP_H_MAX */
-
-#define MTILEMAP_WH_MAX ((MTILEMAP_W_MAX) * (MTILEMAP_H_MAX))
-
-#ifndef MTILEMAP_D_MAX
-#  define MTILEMAP_D_MAX 6
-#endif /* !MTILEMAP_D_MAX */
-
-#define MTILEMAP_TILES_SZ_MAX ((MTILEMAP_WH_MAX) * (MTILEMAP_D_MAX))
 
 #ifndef MTILEMAP_TOKEN_SZ_MAX
 #  define MTILEMAP_TOKEN_SZ_MAX 4096
 #endif /* !MTILEMAP_TOKEN_SZ_MAX */
 
 #ifndef MTILEMAP_PSTATE_SZ_MAX
+/*! \brief Maximum number of items on the MTILEMAP::pstate stack. */
 #  define MTILEMAP_PSTATE_SZ_MAX 24
 #endif /* !MTILEMAP_PSTATE_SZ_MAX */
 
@@ -52,12 +44,25 @@
 
 #define MTILEMAP_FLAG_ACTIVE 0x1
 
+/**
+ * \addtogroup \maug_tilemap_defs Tilemap Tile Definitions
+ * \{
+ */
+
+/**
+ * \addtogroup \maug_tilemap_defs_types Tilemap Custom Property Types
+ * \{
+ */
+
 #define MTILEMAP_CPROP_TYPE_NONE    0
 #define MTILEMAP_CPROP_TYPE_INT     1
 #define MTILEMAP_CPROP_TYPE_FLOAT   2
 #define MTILEMAP_CPROP_TYPE_STR     3
 #define MTILEMAP_CPROP_TYPE_BOOL    4
 
+/*! \} */ /* maug_tilemap_defs_types */
+
+/*! \brief Data store for MTILEMAP_CPROP::value. */
 union MTILEMAP_CPROP_VAL {
    uint32_t u32;
    int32_t i32;
@@ -66,7 +71,9 @@ union MTILEMAP_CPROP_VAL {
    uint8_t bool;
 };
 
+/*! \brief Custom property key-value storage type. */
 struct MTILEMAP_CPROP {
+   /*! \brief \ref maug_tilemap_defs_types for MTILEMAP_CPROP::value. */
    uint8_t type;
    char key[MTILEMAP_CPROP_STR_SZ_MAX];
    union MTILEMAP_CPROP_VAL value;
@@ -74,11 +81,6 @@ struct MTILEMAP_CPROP {
 
 struct MTILEMAP_TILE_DEF {
    uint8_t flags;
-   /* XXX: Get this out! */
-   int32_t rotate_f;
-#if 0
-   float scale_f;
-#endif
 #ifdef MAUG_NO_MMEM
    struct MTILEMAP_CPROP* cprops;
 #else
@@ -87,6 +89,8 @@ struct MTILEMAP_TILE_DEF {
    size_t cprops_sz;
    char image_path[MTILEMAP_TILESET_IMAGE_STR_SZ_MAX];
 };
+
+/*! \} */ /* maug_tilemap_defs */
 
 struct MTILEMAP_LAYER {
 #ifdef MAUG_NO_MMEM
@@ -116,6 +120,11 @@ struct MTILEMAP {
    uint8_t tiles_h;
    uint8_t tiles_w;
 };
+
+/**
+ * \addtogroup maug_tilemap_parser Tilemap Parser
+ * \{
+ */
 
 typedef MERROR_RETVAL
 (*mtilemap_tj_parse_cb)( const char* filename, struct MTILEMAP* t );
@@ -167,6 +176,8 @@ mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
 
 MERROR_RETVAL
 mtilemap_parse_json_file( const char* filename, struct MTILEMAP* m );
+
+/*! \} */ /* maug_tilemap_parser */
 
 MERROR_RETVAL
 mtilemap_alloc_tile_defs( struct MTILEMAP* t, size_t ndefs );
@@ -1030,6 +1041,8 @@ cleanup:
 }
 
 #endif /* MTILEMAP_C */
+
+/*! \} */ /* maug_tilemap */
 
 #endif /* !MTILEMAP_H */
 
