@@ -1061,7 +1061,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #endif /* RETROFLAT_OPENGL */
 
-#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
+#  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 #  define retroflat_screen_w() g_retroflat_state.screen_v_w
 #  define retroflat_screen_h() g_retroflat_state.screen_v_h
@@ -1973,9 +1973,11 @@ static LRESULT CALLBACK WndProc(
           */
             g_retroflat_state.buffer.b =
                retroflat_wing_buffer_setup( hdc_win );
+            g_retroflat_state.buffer.mask = (HBITMAP)NULL;
 #        else
             g_retroflat_state.buffer.b = CreateCompatibleBitmap( hdc_win,
                g_retroflat_state.screen_v_w, g_retroflat_state.screen_v_h );
+            g_retroflat_state.buffer.mask = (HBITMAP)NULL;
 #        endif /* RETROFLAT_WING */
             screen_initialized = 1;
          }
@@ -3938,8 +3940,8 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
-   assert( NULL != src->b );
+   assert( (HBITMAP)NULL != target->b );
+   assert( (HBITMAP)NULL != src->b );
 
    retroflat_internal_autolock_bitmap(
       src, lock_ret, locked_src_internal );
@@ -4197,7 +4199,7 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
 
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
