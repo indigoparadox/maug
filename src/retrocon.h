@@ -344,6 +344,11 @@ MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c ) {
 
    case '\r':
    case '\n':
+      if( 0 == con->lbuffer_sz ) {
+         /* Do nothing if line is empty. */
+         break;
+      }
+
       /* Execute/reset line. */
       retval = retrocon_exec_line( con, con->lbuffer, con->lbuffer_sz );
       con->lbuffer_sz = 0;
