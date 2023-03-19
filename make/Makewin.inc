@@ -6,7 +6,7 @@ ifeq ("$(CFLAGS_WATCOM_WIN)","")
 	CFLAGS_WATCOM_WIN := -DRETROFLAT_OS_WIN 
 endif
 ifeq ("$(LDFLAGS_WATCOM_WIN)","")
-	LDFLAGS_WATCOM_WIN := libr winmm
+	LDFLAGS_WATCOM_WIN := libr mmsystem
 endif
 
 ifeq ("$(CFLAGS_WATCOM386_WIN)","")
