@@ -2069,7 +2069,7 @@ static LRESULT CALLBACK WndProc(
          }
 
          /* Kind of a hack so that we can have a cheap timer. */
-         g_ms += 100;
+         g_ms += 1000 / RETROFLAT_FPS;
          break;
 
       case WM_COMMAND:
@@ -2435,6 +2435,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    const SDL_VideoInfo* info = NULL;
 #  elif defined( RETROFLAT_API_LIBNDS )
    int i = 0;
+#  elif defined( RETROFLAT_API_GLUT )
+   unsigned int glut_init_flags = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
@@ -2595,6 +2597,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
 
 #     ifdef RETROFLAT_OPENGL
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+   ) {
+      SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
+   }
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
@@ -2878,7 +2885,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_screen_v_h = args->screen_h;
 
    glutInit( &argc, argv );
-   glutInitDisplayMode( GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA );
+   glut_init_flags = GLUT_DEPTH | GLUT_RGBA;
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS != (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+   ) {
+      glut_init_flags |= GLUT_DOUBLE;
+   }
+   glutInitDisplayMode( glut_init_flags );
    glutInitWindowSize( g_screen_v_w, g_screen_v_h );
    glutCreateWindow( args->title );
    glutIdleFunc( retroflat_glut_idle );
