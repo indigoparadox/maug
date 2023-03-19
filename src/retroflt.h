@@ -1489,11 +1489,11 @@ struct RETROFLAT_ARGS {
 };
 
 struct RETROFLAT_STATE {
-   void*                loop_data;
-   MERROR_RETVAL        retval;
-   uint8_t              retroflat_flags;
-   char              retroflat_config_path[RETROFLAT_PATH_MAX + 1];
-   char              retroflat_assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+   void*                   loop_data;
+   MERROR_RETVAL           retval;
+   uint8_t                 retroflat_flags;
+   char                    config_path[RETROFLAT_PATH_MAX + 1];
+   char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    struct RETROFLAT_BITMAP buffer;
 
 #if defined( RETROFLAT_API_ALLEGRO )
@@ -2373,24 +2373,27 @@ static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       debug_printf( 1, "setting config path to: %s", arg );
-      strncpy( g_retroflat_state.retroflat_config_path, arg, RETROFLAT_PATH_MAX );
+      strncpy( g_retroflat_state.config_path, arg, RETROFLAT_PATH_MAX );
    }
    return RETROFLAT_OK;
 }
 
 static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   memset( g_retroflat_state.retroflat_config_path, '\0', RETROFLAT_PATH_MAX + 1 );
+   memset( g_retroflat_state.config_path, '\0', RETROFLAT_PATH_MAX + 1 );
 
    if( NULL != args->config_path ) {
       debug_printf( 1, "setting config path to: %s", args->config_path );
       strncpy(
-         g_retroflat_state.retroflat_config_path, args->config_path, RETROFLAT_PATH_MAX );
+         g_retroflat_state.config_path,
+         args->config_path, RETROFLAT_PATH_MAX );
    } else {
       debug_printf( 1, "setting config path to: %s%s",
          args->title, RETROFLAT_CONFIG_EXT );
-      strncpy( g_retroflat_state.retroflat_config_path, args->title, RETROFLAT_PATH_MAX );
+      strncpy(
+         g_retroflat_state.config_path, args->title, RETROFLAT_PATH_MAX );
       strncat(
-         g_retroflat_state.retroflat_config_path, RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
+         g_retroflat_state.config_path,
+         RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
    }
 
    return RETROFLAT_OK;
@@ -2525,9 +2528,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: setting config..." );
 
    /* Set the assets path. */
-   memset( g_retroflat_state.retroflat_assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
+   memset( g_retroflat_state.assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
    if( NULL != args->assets_path ) {
-      strncpy( g_retroflat_state.retroflat_assets_path,
+      strncpy( g_retroflat_state.assets_path,
          args->assets_path, RETROFLAT_ASSETS_PATH_MAX );
    }
 
@@ -3406,7 +3409,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
-      g_retroflat_state.retroflat_assets_path, RETROFLAT_PATH_SEP,
+      g_retroflat_state.assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
 
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
@@ -4755,9 +4758,10 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
 
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
 
-   debug_printf( 1, "opening config file %s...", g_retroflat_state.retroflat_config_path );
+   debug_printf( 1, "opening config file %s...",
+      g_retroflat_state.config_path );
 
-   *config = fopen( g_retroflat_state.retroflat_config_path, "r" );
+   *config = fopen( g_retroflat_state.config_path, "r" );
    maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
 
 cleanup:
@@ -4946,7 +4950,7 @@ cleanup:
 
    retval = GetPrivateProfileString(
       sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
-      g_retroflat_state.retroflat_config_path );
+      g_retroflat_state.config_path );
 
 #  elif defined( RETROFLAT_API_WIN32 )
 
