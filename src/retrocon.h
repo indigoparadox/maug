@@ -236,7 +236,7 @@ void retrocon_print_line( struct RETROCON* con, const char* line ) {
 
    line_sz = strlen( line );
    if( line_sz + con->sbuffer_sz >= RETROCON_SBUFFER_SZ_MAX ) {
-      /* TODO: Handle this better? */
+      /* TODO: Handle line overflow better? (i.e. scroll) */
       con->sbuffer_sz = 0;
       con->sbuffer[con->sbuffer_sz] = '\0';
       con->sbuffer_lines_sz = 0;
@@ -251,6 +251,8 @@ void retrocon_print_line( struct RETROCON* con, const char* line ) {
    for( i = 0 ; line_sz > i ; i++ ) {
       con->sbuffer[con->sbuffer_sz + i] = line[i];
    }
+
+   con->sbuffer[con->sbuffer_sz + line_sz] = '\0';
 
    debug_printf( 1, "println: %s (at " SIZE_T_FMT " chars)",
       &(con->sbuffer[con->sbuffer_sz]),
@@ -278,7 +280,7 @@ MERROR_RETVAL retrocon_exec_line(
       }
    }
 
-   retrocon_print_line( con, "command not found!" );
+   retrocon_print_line( con, "COMMAND NOT FOUND!" );
 
 cleanup:
 
