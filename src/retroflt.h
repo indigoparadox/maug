@@ -797,8 +797,8 @@ struct RETROFLAT_BITMAP {
 #  else
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
 #  endif
-#  define retroflat_screen_w() g_retroflat_state->screen_v_w
-#  define retroflat_screen_h() g_retroflat_state->screen_v_h
+#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
+#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 #  define retroflat_quit( retval_in ) \
       g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
@@ -1063,8 +1063,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
-#  define retroflat_screen_w() g_retroflat_state->screen_v_w
-#  define retroflat_screen_h() g_retroflat_state->screen_v_h
+#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
+#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
@@ -1259,8 +1259,8 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) 0
-#  define retroflat_screen_w() g_retroflat_state->screen_v_w
-#  define retroflat_screen_h() g_retroflat_state->screen_v_h
+#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
+#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
 #  define END_OF_MAIN()
 
@@ -2011,7 +2011,7 @@ static LRESULT CALLBACK WndProc(
 #     if !defined( RETROFLAT_OPENGL )
       case WM_PAINT:
 
-         assert( NULL != g_retroflat_state->buffer.b );
+         assert( (HBITMAP)NULL != g_retroflat_state->buffer.b );
 
          /* Create HDC for window to blit to. */
          /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
