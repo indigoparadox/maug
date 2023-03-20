@@ -4573,6 +4573,9 @@ cleanup:
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
+   /* DrawText will draw gibberish even if the string is null-terminated! */
+   str_sz = strlen( str );
+
    /* TODO: Set specified font. */
 
    memset( &sz, '\0', sizeof( SIZE ) );
