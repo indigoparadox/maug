@@ -1533,7 +1533,6 @@ struct RETROFLAT_STATE {
    int                  screen_v_h;
    int                  screen_w;
    int                  screen_h;
-   unsigned long        ms;
    uint8_t              last_key;
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
@@ -2084,13 +2083,8 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_TIMER:
-         /* if( next <= retroflat_get_ms() ) { */
-
          g_retroflat_state.loop_iter( g_retroflat_state.loop_data );
          next = retroflat_get_ms() + retroflat_fps_next();
-
-         /* Kind of a hack so that we can have a cheap timer. */
-         g_retroflat_state.ms += 1000 / RETROFLAT_FPS;
          break;
 
       case WM_COMMAND:
