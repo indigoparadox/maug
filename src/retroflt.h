@@ -1926,7 +1926,6 @@ static LRESULT CALLBACK WndProc(
       0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
    };
 #     endif /* RETROFLAT_OPENGL */
-   static uint32_t next = 0;
 
    switch( message ) {
       case WM_CREATE:
@@ -2088,7 +2087,6 @@ static LRESULT CALLBACK WndProc(
 
       case WM_TIMER:
          g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
-         next = retroflat_get_ms() + retroflat_fps_next();
          break;
 
       case WM_COMMAND:
@@ -2194,17 +2192,25 @@ void APIENTRY
 void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_idle( void ) {
+   uint32_t now = 0;
+
+   now = retroflat_get_ms();
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS !=
       (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
-      retroflat_get_ms() < g_retroflat_state->retroflat_next
+      now < g_retroflat_state->retroflat_next
    ) {
       return;
    }
    
    glutPostRedisplay();
 
-   g_retroflat_state->retroflat_next = retroflat_get_ms() + retroflat_fps_next();
+   if( now + retroflat_fps_next() > now ) {
+      g_retroflat_state->retroflat_next = now + retroflat_fps_next();
+   } else {
+      /* Rollover protection. */
+      g_retroflat_state->retroflat_next = 0;
+   }
 }
 
 #ifdef RETROFLAT_OS_OS2
@@ -2234,7 +2240,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    defined( RETROFLAT_API_SDL2 ) || \
    defined( RETROFLAT_API_LIBNDS )
 
-   uint32_t next = 0;
+   uint32_t next = 0,
+      now = 0;
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
@@ -2250,7 +2257,13 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          continue;
       }
       loop_iter( data );
-      next = retroflat_get_ms() + retroflat_fps_next();
+      now = retroflat_get_ms();
+      if( now + retroflat_fps_next() > now ) {
+         next = now + retroflat_fps_next();
+      } else {
+         /* Rollover protection. */
+         next = 0;
+      }
    } while(
       RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
