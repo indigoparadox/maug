@@ -4975,9 +4975,10 @@ cleanup:
 
    /* == Win16 (.ini file) == */
 
+/* XXX
    retval = GetPrivateProfileString(
       sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
-      g_retroflat_state->config_path );
+      g_retroflat_state->config_path ); */
 
 #  elif defined( RETROFLAT_API_WIN32 )
 
