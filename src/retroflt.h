@@ -4988,7 +4988,7 @@ cleanup:
 
 #else /* End of RETROFLT_C */
 
-   extern struct RETROFLAT_STATE g_retroflat_state;
+   extern struct RETROFLAT_STATE* g_retroflat_state;
 #     if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    extern HINSTANCE            g_retroflat_instance;
    extern int                  g_retroflat_cmd_show;
