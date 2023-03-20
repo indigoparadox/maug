@@ -2627,8 +2627,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #        endif
 #     endif /* RETROFLAT_OS_DOS */
 
-   g_retroflat_state->buffer.b = create_bitmap( args->screen_w, args->screen_h );
-   maug_cleanup_if_null( BITMAP*, g_retroflat_state->buffer.b, RETROFLAT_ERROR_GRAPHICS );
+   g_retroflat_state->buffer.b = 
+      create_bitmap( args->screen_w, args->screen_h );
+   maug_cleanup_if_null(
+      BITMAP*, g_retroflat_state->buffer.b, RETROFLAT_ERROR_GRAPHICS );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -3189,20 +3191,22 @@ cleanup:
 
    /* Sanity check. */
    assert( (HBITMAP)NULL != bmp->b );
-   assert( (HBITMAP)NULL != bmp->mask );
    assert( (HDC)NULL == bmp->hdc_b );
-   assert( (HDC)NULL == bmp->hdc_mask );
 
    /* Create HDC for source bitmap compatible with the buffer. */
    bmp->hdc_b = CreateCompatibleDC( (HDC)NULL );
    maug_cleanup_if_null( HDC, bmp->hdc_b, RETROFLAT_ERROR_BITMAP );
 
-   /* Create HDC for source mask compatible with the buffer. */
-   bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
-   maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
+   if( (HBITMAP)NULL != bmp->mask ) {
+      /* Create HDC for source mask compatible with the buffer. */
+      bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
+      maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
+   }
 
    bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
-   bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
+   if( (HBITMAP)NULL != bmp->mask ) {
+      bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
+   }
 
 cleanup:
 
@@ -3963,9 +3967,11 @@ cleanup:
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   /* Use mask to blit transparency. */
-   BitBlt(
-      target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
+   if( (HBITMAP)NULL != src->mask ) {
+      /* Use mask to blit transparency. */
+      BitBlt(
+         target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
+   }
 
    /* Do actual blit. */
    BitBlt(
