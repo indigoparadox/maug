@@ -2815,10 +2815,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       /* Retry with smaller depth buffers if this fails. */
       gl_retval = SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, gl_depth );
       if( gl_retval ) {
-         error_printf( "unable to set depth buffer to %d!" );
+         error_printf( "unable to set depth buffer to %d!", gl_depth );
          gl_depth -= 4;
       }
-   }
+   } while( gl_retval );
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 #     endif /* RETROFLAT_OPENGL */
 
