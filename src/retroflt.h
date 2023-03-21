@@ -888,11 +888,17 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 
 #  ifdef RETROFLAT_WING
 
-#if defined( RETROFLAT_API_WIN32 )
-#define WINGAPI WINAPI
-#else
-#define WINGAPI WINAPI _loadds
-#endif
+#     if defined( RETROFLAT_API_WIN32 )
+#        define WINGAPI WINAPI
+#     else
+#        define WINGAPI WINAPI _loadds
+#     endif
+
+#     define RETROFLAT_WING_LLTABLE( f ) \
+   f( HDC, WinGCreateDC, WINGCREATEDC ) \
+   f( BOOL, WinGRecommendDIBFormat, WINGRECOMMENDDIBFORMAT ) \
+   f( HBITMAP, WinGCreateBitmap, WINGCREATEBITMAP ) \
+   f( BOOL, WinGStretchBlt, WINGSTRETCHBLT )
 
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
@@ -901,12 +907,13 @@ typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
 typedef BOOL (WINGAPI *WinGStretchBlt_t)(
    HDC, int, int, int, int, HDC, int, int, int, int );
 
+#     define RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS( retval, proc, proc_u ) \
+   proc ## _t proc;
+
 struct RETROFLAT_WING_MODULE {
    HMODULE module;
-   WinGCreateDC_t WinGCreateDC;
-   WinGRecommendDIBFormat_t WinGRecommendDIBFormat;
-   WinGCreateBitmap_t WinGCreateBitmap;
-   WinGStretchBlt_t WinGStretchBlt;
+   uint8_t success;
+   RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS )
 };
 
 struct RETROFLAT_BMI {
@@ -1983,11 +1990,16 @@ static LRESULT CALLBACK WndProc(
          /* Setup the buffer HDC from which to blit to the window. */
          if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
 #        ifdef RETROFLAT_WING
-            debug_printf( 1, "retroflat: creating screen buffer WinGDC..." );
-            g_retroflat_state->buffer.hdc_b = g_w.WinGCreateDC();
-#        else
+            if( (WinGCreateDC_t)NULL != g_w.WinGCreateDC ) {
+               debug_printf(
+                  1, "retroflat: creating screen buffer WinGDC..." );
+               g_retroflat_state->buffer.hdc_b = g_w.WinGCreateDC();
+            } else {
+#        endif /* RETROFLAT_WING */
             debug_printf( 1, "retroflat: creating screen buffer HDC..." );
             g_retroflat_state->buffer.hdc_b = CreateCompatibleDC( hdc_win );
+#        ifdef RETROFLAT_WING
+            }
 #        endif /* RETROFLAT_WING */
          }
          if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
@@ -2005,16 +2017,22 @@ static LRESULT CALLBACK WndProc(
          /* Do this in its own function so a one-time setup isn't using stack
           * in our WndProc!
           */
-            retroflat_wing_buffer_setup(
-               &(g_retroflat_state->buffer),
-               g_retroflat_state->screen_w,
-               g_retroflat_state->screen_h );
-            g_retroflat_state->buffer.mask = (HBITMAP)NULL;
-#        else
+            if(
+               (WinGCreateBitmap_t)NULL != g_w.WinGCreateBitmap &&
+               (WinGRecommendDIBFormat_t)NULL != g_w.WinGRecommendDIBFormat
+            ) {
+               retroflat_wing_buffer_setup(
+                  &(g_retroflat_state->buffer),
+                  g_retroflat_state->screen_w,
+                  g_retroflat_state->screen_h );
+            } else {
+#        endif /* RETROFLAT_WING */
             g_retroflat_state->buffer.b = CreateCompatibleBitmap( hdc_win,
                g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
-            g_retroflat_state->buffer.mask = (HBITMAP)NULL;
+#        ifdef RETROFLAT_WING
+            }
 #        endif /* RETROFLAT_WING */
+            g_retroflat_state->buffer.mask = (HBITMAP)NULL;
             screen_initialized = 1;
          }
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
@@ -2047,7 +2065,9 @@ static LRESULT CALLBACK WndProc(
 #     if !defined( RETROFLAT_OPENGL )
       case WM_PAINT:
 
-         assert( (HBITMAP)NULL != g_retroflat_state->buffer.b );
+         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            break;
+         }
 
          /* Create HDC for window to blit to. */
          /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
@@ -2065,19 +2085,21 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->buffer.b, sizeof( BITMAP ), &srcBitmap );
 
 #        ifdef RETROFLAT_WING
-         g_w.WinGStretchBlt(
-            hdc_win,
-            0, 0,
-            g_retroflat_state->screen_w, g_retroflat_state->screen_h,
-            g_retroflat_state->buffer.hdc_b,
-            0, 0,
-            srcBitmap.bmWidth,
-            srcBitmap.bmHeight
-         );
+         if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
+            g_w.WinGStretchBlt(
+               hdc_win,
+               0, 0,
+               g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+               g_retroflat_state->buffer.hdc_b,
+               0, 0,
+               srcBitmap.bmWidth,
+               srcBitmap.bmHeight
+            );
 #           ifdef RETROFLAT_API_WIN32
-         GdiFlush();
+            GdiFlush();
 #           endif /* RETROFLAT_API_WIN32 */
-#        else
+         } else {
+#        endif /* RETROFLAT_WING */
          StretchBlt(
             hdc_win,
             0, 0,
@@ -2088,6 +2110,8 @@ static LRESULT CALLBACK WndProc(
             srcBitmap.bmHeight,
             SRCCOPY
          );
+#        ifdef RETROFLAT_WING
+         }
 #        endif /* RETROFLAT_WING */
 
          DeleteDC( hdc_win );
@@ -2123,6 +2147,15 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_TIMER:
+         if(
+            !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
+            hWnd != g_retroflat_state->window ||
+            NULL == g_retroflat_state->loop_iter
+         ) {
+            /* Timer message was called prematurely. */
+            break;
+         }
+
          g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
          break;
 
@@ -2350,8 +2383,8 @@ void retroflat_message( const char* title, const char* format, ... ) {
    fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    /* TODO: Dialog box crashes! */
-   /* MessageBox( NULL, msg_out, title, 0 ); */
-   error_printf( "%s", msg_out );
+   MessageBox( NULL, msg_out, title, 0 );
+   /* error_printf( "%s", msg_out ); */
 #  elif defined( RETROFLAT_API_GLUT )
    /* TODO */
 #  else
@@ -2806,23 +2839,32 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_API_WINCE */
 
 #     ifdef RETROFLAT_WING
+   debug_printf( 3, "attempting to link WinG..." );
    /* Dynamically load the WinG procedures. */
 #        ifdef RETROFLAT_API_WIN32
    g_w.module = LoadLibrary( "wing32.dll" );
+   if( (HMODULE)NULL == g_w.module ) {
 #        elif defined( RETROFLAT_API_WIN16 )
    g_w.module = LoadLibrary( "wing.dll" );
+   if( HINSTANCE_ERROR >= g_w.module ) {
 #        endif
-   /* TODO: Error message? */
-   assert( (HMODULE)NULL != g_w.module );
-   g_w.WinGCreateDC =
-      (WinGCreateDC_t)GetProcAddress( g_w.module, "WinGCreateDC" );
-   g_w.WinGRecommendDIBFormat =
-      (WinGRecommendDIBFormat_t)GetProcAddress(
-         g_w.module, "WinGRecommendDIBFormat" );
-   g_w.WinGCreateBitmap =
-      (WinGCreateBitmap_t)GetProcAddress( g_w.module, "WinGCreateBitmap" );
-   g_w.WinGStretchBlt =
-      (WinGStretchBlt_t)GetProcAddress( g_w.module, "WinGStretchBlt" );
+      g_w.success = 0;
+   } else {
+      g_w.success = 1;
+
+   #define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, proc_u ) \
+      g_w.proc = (proc ## _t)GetProcAddress( g_w.module, #proc ); \
+      if( (proc ## _t)NULL == g_w.proc ) { \
+         g_w.success = 0; \
+      }
+
+      RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_LOAD_PROC )
+
+   }
+
+   if( !g_w.success ) {
+      retroflat_message( "Error", "Unable to link WinG!" );
+   }
 #     endif /* RETROFLAT_WING */
 
    debug_printf( 1, "retroflat: creating window class..." );
@@ -3087,10 +3129,16 @@ void retroflat_shutdown( int retval ) {
       /* TODO: Destroy buffer bitmap! */
    }
 
-#ifndef RETROFLAT_OPENGL
+#     ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRRM )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENRM )
-#endif /* !RETROFLAT_OPENGL */
+#     endif /* !RETROFLAT_OPENGL */
+
+#     ifdef RETROFLAT_WING
+   if( (HMODULE)NULL != g_w.module ) {
+      FreeLibrary( g_w.module );
+   }
+#     endif /* RETROFLAT_WING */
 
 #  elif defined( RETROFLAT_API_GLUT )
 

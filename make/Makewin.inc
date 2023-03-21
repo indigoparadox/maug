@@ -255,7 +255,7 @@ $$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) \
-		$$(subst -DRETROFLAT_WING,,$$(CFLAGS_WATCOM386_WIN)) \
+		$$(CFLAGS_WATCOM386_WIN) \
 		$$(CFLAGS_WATCOM386_WIN_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
