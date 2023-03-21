@@ -57,6 +57,9 @@ endif
 
 # Common Variables
 
+# TODO: Right now, these must be specified before inclusion and apply to all
+# Windows targets... maybe make them per-target instead?
+
 ifeq ("$(SCREENSAVER)","1")
 	CFLAGS_WATCOM_WIN += -DRETROFLAT_SCREENSAVER
 	CFLAGS_WATCOM386_WIN += -DRETROFLAT_SCREENSAVER
@@ -242,7 +245,8 @@ $(1)w.rex: \
 $(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
 $$(RES_WATCOM386_WIN_WIN16_DEP)
 	$$(LD_WATCOM386) name $$@ \
-		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_WIN) \
+		$$(LDFLAGS_WATCOM386) \
+		$$(subst libr wing32,,$$(LDFLAGS_WATCOM386_WIN)) \
 		$$(LDFLAGS_WATCOM386_WIN_WIN16) fil {$$^}
 
 $(1)w.exe: $(1)w.rex
@@ -252,7 +256,8 @@ $(1)w.exe: $(1)w.rex
 $$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
-		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_WIN) \
+		$$(CFLAGS_WATCOM386) \
+		$$(subst -DRETROFLAT_WING,,$$(CFLAGS_WATCOM386_WIN)) \
 		$$(CFLAGS_WATCOM386_WIN_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
