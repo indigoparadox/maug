@@ -342,6 +342,14 @@
 
 #define RETROFLAT_BUFFER_BOOL 0x04
 
+#define RETROFLAT_MSG_FLAG_TYPE_MASK 0x07
+
+#define RETROFLAT_MSG_FLAG_ERROR 0x01
+
+#define RETROFLAT_MSG_FLAG_INFO 0x02
+
+#define RETROFLAT_MSG_FLAG_WARNING 0x04
+
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
@@ -1615,7 +1623,8 @@ MERROR_RETVAL retroflat_loop( retroflat_loop_iter iter, void* data );
  * \param format A format string to be passed to vsnprintf().
  * \todo  This should display a dialog box on every platform if possible.
  */
-void retroflat_message( const char* title, const char* format, ... );
+void retroflat_message(
+   uint8_t flags, const char* title, const char* format, ... );
 
 /**
  * \brief Initialize RetroFlat and its underlying layers. This should be
@@ -1915,7 +1924,7 @@ static MERROR_RETVAL retroflat_wing_buffer_setup(
    /* Setup an optimal WinG hardware screen buffer bitmap. */
    debug_printf( 1, "retroflat: creating WinG buffer..." );
    if( !g_w.WinGRecommendDIBFormat( (BITMAPINFO far*)&(bmp_out->bmi) ) ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not determine recommended format!" );
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
@@ -1990,7 +1999,8 @@ static LRESULT CALLBACK WndProc(
             FALSE == wglMakeCurrent( g_retroflat_state->hdc_win,
                g_retroflat_state->hrc_win )
          ) {
-            retroflat_message( "Error", "Error creating OpenGL context: %d",
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+               "Error", "Error creating OpenGL context: %d",
                GetLastError() );
          }
 
@@ -2014,7 +2024,7 @@ static LRESULT CALLBACK WndProc(
 #        endif /* RETROFLAT_WING */
          }
          if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
-            retroflat_message(
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not determine buffer device context!" );
             g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
             retroflat_quit( g_retroflat_state->retval );
@@ -2047,12 +2057,14 @@ static LRESULT CALLBACK WndProc(
             screen_initialized = 1;
          }
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            retroflat_message( "Error", "Could not create screen buffer!" );
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+               "Error", "Could not create screen buffer!" );
             g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
             retroflat_quit( g_retroflat_state->retval );
             break;
          }
 
+         /* TODO: Get rid of screen_initialized. */
          if( screen_initialized ) {
             /* Create a new HDC for buffer and select buffer into it. */
             g_retroflat_state->buffer.old_hbm_b = SelectObject(
@@ -2084,7 +2096,7 @@ static LRESULT CALLBACK WndProc(
          /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
          hdc_win = BeginPaint( hWnd, &ps );
          if( (HDC)NULL == hdc_win ) {
-            retroflat_message(
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not determine window device context!" );
             g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
             retroflat_quit( g_retroflat_state->retval );
@@ -2383,9 +2395,16 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
 /* === */
 
-void retroflat_message( const char* title, const char* format, ... ) {
+void retroflat_message(
+   uint8_t flags, const char* title, const char* format, ...
+) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
+#  ifdef RETROFLAT_API_SDL2
+   uint32_t sdl_msg_flags = 0;
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   uint32_t win_msg_flags = 0;
+#  endif
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
@@ -2393,11 +2412,42 @@ void retroflat_message( const char* title, const char* format, ... ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_SDL1 )
    /* TODO: Use a dialog box? */
-   fprintf( stderr, "%s\n", msg_out );
+   error_printf( "%s", msg_out );
+#  elif defined( RETROFLAT_API_SDL2 )
+   switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
+   case RETROFLAT_MSG_FLAG_ERROR:
+      sdl_msg_flags = SDL_MESSAGEBOX_ERROR;
+      break;
+
+   case RETROFLAT_MSG_FLAG_INFO:
+      sdl_msg_flags = SDL_MESSAGEBOX_INFORMATION;
+      break;
+
+   case RETROFLAT_MSG_FLAG_WARNING:
+      sdl_msg_flags = SDL_MESSAGEBOX_WARNING;
+      break;
+   }
+
+   SDL_ShowSimpleMessageBox(
+      sdl_msg_flags, title, msg_out, g_retroflat_state->window );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MessageBox( 0, msg_out, title, 0 );
+   switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
+   case RETROFLAT_MSG_FLAG_ERROR:
+      win_msg_flags |= MB_ICONSTOP;
+      break;
+
+   case RETROFLAT_MSG_FLAG_INFO:
+      win_msg_flags |= MB_ICONINFORMATION;
+      break;
+
+   case RETROFLAT_MSG_FLAG_WARNING:
+      win_msg_flags |= MB_ICONEXCLAMATION;
+      break;
+   }
+
+   MessageBox( g_retroflat_state->window, msg_out, title, win_msg_flags );
 #  elif defined( RETROFLAT_API_GLUT )
    /* TODO */
 #  else
@@ -2580,14 +2630,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
-      retroflat_message( "Error", "Could not allocate global state!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not allocate global state!" );
       retval = MERROR_ALLOC;
       goto cleanup;
    }
 
    maug_mlock( g_retroflat_state_h, g_retroflat_state );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state ) {
-      retroflat_message( "Error", "Could not lock global state!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not lock global state!" );
       retval = MERROR_ALLOC;
       goto cleanup;
    }
@@ -2735,7 +2787,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    srand( time( NULL ) );
 
    if( SDL_Init( SDL_INIT_VIDEO ) ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
       goto cleanup;
@@ -2804,7 +2856,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    srand( time( NULL ) );
 
    if( SDL_Init( SDL_INIT_VIDEO ) ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
       goto cleanup;
@@ -2876,7 +2928,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    if( !g_w.success ) {
-      retroflat_message( "Error", "Unable to link WinG!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Unable to link WinG!" );
    }
 #     endif /* RETROFLAT_WING */
 
@@ -2910,7 +2963,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    wc.lpszClassName = RETROFLAT_WINDOW_CLASS;
 
    if( !RegisterClass( &wc ) ) {
-      retroflat_message( "Error", "Could not register window class!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not register window class!" );
       goto cleanup;
    }
 
@@ -2963,7 +3017,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_API_WINCE */
 
    if( !g_retroflat_state->window ) {
-      retroflat_message( "Error", "Could not create window!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not create window!" );
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
@@ -2975,7 +3030,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( !SetTimer(
       g_retroflat_state->window, RETROFLAT_WIN_GFX_TIMER_ID, (int)(1000 / RETROFLAT_FPS), NULL )
    ) {
-      retroflat_message( "Error", "Could not create graphics timer!" );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not create graphics timer!" );
       retval = RETROFLAT_ERROR_TIMER;
       goto cleanup;
    }
@@ -3599,7 +3655,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == tmp_surface ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
       retval = 0;
       goto cleanup;
@@ -3609,7 +3665,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->surface = SDL_DisplayFormat( tmp_surface );
    if( NULL == bmp_out->surface ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
@@ -3638,7 +3694,7 @@ cleanup:
 
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->surface ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
@@ -3652,7 +3708,7 @@ cleanup:
       SDL_CreateTextureFromSurface( g_retroflat_state->buffer.renderer, bmp_out->surface );
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->texture ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to create texture: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_BITMAP;
       if( NULL != bmp_out->surface ) {
@@ -3678,7 +3734,7 @@ cleanup:
    bmp_file = fopen( filename_path, "rb" );
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_file ) {
-      retroflat_message(
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not load bitmap: %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
@@ -4611,7 +4667,8 @@ void retroflat_string_sz(
       font_data = load_font( font_str, NULL, NULL );
    }
    if( NULL == font_data ) {
-      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Unable to load font: %s", font_str );
       goto cleanup;
    }
 
@@ -4705,7 +4762,8 @@ void retroflat_string(
       font_data = load_font( font_str, NULL, NULL );
    }
    if( NULL == font_data ) {
-      retroflat_message( "Error", "Unable to load font: %s", font_str );
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Unable to load font: %s", font_str );
       goto cleanup;
    }
 
