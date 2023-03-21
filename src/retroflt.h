@@ -909,6 +909,12 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
+   size_t w;
+   size_t h;
+#  ifdef RETROFLAT_WING
+   struct RETROFLAT_BMI bmi;
+   uint8_t far*            bits;
+#  endif /* RETROFLAT_WING */
 };
 
 /* TODO: Remove this in favor of mmem.h. */
@@ -1538,10 +1544,6 @@ struct RETROFLAT_STATE {
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
    retroflat_loop_iter  loop_iter;
-#  ifdef RETROFLAT_WING
-   struct RETROFLAT_BMI buffer_bmi;
-   void far*            buffer_bits;
-#  endif /* RETROFLAT_WING */
 
 #elif defined( RETROFLAT_API_LIBNDS )
 
@@ -1865,42 +1867,47 @@ int                  g_retroflat_cmd_show;
 
 #  ifdef RETROFLAT_WING
 
-static HBITMAP retroflat_wing_buffer_setup() {
+static MERROR_RETVAL retroflat_wing_buffer_setup(
+   struct RETROFLAT_BITMAP* bmp_out, int w, int h
+) {
    PALETTEENTRY palette[256];
    int i = 0;
    HDC hdc_win = (HDC)NULL;
+   MERROR_RETVAL retval = MERROR_OK;
 
    hdc_win = GetDC( g_retroflat_state->window );
    assert( (HDC)NULL != hdc_win );
 
    /* Setup an optimal WinG hardware screen buffer bitmap. */
    debug_printf( 1, "retroflat: creating WinG buffer..." );
-   if(
-      !WinGRecommendDIBFormat( 
-         (BITMAPINFO far*)&(g_retroflat_state->buffer_bmi) )
-   ) {
+   if( !WinGRecommendDIBFormat( (BITMAPINFO far*)&(bmp_out->bmi) ) ) {
       retroflat_message(
          "Error", "Could not determine recommended format!" );
-      g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
-      retroflat_quit( g_retroflat_state->retval );
-      return (HBITMAP)NULL;
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
    }
-   g_retroflat_state->buffer_bmi.header.biSize = sizeof( BITMAPINFOHEADER );
-   g_retroflat_state->buffer_bmi.header.biWidth = g_retroflat_state->screen_w;
-   g_retroflat_state->buffer_bmi.header.biHeight *= g_retroflat_state->screen_h;
+   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+   bmp_out->bmi.header.biWidth = w;
+   bmp_out->bmi.header.biHeight *= h;
+   bmp_out->w = w;
+   bmp_out->h = h;
 
    GetSystemPaletteEntries( hdc_win, 0, 256, palette );
    for( i = 0 ; 256 > i ; i++ ) {
-      g_retroflat_state->buffer_bmi.colors[i].rgbRed = palette[i].peRed;
-      g_retroflat_state->buffer_bmi.colors[i].rgbGreen = palette[i].peGreen;
-      g_retroflat_state->buffer_bmi.colors[i].rgbBlue = palette[i].peBlue;
-      g_retroflat_state->buffer_bmi.colors[i].rgbReserved = 0;
+      bmp_out->bmi.colors[i].rgbRed = palette[i].peRed;
+      bmp_out->bmi.colors[i].rgbGreen = palette[i].peGreen;
+      bmp_out->bmi.colors[i].rgbBlue = palette[i].peBlue;
+      bmp_out->bmi.colors[i].rgbReserved = 0;
    }
 
-   return WinGCreateBitmap(
-      g_retroflat_state->buffer.hdc_b,
-      (BITMAPINFO far*)(&g_retroflat_state->buffer_bmi),
-      &(g_retroflat_state->buffer_bits) );
+   bmp_out->b = WinGCreateBitmap(
+      bmp_out->hdc_b,
+      (BITMAPINFO far*)(&bmp_out->bmi),
+      (void far*)&(bmp_out->bits) );
+
+cleanup:
+
+   return retval;
 }
 
 #  endif /* RETROFLAT_WING */
@@ -1974,8 +1981,10 @@ static LRESULT CALLBACK WndProc(
          /* Do this in its own function so a one-time setup isn't using stack
           * in our WndProc!
           */
-            g_retroflat_state->buffer.b =
-               retroflat_wing_buffer_setup();
+            retroflat_wing_buffer_setup(
+               &(g_retroflat_state->buffer),
+               g_retroflat_state->screen_w,
+               g_retroflat_state->screen_h );
             g_retroflat_state->buffer.mask = (HBITMAP)NULL;
 #        else
             g_retroflat_state->buffer.b = CreateCompatibleBitmap( hdc_win,
@@ -3583,6 +3592,9 @@ cleanup:
    assert( 0 == bmi->bmiHeader.biWidth % 8 );
    assert( 0 == bmi->bmiHeader.biHeight % 8 );
 
+   bmp_out->w = bmi->bmiHeader.biWidth;
+   bmp_out->h = bmi->bmiHeader.biHeight;
+
    hdc_win = GetDC( g_retroflat_state->window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win,
       bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
@@ -3655,6 +3667,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    int w, int h, struct RETROFLAT_BITMAP* bmp_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   HDC hdc_win = (HDC)NULL;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    
@@ -3703,7 +3718,8 @@ cleanup:
 
    /* == Win16 / Win32 == */
 
-   HDC hdc_win = (HDC)NULL;
+   bmp_out->w = w;
+   bmp_out->h = h;
 
    hdc_win = GetDC( g_retroflat_state->window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win, w, h );
@@ -4093,7 +4109,15 @@ void retroflat_px(
 
    /* == Win16/Win32 == */
 
+#  ifdef RETROFLAT_WING
+   /*if( NULL != target->bits ) {
+      target->bits[(y * target->w) + x] = color;
+   } else {*/
+      SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
+   /* } */
+#  else
    SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
+#  endif /* RETROFLAT_WING */
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
