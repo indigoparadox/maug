@@ -2382,9 +2382,7 @@ void retroflat_message( const char* title, const char* format, ... ) {
    /* TODO: Use a dialog box? */
    fprintf( stderr, "%s\n", msg_out );
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   /* TODO: Dialog box crashes! */
-   MessageBox( NULL, msg_out, title, 0 );
-   /* error_printf( "%s", msg_out ); */
+   MessageBox( 0, msg_out, title, 0 );
 #  elif defined( RETROFLAT_API_GLUT )
    /* TODO */
 #  else
