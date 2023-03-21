@@ -2207,6 +2207,9 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
       arg_longest = 10; /* Program name. */
    MERROR_RETVAL retval = MERROR_OK;
 
+   /* This uses calloc() to simplify things, since this works on Windows, the
+    * only platform where this routine is used, anyway. */
+
    debug_printf( 1, "retroflat: win cli: %s", cmd_line );
 
    /* Get the number of args. */
