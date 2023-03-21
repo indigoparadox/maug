@@ -1879,7 +1879,7 @@ static HBITMAP retroflat_wing_buffer_setup( HDC hdc_win ) {
          "Error", "Could not determine recommended format!" );
       g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
       retroflat_quit( g_retroflat_state->retval );
-      return NULL;
+      return (HBITMAP)NULL;
    }
    g_retroflat_state->buffer_bmi.header.biSize = sizeof( BITMAPINFOHEADER );
    g_retroflat_state->buffer_bmi.header.biWidth = g_retroflat_state->screen_w;
