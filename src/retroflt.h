@@ -3357,6 +3357,12 @@ cleanup:
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+#  ifdef RETROFLAT_OPENGL
+   if( NULL == bmp ) {
+      glFlush();
+   }
+#  endif /* RETROFLAT_OPENGL */
+
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
