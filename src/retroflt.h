@@ -4110,11 +4110,11 @@ void retroflat_px(
    /* == Win16/Win32 == */
 
 #  ifdef RETROFLAT_WING
-   /*if( NULL != target->bits ) {
-      target->bits[(y * target->w) + x] = color;
-   } else {*/
+   if( NULL != target->bits ) {
+      target->bits[(y * target->w) + x] = gc_retroflat_win_rgbs[color];
+   } else {
       SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
-   /* } */
+   }
 #  else
    SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
 #  endif /* RETROFLAT_WING */
