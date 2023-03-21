@@ -903,10 +903,10 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
 #     endif
 
 #     define RETROFLAT_WING_LLTABLE( f ) \
-   f( HDC, WinGCreateDC, WINGCREATEDC ) \
-   f( BOOL, WinGRecommendDIBFormat, WINGRECOMMENDDIBFORMAT ) \
-   f( HBITMAP, WinGCreateBitmap, WINGCREATEBITMAP ) \
-   f( BOOL, WinGStretchBlt, WINGSTRETCHBLT )
+   f( HDC, WinGCreateDC, 1001 ) \
+   f( BOOL, WinGRecommendDIBFormat, 1002 ) \
+   f( HBITMAP, WinGCreateBitmap, 1003 ) \
+   f( BOOL, WinGStretchBlt, 1009 )
 
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
@@ -915,7 +915,7 @@ typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
 typedef BOOL (WINGAPI *WinGStretchBlt_t)(
    HDC, int, int, int, int, HDC, int, int, int, int );
 
-#     define RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS( retval, proc, proc_u ) \
+#     define RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS( retval, proc, ord ) \
    proc ## _t proc;
 
 struct RETROFLAT_WING_MODULE {
@@ -944,8 +944,9 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
-   size_t w;
-   size_t h;
+   ssize_t w;
+   /* Under WinG, this might be negative! */
+   ssize_t h;
 #  ifdef RETROFLAT_WING
    struct RETROFLAT_BMI bmi;
    uint8_t far*            bits;
@@ -2911,17 +2912,29 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( (HMODULE)NULL == g_w.module ) {
 #        elif defined( RETROFLAT_API_WIN16 )
    g_w.module = LoadLibrary( "wing.dll" );
-   if( HINSTANCE_ERROR >= g_w.module ) {
+   if( HINSTANCE_ERROR == g_w.module ) {
 #        endif
       g_w.success = 0;
    } else {
       g_w.success = 1;
 
-   #define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, proc_u ) \
-      g_w.proc = (proc ## _t)GetProcAddress( g_w.module, #proc ); \
-      if( (proc ## _t)NULL == g_w.proc ) { \
-         g_w.success = 0; \
-      }
+#        ifdef RETROFLAT_API_WIN32
+#           define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, ord ) \
+               g_w.proc = (proc ## _t)GetProcAddress( g_w.module, #proc ); \
+               if( (proc ## _t)NULL == g_w.proc ) { \
+                  g_w.success = 0; \
+               }
+#        elif defined( RETROFLAT_API_WIN16 )
+#           define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, ord ) \
+               g_w.proc = (proc ## _t)GetProcAddress( \
+                  g_w.module, MAKEINTRESOURCE( ord ) ); \
+               if( (proc ## _t)NULL == g_w.proc ) { \
+                  retroflat_message( \
+                     RETROFLAT_MSG_FLAG_ERROR, "Error", \
+                     "Unable to link WinG proc: %s", #proc ); \
+                  g_w.success = 0; \
+               }
+#        endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
       RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_LOAD_PROC )
 
@@ -4278,7 +4291,12 @@ void retroflat_px(
 
 #  ifdef RETROFLAT_WING
    if( NULL != target->bits ) {
-      target->bits[(y * target->w) + x] = gc_retroflat_win_rgbs[color];
+      if( 0 > target->h ) {
+         target->bits[((target->h - 1 - y) * target->w) + x] =
+            gc_retroflat_win_rgbs[color];
+      } else {
+         target->bits[(y * target->w) + x] = gc_retroflat_win_rgbs[color];
+      }
    } else {
       SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
    }
