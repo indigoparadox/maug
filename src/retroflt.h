@@ -1561,6 +1561,9 @@ struct RETROFLAT_STATE {
 #  endif /* RETROFLAT_SCREENSAVER */
    MSG                  msg;
    HDC                  hdc_win;
+#  ifdef RETROFLAT_OPENGL
+   HGLRC                hrc_win;
+#  endif /* RETROFLAT_OPENGL */
    int                  msg_retval;
    int                  screen_v_w;
    int                  screen_v_h;
@@ -1956,7 +1959,6 @@ static LRESULT CALLBACK WndProc(
    int screen_initialized = 0;
 #     if defined( RETROFLAT_OPENGL )
    int pixel_fmt_int = 0;
-   static HGLRC hrc_win = NULL;
    static PIXELFORMATDESCRIPTOR pixel_fmt = {
       sizeof( PIXELFORMATDESCRIPTOR ),
       1,
@@ -1980,8 +1982,17 @@ static LRESULT CALLBACK WndProc(
          SetPixelFormat(
             g_retroflat_state->hdc_win, pixel_fmt_int, &pixel_fmt );
 
-         hrc_win = wglCreateContext( g_retroflat_state->hdc_win );
-         wglMakeCurrent( g_retroflat_state->hdc_win, hrc_win );
+         debug_printf( 1, "setting up OpenGL context..." );
+
+         g_retroflat_state->hrc_win =
+            wglCreateContext( g_retroflat_state->hdc_win );
+         if(
+            FALSE == wglMakeCurrent( g_retroflat_state->hdc_win,
+               g_retroflat_state->hrc_win )
+         ) {
+            retroflat_message( "Error", "Error creating OpenGL context: %d",
+               GetLastError() );
+         }
 
 #     else
 
@@ -2055,7 +2066,7 @@ static LRESULT CALLBACK WndProc(
       case WM_CLOSE:
 #     if defined( RETROFLAT_OPENGL )
          wglMakeCurrent( g_retroflat_state->hdc_win, NULL );
-         wglDeleteContext( hrc_win );
+         wglDeleteContext( g_retroflat_state->hrc_win );
 #     endif /* RETROFLAT_OPENGL */
 
          /* Quit on window close. */
@@ -2148,7 +2159,11 @@ static LRESULT CALLBACK WndProc(
 
       case WM_TIMER:
          if(
+#     ifdef RETROFLAT_OPENGL
+            (HGLRC)NULL == g_retroflat_state->hrc_win ||
+#     else
             !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
+#     endif /* !RETROFLAT_OPENGL */
             hWnd != g_retroflat_state->window ||
             NULL == g_retroflat_state->loop_iter
          ) {
