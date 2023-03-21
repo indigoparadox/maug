@@ -2450,7 +2450,8 @@ void retroflat_message(
 
    MessageBox( g_retroflat_state->window, msg_out, title, win_msg_flags );
 #  elif defined( RETROFLAT_API_GLUT )
-   /* TODO */
+   /* TODO: Use a dialog box? */
+   error_printf( "%s", msg_out );
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -2603,6 +2604,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       wy = CW_USEDEFAULT;
 #  elif defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
+#     if defined( RETROFLAT_OPENGL )
+   int gl_retval = 0,
+      gl_depth = 16;
+#     endif /* RETROFLAT_OPENGL */
 #  elif defined( RETROFLAT_API_LIBNDS )
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
@@ -2806,8 +2811,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
-   /* TODO: Retry with smaller depth buffers if this fails. */
-   SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
+   do {
+      /* Retry with smaller depth buffers if this fails. */
+      gl_retval = SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, gl_depth );
+      if( gl_retval ) {
+         error_printf( "unable to set depth buffer to %d!" );
+         gl_depth -= 4;
+      }
+   }
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 #     endif /* RETROFLAT_OPENGL */
 
@@ -3082,7 +3093,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    glInit();
    
-      /* TODO: Setup NDS 3D engine! */
+   /* TODO: Setup NDS 3D engine! */
 
 #     else
    videoSetMode( MODE_5_2D );
@@ -3204,11 +3215,14 @@ void retroflat_shutdown( int retval ) {
 
    if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
       /* Return the default object into the HDC. */
-      SelectObject( g_retroflat_state->buffer.hdc_b, g_retroflat_state->buffer.old_hbm_b );
+      SelectObject(
+         g_retroflat_state->buffer.hdc_b,
+         g_retroflat_state->buffer.old_hbm_b );
       DeleteDC( g_retroflat_state->buffer.hdc_b );
       g_retroflat_state->buffer.hdc_b = (HDC)NULL;
 
-      /* TODO: Destroy buffer bitmap! */
+      /* Destroy buffer bitmap! */
+      retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
    }
 
 #     ifndef RETROFLAT_OPENGL
@@ -3380,12 +3394,11 @@ cleanup:
    /* == Win16/Win32 == */
 
    if( NULL == bmp ) {
-      /* Do nothing. */
-      /* TODO: Handle screen locking? */
 #     ifdef RETROFLAT_WING
       /* The WinG HDC or whatever should be created already by WndProc. */
       assert( (HDC)NULL != g_retroflat_state->buffer.hdc_b );
 #     endif /* RETROFLAT_WING */
+      /* Do nothing for screen locking, as HDC is managed by WndProc. */
       goto cleanup;
    }
 
@@ -3964,7 +3977,7 @@ xpm_found:
 
    debug_printf( 1, "created empty canvas: %dx%d", bmp_w, bmp_h );
 
-   /* TODO: Draw XPM pixels to canvas. */
+   /* Draw XPM pixels to canvas. */
 
    retroflat_draw_lock( bmp_out );
 
@@ -4291,6 +4304,7 @@ void retroflat_px(
 
 #  ifdef RETROFLAT_WING
    if( NULL != target->bits ) {
+      /* Modify target bits directly (faster) if available! */
       if( 0 > target->h ) {
          target->bits[((target->h - 1 - y) * target->w) + x] =
             gc_retroflat_win_rgbs[color];
@@ -4298,6 +4312,7 @@ void retroflat_px(
          target->bits[(y * target->w) + x] = gc_retroflat_win_rgbs[color];
       }
    } else {
+      /* Use slow Windows GDI. */
       SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
    }
 #  else
@@ -4905,10 +4920,10 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    SDL_PollEvent( &event );
 
-   /* TODO: Handle SDL window close. */
-
    if( SDL_QUIT == event.type ) {
+      /* Handle SDL window close. */
       retroflat_quit( 0 );
+
    } else if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
 
