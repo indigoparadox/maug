@@ -1865,9 +1865,13 @@ int                  g_retroflat_cmd_show;
 
 #  ifdef RETROFLAT_WING
 
-static HBITMAP retroflat_wing_buffer_setup( HDC hdc_win ) {
+static HBITMAP retroflat_wing_buffer_setup() {
    PALETTEENTRY palette[256];
    int i = 0;
+   HDC hdc_win = (HDC)NULL;
+
+   hdc_win = GetDC( g_retroflat_state->window );
+   assert( (HDC)NULL != hdc_win );
 
    /* Setup an optimal WinG hardware screen buffer bitmap. */
    debug_printf( 1, "retroflat: creating WinG buffer..." );
@@ -1971,7 +1975,7 @@ static LRESULT CALLBACK WndProc(
           * in our WndProc!
           */
             g_retroflat_state->buffer.b =
-               retroflat_wing_buffer_setup( hdc_win );
+               retroflat_wing_buffer_setup();
             g_retroflat_state->buffer.mask = (HBITMAP)NULL;
 #        else
             g_retroflat_state->buffer.b = CreateCompatibleBitmap( hdc_win,
