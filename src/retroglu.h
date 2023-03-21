@@ -839,7 +839,7 @@ MERROR_RETVAL retroglu_parse_obj_file(
    /* Build the path to the obj. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s",
-      g_retroflat_state.assets_path, RETROFLAT_PATH_SEP, filename );
+      g_retroflat_state->assets_path, RETROFLAT_PATH_SEP, filename );
 
    /* Open the file and allocate the buffer. */
    debug_printf( RETROGLU_TRACE_LVL, "opening %s...", filename_path );
@@ -897,7 +897,7 @@ MERROR_RETVAL retroglu_load_tex_bmp(
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
-      g_retroflat_state.assets_path, RETROFLAT_PATH_SEP,
+      g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
       filename, RETROFLAT_BITMAP_EXT );
 
    /* Open the file and allocate the buffer. */
