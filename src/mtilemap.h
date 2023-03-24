@@ -131,7 +131,7 @@ typedef MERROR_RETVAL
 
 struct MTILEMAP_PARSER {
    uint8_t pstate[MTILEMAP_PSTATE_SZ_MAX];
-   uint8_t pstate_sz;
+   size_t pstate_sz;
    uint8_t mstate;
    uint8_t mstate_prev;
    size_t i;
@@ -195,41 +195,25 @@ mtilemap_free( struct MTILEMAP* t );
 
 #  include <stdio.h>
 
+#  include <mparser.h>
+
 #define mtilemap_parser_pstate( parser ) \
    (parser->pstate_sz > 0 ? \
       parser->pstate[parser->pstate_sz - 1] : MTILEMAP_PSTATE_NONE)
 
 #define mtilemap_parser_pstate_push( parser, new_pstate ) \
-   debug_printf( \
-      MTILEMAP_TRACE_LVL, "parser pstate PREPUSH: %s", \
-      gc_mtilemap_pstate_names[mtilemap_parser_pstate( parser )] ); \
-   assert( parser->pstate_sz < MTILEMAP_PSTATE_SZ_MAX ); \
-   parser->pstate[parser->pstate_sz++] = new_pstate; \
-   debug_printf( \
-      MTILEMAP_TRACE_LVL, "parser pstate PUSH: %s", \
-      gc_mtilemap_pstate_names[mtilemap_parser_pstate( parser )] );
+   mparser_pstate_push( mtilemap, parser, new_pstate )
 
 #define mtilemap_parser_pstate_pop( parser ) \
-   assert( parser->pstate_sz > 0 ); \
-   parser->pstate_sz--; \
-   debug_printf( \
-      MTILEMAP_TRACE_LVL, "parser pstate POP: %s", \
-      gc_mtilemap_pstate_names[mtilemap_parser_pstate( parser )] );
+   mparser_pstate_pop( mtilemap, parser )
 
 #  define mtilemap_parser_invalid_c( parser, c, retval ) \
-   error_printf( "invalid %c detected at char: " SIZE_T_FMT, c, parser->i ); \
-   retval = 1;
+   mparser_invalid_c( mtilemap, parser, c, retval )
 
-#  define MTILEMAP_PARSER_PSTATE_TABLE_CONST( name, idx ) \
-      static MAUG_CONST uint8_t name = idx;
-
-MTILEMAP_PARSER_PSTATE_TABLE( MTILEMAP_PARSER_PSTATE_TABLE_CONST )
-
-#  define MTILEMAP_PARSER_PSTATE_TABLE_NAME( name, idx ) \
-      #name,
+MTILEMAP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
 static MAUG_CONST char* gc_mtilemap_pstate_names[] = {
-   MTILEMAP_PARSER_PSTATE_TABLE( MTILEMAP_PARSER_PSTATE_TABLE_NAME )
+   MTILEMAP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_NAME )
    ""
 };
 
