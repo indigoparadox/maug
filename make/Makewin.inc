@@ -289,7 +289,7 @@ endef
 # Legacy
 TGTWINNTGCC=$(TGT_GCC_WIN_WIN32)
 
-#---
+# ---
 
 define TGT_GCC64_WIN_WIN32
 
