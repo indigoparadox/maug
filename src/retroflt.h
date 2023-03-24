@@ -1024,13 +1024,6 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
       gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
    }
 
-#ifdef RETROFLT_C
-
-#else
-
-
-#endif /* RETROFLT_C */
-
 /* === End Setup Brush Cache === */
 
 /* === Setup Pen Cache === */
@@ -1278,22 +1271,22 @@ typedef FILE* RETROFLAT_CONFIG;
 typedef float MAUG_CONST* RETROFLAT_COLOR;
 
 /* TODO: Generate with table macro. */
-#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
-#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
-#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
-#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
-#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
-#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
-#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
-#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
-#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
-#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
-#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
-#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
-#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
-#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
-#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
-#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
+#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK
+#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE
+#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN
+#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL
+#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED
+#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET
+#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN
+#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY
+#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY
+#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE
+#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN
+#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN
+#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED
+#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA
+#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW
+#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1361,6 +1354,97 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_7		   '7'
 #  define RETROFLAT_KEY_8		   '8'
 #  define RETROFLAT_KEY_9		   '9'
+
+#elif defined( RETROFLAT_API_MAC6 )
+
+#  include <Multiverse.h>
+
+struct RETROFLAT_BITMAP {
+
+};
+
+typedef short RETROFLAT_CONFIG;
+
+typedef Pattern* RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_BLACK       &(qd.black)
+#  define RETROFLAT_COLOR_DARKBLUE    &(qd.dkGray)
+#  define RETROFLAT_COLOR_DARKGREEN   &(qd.dkGray)
+#  define RETROFLAT_COLOR_TEAL        &(qd.dkGray)
+#  define RETROFLAT_COLOR_DARKRED     &(qd.dkGray)
+#  define RETROFLAT_COLOR_VIOLET      &(qd.dkGray)
+#  define RETROFLAT_COLOR_BROWN       &(qd.dkGray)
+#  define RETROFLAT_COLOR_GRAY        &(qd.ltGray)
+#  define RETROFLAT_COLOR_DARKGRAY    &(qd.dkGray)
+#  define RETROFLAT_COLOR_BLUE        &(qd.ltGray)
+#  define RETROFLAT_COLOR_GREEN       &(qd.ltGray)
+#  define RETROFLAT_COLOR_CYAN        &(qd.ltGray)
+#  define RETROFLAT_COLOR_RED         &(qd.ltGray)
+#  define RETROFLAT_COLOR_MAGENTA     &(qd.ltGray)
+#  define RETROFLAT_COLOR_YELLOW      &(qd.ltGray)
+#  define RETROFLAT_COLOR_WHITE       &(qd.white)
+
+#  define RETROFLAT_KEY_DELETE   0x7f
+#  define RETROFLAT_KEY_ESC      0x1b
+#  define RETROFLAT_KEY_ENTER    0x0d
+#  define RETROFLAT_KEY_TAB	   '\t'
+#  define RETROFLAT_KEY_SPACE	   ' '
+#  define RETROFLAT_KEY_GRAVE    '`'
+#  define RETROFLAT_KEY_SLASH    '/'
+#  define RETROFLAT_KEY_BKSP     0x08
+#  define RETROFLAT_KEY_A		   'a'
+#  define RETROFLAT_KEY_B		   'b'
+#  define RETROFLAT_KEY_C		   'c'
+#  define RETROFLAT_KEY_D		   'd'
+#  define RETROFLAT_KEY_E		   'e'
+#  define RETROFLAT_KEY_F		   'f'
+#  define RETROFLAT_KEY_G		   'g'
+#  define RETROFLAT_KEY_H		   'h'
+#  define RETROFLAT_KEY_I		   'i'
+#  define RETROFLAT_KEY_J		   'j'
+#  define RETROFLAT_KEY_K		   'k'
+#  define RETROFLAT_KEY_L		   'l'
+#  define RETROFLAT_KEY_M		   'm'
+#  define RETROFLAT_KEY_N		   'n'
+#  define RETROFLAT_KEY_O		   'o'
+#  define RETROFLAT_KEY_P		   'p'
+#  define RETROFLAT_KEY_Q		   'q'
+#  define RETROFLAT_KEY_R		   'r'
+#  define RETROFLAT_KEY_S		   's'
+#  define RETROFLAT_KEY_T		   't'
+#  define RETROFLAT_KEY_U		   'u'
+#  define RETROFLAT_KEY_V		   'v'
+#  define RETROFLAT_KEY_W		   'w'
+#  define RETROFLAT_KEY_X		   'x'
+#  define RETROFLAT_KEY_Y		   'y'
+#  define RETROFLAT_KEY_Z		   'z'
+#  define RETROFLAT_KEY_0		   '0'
+#  define RETROFLAT_KEY_1		   '1'
+#  define RETROFLAT_KEY_2		   '2'
+#  define RETROFLAT_KEY_3		   '3'
+#  define RETROFLAT_KEY_4		   '4'
+#  define RETROFLAT_KEY_5		   '5'
+#  define RETROFLAT_KEY_6		   '6'
+#  define RETROFLAT_KEY_7		   '7'
+#  define RETROFLAT_KEY_8		   '8'
+#  define RETROFLAT_KEY_9		   '9'
+
+#  define RETROFLAT_KEY_UP		   'w'
+#  define RETROFLAT_KEY_DOWN	   's'
+#  define RETROFLAT_KEY_RIGHT    'd'
+#  define RETROFLAT_KEY_LEFT     'a'
+
+#  define retroflat_quit( retval_in ) \
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retroflat_state->retval = retval_in;
+
+/* TODO */
+#  define retroflat_bitmap_ok( bmp ) 1
+#  define retroflat_bitmap_locked( bmp ) 0
+#  define retroflat_screen_w() 320
+#  define retroflat_screen_h() 240
+
+#  define END_OF_MAIN()
 
 #else
 #  warning "not implemented"
@@ -1602,6 +1686,13 @@ struct RETROFLAT_STATE {
    size_t               retroflat_next;
    retroflat_loop_iter  loop_iter;
    int16_t              retroflat_last_key;
+
+#  elif defined( RETROFLAT_API_MAC6 )
+
+   EventRecord event;
+   WindowRecord window_rec;
+   WindowPtr window;
+   Rect window_rect;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2366,7 +2457,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          next = 0;
       }
    } while(
-      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
+      RETROFLAT_FLAGS_RUNNING ==
+         (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2382,6 +2474,19 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
       TranslateMessage( &(g_retroflat_state->msg) );
       DispatchMessage( &(g_retroflat_state->msg) );
    } while( 0 < g_retroflat_state->msg_retval );
+
+#  elif defined( RETROFLAT_API_MAC6 )
+
+   Boolean retevt;
+
+   do {
+      SystemTask();
+      retevt = GetNextEvent( everyEvent, &(g_retroflat_state->event) );
+      loop_iter( data );
+   } while(
+      RETROFLAT_FLAGS_RUNNING ==
+         (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
+   );
 
 #  elif defined( RETROFLAT_API_GLUT )
 
@@ -3161,6 +3266,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
+
+#  elif defined( RETROFLAT_API_MAC6 )
+
+   InitGraf( &(qd.thePort) );
+   InitFonts();
+   InitWindows();
+   InitMenus();
+   InitCursor();
+
+   FlushEvents( everyEvent, NULL );
 
 #  else
 #     warning "init not implemented"
@@ -5019,6 +5134,14 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
+
+#  elif defined( RETROFLAT_API_MAC6 )
+
+   switch( g_retroflat_state->event.what ) {
+   case mouseDown:
+      retroflat_quit( 0 );
+      break;
+   }
 
 #  else
 #     warning "poll input not implemented"
