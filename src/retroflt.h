@@ -321,18 +321,47 @@
 /*! \} */ /* maug_retroflt_drawing */
 
 /**
- * \brief Flag for g_retroflat_flags indicating that retroflat_loop() should
- *        continue executing.
+ * \addtogroup maug_retroflt_flags Global Flags
+ * \brief Flags that may be present on RETROFLAT_STATE::retroflat_flags
+ * \{
+ */
+
+/**
+ * \brief Flag indicating that retroflat_loop() should continue executing.
  * \warning This flag is not used on all platforms! It should only be removed
  *          using retroflat_quit().
  */
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
+/**
+ * \brief Flag indicating FPS should not be capped.
+ * \warning This flag should only be set inside retroflat!
+ */
 #define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
 
+/**
+ * \brief Flag indicating keyboard repeat is enabled.
+ * \warning This flag should only be set inside retroflat!
+ */
 #define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
+/**
+ * \brief Flag indicating the current application is running as a screensaver.
+ * \warning This flag should only be set inside retroflat!
+ */
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
+
+/*! \} */ /* maug_retroflt_flags */
+
+/**
+ * \addtogroup maug_retroflt_config
+ * \{
+ */
+
+/**
+ * \addtogroup maug_retroflt_config_btypes RetroFlat Config Buffer Types
+ * \{
+ */
 
 #define RETROFLAT_BUFFER_INT 0x00
 
@@ -342,6 +371,38 @@
 
 #define RETROFLAT_BUFFER_BOOL 0x04
 
+/*! \} */ /* maug_retroflt_config_btypes */
+
+/**
+ * \addtogroup maug_retroflt_config_flags RetroFlat Config Flags
+ * \brief Flags for the flags parameter of retroflat_config_open().
+ * \{
+ */
+
+/**
+ * \brief Flag indicating config object should be opened for WRITING only.
+ *
+ * If this is not specified, the buffer will only be opened for READING.
+ *
+ * These modes are mutually exclusive! A config object must be closed and
+ * reopened to switch between READING and WRITING!
+ */
+#define RETROFLAT_CONFIG_FLAG_W     0x01
+
+/**
+ * \brief Flag indicating config object holds BINARY data.
+ */
+#define RETROFLAT_CONFIG_FLAG_BIN   0x02
+
+/*! \} */ /* maug_retroflt_config_flags */
+
+/*! \} */ /* maug_retroflt_config */
+
+/**
+ * \addtogroup maug_retroflt_msg_api RetroFlat Message API
+ * \{
+ */
+
 #define RETROFLAT_MSG_FLAG_TYPE_MASK 0x07
 
 #define RETROFLAT_MSG_FLAG_ERROR 0x01
@@ -349,6 +410,8 @@
 #define RETROFLAT_MSG_FLAG_INFO 0x02
 
 #define RETROFLAT_MSG_FLAG_WARNING 0x04
+
+/*! \} */ /* maug_retroflt_msg_flags */
 
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
@@ -561,13 +624,6 @@
 #endif /* !RETROFLAT_CONFIG_EXT */
 
 /*! \} */ /* maug_retroflt_compiling */
-
-/**
- * \addtogroup maug_retroflt_cli
- * \{
- */
-
-/*! \} */ /* maug_retroflt_cli */
 
 /**
  * \brief Prototype for the main loop function passed to retroflat_loop().
@@ -1366,6 +1422,21 @@ struct RETROFLAT_BITMAP {
 #  warning "not implemented"
 
 /**
+ * \addtogroup maug_retroflt_config
+ * \{
+ */
+
+/**
+ * \brief A configuration object to use with the \ref maug_retroflt_config.
+ *
+ * This is a file by default, but may be different things (e.g. a registry key
+ * or battery-backed SRAM block) on different platforms.
+ */
+typedef FILE* RETROFLAT_CONFIG;
+
+/*! \} */ /* maug_retroflt_config */
+
+/**
  * \addtogroup maug_retroflt_bitmap
  * \{
  */
@@ -1532,12 +1603,15 @@ struct RETROFLAT_ARGS {
    char* config_path;
 };
 
+/*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
    void*                   loop_data;
    MERROR_RETVAL           retval;
+   /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+   /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
 #if defined( RETROFLAT_API_ALLEGRO )
@@ -1856,20 +1930,46 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
-MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config );
+/**
+ * \addtogroup maug_retroflt_config RetroFlat Config API
+ * \brief Tools for loading and saving config data between sessions.
+ * \{
+ */
+
+/**
+ * \brief Open a configuration file/registry/SRAM/etc handle.
+ * \param flags \ref maug_retroflt_config_flags to open config with.
+ */
+MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config, uint8_t flags );
 
 void retroflat_config_close( RETROFLAT_CONFIG* config );
 
+/**
+ * \brief Write the contents of a buffer to a config object.
+ * \warning The config object must have been opened with the
+ *          ::RETROFLAT_CONFIG_FLAG_W flag enabled!
+ * \param buffer_type \ref maug_retroflt_config_btypes of the buffer provided.
+ * \param buffer_sz_max Size of the buffer provided in bytes.
+ */
 size_t retroflat_config_write(
    RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
    void* buffer, size_t buffer_sz_max );
 
+/**
+ * \brief Write the contents of a buffer to a config object.
+ * \warning The config object must have been opened with the
+ *          ::RETROFLAT_CONFIG_FLAG_W flag disabled!
+ * \param buffer_type \ref maug_retroflt_config_btypes of the buffer provided.
+ * \param buffer_out_sz_max Size of the buffer provided in bytes.
+ */
 size_t retroflat_config_read(
    RETROFLAT_CONFIG* config,
    const char* sect_name, const char* key_name, uint8_t buffer_type,
    void* buffer_out, size_t buffer_out_sz_max,
    const void* default_out, size_t default_out_sz );
+
+/*! \} */ /* maug_retroflt_config */
 
 #ifdef RETROFLT_C
 
@@ -5029,15 +5129,26 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 /* === */
 
-MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config ) {
+MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
+   char flag_buffer[3] = { '\0', '\0', '\0' };
 
-   debug_printf( 1, "opening config file %s...",
-      g_retroflat_state->config_path );
+   if( RETROFLAT_CONFIG_FLAG_W == (RETROFLAT_CONFIG_FLAG_W & flags) ) {
+      flag_buffer[0] = 'w';
+   } else {
+      flag_buffer[0] = 'r';
+   }
 
-   *config = fopen( g_retroflat_state->config_path, "r" );
+   if( RETROFLAT_CONFIG_FLAG_BIN == (RETROFLAT_CONFIG_FLAG_BIN & flags) ) {
+      flag_buffer[1] = 'b';
+   }
+
+   debug_printf( 1, "opening config file %s with mode [%s]...",
+      g_retroflat_state->config_path, flag_buffer );
+
+   *config = fopen( g_retroflat_state->config_path, flag_buffer );
    maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
 
 cleanup:
