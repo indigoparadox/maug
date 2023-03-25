@@ -2,6 +2,8 @@
 #ifndef MTILEMAP_H
 #define MTILEMAP_H
 
+#include <mparser.h>
+
 /**
  * \addtogroup maug_tilemap Tilemap API
  * \brief Functions and structures for working with tilemaps/grids.
