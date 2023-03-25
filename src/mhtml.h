@@ -6,7 +6,12 @@
 #  define MHTML_PARSER_TOKEN_SZ_MAX 1024
 #endif /* !MHTML_PARSER_TOKEN_SZ_MAX */
 
+#ifdef MHTML_C
+#  define MCSS_C
+#endif /* MHTML_C */
+
 #include <mparser.h>
+#include <mcss.h>
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -75,6 +80,7 @@ struct MHTML_PARSER {
    size_t tags_sz;
    size_t tags_sz_max;
    ssize_t tag_iter;
+   struct MCSS_PARSER styler;
 };
 
 void mhtml_unlock_parser( struct MHTML_PARSER* parser );
