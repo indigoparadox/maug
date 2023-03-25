@@ -41,9 +41,14 @@ void loopa(template)( struct dataa(TEMPLATE)* data ) {
 int main( int argc, char** argv ) {
    int retval = 0;
    struct RETROFLAT_ARGS args;
-   struct dataa(TEMPLATE) data;
+   MAUG_MHANDLE data_h = (MAUG_MHANDLE)NULL;
+   struct dataa(TEMPLATE)* data = NULL;
+   
+   memset( &data, '\0', sizeof( struct dataa(TEMPLATE) ) );
 
    /* === Setup === */
+
+   memset( &args, '\0', struct RETROFLAT_ARGS );
 
    args.screen_w = 320;
    args.screen_h = 200;
@@ -55,7 +60,11 @@ int main( int argc, char** argv ) {
       goto cleanup;
    }
 
-   data.init = 0;
+   data_h = maug_malloc( 1, sizeof( struct dataa(TEMPLATE) ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_h );
+   maug_mlock( data_h, data );
+   maug_cleanup_if_null_alloc( struct dataa(TEMPLATE)*, data );
+   maug_mzero( data, sizeof( struct dataa(TEMPLATE) ) );
 
    /* === Main Loop === */
 
@@ -63,7 +72,19 @@ int main( int argc, char** argv ) {
 
 cleanup:
 
+#ifndef RETROFLAT_OS_WASM
+
+   if( NULL != data ) {
+      maug_munlock( data_h, data );
+   }
+
+   if( NULL != data_h ) {
+      maug_mfree( data_h );
+   }
+
    retroflat_shutdown( retval );
+
+#endif /* !RETROFLAT_OS_WASM */
 
    return retval;
 }
