@@ -75,6 +75,7 @@ struct MHTML_TAG_BASE {
    ssize_t parent;
    ssize_t first_child;
    ssize_t next_sibling;
+   ssize_t style;
 };
 
 #define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields ) \
@@ -272,6 +273,7 @@ MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
    parser->tags[new_tag_idx].base.parent = -1;
    parser->tags[new_tag_idx].base.first_child = -1;
    parser->tags[new_tag_idx].base.next_sibling = -1;
+   parser->tags[new_tag_idx].base.style = -1;
 
    if( 0 <= parser->tag_iter ) {
       /* Set new tag parent to current tag. */
@@ -311,12 +313,7 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    retval = mhtml_push_blank_tag( parser );
    maug_cleanup_if_not_ok();
 
-   /* Normalize token case. */
-   for( i = 0 ; parser->token_sz > i ; i++ ) {
-      if( 0x61 <= parser->token[i] && 0x7a >= parser->token[i] ) {
-         parser->token[i] -= 0x20;
-      }
-   }
+   mparser_normalize_token_case( parser, i );
 
    /* Figure out tag type. */
    i = 0;
@@ -377,12 +374,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
 
    debug_printf( 1, "attrib: %s", parser->token );
 
-   /* Normalize token case. */
-   for( i = 0 ; parser->token_sz > i ; i++ ) {
-      if( 0x61 <= parser->token[i] && 0x7a >= parser->token[i] ) {
-         parser->token[i] -= 0x20;
-      }
-   }
+   mparser_normalize_token_case( parser, i );
 
    /* Figure out attrib type. */
    i = 0;
@@ -408,10 +400,33 @@ cleanup:
 
 MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   /* TODO: Equip styler to manage its own locking. */
+   mhtml_parser_lock( parser );
 
    if( MHTML_ATTRIB_KEY_STYLE == parser->attrib_key ) {
       debug_printf( 1, "style: %s", parser->token );
       /* TODO: Parse and attach style. */
+
+      if( '"' == parser->token[0] ) {
+         i = 1;
+      }
+      if( '"' == parser->token[parser->token_sz - 1] ) {
+         parser->token_sz--;
+      }
+
+      /* TODO: Have the styler manage selected style on its own. */
+      parser->styler.styles_sz++;
+      /* TODO: Allocate more styles if needed. */
+      assert( parser->styler.styles_sz < parser->styler.styles_sz_max );
+      parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
+
+      for( ; parser->token_sz > i ; i++ ) {
+         retval = mcss_parse_c( &(parser->styler), parser->token[i] );
+         maug_cleanup_if_not_ok();
+      }
+
       goto cleanup;  
    }
 

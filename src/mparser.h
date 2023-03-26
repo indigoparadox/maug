@@ -10,6 +10,16 @@
 #  define MPARSER_STACK_SZ_MAX 256
 #endif /* !MPARSER_STACK_SZ_MAX */
 
+/* Normalize token case. */
+#define mparser_normalize_token_case( parser, i ) \
+   for( i = 0 ; parser->token_sz > i ; i++ ) { \
+      if( 0x61 <= parser->token[i] && 0x7a >= parser->token[i] ) { \
+         parser->token[i] -= 0x20; \
+      } else if( '-' == parser->token[i] ) { \
+         parser->token[i] = '_'; \
+      } \
+   }
+
 #define mparser_pstate( parser ) \
    (parser->pstate_sz > 0 ? \
       parser->pstate[parser->pstate_sz - 1] : 0)
