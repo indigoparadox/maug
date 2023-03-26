@@ -2827,6 +2827,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_Surface* icon = NULL;
 #     endif /* RETROFLAT_SDL_ICO */
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+
+#ifdef LOG_TO_FILE
+   if( NULL == g_log_file ) {
+      logging_init();
+   }
+#endif /* LOG_TO_FILE */
    
    debug_printf( 1, "retroflat: initializing..." );
 
