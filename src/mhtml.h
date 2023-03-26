@@ -57,6 +57,7 @@
 
 #define mhtml_parser_unlock( parser ) \
    if( NULL != (parser)->tags ) { \
+      debug_printf( 1, "unlocking parser..." ); \
       maug_munlock( (parser)->tags_h, (parser)->tags ); \
    } \
    mcss_parser_unlock( &((parser)->styler) );
@@ -210,6 +211,8 @@ cleanup:
 MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "freeing parser..." );
 
    mhtml_parser_lock( parser );
 
@@ -614,7 +617,13 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
       maug_munlock( parser->tags[iter].TEXT.content, tag_content );
 
    } else {
-      printf( "%s\n", gc_mhtml_tag_names[parser->tags[iter].base.type] );
+      printf( "%s", gc_mhtml_tag_names[parser->tags[iter].base.type] );
+
+      if( 0 <= parser->tags[iter].base.style ) {
+         printf( " (styled)" );
+      }
+
+      printf( "\n" );
    }
 
    mhtml_dump_tree( parser, parser->tags[iter].base.first_child, d + 1 );
