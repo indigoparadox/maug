@@ -43,7 +43,11 @@
    f( 0, WIDTH, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
    f( 1, HEIGHT, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
    f( 2, COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color ) \
-   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color )
+   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color ) \
+   f( 4, MARGIN_LEFT, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
+   f( 5, MARGIN_TOP, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
+   f( 6, PADDING_LEFT, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
+   f( 7, PADDING_TOP, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
 
 #define MCSS_PROP_TABLE_PROPS( idx, prop_name, prop_type, prop_parser, cmp ) \
    prop_type prop_name;
