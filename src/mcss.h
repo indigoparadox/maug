@@ -205,6 +205,10 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       }
       break;
 
+   case '!':
+      /* TODO: Handle !important. */
+      break;
+
    case '\t':
    case '\r':
    case '\n':
