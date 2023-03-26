@@ -2692,7 +2692,11 @@ static int retroflat_cli_u_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 /* Allegro-specific callbacks for init, below. */
 
 void retroflat_on_ms_tick() {
-   g_retroflat_state->ms++;
+   if( NULL == g_retroflat_state ) {
+      debug_printf( 1, "no state!" );
+   } else {
+      g_retroflat_state->ms++;
+   }
 }
 
 void retroflat_on_close_button() {
@@ -4842,7 +4846,7 @@ void retroflat_string_sz(
 
    /* == Allegro == */
 
-   if( NULL == font_str ) {
+   if( NULL == font_str || '\0' == font_str[0] ) {
       font_data = font;
    } else {
       /* TODO: Cache loaded fonts for later use. */
@@ -4946,7 +4950,7 @@ void retroflat_string(
 
    /* == Allegro == */
 
-   if( NULL == font_str ) {
+   if( NULL == font_str || '\0' == font_str[0] ) {
       font_data = font;
    } else {
       /* TODO: Cache loaded fonts for later use. */
