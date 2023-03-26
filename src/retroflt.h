@@ -969,7 +969,7 @@ void* calloc( size_t n, size_t s ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-typedef float MAUG_CONST* RETROFLAT_COLOR;
+typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 #  else
 
@@ -1230,7 +1230,7 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 
 typedef FILE* RETROFLAT_CONFIG;
 
-typedef float MAUG_CONST* RETROFLAT_COLOR;
+typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -2945,7 +2945,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
 #        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
@@ -3179,6 +3179,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    TIMER1_CR = TIMER_ENABLE | TIMER_CASCADE;
 
 #  elif defined( RETROFLAT_API_GLUT )
+
+   /* == GLUT == */
+
+#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd ) \
+         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
@@ -4429,7 +4436,7 @@ void retroflat_rect(
    retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
 
    glBegin( GL_TRIANGLES );
-   glColor3fv( color );
+   glColor3fv( g_retroflat_state->palette[color_idx] );
    glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
    glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
    glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
@@ -4860,7 +4867,8 @@ void retroflat_string(
    retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
    retroglu_string(
-      screen_x, screen_y, 0, color, str, str_sz, font_str, flags );
+      screen_x, screen_y, 0, 
+      g_retroflat_state->palette[color], str, str_sz, font_str, flags );
 
    retroflat_opengl_pop();
 
