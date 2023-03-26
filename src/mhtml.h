@@ -419,12 +419,9 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
       /* TODO: Have the styler manage selected style on its own. */
       parser->styler.styles_sz++;
-      maug_mzero( &(parser->styler.styles[parser->styler.styles_sz - 1]),
-         sizeof( struct MCSS_STYLE ) );
-      parser->styler.styles[parser->styler.styles_sz - 1].BACKGROUND_COLOR =
-         RETROFLAT_COLOR_NULL;
-      parser->styler.styles[parser->styler.styles_sz - 1].COLOR =
-         RETROFLAT_COLOR_NULL;
+      retval = mcss_init_style(
+         &(parser->styler.styles[parser->styler.styles_sz - 1]) );
+      maug_cleanup_if_not_ok();
       /* TODO: Allocate more styles if needed. */
       assert( parser->styler.styles_sz < parser->styler.styles_sz_max );
       parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
