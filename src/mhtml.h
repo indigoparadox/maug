@@ -6,6 +6,10 @@
 #  define MHTML_PARSER_TOKEN_SZ_MAX 1024
 #endif /* !MHTML_PARSER_TOKEN_SZ_MAX */
 
+#ifndef MHTML_PARSER_TAGS_INIT_SZ
+#  define MHTML_PARSER_TAGS_INIT_SZ 10
+#endif /* !MHTML_PARSER_TAGS_INIT_SZ */
+
 #ifdef MHTML_C
 #  define MCSS_C
 #endif /* MHTML_C */
@@ -36,6 +40,20 @@
 
 #define mhtml_parser_append_token( parser, c ) \
    mparser_append_token( mhtml, parser, c, MHTML_PARSER_TOKEN_SZ_MAX )
+
+#define mhtml_parser_lock( parser ) \
+   if( NULL == (parser)->tags ) { \
+      debug_printf( 1, "locking parser..." ); \
+      maug_mlock( (parser)->tags_h, (parser)->tags ); \
+      maug_cleanup_if_null_alloc( union MHTML_TAG*, (parser)->tags ); \
+   } \
+   mcss_parser_lock( &((parser)->styler) );
+
+#define mhtml_parser_unlock( parser ) \
+   if( NULL != (parser)->tags ) { \
+      maug_munlock( (parser)->tags_h, (parser)->tags ); \
+   } \
+   mcss_parser_unlock( &((parser)->styler) );
 
 #define MHTML_TAG_TABLE( f ) \
    f( 0, NONE, void* none; ) \
@@ -83,11 +101,7 @@ struct MHTML_PARSER {
    struct MCSS_PARSER styler;
 };
 
-void mhtml_unlock_parser( struct MHTML_PARSER* parser );
-
-MERROR_RETVAL mhtml_lock_parser( struct MHTML_PARSER* parser );
-
-void mhtml_free_parser( struct MHTML_PARSER* parser );
+MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser );
 
 MERROR_RETVAL mhtml_pop_tag( struct MHTML_PARSER* parser );
 
@@ -119,57 +133,21 @@ MAUG_CONST char* gc_mhtml_tag_names[] = {
    ""
 };
 
-void mhtml_unlock_parser( struct MHTML_PARSER* parser ) {
-
-   if( NULL != parser->tags ) {
-      /* Parser already locked! */
-      goto cleanup;
-   }
-
-   maug_munlock( parser->tags_h, parser->tags );
-
-cleanup:
-   return;
-}
-
-MERROR_RETVAL mhtml_lock_parser( struct MHTML_PARSER* parser ) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   if( NULL != parser->tags ) {
-      /* Parser already locked! */
-      goto cleanup;
-   }
-
-   maug_mlock( parser->tags_h, parser->tags );
-   maug_cleanup_if_null_alloc( union MHTML_TAG*, parser->tags );
-
-cleanup:
-
-   return retval;
-}
-
 ssize_t mhtml_get_next_free_tag( struct MHTML_PARSER* parser ) {
    uint8_t auto_unlocked = 0;
    ssize_t retidx = -1;
    MAUG_MHANDLE new_tags_h = (MAUG_MHANDLE)NULL;
 
    if( NULL != parser->tags ) {
+      debug_printf( 1, "auto-unlocking tags..." );
       maug_munlock( parser->tags_h, parser->tags );
       auto_unlocked = 1;
    }
 
-   if( 0 == parser->tags_sz ) {
-      /* Perform initial tag allocation. */
-      parser->tags_sz_max = 1;
-      parser->tags_h = maug_malloc(
-         parser->tags_sz_max, sizeof( union MHTML_TAG ) );
-      if( NULL == parser->tags_h ) {
-         error_printf( "unable to allocate " SIZE_T_FMT " tags!",
-            parser->tags_sz_max );
-         goto cleanup;
-      }
-
-   } else if( parser->tags_sz_max <= parser->tags_sz + 1 ) {
+   assert( 0 < parser->tags_sz_max );
+   assert( NULL == parser->tags );
+   assert( (MAUG_MHANDLE)NULL != parser->tags_h );
+   if( parser->tags_sz_max <= parser->tags_sz + 1 ) {
       /* We've run out of tags, so double the available number. */
       /* TODO: Check for sz overflow. */
       new_tags_h = maug_mrealloc(
@@ -185,6 +163,7 @@ ssize_t mhtml_get_next_free_tag( struct MHTML_PARSER* parser ) {
    }
 
    /* Assume handle is unlocked. */
+   assert( NULL == parser->tags );
    maug_mlock( parser->tags_h, parser->tags );
    if( NULL == parser->tags ) {
       error_printf( "unable to lock tags!" );
@@ -210,10 +189,11 @@ cleanup:
    return retidx;
 }
 
-void mhtml_free_parser( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
    size_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
 
-   mhtml_lock_parser( parser );
+   mhtml_parser_lock( parser );
 
    for( i = 0 ; parser->tags_sz > i ; i++ ) {
       if(
@@ -224,6 +204,8 @@ void mhtml_free_parser( struct MHTML_PARSER* parser ) {
       }
    }
 
+cleanup:
+
    if( NULL != parser->tags ) {
       maug_munlock( parser->tags_h, parser->tags );
    }
@@ -231,14 +213,15 @@ void mhtml_free_parser( struct MHTML_PARSER* parser ) {
    if( NULL != parser->tags_h ) {
       maug_mfree( parser->tags_h );
    }
+
+   return retval;
 }
 
 MERROR_RETVAL mhtml_pop_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Move up from current tag. */
-   retval = mhtml_lock_parser( parser );
-   maug_cleanup_if_not_ok();
+   mhtml_parser_lock( parser );
    assert( parser->tag_iter >= 0 );
    parser->tag_iter = parser->tags[parser->tag_iter].base.parent;
 
@@ -267,8 +250,7 @@ MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
       goto cleanup;
    }
 
-   retval = mhtml_lock_parser( parser );
-   maug_cleanup_if_not_ok();
+   mhtml_parser_lock( parser );
 
    parser->tags[new_tag_idx].base.parent = -1;
    parser->tags[new_tag_idx].base.first_child = -1;
@@ -484,7 +466,34 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
 
 cleanup:
 
-   mhtml_unlock_parser( parser );
+   mhtml_parser_unlock( parser );
+
+   return retval;
+}
+
+MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( 0 == parser->tags_sz );
+   assert( (MAUG_MHANDLE)NULL == parser->tags );
+
+   /* Perform initial tag allocation. */
+   parser->tags_sz_max = MHTML_PARSER_TAGS_INIT_SZ;
+   debug_printf( 1, "allocating " SIZE_T_FMT " tags...",
+      parser->tags_sz_max );
+   parser->tags_h = maug_malloc(
+      parser->tags_sz_max, sizeof( union MHTML_TAG ) );
+   assert( (MAUG_MHANDLE)NULL != parser->tags_h );
+   if( NULL == parser->tags_h ) {
+      error_printf( "unable to allocate " SIZE_T_FMT " tags!",
+         parser->tags_sz_max );
+      goto cleanup;
+   }
+
+   retval = mcss_init_parser( &(parser->styler) );
+   maug_cleanup_if_not_ok();
+
+cleanup:
 
    return retval;
 }
