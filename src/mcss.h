@@ -40,12 +40,12 @@
    }
 
 #define MCSS_PROP_TABLE( f ) \
-   f( 0, WIDTH, size_t ) \
-   f( 1, HEIGHT, size_t ) \
-   f( 2, COLOR, RETROFLAT_COLOR ) \
-   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR )
+   f( 0, WIDTH, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
+   f( 1, HEIGHT, size_t, mcss_style_size_t, mcss_cmp_size_t ) \
+   f( 2, COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color ) \
+   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color )
 
-#define MCSS_PROP_TABLE_PROPS( idx, prop_name, prop_type ) \
+#define MCSS_PROP_TABLE_PROPS( idx, prop_name, prop_type, prop_parser, cmp ) \
    prop_type prop_name;
 
 struct MCSS_STYLE {
@@ -72,12 +72,12 @@ MERROR_RETVAL mcss_init_parser( struct MCSS_PARSER* parser );
 
 #ifdef MCSS_C
 
-#define MCSS_PROP_TABLE_CONSTS( prop_id, prop_name, prop_type ) \
+#define MCSS_PROP_TABLE_CONSTS( prop_id, prop_name, prop_type, prop_parser, cmp ) \
    MAUG_CONST uint16_t MCSS_PROP_ ## prop_name = prop_id;
 
 MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
 
-#define MCSS_PROP_TABLE_NAMES( prop_id, prop_name, prop_type ) \
+#define MCSS_PROP_TABLE_NAMES( prop_id, prop_name, prop_type, prop_parser, cmp ) \
    #prop_name,
 
 MAUG_CONST char* gc_mcss_prop_names[] = {
@@ -129,45 +129,86 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mcss_push_style_val( struct MCSS_PARSER* parser ) {
+MERROR_RETVAL mcss_style_color(
+   struct MCSS_PARSER* parser, const char* prop_name, RETROFLAT_COLOR* color_out
+) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
    mparser_normalize_token_case( parser, i );
 
-   if( MCSS_PROP_BACKGROUND_COLOR == parser->prop_key ) {
-      /* Figure out color. */
-      i = 0;
-      while( '\0' != gc_mcss_color_names[i][0] ) {
-         if(
-            parser->token_sz == strlen( gc_mcss_color_names[i] ) &&
-            0 == strncmp(
-               gc_mcss_color_names[i], parser->token, parser->token_sz )
-         ) {
-            debug_printf( 1, "selected color: %s", gc_mcss_color_names[i] );
-            parser->styles[parser->styles_sz - 1].BACKGROUND_COLOR =
-               parser->colors[i];
-            goto cleanup;
-         }
-         i++;
+   while( '\0' != gc_mcss_color_names[i][0] ) {
+      if(
+         parser->token_sz == strlen( gc_mcss_color_names[i] ) &&
+         0 == strncmp(
+            gc_mcss_color_names[i], parser->token, parser->token_sz )
+      ) {
+         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_color_names[i] );
+         *color_out = parser->colors[i];
+         goto cleanup;
       }
+      i++;
+   }
 
-   } else if( MCSS_PROP_WIDTH == parser->prop_key ) {
-      
-      parser->styles[parser->styles_sz - 1].WIDTH = atoi( parser->token );
+   error_printf( "invalid %s: %s", prop_name, parser->token );
 
-      debug_printf( 1, "set width: " SIZE_T_FMT, 
-         parser->styles[parser->styles_sz - 1].WIDTH );
+cleanup:
 
-   } else if( MCSS_PROP_HEIGHT == parser->prop_key ) {
-      
-      parser->styles[parser->styles_sz - 1].HEIGHT = atoi( parser->token );
+   return retval;
+}
 
-      debug_printf( 1, "set height: " SIZE_T_FMT, 
-         parser->styles[parser->styles_sz - 1].HEIGHT );
+int8_t mcss_cmp_color( RETROFLAT_COLOR a, RETROFLAT_COLOR b ) {
+   /* TODO: Handle !important. */
 
-   } else {
+   if( RETROFLAT_COLOR_NULL == b ) {
+      /* a wins. */
+      return 1;
+   }
+
+   /* b wins. */
+   return -1;
+}
+
+MERROR_RETVAL mcss_style_size_t(
+   struct MCSS_PARSER* parser, const char* prop_name, size_t* num_out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   *num_out = atoi( parser->token );
+
+   debug_printf( 1, "set %s: " SIZE_T_FMT, prop_name, *num_out );
+
+   return retval;
+}
+
+int8_t mcss_cmp_size_t( size_t a, size_t b ) {
+   /* TODO: Handle !important. */
+
+   if( 0 == b ) {
+      /* a wins. */
+      return 1;
+   }
+
+   /* b wins. */
+   return -1;
+}
+
+MERROR_RETVAL mcss_push_style_val( struct MCSS_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   #define MCSS_PROP_TABLE_PARSE( idx, prop_name, prop_type, prop_parse, cmp ) \
+      case idx: \
+         retval = prop_parse( \
+            parser, #prop_name, \
+            &(parser->styles[parser->styles_sz - 1].prop_name) ); \
+         maug_cleanup_if_not_ok(); \
+         break;
+
+   switch( parser->prop_key ) {
+   MCSS_PROP_TABLE( MCSS_PROP_TABLE_PARSE )
+   default:
       error_printf( "invalid property: %u", parser->prop_key );
+      break;
    }
 
 cleanup:
