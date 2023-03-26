@@ -1167,25 +1167,13 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define BG_TILE_H_PX 8
 #  define BG_W_TILES 32
 
+typedef void* RETROFLAT_CONFIG;
+
 struct RETROFLAT_BITMAP {
    uint16_t* b;
 };
 
-/* In Windows, we're using our own color table and a RETROFLAT_COLOR is just
- * an index in that table. */
-typedef int RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (-1)
-
-#  ifdef RETROFLT_C
-#     define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
-         RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = 0;
-#  else
-#     define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
-         extern RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
-#  endif /* RETROFLT_C */
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
+typedef int RETROFLAT_COLOR_DEF;
 
 #  ifdef RETROFLAT_NDS_WASD
 #     define RETROFLAT_KEY_A           KEY_LEFT
@@ -1214,6 +1202,7 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 
 /* TODO? */
 #  define retroflat_quit( retval_in )
+#  define retroflat_bitmap_ok( bitmap ) (0)
 
 #elif defined( RETROFLAT_API_GLUT )
 
@@ -4381,7 +4370,7 @@ void retroflat_px(
    uint16_t* px_ptr = NULL;
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
-   px_ptr[(y * 256) + x] = color;
+   px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
 #  elif defined( RETROFLAT_API_GLUT )
 
