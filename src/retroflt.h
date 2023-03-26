@@ -4799,6 +4799,16 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 
 /* === */
 
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+#     define retroflat_win_create_font( flags, font_str ) \
+         CreateFont( 10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, \
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, \
+            DEFAULT_QUALITY, DEFAULT_PITCH, \
+            (NULL == font_str || '\0' == font_str[0] ? "Arial" : font_str) );
+
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
    const char* font_str, int* w_out, int* h_out, uint8_t flags
@@ -4812,6 +4822,8 @@ void retroflat_string_sz(
    int lock_ret = 0,
       locked_target_internal = 0;
    SIZE sz;
+   HFONT font;
+   HFONT old_font;
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
@@ -4860,13 +4872,16 @@ cleanup:
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   /* TODO: Set specified font. */
+   font = retroflat_win_create_font( flags, font_str );
+   old_font = SelectObject( target->hdc_b, font );
 
    GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
    *w_out = sz.cx;
    *h_out = sz.cy;
 
 cleanup:
+
+   SelectObject( target->hdc_b, old_font );
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
@@ -4897,6 +4912,8 @@ void retroflat_string(
       locked_target_internal = 0;
    RECT rect;
    SIZE sz;
+   HFONT font;
+   HFONT old_font;
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color ) {
@@ -4960,9 +4977,10 @@ cleanup:
    /* DrawText will draw gibberish even if the string is null-terminated! */
    str_sz = strlen( str );
 
-   /* TODO: Set specified font. */
-
    memset( &sz, '\0', sizeof( SIZE ) );
+
+   font = retroflat_win_create_font( flags, font_str );
+   old_font = SelectObject( target->hdc_b, font );
 
    GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
    rect.left = x_orig;
@@ -4976,6 +4994,8 @@ cleanup:
    DrawText( target->hdc_b, str, str_sz, &rect, 0 );
 
 cleanup:
+
+   SelectObject( target->hdc_b, old_font );
 
    SetBkMode( target->hdc_b, OPAQUE );
    SetTextColor( target->hdc_b, gc_retroflat_win_rgbs[RETROFLAT_COLOR_BLACK] );
