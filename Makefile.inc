@@ -29,12 +29,29 @@ ifeq ("$(RELEASE)","RELEASE")
 	CFLAGS_GCC += -O2
 	CFLAGS_GCC64 += -O2
 else
-	CFLAGS_WATCOM += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
-	CFLAGS_WATCOM386 += -we -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
+	CFLAGS_WATCOM += -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
+	CFLAGS_WATCOM386 += -d3 -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=1
 	CFLAGS_GCC += -DDEBUG -Wall -g
 	CFLAGS_GCC64 += -DDEBUG -Wall -g
 	LDFLAGS_GCC += -g
 	LDFLAGS_GCC64 += -g
+endif
+
+ifeq ("$(PEDANTIC)","1")
+	CFLAGS_GCC += -Wpedantic
+	CFLAGS_GCC64 += -Wpedantic
+endif
+
+ifeq ("$(WERROR)","1")
+	CFLAGS_GCC += -Werror
+	CFLAGS_GCC64 += -Werror
+	CFLAGS_WATCOM += -we
+	CFLAGS_WATCOM386 += -we
+endif
+
+ifeq ("$(C89)","1")
+	CFLAGS_GCC += -std=c89
+	CFLAGS_GCC64 += -std=c89
 endif
 
 # Default compiler specs.
