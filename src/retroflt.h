@@ -684,6 +684,8 @@ struct RETROFLAT_BITMAP {
 
 typedef int RETROFLAT_COLOR;
 
+#  define RETROFLAT_COLOR_NULL (-1)
+
 #  ifdef RETROFLT_C
 
 #  define RETROFLAT_COLOR_TABLE_ALLEGRO( idx, name_l, name_u, r, g, b ) \
@@ -880,6 +882,8 @@ struct RETROFLAT_BITMAP {
 
 typedef float MAUG_CONST* RETROFLAT_COLOR;
 
+#  define RETROFLAT_COLOR_NULL (NULL)
+
 /* TODO: Generate with table macro. */
 #     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
 #     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
@@ -901,6 +905,8 @@ typedef float MAUG_CONST* RETROFLAT_COLOR;
 #else
 
 typedef SDL_Color MAUG_CONST* RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (NULL)
 
 #     ifdef RETROFLT_C
 
@@ -1025,6 +1031,8 @@ void* calloc( size_t n, size_t s ) {
 
 typedef float MAUG_CONST* RETROFLAT_COLOR;
 
+#  define RETROFLAT_COLOR_NULL (NULL)
+
 /* TODO: Generate with table macro. */
 #     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
 #     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
@@ -1047,19 +1055,21 @@ typedef float MAUG_CONST* RETROFLAT_COLOR;
 
 /* Use Windoes API and generate brushes/pens for GDI. */
 
-typedef COLORREF RETROFLAT_COLOR;
+typedef int RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (-1)
 
 #     ifdef RETROFLT_C
 
 #        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
-            const uint32_t RETROFLAT_COLOR_ ## name_u = idx;
+            const COLORREF RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
 
 #     else
 
 #        define RETROFLAT_COLOR_TABLE_W_EXT( idx, name_l, name_u, r, g, b ) \
-            extern const uint32_t RETROFLAT_COLOR_ ## name_u;
+            extern const COLORREF RETROFLAT_COLOR_ ## name_u;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
 
@@ -1276,7 +1286,11 @@ struct RETROFLAT_BITMAP {
    uint16_t* b;
 };
 
+/* In Windows, we're using our own color table and a RETROFLAT_COLOR is just
+ * an index in that table. */
 typedef int RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (-1)
 
 #  ifdef RETROFLT_C
 #     define RETROFLAT_COLOR_TABLE_NDS_RGBS( idx, name_l, name_u, r, g, b ) \
@@ -1332,6 +1346,8 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 typedef FILE* RETROFLAT_CONFIG;
 
 typedef float MAUG_CONST* RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (NULL)
 
 /* TODO: Generate with table macro. */
 #     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
@@ -1486,6 +1502,8 @@ struct RETROFLAT_BITMAP {
  *        on this page.
  */
 typedef int RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (-1)
 
 #  define RETROFLAT_COLOR_BLACK        0
 #  define RETROFLAT_COLOR_DARKBLUE     1
@@ -4342,6 +4360,10 @@ void retroflat_px(
    uint32_t* px_4 = NULL;
 #  endif /* RETROFLAT_API_SDL1 */
 
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
@@ -4468,6 +4490,10 @@ void retroflat_rect(
       locked_target_internal = 0;
    HPEN old_pen = (HPEN)NULL;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
 
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
@@ -4607,6 +4633,10 @@ void retroflat_line(
       locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
@@ -4692,6 +4722,10 @@ void retroflat_ellipse(
    int lock_ret = 0,
       locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
 
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
@@ -4864,6 +4898,10 @@ void retroflat_string(
    RECT rect;
    SIZE sz;
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
 
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
