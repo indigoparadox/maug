@@ -34,6 +34,7 @@ void retrosoft_string(
 
 #  include "mfont8x8.h"
 
+/* TODO: Create another depth for each color. */
 static struct RETROFLAT_BITMAP
 gc_font_bmps[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
 

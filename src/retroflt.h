@@ -256,6 +256,11 @@
 #	define RETROFLAT_API_WIN32
 #endif /* RETROFLAT_API_WINCE */
 
+/**
+ * \addtogroup maug_retroflt_color
+ * \{
+ */
+
 #define RETROFLAT_COLOR_TABLE( f ) \
    f( 0, black, BLACK, 0, 0, 0 ) \
    f( 1, darkblue, DARKBLUE, 0, 0, 170 ) \
@@ -273,6 +278,12 @@
    f( 13, magenta, MAGENTA, 255, 85, 255 ) \
    f( 14, yellow, YELLOW, 255, 255, 85 ) \
    f( 15, white, WHITE, 255, 255, 255 )
+
+typedef int8_t RETROFLAT_COLOR;
+
+#  define RETROFLAT_COLOR_NULL (-1)
+
+/*! \} */
 
 /* TODO: Mouse is broken under DOS/Allegro. */
 #if defined( RETROFLAT_OS_UNIX ) || defined( RETROFLAT_OS_WIN )
@@ -682,25 +693,7 @@ struct RETROFLAT_BITMAP {
    BITMAP* b;
 };
 
-typedef int RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (-1)
-
-#  ifdef RETROFLT_C
-
-#  define RETROFLAT_COLOR_TABLE_ALLEGRO( idx, name_l, name_u, r, g, b ) \
-      int RETROFLAT_COLOR_ ## name_u;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO )
-
-#  else
-
-#  define RETROFLAT_COLOR_TABLE_ALLEGRO_EXT( idx, name_l, name_u, r, g, b ) \
-      extern int RETROFLAT_COLOR_ ## name_u;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_EXT )
-
-#  endif /* RETROFLT_C */
+typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -879,62 +872,9 @@ struct RETROFLAT_BITMAP {
 
    /* SDL Colors */
 #  ifdef RETROFLAT_OPENGL
-
-typedef float MAUG_CONST* RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (NULL)
-
-/* TODO: Generate with table macro. */
-#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
-#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
-#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
-#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
-#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
-#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
-#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
-#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
-#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
-#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
-#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
-#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
-#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
-#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
-#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
-#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
-
+typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 #else
-
-typedef SDL_Color MAUG_CONST* RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (NULL)
-
-#     ifdef RETROFLT_C
-
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
-            MAUG_CONST SDL_Color gc_retroflat_color_ ## name_l = {r, g, b};
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
-
-#        define RETROFLAT_COLOR_TABLE_SDL_P( idx, name_l, name_u, r, g, b ) \
-            MAUG_CONST SDL_Color* RETROFLAT_COLOR_ ## name_u = \
-               &gc_retroflat_color_ ## name_l;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P )
-
-#     else
-
-#        define RETROFLAT_COLOR_TABLE_SDL_EXT( idx, n_l, n_u, r, g, b ) \
-               extern MAUG_CONST SDL_Color gc_retroflat_color_ ## n_l;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_EXT )
-
-#        define RETROFLAT_COLOR_TABLE_SDL_P_EXT( idx, n_l, n_u, r, g, b ) \
-            extern MAUG_CONST SDL_Color* RETROFLAT_COLOR_ ## n_u;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL_P_EXT )
-
-#     endif /* RETROFLT_C */
-
+typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -1031,49 +971,11 @@ void* calloc( size_t n, size_t s ) {
 
 typedef float MAUG_CONST* RETROFLAT_COLOR;
 
-#  define RETROFLAT_COLOR_NULL (NULL)
-
-/* TODO: Generate with table macro. */
-#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
-#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
-#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
-#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
-#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
-#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
-#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
-#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
-#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
-#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
-#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
-#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
-#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
-#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
-#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
-#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
-
-#else
+#  else
 
 /* Use Windoes API and generate brushes/pens for GDI. */
 
-typedef int RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (-1)
-
-#     ifdef RETROFLT_C
-
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
-            const COLORREF RETROFLAT_COLOR_ ## name_u = idx;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
-
-#     else
-
-#        define RETROFLAT_COLOR_TABLE_W_EXT( idx, name_l, name_u, r, g, b ) \
-            extern const COLORREF RETROFLAT_COLOR_ ## name_u;
-
-RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
-
-#     endif /* RETROFLT_C */
+typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* === Setup Brush Cache === */
 
@@ -1082,20 +984,13 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
          (HBRUSH)NULL,
 
 #     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b ) \
-         gc_retroflat_win_brushes[idx] =  CreateSolidBrush( RGB( r, g, b ) );
+         gc_retroflat_win_brushes[idx] = CreateSolidBrush( RGB( r, g, b ) );
 
 #     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b ) \
    if( (HBRUSH)NULL != gc_retroflat_win_brushes[idx] ) { \
       DeleteObject( gc_retroflat_win_brushes[idx] ); \
       gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
    }
-
-#ifdef RETROFLT_C
-
-#else
-
-
-#endif /* RETROFLT_C */
 
 /* === End Setup Brush Cache === */
 
@@ -1116,12 +1011,6 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_W_EXT )
 
 /* === End Setup Pen Cache === */
 
-#     define RETROFLAT_COLOR_TABLE_WIN_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
-         0,
-
-#     define RETROFLAT_COLOR_TABLE_WIN_RGBS( idx, name_l, name_u, r, g, b ) \
-         gc_retroflat_win_rgbs[idx] = RGB( r, g, b );
-
 #     ifdef RETROFLT_C
 
 HBRUSH gc_retroflat_win_brushes[] = {
@@ -1130,10 +1019,6 @@ HBRUSH gc_retroflat_win_brushes[] = {
 
 static HPEN gc_retroflat_win_pens[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENS )
-};
-
-static uint32_t gc_retroflat_win_rgbs[] = {
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS_INIT )
 };
 
 #     else
@@ -1346,26 +1231,6 @@ RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS )
 typedef FILE* RETROFLAT_CONFIG;
 
 typedef float MAUG_CONST* RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (NULL)
-
-/* TODO: Generate with table macro. */
-#     define RETROFLAT_COLOR_BLACK       RETROGLU_COLOR_BLACK       
-#     define RETROFLAT_COLOR_DARKBLUE    RETROGLU_COLOR_DARKBLUE    
-#     define RETROFLAT_COLOR_DARKGREEN   RETROGLU_COLOR_DARKGREEN   
-#     define RETROFLAT_COLOR_TEAL        RETROGLU_COLOR_TEAL        
-#     define RETROFLAT_COLOR_DARKRED     RETROGLU_COLOR_DARKRED     
-#     define RETROFLAT_COLOR_VIOLET      RETROGLU_COLOR_VIOLET      
-#     define RETROFLAT_COLOR_BROWN       RETROGLU_COLOR_BROWN       
-#     define RETROFLAT_COLOR_GRAY        RETROGLU_COLOR_GRAY        
-#     define RETROFLAT_COLOR_DARKGRAY    RETROGLU_COLOR_DARKGRAY    
-#     define RETROFLAT_COLOR_BLUE        RETROGLU_COLOR_BLUE        
-#     define RETROFLAT_COLOR_GREEN       RETROGLU_COLOR_GREEN       
-#     define RETROFLAT_COLOR_CYAN        RETROGLU_COLOR_CYAN        
-#     define RETROFLAT_COLOR_RED         RETROGLU_COLOR_RED         
-#     define RETROFLAT_COLOR_MAGENTA     RETROGLU_COLOR_MAGENTA     
-#     define RETROFLAT_COLOR_YELLOW      RETROGLU_COLOR_YELLOW      
-#     define RETROFLAT_COLOR_WHITE       RETROGLU_COLOR_WHITE       
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
@@ -1629,6 +1494,8 @@ struct RETROFLAT_STATE {
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+   /*! \brief Index of available colors, initialized on platform init. */
+   RETROFLAT_COLOR_DEF     palette[16];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -1993,6 +1860,18 @@ size_t retroflat_config_read(
 
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
+
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+   MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
+
+#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b ) \
+   #name_u,
+
+MAUG_CONST char* gc_retroflat_color_names[] = {
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
+};
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 /* For now, these are set by WinMain(), so they need to be outside of the
@@ -2874,8 +2753,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-#  define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( idx, name_l, name_u, r, g, b ) \
-   RETROFLAT_COLOR_ ## name_u = makecol( r, g, b );
+#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b ) \
+         g_retroflat_state->palette[i] = makecol( r, g, b );
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
 
@@ -2926,6 +2805,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    info = SDL_GetVideoInfo();
    maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
+
+   /* Setup color palettes. */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+            g_retroflat_state->palette[idx].r = rd; \
+            g_retroflat_state->palette[idx].g = gd; \
+            g_retroflat_state->palette[idx].b = bd;
+#     endif /* RETROFLAT_OPENGL */
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
 
 #     ifdef RETROFLAT_OPENGL
    if(
@@ -2999,6 +2890,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+   /* Setup color palettes. */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+            g_retroflat_state->palette[idx].r = rd; \
+            g_retroflat_state->palette[idx].g = gd; \
+            g_retroflat_state->palette[idx].b = bd;
+#     endif /* RETROFLAT_OPENGL */
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
    g_retroflat_state->screen_w = args->screen_w;
@@ -3039,6 +2942,17 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     else
    srand( time( NULL ) );
 #     endif /* RETROFLAT_API_WINCE */
+
+   /* Setup color palettes. */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+            g_retroflat_state->palette[idx] = RGB( r, g, b );
+#     endif /* RETROFLAT_OPENGL */
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
 
 #     ifdef RETROFLAT_WING
    debug_printf( 3, "attempting to link WinG..." );
@@ -3186,7 +3100,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
 #ifndef RETROFLAT_OPENGL
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_RGBS )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRSET )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PNSET )
 #endif /* !RETROFLAT_OPENGL */
@@ -3199,7 +3112,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color constants. */
 #  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
-         RETROFLAT_COLOR_ ## name_u = ARGB16( 1, r, g, b );
+      g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
 
    /* Force screen size. */
@@ -4351,7 +4264,7 @@ cleanup:
 /* === */
 
 void retroflat_px(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, uint8_t flags
 ) {
    int locked_target_internal = 0;
@@ -4362,9 +4275,12 @@ void retroflat_px(
    uint8_t* px_1 = NULL;
    uint16_t* px_2 = NULL;
    uint32_t* px_4 = NULL;
+   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#  elif defined( RETROFLAT_API_SDL2 )
+   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #  endif /* RETROFLAT_API_SDL1 */
 
-   if( RETROFLAT_COLOR_NULL == color ) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
 
@@ -4390,7 +4306,7 @@ void retroflat_px(
 
    /* == Allegro == */
 
-   putpixel( target->b, x, y, color );
+   putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -4436,16 +4352,19 @@ void retroflat_px(
       /* Modify target bits directly (faster) if available! */
       if( 0 > target->h ) {
          target->bits[((target->h - 1 - y) * target->w) + x] =
-            gc_retroflat_win_rgbs[color];
+            g_retroflat_state->palette[color_idx];
       } else {
-         target->bits[(y * target->w) + x] = gc_retroflat_win_rgbs[color];
+         target->bits[(y * target->w) + x] =
+            g_retroflat_state->palette[color_idx];
       }
    } else {
       /* Use slow Windows GDI. */
-      SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
+      SetPixel( target->hdc_b, x, y,
+         g_retroflat_state->palette[color_idx] );
    }
 #  else
-   SetPixel( target->hdc_b, x, y, gc_retroflat_win_rgbs[color] );
+   SetPixel( target->hdc_b, x, y,
+      g_retroflat_state->palette[color_idx] );
 #  endif /* RETROFLAT_WING */
 
 #  elif defined( RETROFLAT_API_LIBNDS )
@@ -4475,7 +4394,7 @@ cleanup:
 /* === */
 
 void retroflat_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
 #if defined( RETROFLAT_OPENGL )
@@ -4488,6 +4407,7 @@ void retroflat_rect(
    SDL_Rect area;
    int locked_target_internal = 0;
    int lock_ret = 0;
+   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HBRUSH old_brush = (HBRUSH)NULL;
    int lock_ret = 0,
@@ -4495,7 +4415,7 @@ void retroflat_rect(
    HPEN old_pen = (HPEN)NULL;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-   if( RETROFLAT_COLOR_NULL == color ) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
 
@@ -4527,9 +4447,11 @@ void retroflat_rect(
 
    assert( NULL != target->b );
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      rectfill( target->b, x, y, x + w, y + h, color );
+      rectfill( target->b, x, y, x + w, y + h,
+         g_retroflat_state->palette[color_idx] );
    } else {
-      rect( target->b, x, y, x + w, y + h, color );
+      rect( target->b, x, y, x + w, y + h,
+         g_retroflat_state->palette[color_idx] );
    }
 
 #  elif defined( RETROFLAT_API_SDL1 )
@@ -4599,8 +4521,8 @@ cleanup:
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   retroflat_win_setup_brush( old_brush, target, color, flags );
-   retroflat_win_setup_pen( old_pen, target, color, flags );
+   retroflat_win_setup_brush( old_brush, target, color_idx, flags );
+   retroflat_win_setup_pen( old_pen, target, color_idx, flags );
 
    Rectangle( target->hdc_b, x, y, x + w, y + h );
 
@@ -4621,7 +4543,7 @@ cleanup:
 /* === */
 
 void retroflat_line(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
@@ -4629,6 +4551,7 @@ void retroflat_line(
 #  elif defined( RETROFLAT_API_SDL2 )
    int lock_ret = 0,
       locked_target_internal = 0;
+   RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
@@ -4637,7 +4560,7 @@ void retroflat_line(
       locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-   if( RETROFLAT_COLOR_NULL == color ) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
 
@@ -4651,14 +4574,14 @@ void retroflat_line(
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
-   retrosoft_line( target, color, x1, y1, x2, y2, flags );
+   retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
    assert( NULL != target->b );
-   line( target->b, x1, y1, x2, y2, color );
+   line( target->b, x1, y1, x2, y2, color_idx );
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
@@ -4686,7 +4609,7 @@ cleanup:
    retroflat_internal_autolock_bitmap(
       target, lock_ret, locked_target_internal );
 
-   retroflat_win_setup_pen( old_pen, target, color, flags );
+   retroflat_win_setup_pen( old_pen, target, color_idx, flags );
 
    /* Create the line points. */
    points[0].x = x1;
@@ -4992,7 +4915,7 @@ cleanup:
    rect.right = (x_orig + sz.cx);
    rect.bottom = (y_orig + sz.cy);
 
-   SetTextColor( target->hdc_b, gc_retroflat_win_rgbs[color] );
+   SetTextColor( target->hdc_b, g_retroflat_state->palette[color] );
    SetBkMode( target->hdc_b, TRANSPARENT );
 
    DrawText( target->hdc_b, str, str_sz, &rect, 0 );
@@ -5002,7 +4925,8 @@ cleanup:
    SelectObject( target->hdc_b, old_font );
 
    SetBkMode( target->hdc_b, OPAQUE );
-   SetTextColor( target->hdc_b, gc_retroflat_win_rgbs[RETROFLAT_COLOR_BLACK] );
+   SetTextColor( target->hdc_b,
+      g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
@@ -5416,6 +5340,13 @@ cleanup:
 }
 
 #else /* End of RETROFLT_C */
+
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+   extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
+
+RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
+
+extern MAUG_CONST char* gc_retroflat_color_names[];
 
    extern struct RETROFLAT_STATE* g_retroflat_state;
 #     if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
