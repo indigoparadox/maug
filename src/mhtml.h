@@ -29,6 +29,16 @@
    f( MHTML_PSTATE_END_ELEMENT, 4 ) \
    f( MHTML_PSTATE_STRING, 5 )
 
+#define mhtml_tag( parser, idx ) (&(parser->tags[idx]))
+
+#define mhtml_tag_parent( parser, idx ) \
+   (0 <= (parser)->tags[idx].parent ? \
+      (&((parser)->tags[(parser)->tags[idx].parent]])) : NULL)
+
+#define mhtml_tag_sibling( parser, idx ) \
+   (0 <= (parser)->tags[idx].next_sibling ? \
+      (&((parser)->tags[(parser)->tags[idx].next_sibling]])) : NULL)
+
 #define mhtml_parser_pstate( parser ) \
    mparser_pstate( parser )
 
