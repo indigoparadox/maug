@@ -1298,24 +1298,7 @@ struct RETROFLAT_BITMAP {
 
 typedef short RETROFLAT_CONFIG;
 
-typedef Pattern* RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_BLACK       &(qd.black)
-#  define RETROFLAT_COLOR_DARKBLUE    &(qd.dkGray)
-#  define RETROFLAT_COLOR_DARKGREEN   &(qd.dkGray)
-#  define RETROFLAT_COLOR_TEAL        &(qd.dkGray)
-#  define RETROFLAT_COLOR_DARKRED     &(qd.dkGray)
-#  define RETROFLAT_COLOR_VIOLET      &(qd.dkGray)
-#  define RETROFLAT_COLOR_BROWN       &(qd.dkGray)
-#  define RETROFLAT_COLOR_GRAY        &(qd.ltGray)
-#  define RETROFLAT_COLOR_DARKGRAY    &(qd.dkGray)
-#  define RETROFLAT_COLOR_BLUE        &(qd.ltGray)
-#  define RETROFLAT_COLOR_GREEN       &(qd.ltGray)
-#  define RETROFLAT_COLOR_CYAN        &(qd.ltGray)
-#  define RETROFLAT_COLOR_RED         &(qd.ltGray)
-#  define RETROFLAT_COLOR_MAGENTA     &(qd.ltGray)
-#  define RETROFLAT_COLOR_YELLOW      &(qd.ltGray)
-#  define RETROFLAT_COLOR_WHITE       &(qd.white)
+typedef Pattern* RETROFLAT_COLOR_DEF;
 
 #  define RETROFLAT_KEY_DELETE   0x7f
 #  define RETROFLAT_KEY_ESC      0x1b
@@ -3320,6 +3303,23 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    InitWindows();
    InitMenus();
    InitCursor();
+
+   g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] =       &(qd.black);
+   g_retroflat_state->palette[RETROFLAT_COLOR_DARKBLUE] =    &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_DARKGREEN] =   &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_TEAL] =        &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_DARKRED] =     &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_VIOLET] =      &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_BROWN] =       &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_GRAY] =        &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_DARKGRAY] =    &(qd.dkGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_BLUE] =        &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_GREEN] =       &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_CYAN] =        &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_RED] =         &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_MAGENTA] =     &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_YELLOW] =      &(qd.ltGray);
+   g_retroflat_state->palette[RETROFLAT_COLOR_WHITE] =       &(qd.white);
 
    FlushEvents( everyEvent, NULL );
 
