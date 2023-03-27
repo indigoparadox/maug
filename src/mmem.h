@@ -12,6 +12,24 @@
 
 /* TODO */
 
+#elif defined( MAUG_OS_MAC )
+
+#  include <Multiverse.h>
+
+typedef Handle MAUG_MHANDLE;
+
+#define maug_malloc( nmemb, sz ) NewHandleClear( sz * nmemb )
+
+#define maug_mrealloc( handle, nmemb, sz ) SetHandleSize( handle, sz );
+
+#define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
+
+#define maug_mfree( handle ) DisposeHandle( handle ); handle = NULL;
+
+#define maug_mlock( handle, ptr ) HLock( handle ); ptr = (void*)handle;
+
+#define maug_munlock( handle, ptr ) HUnlock( handle ); ptr = NULL;
+
 #else
 
 #  include <stdlib.h> /* For *alloc() */

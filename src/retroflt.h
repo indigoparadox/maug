@@ -3321,7 +3321,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_retroflat_state->palette[RETROFLAT_COLOR_YELLOW] =      &(qd.ltGray);
    g_retroflat_state->palette[RETROFLAT_COLOR_WHITE] =       &(qd.white);
 
-   FlushEvents( everyEvent, NULL );
+   FlushEvents( everyEvent, 0 );
 
    win_rect = qd.screenBits.bounds;
    InsetRect( &win_rect, 50, 50 );
@@ -3418,7 +3418,7 @@ void retroflat_shutdown( int retval ) {
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
    maug_munlock( g_retroflat_state_h, g_retroflat_state );
-   maug_mfree( g_retroflat_state );
+   maug_mfree( g_retroflat_state_h );
 
 }
 
