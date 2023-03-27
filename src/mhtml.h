@@ -49,7 +49,6 @@
 
 #define mhtml_parser_lock( parser ) \
    if( NULL == (parser)->tags ) { \
-      debug_printf( 1, "locking parser..." ); \
       maug_mlock( (parser)->tags_h, (parser)->tags ); \
       maug_cleanup_if_null_alloc( union MHTML_TAG*, (parser)->tags ); \
    } \
@@ -57,7 +56,6 @@
 
 #define mhtml_parser_unlock( parser ) \
    if( NULL != (parser)->tags ) { \
-      debug_printf( 1, "unlocking parser..." ); \
       maug_munlock( (parser)->tags_h, (parser)->tags ); \
    } \
    mcss_parser_unlock( &((parser)->styler) );
@@ -421,6 +419,9 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
       /* TODO: Have the styler manage selected style on its own. */
       parser->styler.styles_sz++;
+      retval = mcss_init_style(
+         &(parser->styler.styles[parser->styler.styles_sz - 1]) );
+      maug_cleanup_if_not_ok();
       /* TODO: Allocate more styles if needed. */
       assert( parser->styler.styles_sz < parser->styler.styles_sz_max );
       parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
