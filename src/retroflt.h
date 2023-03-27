@@ -283,6 +283,10 @@ typedef int8_t RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_NULL (-1)
 
+#ifndef RETROFLAT_COLORS_SZ
+#  define RETROFLAT_COLORS_SZ 16
+#endif /* !RETROFLAT_COLORS_SZ */
+
 /*! \} */
 
 /* TODO: Mouse is broken under DOS/Allegro. */
@@ -1351,13 +1355,7 @@ struct RETROFLAT_BITMAP {
  * \{
  */
 
-/**
- * \brief Functions that accept parameters of this type will accept the colors
- *        on this page.
- */
-typedef int RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (-1)
+typedef int RETROFLAT_COLOR_DEF;
 
 #  define RETROFLAT_COLOR_BLACK        0
 #  define RETROFLAT_COLOR_DARKBLUE     1
@@ -1484,7 +1482,7 @@ struct RETROFLAT_STATE {
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Index of available colors, initialized on platform init. */
-   RETROFLAT_COLOR_DEF     palette[16];
+   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -2909,7 +2907,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_Renderer*, g_retroflat_state->buffer.renderer, RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the buffer texture. */
-   g_retroflat_state->buffer.texture = SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
