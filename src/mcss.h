@@ -18,6 +18,8 @@
 
 #define MCSS_PROP_FLAG_IMPORTANT 0x02
 
+#define MCSS_PROP_FLAG_AUTO      0x04
+
 #define MCSS_PARSER_PSTATE_TABLE( f ) \
    f( MCSS_PSTATE_NONE, 0 ) \
    f( MCSS_PSTATE_VALUE, 1 ) \
@@ -53,16 +55,16 @@
    }
 
 #define MCSS_PROP_TABLE( f ) \
-   f( 0, WIDTH, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 ) \
-   f( 1, HEIGHT, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 ) \
-   f( 2, COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color, RETROFLAT_COLOR_NULL ) \
-   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, mcss_cmp_color, RETROFLAT_COLOR_NULL ) \
-   f( 4, MARGIN_LEFT, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 ) \
-   f( 5, MARGIN_TOP, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 ) \
-   f( 6, PADDING_LEFT, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 ) \
-   f( 7, PADDING_TOP, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 )
+   f( 0, WIDTH, size_t, mcss_style_size_t, 0 ) \
+   f( 1, HEIGHT, size_t, mcss_style_size_t, 0 ) \
+   f( 2, COLOR, RETROFLAT_COLOR, mcss_style_color, RETROFLAT_COLOR_NULL ) \
+   f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, RETROFLAT_COLOR_NULL ) \
+   f( 4, MARGIN_LEFT, size_t, mcss_style_size_t, 0 ) \
+   f( 5, MARGIN_TOP, size_t, mcss_style_size_t, 0 ) \
+   f( 6, PADDING_LEFT, size_t, mcss_style_size_t, 0 ) \
+   f( 7, PADDING_TOP, size_t, mcss_style_size_t, 0 )
 
-#define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, cmp, def ) \
+#define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, def ) \
    prop_t prop_n; \
    uint8_t prop_n ## _flags;
 
@@ -94,12 +96,12 @@ MERROR_RETVAL mcss_init_parser( struct MCSS_PARSER* parser );
 
 #ifdef MCSS_C
 
-#define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, cmp, def ) \
+#define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, def ) \
    MAUG_CONST uint16_t MCSS_PROP_ ## prop_n = prop_id;
 
 MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
 
-#define MCSS_PROP_TABLE_NAMES( prop_id, prop_n, prop_t, prop_prse, cmp, def ) \
+#define MCSS_PROP_TABLE_NAMES( prop_id, prop_n, prop_t, prop_prse, def ) \
    #prop_n,
 
 MAUG_CONST char* gc_mcss_prop_names[] = {
@@ -182,18 +184,6 @@ cleanup:
    return retval;
 }
 
-int8_t mcss_cmp_color( RETROFLAT_COLOR a, RETROFLAT_COLOR b ) {
-   /* TODO: Handle !important. */
-
-   if( RETROFLAT_COLOR_NULL == b ) {
-      /* a wins. */
-      return 1;
-   }
-
-   /* b wins. */
-   return -1;
-}
-
 MERROR_RETVAL mcss_style_size_t(
    struct MCSS_PARSER* parser, const char* prop_name, size_t* num_out
 ) {
@@ -206,22 +196,10 @@ MERROR_RETVAL mcss_style_size_t(
    return retval;
 }
 
-int8_t mcss_cmp_size_t( size_t a, size_t b ) {
-   /* TODO: Handle !important. */
-
-   if( 0 == b ) {
-      /* a wins. */
-      return 1;
-   }
-
-   /* b wins. */
-   return -1;
-}
-
 MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   #define MCSS_PROP_TABLE_PARSE( idx, prop_n, prop_t, prop_prse, cmp, def ) \
+   #define MCSS_PROP_TABLE_PARSE( idx, prop_n, prop_t, prop_prse, def ) \
       case idx: \
          retval = prop_prse( \
             parser, #prop_n, \
@@ -331,7 +309,7 @@ MERROR_RETVAL mcss_init_style( struct MCSS_STYLE* style ) {
 
    maug_mzero( style, sizeof( struct MCSS_STYLE ) );
 
-   #define MCSS_PROP_TABLE_DEFS( idx, prop_n, prop_t, prop_prse, cmp, def ) \
+   #define MCSS_PROP_TABLE_DEFS( idx, prop_n, prop_t, prop_prse, def ) \
       style->prop_n = def;
 
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_DEFS )
