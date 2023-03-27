@@ -11,12 +11,18 @@
 #endif /* !MPARSER_STACK_SZ_MAX */
 
 /* Normalize token case. */
-#define mparser_normalize_token_case( parser, i ) \
+#define mparser_token_upper( parser, i ) \
    for( i = 0 ; parser->token_sz > i ; i++ ) { \
       if( 0x61 <= parser->token[i] && 0x7a >= parser->token[i] ) { \
          parser->token[i] -= 0x20; \
-      } else if( '-' == parser->token[i] ) { \
-         parser->token[i] = '_'; \
+      } \
+   }
+
+/* Normalize token case. */
+#define mparser_token_replace( parser, i, c, r ) \
+   for( i = 0 ; parser->token_sz > i ; i++ ) { \
+      if( c == parser->token[i] ) { \
+         parser->token[i] = r; \
       } \
    }
 

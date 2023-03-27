@@ -314,7 +314,7 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    retval = mhtml_push_blank_tag( parser );
    maug_cleanup_if_not_ok();
 
-   mparser_normalize_token_case( parser, i );
+   mparser_token_upper( parser, i );
 
    /* Figure out tag type. */
    i = 0;
@@ -375,7 +375,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
 
    debug_printf( 1, "attrib: %s", parser->token );
 
-   mparser_normalize_token_case( parser, i );
+   mparser_token_upper( parser, i );
 
    /* Figure out attrib type. */
    i = 0;

@@ -6,9 +6,22 @@
 #  define MCSS_PARSER_STYLES_INIT_SZ 10
 #endif /* !MCSS_PARSER_STYLES_INIT_SZ */
 
+#ifndef MCSS_ID_SZ_MAX
+#  define MCSS_ID_SZ_MAX 32
+#endif /* !MCSS_ID_SZ_MAX */
+
+#ifndef MCSS_CLASS_SZ_MAX
+#  define MCSS_CLASS_SZ_MAX 128
+#endif /* !MCSS_CLASS_SZ_MAX */
+
+#define MCSS_PROP_FLAG_ACTIVE    0x01
+
+#define MCSS_PROP_FLAG_IMPORTANT 0x02
+
 #define MCSS_PARSER_PSTATE_TABLE( f ) \
    f( MCSS_PSTATE_NONE, 0 ) \
-   f( MCSS_PSTATE_VALUE, 1 )
+   f( MCSS_PSTATE_VALUE, 1 ) \
+   f( MCSS_PSTATE_RULE, 2 )
 
 #define mcss_parser_pstate( parser ) \
    mparser_pstate( parser )
@@ -50,9 +63,12 @@
    f( 7, PADDING_TOP, size_t, mcss_style_size_t, mcss_cmp_size_t, 0 )
 
 #define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, cmp, def ) \
-   prop_t prop_n;
+   prop_t prop_n; \
+   uint8_t prop_n ## _flags;
 
 struct MCSS_STYLE {
+   char id[MCSS_ID_SZ_MAX];
+   char class[MCSS_CLASS_SZ_MAX];
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PROPS )
 };
 
@@ -60,6 +76,8 @@ struct MCSS_PARSER {
    uint16_t pstate[MPARSER_STACK_SZ_MAX];
    size_t pstate_sz;
    uint16_t prop_key;
+   /*! \brief Flags to push with next pushed prop val. */
+   uint8_t prop_flags;
    char token[MHTML_PARSER_TOKEN_SZ_MAX];
    size_t token_sz;
    size_t i;
@@ -108,7 +126,8 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_normalize_token_case( parser, i );
+   mparser_token_upper( parser, i );
+   mparser_token_replace( parser, i, '-', '_' );
 
    /* Figure out style property type. */
    i = 0;
@@ -139,11 +158,13 @@ MERROR_RETVAL mcss_style_color(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_normalize_token_case( parser, i );
+   mparser_token_upper( parser, i );
+   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
 
    while( '\0' != gc_mcss_color_names[i][0] ) {
       if(
-         parser->token_sz == strlen( gc_mcss_color_names[i] ) &&
+         /* Don't use sz check here because we might've shrunk token with
+          * ! check above. */
          0 == strncmp(
             gc_mcss_color_names[i], parser->token, parser->token_sz )
       ) {
@@ -197,7 +218,7 @@ int8_t mcss_cmp_size_t( size_t a, size_t b ) {
    return -1;
 }
 
-MERROR_RETVAL mcss_push_style_val( struct MCSS_PARSER* parser ) {
+MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    #define MCSS_PROP_TABLE_PARSE( idx, prop_n, prop_t, prop_prse, cmp, def ) \
@@ -206,6 +227,10 @@ MERROR_RETVAL mcss_push_style_val( struct MCSS_PARSER* parser ) {
             parser, #prop_n, \
             &(parser->styles[parser->styles_sz - 1].prop_n) ); \
          maug_cleanup_if_not_ok(); \
+         parser->styles[parser->styles_sz - 1].prop_n ## _flags = \
+            parser->prop_flags; \
+         parser->styles[parser->styles_sz - 1].prop_n ## _flags |= \
+            MCSS_PROP_FLAG_ACTIVE; \
          break;
 
    switch( parser->prop_key ) {
@@ -216,6 +241,8 @@ MERROR_RETVAL mcss_push_style_val( struct MCSS_PARSER* parser ) {
    }
 
 cleanup:
+
+   parser->prop_flags = 0;
 
    return retval;
 }
@@ -240,8 +267,24 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    case ';':
       if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
-         retval = mcss_push_style_val( parser );
+         retval = mcss_push_prop_val( parser );
          maug_cleanup_if_not_ok();
+         mcss_parser_pstate_pop( parser );
+         mcss_parser_reset_token( parser );
+
+      } else if( MCSS_PSTATE_RULE == mcss_parser_pstate( parser ) ) {
+         if(
+            /* TODO: Break this out to make it more resilient. */
+            NULL != strchr( parser->token, '!' ) &&
+            0 == strncmp( "!important", strchr( parser->token, '!' ), 10 )
+         ) {
+            debug_printf( 1, "marking value !important..." );
+            parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
+         }
+         retval = mcss_push_prop_val( parser );
+         maug_cleanup_if_not_ok();
+         mcss_parser_pstate_pop( parser ); /* Pop rule. */
+         assert( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) );
          mcss_parser_pstate_pop( parser );
          mcss_parser_reset_token( parser );
 
@@ -252,6 +295,11 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    case '!':
       /* TODO: Handle !important. */
+      if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
+         mcss_parser_pstate_push( parser, MCSS_PSTATE_RULE );
+         /* Append the ! here so the pusher can make it a \0 later. */
+         mcss_parser_append_token( parser, c );
+      }
       break;
 
    case '\t':
