@@ -2820,6 +2820,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
+#  elif defined( RETROFLAT_API_MAC6 )
+   Rect win_rect;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
@@ -3383,6 +3385,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    FlushEvents( everyEvent, NULL );
 
+   win_rect = qd.screenBits.bounds;
+   InsetRect( &win_rect, 50, 50 );
+   g_retroflat_state->window = NewCWindow(
+      nil, &win_rect, "\pTest", true, documentProc, (WindowPtr)-1, false, 0 );
+
+   SetPort( g_retroflat_state->window );
+
 #  else
 #     warning "init not implemented"
 #  endif  /* RETROFLAT_API_ALLEGRO */
@@ -3405,6 +3414,8 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+   /* TODO: Shutdown logging? */
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
    retrosoft_shutdown();
