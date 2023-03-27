@@ -25,6 +25,10 @@
    f( MCSS_PSTATE_VALUE, 1 ) \
    f( MCSS_PSTATE_RULE, 2 )
 
+#define mcss_tag_style( parser, tag ) \
+   (NULL != (tag) && 0 <= (tag)->base.style ? \
+      &((parser)->styler.styles[(tag)->base.style]) : NULL)
+
 #define mcss_parser_pstate( parser ) \
    mparser_pstate( parser )
 
