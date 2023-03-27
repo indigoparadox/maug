@@ -55,14 +55,16 @@
    }
 
 #define MCSS_PROP_TABLE( f ) \
-   f( 0, WIDTH, size_t, mcss_style_size_t, 0 ) \
-   f( 1, HEIGHT, size_t, mcss_style_size_t, 0 ) \
+   f( 0, WIDTH, ssize_t, mcss_style_size_t, 0 ) \
+   f( 1, HEIGHT, ssize_t, mcss_style_size_t, 0 ) \
    f( 2, COLOR, RETROFLAT_COLOR, mcss_style_color, RETROFLAT_COLOR_NULL ) \
    f( 3, BACKGROUND_COLOR, RETROFLAT_COLOR, mcss_style_color, RETROFLAT_COLOR_NULL ) \
-   f( 4, MARGIN_LEFT, size_t, mcss_style_size_t, 0 ) \
-   f( 5, MARGIN_TOP, size_t, mcss_style_size_t, 0 ) \
-   f( 6, PADDING_LEFT, size_t, mcss_style_size_t, 0 ) \
-   f( 7, PADDING_TOP, size_t, mcss_style_size_t, 0 )
+   f( 4, MARGIN_LEFT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 5, MARGIN_TOP, ssize_t, mcss_style_size_t, 0 ) \
+   f( 6, MARGIN_RIGHT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 7, MARGIN_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
+   f( 8, PADDING_LEFT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 9, PADDING_TOP, ssize_t, mcss_style_size_t, 0 )
 
 #define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, def ) \
    prop_t prop_n; \
@@ -77,7 +79,7 @@ struct MCSS_STYLE {
 struct MCSS_PARSER {
    uint16_t pstate[MPARSER_STACK_SZ_MAX];
    size_t pstate_sz;
-   uint16_t prop_key;
+   int16_t prop_key;
    /*! \brief Flags to push with next pushed prop val. */
    uint8_t prop_flags;
    char token[MHTML_PARSER_TOKEN_SZ_MAX];
@@ -148,6 +150,7 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    }
 
    error_printf( "could not find property: %s", parser->token );
+   parser->prop_key = -1;
 
 cleanup:
 
@@ -155,7 +158,8 @@ cleanup:
 }
 
 MERROR_RETVAL mcss_style_color(
-   struct MCSS_PARSER* parser, const char* prop_name, RETROFLAT_COLOR* color_out
+   struct MCSS_PARSER* parser, const char* prop_name,
+   RETROFLAT_COLOR* color_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -185,13 +189,25 @@ cleanup:
 }
 
 MERROR_RETVAL mcss_style_size_t(
-   struct MCSS_PARSER* parser, const char* prop_name, size_t* num_out
+   struct MCSS_PARSER* parser, const char* prop_name,
+   ssize_t* num_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   mparser_token_upper( parser, i );
+
+   if( 0 == strncmp( "AUTO", parser->token, 5 ) ) {
+      parser->prop_flags |= MCSS_PROP_FLAG_AUTO;
+   }
 
    *num_out = atoi( parser->token );
 
-   debug_printf( 1, "set %s: " SIZE_T_FMT, prop_name, *num_out );
+   if( MCSS_PROP_FLAG_AUTO == (MCSS_PROP_FLAG_AUTO & parser->prop_flags) ) {
+      debug_printf( 1, "set %s: AUTO", prop_name );
+   } else {
+      debug_printf( 1, "set %s: " SIZE_T_FMT, prop_name, *num_out );
+   }
 
    return retval;
 }
@@ -214,7 +230,7 @@ MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
    switch( parser->prop_key ) {
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PARSE )
    default:
-      error_printf( "invalid property: %u", parser->prop_key );
+      error_printf( "invalid property: %d", parser->prop_key );
       break;
    }
 
