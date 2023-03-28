@@ -39,13 +39,17 @@ struct MHTMR_RENDER_TREE {
       maug_munlock( (tree)->nodes_h, (tree)->nodes ); \
    }
 
+MERROR_RETVAL mhtmr_tree_create(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t tag_idx, ssize_t node_idx, size_t d );
+
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t node_idx, size_t d );
+   struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
 
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t node_idx, size_t d );
+   struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
 
 void mhtmr_tree_draw(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
@@ -70,55 +74,54 @@ void mhtml_merge_styles(
 
    mcss_style_init( effect_style );
 
-   /* Merge any styles present as we descend the parsed tree. */
-
-   if( NULL == tag_style && NULL != parent_style ) {
-      memcpy( effect_style, parent_style, sizeof( struct MCSS_STYLE ) );
-      goto block_defs;
-
-   } else if( NULL != tag_style && NULL == parent_style ) {
-      memcpy( effect_style, tag_style, sizeof( struct MCSS_STYLE ) );
-      goto block_defs;
- 
-   } else if( NULL == tag_style && NULL == parent_style ) {
-      debug_printf( 1, "root style?" );
-      goto block_defs;
-   }
+   /* Perform inheritence of special cases. */
 
    #define MCSS_PROP_TABLE_MERGE( p_id, prop_n, prop_t, prop_p, def ) \
       if( \
-         /* Special cases: do not inherit! */ \
-         MCSS_PROP_DISPLAY != p_id && \
-         MCSS_PROP_HEIGHT != p_id && \
-         MCSS_PROP_WIDTH != p_id && ( \
          ( \
-            /* Parent is important and new property isn't. */ \
-            MCSS_PROP_FLAG_IMPORTANT == \
-               (MCSS_PROP_FLAG_IMPORTANT & parent_style->prop_n ## _flags) \
-            && MCSS_PROP_FLAG_IMPORTANT != \
-               (MCSS_PROP_FLAG_IMPORTANT & tag_style->prop_n ## _flags) \
-         ) || ( \
-            /* New property is not active. */ \
-            MCSS_PROP_FLAG_ACTIVE != \
-               (MCSS_PROP_FLAG_ACTIVE & tag_style->prop_n ## _flags) \
-         )) \
+            /* Only do inheritence for some special cases.
+             * e.g. We don't want to inherit width/height/X/etc! */ \
+            MCSS_PROP_COLOR == p_id || \
+            MCSS_PROP_BACKGROUND_COLOR == p_id \
+         ) && (NULL != parent_style && ( \
+            (NULL != tag_style && \
+               /* Parent is important and new property isn't. */ \
+               MCSS_PROP_FLAG_IMPORTANT == \
+                  (MCSS_PROP_FLAG_IMPORTANT & parent_style->prop_n ## _flags) \
+               && MCSS_PROP_FLAG_IMPORTANT != \
+                  (MCSS_PROP_FLAG_IMPORTANT & tag_style->prop_n ## _flags) \
+            ) || (NULL == tag_style || \
+               /* New property is not active. */ \
+               MCSS_PROP_FLAG_ACTIVE != \
+                  (MCSS_PROP_FLAG_ACTIVE & tag_style->prop_n ## _flags) \
+         ))) \
       ) { \
          /* Inherit parent property. */ \
          debug_printf( 1, "%s using parent %s", \
             gc_mhtml_tag_names[tag_type], #prop_n ); \
          effect_style->prop_n = parent_style->prop_n; \
+         if( MCSS_PROP_COLOR == p_id ) { \
+            debug_printf( 1, "color %s", 0 <= effect_style->prop_n ? gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
+         } \
          effect_style->prop_n ## _flags = parent_style->prop_n ## _flags; \
-      } else { \
+      } else if( \
+         NULL != tag_style && \
+         MCSS_PROP_FLAG_ACTIVE == \
+            (MCSS_PROP_FLAG_ACTIVE & tag_style->prop_n ## _flags) \
+      ) { \
          /* Use new property. */ \
          debug_printf( 1, "%s using style %s", \
             gc_mhtml_tag_names[tag_type], #prop_n ); \
+         if( MCSS_PROP_COLOR == p_id ) { \
+            debug_printf( 1, "color %s", 0 <= effect_style->prop_n ? gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
+         } \
          effect_style->prop_n = tag_style->prop_n; \
          effect_style->prop_n ## _flags = tag_style->prop_n ## _flags; \
       }
 
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_MERGE )
 
-block_defs:
+   /* Apply defaults for display. */
 
    if(
       MCSS_PROP_FLAG_ACTIVE !=
@@ -138,8 +141,6 @@ block_defs:
       }
 
    }
-
-cleanup:
 
    return;
 }
@@ -250,14 +251,13 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t tag_idx, ssize_t node_idx, size_t d
+   ssize_t tag_idx, ssize_t node_idx, size_t d
 ) {
    ssize_t node_new_idx = -1;
    ssize_t tag_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == mhtml_tag( parser, tag_idx ) ) {
-      debug_printf( 1, "return" );
       goto cleanup;
    }
 
@@ -271,8 +271,8 @@ MERROR_RETVAL mhtmr_tree_create(
 
       node_idx = node_new_idx;
 
-      /* The common root doesn't belong to any specific tag. */
-      mhtmr_node( tree, node_idx )->tag = -1;
+      /* The common root is the body tag. */
+      mhtmr_node( tree, node_idx )->tag = tag_idx;
 
       mhtmr_node( tree, node_idx )->w = retroflat_screen_w();
    }
@@ -290,9 +290,7 @@ MERROR_RETVAL mhtmr_tree_create(
          "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
          node_new_idx, node_idx );
 
-      mhtmr_tree_create(
-         parser, tree, mhtml_tag( parser, tag_idx )->base.style,
-         tag_iter_idx, node_new_idx, d + 1 );
+      mhtmr_tree_create( parser, tree, tag_iter_idx, node_new_idx, d + 1 );
 
       tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
    }
@@ -304,7 +302,7 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t node_idx, size_t d
+   struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d
 ) {
    struct MCSS_STYLE effect_style;
    char* tag_content = NULL;
@@ -329,7 +327,7 @@ MERROR_RETVAL mhtmr_tree_size(
    /* Make sure we have a root style. */
    mhtml_merge_styles(
       &effect_style,
-      mcss_style( &(parser->styler), parent_style_idx ),
+      parent_style,
       0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
       tag_type );
    
@@ -357,7 +355,7 @@ MERROR_RETVAL mhtmr_tree_size(
 
       node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= node_iter_idx ) {
-         mhtmr_tree_size( parser, tree, tag_style_idx, node_iter_idx, d + 1 );
+         mhtmr_tree_size( parser, tree, &effect_style, node_iter_idx, d + 1 );
 
          node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
       }
@@ -418,7 +416,7 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t node_idx, size_t d
+   struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d
 ) {
    struct MCSS_STYLE effect_style;
    ssize_t child_iter_idx = -1;
@@ -442,7 +440,7 @@ MERROR_RETVAL mhtmr_tree_pos(
    /* Make sure we have a root style. */
    mhtml_merge_styles(
       &effect_style,
-      mcss_style( &(parser->styler), parent_style_idx ),
+      parent_style,
       0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
       tag_type );
    
@@ -509,7 +507,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
    while( 0 <= node_iter_idx ) {
-      mhtmr_tree_pos( parser, tree, tag_style_idx, node_iter_idx, d + 1 );
+      mhtmr_tree_pos( parser, tree, &effect_style, node_iter_idx, d + 1 );
 
       node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
    }
