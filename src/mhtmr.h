@@ -52,7 +52,7 @@ void mhtml_merge_styles(
    struct MCSS_STYLE* tag_style
 ) {
 
-   mcss_init_style( effect_style );
+   mcss_style_init( effect_style );
 
    /* Merge any styles present as we descend the parsed tree. */
 
@@ -374,6 +374,17 @@ void mhtmr_tree_draw( struct MHTMR_RENDER_NODE* node, size_t d ) {
    mhtml_render_tree(
       parser, &r, parent_style, parser->tags[iter].base.next_sibling, d );
 #endif
+}
+
+void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
+
+   debug_printf( 1, "freeing render nodes..." );
+
+   mhtmr_tree_unlock( tree );
+
+   if( NULL != tree->nodes_h ) {
+      maug_mfree( tree->nodes_h );
+   }
 }
 
 MERROR_RETVAL mhtmr_tree_init( struct MHTMR_RENDER_TREE* tree ) {
