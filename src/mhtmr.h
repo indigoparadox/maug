@@ -41,7 +41,11 @@ struct MHTMR_RENDER_TREE {
 
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
-   ssize_t parent_style_idx, ssize_t tag_idx, ssize_t node_idx, size_t d );
+   ssize_t parent_style_idx, ssize_t node_idx, size_t d );
+
+MERROR_RETVAL mhtmr_tree_pos(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t parent_style_idx, ssize_t node_idx, size_t d );
 
 void mhtmr_tree_draw(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
@@ -214,29 +218,18 @@ cleanup:
    return node_new_idx;
 }
 
-MERROR_RETVAL mhtmr_tree_size(
+MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    ssize_t parent_style_idx, ssize_t tag_idx, ssize_t node_idx, size_t d
 ) {
-   struct MCSS_STYLE effect_style;
-   char* tag_content = NULL;
    ssize_t node_new_idx = -1;
    ssize_t tag_iter_idx = -1;
-   ssize_t child_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
-
-   debug_printf( 1, "tree size d: " SIZE_T_FMT, d );
 
    if( NULL == mhtml_tag( parser, tag_idx ) ) {
       debug_printf( 1, "return" );
       goto cleanup;
    }
-
-   /* Make sure we have a root style. */
-   mhtml_merge_styles(
-      &effect_style,
-      mcss_style( &(parser->styler), parent_style_idx ),
-      mcss_tag_style( parser, tag_idx ) );
 
    /* Make sure we have a single root node. */
    if( 0 > node_idx ) {
@@ -252,7 +245,63 @@ MERROR_RETVAL mhtmr_tree_size(
       mhtmr_node( tree, node_idx )->tag = -1;
    }
 
-   if( MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type ) {
+   tag_iter_idx = mhtml_tag( parser, tag_idx )->base.first_child;
+   while( 0 <= tag_iter_idx ) {
+      node_new_idx = mhtmr_add_node_child( tree, node_idx );
+      if( 0 > node_new_idx ) {
+         goto cleanup;
+      }
+
+      mhtmr_node( tree, node_new_idx )->tag = tag_iter_idx;
+
+      debug_printf( 1,
+         "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
+         node_new_idx, node_idx );
+
+      mhtmr_tree_create(
+         parser, tree, mhtml_tag( parser, tag_idx )->base.style,
+         tag_iter_idx, node_new_idx, d + 1 );
+
+      tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
+   }
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mhtmr_tree_size(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t parent_style_idx, ssize_t node_idx, size_t d
+) {
+   struct MCSS_STYLE effect_style;
+   char* tag_content = NULL;
+   ssize_t child_iter_idx = -1;
+   ssize_t tag_idx = -1;
+   ssize_t tag_style_idx = -1;
+   ssize_t node_iter_idx = -1;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( NULL == mhtmr_node( tree, node_idx ) ) {
+      goto cleanup;
+   }
+
+   tag_idx = mhtmr_node( tree, node_idx )->tag;
+
+   if( 0 <= tag_idx ) {
+      tag_style_idx = mhtml_tag( parser, tag_idx )->base.style;
+   }
+
+   /* Make sure we have a root style. */
+   mhtml_merge_styles(
+      &effect_style,
+      mcss_style( &(parser->styler), parent_style_idx ),
+      0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL );
+   
+   if(
+      0 <= tag_idx &&
+      MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type
+   ) {
       /* Get text size to use in calculations below. */
 
       maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
@@ -268,24 +317,11 @@ MERROR_RETVAL mhtmr_tree_size(
    } else {
       /* Get sizing of child nodes. */
 
-      tag_iter_idx = mhtml_tag( parser, tag_idx )->base.first_child;
-      while( 0 <= tag_iter_idx ) {
-         node_new_idx = mhtmr_add_node_child( tree, node_idx );
-         if( 0 > node_new_idx ) {
-            goto cleanup;
-         }
+      node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
+      while( 0 <= node_iter_idx ) {
+         mhtmr_tree_size( parser, tree, tag_style_idx, node_iter_idx, d + 1 );
 
-         mhtmr_node( tree, node_new_idx )->tag = tag_iter_idx;
-
-         debug_printf( 1,
-            "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
-            node_new_idx, node_idx );
-
-         mhtmr_tree_size(
-            parser, tree, mhtml_tag( parser, tag_idx )->base.style,
-            tag_iter_idx, node_new_idx, d + 1 );
-
-         tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
+         node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
       }
    }
 
@@ -329,15 +365,52 @@ MERROR_RETVAL mhtmr_tree_size(
       }
    }
 
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mhtmr_tree_pos(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t parent_style_idx, ssize_t node_idx, size_t d
+) {
+   struct MCSS_STYLE effect_style;
+   ssize_t child_iter_idx = -1;
+   ssize_t tag_idx = -1;
+   ssize_t tag_style_idx = -1;
+   ssize_t node_iter_idx = -1;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( NULL == mhtmr_node( tree, node_idx ) ) {
+      goto cleanup;
+   }
+
+   tag_idx = mhtmr_node( tree, node_idx )->tag;
+
+   if( 0 <= tag_idx ) {
+      tag_style_idx = mhtml_tag( parser, tag_idx )->base.style;
+   }
+
+   /* Make sure we have a root style. */
+   mhtml_merge_styles(
+      &effect_style,
+      mcss_style( &(parser->styler), parent_style_idx ),
+      0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL );
+   
    /* y */
 
    /* TODO: Add margins of children? */
 
    child_iter_idx = mhtmr_node( tree, node_idx )->parent;
    if( 0 <= child_iter_idx ) {
+      /* Add top offset of parent. */
+      mhtmr_node( tree, node_idx )->y +=
+         mhtmr_node( tree, child_iter_idx )->y;
+
       child_iter_idx = mhtmr_node( tree, child_iter_idx )->first_child;
    }
    while( 0 <= child_iter_idx && node_idx != child_iter_idx ) {
+      /* Add top offset of prior siblings. */
       mhtmr_node( tree, node_idx )->y +=
          mhtmr_node( tree, child_iter_idx )->h;
 
@@ -385,6 +458,13 @@ MERROR_RETVAL mhtmr_tree_size(
       mhtmr_node( tree, node_idx )->bg = effect_style.BACKGROUND_COLOR;
    }
 
+   node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
+   while( 0 <= node_iter_idx ) {
+      mhtmr_tree_pos( parser, tree, tag_style_idx, node_iter_idx, d + 1 );
+
+      node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
+   }
+ 
 cleanup:
 
    return retval;
