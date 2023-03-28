@@ -601,6 +601,8 @@ MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
       goto cleanup;
    }
 
+   parser->tag_iter = -1;
+
    retval = mcss_init_parser( &(parser->styler) );
    maug_cleanup_if_not_ok();
 
