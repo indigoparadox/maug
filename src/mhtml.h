@@ -120,6 +120,7 @@ struct MHTML_PARSER {
    size_t tags_sz_max;
    ssize_t tag_iter;
    struct MCSS_PARSER styler;
+   ssize_t body_idx;
 };
 
 MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser );
@@ -345,6 +346,14 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
          debug_printf( 1, "new tag (" SSIZE_T_FMT ") type: %s",
             parser->tag_iter, gc_mhtml_tag_names[i] );
          parser->tags[parser->tag_iter].base.type = i;
+
+         if( MHTML_TAG_TYPE_BODY == i ) {
+            assert( -1 == parser->body_idx );
+            parser->body_idx = parser->tag_iter;
+            debug_printf( 1, "set body index to: " SSIZE_T_FMT,
+               parser->body_idx );
+         }
+
          goto cleanup;
       }
       i++;
@@ -606,6 +615,7 @@ MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser ) {
    }
 
    parser->tag_iter = -1;
+   parser->body_idx = -1;
 
    retval = mcss_parser_init( &(parser->styler) );
    maug_cleanup_if_not_ok();
