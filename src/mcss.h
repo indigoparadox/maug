@@ -72,10 +72,12 @@
    f( 7, MARGIN_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
    f( 8, PADDING_LEFT, ssize_t, mcss_style_size_t, 0 ) \
    f( 9, PADDING_TOP, ssize_t, mcss_style_size_t, 0 ) \
-   f( 10, DISPLAY, uint8_t, mcss_style_display, 0 ) \
-   f( 11, POSITION, uint8_t, mcss_style_position, 0 ) \
-   f( 12, X, ssize_t, mcss_style_size_t, 0 ) \
-   f( 13, Y, ssize_t, mcss_style_size_t, 0 )
+   f( 10, PADDING_RIGHT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 11, PADDING_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
+   f( 12, DISPLAY, uint8_t, mcss_style_display, 0 ) \
+   f( 13, POSITION, uint8_t, mcss_style_position, 0 ) \
+   f( 14, X, ssize_t, mcss_style_size_t, 0 ) \
+   f( 15, Y, ssize_t, mcss_style_size_t, 0 )
 
 #define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, def ) \
    prop_t prop_n; \

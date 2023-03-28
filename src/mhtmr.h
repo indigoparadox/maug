@@ -11,6 +11,10 @@ struct MHTMR_RENDER_NODE {
    ssize_t y;
    size_t w;
    size_t h;
+   size_t m_l;
+   size_t m_r;
+   size_t m_t;
+   size_t m_b;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
@@ -391,6 +395,42 @@ MERROR_RETVAL mhtmr_tree_size(
       }
    }
 
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_LEFT_flags) &&
+      MCSS_PROP_FLAG_AUTO !=
+         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_LEFT_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_LEFT;
+   }
+
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_RIGHT_flags) &&
+      MCSS_PROP_FLAG_AUTO !=
+         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_RIGHT_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_RIGHT;
+   }
+
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_TOP_flags) &&
+      MCSS_PROP_FLAG_AUTO !=
+         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_TOP_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_TOP;
+   }
+
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_BOTTOM_flags) &&
+      MCSS_PROP_FLAG_AUTO !=
+         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_BOTTOM_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_BOTTOM;
+   }
+
    /* height */
 
    if( 
@@ -443,6 +483,13 @@ MERROR_RETVAL mhtmr_tree_pos(
       parent_style,
       0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
       tag_type );
+
+   /* x */
+
+   if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
+      mhtmr_node( tree, node_idx )->x =
+         mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->x;
+   }
    
    /* y */
 
@@ -467,26 +514,63 @@ MERROR_RETVAL mhtmr_tree_pos(
    /* margin-left, margin-right */
 
    if( 
+      0 <= mhtmr_node( tree, node_idx )->parent &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags) &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_RIGHT_flags) &&
       MCSS_PROP_FLAG_AUTO ==
          (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_LEFT_flags) &&
       MCSS_PROP_FLAG_AUTO ==
          (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_RIGHT_flags)
    ) {
       /* Center */
-      /* mhtmr_node( tree, node_idx )->x = (r->w_max / 2) - (r->w / 2); */
+      mhtmr_node( tree, node_idx )->x =
+         mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->x +
+         (mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->w / 2) -
+         (mhtmr_node( tree, node_idx )->w / 2);
 
    } else if( 
+      0 <= mhtmr_node( tree, node_idx )->parent &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags) &&
       MCSS_PROP_FLAG_AUTO ==
          (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_LEFT_flags) &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_RIGHT_flags) &&
       MCSS_PROP_FLAG_AUTO !=
          (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_RIGHT_flags)
    ) {
       /* Justify right. */
+      /* XXX */
       /* r->x = r->w_max - r->w; */
 
-   } else {
+   } else if(
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags)
+   ) {
       /* Justify left. */
-      /* r->x += effect_style.MARGIN_LEFT; */
+      mhtmr_node( tree, node_idx )->x += effect_style.MARGIN_LEFT;
+   }
+
+   /* padding */
+
+   /* TODO: Only apply to topmost/leftmost elements in a container! */
+
+   if( 
+      NULL != parent_style &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & parent_style->PADDING_LEFT_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->x += parent_style->PADDING_LEFT;
+   }
+
+   if( 
+      NULL != parent_style &&
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & parent_style->PADDING_TOP_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->y += parent_style->PADDING_TOP;
    }
 
    /* color */
