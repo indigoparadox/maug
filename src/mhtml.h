@@ -75,13 +75,14 @@
    mcss_parser_unlock( &((parser)->styler) );
 
 #define MHTML_TAG_TABLE( f ) \
-   f( 0, NONE, void* none; ) \
-   f( 1, BODY, void* none; ) \
-   f( 2, DIV, void* none; ) \
-   f( 3, HEAD, void* none; ) \
-   f( 4, HTML, void* none; ) \
-   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz; ) \
-   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz; )
+   f( 0, NONE, void* none;, BLOCK ) \
+   f( 1, BODY, void* none;, BLOCK ) \
+   f( 2, DIV, void* none;, BLOCK ) \
+   f( 3, HEAD, void* none;, BLOCK ) \
+   f( 4, HTML, void* none;, BLOCK ) \
+   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
+   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
+   f( 7, SPAN, void* none;, INLINE )
 
 struct MHTML_TAG_BASE {
    uint16_t type;
@@ -91,7 +92,7 @@ struct MHTML_TAG_BASE {
    ssize_t style;
 };
 
-#define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields, disp ) \
    struct MHTML_TAG_ ## tag_name { \
       struct MHTML_TAG_BASE base; \
       fields \
@@ -99,7 +100,7 @@ struct MHTML_TAG_BASE {
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_STRUCT )
 
-#define MHTML_TAG_TABLE_UNION_FIELD( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_UNION_FIELD( tag_id, tag_name, fields, disp ) \
    struct MHTML_TAG_ ## tag_name tag_name;
 
 union MHTML_TAG {
@@ -144,12 +145,12 @@ static MAUG_CONST char* gc_mhtml_pstate_names[] = {
    ""
 };
 
-#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
    MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name = tag_id;
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
 
-#define MHTML_TAG_TABLE_NAMES( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_NAMES( tag_id, tag_name, fields, disp ) \
    #tag_name,
 
 MAUG_CONST char* gc_mhtml_tag_names[] = {
