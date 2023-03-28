@@ -11,6 +11,9 @@ struct MHTMR_RENDER_NODE {
    ssize_t y;
    size_t w;
    size_t h;
+   RETROFLAT_COLOR bg;
+   RETROFLAT_COLOR fg;
+   ssize_t tag;
    ssize_t parent;
    ssize_t first_child;
    ssize_t next_sibling;
@@ -40,7 +43,15 @@ MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    ssize_t parent_style_idx, ssize_t tag_idx, ssize_t node_idx, size_t d );
 
-void mhtmr_tree_draw( struct MHTMR_RENDER_NODE* node, size_t d );
+void mhtmr_tree_draw(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t node_idx, size_t d );
+
+void mhtmr_tree_dump(
+   struct MHTMR_RENDER_TREE* tree, struct MHTML_PARSER* parser,
+   ssize_t iter, size_t d );
+
+void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree );
 
 MERROR_RETVAL mhtmr_tree_init( struct MHTMR_RENDER_TREE* tree );
 
@@ -211,6 +222,7 @@ MERROR_RETVAL mhtmr_tree_size(
    char* tag_content = NULL;
    ssize_t node_new_idx = -1;
    ssize_t tag_iter_idx = -1;
+   ssize_t child_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( 1, "tree size d: " SIZE_T_FMT, d );
@@ -225,6 +237,20 @@ MERROR_RETVAL mhtmr_tree_size(
       &effect_style,
       mcss_style( &(parser->styler), parent_style_idx ),
       mcss_tag_style( parser, tag_idx ) );
+
+   /* Make sure we have a single root node. */
+   if( 0 > node_idx ) {
+      node_new_idx = mhtmr_add_node_child( tree, node_idx );
+      if( 0 > node_new_idx ) {
+         goto cleanup;
+      }
+      debug_printf( 1, "created initial root node: " SIZE_T_FMT, node_new_idx );
+
+      node_idx = node_new_idx;
+
+      /* The common root doesn't belong to any specific tag. */
+      mhtmr_node( tree, node_idx )->tag = -1;
+   }
 
    if( MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type ) {
       /* Get text size to use in calculations below. */
@@ -249,6 +275,8 @@ MERROR_RETVAL mhtmr_tree_size(
             goto cleanup;
          }
 
+         mhtmr_node( tree, node_new_idx )->tag = tag_iter_idx;
+
          debug_printf( 1,
             "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
             node_new_idx, node_idx );
@@ -259,29 +287,64 @@ MERROR_RETVAL mhtmr_tree_size(
 
          tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
       }
-
-      /*
-      mhtml_size_tree(
-         parser, r, parent_style, parser->tags[tag_iter].base.next_sibling, d );
-      */
-      /* TODO: Add padding, margins of children? */
-
-      /* TODO: Loop through children and add sizes. */
    }
+
+   /* width */
 
    if( 
       MCSS_PROP_FLAG_ACTIVE ==
          (MCSS_PROP_FLAG_ACTIVE & effect_style.WIDTH_flags)
    ) {
       mhtmr_node( tree, node_idx )->w = effect_style.WIDTH;
+   } else {
+      /* Cycle through children and use greatest width. */
+      child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
+      while( 0 <= child_iter_idx ) {
+         if(
+            mhtmr_node( tree, child_iter_idx )->w >
+               mhtmr_node( tree, node_idx )->w
+         ) {
+            mhtmr_node( tree, node_idx )->w =
+               mhtmr_node( tree, child_iter_idx )->w;
+         }
+         child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+      }
    }
+
+   /* height */
 
    if( 
       MCSS_PROP_FLAG_ACTIVE ==
          (MCSS_PROP_FLAG_ACTIVE & effect_style.HEIGHT_flags)
    ) {
       mhtmr_node( tree, node_idx )->h = effect_style.HEIGHT;
+   } else {
+      /* Cycle through children and add heights. */
+      child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
+      while( 0 <= child_iter_idx ) {
+         mhtmr_node( tree, node_idx )->h +=
+            mhtmr_node( tree, child_iter_idx )->h;
+
+         child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+      }
    }
+
+   /* y */
+
+   /* TODO: Add margins of children? */
+
+   child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+   if( 0 <= child_iter_idx ) {
+      child_iter_idx = mhtmr_node( tree, child_iter_idx )->first_child;
+   }
+   while( 0 <= child_iter_idx && node_idx != child_iter_idx ) {
+      mhtmr_node( tree, node_idx )->y +=
+         mhtmr_node( tree, child_iter_idx )->h;
+
+      child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+   }
+
+   /* margin-left, margin-right */
 
    if( 
       MCSS_PROP_FLAG_AUTO ==
@@ -306,57 +369,74 @@ MERROR_RETVAL mhtmr_tree_size(
       /* r->x += effect_style.MARGIN_LEFT; */
    }
 
+   /* color */
+
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.COLOR_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->fg = effect_style.COLOR;
+   }
+
+   if( 
+      MCSS_PROP_FLAG_ACTIVE ==
+         (MCSS_PROP_FLAG_ACTIVE & effect_style.BACKGROUND_COLOR_flags)
+   ) {
+      mhtmr_node( tree, node_idx )->bg = effect_style.BACKGROUND_COLOR;
+   }
+
 cleanup:
 
    return retval;
 }
 
-void mhtmr_tree_draw( struct MHTMR_RENDER_NODE* node, size_t d ) {
+void mhtmr_tree_draw(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   ssize_t node_idx, size_t d
+) {
    char* tag_content = NULL;
-   struct MCSS_STYLE effect_style;
+   union MHTML_TAG* tag = NULL;
+   struct MHTMR_RENDER_NODE* node = NULL;
+
+   node = mhtmr_node( tree, node_idx );
 
    if( NULL == node ) {
       return;
    }
 
-#if 0
-   memcpy( &r, parent_r, sizeof( struct MHTML_RENDER ) );
-   maug_mzero( &effect_style, sizeof( struct MCSS_STYLE ) );
+   if( 0 <= node->tag ) {
+      /* Perform drawing. */
+      tag = mhtml_tag( parser, node->tag );
 
-   mhtml_merge_styles( &effect_style, parent_style,
-      0 <= parser->tags[iter].base.style ?
-         &(parser->styler.styles[parser->tags[iter].base.style]) : NULL );
+      if( MHTML_TAG_TYPE_TEXT == tag->base.type ) {
+         maug_mlock( tag->TEXT.content, tag_content );
+         if( NULL == tag_content ) {
+            error_printf( "could not lock tag content!" );
+            return;
+         }
 
-   /* Perform the actual render. */
+         retroflat_string(
+            NULL, node->fg,
+            tag_content, 0, "", node->x, node->y, 0 );
 
-   if( MHTML_TAG_TYPE_TEXT == parser->tags[iter].base.type ) {
-      maug_mlock( parser->tags[iter].TEXT.content, tag_content );
-      if( NULL == tag_content ) {
-         error_printf( "could not lock tag content!" );
-         return;
-      }
+         maug_munlock( tag->TEXT.content, tag_content );
 
-      retroflat_string(
-         NULL, effect_style.COLOR,
-         tag_content, 0, "", r.x, r.y, 0 );
-
-      maug_munlock( parser->tags[iter].TEXT.content, tag_content );
-
-   } else {
-
-      if( 0 <= parser->tags[iter].base.first_child ) {
-         /* Fit child elements inside this one. */
-         mhtml_size_tree(
-            parser, &r, &effect_style,
-            parser->tags[iter].base.first_child, d + 1 );
-      }
-
-      if( RETROFLAT_COLOR_NULL != effect_style.BACKGROUND_COLOR ) {
-         retroflat_rect(
-            NULL, effect_style.BACKGROUND_COLOR, r.x, r.y, r.w, r.h,
-            RETROFLAT_FLAGS_FILL );
+      } else {
+         if( RETROFLAT_COLOR_NULL != node->bg ) {
+            retroflat_rect(
+               NULL, node->bg, node->x, node->y, node->w, node->h,
+               RETROFLAT_FLAGS_FILL );
+         }
       }
    }
+
+   mhtmr_tree_draw( parser, tree, node->first_child, d + 1 );
+
+   mhtmr_tree_draw( parser, tree, node->next_sibling, d );
+
+#if 0
+   /* Perform the actual render. */
+
 
    memcpy( &r, parent_r, sizeof( struct MHTML_RENDER ) );
 
@@ -364,16 +444,38 @@ void mhtmr_tree_draw( struct MHTMR_RENDER_NODE* node, size_t d ) {
    r.y += effect_style.PADDING_TOP;
    r.x += effect_style.PADDING_LEFT;
 
-   mhtml_render_tree(
-      parser, &r, &effect_style, parser->tags[iter].base.first_child, d + 1 );
+   #endif
+}
 
-   /* TODO: Determine if block or inline. */
-   memcpy( &r, parent_r, sizeof( struct MHTML_RENDER ) );
-   r.y += effect_style.HEIGHT;
+void mhtmr_tree_dump(
+   struct MHTMR_RENDER_TREE* tree, struct MHTML_PARSER* parser,
+   ssize_t iter, size_t d
+) {
+   size_t i = 0;
 
-   mhtml_render_tree(
-      parser, &r, parent_style, parser->tags[iter].base.next_sibling, d );
-#endif
+   if( 0 > iter ) {
+      return;
+   }
+
+   for( i = 0 ; d > i ; i++ ) {
+      printf( "   " );
+   }
+
+   printf(
+      SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
+      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ")",
+      iter,
+      0 <= tree->nodes[iter].tag ?
+         gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type] : 
+            "ROOT",
+      tree->nodes[iter].x, tree->nodes[iter].y,
+      tree->nodes[iter].w, tree->nodes[iter].h );
+
+   printf( "\n" );
+
+   mhtmr_tree_dump( tree, parser, tree->nodes[iter].first_child, d + 1 );
+
+   mhtmr_tree_dump( tree, parser, tree->nodes[iter].next_sibling, d );
 }
 
 void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
