@@ -23,12 +23,12 @@ void retrosoft_ellipse(
    int x, int y, int w, int h, uint8_t flags );
 
 void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags );
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
 
 void retrosoft_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags );
 
 #ifdef RETROSFT_C
@@ -264,8 +264,8 @@ cleanup:
 /* === */
 
 void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
 ) {
    /* TODO: Put a little more effort into sizing. */
    *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
@@ -276,7 +276,7 @@ void retrosoft_string_sz(
 
 void retrosoft_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags
 ) {
    size_t i = 0,

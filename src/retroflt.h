@@ -1761,8 +1761,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
  * \param h_out Pointer to an int in which to store the string height in pixels.
  */
 void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags );
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
 
 /**
  * \brief Draw a text string at the specified location in the specified font
@@ -4732,8 +4732,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_SOFT_SHAPES )
