@@ -71,11 +71,24 @@
    f( 6, MARGIN_RIGHT, ssize_t, mcss_style_size_t, 0 ) \
    f( 7, MARGIN_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
    f( 8, PADDING_LEFT, ssize_t, mcss_style_size_t, 0 ) \
-   f( 9, PADDING_TOP, ssize_t, mcss_style_size_t, 0 )
+   f( 9, PADDING_TOP, ssize_t, mcss_style_size_t, 0 ) \
+   f( 10, DISPLAY, uint8_t, mcss_style_display, 0 ) \
+   f( 11, POSITION, uint8_t, mcss_style_position, 0 ) \
+   f( 12, X, ssize_t, mcss_style_size_t, 0 ) \
+   f( 13, Y, ssize_t, mcss_style_size_t, 0 )
 
 #define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, def ) \
    prop_t prop_n; \
    uint8_t prop_n ## _flags;
+
+#define MCSS_POSITION_TABLE( f ) \
+   f( 0, RELATIVE ) \
+   f( 1, ABSOLUTE )
+
+#define MCSS_DISPLAY_TABLE( f ) \
+   f( 0, INLINE ) \
+   f( 1, BLOCK ) \
+   f( 2, TABLE )
 
 struct MCSS_STYLE {
    char id[MCSS_ID_SZ_MAX];
@@ -106,6 +119,32 @@ void mcss_parser_free( struct MCSS_PARSER* parser );
 MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser );
 
 #ifdef MCSS_C
+
+#define MCSS_POSITION_TABLE_CONSTS( pos_id, pos_name ) \
+   MAUG_CONST uint16_t MCSS_POSITION_ ## pos_name = pos_id;
+
+MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_CONSTS )
+
+#define MCSS_POSITION_TABLE_NAMES( pos_id, pos_name ) \
+   #pos_name,
+
+MAUG_CONST char* gc_mcss_position_names[] = {
+   MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_NAMES )
+   ""
+};
+
+#define MCSS_DISPLAY_TABLE_CONSTS( dis_id, dis_name ) \
+   MAUG_CONST uint16_t MCSS_DISPLAY_ ## dis_name = dis_id;
+
+MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_CONSTS )
+
+#define MCSS_DISPLAY_TABLE_NAMES( dis_id, dis_name ) \
+   #dis_name,
+
+MAUG_CONST char* gc_mcss_display_names[] = {
+   MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_NAMES )
+   ""
+};
 
 #define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, def ) \
    MAUG_CONST uint16_t MCSS_PROP_ ## prop_n = prop_id;
@@ -166,6 +205,70 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL mcss_style_position(
+   struct MCSS_PARSER* parser, const char* prop_name,
+   uint8_t* position_out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   mparser_token_upper( parser, i );
+   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+
+   i = 0;
+   while( '\0' != gc_mcss_position_names[i][0] ) {
+      if(
+         /* Don't use sz check here because we might've shrunk token with
+          * ! check above. */
+         0 == strncmp(
+            gc_mcss_position_names[i], parser->token, parser->token_sz )
+      ) {
+         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_position_names[i] );
+         *position_out = i;
+         goto cleanup;
+      }
+      i++;
+   }
+
+   error_printf( "invalid %s: %s", prop_name, parser->token );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mcss_style_display(
+   struct MCSS_PARSER* parser, const char* prop_name,
+   uint8_t* display_out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   mparser_token_upper( parser, i );
+   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+
+   i = 0;
+   while( '\0' != gc_mcss_display_names[i][0] ) {
+      if(
+         /* Don't use sz check here because we might've shrunk token with
+          * ! check above. */
+         0 == strncmp(
+            gc_mcss_display_names[i], parser->token, parser->token_sz )
+      ) {
+         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_display_names[i] );
+         *display_out = i;
+         goto cleanup;
+      }
+      i++;
+   }
+
+   error_printf( "invalid %s: %s", prop_name, parser->token );
+
+cleanup:
+
+   return retval;
+}
+
 MERROR_RETVAL mcss_style_color(
    struct MCSS_PARSER* parser, const char* prop_name,
    RETROFLAT_COLOR* color_out
@@ -176,6 +279,7 @@ MERROR_RETVAL mcss_style_color(
    mparser_token_upper( parser, i );
    mparser_token_replace( parser, i, '!', '\0' ); /* !important */
 
+   i = 0;
    while( '\0' != gc_mcss_color_names[i][0] ) {
       if(
          /* Don't use sz check here because we might've shrunk token with
