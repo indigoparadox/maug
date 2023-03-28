@@ -188,9 +188,9 @@ cleanup:
 
 RETROGUI_IDC retrogui_poll_ctls( 
    int input, struct RETROFLAT_INPUT* input_evt,
-   struct RETROGUI_CTL* ctls, int ctls_sz
+   struct RETROGUI_CTL* ctls, size_t ctls_sz
 ) {
-   int i = 0;
+   size_t i = 0;
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -202,7 +202,7 @@ RETROGUI_IDC retrogui_poll_ctls(
    }
 #  else
    /* Use our cross-platform controls. */
-   int j = 0,
+   size_t j = 0,
       w = 0,
       h = 0;
 
@@ -227,7 +227,7 @@ RETROGUI_IDC retrogui_poll_ctls(
             /* Figure out the item clicked. */
             for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
                retroflat_string_sz(
-                  NULL, ctls[i].text_list[j], -1, NULL, &w, &h, 0 );
+                  NULL, ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
                if(
                   input_evt->mouse_y < 
                   ctls[i].y + ((j + 1) * (h + RETROGUI_PADDING))
@@ -248,12 +248,12 @@ RETROGUI_IDC retrogui_poll_ctls(
    return RETROGUI_IDC_NONE;
 }
 
-void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, int ctls_sz ) {
+void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, size_t ctls_sz ) {
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    /* TODO: InvalidateRect()? */
 #  else
-   int i = 0,
+   size_t i = 0,
       j = 0,
       w = 0,
       h = 0;
@@ -264,7 +264,7 @@ void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, int ctls_sz ) {
 
       for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
          retroflat_string_sz(
-            NULL, ctls[i].text_list[j], -1, NULL, &w, &h, 0 );
+            NULL, ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
          if( j == ctls[i].sel_idx ) {
             /* TODO: Configurable selection colors. */
             retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,

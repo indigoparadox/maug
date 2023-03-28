@@ -29,11 +29,15 @@
    f( MHTML_PSTATE_END_ELEMENT, 4 ) \
    f( MHTML_PSTATE_STRING, 5 )
 
-#define mhtml_tag( parser, idx ) (&(parser->tags[idx]))
+#define mhtml_tag( parser, idx ) (&((parser)->tags[idx]))
 
 #define mhtml_tag_parent( parser, idx ) \
    (0 <= (parser)->tags[idx].parent ? \
       (&((parser)->tags[(parser)->tags[idx].parent]])) : NULL)
+
+#define mhtml_tag_child( parser, idx ) \
+   (0 <= (parser)->tags[idx].first_child ? \
+      (&((parser)->tags[(parser)->tags[idx].first_child]])) : NULL)
 
 #define mhtml_tag_sibling( parser, idx ) \
    (0 <= (parser)->tags[idx].next_sibling ? \
