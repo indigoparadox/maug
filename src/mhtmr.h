@@ -23,7 +23,7 @@ struct MHTMR_RENDER_TREE {
    size_t nodes_sz_max;
 };
 
-#define mhtmr_node( tree, idx ) (&((tree)->nodes[idx]))
+#define mhtmr_node( tree, idx ) (0 <= idx ? &((tree)->nodes[idx]) : NULL)
 
 #define mhtmr_tree_lock( tree ) \
    if( NULL == (tree)->nodes ) { \
@@ -173,23 +173,27 @@ ssize_t mhtmr_add_node_child(
    mhtmr_node( tree, node_new_idx )->next_sibling = -1;
 
    if( 0 > node_parent_idx ) {
-      debug_printf( 1, "added root node under " SSIZE_T_FMT, node_parent_idx );
+      debug_printf(
+         1, "adding root node under " SSIZE_T_FMT "...", node_parent_idx );
       goto cleanup;
    } else {
-      debug_printf( 1, "added node under " SSIZE_T_FMT, node_parent_idx );
+      debug_printf(
+         1, "adding node " SSIZE_T_FMT " under " SSIZE_T_FMT,
+         node_new_idx, node_parent_idx );
    }
 
    /* Add new child under current node. */
    if( 0 > mhtmr_node( tree, node_parent_idx )->first_child ) {
+      debug_printf( 1, "adding first child..." );
+      assert( -1 == mhtmr_node( tree, node_parent_idx )->first_child );
       mhtmr_node( tree, node_parent_idx )->first_child = node_new_idx;
    } else {
-      node_sibling_idx = mhtmr_node( tree, 
-         mhtmr_node( tree, node_parent_idx )->first_child );
-      debug_printf( 1, "sib: " SSIZE_T_FMT, node_sibling_idx );
+      assert( NULL != mhtmr_node( tree, node_parent_idx ) );
+      node_sibling_idx = mhtmr_node( tree, node_parent_idx )->first_child;
+      assert( NULL != mhtmr_node( tree, node_sibling_idx ) );
       while( 0 <= mhtmr_node( tree, node_sibling_idx )->next_sibling ) {
-         node_sibling_idx = mhtmr_node( tree, 
-            mhtmr_node( tree, node_sibling_idx )->next_sibling );
-         debug_printf( 1, "sib: " SSIZE_T_FMT, node_sibling_idx );
+         node_sibling_idx = 
+            mhtmr_node( tree, node_sibling_idx )->next_sibling;
       }
       mhtmr_node( tree, node_sibling_idx )->next_sibling = node_new_idx;
    }
@@ -252,6 +256,8 @@ MERROR_RETVAL mhtmr_tree_size(
          mhtmr_tree_size(
             parser, tree, mhtml_tag( parser, tag_idx )->base.style,
             tag_iter_idx, node_new_idx, d + 1 );
+
+         tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
       }
 
       /*
