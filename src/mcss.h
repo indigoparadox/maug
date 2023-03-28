@@ -101,7 +101,9 @@ struct MCSS_PARSER {
 
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c );
 
-MERROR_RETVAL mcss_init_parser( struct MCSS_PARSER* parser );
+void mcss_parser_free( struct MCSS_PARSER* parser );
+
+MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser );
 
 #ifdef MCSS_C
 
@@ -327,7 +329,7 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mcss_init_style( struct MCSS_STYLE* style ) {
+MERROR_RETVAL mcss_style_init( struct MCSS_STYLE* style ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    maug_mzero( style, sizeof( struct MCSS_STYLE ) );
@@ -340,7 +342,18 @@ MERROR_RETVAL mcss_init_style( struct MCSS_STYLE* style ) {
    return retval;
 }
 
-MERROR_RETVAL mcss_init_parser( struct MCSS_PARSER* parser ) {
+void mcss_parser_free( struct MCSS_PARSER* parser ) {
+
+   debug_printf( 1, "freeing style parser..." );
+
+   mcss_parser_unlock( parser );
+
+   if( NULL != parser->styles_h ) {
+      maug_mfree( parser->styles_h );
+   }
+}
+
+MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( 0 == parser->styles_sz );

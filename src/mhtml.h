@@ -122,11 +122,13 @@ struct MHTML_PARSER {
    struct MCSS_PARSER styler;
 };
 
-MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser );
+MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser );
 
 MERROR_RETVAL mhtml_pop_tag( struct MHTML_PARSER* parser );
 
 MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c );
+
+MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser );
 
 void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d );
 
@@ -220,11 +222,11 @@ cleanup:
    return retidx;
 }
 
-MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "freeing parser..." );
+   debug_printf( 1, "freeing HTML parser..." );
 
    mhtml_parser_lock( parser );
 
@@ -238,6 +240,8 @@ MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
    }
 
 cleanup:
+
+   mcss_parser_free( &(parser->styler) );
 
    if( NULL != parser->tags ) {
       maug_munlock( parser->tags_h, parser->tags );
@@ -433,7 +437,7 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
       /* TODO: Have the styler manage selected style on its own. */
       parser->styler.styles_sz++;
-      retval = mcss_init_style(
+      retval = mcss_style_init(
          &(parser->styler.styles[parser->styler.styles_sz - 1]) );
       maug_cleanup_if_not_ok();
       /* TODO: Allocate more styles if needed. */
@@ -582,7 +586,7 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( 0 == parser->tags_sz );
@@ -603,7 +607,7 @@ MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
 
    parser->tag_iter = -1;
 
-   retval = mcss_init_parser( &(parser->styler) );
+   retval = mcss_parser_init( &(parser->styler) );
    maug_cleanup_if_not_ok();
 
 cleanup:
