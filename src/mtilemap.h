@@ -132,8 +132,6 @@ struct MTILEMAP_PARSER {
    uint8_t mstate;
    uint8_t mstate_prev;
    size_t i;
-   char* buffer;
-   size_t buffer_sz;
    char token[MTILEMAP_TOKEN_SZ_MAX];
    size_t token_sz;
    size_t tileset_id_cur;
@@ -765,53 +763,39 @@ cleanup:
 
 MERROR_RETVAL
 mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
-   FILE* tilemap_file = NULL;
-   size_t tilemap_file_sz = 0;
    MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct MTILEMAP_PARSER* parser = NULL;
    char filename_path[RETROFLAT_PATH_MAX];
 
-   parser = calloc( sizeof( struct MTILEMAP_PARSER ), 1 );
-   assert( NULL != parser );
+   /* Initialize parser. */
+   parser_h = maug_malloc( 1, sizeof( struct MTILEMAP_PARSER ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser_h );
+
+   maug_mlock( parser_h, parser );
+   maug_cleanup_if_null_alloc( struct MTILEMAP_PARSER*, parser );
+   maug_mzero( parser, sizeof( struct MTILEMAP_PARSER ) );
+
    parser->t = t;
    parser->tj_parse_cb = mtilemap_parse_json_file;
 
+   /* Setup filename path. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
 
-   /* Open and get the file buffer size. */
-   debug_printf(
-      MTILEMAP_TRACE_LVL, "opening tilemap file %s...", filename_path );
-   tilemap_file = fopen( filename_path, "r" );
-   assert( NULL != tilemap_file );
-   fseek( tilemap_file, 0, SEEK_END );
-   tilemap_file_sz = ftell( tilemap_file );
-   fseek( tilemap_file, 0, SEEK_SET );
-
-   /* Load the file buffer into the parser. */
-   parser->buffer = calloc( tilemap_file_sz, 1 );
-   assert( NULL != parser->buffer );
-   parser->buffer_sz =
-      fread( parser->buffer, 1, tilemap_file_sz, tilemap_file );
-   assert( parser->buffer_sz == tilemap_file_sz );
-   fclose( tilemap_file );
-
-   for( parser->i = 0 ; parser->buffer_sz > parser->i ; parser->i++ ) {
-      retval = mtilemap_parse_json_c( parser, parser->buffer[parser->i] );
-      /* TODO: Enlarge token buffer if OVERFLOW received? */
-      /* TODO: Don't load entire file into RAM at once! */
-      maug_cleanup_if_not_ok();
-   }
+   retval = mparser_file(
+      filename_path, parser, (mparser_cb)mtilemap_parse_json_c );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 
-   if( NULL != parser->buffer ) {
-      free( parser->buffer );
+   if( NULL != parser ) {
+      maug_munlock( parser_h, parser );
    }
 
-   if( NULL != parser ) {
-      free( parser );
+   if( NULL != parser_h ) {
+      maug_mfree( parser_h );
    }
 
    return retval;
