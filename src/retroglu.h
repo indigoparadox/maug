@@ -182,8 +182,7 @@ struct RETROGLU_SPRITE {
    float scale_y;
    int rotate_y;
    RETROGLU_COLOR color;
-   struct RETROFLAT_BITMAP textures[RETROGLU_SPRITE_TEX_FRAMES_SZ];
-   size_t texture_cur;
+   struct RETROFLAT_BITMAP texture;
 };
 
 struct RETROGLU_TILE {
@@ -207,9 +206,9 @@ struct RETROGLU_PROJ_ARGS {
 };
 
 #define retroglu_tex_px_x_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->textures[sprite->texture_cur].w)
+   ((px) * 1.0 / sprite->texture.w)
 #define retroglu_tex_px_y_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->textures[sprite->texture_cur].h)
+   ((px) * 1.0 / sprite->texture.h)
 
 #define retroglu_scr_px_x_to_f( px ) \
    (float)(((px) * 1.0 / (retroflat_screen_w() / 2)) - 1.0)
@@ -932,7 +931,6 @@ void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
    glEnd();
 }
 
-#if 0
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
    uint32_t px, uint32_t py, uint32_t pw, uint32_t ph, uint8_t flags
@@ -1010,7 +1008,6 @@ void retroglu_set_tile_clip(
    tile->vertices[5][RETROGLU_SPRITE_X] = -1;
    tile->vertices[5][RETROGLU_SPRITE_Y] = -1;
 }
-#endif
 
 void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
@@ -1170,17 +1167,14 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glColor3fv( sprite->color );
    
 #ifndef RETROGLU_NO_TEXTURES
-   glBindTexture( GL_TEXTURE_2D, sprite->textures[sprite->texture_cur].tex.id );
+   glBindTexture( GL_TEXTURE_2D, sprite->texture.tex.id );
 #else
-   maug_mlock(
-      sprite->textures[sprite->texture_cur].tex.bytes_h,
-      sprite->textures[sprite->texture_cur].tex.bytes );
-   maug_cleanup_if_null_alloc( uint8_t*,
-      sprite->textures[sprite->texture_cur].tex.bytes );
+   maug_mlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, sprite->texture.tex.bytes );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
       RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
       GL_RGBA, GL_UNSIGNED_BYTE,
-      sprite->textures[sprite->texture_cur].tex.bytes ); 
+      sprite->texture.tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 #ifndef MAUG_OS_NDS
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -1206,16 +1200,21 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    glBindTexture( GL_TEXTURE_2D, 0 );
 #else
 cleanup:
-   if( NULL != sprite->textures[sprite->texture_cur].tex.bytes ) {
-      maug_munlock(
-         sprite->textures[sprite->texture_cur].tex.bytes_h,
-         sprite->textures[sprite->texture_cur].tex.bytes );
+   if( NULL != sprite->texture.tex.bytes ) {
+      maug_munlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
    }
 #endif /* !RETROGLU_NO_TEXTURES */
 }
 
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
    /* TODO */
+   if( NULL != sprite->texture.tex.bytes_h ) {
+      if( NULL != sprite->texture.tex.bytes ) {
+         maug_munlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
+      }
+      
+      maug_mfree( sprite->texture.tex.bytes_h );
+   }
 }
 
 /* === */
