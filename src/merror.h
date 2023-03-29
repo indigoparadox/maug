@@ -32,15 +32,21 @@ typedef int MERROR_RETVAL;
 
 /*! \} */ /* maug_error_retvals */
 
-#define maug_cleanup_if_null( type, ptr, err ) \
+#define maug_cleanup_if_null_msg( type, ptr, err, msg ) \
    if( (type)NULL == ptr ) { \
-      error_printf( "failed to allocate " #ptr "!" ); \
+      error_printf( msg ); \
       retval = err; \
       goto cleanup; \
    }
 
+#define maug_cleanup_if_null( type, ptr, err ) \
+   maug_cleanup_if_null_msg( type, ptr, err, "failed to allocate " #ptr "!" )
+
 #define maug_cleanup_if_null_alloc( type, ptr ) \
-   maug_cleanup_if_null( type, ptr, MERROR_ALLOC )
+   maug_cleanup_if_null_msg( type, ptr, MERROR_ALLOC, "failed to allocate " #ptr "!" )
+
+#define maug_cleanup_if_null_file( type ) \
+   maug_cleanup_if_null_msg( type, FILE*, MERROR_FILE, "failed to open FILE!" )
 
 #define maug_cleanup_if_not_ok() \
    if( MERROR_OK != retval ) { \
