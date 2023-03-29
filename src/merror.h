@@ -45,8 +45,8 @@ typedef int MERROR_RETVAL;
 #define maug_cleanup_if_null_alloc( type, ptr ) \
    maug_cleanup_if_null_msg( type, ptr, MERROR_ALLOC, "failed to allocate " #ptr "!" )
 
-#define maug_cleanup_if_null_file( type ) \
-   maug_cleanup_if_null_msg( type, FILE*, MERROR_FILE, "failed to open FILE!" )
+#define maug_cleanup_if_null_file( ptr ) \
+   maug_cleanup_if_null_msg( FILE*, ptr, MERROR_FILE, "failed to open FILE!" )
 
 #define maug_cleanup_if_not_ok() \
    if( MERROR_OK != retval ) { \
