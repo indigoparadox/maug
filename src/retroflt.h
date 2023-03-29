@@ -3386,7 +3386,17 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   if(
+      NULL != bmp &&
+      &g_retroflat_state->buffer != bmp &&
+      (MAUG_MHANDLE)NULL != bmp->tex.bytes_h
+   ) {
+      maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3483,10 +3493,6 @@ cleanup:
 
 cleanup:
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "draw lock not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3500,12 +3506,23 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  ifdef RETROFLAT_OPENGL
-   if( NULL == bmp ) {
+   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
+      /* Flush GL buffer and swap screen buffers. */
       glFlush();
-   }
-#  endif /* RETROFLAT_OPENGL */
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#     if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+      SwapBuffers( g_retroflat_state->hdc_win );
+#     elif defined( RETROFLAT_API_GLUT )
+      glutSwapBuffers();
+#     endif
+   } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes_h ) {
+      /* Unlock texture bitmap. */
+      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3547,11 +3564,7 @@ cleanup:
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
-#     ifdef RETROFLAT_OPENGL
-         SDL_GL_SwapBuffers();
-#     else
          SDL_Flip( bmp->surface );
-#     endif /* RETROFLAT_OPENGL */
       }
 
    } else {
@@ -3599,11 +3612,6 @@ cleanup:
    if( NULL == bmp  ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_retroflat_state->window ) {
-#     ifdef RETROFLAT_OPENGL
-         SwapBuffers( g_retroflat_state->hdc_win );
-#     else
-         InvalidateRect( g_retroflat_state->window, 0, TRUE );
-#     endif /* RETROFLAT_OPENGL */
       }
       goto cleanup;
    }
@@ -3625,15 +3633,6 @@ cleanup:
    }
 
 cleanup:
-
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* == GLUT == */
-
-   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
-      /* Special case: Attempting to release the screen. */
-      glutSwapBuffers();
-   }
 
 #  else
 #     warning "draw release not implemented"
