@@ -136,8 +136,6 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d );
 
 #ifdef MHTML_C
 
-#endif /* MHTML_C */
-
 MHTML_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
 static MAUG_CONST char* gc_mhtml_pstate_names[] = {
@@ -662,6 +660,8 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
 
    mhtml_dump_tree( parser, parser->tags[iter].base.next_sibling, d );
 }
+
+#endif /* MHTML_C */
 
 #endif /* !MHTML_H */
 
