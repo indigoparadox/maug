@@ -26,6 +26,10 @@
 #  define RETROGLU_TRACE_LVL 0
 #endif /* !RETROGLU_TRACE_LVL */
 
+#ifndef RETROGLU_SPRITE_TEX_FRAMES_SZ
+#  define RETROGLU_SPRITE_TEX_FRAMES_SZ 10
+#endif /* !RETROGLU_SPRITE_TEX_FRAMES_SZ */
+
 #define RETROGLU_FLAGS_INIT_VERTICES 0x01
 
 #ifdef MAUG_OS_NDS
@@ -172,24 +176,21 @@ struct RETROGLU_SPRITE {
    float vtexture_front[6][2];
    float vertices_back[6][2];
    float vtexture_back[6][2];
-   uint32_t texture_id;
-   int texture_w;
-   int texture_h;
    float translate_x;
    float translate_y;
    float scale_x;
    float scale_y;
    int rotate_y;
    RETROGLU_COLOR color;
+   struct RETROFLAT_BITMAP textures[RETROGLU_SPRITE_TEX_FRAMES_SZ];
+   size_t texture_cur;
 };
 
 struct RETROGLU_TILE {
    float vertices[6][2];
    float vtexture[6][2];
-   uint32_t texture_id;
-   int texture_w;
-   int texture_h;
    int rotate_x;
+   struct RETROFLAT_BITMAP texture;
 };
 
 
@@ -205,8 +206,10 @@ struct RETROGLU_PROJ_ARGS {
    float far_plane;
 };
 
-#define retroglu_tex_px_x_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_w)
-#define retroglu_tex_px_y_to_f( px, sprite ) ((px) * 1.0 / sprite->texture_h)
+#define retroglu_tex_px_x_to_f( px, sprite ) \
+   ((px) * 1.0 / sprite->textures[sprite->texture_cur].w)
+#define retroglu_tex_px_y_to_f( px, sprite ) \
+   ((px) * 1.0 / sprite->textures[sprite->texture_cur].h)
 
 #define retroglu_scr_px_x_to_f( px ) \
    (float)(((px) * 1.0 / (retroflat_screen_w() / 2)) - 1.0)
@@ -333,6 +336,8 @@ void retroglu_set_sprite_pos(
 void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite );
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite );
+
+void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite );
 
 MERROR_RETVAL retroglu_init_glyph_tex();
 
@@ -883,127 +888,6 @@ MERROR_RETVAL retroglu_parse_obj_file(
    return retval;
 }
 
-MERROR_RETVAL retroglu_load_tex_bmp(
-   const char* filename, uint32_t* p_texture_id,
-   uint32_t* p_bmp_w, uint32_t* p_bmp_h
-) {
-   uint8_t* bmp_buf = NULL;
-   uint32_t bmp_buf_sz = 0;
-   uint32_t bmp_read = 0;
-   FILE* bmp_file;
-   MERROR_RETVAL retval = MERROR_OK;
-   char filename_path[RETROFLAT_PATH_MAX + 1];
-
-   /* Build the path to the bitmap. */
-   memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
-   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
-      g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
-      filename, RETROFLAT_BITMAP_EXT );
-
-   /* Open the file and allocate the buffer. */
-   debug_printf( RETROGLU_TRACE_LVL, "opening %s...", filename_path );
-   bmp_file = fopen( filename_path, "rb" );
-   assert( NULL != bmp_file );
-   fseek( bmp_file, 0, SEEK_END );
-   bmp_buf_sz = ftell( bmp_file );
-   fseek( bmp_file, 0, SEEK_SET );
-   debug_printf( RETROGLU_TRACE_LVL, "opened %s, " UPRINTF_U32 " bytes",
-      filename_path, bmp_buf_sz );
-   assert( NULL == bmp_buf );
-   bmp_buf = calloc( 1, bmp_buf_sz );
-   assert( NULL != bmp_buf );
-   bmp_read = fread( bmp_buf, 1, bmp_buf_sz, bmp_file );
-   assert( bmp_read == bmp_buf_sz );
-   fclose( bmp_file );
-
-   retval = retroglu_load_tex_bmp_data(
-      bmp_buf, bmp_buf_sz, p_texture_id, p_bmp_w, p_bmp_h );
-
-   if( NULL != bmp_buf ) {
-      free( bmp_buf );
-   }
-
-   return retval;
-}
-
-MERROR_RETVAL retroglu_load_tex_bmp_data(
-   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
-   uint32_t* p_bmp_w, uint32_t* p_bmp_h
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   /* TODO: Fix for NDS! */
-
-   uint32_t bmp_offset = 0;
-   uint32_t bmp_bpp = 0;
-   uint32_t bmp_px_sz = 0;
-   uint8_t* bmp_px = NULL;
-   int16_t i = 0;
-
-   /* Offsets hardcoded based on windows bitmap. */
-   /* TODO: More flexibility. */
-
-   if( 40 != bmp_read_uint32( &(bmp_buf[0x0e]) ) ) {
-      error_printf( "unable to determine texture bitmap format: %d",
-         bmp_buf[0x0e] );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-
-   bmp_offset = bmp_read_uint32( &(bmp_buf[0x0a]) );
-   bmp_px_sz = bmp_buf_sz - bmp_offset;
-   *p_bmp_w = bmp_read_uint32( &(bmp_buf[0x12]) );
-   *p_bmp_h = bmp_read_uint32( &(bmp_buf[0x16]) );
-   bmp_bpp = bmp_read_uint32( &(bmp_buf[0x1c]) );
-   if( 24 != bmp_bpp ) {
-      error_printf( "invalid texture bitmap depth: %d", bmp_bpp );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-
-   debug_printf( RETROGLU_TRACE_LVL,
-      "bitmap " UPRINTF_U32 " x " UPRINTF_U32 " x " UPRINTF_U32
-      " starting at " UPRINTF_U32 " bytes",
-      *p_bmp_w, *p_bmp_h, bmp_bpp, bmp_offset );
-
-   /* Allocate temporary buffer for unpacking. */
-   bmp_px = calloc( *p_bmp_w * *p_bmp_h, 4 );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
-
-   /* Unpack bitmap BGR into BGRA with color key. */
-   for( i = 0 ; bmp_px_sz / 3 > i ; i++ ) {
-      bmp_px[i * 4] = bmp_buf[bmp_offset + (i * 3) + 2];
-      bmp_px[(i * 4) + 1] = bmp_buf[bmp_offset + (i * 3) + 1];
-      bmp_px[(i * 4) + 2] = bmp_buf[bmp_offset + (i * 3)];
-      if(
-         RETROFLAT_TXP_R == bmp_buf[bmp_offset + (i * 3) + 2] &&
-         RETROFLAT_TXP_G == bmp_buf[bmp_offset + (i * 3) + 1] &&
-         RETROFLAT_TXP_B == bmp_buf[bmp_offset + (i * 3)]
-      ) {
-         /* Transparent pixel found. */
-         bmp_px[(i * 4) + 3] = 0x00;
-      } else {
-         bmp_px[(i * 4) + 3] = 0xff;
-      }
-   }
-
-#ifndef RETROGLU_NO_TEXTURES
-   glGenTextures( 1, (GLuint*)p_texture_id );
-   glBindTexture( GL_TEXTURE_2D, *p_texture_id );
-#endif /* !RETROGLU_NO_TEXTURES */
-   /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, *p_bmp_w, *p_bmp_h, 0,
-      GL_RGBA, GL_UNSIGNED_BYTE, bmp_px ); 
-
-cleanup:
-
-   if( NULL != bmp_px ) {
-      free( bmp_px );
-   }
-
-   return retval;
-}
-
 void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
    int i = 0;
    int j = 0;
@@ -1048,6 +932,7 @@ void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
    glEnd();
 }
 
+#if 0
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
    uint32_t px, uint32_t py, uint32_t pw, uint32_t ph, uint8_t flags
@@ -1125,6 +1010,7 @@ void retroglu_set_tile_clip(
    tile->vertices[5][RETROGLU_SPRITE_X] = -1;
    tile->vertices[5][RETROGLU_SPRITE_Y] = -1;
 }
+#endif
 
 void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
@@ -1277,11 +1163,24 @@ void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
+#ifdef RETROGLU_NO_TEXTURES
+   MERROR_RETVAL retval = MERROR_OK;
+#endif /* RETROGLU_NO_TEXTURES */
 
    glColor3fv( sprite->color );
    
 #ifndef RETROGLU_NO_TEXTURES
-   glBindTexture( GL_TEXTURE_2D, sprite->texture_id );
+   glBindTexture( GL_TEXTURE_2D, sprite->textures[sprite->texture_cur].tex.id );
+#else
+   maug_mlock(
+      sprite->textures[sprite->texture_cur].tex.bytes_h,
+      sprite->textures[sprite->texture_cur].tex.bytes );
+   maug_cleanup_if_null_alloc( uint8_t*,
+      sprite->textures[sprite->texture_cur].tex.bytes );
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
+      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE,
+      sprite->textures[sprite->texture_cur].tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 #ifndef MAUG_OS_NDS
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -1305,7 +1204,18 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
 
 #ifndef RETROGLU_NO_TEXTURES
    glBindTexture( GL_TEXTURE_2D, 0 );
+#else
+cleanup:
+   if( NULL != sprite->textures[sprite->texture_cur].tex.bytes ) {
+      maug_munlock(
+         sprite->textures[sprite->texture_cur].tex.bytes_h,
+         sprite->textures[sprite->texture_cur].tex.bytes );
+   }
 #endif /* !RETROGLU_NO_TEXTURES */
+}
+
+void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
+   /* TODO */
 }
 
 /* === */
