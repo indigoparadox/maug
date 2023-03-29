@@ -1207,7 +1207,6 @@ cleanup:
 }
 
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
-   /* TODO */
    if( NULL != sprite->texture.tex.bytes_h ) {
       if( NULL != sprite->texture.tex.bytes ) {
          maug_munlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
