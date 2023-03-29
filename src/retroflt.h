@@ -3620,6 +3620,7 @@ cleanup:
    if( NULL == bmp  ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_retroflat_state->window ) {
+         InvalidateRect( g_retroflat_state->window, 0, TRUE );
       }
       goto cleanup;
    }
