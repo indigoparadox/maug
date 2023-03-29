@@ -14,6 +14,10 @@ void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
+void retrosoft_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int x, int y, int w, int h, uint8_t flags );
+
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
@@ -220,6 +224,23 @@ cleanup:
 
 /* === */
 
+void retrosoft_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int x, int y, int w, int h, uint8_t flags
+) {
+   /* TODO: Filed rectangle. */
+
+   retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
+
+   retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+
+   retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
+
+   retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
+}
+
+/* === */
+
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
@@ -234,6 +255,8 @@ void retrosoft_ellipse(
       px_y2 = 0;
 
    /* TODO: Switch to Bresenham algorithm. */
+
+   /* TODO: Filled ellipse. */
 
    retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
