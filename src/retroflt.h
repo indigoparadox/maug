@@ -667,6 +667,15 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_input */
 
+#ifdef RETROFLAT_OPENGL
+struct RETROFLAT_GLTEX {
+   uint8_t* bytes;
+   uint32_t bpp;
+   uint32_t px_sz;
+   uint8_t* px;
+};
+#endif /* RETROFLAT_OPENGL */
+
 /* === Platform-Specific Includes and Defines === */
 
 #if defined( RETROFLAT_API_ALLEGRO )
@@ -791,10 +800,13 @@ typedef FILE* RETROFLAT_CONFIG;
 struct RETROFLAT_BITMAP {
    uint8_t flags;
    SDL_Surface* surface;
-#ifndef RETROFLAT_API_SDL1
+#     ifndef RETROFLAT_API_SDL1
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#endif /* !RETROFLAT_API_SDL1 */
+#     endif /* !RETROFLAT_API_SDL1 */
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 #  define RETROFLAT_KEY_UP	SDLK_UP
@@ -957,6 +969,9 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
    uint8_t far*            bits;
 #  endif /* RETROFLAT_WING */
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 /* TODO: Remove this in favor of mmem.h. */
@@ -1175,6 +1190,9 @@ typedef void* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
    uint16_t* b;
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 typedef int RETROFLAT_COLOR_DEF;
@@ -1227,6 +1245,7 @@ typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
+   struct RETROFLAT_GLTEX tex;
 };
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
@@ -3693,7 +3712,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   /* TODO */
+   /* TODO: Create new RGBA texture. */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -3897,7 +3916,11 @@ MERROR_RETVAL retroflat_create_bitmap(
    HDC hdc_win = (HDC)NULL;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO: Create new RGBA texture. */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
    
    /* == Allegro == */
 
@@ -4842,9 +4865,11 @@ void retroflat_string(
       return;
    }
 
+#  if !defined( RETROFLAT_OPENGL )
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
@@ -4852,13 +4877,15 @@ void retroflat_string(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
+   if( NULL == target ) {
+      retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
-   retroglu_string(
-      screen_x, screen_y, 0, 
-      g_retroflat_state->palette[color], str, str_sz, font_str, flags );
+      retroglu_string(
+         screen_x, screen_y, 0, 
+         g_retroflat_state->palette[color], str, str_sz, font_str, flags );
 
-   retroflat_opengl_pop();
+      retroflat_opengl_pop();
+   }
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
