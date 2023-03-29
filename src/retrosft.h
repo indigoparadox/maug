@@ -142,11 +142,10 @@ void retrosoft_line(
       iter[2],
       inc = 1,
       delta = 0;
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* TODO: Handle thickness. */
 
@@ -227,8 +226,8 @@ void retrosoft_ellipse(
 ) {
    int32_t i = 0,
       i_prev = 0;
-   int16_t lock_ret = 0,
-      locked_target_internal = 0,
+   MERROR_RETVAL retval = MERROR_OK;
+   int16_t locked_target_internal = 0,
       px_x1 = 0,
       px_y1 = 0,
       px_x2 = 0,
@@ -236,8 +235,7 @@ void retrosoft_ellipse(
 
    /* TODO: Switch to Bresenham algorithm. */
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
    for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
