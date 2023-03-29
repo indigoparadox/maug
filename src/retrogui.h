@@ -73,9 +73,9 @@ int16_t retrogui_get_ctl_sel_idx( struct RETROGUI_CTL* ctl );
  */
 RETROGUI_IDC retrogui_poll_ctls(
    int input, struct RETROFLAT_INPUT* input_evt,
-   struct RETROGUI_CTL* ctls, int ctls_sz );
+   struct RETROGUI_CTL* ctls, size_t ctls_sz );
 
-void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, int ctls_sz );
+void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, size_t ctls_sz );
 
 #ifdef RETROGUI_C
 
