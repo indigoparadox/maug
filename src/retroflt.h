@@ -3518,6 +3518,15 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glutSwapBuffers();
 #     endif
    } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes_h ) {
+#ifndef RETROGLU_NO_TEXTURES
+      assert( 0 < bmp->tex.id );
+
+      /* Update stored texture if it exists. */
+      glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->w, bmp->h, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+#endif /* !RETROGLU_NO_TEXTURES */
+
       /* Unlock texture bitmap. */
       maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
    }
