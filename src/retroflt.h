@@ -669,10 +669,12 @@ struct RETROFLAT_INPUT {
 
 #ifdef RETROFLAT_OPENGL
 struct RETROFLAT_GLTEX {
+   MAUG_MHANDLE bytes_h;
    uint8_t* bytes;
    uint32_t bpp;
-   uint32_t px_sz;
+   uint32_t sz;
    uint8_t* px;
+   uint32_t id;
 };
 #endif /* RETROFLAT_OPENGL */
 
@@ -806,6 +808,8 @@ struct RETROFLAT_BITMAP {
 #     endif /* !RETROFLAT_API_SDL1 */
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -1192,6 +1196,8 @@ struct RETROFLAT_BITMAP {
    uint16_t* b;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -1246,6 +1252,8 @@ typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 struct RETROFLAT_BITMAP {
    uint8_t flags;
    struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
 };
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
@@ -3686,6 +3694,13 @@ MERROR_RETVAL retroflat_load_bitmap(
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
+   FILE* bmp_file = NULL;
+   uint8_t* bmp_buffer = NULL;
+   size_t bmp_buffer_sz = 0,
+      bmp_buffer_read = 0;
+   MAUG_MHANDLE bmp_buffer_h = (MAUG_MHANDLE)NULL;
+   uint32_t bmp_offset = 0;
+   size_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
@@ -3713,6 +3728,100 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  ifdef RETROFLAT_OPENGL
 
    /* TODO: Create new RGBA texture. */
+
+   bmp_file = fopen( filename_path, "rb" );
+   maug_cleanup_if_null_alloc( FILE*, bmp_file );
+
+   fseek( bmp_file, 0, SEEK_END );
+   bmp_buffer_sz = ftell( bmp_file );
+   fseek( bmp_file, 0, SEEK_SET );
+
+   bmp_buffer_h = maug_malloc( bmp_buffer_sz, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_buffer_h );
+
+   maug_mlock( bmp_buffer_h, bmp_buffer );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_buffer );
+
+   bmp_buffer_read = fread( bmp_buffer, 1, bmp_buffer_sz, bmp_file );
+   if( bmp_buffer_read < bmp_buffer_sz ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not read bitmap file!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   /* Offsets hardcoded based on windows bitmap. */
+
+   /* TODO: Support other bitmap formats? */
+   if( 40 != bmp_read_uint32( &(bmp_buffer[0x0e]) ) ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Unable to determine texture bitmap format: %d", bmp_buffer[0x0e] );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
+   bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
+   bmp_out->w = bmp_read_uint32( &(bmp_buffer[0x12]) );
+   bmp_out->h = bmp_read_uint32( &(bmp_buffer[0x16]) );
+   bmp_out->tex.bpp = bmp_read_uint32( &(bmp_buffer[0x1c]) );
+   if( 24 != bmp_out->tex.bpp ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Invalid texture bitmap depth: %d",
+         bmp_out->tex.bpp );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   /* Allocate buffer for unpacking. */
+   bmp_out->tex.bytes_h =
+      maug_malloc( bmp_out->w * bmp_out->h, sizeof( uint32_t ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
+
+   maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
+
+   /* Unpack bitmap BGR into BGRA with color key. */
+   for( i = 0 ; bmp_out->tex.sz / 3 > i ; i++ ) {
+      bmp_out->tex.bytes[i * 4] = bmp_buffer[bmp_offset + (i * 3) + 2];
+      bmp_out->tex.bytes[(i * 4) + 1] = bmp_buffer[bmp_offset + (i * 3) + 1];
+      bmp_out->tex.bytes[(i * 4) + 2] = bmp_buffer[bmp_offset + (i * 3)];
+      if(
+         RETROFLAT_TXP_R == bmp_buffer[bmp_offset + (i * 3) + 2] &&
+         RETROFLAT_TXP_G == bmp_buffer[bmp_offset + (i * 3) + 1] &&
+         RETROFLAT_TXP_B == bmp_buffer[bmp_offset + (i * 3)]
+      ) {
+         /* Transparent pixel found. */
+         bmp_out->tex.bytes[(i * 4) + 3] = 0x00;
+      } else {
+         bmp_out->tex.bytes[(i * 4) + 3] = 0xff;
+      }
+   }
+
+#ifndef RETROGLU_NO_TEXTURES
+   glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+   glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->w, bmp_out->h, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
+#endif /* !RETROGLU_NO_TEXTURES */
+
+cleanup:
+
+   if( NULL != bmp_out->tex.bytes ) {
+      maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   }
+
+   if( NULL != bmp_buffer ) {
+      maug_munlock( bmp_buffer_h, bmp_buffer );
+   }
+
+   if( (MAUG_MHANDLE)NULL != bmp_buffer_h ) {
+      maug_mfree( bmp_buffer_h );
+   }
+
+   if( NULL != bmp_file ) {
+      fclose( bmp_file );
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
