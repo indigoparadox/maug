@@ -79,6 +79,17 @@
    f( 14, X, ssize_t, mcss_style_size_t, 0 ) \
    f( 15, Y, ssize_t, mcss_style_size_t, 0 )
 
+#define mcss_prop_is_active( prop ) \
+   (MCSS_PROP_FLAG_ACTIVE == (MCSS_PROP_FLAG_ACTIVE & prop ## _flags))
+
+#define mcss_prop_is_active_flag( prop, flag ) \
+   (mcss_prop_is_active( prop ) && \
+   (MCSS_PROP_FLAG_ ## flag == (MCSS_PROP_FLAG_ ## flag & prop ## _flags)))
+
+#define mcss_prop_is_active_NOT_flag( prop, flag ) \
+   (mcss_prop_is_active( prop ) && \
+   (MCSS_PROP_FLAG_ ## flag != (MCSS_PROP_FLAG_ ## flag & prop ## _flags)))
+
 #define MCSS_PROP_TABLE_PROPS( idx, prop_n, prop_t, prop_prse, def ) \
    prop_t prop_n; \
    uint8_t prop_n ## _flags;
@@ -89,8 +100,7 @@
 
 #define MCSS_DISPLAY_TABLE( f ) \
    f( 0, INLINE ) \
-   f( 1, BLOCK ) \
-   f( 2, TABLE )
+   f( 1, BLOCK )
 
 struct MCSS_STYLE {
    char id[MCSS_ID_SZ_MAX];

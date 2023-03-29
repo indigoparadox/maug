@@ -32,6 +32,10 @@ struct MHTMR_RENDER_TREE {
 
 #define mhtmr_node( tree, idx ) (0 <= idx ? &((tree)->nodes[idx]) : NULL)
 
+#define mhtmr_node_parent( tree, idx ) \
+   (0 <= (tree)->nodes[idx].parent ? \
+      &((tree)->nodes[(tree)->nodes[idx].parent]) : NULL)
+
 #define mhtmr_tree_lock( tree ) \
    if( NULL == (tree)->nodes ) { \
       maug_mlock( (tree)->nodes_h, (tree)->nodes ); \
@@ -367,11 +371,9 @@ MERROR_RETVAL mhtmr_tree_size(
 
    /* width */
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.WIDTH_flags)
-   ) {
+   if( mcss_prop_is_active_NOT_flag( effect_style.WIDTH, AUTO ) ) {
       mhtmr_node( tree, node_idx )->w = effect_style.WIDTH;
+
    } else {
       if( MCSS_DISPLAY_INLINE == effect_style.DISPLAY ) {
          debug_printf( 1, "%s: INLINE", gc_mhtml_tag_names[tag_type] );
@@ -387,57 +389,41 @@ MERROR_RETVAL mhtmr_tree_size(
             }
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
          }
+
       } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
          debug_printf( 1, "%s: BLOCK", gc_mhtml_tag_names[tag_type] );
          /* Use parent width. */
+         /* TODO: Subtract parent padding! */
          mhtmr_node( tree, node_idx )->w =
             mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->w;
       }
    }
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_LEFT_flags) &&
-      MCSS_PROP_FLAG_AUTO !=
-         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_LEFT_flags)
-   ) {
+   /* Apply additional modifiers (padding, etc) after children have all been
+    * calculated.
+    */
+
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_LEFT, AUTO ) ) {
       mhtmr_node( tree, node_idx )->w += effect_style.PADDING_LEFT;
    }
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_RIGHT_flags) &&
-      MCSS_PROP_FLAG_AUTO !=
-         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_RIGHT_flags)
-   ) {
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_RIGHT, AUTO ) ) {
       mhtmr_node( tree, node_idx )->w += effect_style.PADDING_RIGHT;
    }
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_TOP_flags) &&
-      MCSS_PROP_FLAG_AUTO !=
-         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_TOP_flags)
-   ) {
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_TOP, AUTO ) ) {
       mhtmr_node( tree, node_idx )->h += effect_style.PADDING_TOP;
    }
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.PADDING_BOTTOM_flags) &&
-      MCSS_PROP_FLAG_AUTO !=
-         (MCSS_PROP_FLAG_AUTO & effect_style.PADDING_BOTTOM_flags)
-   ) {
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_BOTTOM, AUTO ) ) {
       mhtmr_node( tree, node_idx )->h += effect_style.PADDING_BOTTOM;
    }
 
    /* height */
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.HEIGHT_flags)
-   ) {
+   if( mcss_prop_is_active_NOT_flag( effect_style.HEIGHT, AUTO ) ) {
       mhtmr_node( tree, node_idx )->h = effect_style.HEIGHT;
+
    } else {
       /* Cycle through children and add heights. */
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
@@ -515,14 +501,8 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( 
       0 <= mhtmr_node( tree, node_idx )->parent &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags) &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_RIGHT_flags) &&
-      MCSS_PROP_FLAG_AUTO ==
-         (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_LEFT_flags) &&
-      MCSS_PROP_FLAG_AUTO ==
-         (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_RIGHT_flags)
+      mcss_prop_is_active_flag( effect_style.MARGIN_LEFT, AUTO ) &&
+      mcss_prop_is_active_flag( effect_style.MARGIN_RIGHT, AUTO )
    ) {
       /* Center */
       mhtmr_node( tree, node_idx )->x =
@@ -532,60 +512,51 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    } else if( 
       0 <= mhtmr_node( tree, node_idx )->parent &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags) &&
-      MCSS_PROP_FLAG_AUTO ==
-         (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_LEFT_flags) &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_RIGHT_flags) &&
-      MCSS_PROP_FLAG_AUTO !=
-         (MCSS_PROP_FLAG_AUTO & effect_style.MARGIN_RIGHT_flags)
+      mcss_prop_is_active_flag( effect_style.MARGIN_LEFT, AUTO ) &&
+      mcss_prop_is_active_NOT_flag( effect_style.MARGIN_RIGHT, AUTO )
    ) {
       /* Justify right. */
       /* XXX */
       /* r->x = r->w_max - r->w; */
 
-   } else if(
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.MARGIN_LEFT_flags)
-   ) {
+   } else if( mcss_prop_is_active( effect_style.MARGIN_LEFT ) ) {
       /* Justify left. */
       mhtmr_node( tree, node_idx )->x += effect_style.MARGIN_LEFT;
    }
 
    /* padding */
 
-   /* TODO: Only apply to topmost/leftmost elements in a container! */
-
    if( 
       NULL != parent_style &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & parent_style->PADDING_LEFT_flags)
+      mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) && (
+         /* Block elements should all be on new lines, so pad left. */
+         MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
+         /* Otherwise only pad the first element. */
+         node_idx == mhtmr_node_parent( tree, node_idx )->first_child
+      )
    ) {
       mhtmr_node( tree, node_idx )->x += parent_style->PADDING_LEFT;
    }
 
    if( 
       NULL != parent_style &&
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & parent_style->PADDING_TOP_flags)
+      mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) && (
+         /* Inline elements should all be on the same line, so pad top. */
+         MCSS_DISPLAY_INLINE == effect_style.DISPLAY ||
+         /* Otherwise only pad the first element. */
+         node_idx == mhtmr_node_parent( tree, node_idx )->first_child
+      )
    ) {
       mhtmr_node( tree, node_idx )->y += parent_style->PADDING_TOP;
    }
 
    /* color */
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.COLOR_flags)
-   ) {
+   if( mcss_prop_is_active( effect_style.COLOR ) ) {
       mhtmr_node( tree, node_idx )->fg = effect_style.COLOR;
    }
 
-   if( 
-      MCSS_PROP_FLAG_ACTIVE ==
-         (MCSS_PROP_FLAG_ACTIVE & effect_style.BACKGROUND_COLOR_flags)
-   ) {
+   if( mcss_prop_is_active( effect_style.BACKGROUND_COLOR ) ) {
       mhtmr_node( tree, node_idx )->bg = effect_style.BACKGROUND_COLOR;
    }
 
