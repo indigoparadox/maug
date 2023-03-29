@@ -502,6 +502,7 @@ typedef int8_t RETROFLAT_COLOR;
 #endif /* !RETROFLAT_TXP_B */
 
 /* Convenience macro for auto-locking inside of draw functions. */
+/* TODO: Use maug_cleanup and assume retval. */
 #define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
    if( !retroflat_bitmap_locked( bmp ) ) { \
       lock_ret = retroflat_draw_lock( bmp ); \
@@ -4222,7 +4223,18 @@ cleanup:
 #endif /* RETROFLAT_XPM */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
-#  if defined( RETROFLAT_API_ALLEGRO )
+
+#  if defined( RETROFLAT_OPENGL )
+
+   if( NULL != bitmap->tex.bytes_h ) {
+      if( NULL != bitmap->tex.bytes ) {
+         maug_munlock( bitmap->tex.bytes_h, bitmap->tex.bytes );
+      }
+      
+      maug_mfree( bitmap->tex.bytes_h );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4261,10 +4273,6 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
       DeleteObject( bitmap->mask );
       bitmap->mask = (HBITMAP)NULL;
    }
-
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
 
 #  else
 #     warning "destroy bitmap not implemented"
@@ -4331,6 +4339,7 @@ void retroflat_blit_bitmap(
    dest_rect.h = h;
 
 #     ifdef RETROFLAT_API_SDL1
+   /* TODO: Autounlock? */
    assert( !retroflat_bitmap_locked( target ) );
    retval = 
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
@@ -4554,27 +4563,37 @@ void retroflat_rect(
       return;
    }
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
-   retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
+   /* TODO: Autolock? */
 
-   glBegin( GL_TRIANGLES );
-   glColor3fv( g_retroflat_state->palette[color_idx] );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
-   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      /* Draw directly to the screen. */
 
-   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
-   glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   glEnd();
-   
-   retroflat_opengl_pop();
+      retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
+      retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
+
+      glBegin( GL_TRIANGLES );
+      glColor3fv( g_retroflat_state->palette[color_idx] );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
+      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+
+      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+      glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glEnd();
+      
+      retroflat_opengl_pop();
+   } else {
+      /* TODO: Use soft shapes. */
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4789,9 +4808,11 @@ void retroflat_ellipse(
       return;
    }
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
