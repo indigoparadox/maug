@@ -14,6 +14,8 @@
 #  define MCSS_CLASS_SZ_MAX 128
 #endif /* !MCSS_CLASS_SZ_MAX */
 
+#define MCSS_STYLE_FLAG_ACTIVE   0x01
+
 #define MCSS_PROP_FLAG_ACTIVE    0x01
 
 #define MCSS_PROP_FLAG_IMPORTANT 0x02
@@ -93,8 +95,15 @@
    f( 16, RIGHT, ssize_t, mcss_style_size_t, 0 ) \
    f( 17, BOTTOM, ssize_t, mcss_style_size_t, 0 )
 
+#define mcss_prop_is_heritable( prop_id ) \
+   (MCSS_PROP_COLOR == prop_id || \
+   MCSS_PROP_BACKGROUND_COLOR == prop_id)
+
 #define mcss_prop_is_active( prop ) \
    (MCSS_PROP_FLAG_ACTIVE == (MCSS_PROP_FLAG_ACTIVE & prop ## _flags))
+
+#define mcss_prop_is_important( prop ) \
+   (MCSS_PROP_FLAG_IMPORTANT == (MCSS_PROP_FLAG_IMPORTANT & prop ## _flags))
 
 #define mcss_prop_is_active_flag( prop, flag ) \
    (mcss_prop_is_active( prop ) && \
@@ -119,7 +128,9 @@
 
 struct MCSS_STYLE {
    char id[MCSS_ID_SZ_MAX];
+   uint8_t flags;
    char class[MCSS_CLASS_SZ_MAX];
+   size_t class_sz;
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PROPS )
 };
 
@@ -414,6 +425,7 @@ MERROR_RETVAL mcss_push_style_class(
 
    strncpy( parser->styles[parser->styles_sz - 1].class, class,
       MCSS_CLASS_SZ_MAX );
+   parser->styles[parser->styles_sz - 1].class_sz = strlen( class );
    debug_printf( 1, "pushed style block " SIZE_T_FMT ": %s",
       parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].class );
 
@@ -536,6 +548,8 @@ MERROR_RETVAL mcss_style_init( struct MCSS_STYLE* style ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    maug_mzero( style, sizeof( struct MCSS_STYLE ) );
+
+   style->flags |= MCSS_STYLE_FLAG_ACTIVE;
 
    #define MCSS_PROP_TABLE_DEFS( idx, prop_n, prop_t, prop_prse, def ) \
       style->prop_n = def;
