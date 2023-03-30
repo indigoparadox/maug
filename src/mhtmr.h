@@ -51,6 +51,7 @@ struct MHTMR_RENDER_TREE {
 
 MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   size_t x, size_t y, size_t w, size_t h,
    ssize_t tag_idx, ssize_t node_idx, size_t d );
 
 MERROR_RETVAL mhtmr_tree_size(
@@ -287,6 +288,7 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   size_t x, size_t y, size_t w, size_t h,
    ssize_t tag_idx, ssize_t node_idx, size_t d
 ) {
    ssize_t node_new_idx = -1;
@@ -299,6 +301,8 @@ MERROR_RETVAL mhtmr_tree_create(
 
    /* Make sure we have a single root node. */
    if( 0 > node_idx ) {
+      assert( MHTML_TAG_TYPE_BODY == mhtml_tag( parser, tag_idx )->base.type );
+
       node_new_idx = mhtmr_add_node_child( tree, node_idx );
       if( 0 > node_new_idx ) {
          goto cleanup;
@@ -310,7 +314,10 @@ MERROR_RETVAL mhtmr_tree_create(
       /* The common root is the body tag. */
       mhtmr_node( tree, node_idx )->tag = tag_idx;
 
-      mhtmr_node( tree, node_idx )->w = retroflat_screen_w();
+      mhtmr_node( tree, node_idx )->x = x;
+      mhtmr_node( tree, node_idx )->y = y;
+      mhtmr_node( tree, node_idx )->w = w;
+      mhtmr_node( tree, node_idx )->h = h;
    }
 
    tag_iter_idx = mhtml_tag( parser, tag_idx )->base.first_child;
@@ -326,7 +333,8 @@ MERROR_RETVAL mhtmr_tree_create(
          "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
          node_new_idx, node_idx );
 
-      mhtmr_tree_create( parser, tree, tag_iter_idx, node_new_idx, d + 1 );
+      mhtmr_tree_create( parser, tree, x, y, w, h,
+         tag_iter_idx, node_new_idx, d + 1 );
 
       tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
    }
@@ -775,6 +783,18 @@ void mhtmr_tree_draw(
             tag_content, 0, "", node->x, node->y, 0 );
 
          maug_munlock( tag->TEXT.content, tag_content );
+
+      } else if( MHTML_TAG_TYPE_BODY == tag->base.type ) {
+         /* Draw body BG. */
+         if( RETROFLAT_COLOR_NULL != node->bg ) {
+            retroflat_rect(
+               NULL, node->bg,
+               mhtmr_node( tree, node_idx )->x,
+               mhtmr_node( tree, node_idx )->y,
+               mhtmr_node( tree, node_idx )->w,
+               mhtmr_node( tree, node_idx )->h,
+               RETROFLAT_FLAGS_FILL );
+         }
 
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {
