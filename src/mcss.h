@@ -76,8 +76,10 @@
    f( 11, PADDING_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
    f( 12, DISPLAY, uint8_t, mcss_style_display, 0 ) \
    f( 13, POSITION, uint8_t, mcss_style_position, 0 ) \
-   f( 14, X, ssize_t, mcss_style_size_t, 0 ) \
-   f( 15, Y, ssize_t, mcss_style_size_t, 0 )
+   f( 14, LEFT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 15, TOP, ssize_t, mcss_style_size_t, 0 ) \
+   f( 16, RIGHT, ssize_t, mcss_style_size_t, 0 ) \
+   f( 17, BOTTOM, ssize_t, mcss_style_size_t, 0 )
 
 #define mcss_prop_is_active( prop ) \
    (MCSS_PROP_FLAG_ACTIVE == (MCSS_PROP_FLAG_ACTIVE & prop ## _flags))

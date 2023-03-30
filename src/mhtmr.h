@@ -15,6 +15,7 @@ struct MHTMR_RENDER_NODE {
    size_t m_r;
    size_t m_t;
    size_t m_b;
+   uint8_t pos;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
@@ -338,6 +339,12 @@ MERROR_RETVAL mhtmr_tree_size(
       parent_style,
       0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
       tag_type );
+
+   if( mcss_prop_is_active( effect_style.POSITION ) ) {
+      debug_printf( 1, "node " SSIZE_T_FMT ": applying %s positioning",
+         node_idx, gc_mcss_position_names[effect_style.POSITION] );
+      mhtmr_node( tree, node_idx )->pos = effect_style.POSITION;
+   }
    
    if(
       0 <= tag_idx &&
@@ -381,6 +388,8 @@ MERROR_RETVAL mhtmr_tree_size(
          child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
          while( 0 <= child_iter_idx ) {
             if(
+               MCSS_POSITION_ABSOLUTE !=
+                  mhtmr_node( tree, child_iter_idx )->pos &&
                mhtmr_node( tree, child_iter_idx )->w >
                   mhtmr_node( tree, node_idx )->w
             ) {
@@ -428,8 +437,12 @@ MERROR_RETVAL mhtmr_tree_size(
       /* Cycle through children and add heights. */
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
-         mhtmr_node( tree, node_idx )->h +=
-            mhtmr_node( tree, child_iter_idx )->h;
+         if(
+            MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
+         ) {
+            mhtmr_node( tree, node_idx )->h +=
+               mhtmr_node( tree, child_iter_idx )->h;
+         }
 
          child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
       }
@@ -472,7 +485,23 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* x */
 
-   if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
+   if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+      if( mcss_prop_is_active_NOT_flag( effect_style.LEFT, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->x = effect_style.LEFT;
+      }
+      if( mcss_prop_is_active_NOT_flag( effect_style.RIGHT, AUTO ) ) {
+         child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+         /* TODO: Break when we hit explicit position relative parent. */
+         while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
+         }
+         mhtmr_node( tree, node_idx )->x = 
+            mhtmr_node( tree, child_iter_idx )->w - 
+            mhtmr_node( tree, node_idx )->w - 
+            effect_style.RIGHT;
+      }
+
+   } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
       mhtmr_node( tree, node_idx )->x =
          mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->x;
    }
@@ -481,25 +510,50 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* TODO: Add margins of children? */
 
-   child_iter_idx = mhtmr_node( tree, node_idx )->parent;
-   if( 0 <= child_iter_idx ) {
-      /* Add top offset of parent. */
-      mhtmr_node( tree, node_idx )->y +=
-         mhtmr_node( tree, child_iter_idx )->y;
+   if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+      if( mcss_prop_is_active_NOT_flag( effect_style.TOP, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->y = effect_style.TOP;
+      }
+      if( mcss_prop_is_active_NOT_flag( effect_style.BOTTOM, AUTO ) ) {
+         child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+         /* TODO: Break when we hit explicit position relative parent. */
+         while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
+         }
+         mhtmr_node( tree, node_idx )->y = 
+            mhtmr_node( tree, child_iter_idx )->h - 
+            mhtmr_node( tree, node_idx )->h - 
+            effect_style.BOTTOM;
+      }
 
-      child_iter_idx = mhtmr_node( tree, child_iter_idx )->first_child;
-   }
-   while( 0 <= child_iter_idx && node_idx != child_iter_idx ) {
-      /* Add top offset of prior siblings. */
-      mhtmr_node( tree, node_idx )->y +=
-         mhtmr_node( tree, child_iter_idx )->h;
+   } else {
+      /* Position relative to other nodes. */
+      child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+      if( 0 <= child_iter_idx ) {
+         /* Add top offset of parent. */
+         mhtmr_node( tree, node_idx )->y +=
+            mhtmr_node( tree, child_iter_idx )->y;
 
-      child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+         child_iter_idx = mhtmr_node( tree, child_iter_idx )->first_child;
+      }
+      while( 0 <= child_iter_idx && node_idx != child_iter_idx ) {
+         if(
+            /* Don't add absolute positioned siblings to this offset! */
+            MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
+         ) {
+            /* Add top offset of prior siblings. */
+            mhtmr_node( tree, node_idx )->y +=
+               mhtmr_node( tree, child_iter_idx )->h;
+         }
+
+         child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+      }
    }
 
    /* margin-left, margin-right */
 
    if( 
+      MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, node_idx )->pos &&
       0 <= mhtmr_node( tree, node_idx )->parent &&
       mcss_prop_is_active_flag( effect_style.MARGIN_LEFT, AUTO ) &&
       mcss_prop_is_active_flag( effect_style.MARGIN_RIGHT, AUTO )
@@ -516,8 +570,10 @@ MERROR_RETVAL mhtmr_tree_pos(
       mcss_prop_is_active_NOT_flag( effect_style.MARGIN_RIGHT, AUTO )
    ) {
       /* Justify right. */
-      /* XXX */
-      /* r->x = r->w_max - r->w; */
+      /* TODO: Subtract padding below, as well. */
+      mhtmr_node( tree, node_idx )->x = 
+         mhtmr_node_parent( tree, node_idx )->w -
+         mhtmr_node( tree, node_idx )->w;
 
    } else if( mcss_prop_is_active( effect_style.MARGIN_LEFT ) ) {
       /* Justify left. */
