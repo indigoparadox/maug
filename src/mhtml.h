@@ -82,7 +82,8 @@
    f( 4, HTML, void* none;, BLOCK ) \
    f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
    f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
-   f( 7, SPAN, void* none;, INLINE )
+   f( 7, SPAN, void* none;, INLINE ) \
+   f( 8, BR, void* none;, INLINE )
 
 struct MHTML_TAG_BASE {
    uint16_t type;
@@ -511,6 +512,9 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          maug_cleanup_if_not_ok();
          
          mhtml_parser_pstate_pop( parser );
+         if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
+            mhtml_parser_pstate_pop( parser );
+         }
          assert( MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) );
          mhtml_parser_pstate_pop( parser ); /* Pop element. */
          mhtml_parser_reset_token( parser );
@@ -525,6 +529,11 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) &&
          0 == parser->token_sz
       ) {
+         /* Start of a close tag. */
+         mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+
+      } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
+         /* Close of a self-closing tag. */
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
 
       } else if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
@@ -571,7 +580,10 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
          /* Avoid a token that's only whitespace. */
-         if( 0 < parser->token_sz ) {
+         if(
+            0 < parser->token_sz &&
+            ' ' != parser->token[parser->token_sz - 1]
+         ) {
             mhtml_parser_append_token( parser, ' ' );
          }
 
