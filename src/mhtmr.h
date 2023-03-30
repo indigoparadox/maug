@@ -16,6 +16,7 @@ struct MHTMR_RENDER_NODE {
    size_t m_t;
    size_t m_b;
    uint8_t pos;
+   uint8_t pos_flags;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
@@ -344,6 +345,7 @@ MERROR_RETVAL mhtmr_tree_size(
       debug_printf( 1, "node " SSIZE_T_FMT ": applying %s positioning",
          node_idx, gc_mcss_position_names[effect_style.POSITION] );
       mhtmr_node( tree, node_idx )->pos = effect_style.POSITION;
+      mhtmr_node( tree, node_idx )->pos_flags = effect_style.POSITION_flags;
    }
    
    if(
@@ -382,29 +384,33 @@ MERROR_RETVAL mhtmr_tree_size(
       mhtmr_node( tree, node_idx )->w = effect_style.WIDTH;
 
    } else {
-      if( MCSS_DISPLAY_INLINE == effect_style.DISPLAY ) {
-         debug_printf( 1, "%s: INLINE", gc_mhtml_tag_names[tag_type] );
-         /* Cycle through children and use greatest width. */
-         child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
-         while( 0 <= child_iter_idx ) {
-            if(
-               MCSS_POSITION_ABSOLUTE !=
-                  mhtmr_node( tree, child_iter_idx )->pos &&
-               mhtmr_node( tree, child_iter_idx )->w >
-                  mhtmr_node( tree, node_idx )->w
-            ) {
-               mhtmr_node( tree, node_idx )->w =
-                  mhtmr_node( tree, child_iter_idx )->w;
-            }
-            child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
-         }
-
-      } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
-         debug_printf( 1, "%s: BLOCK", gc_mhtml_tag_names[tag_type] );
+      if(
+         MCSS_DISPLAY_BLOCK == effect_style.DISPLAY &&
+         0 <= mhtmr_node( tree, node_idx )->parent
+      ) {
          /* Use parent width. */
          /* TODO: Subtract parent padding! */
          mhtmr_node( tree, node_idx )->w =
             mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->w;
+         debug_printf( 1, "%s: BLOCK WIDTH: " SSIZE_T_FMT,
+            gc_mhtml_tag_names[tag_type], mhtmr_node( tree, node_idx )->w );
+      } else {
+         debug_printf( 1, "%s: INLINE", gc_mhtml_tag_names[tag_type] );
+      }
+
+      /* Cycle through children and use greatest width. */
+      child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
+      while( 0 <= child_iter_idx ) {
+         if(
+            MCSS_POSITION_ABSOLUTE !=
+               mhtmr_node( tree, child_iter_idx )->pos &&
+            mhtmr_node( tree, child_iter_idx )->w >
+               mhtmr_node( tree, node_idx )->w
+         ) {
+            mhtmr_node( tree, node_idx )->w =
+               mhtmr_node( tree, child_iter_idx )->w;
+         }
+         child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
       }
    }
 
@@ -440,6 +446,10 @@ MERROR_RETVAL mhtmr_tree_size(
          if(
             MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
          ) {
+            debug_printf( 1, "PARENT " SSIZE_T_FMT " adding CHILD "
+               SSIZE_T_FMT " HEIGHT " SSIZE_T_FMT,
+               node_idx, child_iter_idx,
+               mhtmr_node( tree, child_iter_idx )->h );
             mhtmr_node( tree, node_idx )->h +=
                mhtmr_node( tree, child_iter_idx )->h;
          }
@@ -487,14 +497,36 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
       if( mcss_prop_is_active_NOT_flag( effect_style.LEFT, AUTO ) ) {
-         mhtmr_node( tree, node_idx )->x = effect_style.LEFT;
-      }
-      if( mcss_prop_is_active_NOT_flag( effect_style.RIGHT, AUTO ) ) {
+
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
-         /* TODO: Break when we hit explicit position relative parent. */
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            if( 
+               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
+            ) {
+               /* Break when we hit explicit position parent. */
+               break;
+            }
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
+
+         /* Set X to highest non-explicit ancestor. */
+         mhtmr_node( tree, node_idx )->x =
+            mhtmr_node( tree, child_iter_idx )->x + effect_style.LEFT;
+      }
+      if( mcss_prop_is_active_NOT_flag( effect_style.RIGHT, AUTO ) ) {
+
+         child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+         while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            if( 
+               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
+            ) {
+               /* Break when we hit explicit position parent. */
+               break;
+            }
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
+         }
+
+         /* Set X to highest non-explicit ancestor. */
          mhtmr_node( tree, node_idx )->x = 
             mhtmr_node( tree, child_iter_idx )->w - 
             mhtmr_node( tree, node_idx )->w - 
@@ -512,14 +544,37 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
       if( mcss_prop_is_active_NOT_flag( effect_style.TOP, AUTO ) ) {
-         mhtmr_node( tree, node_idx )->y = effect_style.TOP;
-      }
-      if( mcss_prop_is_active_NOT_flag( effect_style.BOTTOM, AUTO ) ) {
+
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
-         /* TODO: Break when we hit explicit position relative parent. */
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            if( 
+               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
+            ) {
+               /* Break when we hit explicit position parent. */
+               break;
+            }
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
+
+         /* Set Y to highest non-explicit ancestor. */
+         mhtmr_node( tree, node_idx )->y = 
+            mhtmr_node( tree, child_iter_idx )->y + effect_style.TOP;
+      }
+      if( mcss_prop_is_active_NOT_flag( effect_style.BOTTOM, AUTO ) ) {
+
+         child_iter_idx = mhtmr_node( tree, node_idx )->parent;
+         while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
+            if( 
+               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
+            ) {
+               /* Break when we hit explicit position parent. */
+               debug_printf( 1, "active POS: " SIZE_T_FMT, child_iter_idx );
+               break;
+            }
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
+         }
+
+         /* Set Y to highest non-explicit ancestor. */
          mhtmr_node( tree, node_idx )->y = 
             mhtmr_node( tree, child_iter_idx )->h - 
             mhtmr_node( tree, node_idx )->h - 
@@ -641,6 +696,8 @@ void mhtmr_tree_draw(
    if( NULL == node ) {
       return;
    }
+
+   /* TODO: Multi-pass, draw absolute pos afterwards. */
 
    if( 0 <= node->tag ) {
       /* Perform drawing. */
