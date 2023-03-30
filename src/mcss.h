@@ -127,8 +127,9 @@
    f( 2, BLOCK )
 
 struct MCSS_STYLE {
-   char id[MCSS_ID_SZ_MAX];
    uint8_t flags;
+   char id[MCSS_ID_SZ_MAX];
+   size_t id_sz;
    char class[MCSS_CLASS_SZ_MAX];
    size_t class_sz;
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PROPS )
@@ -399,15 +400,24 @@ cleanup:
 
 MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE styles_h_new = (MAUG_MHANDLE)NULL;
 
    /* TODO: Lock styles? */
+
+   /* Allocate more styles if needed. */
+   if( parser->styles_sz + 1 >= parser->styles_sz_max ) {
+      maug_munlock( parser->styles_h, parser->styles );
+      maug_mrealloc_test( styles_h_new, parser->styles_h,
+         parser->styles_sz_max * 2, sizeof( struct MCSS_STYLE ) );
+      maug_mlock( parser->styles_h, parser->styles );
+      parser->styles_sz_max *= 2;
+   }
 
    parser->styles_sz++;
 
    retval = mcss_style_init( &(parser->styles[parser->styles_sz - 1]) );
    maug_cleanup_if_not_ok();
    
-   /* TODO: Allocate more styles if needed. */
    assert( parser->styles_sz < parser->styles_sz_max );
 
 cleanup:
@@ -416,7 +426,7 @@ cleanup:
 }
 
 MERROR_RETVAL mcss_push_style_class(
-   struct MCSS_PARSER* parser, const char* class
+   struct MCSS_PARSER* parser, const char* class, size_t class_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -425,9 +435,28 @@ MERROR_RETVAL mcss_push_style_class(
 
    strncpy( parser->styles[parser->styles_sz - 1].class, class,
       MCSS_CLASS_SZ_MAX );
-   parser->styles[parser->styles_sz - 1].class_sz = strlen( class );
-   debug_printf( 1, "pushed style block " SIZE_T_FMT ": %s",
+   parser->styles[parser->styles_sz - 1].class_sz = class_sz;
+   debug_printf( 1, "pushed style block " SIZE_T_FMT ": .%s",
       parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].class );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mcss_push_style_id(
+   struct MCSS_PARSER* parser, const char* id, size_t id_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = mcss_push_style( parser );
+   maug_cleanup_if_not_ok();
+
+   strncpy( parser->styles[parser->styles_sz - 1].id, id,
+      MCSS_ID_SZ_MAX );
+   parser->styles[parser->styles_sz - 1].id_sz = id_sz;
+   debug_printf( 1, "pushed style block " SIZE_T_FMT ": #%s",
+      parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].id );
 
 cleanup:
 
@@ -498,6 +527,19 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       if( MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ) {
          mcss_parser_pstate_push( parser, MCSS_PSTATE_CLASS );
          mcss_parser_reset_token( parser );
+
+      } else {
+         mcss_parser_invalid_c( parser, c, retval );
+      }
+      break;
+
+   case '#':
+      if( MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ) {
+         mcss_parser_pstate_push( parser, MCSS_PSTATE_ID );
+         mcss_parser_reset_token( parser );
+
+      } else {
+         mcss_parser_invalid_c( parser, c, retval );
       }
       break;
 
@@ -518,7 +560,12 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    case '{':
       if( MCSS_PSTATE_CLASS == mcss_parser_pstate( parser ) ) {
-         mcss_push_style_class( parser, parser->token );
+         mcss_push_style_class( parser, parser->token, parser->token_sz );
+         mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
+         mcss_parser_reset_token( parser );
+
+      } else if( MCSS_PSTATE_ID == mcss_parser_pstate( parser ) ) {
+         mcss_push_style_id( parser, parser->token, parser->token_sz );
          mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
          mcss_parser_reset_token( parser );
       }

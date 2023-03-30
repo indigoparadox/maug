@@ -375,6 +375,26 @@ MERROR_RETVAL mhtmr_apply_styles(
          }
       }
    }
+   if( 0 < mhtml_tag( parser, tag_idx )->base.id_sz ) {
+      for( i = 0 ; parser->styler.styles_sz > i ; i++ ) {
+         if(
+            0 == strncmp(
+               mhtml_tag( parser, tag_idx )->base.id,
+               parser->styler.styles[i].id,
+               mhtml_tag( parser, tag_idx )->base.id_sz
+            )
+         ) {
+            debug_printf( 1, "found style for tag ID: %s",
+               parser->styler.styles[i].id );
+
+            mhtml_merge_styles(
+               effect_style,
+               parent_style,
+               &(parser->styler.styles[i]),
+               tag_type );
+         }
+      }
+   }
 
    /* Grab element-specific style last. */
    tag_style_idx = mhtml_tag( parser, tag_idx )->base.style;
