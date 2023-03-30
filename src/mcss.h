@@ -646,6 +646,28 @@ cleanup:
    return retval;
 }
 
+#else
+
+#define MCSS_POSITION_TABLE_CONSTS( pos_id, pos_name ) \
+   extern MAUG_CONST uint16_t MCSS_POSITION_ ## pos_name;
+
+MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_CONSTS )
+
+#define MCSS_DISPLAY_TABLE_CONSTS( dis_id, dis_name ) \
+   extern MAUG_CONST uint16_t MCSS_DISPLAY_ ## dis_name;
+
+MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_CONSTS )
+
+extern MAUG_CONST char* gc_mcss_position_names[];
+extern MAUG_CONST char* gc_mcss_display_names[];
+
+#define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, def ) \
+   extern MAUG_CONST uint16_t MCSS_PROP_ ## prop_n;
+
+MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
+
+extern MAUG_CONST char* gc_mcss_prop_names[];
+
 #endif /* MCSS_C */
 
 #endif /* !MCSS_H */

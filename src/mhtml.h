@@ -774,6 +774,15 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
    mhtml_dump_tree( parser, parser->tags[iter].base.next_sibling, d );
 }
 
+#else
+
+#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
+   extern MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name;
+
+MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
+
+extern MAUG_CONST char* gc_mhtml_tag_names[];
+
 #endif /* MHTML_C */
 
 #endif /* !MHTML_H */
