@@ -251,7 +251,10 @@ MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
 
    for( i = 0 ; parser->tags_sz > i ; i++ ) {
       if(
-         MHTML_TAG_TYPE_TEXT == parser->tags[i].base.type &&
+         (
+            MHTML_TAG_TYPE_TEXT == parser->tags[i].base.type ||
+            MHTML_TAG_TYPE_STYLE == parser->tags[i].base.type
+         ) &&
          (MAUG_MHANDLE)NULL != parser->tags[i].TEXT.content
       ) {
          maug_mfree( parser->tags[i].TEXT.content );
@@ -476,6 +479,23 @@ cleanup:
    return retval;
 }
 
+void mhtml_strip_token_quotes( struct MHTML_PARSER* parser ) {
+   size_t i = 0;
+   
+   if( '"' == parser->token[0] ) {
+      for( i = 0 ; parser->token_sz - 1 > i ; i++ ) {
+         parser->token[i] = parser->token[i + 1];
+      }
+      parser->token_sz--;
+      parser->token[parser->token_sz] = '\0';
+   }
+
+   if( '"' == parser->token[parser->token_sz - 1] ) {
+      parser->token_sz--;
+      parser->token[parser->token_sz] = '\0';
+   }
+}
+
 MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -483,16 +503,11 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    /* TODO: Equip styler to manage its own locking. */
    mhtml_parser_lock( parser );
 
+   mhtml_strip_token_quotes( parser );
+
    if( MHTML_ATTRIB_KEY_STYLE == parser->attrib_key ) {
       debug_printf( 1, "style: %s", parser->token );
       /* TODO: Parse and attach style. */
-
-      if( '"' == parser->token[0] ) {
-         i = 1;
-      }
-      if( '"' == parser->token[parser->token_sz - 1] ) {
-         parser->token_sz--;
-      }
 
       retval = mcss_push_style( &(parser->styler) );
       maug_cleanup_if_not_ok();
@@ -505,7 +520,14 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
          maug_cleanup_if_not_ok();
       }
 
-      goto cleanup;  
+      goto cleanup;
+
+   } else if( MHTML_ATTRIB_KEY_CLASS == parser->attrib_key ) {
+      strncpy(
+         parser->tags[parser->tag_iter].base.classes,
+         parser->token,
+         MCSS_CLASS_SZ_MAX );
+      parser->tags[parser->tag_iter].base.classes_sz = parser->token_sz;
    }
 
 cleanup:
