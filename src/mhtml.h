@@ -14,12 +14,30 @@
 #  define MCSS_C
 #endif /* MHTML_C */
 
+/*! \brief Indicates a text tag contains CSS information to be parsed. */
+#define MHTML_TAG_FLAG_STYLE  0x02
+
 #include <mparser.h>
 #include <mcss.h>
 
 #define MHTML_ATTRIB_TABLE( f ) \
    f( NONE, 0 ) \
-   f( STYLE, 1 )
+   f( STYLE, 1 ) \
+   f( CLASS, 2 ) \
+   f( ID, 3 ) \
+   f( NAME, 4 )
+
+#define MHTML_TAG_TABLE( f ) \
+   f( 0, NONE, void* none;, NONE ) \
+   f( 1, BODY, void* none;, BLOCK ) \
+   f( 2, DIV, void* none;, BLOCK ) \
+   f( 3, HEAD, void* none;, NONE ) \
+   f( 4, HTML, void* none;, BLOCK ) \
+   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
+   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
+   f( 7, SPAN, void* none;, INLINE ) \
+   f( 8, BR, void* none;, INLINE ) \
+   f( 9, STYLE, void* none;, NONE )
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -27,7 +45,8 @@
    f( MHTML_PSTATE_ATTRIB_KEY, 2 ) \
    f( MHTML_PSTATE_ATTRIB_VAL, 3 ) \
    f( MHTML_PSTATE_END_ELEMENT, 4 ) \
-   f( MHTML_PSTATE_STRING, 5 )
+   f( MHTML_PSTATE_STRING, 5 ) \
+   f( MHTML_PSTATE_STYLE, 6 )
 
 #define mhtml_tag( parser, idx ) (&((parser)->tags[idx]))
 
@@ -74,23 +93,17 @@
    } \
    mcss_parser_unlock( &((parser)->styler) );
 
-#define MHTML_TAG_TABLE( f ) \
-   f( 0, NONE, void* none;, BLOCK ) \
-   f( 1, BODY, void* none;, BLOCK ) \
-   f( 2, DIV, void* none;, BLOCK ) \
-   f( 3, HEAD, void* none;, BLOCK ) \
-   f( 4, HTML, void* none;, BLOCK ) \
-   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
-   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
-   f( 7, SPAN, void* none;, INLINE ) \
-   f( 8, BR, void* none;, INLINE )
-
 struct MHTML_TAG_BASE {
    uint16_t type;
+   uint8_t flags;
    ssize_t parent;
    ssize_t first_child;
    ssize_t next_sibling;
    ssize_t style;
+   char classes[MCSS_CLASS_SZ_MAX];
+   size_t classes_sz;
+   char id[MCSS_ID_SZ_MAX];
+   size_t id_sz;
 };
 
 #define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields, disp ) \
@@ -121,6 +134,11 @@ struct MHTML_PARSER {
    size_t tags_sz;
    size_t tags_sz_max;
    ssize_t tag_iter;
+   /**
+    * \brief Flags to be pushed to MHTML_TAG_BASE::flags on next 
+    *        mhtml_push_tag().
+    */
+   uint8_t tag_flags;
    struct MCSS_PARSER styler;
    ssize_t body_idx;
 };
@@ -276,7 +294,7 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_push_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t new_tag_idx = -1,
       tag_child_idx = 0;
@@ -294,6 +312,9 @@ MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
    parser->tags[new_tag_idx].base.first_child = -1;
    parser->tags[new_tag_idx].base.next_sibling = -1;
    parser->tags[new_tag_idx].base.style = -1;
+   
+   parser->tags[new_tag_idx].base.flags = parser->tag_flags;
+   parser->tag_flags = 0;
 
    if( 0 <= parser->tag_iter ) {
       /* Set new tag parent to current tag. */
@@ -330,10 +351,19 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   retval = mhtml_push_blank_tag( parser );
-   maug_cleanup_if_not_ok();
-
    mparser_token_upper( parser, i );
+
+   if( 0 == strncmp( "STYLE", parser->token, 6 ) ) {
+      /* Special case: style tag. Don't push a new tag here, but set a flag for
+       * the text tag next created by mhtml_push_tag() so the contents are
+       * directly attached to the style tag.
+       */
+      parser->tag_flags |= MHTML_TAG_FLAG_STYLE;
+      goto cleanup;
+   }
+
+   retval = mhtml_push_tag( parser );
+   maug_cleanup_if_not_ok();
 
    /* Figure out tag type. */
    i = 0;
@@ -348,6 +378,9 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
          parser->tags[parser->tag_iter].base.type = i;
 
          if( MHTML_TAG_TYPE_BODY == i ) {
+            /* Special case: body tag. Keep track of it for later so it can
+             * be passed to the renderer.
+             */
             assert( -1 == parser->body_idx );
             parser->body_idx = parser->tag_iter;
             debug_printf( 1, "set body index to: " SSIZE_T_FMT,
@@ -370,11 +403,19 @@ cleanup:
 MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* tag_content = NULL;
+   size_t i = 0;
 
-   retval = mhtml_push_blank_tag( parser );
+   retval = mhtml_push_tag( parser );
    maug_cleanup_if_not_ok();
 
-   parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_TEXT;
+   if(
+      MHTML_TAG_FLAG_STYLE == (MHTML_TAG_FLAG_STYLE & 
+         parser->tags[parser->tag_iter].base.flags)
+   ) {
+      parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_STYLE;
+   } else {
+      parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_TEXT;
+   }
 
    /* Allocate text memory. */
    parser->tags[parser->tag_iter].TEXT.content =
@@ -384,10 +425,19 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    maug_mlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
    maug_cleanup_if_null_alloc( char*, tag_content );
 
-   /* Copy token to tag text. */
-   strncpy( tag_content, parser->token, parser->token_sz );
-   tag_content[parser->token_sz] = '\0';
-   parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
+   if( MHTML_TAG_TYPE_STYLE == parser->tags[parser->tag_iter].base.type ) {
+      debug_printf( 1, "parsing STYLE tag..." );
+      for( ; parser->token_sz > i ; i++ ) {
+         retval = mcss_parse_c( &(parser->styler), parser->token[i] );
+         maug_cleanup_if_not_ok();
+      }
+      mcss_parser_reset( &(parser->styler) );
+   } else {
+      /* Copy token to tag text. */
+      strncpy( tag_content, parser->token, parser->token_sz );
+      tag_content[parser->token_sz] = '\0';
+      parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
+   }
 
    maug_munlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
 
@@ -444,13 +494,10 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
          parser->token_sz--;
       }
 
-      /* TODO: Have the styler manage selected style on its own. */
-      parser->styler.styles_sz++;
-      retval = mcss_style_init(
-         &(parser->styler.styles[parser->styler.styles_sz - 1]) );
+      retval = mcss_push_style( &(parser->styler) );
       maug_cleanup_if_not_ok();
-      /* TODO: Allocate more styles if needed. */
-      assert( parser->styler.styles_sz < parser->styler.styles_sz_max );
+      
+      /* Set the new style as this tag's explicit style. */
       parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
 
       for( ; parser->token_sz > i ; i++ ) {
@@ -475,11 +522,21 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    case '<':
       if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
          if( 0 < parser->token_sz ) {
-            mhtml_push_text_tag( parser );
-
-            /* Pop out of text so next tag isn't a child of it. */
-            retval = mhtml_pop_tag( parser );
+            retval = mhtml_push_text_tag( parser );
             maug_cleanup_if_not_ok();
+
+            if(
+               /* See special exception in mhtml_push_tag(). Style tags don't
+                * push their subordinate text, so popping here would be
+                * uneven!
+                */
+               MHTML_TAG_TYPE_STYLE !=
+                  parser->tags[parser->tag_iter].base.type
+            ) {
+               /* Pop out of text so next tag isn't a child of it. */
+               retval = mhtml_pop_tag( parser );
+               maug_cleanup_if_not_ok();
+            }
          }
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_ELEMENT )
          mhtml_parser_reset_token( parser );

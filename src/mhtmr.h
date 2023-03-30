@@ -394,7 +394,7 @@ MERROR_RETVAL mhtmr_tree_size(
             mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->w;
          debug_printf( 1, "%s: BLOCK WIDTH: " SSIZE_T_FMT,
             gc_mhtml_tag_names[tag_type], mhtmr_node( tree, node_idx )->w );
-      } else {
+      } else if( MCSS_DISPLAY_INLINE == effect_style.DISPLAY ) {
          debug_printf( 1, "%s: INLINE", gc_mhtml_tag_names[tag_type] );
       }
 

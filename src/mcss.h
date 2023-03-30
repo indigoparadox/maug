@@ -23,7 +23,10 @@
 #define MCSS_PARSER_PSTATE_TABLE( f ) \
    f( MCSS_PSTATE_NONE, 0 ) \
    f( MCSS_PSTATE_VALUE, 1 ) \
-   f( MCSS_PSTATE_RULE, 2 )
+   f( MCSS_PSTATE_RULE, 2 ) \
+   f( MCSS_PSTATE_CLASS, 3 ) \
+   f( MCSS_PSTATE_ID, 4 ) \
+   f( MCSS_PSTATE_BLOCK, 5 )
 
 #define mcss_style( styler, style_idx ) \
    (0 <= style_idx ? &((styler)->styles[style_idx]) : NULL)
@@ -60,6 +63,15 @@
    if( NULL != (parser)->styles ) { \
       maug_munlock( (parser)->styles_h, (parser)->styles ); \
    }
+
+/**
+ * \brief Clear enough state to start parsing a new block from scratch.
+ */
+#define mcss_parser_reset( parser ) \
+   while( MCSS_PSTATE_NONE != mcss_parser_pstate( parser ) ) { \
+      mcss_parser_pstate_pop( parser ); \
+   } \
+   mcss_parser_reset_token( parser );
 
 #define MCSS_PROP_TABLE( f ) \
    f( 0, WIDTH, ssize_t, mcss_style_size_t, 0 ) \
@@ -101,8 +113,9 @@
    f( 1, ABSOLUTE )
 
 #define MCSS_DISPLAY_TABLE( f ) \
-   f( 0, INLINE ) \
-   f( 1, BLOCK )
+   f( 0, NONE ) \
+   f( 1, INLINE ) \
+   f( 2, BLOCK )
 
 struct MCSS_STYLE {
    char id[MCSS_ID_SZ_MAX];
@@ -126,7 +139,11 @@ struct MCSS_PARSER {
    RETROFLAT_COLOR colors[16];
 };
 
+MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser );
+
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c );
+
+MERROR_RETVAL mcss_style_init( struct MCSS_STYLE* style );
 
 void mcss_parser_free( struct MCSS_PARSER* parser );
 
@@ -358,12 +375,49 @@ MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PARSE )
    default:
       error_printf( "invalid property: %d", parser->prop_key );
+      retval = MERROR_PARSE;
       break;
    }
 
 cleanup:
 
    parser->prop_flags = 0;
+
+   return retval;
+}
+
+MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO: Lock styles? */
+
+   parser->styles_sz++;
+
+   retval = mcss_style_init( &(parser->styles[parser->styles_sz - 1]) );
+   maug_cleanup_if_not_ok();
+   
+   /* TODO: Allocate more styles if needed. */
+   assert( parser->styles_sz < parser->styles_sz_max );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mcss_push_style_class(
+   struct MCSS_PARSER* parser, const char* class
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = mcss_push_style( parser );
+   maug_cleanup_if_not_ok();
+
+   strncpy( parser->styles[parser->styles_sz - 1].class, class,
+      MCSS_CLASS_SZ_MAX );
+   debug_printf( 1, "pushed style block " SIZE_T_FMT ": %s",
+      parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].class );
+
+cleanup:
 
    return retval;
 }
@@ -375,7 +429,10 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    switch( c ) {
    case ':':
-      if( MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ) {
+      if( 
+         MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ||
+         MCSS_PSTATE_BLOCK == mcss_parser_pstate( parser )
+      ) {
          retval = mcss_push_prop_key( parser );
          maug_cleanup_if_not_ok();
          mcss_parser_pstate_push( parser, MCSS_PSTATE_VALUE );
@@ -415,11 +472,20 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       break;
 
    case '!':
-      /* TODO: Handle !important. */
       if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
          mcss_parser_pstate_push( parser, MCSS_PSTATE_RULE );
          /* Append the ! here so the pusher can make it a \0 later. */
          mcss_parser_append_token( parser, c );
+
+      } else {
+         mcss_parser_invalid_c( parser, c, retval );
+      }
+      break;
+
+   case '.':
+      if( MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ) {
+         mcss_parser_pstate_push( parser, MCSS_PSTATE_CLASS );
+         mcss_parser_reset_token( parser );
       }
       break;
 
@@ -427,13 +493,32 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
    case '\r':
    case '\n':
    case ' ':
-      if( MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ) {
+      if(
+         MCSS_PSTATE_NONE == mcss_parser_pstate( parser ) ||
+         MCSS_PSTATE_BLOCK == mcss_parser_pstate( parser )
+      ) {
          /* Avoid a token that's only whitespace. */
          if( 0 < parser->token_sz ) {
             mcss_parser_append_token( parser, ' ' );
          }
       }
       break;
+
+   case '{':
+      if( MCSS_PSTATE_CLASS == mcss_parser_pstate( parser ) ) {
+         mcss_push_style_class( parser, parser->token );
+         mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
+         mcss_parser_reset_token( parser );
+      }
+      break;
+
+   case '}':
+      if( MCSS_PSTATE_BLOCK == mcss_parser_pstate( parser ) ) {
+         mcss_parser_pstate_pop( parser );
+         mcss_parser_reset_token( parser );
+         /* TODO: Handle multiple classes/IDs. */
+         mcss_parser_pstate_pop( parser ); /* Class or ID */
+      }
 
    default:
       mcss_parser_append_token( parser, c );
