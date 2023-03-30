@@ -463,6 +463,12 @@ cleanup:
    return retval;
 }
 
+/*! \breif Break when we hit explicit position parent. */
+#define mhtmr_break_on_active_pos( iter_idx ) \
+   if( mcss_prop_is_active( mhtmr_node( tree, iter_idx )->pos ) ) { \
+      break; \
+   }
+
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d
@@ -500,12 +506,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
-            if( 
-               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
-            ) {
-               /* Break when we hit explicit position parent. */
-               break;
-            }
+            mhtmr_break_on_active_pos( child_iter_idx );
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
 
@@ -517,12 +518,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
-            if( 
-               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
-            ) {
-               /* Break when we hit explicit position parent. */
-               break;
-            }
+            mhtmr_break_on_active_pos( child_iter_idx );
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
 
@@ -547,12 +543,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
-            if( 
-               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
-            ) {
-               /* Break when we hit explicit position parent. */
-               break;
-            }
+            mhtmr_break_on_active_pos( child_iter_idx );
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
 
@@ -564,13 +555,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
          while( 0 <= mhtmr_node( tree, child_iter_idx )->parent ) {
-            if( 
-               mcss_prop_is_active( mhtmr_node( tree, child_iter_idx )->pos )
-            ) {
-               /* Break when we hit explicit position parent. */
-               debug_printf( 1, "active POS: " SIZE_T_FMT, child_iter_idx );
-               break;
-            }
+            mhtmr_break_on_active_pos( child_iter_idx );
             child_iter_idx = mhtmr_node( tree, child_iter_idx )->parent;
          }
 
