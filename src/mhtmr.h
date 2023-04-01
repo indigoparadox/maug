@@ -32,6 +32,8 @@ struct MHTMR_RENDER_TREE {
    size_t nodes_sz_max;
 };
 
+/* TODO: Function names should be verb_noun! */
+
 #define mhtmr_node( tree, idx ) (0 <= idx ? &((tree)->nodes[idx]) : NULL)
 
 #define mhtmr_node_parent( tree, idx ) \

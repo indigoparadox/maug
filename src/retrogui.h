@@ -6,64 +6,83 @@
 #  define RETROGUI_CTL_TEXT_SZ_MAX 128
 #endif /* !RETROGUI_CTL_TEXT_SZ_MAX */
 
+#ifndef RETROGUI_CTL_SZ_MAX_INIT
+#  define RETROGUI_CTL_SZ_MAX_INIT 10
+#endif /* !RETROGUI_CTL_SZ_MAX_INIT */
+
 #ifndef RETROGUI_PADDING
 #  define RETROGUI_PADDING 5
 #endif /* !RETROGUI_PADDING */
 
-#define RETROGUI_CTL_NONE 0
-#define RETROGUI_CTL_BUTTON 1
-#define RETROGUI_CTL_LISTBOX 2
-#define RETROGUI_CTL_TEXTBOX 3
-#define RETROGUI_CTL_SCROLLBAR 4
+#ifndef RETROGUI_BTN_LBL_SZ_MAX
+#  define RETROGUI_BTN_LBL_SZ_MAX 64
+#endif /* !RETROGUI_BTN_LBL_SZ_MAX */
 
-struct RETROGUI_CTL;
+#define RETROGUI_CTL_TABLE( f ) \
+   f( 0, NONE, void* none; ) \
+   f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; )
+
+#if 0
+   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; ) \
+   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; ) \
+   f( 4, SCROLLBAR, size_t min; size_t max; size_t value; )
+#endif
+
+#define retrogui_lock( gui ) \
+   if( NULL == (gui)->ctls ) { \
+      maug_mlock( (gui)->ctls_h, (gui)->ctls ); \
+      maug_cleanup_if_null_alloc( union RETROGUI_CTL*, (gui)->ctls ); \
+   }
+
+#define retrogui_unlock( gui ) \
+   if( NULL != (gui)->ctls ) { \
+      maug_munlock( (gui)->ctls_h, (gui)->ctls ); \
+   }
 
 /*! \brief Unique identifying constant number for controls. */
-typedef int16_t RETROGUI_IDC;
+typedef size_t RETROGUI_IDC;
 
 #define RETROGUI_IDC_NONE -1
 
-#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-struct RETROGUI_CTL {
-   HWND hwnd;
+struct RETROGUI_CTL_BASE {
+   uint8_t type;
    RETROGUI_IDC idc;
-   int ctl_type;
-};
-
-#else
-
-struct RETROGUI_CTL {
-   int x;
-   int y;
-   int w;
-   int h;
-   RETROGUI_IDC idc;
+   size_t x;
+   size_t y;
+   size_t w;
+   size_t h;
    RETROFLAT_COLOR bg_color;
    RETROFLAT_COLOR fg_color;
-   char** text_list;
-   int text_list_sz;
-   int sel_idx;
-   int ctl_type;
+#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   HWND hwnd;
+#endif
 };
 
-#endif
+#define RETROGUI_CTL_TABLE_FIELDS( idx, c_name, c_fields ) \
+   struct RETROGUI_CTL_ ## c_name { \
+      struct RETROGUI_CTL_BASE base; \
+      c_fields \
+   };
 
-MERROR_RETVAL retrogui_add_button(
-   const char* text, int x, int y, int w, int h,
-   RETROFLAT_COLOR bg_color, RETROFLAT_COLOR fg_color,
-   RETROGUI_IDC idc, uint8_t flags, struct RETROGUI_CTL* button );
+RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_FIELDS )
 
-MERROR_RETVAL retrogui_add_listbox(
-   char* const* text_list, int text_list_sz, int sel_idx,
-   int x, int y, int w, int h,
-   RETROFLAT_COLOR bg_color, RETROFLAT_COLOR fg_color,
-   RETROGUI_IDC idc, uint8_t flags, struct RETROGUI_CTL* listbox );
+#define RETROGUI_CTL_TABLE_TYPES( idx, c_name, c_fields ) \
+   struct RETROGUI_CTL_ ## c_name c_name;
 
-MERROR_RETVAL retrogui_get_ctl_text(
-   char* buffer, int buffer_sz, struct RETROGUI_CTL* ctl );
+union RETROGUI_CTL {
+   struct RETROGUI_CTL_BASE base;
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_TYPES )
+};
 
-int16_t retrogui_get_ctl_sel_idx( struct RETROGUI_CTL* ctl );
+struct RETROGUI {
+   RETROGUI_IDC idc_prev;
+   MAUG_MHANDLE ctls_h;
+   union RETROGUI_CTL* ctls;
+   size_t ctls_sz;
+   size_t ctls_sz_max;
+};
+
+union RETROGUI_CTL* retrogui_get_ctl_by_idc( struct RETROGUI* gui, size_t idc );
 
 /**
  * \brief Poll for the last clicked control and maintain listboxes
@@ -74,114 +93,256 @@ int16_t retrogui_get_ctl_sel_idx( struct RETROGUI_CTL* ctl );
  *         since last poll.
  */
 RETROGUI_IDC retrogui_poll_ctls(
-   int input, struct RETROFLAT_INPUT* input_evt,
-   struct RETROGUI_CTL* ctls, size_t ctls_sz );
+   struct RETROGUI* gui, int input, struct RETROFLAT_INPUT* input_evt );
 
-void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, size_t ctls_sz );
+void retrogui_redraw_ctls( struct RETROGUI* gui );
+
+MERROR_RETVAL retrogui_push_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl );
+
+size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc );
+
+MERROR_RETVAL retrogui_init_ctl(
+   union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
+
+MERROR_RETVAL retrogui_init( struct RETROGUI* gui );
 
 #ifdef RETROGUI_C
 
-RETROGUI_IDC g_retrogui_last_idc = RETROGUI_IDC_NONE;
+#define RETROGUI_CTL_TABLE_CONSTS( idx, c_name, c_fields ) \
+   MAUG_CONST uint8_t RETROGUI_CTL_TYPE_ ## c_name = idx;
 
-MERROR_RETVAL retrogui_add_button(
-   const char* text, int x, int y, int w, int h,
-   RETROFLAT_COLOR bg_color, RETROFLAT_COLOR fg_color,
-   RETROGUI_IDC idc, uint8_t flags, struct RETROGUI_CTL* button
-) {
-   MERROR_RETVAL retval = MERROR_OK;
+RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CONSTS )
 
-   assert( 0 < idc );
+#define RETROGUI_CTL_TABLE_NAMES( idx, c_name, f_fields ) \
+   #c_name,
+
+MAUG_CONST char* gc_retrogui_ctl_names[] = {
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_NAMES )
+   ""
+};
+
+/* === Control: NONE === */
+
+void retrogui_redraw_NONE( struct RETROGUI* gui, union RETROGUI_CTL* ctl ) {
+}
+
+static MERROR_RETVAL retrogui_push_NONE( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_GUI;
+  
+   return retval;
+}
+
+MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_GUI;
+
+   return retval;
+}
+
+/* === Control: LISTBOX === */
+
+void retrogui_redraw_LISTBOX( struct RETROGUI* gui, union RETROGUI_CTL* ctl ) {
+   size_t i = 0;
+   
+   assert( NULL == ctl->LISTBOX.list );
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   /* TODO: InvalidateRect()? */
+#  else
 
-   button->hwnd = CreateWindow(
-      "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-      x, y, w, h, g_retroflat_state->window, (HMENU)idc, g_retroflat_instance, NULL );
-   if( (HWND)NULL == button->hwnd ) {
-      error_printf( "could not create button: %s", text );
+   maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   if( NULL == ctl->LISTBOX.list ) {
       goto cleanup;
    }
-   button->idc = idc;
-   button->ctl_type = RETROGUI_CTL_BUTTON;
+   
+   retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+
+#if 0
+   /* XXX: Parse out variable strings. */
+   for( j = 0 ; gui->ctls[i].text_list_sz > j ; j++ ) {
+      retroflat_string_sz(
+         NULL, gui->ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
+      if( j == gui->ctls[i].sel_idx ) {
+         /* TODO: Configurable selection colors. */
+         retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
+            gui->ctls[i].x, gui->ctls[i].y + (j * (h + RETROGUI_PADDING)),
+            gui->ctls[i].w, h, RETROFLAT_FLAGS_FILL );
+         
+      }
+      retroflat_string(
+         NULL, gui->ctls[i].fg_color, gui->ctls[i].text_list[j], -1, NULL,
+         gui->ctls[i].x, gui->ctls[i].y + (j * (h + RETROGUI_PADDING)), 0 );
+   }
+#endif
 
 cleanup:
 
+   if( NULL != ctl->LISTBOX.list ) {
+      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   }
+
+#  endif
+
+}
+
+MERROR_RETVAL retrogui_select_listbox_item(
+   union RETROGUI_CTL* ctl, size_t item_idx
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* Select sel_idx. */
+   SendMessage( listbox->hwnd, LB_SETCURSEL, sel_idx, 0 );
+
 #  else
 
-   button->x = x;
-   button->y = y;
-   button->w = w;
-   button->h = h;
-   button->bg_color = bg_color;
-   button->fg_color = fg_color;
-   button->idc = idc;
-   button->text_list = calloc( 1, sizeof( char* ) );
-   button->text_list[0] = calloc( 1, RETROGUI_CTL_TEXT_SZ_MAX + 1 );
-   strncpy( button->text_list[0], text, RETROGUI_CTL_TEXT_SZ_MAX );
-   button->text_list_sz = 1;
-   button->sel_idx = -1;
-   button->ctl_type = RETROGUI_CTL_BUTTON;
+   ctl->LISTBOX.sel_idx = item_idx;
 
 #  endif
 
    return retval;
 }
 
-MERROR_RETVAL retrogui_add_listbox(
-   char* const* text_list, int text_list_sz, int sel_idx,
-   int x, int y, int w, int h,
-   RETROFLAT_COLOR bg_color, RETROFLAT_COLOR fg_color,
-   RETROGUI_IDC idc, uint8_t flags, struct RETROGUI_CTL* listbox
+MERROR_RETVAL retrogui_push_listbox_item(
+   struct RETROGUI* gui, size_t idc, const char* item, size_t item_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int i = 0;
+   union RETROGUI_CTL* ctl = NULL;
+   MAUG_MHANDLE listbox_h_new = (MAUG_MHANDLE)NULL;
 
-   assert( 0 < idc );
+   retrogui_lock( gui );
+
+   ctl = retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Adding item \"%s\" failed!", item );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+   
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   SendMessage( ctl->LISTBOX.base.hwnd, LB_ADDSTRING, 0, (LPARAM)item );
+
+#  else
+
+   if( 0 == ctl->LISTBOX.list_sz ) {
+      ctl->LISTBOX.list_h = maug_malloc( 255, sizeof( char ) );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->LISTBOX.list_h );
+      ctl->LISTBOX.list_sz_max = 255;
+   }
+
+   if( NULL != ctl->LISTBOX.list ) {
+      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   }
+
+   while( ctl->LISTBOX.list_sz + item_sz + 1 >= ctl->LISTBOX.list_sz_max )  {
+      debug_printf( 1, "resizing listbox items to " SIZE_T_FMT "...",
+         ctl->LISTBOX.list_sz );
+      maug_mrealloc_test(
+         listbox_h_new, ctl->LISTBOX.list_h,
+         ctl->LISTBOX.list_sz_max * 2, sizeof( char ) );
+      ctl->LISTBOX.list_sz_max *= 2;
+   }
+
+   maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   maug_cleanup_if_null_alloc( char*, ctl->LISTBOX.list );
+
+   strncpy( &(ctl->LISTBOX.list[ctl->LISTBOX.list_sz]), item, item_sz );
+   ctl->LISTBOX.list[ctl->LISTBOX.list_sz + item_sz] = '\0';
+   ctl->LISTBOX.list_sz += item_sz + 1;
+
+#endif
+
+cleanup:
+
+   if( NULL != ctl->LISTBOX.list ) {
+      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   }
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_push_LISTBOX( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   listbox->hwnd = CreateWindow(
+   ctl->base.hwnd = CreateWindow(
       "LISTBOX", NULL, WS_CHILD | WS_VISIBLE | LBS_STANDARD,
-      x, y, w, h, g_retroflat_state->window, (HMENU)idc,
+      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      g_retroflat_state->window, (HMENU)ctl->base.idc,
       g_retroflat_instance, NULL );
-   if( (HWND)NULL == listbox->hwnd ) {
+   if( (HWND)NULL == ctl->base.hwnd ) {
       error_printf( "could not create listbox" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
-   listbox->idc = idc;
-   listbox->ctl_type = RETROGUI_CTL_LISTBOX;
-
-   /* Add listbox items. */
-   for( i = 0 ; text_list_sz > i ; i++ ) {
-      SendMessage( listbox->hwnd, LB_ADDSTRING, 0, (LPARAM)text_list[i] );
-   }
-
-   /* Select sel_idx. */
-   SendMessage( listbox->hwnd, LB_SETCURSEL, sel_idx, 0 );
 
 cleanup:
 
 #  else
 
-   listbox->x = x;
-   listbox->y = y;
-   listbox->w = w;
-   listbox->h = h;
-   listbox->bg_color = bg_color;
-   listbox->fg_color = fg_color;
-   listbox->idc = idc;
-   listbox->text_list = calloc( text_list_sz, sizeof( char* ) );
-   listbox->text_list_sz = text_list_sz;
+   /* TODO? */
 
-   /* Add listbox items. */
-   for( i = 0 ; text_list_sz > i ; i++ ) {
-      listbox->text_list[i] =
-         calloc( strlen( text_list[i] ) + 1, sizeof( char ) );
-      assert( NULL != listbox->text_list[i] );
-      strcpy( listbox->text_list[i], text_list[i] );
+#  endif
+
+   return retval;
+}
+
+MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "initializing listbox " SIZE_T_FMT "...", ctl->base.idc );
+
+   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
+
+   return retval;
+}
+
+/* === Generic Functions === */
+
+union RETROGUI_CTL* retrogui_get_ctl_by_idc(
+   struct RETROGUI* gui, size_t idc
+) {
+   size_t i = 0;
+   union RETROGUI_CTL* ctl = NULL;
+
+   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+      if( idc == gui->ctls[i].base.idc ) {
+         ctl = &(gui->ctls[i]);
+         break;
+      }
    }
-   listbox->sel_idx = sel_idx;
-   listbox->ctl_type = RETROGUI_CTL_LISTBOX;
+
+   if( NULL == ctl ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Could not find GUI item: " SIZE_T_FMT, idc );
+   }
+
+   return ctl;
+}
+
+static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   ctl->base.hwnd = CreateWindow(
+      "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      g_retroflat_state->window, (HMENU)(ctl->base.idc),
+      g_retroflat_instance, NULL );
+   if( (HWND)NULL == ctl->base.hwnd ) {
+      error_printf( "could not create button: %s", text );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+cleanup:
 
 #  endif
 
@@ -189,17 +350,16 @@ cleanup:
 }
 
 RETROGUI_IDC retrogui_poll_ctls( 
-   int input, struct RETROFLAT_INPUT* input_evt,
-   struct RETROGUI_CTL* ctls, size_t ctls_sz
+   struct RETROGUI* gui, int input, struct RETROFLAT_INPUT* input_evt
 ) {
    size_t i = 0;
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   for( i = 0 ; ctls_sz > i ; i++ ) {
-      if( ctls[i].idc == g_retroflat_state->last_idc ) {
-         g_retroflat_state->last_idc = 0;
-         return ctls[i].idc;
+   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+      if( gui->ctls[i].idc == gui->idc_prev ) {
+         gui->idc_prev = 0;
+         return gui->ctls[i].idc;
       }
    }
 #  else
@@ -208,84 +368,130 @@ RETROGUI_IDC retrogui_poll_ctls(
       w = 0,
       h = 0;
 
-   for( i = 0 ; ctls_sz > i ; i++ ) {
+   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
       if(
          RETROFLAT_MOUSE_B_LEFT == input &&
-         input_evt->mouse_x > ctls[i].x &&
-         input_evt->mouse_y > ctls[i].y &&
-         input_evt->mouse_x < ctls[i].x + ctls[i].w &&
-         input_evt->mouse_y < ctls[i].y + ctls[i].h
+         input_evt->mouse_x > gui->ctls[i].base.x &&
+         input_evt->mouse_y > gui->ctls[i].base.y &&
+         input_evt->mouse_x < gui->ctls[i].base.x + gui->ctls[i].base.w &&
+         input_evt->mouse_y < gui->ctls[i].base.y + gui->ctls[i].base.h
       ) {
-         if( RETROGUI_CTL_BUTTON == ctls[i].ctl_type ) {
+      #if 0
+         if( RETROGUI_CTL_TYPE_BUTTON == gui->ctls[i].base.type ) {
             /* Set the last button clicked. */
-            if( g_retrogui_last_idc == ctls[i].idc ) {
+            if( gui->idc_prev == gui->ctls[i].base.idc ) {
                /* No repeated clicks! */
                return RETROGUI_IDC_NONE;
             } else {
-               g_retrogui_last_idc = ctls[i].idc;
-               return ctls[i].idc;
+               gui->idc_prev = gui->ctls[i].base.idc;
+               return gui->ctls[i].base.idc;
             }
-         } else if( RETROGUI_CTL_LISTBOX == ctls[i].ctl_type ) {
+         } else XXX
+         #endif 
+         if( RETROGUI_CTL_TYPE_LISTBOX == gui->ctls[i].base.type ) {
             /* Figure out the item clicked. */
-            for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
+            for( j = 0 ; gui->ctls[i].LISTBOX.list_sz > j ; j++ ) {
+            /*
                retroflat_string_sz(
-                  NULL, ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
+                  NULL, gui->ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
                if(
                   input_evt->mouse_y < 
-                  ctls[i].y + ((j + 1) * (h + RETROGUI_PADDING))
+                  gui->ctls[i].y + ((j + 1) * (h + RETROGUI_PADDING))
                ) {
-                  ctls[i].sel_idx = j;
+                  gui->ctls[i].sel_idx = j;
                   return RETROGUI_IDC_NONE;
                }
+            XXX
+            */
             }
          }
       }
    }
    
    /* Reset repeat detector. */
-   g_retrogui_last_idc = RETROGUI_IDC_NONE;
+   gui->idc_prev = RETROGUI_IDC_NONE;
 
 #  endif
+
+cleanup:
 
    return RETROGUI_IDC_NONE;
 }
 
-void retrogui_redraw_ctls( struct RETROGUI_CTL* ctls, size_t ctls_sz ) {
+void retrogui_redraw_ctls( struct RETROGUI* gui ) {
 
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   /* TODO: InvalidateRect()? */
-#  else
+   assert( NULL != gui->ctls );
+
    size_t i = 0,
       j = 0,
       w = 0,
       h = 0;
 
-   for( i = 0 ; ctls_sz > i ; i++ ) {
-      retroflat_rect( NULL, ctls[i].bg_color,
-         ctls[i].x, ctls[i].y, ctls[i].w, ctls[i].h, RETROFLAT_FLAGS_FILL );
+   #define RETROGUI_CTL_TABLE_PUSH( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
+         retrogui_redraw_ ## c_name( gui, &(gui->ctls[i]) ); \
 
-      for( j = 0 ; ctls[i].text_list_sz > j ; j++ ) {
-         retroflat_string_sz(
-            NULL, ctls[i].text_list[j], 0, NULL, &w, &h, 0 );
-         if( j == ctls[i].sel_idx ) {
-            /* TODO: Configurable selection colors. */
-            retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
-               ctls[i].x, ctls[i].y + (j * (h + RETROGUI_PADDING)),
-               ctls[i].w, h, RETROFLAT_FLAGS_FILL );
-            
-         }
-         retroflat_string(
-            NULL, ctls[i].fg_color, ctls[i].text_list[j], -1, NULL,
-            ctls[i].x, ctls[i].y + (j * (h + RETROGUI_PADDING)), 0 );
+   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+      if( 0 ) {
+      RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_PUSH )
       }
    }
+}
 
-#  endif
+MERROR_RETVAL retrogui_push_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl
+) {
+   MERROR_RETVAL retval = MERROR_OK;
 
+   assert( NULL != gui->ctls );
+
+   /* TODO: Hunt for control IDC and fail if duplicate found! */
+
+   /* TODO: Grow controls if needed. */
+   assert( gui->ctls_sz + 1 < gui->ctls_sz_max );
+
+   if( RETROFLAT_COLOR_NULL == ctl->base.bg_color ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Invalid background color specified for control " SIZE_T_FMT "!",
+         ctl->base.idc );
+      retval = MERROR_GUI;
+      goto cleanup;
+
+   }
+
+   if( RETROFLAT_COLOR_NULL == ctl->base.fg_color ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Invalid foreground color specified for control " SIZE_T_FMT "!",
+         ctl->base.idc );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   debug_printf( 1, "pushing ctl " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
+      ctl->base.idc, gui->ctls_sz );
+
+   memcpy(
+      &(gui->ctls[gui->ctls_sz]),
+      ctl,
+      sizeof( union RETROGUI_CTL ) );
+   gui->ctls_sz++;
+
+   #define RETROGUI_CTL_TABLE_PUSH( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         retval = retrogui_push_ ## c_name( ctl ); \
+         maug_cleanup_if_not_ok();
+
+   if( 0 ) {
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_PUSH )
+   }
+
+cleanup:
+
+   return retval;
 }
 
 MERROR_RETVAL retrogui_get_ctl_text(
-   char* buffer, int buffer_sz, struct RETROGUI_CTL* ctl
+   char* buffer, int buffer_sz, union RETROGUI_CTL* ctl
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    
@@ -294,17 +500,76 @@ MERROR_RETVAL retrogui_get_ctl_text(
    return retval;
 }
 
-int16_t retrogui_get_ctl_sel_idx( struct RETROGUI_CTL* ctl ) {
-   int16_t idx = -1;
+size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc ) {
+   size_t idx = -1;
+   union RETROGUI_CTL* ctl = NULL;
+
+   ctl = retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      goto cleanup;
+   }
+
+   assert( RETROGUI_CTL_TYPE_LISTBOX == ctl->base.type );
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    idx = SendMessage( ctl->hwnd, LB_GETCARETINDEX, 0, 0 );
 #  else
-   idx = ctl->sel_idx;
+   idx = ctl->LISTBOX.sel_idx;
 #  endif
+
+cleanup:
 
    return idx;
 }
+
+MERROR_RETVAL retrogui_init_ctl(
+   union RETROGUI_CTL* ctl, uint8_t type, size_t idc
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "initializing control base " SIZE_T_FMT "...", idc );
+
+   maug_mzero( ctl, sizeof( union RETROGUI_CTL ) );
+
+   ctl->base.type = type;
+   ctl->base.idc = idc;
+   ctl->base.fg_color = RETROFLAT_COLOR_NULL;
+   ctl->base.bg_color = RETROFLAT_COLOR_NULL;
+
+   #define RETROGUI_CTL_TABLE_INITS( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         retrogui_init_ ## c_name( ctl ); \
+
+   if( 0 ) {
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_INITS )
+   }
+
+   return retval;
+}
+
+MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   maug_mzero( gui, sizeof( struct RETROGUI ) );
+
+   gui->ctls_h = maug_malloc(
+      RETROGUI_CTL_SZ_MAX_INIT, sizeof( struct RETROGUI ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, gui );
+   gui->ctls_sz_max = RETROGUI_CTL_SZ_MAX_INIT;
+
+cleanup:
+
+   return retval;
+}
+
+#else
+
+#define RETROGUI_CTL_TABLE_CONSTS( idx, c_name, c_fields ) \
+   extern MAUG_CONST uint8_t RETROGUI_CTL_TYPE_ ## c_name;
+
+RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CONSTS )
+
+extern MAUG_CONST char* gc_retrogui_ctl_names[];
 
 #endif /* RETROGUI_C */
 

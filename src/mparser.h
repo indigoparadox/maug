@@ -12,6 +12,8 @@
 
 typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
+/* TODO: Function names should be verb_noun! */
+
 /* Normalize token case. */
 #define mparser_token_upper( parser, i ) \
    for( i = 0 ; (parser)->token_sz > i ; i++ ) { \
