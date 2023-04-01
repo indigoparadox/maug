@@ -57,10 +57,10 @@ typedef size_t RETROGUI_IDC;
 #define RETROGUI_CTL_TABLE( f ) \
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
-   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; )
+   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; ) \
+   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t cursor_pos; )
 
 #if 0
-   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; ) \
    f( 4, SCROLLBAR, size_t min; size_t max; size_t value; )
 #endif
 
@@ -111,6 +111,7 @@ struct RETROGUI {
    union RETROGUI_CTL* ctls;
    size_t ctls_sz;
    size_t ctls_sz_max;
+   RETROGUI_IDC focus;
 };
 
 MERROR_RETVAL retrogui_push_listbox_item(
@@ -478,6 +479,107 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
    return retval;
 }
 
+/* === Control: TEXTBOX === */
+
+static RETROGUI_IDC retrogui_poll_TEXTBOX(
+   union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+
+   /* TODO: Focus? Enter? */
+
+   return idc_out;
+}
+
+static void retrogui_redraw_TEXTBOX(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl
+) {
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   /* Do nothing. */
+#  else
+
+   retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+
+   /* TODO: Draw chiselled inset border. */
+
+   /* TODO: Draw blinking cursor. */
+
+   assert( NULL == ctl->TEXTBOX.text );
+   maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   if( NULL == ctl->TEXTBOX.text ) {
+      goto cleanup;
+   }
+
+   retroflat_string(
+      NULL, ctl->base.fg_color, ctl->TEXTBOX.text, 0, NULL,
+      ctl->base.x + RETROGUI_PADDING,
+      ctl->base.y + RETROGUI_PADDING, 0 );
+
+cleanup:
+
+   if( NULL != ctl->TEXTBOX.text ) {
+      maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   }
+
+#  endif
+
+   return;
+}
+
+static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   ctl->base.hwnd = CreateWindow(
+      "EDIT", 0, WS_CHILD | WS_VISIBLE | WS_BORDER,
+      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      g_retroflat_state->window, (HMENU)(ctl->base.idc),
+      g_retroflat_instance, NULL );
+   if( (HWND)NULL == ctl->base.hwnd ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Could not create textbox: " SIZE_T_FMT, ctl->base.idc );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+#  else
+
+   assert( NULL == ctl->TEXTBOX.text_h );
+   ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
+
+   maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   maug_cleanup_if_null_alloc( char*, ctl->TEXTBOX.text );
+   maug_mzero( ctl->TEXTBOX.text, RETROGUI_CTL_TEXT_SZ_MAX );
+   maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+
+#  endif
+
+cleanup:
+
+   return retval;
+}
+
+static void retrogui_free_TEXTBOX( union RETROGUI_CTL* ctl ) {
+   if( NULL != ctl->TEXTBOX.text_h ) {
+      maug_mfree( ctl->TEXTBOX.text_h );
+   }
+}
+
+static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "initializing textbox " SIZE_T_FMT "...", ctl->base.idc );
+
+   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
+
+   return retval;
+}
+
 /* === Generic Functions === */
 
 union RETROGUI_CTL* retrogui_get_ctl_by_idc(
@@ -543,6 +645,8 @@ RETROGUI_IDC retrogui_poll_ctls(
          }
 
          gui->idc_prev = gui->ctls[i].base.idc;
+
+         gui->focus = gui->ctls[i].base.idc;
 
          if( 0 ) {
          RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_POLL )
