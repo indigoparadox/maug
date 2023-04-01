@@ -289,6 +289,10 @@ void retrosoft_string_sz(
    const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
 ) {
    /* TODO: Put a little more effort into sizing. */
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
    *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
    *h_out = RETROSOFT_GLYPH_H_SZ;
 }
