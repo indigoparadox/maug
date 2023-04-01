@@ -48,6 +48,8 @@
    f( MHTML_PSTATE_STRING, 5 ) \
    f( MHTML_PSTATE_STYLE, 6 )
 
+/* TODO: Function names should be verb_noun! */
+
 #define mhtml_tag( parser, idx ) (&((parser)->tags[idx]))
 
 #define mhtml_tag_parent( parser, idx ) \

@@ -192,6 +192,8 @@ mtilemap_free( struct MTILEMAP* t );
 
 #  include <mparser.h>
 
+/* TODO: Function names should be verb_noun! */
+
 #define mtilemap_parser_pstate( parser ) \
    (parser->pstate_sz > 0 ? \
       parser->pstate[parser->pstate_sz - 1] : MTILEMAP_PSTATE_NONE)

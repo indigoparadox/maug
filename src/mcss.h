@@ -30,6 +30,8 @@
    f( MCSS_PSTATE_ID, 4 ) \
    f( MCSS_PSTATE_BLOCK, 5 )
 
+/* TODO: Function names should be verb_noun! */
+
 #define mcss_style( styler, style_idx ) \
    (0 <= style_idx ? &((styler)->styles[style_idx]) : NULL)
 
