@@ -38,7 +38,7 @@
 /*! \brief Unique identifying constant number for controls. */
 typedef size_t RETROGUI_IDC;
 
-#define RETROGUI_IDC_NONE -1
+#define RETROGUI_IDC_NONE 0
 
 /**
  * \addtogroup maug_retrogui_ctl RetroGUI Controls
@@ -58,7 +58,7 @@ typedef size_t RETROGUI_IDC;
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; ) \
-   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t cursor_pos; )
+   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t cursor_pos; )
 
 #if 0
    f( 4, SCROLLBAR, size_t min; size_t max; size_t value; )
@@ -159,7 +159,15 @@ MAUG_CONST char* gc_retrogui_ctl_names[] = {
 
 /* === Control: NONE === */
 
-static RETROGUI_IDC retrogui_poll_NONE( 
+static RETROGUI_IDC retrogui_click_NONE( 
+   union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+
+   return idc_out;
+}
+
+static RETROGUI_IDC retrogui_key_NONE( 
    union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -187,7 +195,7 @@ static MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
 
 /* === Control: LISTBOX === */
 
-static RETROGUI_IDC retrogui_poll_LISTBOX( 
+static RETROGUI_IDC retrogui_click_LISTBOX( 
    union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -226,6 +234,16 @@ static RETROGUI_IDC retrogui_poll_LISTBOX(
    }
 
 #endif
+
+   return idc_out;
+}
+
+static RETROGUI_IDC retrogui_key_LISTBOX( 
+   union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+
+   /* TODO: Move up or down to next/prev item. */
 
    return idc_out;
 }
@@ -410,13 +428,25 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
 
 /* === Control: BUTTON === */
 
-static RETROGUI_IDC retrogui_poll_BUTTON( 
+static RETROGUI_IDC retrogui_click_BUTTON( 
    union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
    /* Set the last button clicked. */
    idc_out = ctl->base.idc;
+
+   return idc_out;
+}
+
+static RETROGUI_IDC retrogui_key_BUTTON( 
+   union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+
+   /* Set the last button clicked. */
+   /* TODO: Only set out on ENTER/SPACE. */
+   /* idc_out = ctl->base.idc; */
 
    return idc_out;
 }
@@ -481,12 +511,43 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
 
 /* === Control: TEXTBOX === */
 
-static RETROGUI_IDC retrogui_poll_TEXTBOX(
+static RETROGUI_IDC retrogui_click_TEXTBOX(
    union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
-   /* TODO: Focus? Enter? */
+   return idc_out;
+}
+
+static RETROGUI_IDC retrogui_key_TEXTBOX(
+   union RETROGUI_CTL* ctl, int input, struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   /* Do nothing. */
+#  else
+
+   /* TODO Ignore non-printable characters. */
+
+   assert( NULL == ctl->TEXTBOX.text );
+   assert( (MAUG_MHANDLE)NULL != ctl->TEXTBOX.text_h );
+   maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   if( NULL == ctl->TEXTBOX.text ) {
+      error_printf( "could not lock TEXTBOX text handle!" );
+      goto cleanup;
+   }
+
+   assert( ctl->TEXTBOX.text_sz < ctl->TEXTBOX.text_sz_max );
+   ctl->TEXTBOX.text[ctl->TEXTBOX.text_sz++] = input;
+
+cleanup:
+
+   if( NULL != ctl->TEXTBOX.text ) {
+      maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   }
+
+#  endif
 
    return idc_out;
 }
@@ -507,7 +568,7 @@ static void retrogui_redraw_TEXTBOX(
    /* TODO: Draw blinking cursor. */
 
    assert( NULL == ctl->TEXTBOX.text );
-   maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
    if( NULL == ctl->TEXTBOX.text ) {
       goto cleanup;
    }
@@ -547,12 +608,17 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
 
 #  else
 
+   debug_printf( 1, "clearing textbox " SIZE_T_FMT " buffer...",
+      ctl->base.idc );
    assert( NULL == ctl->TEXTBOX.text_h );
    ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
+   ctl->TEXTBOX.text_sz_max = RETROGUI_CTL_TEXT_SZ_MAX;
 
    maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
    maug_cleanup_if_null_alloc( char*, ctl->TEXTBOX.text );
+   debug_printf( 1, "clearing textbox " SIZE_T_FMT " buffer...",
+      ctl->base.idc );
    maug_mzero( ctl->TEXTBOX.text, RETROGUI_CTL_TEXT_SZ_MAX );
    maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
 
@@ -608,6 +674,7 @@ RETROGUI_IDC retrogui_poll_ctls(
 ) {
    size_t i = 0;
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   union RETROGUI_CTL* ctl = NULL;
 
    assert( NULL != gui->ctls );
 
@@ -624,19 +691,34 @@ RETROGUI_IDC retrogui_poll_ctls(
 
    /* Use our cross-platform controls. */
 
-   #define RETROGUI_CTL_TABLE_POLL( idx, c_name, c_fields ) \
+   #define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          idc_out = \
-            retrogui_poll_ ## c_name( &(gui->ctls[i]), input, input_evt ); \
+            retrogui_click_ ## c_name( &(gui->ctls[i]), input, input_evt );
 
-   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
-      if(
-         RETROFLAT_MOUSE_B_LEFT == input &&
-         input_evt->mouse_x > gui->ctls[i].base.x &&
-         input_evt->mouse_y > gui->ctls[i].base.y &&
-         input_evt->mouse_x < gui->ctls[i].base.x + gui->ctls[i].base.w &&
-         input_evt->mouse_y < gui->ctls[i].base.y + gui->ctls[i].base.h
-      ) {
+   #define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         idc_out = retrogui_key_ ## c_name( ctl, input, input_evt );
+
+   if( 0 == input ) {
+      goto reset_debounce;
+
+   } else if(
+      RETROFLAT_MOUSE_B_LEFT == input ||
+      RETROFLAT_MOUSE_B_RIGHT == input
+   ) {
+      /* Remove all focus before testing if a new control has focus. */
+      gui->focus = RETROGUI_IDC_NONE;
+      for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+         if(
+            input_evt->mouse_x < gui->ctls[i].base.x ||
+            input_evt->mouse_y < gui->ctls[i].base.y ||
+            input_evt->mouse_x > gui->ctls[i].base.x + gui->ctls[i].base.w ||
+            input_evt->mouse_y > gui->ctls[i].base.y + gui->ctls[i].base.h
+         ) {
+            continue;
+         }
+
          if( gui->idc_prev == gui->ctls[i].base.idc ) {
             /* No repeated clicks! */
             /* TODO: Allow exceptions for e.g. scrollbars. */
@@ -649,11 +731,33 @@ RETROGUI_IDC retrogui_poll_ctls(
          gui->focus = gui->ctls[i].base.idc;
 
          if( 0 ) {
-         RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_POLL )
+         RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CLICK )
          }
          break;
       }
+
+   } else {
+
+      debug_printf( 1, SIZE_T_FMT " %c", gui->focus, input );
+
+      if( RETROGUI_IDC_NONE == gui->focus ) {
+         goto reset_debounce;
+      }
+
+      /* Send keystrokes to control that has focus. */
+
+      ctl = retrogui_get_ctl_by_idc( gui, gui->focus );
+      if( NULL == ctl ) {
+         debug_printf( 1, "invalid IDC: " SIZE_T_FMT, gui->focus );
+         goto reset_debounce;
+      }
+
+      if( 0 ) {
+      RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_KEY )
+      }
    }
+
+reset_debounce:
 
    /* Reset repeat detector. */
    gui->idc_prev = RETROGUI_IDC_NONE;
