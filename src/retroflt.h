@@ -650,6 +650,47 @@ typedef void (*retroflat_loop_iter)(void* data);
  * \{
  */
 
+/**
+ * \brief Remove a character from a text buffer before cursor position.
+ */
+#define retroflat_buffer_bksp( buffer, buffer_cur, buffer_sz ) \
+   if( 0 < buffer_cur ) { \
+      if( buffer_cur < buffer_sz ) { \
+         memmove( \
+            &(buffer[(buffer_cur) - 1]), \
+            &(buffer[buffer_cur]), \
+            (buffer_sz) - (buffer_cur) ); \
+      } \
+      buffer_cur--; \
+      buffer_sz--; \
+      buffer[buffer_sz] = '\0'; \
+   }
+
+/**
+ * \brief Insert a character into a text buffer at cursor position.
+ */
+#define retroflat_buffer_insert( c, buffer, buffer_cur, buffer_sz, buffer_mx ) \
+   if( buffer_sz + 1 < buffer_mx ) { \
+      if( buffer_cur < buffer_sz ) { \
+         memmove( \
+            &(buffer[(buffer_cur) + 1]), \
+            &(buffer[buffer_cur]), \
+            (buffer_sz) - (buffer_cur) ); \
+      } \
+      buffer[buffer_cur] = c; \
+      buffer_cur++; \
+      buffer_sz++; \
+      buffer[buffer_sz] = '\0'; \
+   }
+
+#define RETROFLAT_INPUT_MOD_SHIFT   0x01
+
+#define RETROFLAT_INPUT_MOD_ALT     0x02
+
+#define RETROFLAT_INPUT_MOD_CTRL    0x04
+
+#define RETROFLAT_INPUT_FORCE_UPPER    0x08
+
 /*! \brief Struct passed to retroflat_poll_input() to hold return data. */
 struct RETROFLAT_INPUT {
    /**
@@ -662,6 +703,7 @@ struct RETROFLAT_INPUT {
     *        event is a mouse click.
     */
    int mouse_y;
+   uint8_t key_flags;
 };
 
 /*! \} */ /* maug_retroflt_input */
@@ -773,6 +815,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_KEY_GRAVE    KEY_BACKQUOTE
 #  define RETROFLAT_KEY_BKSP     KEY_BACKSPACE
 #  define RETROFLAT_KEY_SLASH    KEY_SLASH
+#  define RETROFLAT_KEY_SEMICOLON   KEY_SEMICOLON
+#  define RETROFLAT_KEY_PERIOD   KEY_STOP
+#  define RETROFLAT_KEY_COMMA    KEY_COMMA
+#  define RETROFLAT_KEY_EQUALS   KEY_EQUALS
+#  define RETROFLAT_KEY_DASH     KEY_MINUS
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -864,6 +911,11 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
 #  define RETROFLAT_KEY_SLASH SDLK_SLASH
 #  define RETROFLAT_KEY_BKSP  SDLK_BACKSPACE
+#  define RETROFLAT_KEY_SEMICOLON   SDLK_SEMICOLON
+#  define RETROFLAT_KEY_PERIOD   SDLK_PERIOD
+#  define RETROFLAT_KEY_COMMA    SDLK_COMMA
+#  define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
+#  define RETROFLAT_KEY_DASH     SDLK_MINUS
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -1140,6 +1192,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define RETROFLAT_KEY_DELETE   VK_DELETE
 #  define RETROFLAT_KEY_PGUP     VK_PRIOR
 #  define RETROFLAT_KEY_PGDN     VK_NEXT
+#  define RETROFLAT_KEY_SEMICOLON   ';'
+#  define RETROFLAT_KEY_PERIOD   '.'
+#  define RETROFLAT_KEY_COMMA    ','
+#  define RETROFLAT_KEY_EQUALS   '='
+#  define RETROFLAT_KEY_DASH     '-'
 
 #  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
 #  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
@@ -1281,6 +1338,11 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_GRAVE    '`'
 #  define RETROFLAT_KEY_SLASH    '/'
 #  define RETROFLAT_KEY_BKSP     0x08
+#  define RETROFLAT_KEY_SEMICOLON   ';'
+#  define RETROFLAT_KEY_PERIOD   '.'
+#  define RETROFLAT_KEY_COMMA    ','
+#  define RETROFLAT_KEY_EQUALS   '='
+#  define RETROFLAT_KEY_DASH     '-'
 #  define RETROFLAT_KEY_A		   'a'
 #  define RETROFLAT_KEY_B		   'b'
 #  define RETROFLAT_KEY_C		   'c'
@@ -1555,6 +1617,7 @@ struct RETROFLAT_STATE {
    int                  screen_w;
    int                  screen_h;
    uint8_t              last_key;
+   uint8_t              vk_mods;
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
@@ -2166,7 +2229,36 @@ static LRESULT CALLBACK WndProc(
          return 1;
 
       case WM_KEYDOWN:
-         g_retroflat_state->last_key = wParam;
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         default:
+            g_retroflat_state->last_key = wParam;
+            break;
+         }
+         break;
+
+      case WM_KEYUP:
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         }
          break;
 
       case WM_LBUTTONDOWN:
@@ -2412,6 +2504,78 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
    /* This should be set by retroflat_quit(). */
    return g_retroflat_state->retval;
+}
+
+/* === */
+
+char retroflat_vk_to_ascii( int k, uint8_t flags ) {
+   char c = 0;
+   char offset_lower = 0;
+
+   if( RETROFLAT_INPUT_MOD_SHIFT != (RETROFLAT_INPUT_MOD_SHIFT & flags) ) {
+      /* Shift is *not* being held down. */
+
+      if( RETROFLAT_KEY_A <= k && RETROFLAT_KEY_Z >= k ) {
+         if( 
+            RETROFLAT_INPUT_FORCE_UPPER !=
+               (RETROFLAT_INPUT_FORCE_UPPER & flags)
+         ) {
+            /* Key is alphabetical and we're not forcing uppercase. */
+            offset_lower = 0x20;
+         }
+      } else {
+         offset_lower = 1;
+      }
+   }
+   
+   switch( k ) {
+   case RETROFLAT_KEY_A: c = 0x41 + offset_lower; break;
+   case RETROFLAT_KEY_B: c = 0x42 + offset_lower; break;
+   case RETROFLAT_KEY_C: c = 0x43 + offset_lower; break;
+   case RETROFLAT_KEY_D: c = 0x44 + offset_lower; break;
+   case RETROFLAT_KEY_E: c = 0x45 + offset_lower; break;
+   case RETROFLAT_KEY_F: c = 0x46 + offset_lower; break;
+   case RETROFLAT_KEY_G: c = 0x47 + offset_lower; break;
+   case RETROFLAT_KEY_H: c = 0x48 + offset_lower; break;
+   case RETROFLAT_KEY_I: c = 0x49 + offset_lower; break;
+   case RETROFLAT_KEY_J: c = 0x4a + offset_lower; break;
+   case RETROFLAT_KEY_K: c = 0x4b + offset_lower; break;
+   case RETROFLAT_KEY_L: c = 0x4c + offset_lower; break;
+   case RETROFLAT_KEY_M: c = 0x4d + offset_lower; break;
+   case RETROFLAT_KEY_N: c = 0x4e + offset_lower; break;
+   case RETROFLAT_KEY_O: c = 0x4f + offset_lower; break;
+   case RETROFLAT_KEY_P: c = 0x50 + offset_lower; break;
+   case RETROFLAT_KEY_Q: c = 0x51 + offset_lower; break;
+   case RETROFLAT_KEY_R: c = 0x52 + offset_lower; break;
+   case RETROFLAT_KEY_S: c = 0x53 + offset_lower; break;
+   case RETROFLAT_KEY_T: c = 0x54 + offset_lower; break;
+   case RETROFLAT_KEY_U: c = 0x55 + offset_lower; break;
+   case RETROFLAT_KEY_V: c = 0x56 + offset_lower; break;
+   case RETROFLAT_KEY_W: c = 0x57 + offset_lower; break;
+   case RETROFLAT_KEY_X: c = 0x58 + offset_lower; break;
+   case RETROFLAT_KEY_Y: c = 0x59 + offset_lower; break;
+   case RETROFLAT_KEY_Z: c = 0x60 + offset_lower; break;
+   case RETROFLAT_KEY_0: c = 0x30 + offset_lower; break;
+   case RETROFLAT_KEY_1: c = offset_lower ? 0x31 : '!'; break;
+   case RETROFLAT_KEY_2: c = 0x32; break;
+   case RETROFLAT_KEY_3: c = 0x33; break;
+   case RETROFLAT_KEY_4: c = 0x34; break;
+   case RETROFLAT_KEY_5: c = 0x35; break;
+   case RETROFLAT_KEY_6: c = 0x36; break;
+   case RETROFLAT_KEY_7: c = 0x37; break;
+   case RETROFLAT_KEY_8: c = 0x38; break;
+   case RETROFLAT_KEY_9: c = 0x39; break;
+   case RETROFLAT_KEY_SPACE: c = ' '; break;
+   case RETROFLAT_KEY_BKSP: c = 0x08; break;
+   case RETROFLAT_KEY_ENTER: c = '\n'; break;
+   case RETROFLAT_KEY_SEMICOLON: c = offset_lower ? ';' : ':'; break;
+   case RETROFLAT_KEY_DASH: c = offset_lower ? '-' : '_'; break;
+   case RETROFLAT_KEY_SLASH: c = offset_lower ? '/' : '?'; break;
+   case RETROFLAT_KEY_PERIOD: c = offset_lower ? '.' : '>'; break;
+   case RETROFLAT_KEY_COMMA: c = offset_lower ? ',' : '<'; break;
+   }
+
+   return c;
 }
 
 /* === */
@@ -5167,6 +5331,19 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    poll_keyboard();
    if( keypressed() ) {
+      /* TODO: ??? */
+      if( KB_SHIFT_FLAG == (KB_SHIFT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
+      }
+
+      if( KB_CTRL_FLAG == (KB_CTRL_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
+      }
+
+      if( KB_ALT_FLAG == (KB_ALT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
+      }
+
       return (readkey() >> 8);
    }
 
@@ -5182,6 +5359,21 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    } else if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
+
+      if(
+         KMOD_RSHIFT == (KMOD_RSHIFT & event.key.keysym.mod) ||
+         KMOD_LSHIFT == (KMOD_LSHIFT & event.key.keysym.mod) 
+      ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
+      }
+
+      if( KMOD_CTRL == (KMOD_CTRL & event.key.keysym.mod) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
+      }
+
+      if( KMOD_ALT == (KMOD_ALT & event.key.keysym.mod) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
+      }
 
       /* Flush key buffer to improve responsiveness. */
       if(
@@ -5239,6 +5431,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       * received.
       */
       key_out = g_retroflat_state->last_key;
+      input->key_flags = g_retroflat_state->vk_mods;
 
       /* Reset pressed key. */
       g_retroflat_state->last_key = 0;
