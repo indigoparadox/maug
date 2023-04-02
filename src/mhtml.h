@@ -14,12 +14,30 @@
 #  define MCSS_C
 #endif /* MHTML_C */
 
+/*! \brief Indicates a text tag contains CSS information to be parsed. */
+#define MHTML_TAG_FLAG_STYLE  0x02
+
 #include <mparser.h>
 #include <mcss.h>
 
 #define MHTML_ATTRIB_TABLE( f ) \
    f( NONE, 0 ) \
-   f( STYLE, 1 )
+   f( STYLE, 1 ) \
+   f( CLASS, 2 ) \
+   f( ID, 3 ) \
+   f( NAME, 4 )
+
+#define MHTML_TAG_TABLE( f ) \
+   f( 0, NONE, void* none;, NONE ) \
+   f( 1, BODY, void* none;, BLOCK ) \
+   f( 2, DIV, void* none;, BLOCK ) \
+   f( 3, HEAD, void* none;, NONE ) \
+   f( 4, HTML, void* none;, BLOCK ) \
+   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
+   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
+   f( 7, SPAN, void* none;, INLINE ) \
+   f( 8, BR, void* none;, INLINE ) \
+   f( 9, STYLE, void* none;, NONE )
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -27,7 +45,24 @@
    f( MHTML_PSTATE_ATTRIB_KEY, 2 ) \
    f( MHTML_PSTATE_ATTRIB_VAL, 3 ) \
    f( MHTML_PSTATE_END_ELEMENT, 4 ) \
-   f( MHTML_PSTATE_STRING, 5 )
+   f( MHTML_PSTATE_STRING, 5 ) \
+   f( MHTML_PSTATE_STYLE, 6 )
+
+/* TODO: Function names should be verb_noun! */
+
+#define mhtml_tag( parser, idx ) (&((parser)->tags[idx]))
+
+#define mhtml_tag_parent( parser, idx ) \
+   (0 <= (parser)->tags[idx].parent ? \
+      (&((parser)->tags[(parser)->tags[idx].parent]])) : NULL)
+
+#define mhtml_tag_child( parser, idx ) \
+   (0 <= (parser)->tags[idx].first_child ? \
+      (&((parser)->tags[(parser)->tags[idx].first_child]])) : NULL)
+
+#define mhtml_tag_sibling( parser, idx ) \
+   (0 <= (parser)->tags[idx].next_sibling ? \
+      (&((parser)->tags[(parser)->tags[idx].next_sibling]])) : NULL)
 
 #define mhtml_parser_pstate( parser ) \
    mparser_pstate( parser )
@@ -60,24 +95,20 @@
    } \
    mcss_parser_unlock( &((parser)->styler) );
 
-#define MHTML_TAG_TABLE( f ) \
-   f( 0, NONE, void* none; ) \
-   f( 1, BODY, void* none; ) \
-   f( 2, DIV, void* none; ) \
-   f( 3, HEAD, void* none; ) \
-   f( 4, HTML, void* none; ) \
-   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz; ) \
-   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz; )
-
 struct MHTML_TAG_BASE {
    uint16_t type;
+   uint8_t flags;
    ssize_t parent;
    ssize_t first_child;
    ssize_t next_sibling;
    ssize_t style;
+   char classes[MCSS_CLASS_SZ_MAX];
+   size_t classes_sz;
+   char id[MCSS_ID_SZ_MAX];
+   size_t id_sz;
 };
 
-#define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields, disp ) \
    struct MHTML_TAG_ ## tag_name { \
       struct MHTML_TAG_BASE base; \
       fields \
@@ -85,7 +116,7 @@ struct MHTML_TAG_BASE {
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_STRUCT )
 
-#define MHTML_TAG_TABLE_UNION_FIELD( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_UNION_FIELD( tag_id, tag_name, fields, disp ) \
    struct MHTML_TAG_ ## tag_name tag_name;
 
 union MHTML_TAG {
@@ -105,20 +136,26 @@ struct MHTML_PARSER {
    size_t tags_sz;
    size_t tags_sz_max;
    ssize_t tag_iter;
+   /**
+    * \brief Flags to be pushed to MHTML_TAG_BASE::flags on next 
+    *        mhtml_push_tag().
+    */
+   uint8_t tag_flags;
    struct MCSS_PARSER styler;
+   ssize_t body_idx;
 };
 
-MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser );
+MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser );
 
 MERROR_RETVAL mhtml_pop_tag( struct MHTML_PARSER* parser );
 
 MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c );
 
+MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser );
+
 void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d );
 
 #ifdef MHTML_C
-
-#endif /* MHTML_C */
 
 MHTML_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
@@ -127,12 +164,12 @@ static MAUG_CONST char* gc_mhtml_pstate_names[] = {
    ""
 };
 
-#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
    MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name = tag_id;
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
 
-#define MHTML_TAG_TABLE_NAMES( tag_id, tag_name, fields ) \
+#define MHTML_TAG_TABLE_NAMES( tag_id, tag_name, fields, disp ) \
    #tag_name,
 
 MAUG_CONST char* gc_mhtml_tag_names[] = {
@@ -206,17 +243,20 @@ cleanup:
    return retidx;
 }
 
-MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "freeing parser..." );
+   debug_printf( 1, "freeing HTML parser..." );
 
    mhtml_parser_lock( parser );
 
    for( i = 0 ; parser->tags_sz > i ; i++ ) {
       if(
-         MHTML_TAG_TYPE_TEXT == parser->tags[i].base.type &&
+         (
+            MHTML_TAG_TYPE_TEXT == parser->tags[i].base.type ||
+            MHTML_TAG_TYPE_STYLE == parser->tags[i].base.type
+         ) &&
          (MAUG_MHANDLE)NULL != parser->tags[i].TEXT.content
       ) {
          maug_mfree( parser->tags[i].TEXT.content );
@@ -224,6 +264,8 @@ MERROR_RETVAL mhtml_free_parser( struct MHTML_PARSER* parser ) {
    }
 
 cleanup:
+
+   mcss_parser_free( &(parser->styler) );
 
    if( NULL != parser->tags ) {
       maug_munlock( parser->tags_h, parser->tags );
@@ -257,7 +299,7 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_push_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t new_tag_idx = -1,
       tag_child_idx = 0;
@@ -275,6 +317,9 @@ MERROR_RETVAL mhtml_push_blank_tag( struct MHTML_PARSER* parser ) {
    parser->tags[new_tag_idx].base.first_child = -1;
    parser->tags[new_tag_idx].base.next_sibling = -1;
    parser->tags[new_tag_idx].base.style = -1;
+   
+   parser->tags[new_tag_idx].base.flags = parser->tag_flags;
+   parser->tag_flags = 0;
 
    if( 0 <= parser->tag_iter ) {
       /* Set new tag parent to current tag. */
@@ -311,10 +356,19 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   retval = mhtml_push_blank_tag( parser );
-   maug_cleanup_if_not_ok();
+   mparser_token_upper( parser, i );
 
-   mparser_normalize_token_case( parser, i );
+   if( 0 == strncmp( "STYLE", parser->token, 6 ) ) {
+      /* Special case: style tag. Don't push a new tag here, but set a flag for
+       * the text tag next created by mhtml_push_tag() so the contents are
+       * directly attached to the style tag.
+       */
+      parser->tag_flags |= MHTML_TAG_FLAG_STYLE;
+      goto cleanup;
+   }
+
+   retval = mhtml_push_tag( parser );
+   maug_cleanup_if_not_ok();
 
    /* Figure out tag type. */
    i = 0;
@@ -327,6 +381,17 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
          debug_printf( 1, "new tag (" SSIZE_T_FMT ") type: %s",
             parser->tag_iter, gc_mhtml_tag_names[i] );
          parser->tags[parser->tag_iter].base.type = i;
+
+         if( MHTML_TAG_TYPE_BODY == i ) {
+            /* Special case: body tag. Keep track of it for later so it can
+             * be passed to the renderer.
+             */
+            assert( -1 == parser->body_idx );
+            parser->body_idx = parser->tag_iter;
+            debug_printf( 1, "set body index to: " SSIZE_T_FMT,
+               parser->body_idx );
+         }
+
          goto cleanup;
       }
       i++;
@@ -343,11 +408,19 @@ cleanup:
 MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* tag_content = NULL;
+   size_t i = 0;
 
-   retval = mhtml_push_blank_tag( parser );
+   retval = mhtml_push_tag( parser );
    maug_cleanup_if_not_ok();
 
-   parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_TEXT;
+   if(
+      MHTML_TAG_FLAG_STYLE == (MHTML_TAG_FLAG_STYLE & 
+         parser->tags[parser->tag_iter].base.flags)
+   ) {
+      parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_STYLE;
+   } else {
+      parser->tags[parser->tag_iter].base.type = MHTML_TAG_TYPE_TEXT;
+   }
 
    /* Allocate text memory. */
    parser->tags[parser->tag_iter].TEXT.content =
@@ -357,10 +430,19 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    maug_mlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
    maug_cleanup_if_null_alloc( char*, tag_content );
 
-   /* Copy token to tag text. */
-   strncpy( tag_content, parser->token, parser->token_sz );
-   tag_content[parser->token_sz] = '\0';
-   parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
+   if( MHTML_TAG_TYPE_STYLE == parser->tags[parser->tag_iter].base.type ) {
+      debug_printf( 1, "parsing STYLE tag..." );
+      for( ; parser->token_sz > i ; i++ ) {
+         retval = mcss_parse_c( &(parser->styler), parser->token[i] );
+         maug_cleanup_if_not_ok();
+      }
+      mcss_parser_reset( &(parser->styler) );
+   } else {
+      /* Copy token to tag text. */
+      strncpy( tag_content, parser->token, parser->token_sz );
+      tag_content[parser->token_sz] = '\0';
+      parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
+   }
 
    maug_munlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
 
@@ -375,7 +457,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
 
    debug_printf( 1, "attrib: %s", parser->token );
 
-   mparser_normalize_token_case( parser, i );
+   mparser_token_upper( parser, i );
 
    /* Figure out attrib type. */
    i = 0;
@@ -410,20 +492,10 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       debug_printf( 1, "style: %s", parser->token );
       /* TODO: Parse and attach style. */
 
-      if( '"' == parser->token[0] ) {
-         i = 1;
-      }
-      if( '"' == parser->token[parser->token_sz - 1] ) {
-         parser->token_sz--;
-      }
-
-      /* TODO: Have the styler manage selected style on its own. */
-      parser->styler.styles_sz++;
-      retval = mcss_init_style(
-         &(parser->styler.styles[parser->styler.styles_sz - 1]) );
+      retval = mcss_push_style( &(parser->styler) );
       maug_cleanup_if_not_ok();
-      /* TODO: Allocate more styles if needed. */
-      assert( parser->styler.styles_sz < parser->styler.styles_sz_max );
+      
+      /* Set the new style as this tag's explicit style. */
       parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
 
       for( ; parser->token_sz > i ; i++ ) {
@@ -431,7 +503,21 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
          maug_cleanup_if_not_ok();
       }
 
-      goto cleanup;  
+      goto cleanup;
+
+   } else if( MHTML_ATTRIB_KEY_CLASS == parser->attrib_key ) {
+      strncpy(
+         parser->tags[parser->tag_iter].base.classes,
+         parser->token,
+         MCSS_CLASS_SZ_MAX );
+      parser->tags[parser->tag_iter].base.classes_sz = parser->token_sz;
+
+   } else if( MHTML_ATTRIB_KEY_ID == parser->attrib_key ) {
+      strncpy(
+         parser->tags[parser->tag_iter].base.id,
+         parser->token,
+         MCSS_ID_SZ_MAX );
+      parser->tags[parser->tag_iter].base.id_sz = parser->token_sz;
    }
 
 cleanup:
@@ -448,11 +534,21 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    case '<':
       if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
          if( 0 < parser->token_sz ) {
-            mhtml_push_text_tag( parser );
-
-            /* Pop out of text so next tag isn't a child of it. */
-            retval = mhtml_pop_tag( parser );
+            retval = mhtml_push_text_tag( parser );
             maug_cleanup_if_not_ok();
+
+            if(
+               /* See special exception in mhtml_push_tag(). Style tags don't
+                * push their subordinate text, so popping here would be
+                * uneven!
+                */
+               MHTML_TAG_TYPE_STYLE !=
+                  parser->tags[parser->tag_iter].base.type
+            ) {
+               /* Pop out of text so next tag isn't a child of it. */
+               retval = mhtml_pop_tag( parser );
+               maug_cleanup_if_not_ok();
+            }
          }
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_ELEMENT )
          mhtml_parser_reset_token( parser );
@@ -469,12 +565,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          mhtml_parser_pstate_pop( parser );
          mhtml_parser_reset_token( parser );
 
-      } else if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
-         retval = mhtml_push_attrib_val( parser );
-         maug_cleanup_if_not_ok();
+      } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
          mhtml_parser_pstate_pop( parser );
-         assert( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) );
-         mhtml_parser_pstate_pop( parser ); /* Pop key */
          assert( MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) );
          mhtml_parser_pstate_pop( parser ); /* Pop element. */
          mhtml_parser_reset_token( parser );
@@ -485,9 +577,18 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          maug_cleanup_if_not_ok();
          
          mhtml_parser_pstate_pop( parser );
+         if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
+            mhtml_parser_pstate_pop( parser );
+         }
          assert( MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) );
          mhtml_parser_pstate_pop( parser ); /* Pop element. */
          mhtml_parser_reset_token( parser );
+
+      } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
+         mhtml_parser_append_token( parser, c );
+
+      } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
+         mhtml_parser_append_token( parser, c );
 
       } else {
          mhtml_parser_invalid_c( parser, c, retval );
@@ -499,9 +600,14 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) &&
          0 == parser->token_sz
       ) {
+         /* Start of a close tag. */
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
 
-      } else if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
+      } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
+         /* Close of a self-closing tag. */
+         mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+
+      } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
          mhtml_parser_append_token( parser, c );
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
@@ -530,6 +636,27 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       }
       break;
 
+   case '"':
+      if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
+         mhtml_parser_pstate_push( parser, MHTML_PSTATE_STRING );
+         mhtml_parser_reset_token( parser );
+
+      } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
+         retval = mhtml_push_attrib_val( parser );
+         maug_cleanup_if_not_ok();
+         mhtml_parser_pstate_pop( parser );
+         assert( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) );
+         mhtml_parser_pstate_pop( parser );
+         mhtml_parser_reset_token( parser );
+
+      } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
+         mhtml_parser_append_token( parser, c );
+
+      } else {
+         mhtml_parser_invalid_c( parser, '_', retval );
+      }
+      break;
+
    case '\r':
    case '\n':
    case '\t':
@@ -540,12 +667,18 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_ATTRIB_KEY );
          mhtml_parser_reset_token( parser );
 
-      } else if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
+      } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
          mhtml_parser_append_token( parser, c );
+
+      } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
+         /* Do nothing. */
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
          /* Avoid a token that's only whitespace. */
-         if( 0 < parser->token_sz ) {
+         if(
+            0 < parser->token_sz &&
+            ' ' != parser->token[parser->token_sz - 1]
+         ) {
             mhtml_parser_append_token( parser, ' ' );
          }
 
@@ -568,7 +701,7 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
+MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( 0 == parser->tags_sz );
@@ -587,7 +720,10 @@ MERROR_RETVAL mhtml_init_parser( struct MHTML_PARSER* parser ) {
       goto cleanup;
    }
 
-   retval = mcss_init_parser( &(parser->styler) );
+   parser->tag_iter = -1;
+   parser->body_idx = -1;
+
+   retval = mcss_parser_init( &(parser->styler) );
    maug_cleanup_if_not_ok();
 
 cleanup:
@@ -624,6 +760,14 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
          printf( " (styled)" );
       }
 
+      if( 0 < parser->tags[iter].base.id_sz ) {
+         printf( " (id: %s)", parser->tags[iter].base.id );
+      }
+
+      if( 0 < parser->tags[iter].base.classes_sz ) {
+         printf( " (classes: %s)", parser->tags[iter].base.classes );
+      }
+
       printf( "\n" );
    }
 
@@ -631,6 +775,17 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
 
    mhtml_dump_tree( parser, parser->tags[iter].base.next_sibling, d );
 }
+
+#else
+
+#define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
+   extern MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name;
+
+MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
+
+extern MAUG_CONST char* gc_mhtml_tag_names[];
+
+#endif /* MHTML_C */
 
 #endif /* !MHTML_H */
 

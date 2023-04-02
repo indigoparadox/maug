@@ -3,6 +3,7 @@
 #define RETROSFT_H
 
 MERROR_RETVAL retrosoft_load_glyph(
+   RETROFLAT_COLOR color,
    size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp );
 
 MERROR_RETVAL retrosoft_init();
@@ -13,6 +14,10 @@ void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
+void retrosoft_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int x, int y, int w, int h, uint8_t flags );
+
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
@@ -22,12 +27,12 @@ void retrosoft_ellipse(
    int x, int y, int w, int h, uint8_t flags );
 
 void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags );
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
 
 void retrosoft_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags );
 
 #ifdef RETROSFT_C
@@ -36,11 +41,12 @@ void retrosoft_string(
 
 /* TODO: Create another depth for each color. */
 static struct RETROFLAT_BITMAP
-gc_font_bmps[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
+gc_font_bmps[RETROFLAT_COLORS_SZ][RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
 
 /* === */
 
 MERROR_RETVAL retrosoft_load_glyph(
+   RETROFLAT_COLOR color,
    size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -57,7 +63,7 @@ MERROR_RETVAL retrosoft_load_glyph(
    for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
       for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
          if( 1 == ((glyph_dots[y] >> x) & 0x01) ) {
-            retroflat_px( bmp, RETROFLAT_COLOR_WHITE, x, y, 0 );
+            retroflat_px( bmp, color, x, y, 0 );
          }
       }
    }
@@ -79,13 +85,22 @@ MERROR_RETVAL retrosoft_init() {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
       j = 0;
+   RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
 
+#ifdef RETROSOFT_PRELOAD_COLORS
+   for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
+      debug_printf( 1, "loading glyphs in %s...", gc_retroflat_color_names[h] );
+#endif /* RETROSOFT_PRELOAD_COLORS */
    for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
-      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
-         retval = retrosoft_load_glyph( i, j, &(gc_font_bmps[i][j]) );
-         maug_cleanup_if_not_ok();
+         for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+            debug_printf( 1, "loading glyph " SIZE_T_FMT "...", j );
+            retval = retrosoft_load_glyph( h, i, j, &(gc_font_bmps[h][i][j]) );
+            maug_cleanup_if_not_ok();
+         }
       }
+#ifdef RETROSOFT_PRELOAD_COLORS
    }
+#endif /* RETROSOFT_PRELOAD_COLORS */
 
 cleanup:
 
@@ -99,12 +114,19 @@ cleanup:
 void retrosoft_shutdown() {
    size_t i = 0,
       j = 0;
+   RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
 
-   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
-      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
-         retroflat_destroy_bitmap( &(gc_font_bmps[i][j]) );
+#ifdef RETROSOFT_PRELOAD_COLORS
+   for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
+#endif /* RETROSOFT_PRELOAD_COLORS */
+      for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+         for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+            retroflat_destroy_bitmap( &(gc_font_bmps[h][i][j]) );
+         }
       }
+#ifdef RETROSOFT_PRELOAD_COLORS
    }
+#endif /* RETROSOFT_PRELOAD_COLORS */
 }
 
 /* === */
@@ -124,11 +146,10 @@ void retrosoft_line(
       iter[2],
       inc = 1,
       delta = 0;
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* TODO: Handle thickness. */
 
@@ -203,14 +224,31 @@ cleanup:
 
 /* === */
 
+void retrosoft_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int x, int y, int w, int h, uint8_t flags
+) {
+   /* TODO: Filed rectangle. */
+
+   retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
+
+   retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+
+   retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
+
+   retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
+}
+
+/* === */
+
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int32_t i = 0,
       i_prev = 0;
-   int16_t lock_ret = 0,
-      locked_target_internal = 0,
+   MERROR_RETVAL retval = MERROR_OK;
+   int16_t locked_target_internal = 0,
       px_x1 = 0,
       px_y1 = 0,
       px_x2 = 0,
@@ -218,8 +256,9 @@ void retrosoft_ellipse(
 
    /* TODO: Switch to Bresenham algorithm. */
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   /* TODO: Filled ellipse. */
+
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
    for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
@@ -246,10 +285,14 @@ cleanup:
 /* === */
 
 void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
 ) {
    /* TODO: Put a little more effort into sizing. */
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
    *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
    *h_out = RETROSOFT_GLYPH_H_SZ;
 }
@@ -258,7 +301,7 @@ void retrosoft_string_sz(
 
 void retrosoft_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
    uint8_t flags
 ) {
    size_t i = 0,
@@ -274,8 +317,30 @@ void retrosoft_string(
       /* Fonts start at character after space. */
       glyph_idx = str[i] - ' ';
 
+#if defined( RETROFLAT_API_SDL2 ) && !defined( RETROSOFT_PRELOAD_COLORS )
+      /* If we're not caching the colors, use SDL2 features if available to
+       * tint the glyph before blitting it. */
+      SDL_SetSurfaceColorMod(
+         gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].surface,
+         g_retroflat_state->palette[color].r,
+         g_retroflat_state->palette[color].g,
+         g_retroflat_state->palette[color].b );
+      SDL_DestroyTexture(
+         gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].texture );
+      gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].texture =
+         SDL_CreateTextureFromSurface(
+            g_retroflat_state->buffer.renderer,
+            gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].surface );
+#endif /* RETROFLAT_API_SDL2 && !RETROSOFT_PRELOAD_COLORS */
+
       retroflat_blit_bitmap(
-         target, &(gc_font_bmps[0][glyph_idx]), 0, 0, x, y_orig,
+         target, &(gc_font_bmps[
+#ifdef RETROSOFT_PRELOAD_COLORS
+         color
+#else
+         RETROFLAT_COLOR_WHITE
+#endif /* !RETROSOFT_PRELOAD_COLORS */
+         ][0][glyph_idx]), 0, 0, x, y_orig,
          RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ );
 
       x += 8;

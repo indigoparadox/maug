@@ -283,6 +283,10 @@ typedef int8_t RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_NULL (-1)
 
+#ifndef RETROFLAT_COLORS_SZ
+#  define RETROFLAT_COLORS_SZ 16
+#endif /* !RETROFLAT_COLORS_SZ */
+
 /*! \} */
 
 /* TODO: Mouse is broken under DOS/Allegro. */
@@ -498,12 +502,11 @@ typedef int8_t RETROFLAT_COLOR;
 #endif /* !RETROFLAT_TXP_B */
 
 /* Convenience macro for auto-locking inside of draw functions. */
-#define retroflat_internal_autolock_bitmap( bmp, lock_ret, lock_auto ) \
+/* TODO: Use maug_cleanup and assume retval. */
+#define retroflat_internal_autolock_bitmap( bmp, lock_auto ) \
    if( !retroflat_bitmap_locked( bmp ) ) { \
-      lock_ret = retroflat_draw_lock( bmp ); \
-      if( RETROFLAT_OK != lock_ret ) { \
-         goto cleanup; \
-      } \
+      retval = retroflat_draw_lock( bmp ); \
+      maug_cleanup_if_not_ok(); \
       lock_auto = 1; \
    }
 
@@ -647,6 +650,47 @@ typedef void (*retroflat_loop_iter)(void* data);
  * \{
  */
 
+/**
+ * \brief Remove a character from a text buffer before cursor position.
+ */
+#define retroflat_buffer_bksp( buffer, buffer_cur, buffer_sz ) \
+   if( 0 < buffer_cur ) { \
+      if( buffer_cur < buffer_sz ) { \
+         memmove( \
+            &(buffer[(buffer_cur) - 1]), \
+            &(buffer[buffer_cur]), \
+            (buffer_sz) - (buffer_cur) ); \
+      } \
+      buffer_cur--; \
+      buffer_sz--; \
+      buffer[buffer_sz] = '\0'; \
+   }
+
+/**
+ * \brief Insert a character into a text buffer at cursor position.
+ */
+#define retroflat_buffer_insert( c, buffer, buffer_cur, buffer_sz, buffer_mx ) \
+   if( buffer_sz + 1 < buffer_mx ) { \
+      if( buffer_cur < buffer_sz ) { \
+         memmove( \
+            &(buffer[(buffer_cur) + 1]), \
+            &(buffer[buffer_cur]), \
+            (buffer_sz) - (buffer_cur) ); \
+      } \
+      buffer[buffer_cur] = c; \
+      buffer_cur++; \
+      buffer_sz++; \
+      buffer[buffer_sz] = '\0'; \
+   }
+
+#define RETROFLAT_INPUT_MOD_SHIFT   0x01
+
+#define RETROFLAT_INPUT_MOD_ALT     0x02
+
+#define RETROFLAT_INPUT_MOD_CTRL    0x04
+
+#define RETROFLAT_INPUT_FORCE_UPPER    0x08
+
 /*! \brief Struct passed to retroflat_poll_input() to hold return data. */
 struct RETROFLAT_INPUT {
    /**
@@ -659,9 +703,21 @@ struct RETROFLAT_INPUT {
     *        event is a mouse click.
     */
    int mouse_y;
+   uint8_t key_flags;
 };
 
 /*! \} */ /* maug_retroflt_input */
+
+#ifdef RETROFLAT_OPENGL
+struct RETROFLAT_GLTEX {
+   MAUG_MHANDLE bytes_h;
+   uint8_t* bytes;
+   uint32_t bpp;
+   uint32_t sz;
+   uint8_t* px;
+   uint32_t id;
+};
+#endif /* RETROFLAT_OPENGL */
 
 /* === Platform-Specific Includes and Defines === */
 
@@ -759,6 +815,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_KEY_GRAVE    KEY_BACKQUOTE
 #  define RETROFLAT_KEY_BKSP     KEY_BACKSPACE
 #  define RETROFLAT_KEY_SLASH    KEY_SLASH
+#  define RETROFLAT_KEY_SEMICOLON   KEY_SEMICOLON
+#  define RETROFLAT_KEY_PERIOD   KEY_STOP
+#  define RETROFLAT_KEY_COMMA    KEY_COMMA
+#  define RETROFLAT_KEY_EQUALS   KEY_EQUALS
+#  define RETROFLAT_KEY_DASH     KEY_MINUS
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -787,10 +848,15 @@ typedef FILE* RETROFLAT_CONFIG;
 struct RETROFLAT_BITMAP {
    uint8_t flags;
    SDL_Surface* surface;
-#ifndef RETROFLAT_API_SDL1
+#     ifndef RETROFLAT_API_SDL1
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#endif /* !RETROFLAT_API_SDL1 */
+#     endif /* !RETROFLAT_API_SDL1 */
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 #  define RETROFLAT_KEY_UP	SDLK_UP
@@ -845,6 +911,11 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
 #  define RETROFLAT_KEY_SLASH SDLK_SLASH
 #  define RETROFLAT_KEY_BKSP  SDLK_BACKSPACE
+#  define RETROFLAT_KEY_SEMICOLON   SDLK_SEMICOLON
+#  define RETROFLAT_KEY_PERIOD   SDLK_PERIOD
+#  define RETROFLAT_KEY_COMMA    SDLK_COMMA
+#  define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
+#  define RETROFLAT_KEY_DASH     SDLK_MINUS
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -953,6 +1024,9 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
    uint8_t far*            bits;
 #  endif /* RETROFLAT_WING */
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 /* TODO: Remove this in favor of mmem.h. */
@@ -1118,6 +1192,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define RETROFLAT_KEY_DELETE   VK_DELETE
 #  define RETROFLAT_KEY_PGUP     VK_PRIOR
 #  define RETROFLAT_KEY_PGDN     VK_NEXT
+#  define RETROFLAT_KEY_SEMICOLON   ';'
+#  define RETROFLAT_KEY_PERIOD   '.'
+#  define RETROFLAT_KEY_COMMA    ','
+#  define RETROFLAT_KEY_EQUALS   '='
+#  define RETROFLAT_KEY_DASH     '-'
 
 #  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
 #  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
@@ -1171,6 +1250,11 @@ typedef void* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
    uint16_t* b;
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 typedef int RETROFLAT_COLOR_DEF;
@@ -1223,6 +1307,9 @@ typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
    uint8_t flags;
+   struct RETROFLAT_GLTEX tex;
+   ssize_t w;
+   ssize_t h;
 };
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
@@ -1251,6 +1338,11 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_GRAVE    '`'
 #  define RETROFLAT_KEY_SLASH    '/'
 #  define RETROFLAT_KEY_BKSP     0x08
+#  define RETROFLAT_KEY_SEMICOLON   ';'
+#  define RETROFLAT_KEY_PERIOD   '.'
+#  define RETROFLAT_KEY_COMMA    ','
+#  define RETROFLAT_KEY_EQUALS   '='
+#  define RETROFLAT_KEY_DASH     '-'
 #  define RETROFLAT_KEY_A		   'a'
 #  define RETROFLAT_KEY_B		   'b'
 #  define RETROFLAT_KEY_C		   'c'
@@ -1425,13 +1517,7 @@ struct RETROFLAT_BITMAP {
  * \{
  */
 
-/**
- * \brief Functions that accept parameters of this type will accept the colors
- *        on this page.
- */
-typedef int RETROFLAT_COLOR;
-
-#  define RETROFLAT_COLOR_NULL (-1)
+typedef int RETROFLAT_COLOR_DEF;
 
 #  define RETROFLAT_COLOR_BLACK        0
 #  define RETROFLAT_COLOR_DARKBLUE     1
@@ -1558,9 +1644,13 @@ struct RETROFLAT_STATE {
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Index of available colors, initialized on platform init. */
-   RETROFLAT_COLOR_DEF     palette[16];
+   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+
+#if defined( RETROFLAT_OPENGL )
+   uint32_t tex_palette[RETROFLAT_COLORS_SZ];
+#endif /* RETROFLAT_OPENGL */
 
 #if defined( RETROFLAT_API_ALLEGRO )
 
@@ -1568,7 +1658,7 @@ struct RETROFLAT_STATE {
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
-#endif /* RETROFLAT_OS_DOS */
+#  endif /* RETROFLAT_OS_DOS */
    unsigned int         close_button;
    unsigned long        ms;
 
@@ -1601,6 +1691,7 @@ struct RETROFLAT_STATE {
    int                  screen_w;
    int                  screen_h;
    uint8_t              last_key;
+   uint8_t              vk_mods;
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
@@ -1844,8 +1935,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
  * \param h_out Pointer to an int in which to store the string height in pixels.
  */
 void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags );
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
 
 /**
  * \brief Draw a text string at the specified location in the specified font
@@ -1964,7 +2055,6 @@ struct RETROFLAT_WING_MODULE g_w;
 /* === Function Definitions === */
 
 #  if defined( RETROFLAT_SOFT_SHAPES ) && !defined( MAUG_NO_AUTO_C )
-/* TODO: Define _C here? */
 #     define RETROFP_C
 #     include <retrofp.h>
 #     define RETROSFT_C
@@ -1974,6 +2064,10 @@ struct RETROFLAT_WING_MODULE g_w;
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
 #     define RETROGLU_C
 #     include <retroglu.h>
+#     define RETROFP_C
+#     include <retrofp.h>
+#     define RETROSFT_C
+#     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_WING
@@ -2216,7 +2310,36 @@ static LRESULT CALLBACK WndProc(
          return 1;
 
       case WM_KEYDOWN:
-         g_retroflat_state->last_key = wParam;
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         default:
+            g_retroflat_state->last_key = wParam;
+            break;
+         }
+         break;
+
+      case WM_KEYUP:
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         }
          break;
 
       case WM_LBUTTONDOWN:
@@ -2476,6 +2599,78 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
    /* This should be set by retroflat_quit(). */
    return g_retroflat_state->retval;
+}
+
+/* === */
+
+char retroflat_vk_to_ascii( int k, uint8_t flags ) {
+   char c = 0;
+   char offset_lower = 0;
+
+   if( RETROFLAT_INPUT_MOD_SHIFT != (RETROFLAT_INPUT_MOD_SHIFT & flags) ) {
+      /* Shift is *not* being held down. */
+
+      if( RETROFLAT_KEY_A <= k && RETROFLAT_KEY_Z >= k ) {
+         if( 
+            RETROFLAT_INPUT_FORCE_UPPER !=
+               (RETROFLAT_INPUT_FORCE_UPPER & flags)
+         ) {
+            /* Key is alphabetical and we're not forcing uppercase. */
+            offset_lower = 0x20;
+         }
+      } else {
+         offset_lower = 1;
+      }
+   }
+   
+   switch( k ) {
+   case RETROFLAT_KEY_A: c = 0x41 + offset_lower; break;
+   case RETROFLAT_KEY_B: c = 0x42 + offset_lower; break;
+   case RETROFLAT_KEY_C: c = 0x43 + offset_lower; break;
+   case RETROFLAT_KEY_D: c = 0x44 + offset_lower; break;
+   case RETROFLAT_KEY_E: c = 0x45 + offset_lower; break;
+   case RETROFLAT_KEY_F: c = 0x46 + offset_lower; break;
+   case RETROFLAT_KEY_G: c = 0x47 + offset_lower; break;
+   case RETROFLAT_KEY_H: c = 0x48 + offset_lower; break;
+   case RETROFLAT_KEY_I: c = 0x49 + offset_lower; break;
+   case RETROFLAT_KEY_J: c = 0x4a + offset_lower; break;
+   case RETROFLAT_KEY_K: c = 0x4b + offset_lower; break;
+   case RETROFLAT_KEY_L: c = 0x4c + offset_lower; break;
+   case RETROFLAT_KEY_M: c = 0x4d + offset_lower; break;
+   case RETROFLAT_KEY_N: c = 0x4e + offset_lower; break;
+   case RETROFLAT_KEY_O: c = 0x4f + offset_lower; break;
+   case RETROFLAT_KEY_P: c = 0x50 + offset_lower; break;
+   case RETROFLAT_KEY_Q: c = 0x51 + offset_lower; break;
+   case RETROFLAT_KEY_R: c = 0x52 + offset_lower; break;
+   case RETROFLAT_KEY_S: c = 0x53 + offset_lower; break;
+   case RETROFLAT_KEY_T: c = 0x54 + offset_lower; break;
+   case RETROFLAT_KEY_U: c = 0x55 + offset_lower; break;
+   case RETROFLAT_KEY_V: c = 0x56 + offset_lower; break;
+   case RETROFLAT_KEY_W: c = 0x57 + offset_lower; break;
+   case RETROFLAT_KEY_X: c = 0x58 + offset_lower; break;
+   case RETROFLAT_KEY_Y: c = 0x59 + offset_lower; break;
+   case RETROFLAT_KEY_Z: c = 0x60 + offset_lower; break;
+   case RETROFLAT_KEY_0: c = 0x30 + offset_lower; break;
+   case RETROFLAT_KEY_1: c = offset_lower ? 0x31 : '!'; break;
+   case RETROFLAT_KEY_2: c = 0x32; break;
+   case RETROFLAT_KEY_3: c = 0x33; break;
+   case RETROFLAT_KEY_4: c = 0x34; break;
+   case RETROFLAT_KEY_5: c = 0x35; break;
+   case RETROFLAT_KEY_6: c = 0x36; break;
+   case RETROFLAT_KEY_7: c = 0x37; break;
+   case RETROFLAT_KEY_8: c = 0x38; break;
+   case RETROFLAT_KEY_9: c = 0x39; break;
+   case RETROFLAT_KEY_SPACE: c = ' '; break;
+   case RETROFLAT_KEY_BKSP: c = 0x08; break;
+   case RETROFLAT_KEY_ENTER: c = '\n'; break;
+   case RETROFLAT_KEY_SEMICOLON: c = offset_lower ? ';' : ':'; break;
+   case RETROFLAT_KEY_DASH: c = offset_lower ? '-' : '_'; break;
+   case RETROFLAT_KEY_SLASH: c = offset_lower ? '/' : '?'; break;
+   case RETROFLAT_KEY_PERIOD: c = offset_lower ? '.' : '>'; break;
+   case RETROFLAT_KEY_COMMA: c = offset_lower ? ',' : '<'; break;
+   }
+
+   return c;
 }
 
 /* === */
@@ -2809,6 +3004,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
+#  ifdef RETROFLAT_OPENGL
+#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b ) \
+         g_retroflat_state->tex_palette[idx] = \
+            (((uint32_t)(r) & 0xff) << 24) | \
+            (((uint32_t)(g) & 0xff) << 16) | \
+            (((uint32_t)(b) & 0xff) << 8) | \
+            0xff;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
+#  endif /* RETROFLAT_OPENGL */
+
 #  ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
@@ -3012,7 +3217,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_Renderer*, g_retroflat_state->buffer.renderer, RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the buffer texture. */
-   g_retroflat_state->buffer.texture = SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
@@ -3499,7 +3705,17 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   if(
+      NULL != bmp &&
+      &g_retroflat_state->buffer != bmp &&
+      (MAUG_MHANDLE)NULL != bmp->tex.bytes_h
+   ) {
+      maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3596,10 +3812,6 @@ cleanup:
 
 cleanup:
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "draw lock not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3613,12 +3825,32 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  ifdef RETROFLAT_OPENGL
-   if( NULL == bmp ) {
+   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
+      /* Flush GL buffer and swap screen buffers. */
       glFlush();
-   }
-#  endif /* RETROFLAT_OPENGL */
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#     if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+      SwapBuffers( g_retroflat_state->hdc_win );
+#     elif defined( RETROFLAT_API_GLUT )
+      glutSwapBuffers();
+#     endif
+   } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes_h ) {
+#ifndef RETROGLU_NO_TEXTURES
+      assert( 0 < bmp->tex.id );
+
+      /* Update stored texture if it exists. */
+      glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->w, bmp->h, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+#endif /* !RETROGLU_NO_TEXTURES */
+
+      /* Unlock texture bitmap. */
+      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -3660,11 +3892,7 @@ cleanup:
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
-#     ifdef RETROFLAT_OPENGL
-         SDL_GL_SwapBuffers();
-#     else
          SDL_Flip( bmp->surface );
-#     endif /* RETROFLAT_OPENGL */
       }
 
    } else {
@@ -3712,11 +3940,7 @@ cleanup:
    if( NULL == bmp  ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_retroflat_state->window ) {
-#     ifdef RETROFLAT_OPENGL
-         SwapBuffers( g_retroflat_state->hdc_win );
-#     else
          InvalidateRect( g_retroflat_state->window, 0, TRUE );
-#     endif /* RETROFLAT_OPENGL */
       }
       goto cleanup;
    }
@@ -3739,15 +3963,6 @@ cleanup:
 
 cleanup:
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* == GLUT == */
-
-   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
-      /* Special case: Attempting to release the screen. */
-      glutSwapBuffers();
-   }
-
 #  else
 #     warning "draw release not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -3762,19 +3977,15 @@ cleanup:
 static int retroflat_bitmap_win_transparency(
    struct RETROFLAT_BITMAP* bmp_out, int w, int h  
 ) {
-   int retval = RETROFLAT_OK,
-      lock_ret = 0;
+   int retval = RETROFLAT_OK;
    unsigned long txp_color = 0;
 
    /* Setup bitmap transparency mask. */
    bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
    maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
 
-   lock_ret = retroflat_draw_lock( bmp_out );
-   if( RETROFLAT_OK != lock_ret ) {
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   retval = retroflat_draw_lock( bmp_out );
+   maug_cleanup_if_not_ok();
 
    /* Convert the color key into bitmap format. */
    txp_color |= (RETROFLAT_TXP_B & 0xff);
@@ -3792,7 +4003,7 @@ static int retroflat_bitmap_win_transparency(
 
 cleanup:
 
-   if( RETROFLAT_OK == lock_ret ) {
+   if( RETROFLAT_OK == retval ) {
       retroflat_draw_release( bmp_out );
    }
 
@@ -3807,6 +4018,13 @@ MERROR_RETVAL retroflat_load_bitmap(
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
+   FILE* bmp_file = NULL;
+   uint8_t* bmp_buffer = NULL;
+   size_t bmp_buffer_sz = 0,
+      bmp_buffer_read = 0;
+   MAUG_MHANDLE bmp_buffer_h = (MAUG_MHANDLE)NULL;
+   uint32_t bmp_offset = 0;
+   size_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
@@ -3833,7 +4051,101 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   /* TODO */
+   /* TODO: Create new RGBA texture. */
+
+   bmp_file = fopen( filename_path, "rb" );
+   maug_cleanup_if_null_alloc( FILE*, bmp_file );
+
+   fseek( bmp_file, 0, SEEK_END );
+   bmp_buffer_sz = ftell( bmp_file );
+   fseek( bmp_file, 0, SEEK_SET );
+
+   bmp_buffer_h = maug_malloc( bmp_buffer_sz, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_buffer_h );
+
+   maug_mlock( bmp_buffer_h, bmp_buffer );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_buffer );
+
+   bmp_buffer_read = fread( bmp_buffer, 1, bmp_buffer_sz, bmp_file );
+   if( bmp_buffer_read < bmp_buffer_sz ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not read bitmap file!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   /* Offsets hardcoded based on windows bitmap. */
+
+   /* TODO: Support other bitmap formats? */
+   if( 40 != bmp_read_uint32( &(bmp_buffer[0x0e]) ) ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
+         "Unable to determine texture bitmap format: %d", bmp_buffer[0x0e] );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
+   bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
+   bmp_out->w = bmp_read_uint32( &(bmp_buffer[0x12]) );
+   bmp_out->h = bmp_read_uint32( &(bmp_buffer[0x16]) );
+   bmp_out->tex.bpp = bmp_read_uint32( &(bmp_buffer[0x1c]) );
+   if( 24 != bmp_out->tex.bpp ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Invalid texture bitmap depth: %d",
+         bmp_out->tex.bpp );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   /* Allocate buffer for unpacking. */
+   bmp_out->tex.bytes_h =
+      maug_malloc( bmp_out->w * bmp_out->h, sizeof( uint32_t ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
+
+   maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
+
+   /* Unpack bitmap BGR into BGRA with color key. */
+   for( i = 0 ; bmp_out->tex.sz / 3 > i ; i++ ) {
+      bmp_out->tex.bytes[i * 4] = bmp_buffer[bmp_offset + (i * 3) + 2];
+      bmp_out->tex.bytes[(i * 4) + 1] = bmp_buffer[bmp_offset + (i * 3) + 1];
+      bmp_out->tex.bytes[(i * 4) + 2] = bmp_buffer[bmp_offset + (i * 3)];
+      if(
+         RETROFLAT_TXP_R == bmp_buffer[bmp_offset + (i * 3) + 2] &&
+         RETROFLAT_TXP_G == bmp_buffer[bmp_offset + (i * 3) + 1] &&
+         RETROFLAT_TXP_B == bmp_buffer[bmp_offset + (i * 3)]
+      ) {
+         /* Transparent pixel found. */
+         bmp_out->tex.bytes[(i * 4) + 3] = 0x00;
+      } else {
+         bmp_out->tex.bytes[(i * 4) + 3] = 0xff;
+      }
+   }
+
+#ifndef RETROGLU_NO_TEXTURES
+   glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+   glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->w, bmp_out->h, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
+#endif /* !RETROGLU_NO_TEXTURES */
+
+cleanup:
+
+   if( NULL != bmp_out->tex.bytes ) {
+      maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   }
+
+   if( NULL != bmp_buffer ) {
+      maug_munlock( bmp_buffer_h, bmp_buffer );
+   }
+
+   if( (MAUG_MHANDLE)NULL != bmp_buffer_h ) {
+      maug_mfree( bmp_buffer_h );
+   }
+
+   if( NULL != bmp_file ) {
+      fclose( bmp_file );
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -3931,13 +4243,7 @@ cleanup:
 
    /* Load the bitmap file from disk. */
    bmp_file = fopen( filename_path, "rb" );
-   /* TODO: maug_cleanup_if_null()? */
-   if( NULL == bmp_file ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Could not load bitmap: %s", filename_path );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null_file( bmp_file );
    fseek( bmp_file, 0, SEEK_END );
    sz = ftell( bmp_file );
    fseek( bmp_file, 0, SEEK_SET );
@@ -3985,11 +4291,7 @@ cleanup:
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 #        endif /* RETROFLAT_API_WINCE */
-   /* TODO: Error with bitmap path. */
-   if( NULL == bmp_out->b ) {
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
+   maug_cleanup_if_null_file( bmp_out->b );
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
 
@@ -4016,10 +4318,6 @@ cleanup:
    }
 #     endif /* RETROFLAT_API_WIN16 */
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "load bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4037,7 +4335,27 @@ MERROR_RETVAL retroflat_create_bitmap(
    HDC hdc_win = (HDC)NULL;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   bmp_out->w = w;
+   bmp_out->h = h;
+   /* TODO: Overflow checking. */
+   bmp_out->tex.bytes_h =
+      maug_malloc( bmp_out->w * bmp_out->h, sizeof( uint32_t ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
+
+   maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
+
+   /* TODO: Overflow checking. */
+   maug_mzero(
+      bmp_out->tex.bytes, bmp_out->w * bmp_out->h * sizeof( uint32_t ) );
+
+cleanup:
+   if( NULL != bmp_out->tex.bytes ) {
+      maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   }
+#  elif defined( RETROFLAT_API_ALLEGRO )
    
    /* == Allegro == */
 
@@ -4092,9 +4410,6 @@ cleanup:
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
 cleanup:
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
 
 #  else
 #     warning "create bitmap not implemented"
@@ -4222,7 +4537,18 @@ cleanup:
 #endif /* RETROFLAT_XPM */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
-#  if defined( RETROFLAT_API_ALLEGRO )
+
+#  if defined( RETROFLAT_OPENGL )
+
+   if( NULL != bitmap->tex.bytes_h ) {
+      if( NULL != bitmap->tex.bytes ) {
+         maug_munlock( bitmap->tex.bytes_h, bitmap->tex.bytes );
+      }
+      
+      maug_mfree( bitmap->tex.bytes_h );
+   }
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4262,10 +4588,6 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
       bitmap->mask = (HBITMAP)NULL;
    }
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "destroy bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -4278,17 +4600,15 @@ void retroflat_blit_bitmap(
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
 #  if defined( RETROFLAT_API_SDL1 )
-   int retval = 0;
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )
-   int retval = 0;
-   int lock_ret = 0;
+   MERROR_RETVAL retval = MERROR_OK;
    int locked_target_internal = 0;
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int lock_ret = 0;
+   MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
    int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -4298,7 +4618,11 @@ void retroflat_blit_bitmap(
    }
    assert( NULL != src );
 
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_OPENGL )
+
+   /* TODO */
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4331,6 +4655,7 @@ void retroflat_blit_bitmap(
    dest_rect.h = h;
 
 #     ifdef RETROFLAT_API_SDL1
+   /* TODO: Autounlock? */
    assert( !retroflat_bitmap_locked( target ) );
    retval = 
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
@@ -4338,8 +4663,7 @@ void retroflat_blit_bitmap(
       error_printf( "could not blit surface: %s", SDL_GetError() );
    }
 #     else
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    retval = SDL_RenderCopy(
       target->renderer, src->texture, &src_rect, &dest_rect );
@@ -4361,10 +4685,8 @@ cleanup:
    assert( (HBITMAP)NULL != target->b );
    assert( (HBITMAP)NULL != src->b );
 
-   retroflat_internal_autolock_bitmap(
-      src, lock_ret, locked_src_internal );
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( src, locked_src_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    if( (HBITMAP)NULL != src->mask ) {
       /* Use mask to blit transparency. */
@@ -4386,10 +4708,6 @@ cleanup:
       retroflat_draw_release( target );
    }
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "blit bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4403,7 +4721,7 @@ void retroflat_px(
    int x, int y, uint8_t flags
 ) {
    int locked_target_internal = 0;
-   int lock_ret = 0;
+   MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_API_SDL1 )
    int offset = 0;
@@ -4430,12 +4748,11 @@ void retroflat_px(
       return;
    }
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* TODO */
+   target->tex.bytes[(y * target->w * sizeof( uint32_t )) + (x * sizeof( uint32_t ))] = g_retroflat_state->tex_palette[color_idx];
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4511,10 +4828,6 @@ void retroflat_px(
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
-#  elif defined( RETROFLAT_API_GLUT )
-
-   /* TODO */
-
 #  else
 #     warning "px not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -4539,14 +4852,14 @@ void retroflat_rect(
       screen_w = 0,
       screen_h = 0;
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   MERROR_RETVAL retval = MERROR_OK;
    SDL_Rect area;
    int locked_target_internal = 0;
-   int lock_ret = 0;
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   MERROR_RETVAL retval = MERROR_OK;
    HBRUSH old_brush = (HBRUSH)NULL;
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   int locked_target_internal = 0;
    HPEN old_pen = (HPEN)NULL;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -4554,27 +4867,37 @@ void retroflat_rect(
       return;
    }
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
-   retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
+   /* TODO: Autolock? */
 
-   glBegin( GL_TRIANGLES );
-   glColor3fv( g_retroflat_state->palette[color_idx] );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
-   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      /* Draw directly to the screen. */
 
-   glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
-   glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   glEnd();
-   
-   retroflat_opengl_pop();
+      retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
+      retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
+
+      glBegin( GL_TRIANGLES );
+      glColor3fv( g_retroflat_state->palette[color_idx] );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
+      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+
+      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
+      glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glEnd();
+      
+      retroflat_opengl_pop();
+   } else {
+      /* TODO: Use soft shapes. */
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4591,8 +4914,7 @@ void retroflat_rect(
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    area.x = x;
    area.y = y;
@@ -4629,8 +4951,7 @@ cleanup:
    area.w = w;
    area.h = h;
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
@@ -4653,8 +4974,7 @@ cleanup:
 
    assert( (HBITMAP)NULL != target->b );
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    retroflat_win_setup_brush( old_brush, target, color_idx, flags );
    retroflat_win_setup_pen( old_pen, target, color_idx, flags );
@@ -4684,28 +5004,34 @@ void retroflat_line(
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 #  elif defined( RETROFLAT_API_SDL2 )
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
    RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
    POINT points[2];
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* TODO */
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      /* TODO: Draw line in ortho. */
+   } else {
+      retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+   }
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
@@ -4722,8 +5048,7 @@ void retroflat_line(
 
    /* == SDL2 == */
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
@@ -4741,8 +5066,7 @@ cleanup:
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    retroflat_win_setup_pen( old_pen, target, color_idx, flags );
 
@@ -4781,21 +5105,27 @@ void retroflat_ellipse(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color ) {
       return;
    }
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* TODO */
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      /* TODO: Draw ellipse in ortho. */
+   } else {
+      retrosoft_ellipse( target, color, x, y, w, h, flags );
+   }
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
@@ -4819,8 +5149,7 @@ void retroflat_ellipse(
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    retroflat_win_setup_brush( old_brush, target, color, flags );
    retroflat_win_setup_pen( old_pen, target, color, flags );
@@ -4872,8 +5201,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, int str_sz,
-   const char* font_str, int* w_out, int* h_out, uint8_t flags
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_SOFT_SHAPES )
@@ -4881,8 +5210,8 @@ void retroflat_string_sz(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
    SIZE sz;
    HFONT font;
    HFONT old_font;
@@ -4894,7 +5223,7 @@ void retroflat_string_sz(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* TODO */
+   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
@@ -4931,8 +5260,7 @@ cleanup:
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    font = retroflat_win_create_font( flags, font_str );
    old_font = SelectObject( target->hdc_b, font );
@@ -4970,8 +5298,8 @@ void retroflat_string(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int lock_ret = 0,
-      locked_target_internal = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   int locked_target_internal = 0;
    RECT rect;
    SIZE sz;
    HFONT font;
@@ -4982,9 +5310,11 @@ void retroflat_string(
       return;
    }
 
+#  if !defined( RETROFLAT_OPENGL )
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* !RETROFLAT_OPENGL */
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
@@ -4992,13 +5322,18 @@ void retroflat_string(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
-   retroglu_string(
-      screen_x, screen_y, 0, 
-      g_retroflat_state->palette[color], str, str_sz, font_str, flags );
+      retroglu_string(
+         screen_x, screen_y, 0, 
+         g_retroflat_state->palette[color], str, str_sz, font_str, flags );
 
-   retroflat_opengl_pop();
+      retroflat_opengl_pop();
+   } else {
+      retrosoft_string(
+         target, color, str, str_sz, font_str, x_orig, y_orig, flags );
+   }
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
@@ -5034,8 +5369,7 @@ cleanup:
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap(
-      target, lock_ret, locked_target_internal );
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* DrawText will draw gibberish even if the string is null-terminated! */
    str_sz = strlen( str );
@@ -5136,6 +5470,19 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    poll_keyboard();
    if( keypressed() ) {
+      /* TODO: ??? */
+      if( KB_SHIFT_FLAG == (KB_SHIFT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
+      }
+
+      if( KB_CTRL_FLAG == (KB_CTRL_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
+      }
+
+      if( KB_ALT_FLAG == (KB_ALT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
+      }
+
       return (readkey() >> 8);
    }
 
@@ -5151,6 +5498,21 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    } else if( SDL_KEYDOWN == event.type ) {
       key_out = event.key.keysym.sym;
+
+      if(
+         KMOD_RSHIFT == (KMOD_RSHIFT & event.key.keysym.mod) ||
+         KMOD_LSHIFT == (KMOD_LSHIFT & event.key.keysym.mod) 
+      ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
+      }
+
+      if( KMOD_CTRL == (KMOD_CTRL & event.key.keysym.mod) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
+      }
+
+      if( KMOD_ALT == (KMOD_ALT & event.key.keysym.mod) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
+      }
 
       /* Flush key buffer to improve responsiveness. */
       if(
@@ -5208,6 +5570,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       * received.
       */
       key_out = g_retroflat_state->last_key;
+      input->key_flags = g_retroflat_state->vk_mods;
 
       /* Reset pressed key. */
       g_retroflat_state->last_key = 0;
@@ -5507,6 +5870,8 @@ extern MAUG_CONST char* gc_retroflat_color_names[];
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
 #     include <retroglu.h>
+#     include <retrofp.h>
+#     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
 
 #endif /* RETROFLT_C */

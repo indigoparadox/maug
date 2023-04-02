@@ -103,57 +103,10 @@ MERROR_RETVAL retrocon_exec_line(
 
 int retrocon_debounce( struct RETROCON* con, int c );
 
-MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c );
+MERROR_RETVAL retrocon_input(
+   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt );
 
 #ifdef RETROCON_C
-
-static char retrocon_vk_to_ascii( int k ) {
-   char c = 0;
-   
-   switch( k ) {
-   case RETROFLAT_KEY_A: c = 0x41; break;
-   case RETROFLAT_KEY_B: c = 0x42; break;
-   case RETROFLAT_KEY_C: c = 0x43; break;
-   case RETROFLAT_KEY_D: c = 0x44; break;
-   case RETROFLAT_KEY_E: c = 0x45; break;
-   case RETROFLAT_KEY_F: c = 0x46; break;
-   case RETROFLAT_KEY_G: c = 0x47; break;
-   case RETROFLAT_KEY_H: c = 0x48; break;
-   case RETROFLAT_KEY_I: c = 0x49; break;
-   case RETROFLAT_KEY_J: c = 0x4a; break;
-   case RETROFLAT_KEY_K: c = 0x4b; break;
-   case RETROFLAT_KEY_L: c = 0x4c; break;
-   case RETROFLAT_KEY_M: c = 0x4d; break;
-   case RETROFLAT_KEY_N: c = 0x4e; break;
-   case RETROFLAT_KEY_O: c = 0x4f; break;
-   case RETROFLAT_KEY_P: c = 0x50; break;
-   case RETROFLAT_KEY_Q: c = 0x51; break;
-   case RETROFLAT_KEY_R: c = 0x52; break;
-   case RETROFLAT_KEY_S: c = 0x53; break;
-   case RETROFLAT_KEY_T: c = 0x54; break;
-   case RETROFLAT_KEY_U: c = 0x55; break;
-   case RETROFLAT_KEY_V: c = 0x56; break;
-   case RETROFLAT_KEY_W: c = 0x57; break;
-   case RETROFLAT_KEY_X: c = 0x58; break;
-   case RETROFLAT_KEY_Y: c = 0x59; break;
-   case RETROFLAT_KEY_Z: c = 0x60; break;
-   case RETROFLAT_KEY_0: c = 0x30; break;
-   case RETROFLAT_KEY_1: c = 0x31; break;
-   case RETROFLAT_KEY_2: c = 0x32; break;
-   case RETROFLAT_KEY_3: c = 0x33; break;
-   case RETROFLAT_KEY_4: c = 0x34; break;
-   case RETROFLAT_KEY_5: c = 0x35; break;
-   case RETROFLAT_KEY_6: c = 0x36; break;
-   case RETROFLAT_KEY_7: c = 0x37; break;
-   case RETROFLAT_KEY_8: c = 0x38; break;
-   case RETROFLAT_KEY_9: c = 0x39; break;
-   case RETROFLAT_KEY_SPACE: c = ' '; break;
-   case RETROFLAT_KEY_BKSP: c = 0x08; break;
-   case RETROFLAT_KEY_ENTER: c = '\n'; break;
-   }
-
-   return c;
-}
 
 static MERROR_RETVAL retrocon_cmd_print(
    struct RETROCON* con, const char* line, size_t line_sz, void* data
@@ -189,6 +142,10 @@ static MERROR_RETVAL retrocon_cmd_quit(
 
 MERROR_RETVAL retrocon_init( struct RETROCON* con ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
+   con->lbuffer_color = RETROFLAT_COLOR_BLACK;
+   con->bg_color = RETROFLAT_COLOR_WHITE;
 
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
    retval = retrocon_add_command( con, "QUIT", retrocon_cmd_quit, NULL );
@@ -336,9 +293,13 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
    return c;
 }
 
-MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c ) {
+MERROR_RETVAL retrocon_input(
+   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt
+) {
    MERROR_RETVAL retval = MERROR_OK;
    int c = 0;
+
+   /* TODO: Use new retroflat_buffer_* macros! */
 
    /* Put keycode on retrocon track. Clear pass-track if console active. */
    c = *p_c;
@@ -386,7 +347,8 @@ MERROR_RETVAL retrocon_input( struct RETROCON* con, int* p_c ) {
       break;
 
    default:
-      c = retrocon_vk_to_ascii( c );
+      c = retroflat_vk_to_ascii(
+         c, input_evt->key_flags | RETROFLAT_INPUT_FORCE_UPPER );
       if(
          /* Active and printable chars get added to line buffer. */
          RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags)  &&

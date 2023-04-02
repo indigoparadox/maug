@@ -793,6 +793,7 @@ WARN_LOGFILE           =
 INPUT                  = \
    src/retroflt.h \
    src/retroglu.h \
+   src/retrogui.h \
    src/retrofp.h \
    src/retrosft.h \
    src/retrocon.h \
