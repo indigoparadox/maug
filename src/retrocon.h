@@ -79,7 +79,7 @@ MERROR_RETVAL retrocon_exec_line(
 int retrocon_debounce( struct RETROCON* con, int c );
 
 MERROR_RETVAL retrocon_input(
-   struct RETROCON* con, int* p_c struct RETROFLAT_INPUT* input_evt );
+   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt );
 
 #ifdef RETROCON_C
 
@@ -117,6 +117,10 @@ static MERROR_RETVAL retrocon_cmd_quit(
 
 MERROR_RETVAL retrocon_init( struct RETROCON* con ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
+   con->lbuffer_color = RETROFLAT_COLOR_BLACK;
+   con->bg_color = RETROFLAT_COLOR_WHITE;
 
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
    retval = retrocon_add_command( con, "QUIT", retrocon_cmd_quit, NULL );
@@ -265,10 +269,12 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
 }
 
 MERROR_RETVAL retrocon_input(
-   struct RETROCON* con, int* p_c struct RETROFLAT_INPUT* input_evt
+   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int c = 0;
+
+   /* TODO: Use new retroflat_buffer_* macros! */
 
    /* Put keycode on retrocon track. Clear pass-track if console active. */
    c = *p_c;
