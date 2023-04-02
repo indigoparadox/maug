@@ -4464,7 +4464,7 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_SDL1 )
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )

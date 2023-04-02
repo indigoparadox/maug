@@ -105,6 +105,8 @@ union RETROGUI_CTL {
 
 /*! \} */ /* maug_retrogui_ctl */
 
+typedef void (*retrogui_xy_cb)( size_t* x, size_t* y, void* data );
+
 struct RETROGUI {
    RETROGUI_IDC idc_prev;
    MAUG_MHANDLE ctls_h;
@@ -112,6 +114,9 @@ struct RETROGUI {
    size_t ctls_sz;
    size_t ctls_sz_max;
    RETROGUI_IDC focus;
+   struct RETROFLAT_BITMAP* draw_bmp;
+   retrogui_xy_cb draw_xy;
+   void* draw_xy_data;
 };
 
 MERROR_RETVAL retrogui_push_listbox_item(
@@ -163,6 +168,7 @@ MAUG_CONST char* gc_retrogui_ctl_names[] = {
 /* === Control: NONE === */
 
 static RETROGUI_IDC retrogui_click_NONE( 
+   struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -199,6 +205,7 @@ static MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
 /* === Control: LISTBOX === */
 
 static RETROGUI_IDC retrogui_click_LISTBOX( 
+   struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -216,7 +223,8 @@ static RETROGUI_IDC retrogui_click_LISTBOX(
 
    /* Figure out the item clicked. */
    while( i < ctl->LISTBOX.list_sz ) {
-      retroflat_string_sz( NULL, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
+      retroflat_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
 
       if(
          input_evt->mouse_y < 
@@ -275,16 +283,17 @@ static void retrogui_redraw_LISTBOX(
 
    /* Parse out variable-length strings. */
    while( i < ctl->LISTBOX.list_sz ) {
-      retroflat_string_sz( NULL, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
+      retroflat_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
       if( j == ctl->LISTBOX.sel_idx ) {
          /* TODO: Configurable selection colors. */
-         retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
+         retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
             ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)),
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          
       }
       retroflat_string(
-         NULL, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0, NULL,
+         gui->draw_bmp, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0, NULL,
          ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)), 0 );
 
       /* Move to next variable-length string. */
@@ -432,6 +441,7 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
 /* === Control: BUTTON === */
 
 static RETROGUI_IDC retrogui_click_BUTTON( 
+   struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -460,15 +470,15 @@ static void retrogui_redraw_BUTTON(
    size_t w = 0,
       h = 0;
 
-   retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    /* TODO: Draw outlines for outset/inset depending on idc_prev. */
       
-   retroflat_string_sz( NULL, ctl->BUTTON.label, 0, NULL, &w, &h, 0 );
+   retroflat_string_sz( gui->draw_bmp, ctl->BUTTON.label, 0, NULL, &w, &h, 0 );
 
    retroflat_string(
-      NULL, ctl->base.fg_color, ctl->BUTTON.label, 0, NULL,
+      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0, NULL,
       ctl->base.x + ((ctl->base.w / 2) - (w / 2)),
       ctl->base.y + ((ctl->base.h / 2) - (h / 2)), 0 );
 }
@@ -515,6 +525,7 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
 /* === Control: TEXTBOX === */
 
 static RETROGUI_IDC retrogui_click_TEXTBOX(
+   struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
@@ -605,26 +616,26 @@ static void retrogui_redraw_TEXTBOX(
    /* Do nothing. */
 #  else
 
-   retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
 
    /* Draw chiselled inset border. */
 
-   retroflat_rect( NULL, RETROFLAT_COLOR_BLACK,
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
       ctl->base.x, ctl->base.y, ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( NULL, RETROFLAT_COLOR_BLACK,
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
       ctl->base.x, ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( NULL, RETROFLAT_COLOR_DARKGRAY,
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
       ctl->base.x, ctl->base.y + ctl->base.h - 1,
       ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( NULL, RETROFLAT_COLOR_DARKGRAY,
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
       ctl->base.x + ctl->base.w - 1, ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
 
@@ -637,7 +648,7 @@ static void retrogui_redraw_TEXTBOX(
    }
 
    retroflat_string(
-      NULL, ctl->base.fg_color, ctl->TEXTBOX.text, 0, NULL,
+      gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, NULL,
       ctl->base.x + RETROGUI_PADDING,
       ctl->base.y + RETROGUI_PADDING, 0 );
 
@@ -648,7 +659,7 @@ cleanup:
    }
 
    /* TODO: Get cursor color from GUI. */
-   retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
       ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
       ctl->base.y + RETROGUI_PADDING,
       8, 8,
@@ -744,7 +755,9 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc(
 RETROGUI_IDC retrogui_poll_ctls( 
    struct RETROGUI* gui, int* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
-   size_t i = 0;
+   size_t i = 0,
+      mouse_x = 0,
+      mouse_y = 0;
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
    union RETROGUI_CTL* ctl = NULL;
 
@@ -778,7 +791,7 @@ RETROGUI_IDC retrogui_poll_ctls(
    #define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          idc_out = \
-            retrogui_click_ ## c_name( &(gui->ctls[i]), p_input, input_evt );
+            retrogui_click_ ## c_name( gui, &(gui->ctls[i]), p_input, input_evt );
 
    #define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
@@ -793,12 +806,20 @@ RETROGUI_IDC retrogui_poll_ctls(
    ) {
       /* Remove all focus before testing if a new control has focus. */
       gui->focus = RETROGUI_IDC_NONE;
+
+      mouse_x = input_evt->mouse_x;
+      mouse_y = input_evt->mouse_y;
+
+      if( NULL != gui->draw_xy ) {
+         gui->draw_xy( &mouse_x, &mouse_y, gui->draw_xy_data );
+      }
+
       for( i = 0 ; gui->ctls_sz > i ; i++ ) {
          if(
-            input_evt->mouse_x < gui->ctls[i].base.x ||
-            input_evt->mouse_y < gui->ctls[i].base.y ||
-            input_evt->mouse_x > gui->ctls[i].base.x + gui->ctls[i].base.w ||
-            input_evt->mouse_y > gui->ctls[i].base.y + gui->ctls[i].base.h
+            mouse_x < gui->ctls[i].base.x ||
+            mouse_y < gui->ctls[i].base.y ||
+            mouse_x > gui->ctls[i].base.x + gui->ctls[i].base.w ||
+            mouse_y > gui->ctls[i].base.y + gui->ctls[i].base.h
          ) {
             continue;
          }
