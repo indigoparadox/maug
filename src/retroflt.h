@@ -5286,6 +5286,8 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    assert( NULL != input );
 
+   input->key_flags = 0;
+
 #  ifdef RETROFLAT_API_ALLEGRO
 
    /* == Allegro == */
