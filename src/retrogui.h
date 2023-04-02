@@ -608,9 +608,27 @@ static void retrogui_redraw_TEXTBOX(
    retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
-   /* TODO: Draw chiselled inset border. */
 
-   /* TODO: Draw blinking cursor. */
+   /* Draw chiselled inset border. */
+
+   retroflat_rect( NULL, RETROFLAT_COLOR_BLACK,
+      ctl->base.x, ctl->base.y, ctl->base.w, 2,
+      RETROFLAT_FLAGS_FILL );
+
+   retroflat_rect( NULL, RETROFLAT_COLOR_BLACK,
+      ctl->base.x, ctl->base.y, 2, ctl->base.h,
+      RETROFLAT_FLAGS_FILL );
+
+   retroflat_rect( NULL, RETROFLAT_COLOR_DARKGRAY,
+      ctl->base.x, ctl->base.y + ctl->base.h - 1,
+      ctl->base.w, 2,
+      RETROFLAT_FLAGS_FILL );
+
+   retroflat_rect( NULL, RETROFLAT_COLOR_DARKGRAY,
+      ctl->base.x + ctl->base.w - 1, ctl->base.y, 2, ctl->base.h,
+      RETROFLAT_FLAGS_FILL );
+
+   /* Draw text. */
 
    assert( NULL == ctl->TEXTBOX.text );
    maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
@@ -633,7 +651,10 @@ cleanup:
    retroflat_rect( NULL, RETROFLAT_COLOR_BLUE,
       ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
       ctl->base.y + RETROGUI_PADDING,
-      8, 8, 0 );
+      8, 8,
+      /* Draw blinking cursor. */
+      gui->focus == ctl->base.idc && retroflat_get_ms() % 30 > 15
+         ? RETROFLAT_FLAGS_FILL : 0 );
 
 #  endif
 
