@@ -59,6 +59,8 @@ MERROR_RETVAL retrosoft_load_glyph(
       RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp );
    maug_cleanup_if_not_ok();
 
+   retroflat_draw_lock( bmp );
+
    /* Draw the glyph onto the bitmap. */
    for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
       for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
@@ -67,6 +69,8 @@ MERROR_RETVAL retrosoft_load_glyph(
          }
       }
    }
+
+   retroflat_draw_release( bmp );
 
    /*
    retroflat_rect(
@@ -228,15 +232,29 @@ void retrosoft_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
-   /* TODO: Filed rectangle. */
+   size_t x_iter = 0,
+      y_iter = 0;
 
-   retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
 
-   retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+      for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
+         for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
+            /* TODO: Optimize filling 4-byte sequences! */
+            retroflat_px( target, color_idx, x_iter, y_iter, 0 );
+         }
+      }
 
-   retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
+   } else {
 
-   retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
+      retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
+
+      retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+
+      retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
+
+      retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
+
+   }
 }
 
 /* === */
