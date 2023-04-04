@@ -927,7 +927,8 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
-#  ifdef RETROFLAT_API_SDL1
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+/* Special pixel lock JUST for SDL1 surfaces. */
 #     define retroflat_px_lock( bmp ) \
          assert( NULL != bmp ); \
          (bmp)->autolock_refs++; \
@@ -938,6 +939,7 @@ struct RETROFLAT_BITMAP {
          (bmp)->autolock_refs--; \
          SDL_UnlockSurface( (bmp)->surface );
 #  else
+/* Pixel lock above does not apply to SDL2 surfaces or bitmap textures. */
 #     define retroflat_px_lock( bmp )
 #     define retroflat_px_release( bmp )
 #  endif
@@ -3607,6 +3609,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       &g_retroflat_state->buffer != bmp &&
       (MAUG_MHANDLE)NULL != bmp->tex.bytes_h
    ) {
+      bmp->flags |= RETROFLAT_FLAGS_LOCK;
       maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
    }
 
@@ -3633,7 +3636,7 @@ cleanup:
 
    /* == SDL1 == */
 
-   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       /* Special case: Attempting to lock the screen. */
       bmp = (&g_retroflat_state->buffer);
 
@@ -3733,8 +3736,8 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     elif defined( RETROFLAT_API_GLUT )
       glutSwapBuffers();
 #     endif
-   } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes ) {
-      /* TODO: Use check if bitmap is locked. */
+   } else if( retroflat_bitmap_locked( bmp ) ) {
+      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
 #ifndef RETROGLU_NO_TEXTURES
       assert( 0 < bmp->tex.id );
       assert( NULL != bmp->tex.bytes );
@@ -4238,6 +4241,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    HDC hdc_win = (HDC)NULL;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+
 #  if defined( RETROFLAT_OPENGL )
 
    bmp_out->w = w;
@@ -4536,7 +4541,6 @@ void retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   /* TODO */
    if( NULL == target || &(g_retroflat_state->buffer) == target ) {
       /* TODO: Create ortho sprite on screen. */
 
@@ -4545,11 +4549,11 @@ void retroflat_blit_bitmap(
 
       assert( NULL != target->tex.bytes );
 
-      for( y_iter = d_y ; h > y_iter ; y_iter++ ) {
+      for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          /* TODO: Handle transparency! */
          memcpy(
-            &(target->tex.bytes[(((d_y * target->w) + d_x) * 4)]),
-            &(src->tex.bytes[(((s_y * src->w) + s_x) * 4)]),
+            &(target->tex.bytes[(((y_iter * target->w) + d_x) * 4)]),
+            &(src->tex.bytes[(((y_iter * src->w) + s_x) * 4)]),
             w * 4 );
       }
 
@@ -4670,6 +4674,7 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 
    target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
