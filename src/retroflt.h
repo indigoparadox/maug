@@ -1579,7 +1579,7 @@ struct RETROFLAT_STATE {
    struct RETROFLAT_BITMAP buffer;
 
 #if defined( RETROFLAT_OPENGL )
-   uint32_t tex_palette[RETROFLAT_COLORS_SZ];
+   uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #endif /* RETROFLAT_OPENGL */
 
 #if defined( RETROFLAT_API_ALLEGRO )
@@ -2906,12 +2906,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_SCREENSAVER */
 
 #  ifdef RETROFLAT_OPENGL
+   debug_printf( 1, "setting up texture palette..." );
 #     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b ) \
-         g_retroflat_state->tex_palette[idx] = \
-            (((uint32_t)(r) & 0xff) << 24) | \
-            (((uint32_t)(g) & 0xff) << 16) | \
-            (((uint32_t)(b) & 0xff) << 8) | \
-            0xff;
+         g_retroflat_state->tex_palette[idx][0] = r; \
+         g_retroflat_state->tex_palette[idx][1] = g; \
+         g_retroflat_state->tex_palette[idx][2] = b;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
 #  endif /* RETROFLAT_OPENGL */
 
@@ -3701,9 +3700,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     elif defined( RETROFLAT_API_GLUT )
       glutSwapBuffers();
 #     endif
-   } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes_h ) {
+   } else if( (MAUG_MHANDLE)NULL != bmp->tex.bytes ) {
+      /* TODO: Use check if bitmap is locked. */
 #ifndef RETROGLU_NO_TEXTURES
       assert( 0 < bmp->tex.id );
+      assert( NULL != bmp->tex.bytes );
 
       /* Update stored texture if it exists. */
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
@@ -3963,8 +3964,9 @@ MERROR_RETVAL retroflat_load_bitmap(
    }
 
    /* Allocate buffer for unpacking. */
-   bmp_out->tex.bytes_h =
-      maug_malloc( bmp_out->w * bmp_out->h, sizeof( uint32_t ) );
+   debug_printf( 1, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
+      bmp_out->w, bmp_out->h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4205,8 +4207,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->w = w;
    bmp_out->h = h;
    /* TODO: Overflow checking. */
-   bmp_out->tex.bytes_h =
-      maug_malloc( bmp_out->w * bmp_out->h, sizeof( uint32_t ) );
+   debug_printf( 1, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
+      bmp_out->w, bmp_out->h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4215,6 +4218,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* TODO: Overflow checking. */
    maug_mzero(
       bmp_out->tex.bytes, bmp_out->w * bmp_out->h * sizeof( uint32_t ) );
+
+   glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
 
 cleanup:
    if( NULL != bmp_out->tex.bytes ) {
@@ -4617,7 +4622,13 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   target->tex.bytes[(y * target->w * sizeof( uint32_t )) + (x * sizeof( uint32_t ))] = g_retroflat_state->tex_palette[color_idx];
+   target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
+      g_retroflat_state->tex_palette[color_idx][0];
+   target->tex.bytes[(((y * target->w) + x) * 4) + 1] =
+      g_retroflat_state->tex_palette[color_idx][1];
+   target->tex.bytes[(((y * target->w) + x) * 4) + 2] =
+      g_retroflat_state->tex_palette[color_idx][2];
+   target->tex.bytes[(((y * target->w) + x) * 4) + 3] = 0xff;
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4761,8 +4772,12 @@ void retroflat_rect(
       
       retroflat_opengl_pop();
    } else {
-      /* TODO: Use soft shapes. */
+      retrosoft_rect( target, color_idx, x, y, w, h, flags );
    }
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+
+   retrosoft_rect( target, color_idx, x, y, w, h, flags );
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
