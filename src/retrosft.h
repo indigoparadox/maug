@@ -323,6 +323,10 @@ void retrosoft_string(
       glyph_idx = 0;
    int x = x_orig;
 
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
    for( i = 0 ; str_sz > i ; i++ ) {
       /* Terminate prematurely at null. */
       if( '\0' == str[i] ) {
