@@ -4549,6 +4549,9 @@ void retroflat_blit_bitmap(
 
       assert( NULL != target->tex.bytes );
 
+      /* TODO: Some kind of source-autolock? */
+      assert( !retroflat_bitmap_locked( src ) );
+      maug_mlock( src->tex.bytes_h, src->tex.bytes );
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          /* TODO: Handle transparency! */
          memcpy(
@@ -4556,6 +4559,7 @@ void retroflat_blit_bitmap(
             &(src->tex.bytes[(((y_iter * src->w) + s_x) * 4)]),
             w * 4 );
       }
+      maug_munlock( src->tex.bytes_h, src->tex.bytes );
 
    }
 
