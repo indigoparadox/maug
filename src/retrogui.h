@@ -8,6 +8,11 @@
  * \file retrogui.h
  */
 
+/* TODO: Implement dirty flag! */
+
+/*! \brief RETROGUI::flags indicating controls should be redrawn. */
+#define RETROGUI_FLAGS_DIRTY 0x01
+
 #ifndef RETROGUI_CTL_TEXT_SZ_MAX
 #  define RETROGUI_CTL_TEXT_SZ_MAX 128
 #endif /* !RETROGUI_CTL_TEXT_SZ_MAX */
@@ -108,6 +113,7 @@ union RETROGUI_CTL {
 typedef void (*retrogui_xy_cb)( size_t* x, size_t* y, void* data );
 
 struct RETROGUI {
+   uint8_t flags;
    RETROGUI_IDC idc_prev;
    MAUG_MHANDLE ctls_h;
    union RETROGUI_CTL* ctls;

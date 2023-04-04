@@ -3412,6 +3412,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
 #  if defined( RETROFLAT_OPENGL )
+   retval = retrosoft_init();
+   maug_cleanup_if_not_ok();
    retval = retroglu_init_glyph_tex();
    maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_OPENGL */
@@ -4469,7 +4471,9 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int w, int h
 ) {
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
+   size_t y_iter = 0;
+#  elif defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )
@@ -4483,14 +4487,36 @@ void retroflat_blit_bitmap(
    int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = &(g_retroflat_state->buffer);
    }
+#  endif /* RETROFLAT_OPENGL */
+
    assert( NULL != src );
+
+   /* TODO: Sort out autolocking. Should it even happen? */
 
 #  if defined( RETROFLAT_OPENGL )
 
    /* TODO */
+   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+      /* TODO: Create ortho sprite on screen. */
+
+   } else {
+      /* Blit to texture. */
+
+      assert( NULL != target->tex.bytes );
+
+      for( y_iter = d_y ; h > y_iter ; y_iter++ ) {
+         /* TODO: Handle transparency! */
+         memcpy(
+            &(target->tex.bytes[(((d_y * target->w) + d_x) * 4)]),
+            &(src->tex.bytes[(((s_y * src->w) + s_x) * 4)]),
+            w * 4 );
+      }
+
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -4618,8 +4644,6 @@ void retroflat_px(
       return;
    }
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
-
 #  if defined( RETROFLAT_OPENGL )
 
    target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
@@ -4634,11 +4658,20 @@ void retroflat_px(
 
    /* == Allegro == */
 
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+
    putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
 
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
+
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    offset = (y * target->surface->pitch) +
       (x * target->surface->format->BytesPerPixel);
@@ -4663,9 +4696,16 @@ void retroflat_px(
       break;
    }
 
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
+
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    SDL_SetRenderDrawColor(
       target->renderer,  color->r, color->g, color->b, 255 );
@@ -4674,6 +4714,8 @@ void retroflat_px(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
+
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
 #  ifdef RETROFLAT_WING
    if( NULL != target->bits ) {
@@ -4695,24 +4737,31 @@ void retroflat_px(
       g_retroflat_state->palette[color_idx] );
 #  endif /* RETROFLAT_WING */
 
+cleanup:
+
+   if( locked_target_internal ) {
+      retroflat_draw_release( target );
+   }
 #  elif defined( RETROFLAT_API_LIBNDS )
 
    /* == Nintendo DS == */
+
+   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    uint16_t* px_ptr = NULL;
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
-#  else
-#     warning "px not implemented"
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
 cleanup:
 
    if( locked_target_internal ) {
       retroflat_draw_release( target );
    }
+#  else
+#     warning "px not implemented"
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
 }
 
 /* === */
