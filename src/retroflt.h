@@ -501,15 +501,6 @@ typedef int8_t RETROFLAT_COLOR;
 #  define RETROFLAT_TXP_B 0x00
 #endif /* !RETROFLAT_TXP_B */
 
-/* Convenience macro for auto-locking inside of draw functions. */
-/* TODO: Use maug_cleanup and assume retval. */
-#define retroflat_internal_autolock_bitmap( bmp, lock_auto ) \
-   if( !retroflat_bitmap_locked( bmp ) ) { \
-      retval = retroflat_draw_lock( bmp ); \
-      maug_cleanup_if_not_ok(); \
-      lock_auto = 1; \
-   }
-
 /*! \} */ /* maug_retroflt_bitmap */
 
 #ifndef RETROFLAT_GL_Z
@@ -755,6 +746,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 
 #  define retroflat_quit( retval_in ) \
    g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
@@ -848,10 +841,14 @@ typedef FILE* RETROFLAT_CONFIG;
 struct RETROFLAT_BITMAP {
    uint8_t flags;
    SDL_Surface* surface;
-#     ifndef RETROFLAT_API_SDL1
+#  ifdef RETROFLAT_API_SDL1
+   /* SDL1 autolock counter. */
+   ssize_t autolock_refs;
+#  else
+   /* SDL2 texture pointers. */
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#     endif /* !RETROFLAT_API_SDL1 */
+#  endif /* RETROFLAT_API_SDL1 */
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
    ssize_t w;
@@ -929,6 +926,21 @@ struct RETROFLAT_BITMAP {
 #  endif
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
+
+#  ifdef RETROFLAT_API_SDL1
+#     define retroflat_px_lock( bmp ) \
+         assert( NULL != bmp ); \
+         (bmp)->autolock_refs++; \
+         SDL_LockSurface( (bmp)->surface );
+#     define retroflat_px_release( bmp ) \
+         assert( NULL != bmp ); \
+         assert( 0 < (bmp)->autolock_refs ); \
+         (bmp)->autolock_refs--; \
+         SDL_UnlockSurface( (bmp)->surface );
+#  else
+#     define retroflat_px_lock( bmp )
+#     define retroflat_px_release( bmp )
+#  endif
 
 #  define retroflat_quit( retval_in ) \
       g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
@@ -1130,6 +1142,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
@@ -1235,6 +1249,15 @@ extern HBRUSH gc_retroflat_win_brushes[];
       return retval; \
    }
 
+/* Convenience macro for auto-locking inside of draw functions. */
+/* TODO: Use maug_cleanup and assume retval. */
+#define retroflat_internal_autolock_bitmap( bmp, lock_auto ) \
+   if( !retroflat_bitmap_locked( bmp ) ) { \
+      retval = retroflat_draw_lock( bmp ); \
+      maug_cleanup_if_not_ok(); \
+      lock_auto = 1; \
+   }
+
 #elif defined( RETROFLAT_API_LIBNDS )
 
 /* == Nintendo DS == */
@@ -1282,6 +1305,8 @@ typedef int RETROFLAT_COLOR_DEF;
 
 /* TODO */
 #  define retroflat_bitmap_locked( bmp ) (0)
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
@@ -1318,6 +1343,10 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) 0
+
+/*! \brief Special lock used before per-pixel operations because of SDL1. */
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
@@ -3621,14 +3650,14 @@ cleanup:
          /* We actually want to lock the buffer for pixel manipulation. */
          assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
          bmp->flags |= RETROFLAT_FLAGS_LOCK;
-         SDL_LockSurface( bmp->surface );
+         /* SDL_LockSurface( bmp->surface ); */
       }
 
    } else {
       /* Locking a bitmap for pixel drawing. */
       assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
       bmp->flags |= RETROFLAT_FLAGS_LOCK;
-      SDL_LockSurface( bmp->surface );
+      /* SDL_LockSurface( bmp->surface ); */
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
@@ -3641,7 +3670,9 @@ cleanup:
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
    } else {
       /* Target is the screen buffer. */
-      SDL_SetRenderTarget( g_retroflat_state->buffer.renderer, g_retroflat_state->buffer.texture );
+      SDL_SetRenderTarget(
+         g_retroflat_state->buffer.renderer,
+         g_retroflat_state->buffer.texture );
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3909,6 +3940,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    assert( NULL != bmp_out );
 
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
@@ -4160,7 +4193,8 @@ cleanup:
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 #        endif /* RETROFLAT_API_WINCE */
-   maug_cleanup_if_null_file( bmp_out->b );
+   maug_cleanup_if_null_msg(
+      HBITMAP, bmp_out->b, MERROR_FILE, "failed to open FILE!" )
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
 
@@ -4339,7 +4373,11 @@ xpm_found:
 
    /* Draw XPM pixels to canvas. */
 
+   /* Normally draw lock is called from the main loop, but we're making an
+    * off-screen bitmap, here!
+    */
    retroflat_draw_lock( bmp_out );
+   retroflat_px_lock( bmp_out );
 
    for( y = 0 ; bmp_h > y ; y++ ) {
       for( x = 0 ; bmp_w > x ; x++ ) {
@@ -4398,6 +4436,7 @@ xpm_found:
       }
    }
 
+   retroflat_px_release( bmp_out );
    retroflat_draw_release( bmp_out );
 
 cleanup:
@@ -4474,11 +4513,11 @@ void retroflat_blit_bitmap(
 #  if defined( RETROFLAT_OPENGL )
    size_t y_iter = 0;
 #  elif defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+   MERROR_RETVAL retval = MERROR_OK;
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )
    MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4494,8 +4533,6 @@ void retroflat_blit_bitmap(
 #  endif /* RETROFLAT_OPENGL */
 
    assert( NULL != src );
-
-   /* TODO: Sort out autolocking. Should it even happen? */
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -4539,8 +4576,6 @@ void retroflat_blit_bitmap(
 
    /* == SDL == */
 
-   assert( !retroflat_bitmap_locked( src ) );
-
    src_rect.x = s_x;
    src_rect.y = s_y;
    src_rect.w = w;
@@ -4551,27 +4586,22 @@ void retroflat_blit_bitmap(
    dest_rect.h = h;
 
 #     ifdef RETROFLAT_API_SDL1
-   /* TODO: Autounlock? */
-   assert( !retroflat_bitmap_locked( target ) );
+   assert( 0 == src->autolock_refs );
+   assert( 0 == target->autolock_refs );
    retval = 
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
    if( 0 != retval ) {
       error_printf( "could not blit surface: %s", SDL_GetError() );
    }
 #     else
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
+   assert( retroflat_bitmap_locked( target ) );
    retval = SDL_RenderCopy(
       target->renderer, src->texture, &src_rect, &dest_rect );
    if( 0 != retval ) {
       error_printf( "could not blit surface: %s", SDL_GetError() );
    }
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 #     endif /* !RETROFLAT_API_SDL1 */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4582,7 +4612,7 @@ cleanup:
    assert( (HBITMAP)NULL != src->b );
 
    retroflat_internal_autolock_bitmap( src, locked_src_internal );
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    if( (HBITMAP)NULL != src->mask ) {
       /* Use mask to blit transparency. */
@@ -4600,10 +4630,6 @@ cleanup:
       retroflat_draw_release( src );
    }
 
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
-
 #  else
 #     warning "blit bitmap not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4616,8 +4642,6 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, uint8_t flags
 ) {
-   int locked_target_internal = 0;
-   MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_API_SDL1 )
    int offset = 0;
@@ -4646,6 +4670,8 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   assert( retroflat_bitmap_locked( target ) );
+
    target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
       g_retroflat_state->tex_palette[color_idx][0];
    target->tex.bytes[(((y * target->w) + x) * 4) + 1] =
@@ -4658,20 +4684,15 @@ void retroflat_px(
 
    /* == Allegro == */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
-
    putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   retroflat_px_lock( target );
+
+   assert( 0 < target->autolock_refs );
 
    offset = (y * target->surface->pitch) +
       (x * target->surface->format->BytesPerPixel);
@@ -4696,16 +4717,13 @@ cleanup:
       break;
    }
 
-cleanup:
+   retroflat_px_release( target );
 
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    SDL_SetRenderDrawColor(
       target->renderer,  color->r, color->g, color->b, 255 );
@@ -4715,7 +4733,7 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
 #  ifdef RETROFLAT_WING
    if( NULL != target->bits ) {
@@ -4737,27 +4755,15 @@ cleanup:
       g_retroflat_state->palette[color_idx] );
 #  endif /* RETROFLAT_WING */
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 #  elif defined( RETROFLAT_API_LIBNDS )
 
    /* == Nintendo DS == */
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    uint16_t* px_ptr = NULL;
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 #  else
 #     warning "px not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -4776,11 +4782,7 @@ void retroflat_rect(
       screen_y = 0,
       screen_w = 0,
       screen_h = 0;
-#elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-   MERROR_RETVAL retval = MERROR_OK;
-   SDL_Rect area;
-   int locked_target_internal = 0;
-   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#elif defined( RETROFLAT_API_SDL2 )
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MERROR_RETVAL retval = MERROR_OK;
    HBRUSH old_brush = (HBRUSH)NULL;
@@ -4799,8 +4801,6 @@ void retroflat_rect(
 #  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
-
-   /* TODO: Autolock? */
 
    if( NULL == target || &(g_retroflat_state->buffer) == target ) {
       /* Draw directly to the screen. */
@@ -4841,46 +4841,14 @@ void retroflat_rect(
          g_retroflat_state->palette[color_idx] );
    }
 
-#  elif defined( RETROFLAT_API_SDL1 )
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
-
-   area.x = x;
-   area.y = y;
-   area.w = w;
-   area.h = h;
-
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-
-      /* Full-screen blank requested. */
-      SDL_FillRect( target->surface, &area,
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b ) );
-
-   } else {
-      /* Top */
-      retroflat_line( target, color, x, y, x + w, y, 0 );
-      /* Right */
-      retroflat_line( target, color, x + w, y, x + w, y + h, 0 );
-      /* Bottom */
-      retroflat_line( target, color, x, y + h, x + w, y + h, 0 );
-      /* Left */
-      retroflat_line( target, color, x, y, x, y + h, 0 );
-   }
-
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
-
 #  elif defined( RETROFLAT_API_SDL2 )
 
+   assert( retroflat_bitmap_locked( target ) );
+
    area.x = x;
    area.y = y;
    area.w = w;
    area.h = h;
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
@@ -4891,19 +4859,13 @@ cleanup:
       SDL_RenderDrawRect( target->renderer, &area );
    }
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
-
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
 
    assert( (HBITMAP)NULL != target->b );
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    retroflat_win_setup_brush( old_brush, target, color_idx, flags );
    retroflat_win_setup_pen( old_pen, target, color_idx, flags );
@@ -4914,10 +4876,6 @@ cleanup:
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 
 #  else
 #     warning "rect not implemented"
@@ -4977,25 +4935,19 @@ void retroflat_line(
 
    /* == SDL2 == */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target );
 
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
    SDL_RenderDrawLine( target->renderer, x1, y1, x2, y2 );
  
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }  
-
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16/Win32 == */
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    retroflat_win_setup_pen( old_pen, target, color_idx, flags );
 
@@ -5012,10 +4964,6 @@ cleanup:
    if( (HPEN)NULL != pen ) {
       SelectObject( target->hdc_b, old_pen );
       DeleteObject( pen );
-   }
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
    }
 
 #  else
@@ -5077,8 +5025,7 @@ void retroflat_ellipse(
    /* == Win16/Win32 == */
 
    assert( NULL != target->b );
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    retroflat_win_setup_brush( old_brush, target, color, flags );
    retroflat_win_setup_pen( old_pen, target, color, flags );
@@ -5089,10 +5036,6 @@ cleanup:
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 
 #  else
 #     warning "ellipse not implemented"
@@ -5188,8 +5131,7 @@ cleanup:
    /* == Win16/Win32 == */
 
    assert( NULL != target->b );
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    font = retroflat_win_create_font( flags, font_str );
    old_font = SelectObject( target->hdc_b, font );
@@ -5201,10 +5143,6 @@ cleanup:
 cleanup:
 
    SelectObject( target->hdc_b, old_font );
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 
 #  else
 #     warning "string sz not implemented"
@@ -5298,7 +5236,7 @@ cleanup:
 
    assert( NULL != target->b );
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   assert( retroflat_bitmap_locked( target ) );
 
    /* DrawText will draw gibberish even if the string is null-terminated! */
    str_sz = strlen( str );
@@ -5326,10 +5264,6 @@ cleanup:
    SetBkMode( target->hdc_b, OPAQUE );
    SetTextColor( target->hdc_b,
       g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }
 
 #  else
 #     warning "string not implemented"

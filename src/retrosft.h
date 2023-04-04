@@ -59,7 +59,11 @@ MERROR_RETVAL retrosoft_load_glyph(
       RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp );
    maug_cleanup_if_not_ok();
 
+   /* Normally draw lock is called from the main loop, but we're making an
+    * off-screen bitmap, here!
+    */
    retroflat_draw_lock( bmp );
+   retroflat_px_lock( bmp );
 
    /* Draw the glyph onto the bitmap. */
    for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
@@ -70,6 +74,7 @@ MERROR_RETVAL retrosoft_load_glyph(
       }
    }
 
+   retroflat_px_release( bmp );
    retroflat_draw_release( bmp );
 
    /*
@@ -150,12 +155,10 @@ void retrosoft_line(
       iter[2],
       inc = 1,
       delta = 0;
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
-
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
 
    /* TODO: Handle thickness. */
+
+   retroflat_px_lock( target );
 
    /* Figure out strategy based on line slope. */
    if( abs( y2 - y1 ) < abs( x2 - x1 ) ) {
@@ -219,11 +222,7 @@ void retrosoft_line(
       }
    }
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }  
+   retroflat_px_release( target );
 }
 
 /* === */
@@ -234,6 +233,8 @@ void retrosoft_rect(
 ) {
    size_t x_iter = 0,
       y_iter = 0;
+
+   retroflat_px_lock( target );
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
 
@@ -255,6 +256,8 @@ void retrosoft_rect(
       retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
 
    }
+
+   retroflat_px_release( target );
 }
 
 /* === */
@@ -265,9 +268,7 @@ void retrosoft_ellipse(
 ) {
    int32_t i = 0,
       i_prev = 0;
-   MERROR_RETVAL retval = MERROR_OK;
-   int16_t locked_target_internal = 0,
-      px_x1 = 0,
+   int16_t px_x1 = 0,
       px_y1 = 0,
       px_x2 = 0,
       px_y2 = 0;
@@ -276,7 +277,7 @@ void retrosoft_ellipse(
 
    /* TODO: Filled ellipse. */
 
-   retroflat_internal_autolock_bitmap( target, locked_target_internal );
+   retroflat_px_lock( target );
 
    /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
    for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
@@ -293,11 +294,7 @@ void retrosoft_ellipse(
       retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
    }
 
-cleanup:
-
-   if( locked_target_internal ) {
-      retroflat_draw_release( target );
-   }  
+   retroflat_px_release( target );
 }
 
 /* === */
