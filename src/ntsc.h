@@ -1,4 +1,7 @@
 
+#ifndef NTSC_H
+#define NTSC_H
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,8 +18,6 @@
  *   Discord: https://discord.com/invite/hdYctSmyQJ
  */
 /*****************************************************************************/
-#ifndef _CRT_CORE_H_
-#define _CRT_CORE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -228,271 +229,7 @@ extern void crt_sincos14(int *s, int *c, int n);
 }
 #endif
 
-#endif
-
 #ifdef NTSC_C
-
-#if CMD_LINE_VERSION
-#include "ppm_rw.h"
-#include "bmp_rw.h"
-#else
-#include "fw.h"
-#define XMAX 832
-#define YMAX 624
-
-static int *video = NULL;
-static VIDINFO *info;
-
-static struct CRT crt;
-
-static int *img;
-static int imgw;
-static int imgh;
-
-static int color = 1;
-static int noise = 12;
-static int field = 0;
-static int progressive = 0;
-static int raw = 0;
-static int hue = 0;
-static int fadephos = 1; /* fade phosphors each frame */
-
-static void
-updatecb(void)
-{
-    if (pkb_key_pressed(FW_KEY_ESCAPE)) {
-        sys_shutdown();
-    }
-
-    if (pkb_key_held('q')) {
-        crt.black_point += 1;
-        printf("crt.black_point   %d\n", crt.black_point);
-    }
-    if (pkb_key_held('a')) {
-        crt.black_point -= 1;
-        printf("crt.black_point   %d\n", crt.black_point);
-    }
-
-    if (pkb_key_held('w')) {
-        crt.white_point += 1;
-        printf("crt.white_point   %d\n", crt.white_point);
-    }
-    if (pkb_key_held('s')) {
-        crt.white_point -= 1;
-        printf("crt.white_point   %d\n", crt.white_point);
-    }
-
-    if (pkb_key_held(FW_KEY_ARROW_UP)) {
-        crt.brightness += 1;
-        printf("%d\n", crt.brightness);
-    }
-    if (pkb_key_held(FW_KEY_ARROW_DOWN)) {
-        crt.brightness -= 1;
-        printf("%d\n", crt.brightness);
-    }
-    if (pkb_key_held(FW_KEY_ARROW_LEFT)) {
-        crt.contrast -= 1;
-        printf("%d\n", crt.contrast);
-    }
-    if (pkb_key_held(FW_KEY_ARROW_RIGHT)) {
-        crt.contrast += 1;
-        printf("%d\n", crt.contrast);
-    }
-    if (pkb_key_held('1')) {
-        crt.saturation -= 1;
-        printf("%d\n", crt.saturation);
-    }
-    if (pkb_key_held('2')) {
-        crt.saturation += 1;
-        printf("%d\n", crt.saturation);
-    }
-    if (pkb_key_held('3')) {
-        noise -= 1;
-        if (noise < 0) {
-            noise = 0;
-        }
-        printf("%d\n", noise);
-    }
-    if (pkb_key_held('4')) {
-        noise += 1;
-        printf("%d\n", noise);
-    }
-    if (pkb_key_held('5')) {
-        hue--;
-        if (hue < 0) {
-            hue = 359;
-        }
-        printf("%d\n", hue);
-    }
-    if (pkb_key_held('6')) {
-        hue++;
-        if (hue > 359) {
-            hue = 0;
-        }
-        printf("%d\n", hue);
-    }
-    if (pkb_key_held('7')) {
-        crt.hue -= 1;
-        printf("%d\n", crt.hue);
-    }
-    if (pkb_key_held('8')) {
-        crt.hue += 1;
-        printf("%d\n", crt.hue);
-    }
-  
-    if (pkb_key_pressed(FW_KEY_SPACE)) {
-        color ^= 1;
-    }
-    
-    if (pkb_key_pressed('m')) {
-        fadephos ^= 1;
-        printf("fadephos: %d\n", fadephos);
-    }
-    if (pkb_key_pressed('r')) {
-        crt_reset(&crt);
-    }
-    if (pkb_key_pressed('g')) {
-        crt.scanlines ^= 1;
-        printf("crt.scanlines: %d\n", crt.scanlines);
-    }
-    if (pkb_key_pressed('b')) {
-        crt.blend ^= 1;
-        printf("crt.blend: %d\n", crt.blend);
-    }
-    if (pkb_key_pressed('f')) {
-        field ^= 1;
-        printf("field: %d\n", field);
-    }
-    if (pkb_key_pressed('e')) {
-        progressive ^= 1;
-        printf("progressive: %d\n", progressive);
-    }
-    if (pkb_key_pressed('t')) {
-        /* Analog array must be cleared since it normally doesn't get zeroed each frame
-         * so active video portions that were written to in non-raw mode will not lose
-         * their values resulting in the previous image being
-         * displayed where the new, smaller image is not
-         */
-#if (CRT_SYSTEM == CRT_SYSTEM_NTSC)
-        /* clearing the analog buffer with optimized NES mode will cause the
-         * image to break since the field does not get repopulated
-         */
-        memset(crt.analog, 0, sizeof(crt.analog));
-#endif
-        raw ^= 1;
-        printf("raw: %d\n", raw);
-    }
-}
-
-static void
-fade_phosphors(void)
-{
-    int i, *v;
-    unsigned int c;
-
-    v = video;
-
-    for (i = 0; i < info->width * info->height; i++) {
-        c = v[i] & 0xffffff;
-        v[i] = (c >> 1 & 0x7f7f7f) +
-               (c >> 2 & 0x3f3f3f) +
-               (c >> 3 & 0x1f1f1f) +
-               (c >> 4 & 0x0f0f0f);
-    }
-}
-
-static void
-displaycb(void)
-{
-    static struct NTSC_SETTINGS ntsc;
-  
-    if (fadephos) {
-        fade_phosphors();
-    } else {
-        memset(video, 0, info->width * info->height * sizeof(int));
-    }
-    /* not necessary to clear if you're rendering on a constant region of the display */
-    /* memset(crt.analog, 0, sizeof(crt.analog)); */
-    ntsc.data = img;
-    ntsc.format = CRT_PIX_FORMAT_BGRA;
-    ntsc.w = imgw;
-    ntsc.h = imgh;
-    ntsc.as_color = color;
-    ntsc.field = field & 1;
-    ntsc.raw = raw;
-    ntsc.hue = hue;
-    if (ntsc.field == 0) {
-        /* a frame is two fields */
-        ntsc.frame ^= 1;
-    }
-    crt_modulate(&crt, &ntsc);
-    crt_demodulate(&crt, noise);
-    if (!progressive) {
-        field ^= 1;
-    }
-    vid_blit();
-    vid_sync();
-}
-
-int
-main(int argc, char **argv)
-{
-    int werr;
-    char *input_file;
-
-    sys_init();
-    sys_updatefunc(updatecb);
-    sys_displayfunc(displaycb);
-    sys_keybfunc(pkb_keyboard);
-    sys_keybupfunc(pkb_keyboardup);
-
-    clk_mode(FW_CLK_MODE_HIRES);
-    pkb_reset();
-    sys_sethz(60);
-    sys_capfps(1);
-
-    werr = vid_open("crt", XMAX, YMAX, 1, FW_VFLAG_VIDFAST);
-    if (werr != FW_VERR_OK) {
-        FW_error("unable to create window\n");
-        return EXIT_FAILURE;
-    }
-
-    info = vid_getinfo();
-    video = info->video;
-    
-    printf(DRV_HEADER);
-
-    crt_init(&crt, info->width, info->height, CRT_PIX_FORMAT_BGRA, video);
-    crt.blend = 1;
-    crt.scanlines = 1;
-
-    if (argc == 1) {
-        fprintf(stderr, "Please specify PPM or BMP image input file.\n");
-        return EXIT_FAILURE;
-    }
-    input_file = argv[1];
-    
-    if (cmpsuf(input_file, ".ppm", 4) == 0) {
-        if (!ppm_read24(input_file, &img, &imgw, &imgh, calloc)) {
-            fprintf(stderr, "unable to read image\n");
-            return EXIT_FAILURE;
-        }
-    } else {
-        if (!bmp_read24(input_file, &img, &imgw, &imgh, calloc)) {
-            fprintf(stderr, "unable to read image\n");
-            return EXIT_FAILURE;
-        }
-    }
-
-    printf("loaded %d %d\n", imgw, imgh);
-
-    sys_start();
-
-    sys_shutdown();
-    return EXIT_SUCCESS;
-}
-
-#endif
 
 /*****************************************************************************/
 /*
@@ -1224,7 +961,7 @@ iirf(struct IIRLP *f, int s)
     return s - f->h;
 #else
     return f->h;
-#endif
+#endif /* HIPASS */
 }
 
 extern void
@@ -1272,7 +1009,7 @@ crt_modulate(struct CRT *v, struct NTSC_SETTINGS *s)
             desth = ((CRT_LINES * 64500) >> 16);
         }
     }
-#endif
+#endif /* CRT_DO_BLOOM */
     if (s->as_color) {
         for (x = 0; x < CRT_CC_SAMPLES; x++) {
             n = s->hue + x * (360 / CRT_CC_SAMPLES);
@@ -1430,7 +1167,10 @@ crt_modulate(struct CRT *v, struct NTSC_SETTINGS *s)
         }
     }
 }
-#endif
+
+#endif /* CRT_SYSTEM == CRT_SYSTEM_NTSC */
 
 #endif /* NTSC_C */
+
+#endif /* NTSC_H */
 
