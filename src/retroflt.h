@@ -1616,6 +1616,7 @@ struct RETROFLAT_STATE {
    struct CRT crt;
    struct RETROFLAT_BITMAP crt_buffer; /* Real screen buffer for NTSC CRT. */
    int field;
+   int noise;
 #endif /* RETROFLAT_NTSC */
 
 #if defined( RETROFLAT_OPENGL )
@@ -2779,6 +2780,26 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 #  endif /* !MAUG_CLI_SIGIL_SZ */
 
+#  ifdef RETROFLAT_NTSC
+
+static int retroflat_cli_n( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfn", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      debug_printf( 1, "setting video noise to: %d", atoi( arg ) );
+      g_retroflat_state->noise = atoi( arg );
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_n_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   debug_printf( 1, "setting video noise to: 12" );
+   g_retroflat_state->noise = 12;
+   return RETROFLAT_OK;
+}
+
+#  endif /* RETROFLAT_NTSC */
+
 static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       debug_printf( 1, "unlocking FPS..." );
@@ -2910,6 +2931,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "Set the config path.", 0,
       (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
 #  endif /* !MAUG_NO_CONFIG */
+
+#  ifdef RETROFLAT_NTSC
+	maug_add_arg( MAUG_CLI_SIGIL "rfn", MAUG_CLI_SIGIL_SZ + 2,
+      "NTSC noise", 0,
+      (maug_cli_cb)retroflat_cli_n, (maug_cli_cb)retroflat_cli_n_def, args );
+#  endif /* RETROFLAT_NTSC */
 
    maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
       "Unlock FPS.", 0,
@@ -3842,7 +3869,7 @@ cleanup:
             g_retroflat_state->ntsc.frame ^= 1;
          }
          crt_modulate( &(g_retroflat_state->crt), &(g_retroflat_state->ntsc) );
-         crt_demodulate( &(g_retroflat_state->crt), 52 );
+         crt_demodulate( &(g_retroflat_state->crt), g_retroflat_state->noise );
          g_retroflat_state->ntsc.field ^= 1;
 
          bmp = &(g_retroflat_state->crt_buffer);
