@@ -175,7 +175,6 @@ struct CRT {
     /* internal data */
     int ccf[CRT_CC_VPER][CRT_CC_SAMPLES]; /* faster color carrier convergence */
     int hsync, vsync; /* keep track of sync over frames */
-    int rn; /* seed for the 'random' noise */
 };
 
 /* Initializes the library. Sets up filters.
@@ -411,17 +410,9 @@ init_eq(struct EQF *f,
     f->g[2] = g_hi;
     
     crt_sincos14(&sn, &cs, T14_PI * f_lo / rate);
-    if (EQ_P >= 15) {
-        f->lf = 2 * (sn << (EQ_P - 15));
-    } else {
-        f->lf = 2 * (sn >> (15 - EQ_P));
-    }
+    f->lf = 2 * (sn << (EQ_P - 15));
     crt_sincos14(&sn, &cs, T14_PI * f_hi / rate);
-    if (EQ_P >= 15) {
-        f->hf = 2 * (sn << (EQ_P - 15));
-    } else {
-        f->hf = 2 * (sn >> (15 - EQ_P));
-    }
+    f->hf = 2 * (sn << (EQ_P - 15));
 }
 
 static void
@@ -495,7 +486,6 @@ crt_init(struct CRT *v, int w, int h, int f, unsigned char *out)
     memset(v, 0, sizeof(struct CRT));
     crt_resize(v, w, h, f, out);
     crt_reset(v);
-    v->rn = 194;
     
     /* kilohertz to line sample conversion */
 #define kHz2L(kHz) (CRT_HRES * (kHz * 100) / L_FREQ)
@@ -524,7 +514,7 @@ crt_demodulate(struct CRT *v, int noise)
     static struct {
         int y, i, q;
     } out[AV_LEN + 1], *yiqA, *yiqB;
-    int i, j, line, rn;
+    int i, j, line;
     signed char *sig;
     int s = 0;
     int field, ratio;
@@ -548,17 +538,13 @@ crt_demodulate(struct CRT *v, int noise)
     huesn >>= 11; /* make 4-bit */
     huecs >>= 11;
 
-    rn = v->rn;
     for (i = 0; i < CRT_INPUT_SIZE; i++) {
-        rn = (214019 * rn + 140327895);
-
         /* signal + noise */
-        s = v->analog[i] + (((((rn >> 16) & 0xff) - 0x7f) * noise) >> 8);
+        s = v->analog[i] + (((((rand() >> 16) & 0xff) - 0x7f) * noise) >> 8);
         if (s >  127) { s =  127; }
         if (s < -127) { s = -127; }
         v->inp[i] = s;
     }
-    v->rn = rn;
 
     /* Look for vertical sync.
      * 

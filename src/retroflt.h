@@ -3858,8 +3858,14 @@ cleanup:
          assert(
             4 == g_retroflat_state->buffer.surface->format->BytesPerPixel );
 
+         retroflat_px_lock( &(g_retroflat_state->buffer) );
+         retroflat_px_lock( &(g_retroflat_state->crt_buffer) );
+
          g_retroflat_state->ntsc.data =
             g_retroflat_state->buffer.surface->pixels;
+         g_retroflat_state->crt.out =
+            g_retroflat_state->crt_buffer.surface->pixels;
+
          g_retroflat_state->ntsc.format = CRT_PIX_FORMAT_RGBA;
          g_retroflat_state->ntsc.w = retroflat_screen_w();
          g_retroflat_state->ntsc.h = retroflat_screen_h();
@@ -3871,6 +3877,9 @@ cleanup:
          crt_modulate( &(g_retroflat_state->crt), &(g_retroflat_state->ntsc) );
          crt_demodulate( &(g_retroflat_state->crt), g_retroflat_state->noise );
          g_retroflat_state->ntsc.field ^= 1;
+
+         retroflat_px_release( &(g_retroflat_state->buffer) );
+         retroflat_px_release( &(g_retroflat_state->crt_buffer) );
 
          bmp = &(g_retroflat_state->crt_buffer);
          
