@@ -1574,6 +1574,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #     include <GL/glu.h>
 #  endif /* RETROFLAT_OPENGL */
 
+#  if defined( RETROFLAT_NTSC )
+#     include <ntsc.h>
+#  endif /* RETROFLAT_NTSC */
+
 /* === Structures === */
 
 /*! \brief Struct containing configuration values for a RetroFlat program. */
@@ -1606,6 +1610,13 @@ struct RETROFLAT_STATE {
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+
+#if defined( RETROFLAT_NTSC )
+   struct NTSC_SETTINGS ntsc;
+   struct CRT crt;
+   struct RETROFLAT_BITMAP crt_buffer; /* Real screen buffer for NTSC CRT. */
+   int field;
+#endif /* RETROFLAT_NTSC */
 
 #if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
@@ -3080,7 +3091,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
 #     endif /* RETROFLAT_SDL_ICO */
 
+#  ifdef RETROFLAT_NTSC
+   debug_printf( 1, "setting up NTSC..." );
+
+   /* Create intermediary screen buffer. */
+   retroflat_create_bitmap(
+      args->screen_w, args->screen_h, &(g_retroflat_state->buffer) );
+
+   g_retroflat_state->crt_buffer.surface = SDL_SetVideoMode(
+#  else
    g_retroflat_state->buffer.surface = SDL_SetVideoMode(
+#  endif /* RETROFLAT_NTSC */
+   /* Setup the screen buffer. */
       args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
@@ -3088,7 +3110,19 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OPENGL */
    );
    maug_cleanup_if_null(
-      SDL_Surface*, g_retroflat_state->buffer.surface, RETROFLAT_ERROR_GRAPHICS );
+      SDL_Surface*,
+      g_retroflat_state->buffer.surface, RETROFLAT_ERROR_GRAPHICS );
+
+#  ifdef RETROFLAT_NTSC
+
+   /* Initialize CRT buffer. */
+   crt_init(
+      &(g_retroflat_state->crt), args->screen_w, args->screen_h,
+      CRT_PIX_FORMAT_BGRA, g_retroflat_state->crt_buffer.surface->pixels );
+   g_retroflat_state->crt.blend = 1;
+   g_retroflat_state->crt.scanlines = 1;
+
+#  endif /* RETROFLAT_NTSC */
 
    /* Setup key repeat. */
    if(
@@ -3782,6 +3816,7 @@ cleanup:
          RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags)
       ) {
          /* The screen was locked for pixel manipulation. */
+         /* XXX: Is this still true? Can this be removed? */
          bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
          SDL_UnlockSurface( bmp->surface );
 
@@ -3790,6 +3825,29 @@ cleanup:
             RETROFLAT_FLAGS_SCREEN_LOCK ==
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
+
+#     ifdef RETROFLAT_NTSC
+
+         assert(
+            4 == g_retroflat_state->buffer.surface->format->BytesPerPixel );
+
+         g_retroflat_state->ntsc.data =
+            g_retroflat_state->buffer.surface->pixels;
+         g_retroflat_state->ntsc.format = CRT_PIX_FORMAT_RGBA;
+         g_retroflat_state->ntsc.w = retroflat_screen_w();
+         g_retroflat_state->ntsc.h = retroflat_screen_h();
+         g_retroflat_state->ntsc.as_color = 1;
+         g_retroflat_state->ntsc.field = g_retroflat_state->field & 1;
+         if( 0 == g_retroflat_state->ntsc.field ) {
+            g_retroflat_state->ntsc.frame ^= 1;
+         }
+         crt_modulate( &(g_retroflat_state->crt), &(g_retroflat_state->ntsc) );
+         crt_demodulate( &(g_retroflat_state->crt), 52 );
+         g_retroflat_state->ntsc.field ^= 1;
+
+         bmp = &(g_retroflat_state->crt_buffer);
+         
+#     endif /* RETROFLAT_NTSC */
 
          SDL_Flip( bmp->surface );
       }
