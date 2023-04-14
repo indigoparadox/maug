@@ -36,6 +36,12 @@ else
 	endif
 endif
 
+ifeq ("$(NTSC)","1")
+   SDL_VER_UNIX := 1
+	CFLAGS_GCC_UNIX += -DRETROFLAT_NTSC
+	CFLAGS_GCC64_UNIX += -DRETROFLAT_NTSC
+endif
+
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$(shell uname -s)-sdl$(SDL_VER_UNIX)
 OBJDIR_GCC_UNIX_ALLEGRO=obj/gcc-$(shell uname -s)-allegro
 OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut

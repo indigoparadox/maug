@@ -1575,6 +1575,9 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_NTSC )
+#     ifndef RETROFLAT_API_SDL1
+#        error "NTSC presently only works with SDL 1!"
+#     endif
 #     include <ntsc.h>
 #  endif /* RETROFLAT_NTSC */
 
