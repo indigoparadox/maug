@@ -87,4 +87,5 @@ uprintf's behavior can be modified by defining the following before inclusion:
 | DEBUG\_THRESHOLD  | debug\_printf() w/ this or higher lvl will be displayed.|
 | DEBUG\_LOG        | If defined, debug will be output to LOG\_FILE\_NAME.    |
 | ANCIENT\_C        | Use static functions where vararg macros unsupported.   |
+| RETROFLAT\_NTSC   | Use https://github.com/LMP88959/NTSC-CRT screen filter. |
 
