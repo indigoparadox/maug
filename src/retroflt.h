@@ -3151,9 +3151,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Initialize CRT buffer. */
    crt_init(
       &(g_retroflat_state->crt), args->screen_w, args->screen_h,
-      CRT_PIX_FORMAT_BGRA, g_retroflat_state->crt_buffer.surface->pixels );
+      CRT_PIX_FORMAT_RGBA, g_retroflat_state->crt_buffer.surface->pixels );
    g_retroflat_state->crt.blend = 1;
    g_retroflat_state->crt.scanlines = 1;
+
+   g_retroflat_state->ntsc.w = retroflat_screen_w();
+   g_retroflat_state->ntsc.h = retroflat_screen_h();
+   g_retroflat_state->ntsc.as_color = 1;
+   g_retroflat_state->ntsc.raw = 0;
 
 #  endif /* RETROFLAT_NTSC */
 
@@ -3873,9 +3878,6 @@ cleanup:
             g_retroflat_state->crt_buffer.surface->pixels;
 
          g_retroflat_state->ntsc.format = CRT_PIX_FORMAT_RGBA;
-         g_retroflat_state->ntsc.w = retroflat_screen_w();
-         g_retroflat_state->ntsc.h = retroflat_screen_h();
-         g_retroflat_state->ntsc.as_color = 1;
          g_retroflat_state->ntsc.field = g_retroflat_state->field & 1;
          if( 0 == g_retroflat_state->ntsc.field ) {
             g_retroflat_state->ntsc.frame ^= 1;

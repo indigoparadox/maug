@@ -310,10 +310,10 @@ crt_bpp4fmt(int format)
 /*****************************************************************************/
 
 /* convolution is much faster but the EQ looks softer, more authentic, and more analog */
-#define USE_CONVOLUTION 0
-#define USE_7_SAMPLE_KERNEL 1
+#define USE_CONVOLUTION 1
+#define USE_7_SAMPLE_KERNEL 0
 #define USE_6_SAMPLE_KERNEL 0
-#define USE_5_SAMPLE_KERNEL 0
+#define USE_5_SAMPLE_KERNEL 1
 
 #if (CRT_CC_SAMPLES != 4)
 /* the current convolutions do not filter properly at > 4 samples */
