@@ -746,6 +746,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
 
@@ -926,6 +927,9 @@ struct RETROFLAT_BITMAP {
 #  endif
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
+#  define retroflat_screen_buffer() \
+      (NULL == g_retroflat_state->vdp_buffer ? \
+         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
 
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
 /* Special pixel lock JUST for SDL1 surfaces. */
@@ -1148,6 +1152,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
@@ -1312,6 +1317,7 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 #  define END_OF_MAIN()
 
@@ -1351,6 +1357,7 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
 #  define END_OF_MAIN()
 
@@ -1458,6 +1465,8 @@ struct RETROFLAT_BITMAP {
 
 /*! \brief Get the current screen height in pixels. */
 #  define retroflat_screen_h()
+
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 /**
  * \brief This should be called in order to quit a program using RetroFlat.
@@ -1608,6 +1617,7 @@ struct RETROFLAT_STATE {
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+   struct RETROFLAT_BITMAP* vdp_buffer;
 
 #if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
@@ -2304,7 +2314,7 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_DESTROY:
-         if( retroflat_bitmap_ok( &g_retroflat_state->buffer ) ) {
+         if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             DeleteObject( g_retroflat_state->buffer.b );
          }
          PostQuitMessage( 0 );
@@ -3090,7 +3100,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OPENGL */
    );
    maug_cleanup_if_null(
-      SDL_Surface*, g_retroflat_state->buffer.surface, RETROFLAT_ERROR_GRAPHICS );
+      SDL_Surface*, g_retroflat_state->buffer.surface,
+      RETROFLAT_ERROR_GRAPHICS );
 
    /* Setup key repeat. */
    if(
@@ -3143,9 +3154,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Create the main renderer. */
    g_retroflat_state->buffer.renderer = SDL_CreateRenderer(
-      g_retroflat_state->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
+      g_retroflat_state->window, -1,
+      SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
    maug_cleanup_if_null(
-      SDL_Renderer*, g_retroflat_state->buffer.renderer, RETROFLAT_ERROR_GRAPHICS );
+      SDL_Renderer*, g_retroflat_state->buffer.renderer,
+      RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the buffer texture. */
    g_retroflat_state->buffer.texture =
@@ -3240,7 +3253,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_retroflat_state->screen_v_h = args->screen_h;
 
    memset(
-      &g_retroflat_state->buffer, '\0', sizeof( struct RETROFLAT_BITMAP ) );
+      &(g_retroflat_state->buffer), '\0', sizeof( struct RETROFLAT_BITMAP ) );
    memset( &wc, '\0', sizeof( WNDCLASS ) );
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
@@ -3467,13 +3480,17 @@ void retroflat_shutdown( int retval ) {
    return;
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
+#  ifdef RETROFLAT_VDP
+   /* TODO: Destroy the VDP buffer! */
+#  endif /* RETROFLAT_VDP */
+
    /* == Allegro == */
 
    if( RETROFLAT_ERROR_ENGINE != retval ) {
       clear_keybuf();
    }
 
-   retroflat_destroy_bitmap( &g_retroflat_state->buffer );
+   retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -3606,7 +3623,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    if(
       NULL != bmp &&
-      &g_retroflat_state->buffer != bmp &&
+      &(g_retroflat_state->buffer) != bmp &&
       (MAUG_MHANDLE)NULL != bmp->tex.bytes_h
    ) {
       bmp->flags |= RETROFLAT_FLAGS_LOCK;
@@ -3638,7 +3655,7 @@ cleanup:
 
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       /* Special case: Attempting to lock the screen. */
-      bmp = (&g_retroflat_state->buffer);
+      bmp = &(g_retroflat_state->buffer);
 
       if(
          RETROFLAT_FLAGS_SCREEN_LOCK !=
@@ -3667,7 +3684,7 @@ cleanup:
 
    /* == SDL2 == */
 
-   if( NULL != bmp && (&g_retroflat_state->buffer) != bmp ) {
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
       assert( NULL == bmp->renderer );
       assert( NULL != bmp->surface );
       bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
@@ -3725,7 +3742,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  ifdef RETROFLAT_OPENGL
-   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       /* Flush GL buffer and swap screen buffers. */
       glFlush();
 
@@ -3777,9 +3794,9 @@ cleanup:
 
    /* == SDL1 == */
 
-   if( NULL == bmp || &g_retroflat_state->buffer == bmp ) {
-      /* Special case: Attempting to release the screen. */
-      bmp = (&g_retroflat_state->buffer);
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      /* Special case: Attempting to release the (real, non-VDP) screen. */
+      bmp = &(g_retroflat_state->buffer);
 
       if(
          RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags)
@@ -3808,11 +3825,12 @@ cleanup:
 
    /* == SDL2 == */
 
-   if( NULL == bmp || (&g_retroflat_state->buffer) == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       /* Flip the screen. */
       SDL_SetRenderTarget( g_retroflat_state->buffer.renderer, NULL );
       SDL_RenderCopyEx(
-         g_retroflat_state->buffer.renderer, g_retroflat_state->buffer.texture, NULL, NULL, 0, NULL, 0 );
+         g_retroflat_state->buffer.renderer,
+         g_retroflat_state->buffer.texture, NULL, NULL, 0, NULL, 0 );
       SDL_RenderPresent( g_retroflat_state->buffer.renderer );
    } else {
       /* It's a bitmap. */
@@ -4120,8 +4138,8 @@ cleanup:
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
-   bmp_out->texture =
-      SDL_CreateTextureFromSurface( g_retroflat_state->buffer.renderer, bmp_out->surface );
+   bmp_out->texture = SDL_CreateTextureFromSurface(
+      g_retroflat_state->buffer.renderer, bmp_out->surface );
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->texture ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -4533,7 +4551,7 @@ void retroflat_blit_bitmap(
 
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 #  endif /* RETROFLAT_OPENGL */
 
@@ -4541,7 +4559,7 @@ void retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Create ortho sprite on screen. */
 
    } else {
@@ -4666,7 +4684,7 @@ void retroflat_px(
    }
 
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 
    if(
@@ -4805,13 +4823,13 @@ void retroflat_rect(
 
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 #  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       /* Draw directly to the screen. */
 
       retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
@@ -4917,13 +4935,13 @@ void retroflat_line(
 
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 #  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Draw line in ortho. */
    } else {
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
@@ -5001,13 +5019,13 @@ void retroflat_ellipse(
 
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 #  endif /* !RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Draw ellipse in ortho. */
    } else {
       retrosoft_ellipse( target, color, x, y, w, h, flags );
@@ -5099,7 +5117,7 @@ void retroflat_string_sz(
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 
 #  if defined( RETROFLAT_OPENGL )
@@ -5188,7 +5206,7 @@ void retroflat_string(
 
 #  if !defined( RETROFLAT_OPENGL )
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = retroflat_screen_buffer();
    }
 #  endif /* !RETROFLAT_OPENGL */
 
@@ -5198,7 +5216,7 @@ void retroflat_string(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || &(g_retroflat_state->buffer) == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
       retroglu_string(
