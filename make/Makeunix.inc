@@ -15,6 +15,14 @@ ifeq ("$(LDFLAGS_GCC64_UNIX)","")
 	LDFLAGS_GCC64_UNIX :=
 endif
 
+ifeq ("$(VDP)","1")
+	CFLAGS_GCC_UNIX += -DRETROFLAT_VDP
+	LDFLAGS_GCC_UNIX += -ldl
+	CFLAGS_GCC64_UNIX += -DRETROFLAT_VDP
+	LDFLAGS_GCC64_UNIX += -ldl
+	SDL_VER_UNIX := 1
+endif
+
 ifneq ("$(RELEASE)","RELEASE")
 	# Build debug unless release specified.
 	GCC_FSAN := -fsanitize=address -fsanitize=leak -fsanitize=undefined 

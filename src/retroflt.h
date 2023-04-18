@@ -333,6 +333,8 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_FILL     0x01
 
+#define RETROFLAT_FLAGS_OPAQUE   0x01
+
 /*! \} */ /* maug_retroflt_drawing */
 
 /**
@@ -634,6 +636,14 @@ typedef int8_t RETROFLAT_COLOR;
  * \brief Prototype for the main loop function passed to retroflat_loop().
  */
 typedef void (*retroflat_loop_iter)(void* data);
+
+struct RETROFLAT_STATE;
+
+typedef MERROR_RETVAL (*retroflat_vdp_init_t)( struct RETROFLAT_STATE* );
+
+typedef MERROR_RETVAL (*retroflat_vdp_flip_t)( struct RETROFLAT_STATE* );
+
+typedef void (*retroflat_vdp_shutdown_t)( struct RETROFLAT_STATE* );
 
 /**
  * \addtogroup maug_retroflt_input RetroFlat Input API
@@ -1605,6 +1615,20 @@ struct RETROFLAT_ARGS {
    char* config_path;
 };
 
+/* To export a retroflat function for VDP use: add a type for it here,
+   * then add a pointer in the state struct, then assign that pointer to
+   * the retroflat function being exported in the init function.
+   */
+
+typedef MERROR_RETVAL (*retroflat_create_bitmap_t)(
+   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+
+typedef void (*retroflat_destroy_bitmap_t)( struct RETROFLAT_BITMAP* bitmap );
+
+typedef void (*retroflat_blit_bitmap_t)(
+   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   int s_x, int s_y, int d_x, int d_y, int w, int h );
+
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
    void*                   loop_data;
@@ -1617,7 +1641,13 @@ struct RETROFLAT_STATE {
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+   
    struct RETROFLAT_BITMAP* vdp_buffer;
+   void* vdp_exe;
+
+   retroflat_create_bitmap_t vdp_create_bitmap;
+   retroflat_destroy_bitmap_t vdp_destroy_bitmap;
+   retroflat_blit_bitmap_t vdp_blit_bitmap;
 
 #if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
@@ -1779,7 +1809,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out );
 
 MERROR_RETVAL retroflat_create_bitmap(
-   int w, int h, struct RETROFLAT_BITMAP* bmp_out );
+   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
 #if defined( RETROFLAT_XPM ) || defined( DOCUMENTATION )
 
@@ -2033,6 +2063,10 @@ struct RETROFLAT_WING_MODULE g_w;
 #     define RETROSFT_C
 #     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
+
+#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+#     include <dlfcn.h>
+#  endif
 
 #  ifdef RETROFLAT_WING
 
@@ -2852,6 +2886,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_Surface* icon = NULL;
 #     endif /* RETROFLAT_SDL_ICO */
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+
+#  ifdef RETROFLAT_VDP
+   retroflat_vdp_init_t vdp_init = NULL;
+#  endif /* RETROFLAT_VDP */
    
    debug_printf( 1, "retroflat: initializing..." );
 
@@ -3462,6 +3500,31 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_OPENGL */
 
+#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+
+   g_retroflat_state->vdp_create_bitmap = retroflat_create_bitmap;
+   g_retroflat_state->vdp_destroy_bitmap = retroflat_destroy_bitmap;
+   g_retroflat_state->vdp_blit_bitmap = retroflat_blit_bitmap;
+
+   g_retroflat_state->vdp_exe = dlopen( "./retrovdp.so", RTLD_LAZY );
+   if( !(g_retroflat_state->vdp_exe) ) {
+      error_printf( "not loading VDP: %s", dlerror() );
+      goto skip_vdp;
+   }
+
+   debug_printf( 1, "initializing VDP..." );
+   vdp_init = dlsym( g_retroflat_state->vdp_exe, "retroflat_vdp_init" );
+   if( !vdp_init ) {
+      error_printf( "no VDP init found!" );
+      goto skip_vdp;
+   }
+
+   retval = vdp_init( g_retroflat_state );
+
+skip_vdp:
+
+#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
+
 cleanup:
 
    return retval;
@@ -3470,6 +3533,20 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+   retroflat_vdp_shutdown_t vdp_shutdown = NULL;
+
+   if( NULL != g_retroflat_state->vdp_exe ) {
+      vdp_shutdown = dlsym(
+         g_retroflat_state->vdp_exe, "retroflat_vdp_shutdown" );
+      if( NULL != vdp_shutdown ) {
+         debug_printf( 1, "shutting down VDP..." );
+         vdp_shutdown( g_retroflat_state );
+      }
+      dlclose( g_retroflat_state->vdp_exe );
+   }
+#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
    retrosoft_shutdown();
@@ -3740,6 +3817,9 @@ cleanup:
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+   retroflat_vdp_flip_t vdp_flip = NULL;
+#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
 
 #  ifdef RETROFLAT_OPENGL
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
@@ -3810,6 +3890,18 @@ cleanup:
             RETROFLAT_FLAGS_SCREEN_LOCK ==
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
+
+         if( NULL == g_retroflat_state->vdp_exe ) {
+            goto skip_vdp;
+         }
+         vdp_flip = dlsym( g_retroflat_state->vdp_exe, "retroflat_vdp_flip" );
+         if( !vdp_flip ) {
+            goto skip_vdp;
+         }
+
+         retval = vdp_flip( g_retroflat_state );
+
+skip_vdp:
 
          SDL_Flip( bmp->surface );
       }
@@ -4252,7 +4344,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   int w, int h, struct RETROFLAT_BITMAP* bmp_out
+   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -4301,14 +4393,18 @@ cleanup:
       32, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
-   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-      SDL_MapRGB( bmp_out->surface->format,
-         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
 
 cleanup:
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
+
+   /* TODO: Handle opaque flag. */
 
    /* Create surface. */
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
@@ -4330,6 +4426,8 @@ cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16 / Win32 == */
+
+   /* TODO: Handle opaque flag. */
 
    bmp_out->w = w;
    bmp_out->h = h;
@@ -4387,7 +4485,7 @@ xpm_found:
    assert( 16 == bmp_colors );
    assert( 1 == bmp_bypp );
 
-   retval = retroflat_create_bitmap( bmp_w, bmp_h, bmp_out );
+   retval = retroflat_create_bitmap( bmp_w, bmp_h, bmp_out, 0 );
    if( MERROR_OK != retval ) {
       goto cleanup;
    }

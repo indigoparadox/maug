@@ -56,7 +56,7 @@ MERROR_RETVAL retrosoft_load_glyph(
    
    /* Create a transparent bitmap to draw on. */
    retval = retroflat_create_bitmap(
-      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp );
+      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp, 0 );
    maug_cleanup_if_not_ok();
 
    /* Normally draw lock is called from the main loop, but we're making an
