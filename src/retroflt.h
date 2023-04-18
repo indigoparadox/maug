@@ -3891,6 +3891,8 @@ cleanup:
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
+#     if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+
          if( NULL == g_retroflat_state->vdp_exe ) {
             goto skip_vdp;
          }
@@ -3902,6 +3904,8 @@ cleanup:
          retval = vdp_flip( g_retroflat_state );
 
 skip_vdp:
+
+#     endif /* RETROFLAT_OS_UNIX && RETROFLAT_VDP */
 
          SDL_Flip( bmp->surface );
       }
