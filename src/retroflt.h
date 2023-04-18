@@ -578,6 +578,13 @@ typedef int8_t RETROFLAT_COLOR;
 #  define RETROFLAT_TITLE_MAX 255
 #endif /* !RETROFLAT_TITLE_MAX */
 
+#ifndef RETROFLAT_VDP_ARGS_SZ_MAX
+/**
+ * \warn Changing this may break binary compatibility!
+ */
+#  define RETROFLAT_VDP_ARGS_SZ_MAX 255
+#endif /* !RETROFLAT_VDP_ARGS_SZ_MAX */
+
 #if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 #  if !defined( RETROFLAT_WIN_STYLE )
 #     if defined( RETROFLAT_API_WINCE )
@@ -1644,6 +1651,8 @@ struct RETROFLAT_STATE {
    
    struct RETROFLAT_BITMAP* vdp_buffer;
    void* vdp_exe;
+   void* vdp_data;
+   char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
 
    retroflat_create_bitmap_t vdp_create_bitmap;
    retroflat_destroy_bitmap_t vdp_destroy_bitmap;
@@ -2814,6 +2823,18 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 #  endif /* !MAUG_CLI_SIGIL_SZ */
 
+#  ifdef RETROFLAT_VDP
+static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* Next arg is VDP args str. */
+   } else {
+      strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
+      debug_printf( 1, "VDP args: %s", g_retroflat_state->vdp_args );
+   }
+   return RETROFLAT_OK;
+}
+#  endif /* RETROFLAT_VDP */
+
 static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       debug_printf( 1, "unlocking FPS..." );
@@ -2943,6 +2964,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfh,
       (maug_cli_cb)retroflat_cli_rfh_def, args );
 #  endif /* !RETROFLAT_NO_CLI_SZ */
+
+#  ifdef RETROFLAT_VDP
+   maug_add_arg( MAUG_CLI_SIGIL "vdp", MAUG_CLI_SIGIL_SZ + 4,
+      "Pass a string of args to the VDP.", 0,
+      (maug_cli_cb)retroflat_cli_vdp, NULL, args );
+#  endif /* RETROFLAT_VDP */
 
 #  ifndef MAUG_NO_CONFIG
    maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
