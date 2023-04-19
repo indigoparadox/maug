@@ -1072,6 +1072,7 @@ struct RETROFLAT_BITMAP {
    ssize_t h;
    struct RETROFLAT_BMI bmi;
    uint8_t far* bits;
+   ssize_t autolock_refs;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
 #  endif /* RETROFLAT_OPENGL */
@@ -1183,20 +1184,27 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_px_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
-   GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
-      (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
-   assert( NULL == (bmp)->bits ); \
-   (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
-   assert( NULL != (bmp)->bits ); \
-   GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
-      (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS );
+   if( 0 == (bmp)->autolock_refs ) { \
+      GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      assert( NULL == (bmp)->bits ); \
+      (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
+      assert( NULL != (bmp)->bits ); \
+      GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+   } \
+   (bmp)->autolock_refs++;
 
 #  define retroflat_px_release( bmp ) \
-   SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
-      (bmp)->h, (bmp)->bits, \
-      (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
-   free( (bmp)->bits ); \
-   (bmp)->bits = NULL;
+   assert( 0 < (bmp)->autolock_refs ); \
+   (bmp)->autolock_refs--; \
+   if( 0 == (bmp)->autolock_refs ) { \
+      SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
+         (bmp)->h, (bmp)->bits, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      free( (bmp)->bits ); \
+      (bmp)->bits = NULL; \
+   }
 
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
@@ -2202,9 +2210,6 @@ static LRESULT CALLBACK WndProc(
          /* TODO: Get rid of screen_initialized. */
          if( screen_initialized ) {
             /* Create a new HDC for buffer and select buffer into it. */
-            g_retroflat_state->buffer.old_hbm_b = SelectObject(
-               g_retroflat_state->buffer.hdc_b,
-               g_retroflat_state->buffer.b );
          }
 
 #     endif /* RETROFLAT_OPENGL */
@@ -2250,7 +2255,7 @@ static LRESULT CALLBACK WndProc(
 
          vdp_flip = (retroflat_vdp_flip_t)GetProcAddress(
             g_retroflat_state->vdp_exe, "retroflat_vdp_flip_" );
-         if( (HINSTANCE)NULL == vdp_flip ) {
+         if( (retroflat_vdp_flip_t)NULL == vdp_flip ) {
             goto skip_vdp;
          }
 
@@ -3876,6 +3881,7 @@ cleanup:
       maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
    }
 
+   /* Select bitmaps into their HDCs. */
    bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
    if( (HBITMAP)NULL != bmp->mask ) {
       bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
@@ -4594,16 +4600,16 @@ cleanup:
 
    debug_printf( 1, "creating bitmap..." );
 
+   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
+   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+
    if(
       RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
    ) {
       debug_printf( 1, "creating screen device context..." );
-      g_retroflat_state->buffer.hdc_b =
-         CreateCompatibleDC( g_retroflat_state->hdc_win );
+      bmp_out->hdc_b = CreateCompatibleDC( g_retroflat_state->hdc_win );
+      bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
    }
-
-   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
-   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
 #     ifdef RETROFLAT_WING
    }
