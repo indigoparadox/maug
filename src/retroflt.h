@@ -2180,11 +2180,9 @@ static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
    PAINTSTRUCT ps;
-#     ifndef RETROFLAT_OPENGL
-   HDC hdc_win = (HDC)NULL;
-#     endif /* !RETROFLAT_OPENGL */
    BITMAP srcBitmap;
    int screen_initialized = 0;
+   HDC hdc_paint = (HDC)NULL;
 #     if defined( RETROFLAT_OPENGL )
    int pixel_fmt_int = 0;
    static PIXELFORMATDESCRIPTOR pixel_fmt = {
@@ -2204,10 +2202,10 @@ static LRESULT CALLBACK WndProc(
 
    switch( message ) {
       case WM_CREATE:
-#     if defined( RETROFLAT_OPENGL )
-         
          g_retroflat_state->hdc_win = GetDC( hWnd );
 
+#     if defined( RETROFLAT_OPENGL )
+         
          pixel_fmt_int =
             ChoosePixelFormat( g_retroflat_state->hdc_win, &pixel_fmt );
          SetPixelFormat(
@@ -2228,8 +2226,6 @@ static LRESULT CALLBACK WndProc(
 
 #     else
 
-         hdc_win = GetDC( hWnd );
-
          /* Setup the buffer HDC from which to blit to the window. */
          if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
 #        ifdef RETROFLAT_WING
@@ -2240,7 +2236,7 @@ static LRESULT CALLBACK WndProc(
             } else {
 #        endif /* RETROFLAT_WING */
             debug_printf( 1, "retroflat: creating screen buffer HDC..." );
-            g_retroflat_state->buffer.hdc_b = CreateCompatibleDC( hdc_win );
+            g_retroflat_state->buffer.hdc_b = CreateCompatibleDC( g_retroflat_state->hdc_win );
 #        ifdef RETROFLAT_WING
             }
 #        endif /* RETROFLAT_WING */
@@ -2270,7 +2266,7 @@ static LRESULT CALLBACK WndProc(
                   g_retroflat_state->screen_h );
             } else {
 #        endif /* RETROFLAT_WING */
-            g_retroflat_state->buffer.b = CreateCompatibleBitmap( hdc_win,
+            g_retroflat_state->buffer.b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
                g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
 #        ifdef RETROFLAT_WING
             }
@@ -2316,8 +2312,8 @@ static LRESULT CALLBACK WndProc(
 
          /* Create HDC for window to blit to. */
          /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
-         hdc_win = BeginPaint( hWnd, &ps );
-         if( (HDC)NULL == hdc_win ) {
+         hdc_paint = BeginPaint( hWnd, &ps );
+         if( (HDC)NULL == hdc_paint ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not determine window device context!" );
             g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
@@ -2349,7 +2345,7 @@ skip_vdp:
 #        ifdef RETROFLAT_WING
          if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
             g_w.WinGStretchBlt(
-               hdc_win,
+               hdc_paint,
                0, 0,
                g_retroflat_state->screen_w, g_retroflat_state->screen_h,
                g_retroflat_state->buffer.hdc_b,
@@ -2363,7 +2359,7 @@ skip_vdp:
          } else {
 #        endif /* RETROFLAT_WING */
          StretchBlt(
-            hdc_win,
+            hdc_paint,
             0, 0,
             g_retroflat_state->screen_w, g_retroflat_state->screen_h,
             g_retroflat_state->buffer.hdc_b,
@@ -2376,9 +2372,8 @@ skip_vdp:
          }
 #        endif /* RETROFLAT_WING */
 
-         DeleteDC( hdc_win );
+         DeleteDC( hdc_paint );
          EndPaint( hWnd, &ps );
-         hdc_win = (HDC)NULL;
          break;
 
 #     endif /* !RETROFLAT_OPENGL */
