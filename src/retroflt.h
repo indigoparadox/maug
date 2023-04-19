@@ -333,7 +333,16 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_FILL     0x01
 
+/**
+ * \brief Flag for retroflat_create_bitmap() to create a bitmap without 
+ *        transparency.
+ */
 #define RETROFLAT_FLAGS_OPAQUE   0x01
+
+/**
+ * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
+ */
+#define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
 
 /*! \} */ /* maug_retroflt_drawing */
 
@@ -462,6 +471,8 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_LOCK     0x01
 
 #define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
+
+#define RETROFLAT_VDP_FLAG_PXLOCK 0x01
 
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
@@ -636,6 +647,10 @@ typedef int8_t RETROFLAT_COLOR;
 #ifndef RETROFLAT_CONFIG_EXT
 #  define RETROFLAT_CONFIG_EXT ".ini"
 #endif /* !RETROFLAT_CONFIG_EXT */
+
+#ifndef RETROFLAT_BMP_COLORS_SZ_MAX
+#  define RETROFLAT_BMP_COLORS_SZ_MAX 256
+#endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
 
 /*! \} */ /* maug_retroflt_compiling */
 
@@ -1035,7 +1050,7 @@ struct RETROFLAT_WING_MODULE {
 
 struct RETROFLAT_BMI {
    BITMAPINFOHEADER header;
-   RGBQUAD colors[256];
+   RGBQUAD colors[RETROFLAT_BMP_COLORS_SZ_MAX];
 };
 
 #  ifdef RETROFLAT_API_WIN32
@@ -1052,14 +1067,12 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
-   uint8_t* dibits;
    ssize_t w;
    /* Under WinG, this might be negative! */
    ssize_t h;
    struct RETROFLAT_BMI bmi;
-#  ifdef RETROFLAT_WING
-   uint8_t far*            bits;
-#  endif /* RETROFLAT_WING */
+   uint8_t far* bits;
+   ssize_t autolock_refs;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
 #  endif /* RETROFLAT_OPENGL */
@@ -1166,16 +1179,33 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
+
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \
-   assert( NULL == (bmp)->dibits ); \
-   (bmp)->dibits = calloc( (bmp)->w * (bmp)->h, sizeof( uint32_t ) ); \
-   GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->dibits, \
-      (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS );
+   /* Confirm header info. */ \
+   if( 0 == (bmp)->autolock_refs ) { \
+      GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      assert( NULL == (bmp)->bits ); \
+      (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
+      assert( NULL != (bmp)->bits ); \
+      GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+   } \
+   (bmp)->autolock_refs++;
+
 #  define retroflat_px_release( bmp ) \
-   free( (bmp)->dibits ); \
-   (bmp)->dibits = NULL;
+   assert( 0 < (bmp)->autolock_refs ); \
+   (bmp)->autolock_refs--; \
+   if( 0 == (bmp)->autolock_refs ) { \
+      SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
+         (bmp)->h, (bmp)->bits, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      free( (bmp)->bits ); \
+      (bmp)->bits = NULL; \
+   }
+
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_screen_buffer() \
@@ -1660,7 +1690,6 @@ struct RETROFLAT_STATE {
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
-   
    struct RETROFLAT_BITMAP* vdp_buffer;
 #ifdef RETROFLAT_OS_WIN
    HMODULE vdp_exe;
@@ -1669,10 +1698,21 @@ struct RETROFLAT_STATE {
 #endif /* RETROFLAT_OS_WIN */
    void* vdp_data;
    char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
+   uint8_t vdp_flags;
 
    retroflat_create_bitmap_t vdp_create_bitmap;
    retroflat_destroy_bitmap_t vdp_destroy_bitmap;
    retroflat_blit_bitmap_t vdp_blit_bitmap;
+
+   /* These are used by VDP so should be standardized/not put in plat-spec! */
+   int                  screen_v_w;
+   int                  screen_v_h;
+   int                  screen_w;
+   int                  screen_h;
+
+   /* TODO: Put these in a platform-specific struct of some kind to maintain
+    *       consistent state struct size for VDP?
+    */
 
 #if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
@@ -1692,11 +1732,7 @@ struct RETROFLAT_STATE {
 
 #  ifndef RETROFLAT_API_SDL1
    SDL_Window*          window;
-   int                  screen_w;
-   int                  screen_h;
 #  endif /* !RETROFLAT_API_SDL1 */
-   int                  screen_v_w;
-   int                  screen_v_h;
    int                  mouse_state;
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -1712,10 +1748,6 @@ struct RETROFLAT_STATE {
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
    int                  msg_retval;
-   int                  screen_v_w;
-   int                  screen_v_h;
-   int                  screen_w;
-   int                  screen_h;
    uint8_t              last_key;
    uint8_t              vk_mods;
    unsigned int         last_mouse;
@@ -1736,8 +1768,6 @@ struct RETROFLAT_STATE {
 
 #  elif defined( RETROFLAT_API_GLUT )
 
-   int                  screen_v_w;
-   int                  screen_v_h;
    size_t               retroflat_next;
    retroflat_loop_iter  loop_iter;
    int16_t              retroflat_last_key;
@@ -3047,6 +3077,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
+   /* Setup intended screen size.
+    * These may be forced/modified by the platform-specific section below!
+    */
+   /* TODO: Handle window resizing someday! */
+   g_retroflat_state->screen_v_w = args->screen_w;
+   g_retroflat_state->screen_v_h = args->screen_h;
+   g_retroflat_state->screen_w = args->screen_w;
+   g_retroflat_state->screen_h = args->screen_h;
+
 #  ifdef RETROFLAT_OPENGL
    debug_printf( 1, "setting up texture palette..." );
 #     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b ) \
@@ -3177,9 +3216,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 #     endif /* RETROFLAT_OPENGL */
 
-   g_retroflat_state->screen_v_w = args->screen_w;
-   g_retroflat_state->screen_v_h = args->screen_h;
-
    if( NULL != args->title ) {
       retroflat_set_title( args->title );
    }
@@ -3242,11 +3278,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OPENGL */
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
 
-   g_retroflat_state->screen_v_w = args->screen_w;
-   g_retroflat_state->screen_v_h = args->screen_h;
-   g_retroflat_state->screen_w = args->screen_w;
-   g_retroflat_state->screen_h = args->screen_h;
-
    /* Create the main window. */
    g_retroflat_state->window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -3287,6 +3318,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_API_WINCE */
 
    /* Setup color palettes. */
+   /* TODO: For WinG, try to make the indexes match system palette? */
 #     ifdef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
@@ -3342,16 +3374,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: creating window class..." );
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = args->screen_w;
-   wr.bottom = args->screen_h;
+   wr.right = g_retroflat_state->screen_v_w;
+   wr.bottom = g_retroflat_state->screen_v_h;
 #     ifndef RETROFLAT_API_WINCE
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */
-
-   g_retroflat_state->screen_w = args->screen_w;
-   g_retroflat_state->screen_h = args->screen_h;
-   g_retroflat_state->screen_v_w = args->screen_w;
-   g_retroflat_state->screen_v_h = args->screen_h;
 
    memset(
       &(g_retroflat_state->buffer), '\0', sizeof( struct RETROFLAT_BITMAP ) );
@@ -3417,6 +3444,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    );
 
 #     ifdef RETROFLAT_API_WINCE
+   /* Force screen size. */
    GetClientRect( g_retroflat_state->window, &wr );
    g_retroflat_state->screen_v_w = wr.right - wr.left;
    g_retroflat_state->screen_v_h = wr.bottom - wr.top;
@@ -3530,9 +3558,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
-   g_retroflat_state->screen_v_w = args->screen_w;
-   g_retroflat_state->screen_v_h = args->screen_h;
-
    glutInit( &argc, argv );
    glut_init_flags = GLUT_DEPTH | GLUT_RGBA;
    if(
@@ -3541,7 +3566,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       glut_init_flags |= GLUT_DOUBLE;
    }
    glutInitDisplayMode( glut_init_flags );
-   glutInitWindowSize( g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+   glutInitWindowSize(
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
    glutCreateWindow( args->title );
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
@@ -3908,6 +3934,7 @@ cleanup:
       maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
    }
 
+   /* Select bitmaps into their HDCs. */
    bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
    if( (HBITMAP)NULL != bmp->mask ) {
       bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
@@ -5005,12 +5032,13 @@ void retroflat_px(
 #  ifdef RETROFLAT_WING
    if( NULL != target->bits ) {
       /* Modify target bits directly (faster) if available! */
+      /* WinG bitmaps are 8-bit palettized, so use the index directly. */
       if( 0 > target->h ) {
          target->bits[((target->h - 1 - y) * target->w) + x] =
-            g_retroflat_state->palette[color_idx];
+            color_idx;
       } else {
          target->bits[(y * target->w) + x] =
-            g_retroflat_state->palette[color_idx];
+            color_idx;
       }
    } else {
       /* Use slow Windows GDI. */
