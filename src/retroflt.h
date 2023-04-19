@@ -1181,7 +1181,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
 /* TODO: Check alloc! */
-#  define retroflat_px_lock( bmp ) \
+#  define retroflat_px_lock( bmp )
+#if 0
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
    if( 0 == (bmp)->autolock_refs ) { \
@@ -1194,8 +1195,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
    } \
    (bmp)->autolock_refs++;
+#endif
 
-#  define retroflat_px_release( bmp ) \
+#  define retroflat_px_release( bmp )
+#if 0
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
    if( 0 == (bmp)->autolock_refs ) { \
@@ -1205,6 +1208,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
       free( (bmp)->bits ); \
       (bmp)->bits = NULL; \
    }
+#endif
 
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
