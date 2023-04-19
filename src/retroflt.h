@@ -3732,6 +3732,9 @@ void retroflat_shutdown( int retval ) {
    }
 #     endif /* RETROFLAT_WING */
 
+   if( (HDC)NULL != g_retroflat_state->hdc_win ) {
+      ReleaseDC( g_retroflat_state->window, g_retroflat_state->hdc_win );
+   }
 #  elif defined( RETROFLAT_API_GLUT )
 
    /* TODO */
@@ -4188,7 +4191,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    SDL_Surface* tmp_surface = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
 #     if defined( RETROFLAT_API_WIN16 )
-   HDC hdc_win = (HDC)NULL;
    char* buf = NULL;
    FILE* bmp_file = NULL;
    long int i, x, y, w, h, colors, offset, sz, read;
@@ -4448,13 +4450,12 @@ cleanup:
    bmp_out->w = bmp_out->bmi.header.biWidth;
    bmp_out->h = bmp_out->bmi.header.biHeight;
 
-   hdc_win = GetDC( g_retroflat_state->window );
-   bmp_out->b = CreateCompatibleBitmap( hdc_win,
+   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
    /* Turn the bits into a bitmap. */
-   SetDIBits( hdc_win, bmp_out->b, 0,
+   SetDIBits( g_retroflat_state->hdc_win, bmp_out->b, 0,
       bmp_out->bmi.header.biHeight, &(buf[offset]),
       (BITMAPINFO*)&(bmp_out->bmi),
       DIB_RGB_COLORS );
@@ -4497,9 +4498,6 @@ cleanup:
       fclose( bmp_file );
    }
 
-   if( (HDC)NULL != hdc_win ) {
-      ReleaseDC( g_retroflat_state->window, hdc_win );
-   }
 #     endif /* RETROFLAT_API_WIN16 */
 
 #  else
