@@ -1031,12 +1031,12 @@ struct RETROFLAT_WING_MODULE {
    uint8_t success;
    RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS )
 };
+#  endif /* RETROFLAT_WING */
 
 struct RETROFLAT_BMI {
    BITMAPINFOHEADER header;
    RGBQUAD colors[256];
 };
-#  endif /* RETROFLAT_WING */
 
 #  ifdef RETROFLAT_API_WIN32
 typedef HKEY RETROFLAT_CONFIG;
@@ -1052,11 +1052,12 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
+   uint8_t* dibits;
    ssize_t w;
    /* Under WinG, this might be negative! */
    ssize_t h;
-#  ifdef RETROFLAT_WING
    struct RETROFLAT_BMI bmi;
+#  ifdef RETROFLAT_WING
    uint8_t far*            bits;
 #  endif /* RETROFLAT_WING */
 #  ifdef RETROFLAT_OPENGL
@@ -1165,11 +1166,21 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
-#  define retroflat_px_lock( bmp )
-#  define retroflat_px_release( bmp )
+/* TODO: Check alloc! */
+#  define retroflat_px_lock( bmp ) \
+   assert( NULL != (bmp)->hdc_b ); \
+   assert( NULL == (bmp)->dibits ); \
+   (bmp)->dibits = calloc( (bmp)->w * (bmp)->h, sizeof( uint32_t ) ); \
+   GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->dibits, \
+      (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS );
+#  define retroflat_px_release( bmp ) \
+   free( (bmp)->dibits ); \
+   (bmp)->dibits = NULL;
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (NULL == g_retroflat_state->vdp_buffer ? \
+         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
@@ -1648,9 +1659,14 @@ struct RETROFLAT_STATE {
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+
    
    struct RETROFLAT_BITMAP* vdp_buffer;
+#ifdef RETROFLAT_OS_WIN
+   HMODULE vdp_exe;
+#else
    void* vdp_exe;
+#endif /* RETROFLAT_OS_WIN */
    void* vdp_data;
    char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
 
@@ -2148,6 +2164,9 @@ static LRESULT CALLBACK WndProc(
       0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
    };
 #     endif /* RETROFLAT_OPENGL */
+#     ifdef RETROFLAT_VDP
+   retroflat_vdp_flip_t vdp_flip = NULL;
+#     endif /* RETROFLAT_VDP */
 
    switch( message ) {
       case WM_CREATE:
@@ -2275,6 +2294,23 @@ static LRESULT CALLBACK WndProc(
          /* Load parameters of the buffer into info object (srcBitmap). */
          GetObject(
             g_retroflat_state->buffer.b, sizeof( BITMAP ), &srcBitmap );
+
+#        if defined( RETROFLAT_VDP )
+
+         if( (HMODULE)NULL == g_retroflat_state->vdp_exe ) {
+            goto skip_vdp;
+         }
+         vdp_flip = (retroflat_vdp_flip_t)GetProcAddress(
+            g_retroflat_state->vdp_exe, "retroflat_vdp_flip_" );
+         if( (HMODULE)NULL == vdp_flip ) {
+            goto skip_vdp;
+         }
+
+         vdp_flip( g_retroflat_state );
+
+skip_vdp:
+
+#        endif /* RETROFLAT_OS_UNIX && RETROFLAT_VDP */
 
 #        ifdef RETROFLAT_WING
          if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
@@ -3550,6 +3586,30 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 skip_vdp:
 
+#  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
+
+   g_retroflat_state->vdp_create_bitmap = retroflat_create_bitmap;
+   g_retroflat_state->vdp_destroy_bitmap = retroflat_destroy_bitmap;
+   g_retroflat_state->vdp_blit_bitmap = retroflat_blit_bitmap;
+
+   g_retroflat_state->vdp_exe = LoadLibrary( "./retrovdp.dll" );
+   if( (HMODULE)NULL == g_retroflat_state->vdp_exe ) {
+      error_printf( "not loading VDP" );
+      goto skip_vdp;
+   }
+
+   debug_printf( 1, "initializing VDP..." );
+   vdp_init = (retroflat_vdp_init_t)GetProcAddress(
+      g_retroflat_state->vdp_exe, "retroflat_vdp_init_" );
+   if( (retroflat_vdp_init_t)NULL == vdp_init ) {
+      error_printf( "no VDP init found!" );
+      goto skip_vdp;
+   }
+
+   retval = vdp_init( g_retroflat_state );
+
+skip_vdp:
+
 #  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
 
 cleanup:
@@ -3572,6 +3632,20 @@ void retroflat_shutdown( int retval ) {
          vdp_shutdown( g_retroflat_state );
       }
       dlclose( g_retroflat_state->vdp_exe );
+   }
+
+#  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
+   
+   retroflat_vdp_shutdown_t vdp_shutdown = NULL;
+
+   if( (HMODULE)NULL != g_retroflat_state->vdp_exe ) {
+      vdp_shutdown = (retroflat_vdp_shutdown_t)GetProcAddress(
+         g_retroflat_state->vdp_exe, "retroflat_vdp_shutdown_" );
+      if( (retroflat_vdp_shutdown_t)NULL != vdp_shutdown ) {
+         debug_printf( 1, "shutting down VDP..." );
+         vdp_shutdown( g_retroflat_state );
+      }
+      FreeLibrary( g_retroflat_state->vdp_exe );
    }
 #  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
 
@@ -3808,8 +3882,16 @@ cleanup:
       /* The WinG HDC or whatever should be created already by WndProc. */
       assert( (HDC)NULL != g_retroflat_state->buffer.hdc_b );
 #     endif /* RETROFLAT_WING */
+#     ifdef RETROFLAT_VDP
+      if( NULL != g_retroflat_state->vdp_buffer ) {
+         bmp = g_retroflat_state->vdp_buffer;
+      } else {
+#     endif
       /* Do nothing for screen locking, as HDC is managed by WndProc. */
       goto cleanup;
+#     ifdef RETROFLAT_VDP
+      }
+#     endif /* RETROFLAT_VDP */
    }
 
    /* Sanity check. */
@@ -3844,9 +3926,9 @@ cleanup:
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
+#  if defined( RETROFLAT_VDP )
    retroflat_vdp_flip_t vdp_flip = NULL;
-#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
+#  endif /* RETROFLAT_VDP */
 
 #  ifdef RETROFLAT_OPENGL
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
@@ -3985,7 +4067,15 @@ cleanup:
       if( (HWND)NULL != g_retroflat_state->window ) {
          InvalidateRect( g_retroflat_state->window, 0, TRUE );
       }
+#     ifdef RETROFLAT_VDP
+      if( NULL != g_retroflat_state->vdp_buffer ) {
+         bmp = g_retroflat_state->vdp_buffer;
+      } else {
+#     endif
       goto cleanup;
+#     ifdef RETROFLAT_VDP
+      }
+#     endif
    }
 
    /* Unlock the bitmap. */
@@ -5859,7 +5949,7 @@ cleanup:
    return retval;
 }
 
-#else /* End of RETROFLT_C */
+#elif !defined( RETROVDP_C ) /* End of RETROFLT_C */
 
 #define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
    extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
@@ -5888,6 +5978,12 @@ extern MAUG_CONST char* gc_retroflat_color_names[];
 #  endif /* RETROFLAT_OPENGL */
 
 #endif /* RETROFLT_C */
+
+#ifdef RETROVDP_C
+
+/* Declarations for VDP sources. */
+
+#endif /* RETROVDP_C */
 
 /*! \} */ /* maug_retroflt */
 
