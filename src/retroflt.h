@@ -2180,9 +2180,11 @@ static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
    PAINTSTRUCT ps;
+#     ifndef RETROFLAT_OPENGL
+   HDC hdc_paint = (HDC)NULL;
+#     endif /* !RETROFLAT_OPENGL */
    BITMAP srcBitmap;
    int screen_initialized = 0;
-   HDC hdc_paint = (HDC)NULL;
 #     if defined( RETROFLAT_OPENGL )
    int pixel_fmt_int = 0;
    static PIXELFORMATDESCRIPTOR pixel_fmt = {
