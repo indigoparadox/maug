@@ -4164,9 +4164,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 #     if defined( RETROFLAT_API_WIN16 )
    HDC hdc_win = (HDC)NULL;
    char* buf = NULL;
-   BITMAPINFO* bmi = NULL;
    FILE* bmp_file = NULL;
-   long int i, x, y, w, h, bpp, offset, sz, read;
+   long int i, x, y, w, h, colors, offset, sz, read;
 #     elif defined( RETROFLAT_API_WIN32 )
    BITMAP bm;
 #     endif /* RETROFLAT_API_WIN32 */
@@ -4390,30 +4389,52 @@ cleanup:
    read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
 
-   bmi = (BITMAPINFO*)&(buf[sizeof( BITMAPFILEHEADER )]);
-
-   bpp = retroflat_bmp_int( unsigned short, buf, 28 );
    offset = retroflat_bmp_int( unsigned long, buf, 10 );
+   colors = retroflat_bmp_int( int, buf, 46 );
 
-   assert( 0 < bmi->bmiHeader.biWidth );
-   assert( 0 < bmi->bmiHeader.biHeight );
-   assert( 0 == bmi->bmiHeader.biWidth % 8 );
-   assert( 0 == bmi->bmiHeader.biHeight % 8 );
+   /* Avoid a color overflow. */
+   if(
+      sizeof( BITMAPFILEHEADER ) +
+      sizeof( BITMAPINFOHEADER ) +
+      (colors * sizeof( RGBQUAD )) > sz
+   ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error",
+         "Attempted to load bitmap with too many colors!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
 
-   bmp_out->w = bmi->bmiHeader.biWidth;
-   bmp_out->h = bmi->bmiHeader.biHeight;
+   memcpy( &(bmp_out->bmi),
+      &(buf[sizeof( BITMAPFILEHEADER )]),
+      /* SetDIBits needs the color palette! */
+      sizeof( BITMAPINFOHEADER ) + (colors * sizeof( RGBQUAD )) );
+
+   /* This never gets the height right? */
+   debug_printf( 1, "bitmap w: %08x, h: %08x, colors: %d",
+      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight, colors );
+
+   assert( 0 < bmp_out->bmi.header.biWidth );
+   assert( 0 < bmp_out->bmi.header.biHeight );
+   assert( 0 == bmp_out->bmi.header.biWidth % 8 );
+   assert( 0 == bmp_out->bmi.header.biHeight % 8 );
+
+   bmp_out->w = bmp_out->bmi.header.biWidth;
+   bmp_out->h = bmp_out->bmi.header.biHeight;
 
    hdc_win = GetDC( g_retroflat_state->window );
    bmp_out->b = CreateCompatibleBitmap( hdc_win,
-      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
+      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
+   /* Turn the bits into a bitmap. */
    SetDIBits( hdc_win, bmp_out->b, 0,
-      bmi->bmiHeader.biHeight, &(buf[offset]), bmi,
+      bmp_out->bmi.header.biHeight, &(buf[offset]),
+      (BITMAPINFO*)&(bmp_out->bmi),
       DIB_RGB_COLORS );
 
    retval = retroflat_bitmap_win_transparency( bmp_out,
-      bmi->bmiHeader.biWidth, bmi->bmiHeader.biHeight );
+      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
 
 #     else
 
