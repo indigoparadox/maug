@@ -3889,30 +3889,44 @@ cleanup:
          /* We actually want to lock the buffer for pixel manipulation. */
          assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
          bmp->flags |= RETROFLAT_FLAGS_LOCK;
-         /* SDL_LockSurface( bmp->surface ); */
       }
 
    } else {
       /* Locking a bitmap for pixel drawing. */
       assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
       bmp->flags |= RETROFLAT_FLAGS_LOCK;
-      /* SDL_LockSurface( bmp->surface ); */
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
 
-   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
-      assert( NULL == bmp->renderer );
-      assert( NULL != bmp->surface );
-      bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
-   } else {
+   if(
+      NULL == bmp
+#     ifdef RETROFLAT_VDP
+      && NULL == g_retroflat_state->vdp_buffer
+#     endif /* RETROFLAT_VDP */
+   ) {
+
       /* Target is the screen buffer. */
       SDL_SetRenderTarget(
          g_retroflat_state->buffer.renderer,
          g_retroflat_state->buffer.texture );
+
+      goto cleanup;
+
+#     ifdef RETROFLAT_VDP
+   } else if( NULL == bmp && NULL != g_retroflat_state->vdp_buffer ) {
+      /* Lock the VDP buffer for drawing. */
+      bmp = g_retroflat_state->vdp_buffer;
+#     endif /* RETROFLAT_VDP */
    }
+
+   assert( NULL == bmp->renderer );
+   assert( NULL != bmp->surface );
+   bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
+
+cleanup:
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -4057,32 +4071,44 @@ cleanup:
 
    /* == SDL2 == */
 
-   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+   if( 
+      NULL == bmp
+#     ifdef RETROFLAT_VDP
+      && NULL == g_retroflat_state->vdp_buffer
+#     endif /* RETROFLAT_VDP */
+   ) {
       /* Flip the screen. */
       SDL_SetRenderTarget( g_retroflat_state->buffer.renderer, NULL );
       SDL_RenderCopyEx(
          g_retroflat_state->buffer.renderer,
          g_retroflat_state->buffer.texture, NULL, NULL, 0, NULL, 0 );
       SDL_RenderPresent( g_retroflat_state->buffer.renderer );
-   } else {
-      /* It's a bitmap. */
 
-      /* Scrap the software renderer. */
-      SDL_RenderPresent( bmp->renderer );
-      SDL_DestroyRenderer( bmp->renderer );
-      bmp->renderer = NULL;
+      goto cleanup;
 
-      /* Scrap the old texture and recreate it from the updated surface. */
-      /* The renderer should be a software renderer pointing to the surface,
-       * created in retroflat_lock() above.
-       */
-      assert( NULL != bmp->texture );
-      SDL_DestroyTexture( bmp->texture );
-      bmp->texture = SDL_CreateTextureFromSurface(
-         g_retroflat_state->buffer.renderer, bmp->surface );
-      maug_cleanup_if_null(
-         SDL_Texture*, bmp->texture, RETROFLAT_ERROR_BITMAP );
+#     ifdef RETROFLAT_VDP
+   } else if( NULL == bmp && NULL != g_retroflat_state->vdp_buffer ) {
+      bmp = g_retroflat_state->vdp_buffer;
+#     endif /* RETROFLAT_VDP */
    }
+
+   /* It's a bitmap. */
+
+   /* Scrap the software renderer. */
+   SDL_RenderPresent( bmp->renderer );
+   SDL_DestroyRenderer( bmp->renderer );
+   bmp->renderer = NULL;
+
+   /* Scrap the old texture and recreate it from the updated surface. */
+   /* The renderer should be a software renderer pointing to the surface,
+      * created in retroflat_lock() above.
+      */
+   assert( NULL != bmp->texture );
+   SDL_DestroyTexture( bmp->texture );
+   bmp->texture = SDL_CreateTextureFromSurface(
+      g_retroflat_state->buffer.renderer, bmp->surface );
+   maug_cleanup_if_null(
+      SDL_Texture*, bmp->texture, RETROFLAT_ERROR_BITMAP );
 
 cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
