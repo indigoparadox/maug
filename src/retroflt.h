@@ -1060,6 +1060,7 @@ typedef int RETROFLAT_CONFIG;
 #  endif /* RETROFLAT_API_WIN32 */
 
 struct RETROFLAT_BITMAP {
+   uint32_t sentinal;
    uint8_t flags;
    HBITMAP b;
    HBITMAP mask;
@@ -1070,12 +1071,16 @@ struct RETROFLAT_BITMAP {
    ssize_t w;
    /* Under WinG, this might be negative! */
    ssize_t h;
-   struct RETROFLAT_BMI bmi;
-   uint8_t far* bits;
+   uint8_t
+#ifdef RETROFLAT_API_WIN16
+   far
+#endif /* RETROFLAT_API_WIN16 */
+   * bits;
    ssize_t autolock_refs;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
 #  endif /* RETROFLAT_OPENGL */
+   struct RETROFLAT_BMI bmi;
 };
 
 /* TODO: Remove this in favor of mmem.h. */
@@ -1182,22 +1187,26 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
+   assert( 0x123456 == (bmp)->sentinal ); \
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
-   if( 0 == (bmp)->autolock_refs ) { \
+   (bmp)->autolock_refs++; \
+   debug_printf( 0, "refs++: %d", (bmp)->autolock_refs ); \
+   if( 1 == (bmp)->autolock_refs ) { \
       GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      debug_printf( 0, "bits: %p", (bmp)->bits ); \
       assert( NULL == (bmp)->bits ); \
       (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
       assert( NULL != (bmp)->bits ); \
       GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
-   } \
-   (bmp)->autolock_refs++;
+   }
 
 #  define retroflat_px_release( bmp ) \
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
+   debug_printf( 0, "refs--: %d", (bmp)->autolock_refs ); \
    if( 0 == (bmp)->autolock_refs ) { \
       SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
          (bmp)->h, (bmp)->bits, \
@@ -4209,7 +4218,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    }
 
    /* Allocate buffer for unpacking. */
-   debug_printf( 1, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
+   debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       bmp_out->w, bmp_out->h );
    bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
@@ -4399,6 +4408,8 @@ cleanup:
    bmp_out->w = bmp_out->bmi.header.biWidth;
    bmp_out->h = bmp_out->bmi.header.biHeight;
 
+   bmp_out->sentinal = 0x123456;
+
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
@@ -4428,6 +4439,11 @@ cleanup:
       HBITMAP, bmp_out->b, MERROR_FILE, "failed to open FILE!" )
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
+
+   bmp_out->sentinal = 0x123456;
+
+   bmp_out->w = bm.bmWidth;
+   bmp_out->h = bm.bmHeight;
 
    retval = retroflat_bitmap_win_transparency(
       bmp_out, bm.bmWidth, bm.bmHeight );
@@ -4474,7 +4490,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->w = w;
    bmp_out->h = h;
    /* TODO: Overflow checking. */
-   debug_printf( 1, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
+   debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       bmp_out->w, bmp_out->h );
    bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
@@ -4598,7 +4614,9 @@ cleanup:
    } else {
 #     endif /* RETROFLAT_WING */
 
-   debug_printf( 1, "creating bitmap..." );
+   debug_printf( 0, "creating bitmap..." );
+
+   bmp_out->sentinal = 0x123456;
 
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
