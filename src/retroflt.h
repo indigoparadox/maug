@@ -341,6 +341,9 @@ typedef int8_t RETROFLAT_COLOR;
 
 /**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
+ *
+ * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
+ * is screen-backed.
  */
 #define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
 
@@ -1192,7 +1195,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
    /* Confirm header info. */ \
    (bmp)->autolock_refs++; \
    debug_printf( 0, "refs++: %d", (bmp)->autolock_refs ); \
-   if( 1 == (bmp)->autolock_refs ) { \
+   if( \
+      1 == (bmp)->autolock_refs && \
+      RETROFLAT_FLAGS_SCREEN_BUFFER != \
+         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
+   ) { \
       GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
       debug_printf( 0, "bits: %p", (bmp)->bits ); \
@@ -1207,7 +1214,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
    debug_printf( 0, "refs--: %d", (bmp)->autolock_refs ); \
-   if( 0 == (bmp)->autolock_refs ) { \
+   if( \
+      0 == (bmp)->autolock_refs && \
+      RETROFLAT_FLAGS_SCREEN_BUFFER != \
+         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
+   ) { \
       SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
          (bmp)->h, (bmp)->bits, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
@@ -4581,11 +4592,14 @@ cleanup:
    }
 #     endif /* RETROFLAT_WING */
 
+   debug_printf( 0, "creating bitmap..." );
+
    bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
    bmp_out->bmi.header.biWidth = w;
    bmp_out->bmi.header.biHeight *= h;
    bmp_out->w = w;
    bmp_out->h = h;
+   bmp_out->sentinal = 0x123456;
 
    GetSystemPaletteEntries(
       g_retroflat_state->hdc_win, 0, RETROFLAT_BMP_COLORS_SZ_MAX, palette );
@@ -4606,17 +4620,16 @@ cleanup:
       /* Setup an optimal WinG hardware screen buffer bitmap. */
       debug_printf( 1, "creating WinG-backed bitmap..." );
 
+      bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
       bmp_out->b = g_w.WinGCreateBitmap(
          bmp_out->hdc_b,
          (BITMAPINFO far*)(&bmp_out->bmi),
          (void far*)&(bmp_out->bits) );
 
+      debug_printf( 1, "WinG bitmap bits: %p", bmp_out->bits );
+
    } else {
 #     endif /* RETROFLAT_WING */
-
-   debug_printf( 0, "creating bitmap..." );
-
-   bmp_out->sentinal = 0x123456;
 
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
