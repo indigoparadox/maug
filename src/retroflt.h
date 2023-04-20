@@ -1228,6 +1228,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
+#  ifdef RETROFLAT_VDP
+
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \
@@ -1238,9 +1240,16 @@ extern HBRUSH gc_retroflat_win_brushes[];
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
          (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
-      GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
-         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      /* GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); */ \
       assert( NULL == (bmp)->bits ); \
+      assert( (bmp)->bmi.header.biBitCount == 32 ); \
+      assert( (bmp)->bmi.header.biWidth > 0 ); \
+      assert( (bmp)->bmi.header.biHeight > 0 ); \
+      assert( (bmp)->bmi.header.biWidth == (bmp)->w ); \
+      assert( (bmp)->bmi.header.biHeight == (bmp)->h ); \
+      assert( (bmp)->bmi.header.biSizeImage == \
+         (bmp)->h * (bmp)->w * 4 ); \
       (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
       assert( NULL != (bmp)->bits ); \
       GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
@@ -1256,12 +1265,23 @@ extern HBRUSH gc_retroflat_win_brushes[];
          (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
       /* TODO: This just blacks out the bitmap. Palette issue? */ \
-      /* SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
-         (bmp)->h, (bmp)->bits, \
-         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); */ \
+      if( \
+         SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
+            (bmp)->h, (bmp)->bits, \
+            (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < (bmp)->h \
+      ) { \
+         error_printf( "SetDIBits failed!" ); \
+      } \
       free( (bmp)->bits ); \
       (bmp)->bits = NULL; \
    }
+
+#  else
+
+#     define retroflat_px_lock( bmp )
+#     define retroflat_px_release( bmp )
+
+#  endif /* RETROFLAT_VDP */
 
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
@@ -4652,7 +4672,13 @@ cleanup:
 
    bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
    bmp_out->bmi.header.biWidth = w;
+#     ifdef RETROFLAT_WING
    bmp_out->bmi.header.biHeight *= h;
+#     else
+   bmp_out->bmi.header.biHeight = h;
+#     endif /* RETROFLAT_WING */
+   bmp_out->bmi.header.biBitCount = 32;
+   bmp_out->bmi.header.biSizeImage = w * h * 4;
    bmp_out->w = w;
    bmp_out->h = h;
 
