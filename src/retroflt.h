@@ -1063,7 +1063,6 @@ typedef int RETROFLAT_CONFIG;
 #  endif /* RETROFLAT_API_WIN32 */
 
 struct RETROFLAT_BITMAP {
-   uint32_t sentinal;
    uint8_t flags;
    HBITMAP b;
    HBITMAP mask;
@@ -1190,7 +1189,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
-   assert( 0x123456 == (bmp)->sentinal ); \
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
    (bmp)->autolock_refs++; \
@@ -4419,8 +4417,6 @@ cleanup:
    bmp_out->w = bmp_out->bmi.header.biWidth;
    bmp_out->h = bmp_out->bmi.header.biHeight;
 
-   bmp_out->sentinal = 0x123456;
-
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
@@ -4450,8 +4446,6 @@ cleanup:
       HBITMAP, bmp_out->b, MERROR_FILE, "failed to open FILE!" )
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
-
-   bmp_out->sentinal = 0x123456;
 
    bmp_out->w = bm.bmWidth;
    bmp_out->h = bm.bmHeight;
@@ -4599,7 +4593,6 @@ cleanup:
    bmp_out->bmi.header.biHeight *= h;
    bmp_out->w = w;
    bmp_out->h = h;
-   bmp_out->sentinal = 0x123456;
 
    GetSystemPaletteEntries(
       g_retroflat_state->hdc_win, 0, RETROFLAT_BMP_COLORS_SZ_MAX, palette );
