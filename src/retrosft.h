@@ -98,11 +98,11 @@ MERROR_RETVAL retrosoft_init() {
 
 #ifdef RETROSOFT_PRELOAD_COLORS
    for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
-      debug_printf( 1, "loading glyphs in %s...", gc_retroflat_color_names[h] );
+      debug_printf( 0, "loading glyphs in %s...", gc_retroflat_color_names[h] );
 #endif /* RETROSOFT_PRELOAD_COLORS */
    for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
          for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
-            debug_printf( 1, "loading glyph " SIZE_T_FMT "...", j );
+            debug_printf( 0, "loading glyph " SIZE_T_FMT "...", j );
             retval = retrosoft_load_glyph( h, i, j, &(gc_font_bmps[h][i][j]) );
             maug_cleanup_if_not_ok();
          }
