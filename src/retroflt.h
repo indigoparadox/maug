@@ -1217,9 +1217,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
          (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
-      SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
+      /* TODO: This just blacks out the bitmap. Palette issue? */ \
+      /* SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
          (bmp)->h, (bmp)->bits, \
-         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); */ \
       free( (bmp)->bits ); \
       (bmp)->bits = NULL; \
    }
@@ -2150,8 +2151,6 @@ static LRESULT CALLBACK WndProc(
 #     ifndef RETROFLAT_OPENGL
    HDC hdc_paint = (HDC)NULL;
 #     endif /* !RETROFLAT_OPENGL */
-   BITMAP srcBitmap;
-   int screen_initialized = 0;
 #     if defined( RETROFLAT_OPENGL )
    int pixel_fmt_int = 0;
    static PIXELFORMATDESCRIPTOR pixel_fmt = {
@@ -2198,7 +2197,8 @@ static LRESULT CALLBACK WndProc(
 
          /* Setup the screen buffer. */
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            debug_printf( 1, "retroflat: creating window buffer..." );
+            debug_printf( 1, "retroflat: creating window buffer (%d x %d)...",
+               g_retroflat_state->screen_w, g_retroflat_state->screen_h );
             /* Do this in its own function so a one-time setup isn't using stack
             * in our WndProc!
             */
@@ -2215,7 +2215,6 @@ static LRESULT CALLBACK WndProc(
                break;
             }
 
-           screen_initialized = 1;
          }
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -2223,11 +2222,6 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
             retroflat_quit( g_retroflat_state->retval );
             break;
-         }
-
-         /* TODO: Get rid of screen_initialized. */
-         if( screen_initialized ) {
-            /* Create a new HDC for buffer and select buffer into it. */
          }
 
 #     endif /* RETROFLAT_OPENGL */
@@ -2247,6 +2241,7 @@ static LRESULT CALLBACK WndProc(
       case WM_PAINT:
 
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            error_printf( "screen buffer not ready!" );
             break;
          }
 
@@ -2260,10 +2255,6 @@ static LRESULT CALLBACK WndProc(
             retroflat_quit( g_retroflat_state->retval );
             break;
          }
-
-         /* Load parameters of the buffer into info object (srcBitmap). */
-         GetObject(
-            g_retroflat_state->buffer.b, sizeof( BITMAP ), &srcBitmap );
 
 #        if defined( RETROFLAT_VDP )
 
@@ -2312,8 +2303,8 @@ skip_vdp:
                g_retroflat_state->screen_w, g_retroflat_state->screen_h,
                g_retroflat_state->buffer.hdc_b,
                0, 0,
-               srcBitmap.bmWidth,
-               srcBitmap.bmHeight
+               g_retroflat_state->screen_w,
+               g_retroflat_state->screen_h
             );
 #           ifdef RETROFLAT_API_WIN32
             GdiFlush();
@@ -2326,8 +2317,8 @@ skip_vdp:
             g_retroflat_state->screen_w, g_retroflat_state->screen_h,
             g_retroflat_state->buffer.hdc_b,
             0, 0,
-            srcBitmap.bmWidth,
-            srcBitmap.bmHeight,
+            g_retroflat_state->screen_w,
+            g_retroflat_state->screen_h,
             SRCCOPY
          );
 #        ifdef RETROFLAT_WING
