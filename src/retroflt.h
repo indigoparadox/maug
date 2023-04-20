@@ -3541,12 +3541,36 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )
-   g_retroflat_state->vdp_exe = dlopen( "./retrovdp.so", RTLD_LAZY );
+   g_retroflat_state->vdp_exe = dlopen(
+#        ifdef RETROFLAT_API_SDL1
+      "./rvdpsdl1.so",
+#        elif defined( RETROFLAT_API_SDL2 )
+      "./rvdpsdl2.so",
+#        else
+#           error "rvdp .so undefined!"
+#        endif
+      RTLD_LAZY );
 #     elif defined( RETROFLAT_OS_WIN )
-   g_retroflat_state->vdp_exe = LoadLibrary( "./retrovdp.dll" );
+   g_retroflat_state->vdp_exe = LoadLibrary(
+#        ifdef RETROFLAT_API_SDL1
+      "./rvdpsdl1.dll"
+#        elif defined( RETROFLAT_API_SDL2 )
+      "./rvdpsdl2.dll"
+#        elif defined( RETROFLAT_API_WIN32 )
+      "./rvdpnt.dll"
+#        else
+#           error "rvdp .so undefined!"
+#        endif
+      );
 #     else
 #        error "dlopen undefined!"
 #     endif /* RETROFLAT_OS_UNIX */
+
+   if( !(g_retroflat_state->vdp_exe) ) {
+      error_printf( "not loading VDP" );
+      /* Skip creating the buffer or trying to run the init proc. */
+      goto skip_vdp;
+   }
 
    /* Create intermediary screen buffer. */
    debug_printf( 1, "creating VDP buffer, %d x %d",
@@ -3559,11 +3583,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
    maug_cleanup_if_not_ok();
-
-   if( !(g_retroflat_state->vdp_exe) ) {
-      error_printf( "not loading VDP" );
-      goto skip_vdp;
-   }
 
    debug_printf( 1, "initializing VDP..." );
    retval = retroflat_vdp_call( "retroflat_vdp_init" );
@@ -3848,6 +3867,10 @@ cleanup:
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
+
+   /* SDL locking semantics are the opposite of every other platform. See
+    * retroflat_px_lock() for a proxy to SDL_LockSurface().
+    */
 
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       /* Special case: Attempting to lock the screen. */
