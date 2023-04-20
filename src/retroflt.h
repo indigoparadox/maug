@@ -466,30 +466,17 @@ struct RETROFLAT_STATE;
 #define RETROFLAT_VDP_FLAG_PXLOCK 0x01
 
 /**
- * \brief VDP initialization function, called from the VDP .so/.dll on
- *        startup.
+ * \brief VDP function called from the VDP library.
  *
- * The VDP plugin should export a function with this signature as
- * retroflat_vdp_init().
- */
-typedef MERROR_RETVAL (*retroflat_vdp_init_t)( struct RETROFLAT_STATE* );
-
-/**
- * \brief VDP flip function, called from the VDP .so/.dll to process
- *        the framebuffer of every frame.
+ * The VDP plugin should export three functions with this signature:
  *
- * The VDP plugin should export a function with this signature as
- * retroflat_vdp_flip().
+ * | Function Name          | Called From                                     |
+ * |------------------------|-------------------------------------------------|
+ * | retroflat_vdp_init()   | retroflat_init()                                |
+ * | retroflat_vdp_flip()   | retroflat_draw_release() on screen buffer       |
+ * | retroflat_vdp_shutdown | retroflat_shutdown()                            |
  */
-typedef MERROR_RETVAL (*retroflat_vdp_flip_t)( struct RETROFLAT_STATE* );
-
-/**
- * \breif VDP shutdown function, called from the VDP .so/.dll on shutdown.
- *
- * The VDP plugin should export a function with this signature as
- * retroflat_vdp_shutdown().
- */
-typedef void (*retroflat_vdp_shutdown_t)( struct RETROFLAT_STATE* );
+typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
 /*! \} */ /* maug_retroflt_vdp */
 
@@ -1881,6 +1868,10 @@ MERROR_RETVAL retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* arg
  */
 void retroflat_shutdown( int retval );
 
+#  ifdef RETROFLAT_VDP
+MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
+#  endif /* RETROFLAT_VDP */
+
 void retroflat_set_title( const char* format, ... );
 
 uint32_t retroflat_get_ms();
@@ -2213,9 +2204,6 @@ static LRESULT CALLBACK WndProc(
       0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
    };
 #     endif /* RETROFLAT_OPENGL */
-#     ifdef RETROFLAT_VDP
-   retroflat_vdp_flip_t vdp_flip = NULL;
-#     endif /* RETROFLAT_VDP */
 
    switch( message ) {
       case WM_CREATE:
@@ -2306,42 +2294,7 @@ static LRESULT CALLBACK WndProc(
          }
 
 #        if defined( RETROFLAT_VDP )
-
-         if( (HMODULE)NULL == g_retroflat_state->vdp_exe ) {
-            goto skip_vdp;
-         }
-
-         vdp_flip = (retroflat_vdp_flip_t)GetProcAddress(
-            g_retroflat_state->vdp_exe, "retroflat_vdp_flip_" );
-         if( (retroflat_vdp_flip_t)NULL == vdp_flip ) {
-            goto skip_vdp;
-         }
-
-         /* Give the VDP buffer an HDC so it can be pixel locked. */
-         retroflat_draw_lock( g_retroflat_state->vdp_buffer );
-
-         if(
-            RETROFLAT_VDP_FLAG_PXLOCK ==
-               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
-         ) {
-            retroflat_px_lock( &(g_retroflat_state->buffer) );
-            retroflat_px_lock( g_retroflat_state->vdp_buffer );
-         }
-
-         vdp_flip( g_retroflat_state );
-
-         if(
-            RETROFLAT_VDP_FLAG_PXLOCK ==
-               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
-         ) {
-            retroflat_px_release( &(g_retroflat_state->buffer) );
-            retroflat_px_release( g_retroflat_state->vdp_buffer );
-         }
-
-         retroflat_draw_release( g_retroflat_state->vdp_buffer );
-
-skip_vdp:
-
+         retroflat_vdp_call( "retroflat_vdp_flip" );
 #        endif /* RETROFLAT_VDP */
 
 #        ifdef RETROFLAT_WING
@@ -2975,10 +2928,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_SDL_ICO */
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
-#  ifdef RETROFLAT_VDP
-   retroflat_vdp_init_t vdp_init = NULL;
-#  endif /* RETROFLAT_VDP */
-   
    debug_printf( 1, "retroflat: initializing..." );
 
    /* System sanity checks. */
@@ -3590,20 +3539,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_OPENGL */
 
-#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
-
+#  ifdef RETROFLAT_VDP
+#     if defined( RETROFLAT_OS_UNIX )
    g_retroflat_state->vdp_exe = dlopen( "./retrovdp.so", RTLD_LAZY );
-   if( !(g_retroflat_state->vdp_exe) ) {
-      error_printf( "not loading VDP: %s", dlerror() );
-      goto skip_vdp;
-   }
-
-   debug_printf( 1, "initializing VDP..." );
-   vdp_init = dlsym( g_retroflat_state->vdp_exe, "retroflat_vdp_init" );
-   if( !vdp_init ) {
-      error_printf( "no VDP init found!" );
-      goto skip_vdp;
-   }
+#     elif defined( RETROFLAT_OS_WIN )
+   g_retroflat_state->vdp_exe = LoadLibrary( "./retrovdp.dll" );
+#     else
+#        error "dlopen undefined!"
+#     endif /* RETROFLAT_OS_UNIX */
 
    /* Create intermediary screen buffer. */
    debug_printf( 1, "creating VDP buffer, %d x %d",
@@ -3617,43 +3560,17 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
    maug_cleanup_if_not_ok();
 
-   retval = vdp_init( g_retroflat_state );
-
-skip_vdp:
-
-#  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
-
-   g_retroflat_state->vdp_exe = LoadLibrary( "./retrovdp.dll" );
-   if( (HMODULE)NULL == g_retroflat_state->vdp_exe ) {
+   if( !(g_retroflat_state->vdp_exe) ) {
       error_printf( "not loading VDP" );
       goto skip_vdp;
    }
 
    debug_printf( 1, "initializing VDP..." );
-   vdp_init = (retroflat_vdp_init_t)GetProcAddress(
-      g_retroflat_state->vdp_exe, "retroflat_vdp_init_" );
-   if( (retroflat_vdp_init_t)NULL == vdp_init ) {
-      error_printf( "no VDP init found!" );
-      goto skip_vdp;
-   }
-
-   /* Create intermediary screen buffer. */
-   debug_printf( 1, "creating VDP buffer, %d x %d",
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
-   g_retroflat_state->vdp_buffer =
-      calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
-   maug_cleanup_if_null_alloc(
-      struct RETROFLAT_BITMAP*, g_retroflat_state->vdp_buffer );
-   retval = retroflat_create_bitmap(
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
-      g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
-   maug_cleanup_if_not_ok();
-
-   retval = vdp_init( g_retroflat_state );
+   retval = retroflat_vdp_call( "retroflat_vdp_init" );
 
 skip_vdp:
 
-#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
+#  endif /* RETROFLAT_VDP */
 
 cleanup:
 
@@ -3664,43 +3581,23 @@ cleanup:
 
 void retroflat_shutdown( int retval ) {
 
-#  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
-   retroflat_vdp_shutdown_t vdp_shutdown = NULL;
-
+#  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
-      vdp_shutdown = dlsym(
-         g_retroflat_state->vdp_exe, "retroflat_vdp_shutdown" );
-      if( NULL != vdp_shutdown ) {
-         debug_printf( 1, "shutting down VDP..." );
-         vdp_shutdown( g_retroflat_state );
-      }
+      retroflat_vdp_call( "retroflat_vdp_shutdown" );
+#     ifdef RETROFLAT_OS_UNIX
       dlclose( g_retroflat_state->vdp_exe );
-   }
-
-   if( NULL != g_retroflat_state->vdp_buffer ) {
-      retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
-      free( g_retroflat_state->vdp_buffer );
-   }
-
-#  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
-   
-   retroflat_vdp_shutdown_t vdp_shutdown = NULL;
-
-   if( (HMODULE)NULL != g_retroflat_state->vdp_exe ) {
-      vdp_shutdown = (retroflat_vdp_shutdown_t)GetProcAddress(
-         g_retroflat_state->vdp_exe, "retroflat_vdp_shutdown_" );
-      if( (retroflat_vdp_shutdown_t)NULL != vdp_shutdown ) {
-         debug_printf( 1, "shutting down VDP..." );
-         vdp_shutdown( g_retroflat_state );
-      }
+#     elif defined( RETROFLAT_OS_WIN )
       FreeLibrary( g_retroflat_state->vdp_exe );
+#     else
+#        error "dlclose undefined!"
+#     endif /* RETROFLAT_OS_UNIX || RETROFLAT_OS_WIN */
    }
 
    if( NULL != g_retroflat_state->vdp_buffer ) {
       retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
       free( g_retroflat_state->vdp_buffer );
    }
-#  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
+#  endif /* RETROFLAT_VDP */
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
    retrosoft_shutdown();
@@ -3776,6 +3673,70 @@ void retroflat_shutdown( int retval ) {
    maug_mfree( g_retroflat_state );
 
 }
+
+/* === */
+
+#  ifdef RETROFLAT_VDP
+
+MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   retroflat_vdp_proc_t vdp_proc = (retroflat_vdp_proc_t)NULL;
+#     ifdef RETROFLAT_OS_WIN
+   char proc_name_ex[256];
+#     endif /* RETROFLAT_OS_WIN */
+
+   if( NULL == g_retroflat_state->vdp_exe ) {
+      goto cleanup;
+   }
+
+#     ifdef RETROFLAT_OS_UNIX
+   vdp_proc = dlsym( g_retroflat_state->vdp_exe, proc_name );
+#     elif defined( RETROFLAT_OS_WIN )
+   /* Append a _ to the proc_name because Watcom? Windows? */
+   maug_snprintf( proc_name_ex, 255, "%s_", proc_name );
+   vdp_proc = (retroflat_vdp_proc_t)GetProcAddress(
+      g_retroflat_state->vdp_exe, proc_name_ex );
+#     else
+#        error "dlsym undefined!"
+#     endif
+   if( (retroflat_vdp_proc_t)NULL == vdp_proc ) {
+      goto cleanup;
+   }
+
+#     ifdef RETROFLAT_OS_WIN
+   retroflat_draw_lock( g_retroflat_state->vdp_buffer );
+#     endif /* RETROFLAT_OS_WIN */
+
+   if(
+      /* Don't pxlock before init can set the flag! */
+      0 == strcmp( "retroflat_vdp_flip", proc_name ) &&
+      RETROFLAT_VDP_FLAG_PXLOCK ==
+         (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
+   ) {
+      retroflat_px_lock( &(g_retroflat_state->buffer) );
+      retroflat_px_lock( g_retroflat_state->vdp_buffer );
+   }
+
+   retval = vdp_proc( g_retroflat_state );
+
+   if(
+      0 == strcmp( "retroflat_vdp_flip", proc_name ) &&
+      RETROFLAT_VDP_FLAG_PXLOCK ==
+         (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
+   ) {
+      retroflat_px_release( &(g_retroflat_state->buffer) );
+      retroflat_px_release( g_retroflat_state->vdp_buffer );
+   }
+
+#     ifdef RETROFLAT_OS_WIN
+   retroflat_draw_release( g_retroflat_state->vdp_buffer );
+#     endif /* RETROFLAT_OS_WIN */
+
+cleanup:
+   return retval;
+}
+
+#  endif /* RETROFLAT_VDP */
 
 /* === */
 
@@ -3984,9 +3945,6 @@ cleanup:
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_VDP )
-   retroflat_vdp_flip_t vdp_flip = NULL;
-#  endif /* RETROFLAT_VDP */
 
 #  ifdef RETROFLAT_OPENGL
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
@@ -4058,37 +4016,9 @@ cleanup:
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
-#     if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
-
-         if( NULL == g_retroflat_state->vdp_exe ) {
-            goto skip_vdp;
-         }
-         vdp_flip = dlsym( g_retroflat_state->vdp_exe, "retroflat_vdp_flip" );
-         if( !vdp_flip ) {
-            goto skip_vdp;
-         }
-
-         if(
-            RETROFLAT_VDP_FLAG_PXLOCK ==
-               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
-         ) {
-            retroflat_px_lock( &(g_retroflat_state->buffer) );
-            retroflat_px_lock( g_retroflat_state->vdp_buffer );
-         }
-
-         retval = vdp_flip( g_retroflat_state );
-
-         if(
-            RETROFLAT_VDP_FLAG_PXLOCK ==
-               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
-         ) {
-            retroflat_px_release( &(g_retroflat_state->buffer) );
-            retroflat_px_release( g_retroflat_state->vdp_buffer );
-         }
-
-skip_vdp:
-
-#     endif /* RETROFLAT_OS_UNIX && RETROFLAT_VDP */
+#     if defined( RETROFLAT_VDP )
+         retroflat_vdp_call( "retroflat_vdp_flip" );
+#     endif /* RETROFLAT_VDP */
 
          SDL_Flip( bmp->surface );
       }
