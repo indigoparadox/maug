@@ -442,6 +442,57 @@ typedef int8_t RETROFLAT_COLOR;
 
 /*! \} */ /* maug_retroflt_msg_flags */
 
+struct RETROFLAT_STATE;
+
+/**
+ * \addtogroup maug_retroflt_vdp RetroFlat VDP API
+ * \brief Video Display Processor tools for modifying display output.
+ *
+ * The VDP system allows for a plugin to post-process frames in programs that
+ * use RetroFlat. The VDP is provided with a bitmap of every frame
+ * in RETROFLAT_STATE::vdp_buffer which it processes and outputs to
+ * RETROFLAT_STATE::buffer.
+ *
+ * \{
+ */
+
+/**
+ * \brief Flag for RETROFLAT_STATE::vdp_flags indicating the VDP requires
+ *        RetroFlat to pixel-lock the frame before passing it (almost always
+ *        true!)
+ *
+ * This should be set by the VDP during its initialization.
+ */
+#define RETROFLAT_VDP_FLAG_PXLOCK 0x01
+
+/**
+ * \brief VDP initialization function, called from the VDP .so/.dll on
+ *        startup.
+ *
+ * The VDP plugin should export a function with this signature as
+ * retroflat_vdp_init().
+ */
+typedef MERROR_RETVAL (*retroflat_vdp_init_t)( struct RETROFLAT_STATE* );
+
+/**
+ * \brief VDP flip function, called from the VDP .so/.dll to process
+ *        the framebuffer of every frame.
+ *
+ * The VDP plugin should export a function with this signature as
+ * retroflat_vdp_flip().
+ */
+typedef MERROR_RETVAL (*retroflat_vdp_flip_t)( struct RETROFLAT_STATE* );
+
+/**
+ * \breif VDP shutdown function, called from the VDP .so/.dll on shutdown.
+ *
+ * The VDP plugin should export a function with this signature as
+ * retroflat_vdp_shutdown().
+ */
+typedef void (*retroflat_vdp_shutdown_t)( struct RETROFLAT_STATE* );
+
+/*! \} */ /* maug_retroflt_vdp */
+
 /**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
@@ -474,8 +525,6 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_LOCK     0x01
 
 #define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
-
-#define RETROFLAT_VDP_FLAG_PXLOCK 0x01
 
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
@@ -661,14 +710,6 @@ typedef int8_t RETROFLAT_COLOR;
  * \brief Prototype for the main loop function passed to retroflat_loop().
  */
 typedef void (*retroflat_loop_iter)(void* data);
-
-struct RETROFLAT_STATE;
-
-typedef MERROR_RETVAL (*retroflat_vdp_init_t)( struct RETROFLAT_STATE* );
-
-typedef MERROR_RETVAL (*retroflat_vdp_flip_t)( struct RETROFLAT_STATE* );
-
-typedef void (*retroflat_vdp_shutdown_t)( struct RETROFLAT_STATE* );
 
 /**
  * \addtogroup maug_retroflt_input RetroFlat Input API
@@ -1540,6 +1581,7 @@ struct RETROFLAT_BITMAP {
 /*! \brief Get the current screen height in pixels. */
 #  define retroflat_screen_h()
 
+/*! \brief Get the direct screen buffer or the VDP buffer if a VDP is loaded. */
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 /**
@@ -1679,20 +1721,6 @@ struct RETROFLAT_ARGS {
    char* config_path;
 };
 
-/* To export a retroflat function for VDP use: add a type for it here,
-   * then add a pointer in the state struct, then assign that pointer to
-   * the retroflat function being exported in the init function.
-   */
-
-typedef MERROR_RETVAL (*retroflat_create_bitmap_t)(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
-
-typedef void (*retroflat_destroy_bitmap_t)( struct RETROFLAT_BITMAP* bitmap );
-
-typedef void (*retroflat_blit_bitmap_t)(
-   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int w, int h );
-
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
    void*                   loop_data;
@@ -1706,19 +1734,23 @@ struct RETROFLAT_STATE {
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
+   /**
+    * \brief A buffer assembled and passed to the VDP for its use,
+    *        or NULL if no VDP is loaded.
+    */
    struct RETROFLAT_BITMAP* vdp_buffer;
 #ifdef RETROFLAT_OS_WIN
    HMODULE vdp_exe;
 #else
+   /*! \brief A handle for the loaded VDP module. */
    void* vdp_exe;
 #endif /* RETROFLAT_OS_WIN */
+   /*! \brief Pointer to data defined by the VDP for its use. */
    void* vdp_data;
+   /*! \brief CLI args passed with -vdp to the \ref maug_retroflt_vdp. */
    char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
+   /*! \brief Flags set by the \ref maug_retroflt_vdp. */
    uint8_t vdp_flags;
-
-   retroflat_create_bitmap_t vdp_create_bitmap;
-   retroflat_destroy_bitmap_t vdp_destroy_bitmap;
-   retroflat_blit_bitmap_t vdp_blit_bitmap;
 
    /* These are used by VDP so should be standardized/not put in plat-spec! */
    int                  screen_v_w;
@@ -3540,10 +3572,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 
-   g_retroflat_state->vdp_create_bitmap = retroflat_create_bitmap;
-   g_retroflat_state->vdp_destroy_bitmap = retroflat_destroy_bitmap;
-   g_retroflat_state->vdp_blit_bitmap = retroflat_blit_bitmap;
-
    g_retroflat_state->vdp_exe = dlopen( "./retrovdp.so", RTLD_LAZY );
    if( !(g_retroflat_state->vdp_exe) ) {
       error_printf( "not loading VDP: %s", dlerror() );
@@ -3557,15 +3585,23 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto skip_vdp;
    }
 
+   /* Create intermediary screen buffer. */
+   debug_printf( 1, "creating VDP buffer, %d x %d",
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+   g_retroflat_state->vdp_buffer =
+      calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   maug_cleanup_if_null_alloc(
+      struct RETROFLAT_BITMAP*, g_retroflat_state->vdp_buffer );
+   retval = retroflat_create_bitmap(
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+      g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
+   maug_cleanup_if_not_ok();
+
    retval = vdp_init( g_retroflat_state );
 
 skip_vdp:
 
 #  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
-
-   g_retroflat_state->vdp_create_bitmap = retroflat_create_bitmap;
-   g_retroflat_state->vdp_destroy_bitmap = retroflat_destroy_bitmap;
-   g_retroflat_state->vdp_blit_bitmap = retroflat_blit_bitmap;
 
    g_retroflat_state->vdp_exe = LoadLibrary( "./retrovdp.dll" );
    if( (HMODULE)NULL == g_retroflat_state->vdp_exe ) {
@@ -3580,6 +3616,18 @@ skip_vdp:
       error_printf( "no VDP init found!" );
       goto skip_vdp;
    }
+
+   /* Create intermediary screen buffer. */
+   debug_printf( 1, "creating VDP buffer, %d x %d",
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+   g_retroflat_state->vdp_buffer =
+      calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   maug_cleanup_if_null_alloc(
+      struct RETROFLAT_BITMAP*, g_retroflat_state->vdp_buffer );
+   retval = retroflat_create_bitmap(
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+      g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
+   maug_cleanup_if_not_ok();
 
    retval = vdp_init( g_retroflat_state );
 
@@ -3609,6 +3657,11 @@ void retroflat_shutdown( int retval ) {
       dlclose( g_retroflat_state->vdp_exe );
    }
 
+   if( NULL != g_retroflat_state->vdp_buffer ) {
+      retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
+      free( g_retroflat_state->vdp_buffer );
+   }
+
 #  elif defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_WIN )
    
    retroflat_vdp_shutdown_t vdp_shutdown = NULL;
@@ -3621,6 +3674,11 @@ void retroflat_shutdown( int retval ) {
          vdp_shutdown( g_retroflat_state );
       }
       FreeLibrary( g_retroflat_state->vdp_exe );
+   }
+
+   if( NULL != g_retroflat_state->vdp_buffer ) {
+      retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
+      free( g_retroflat_state->vdp_buffer );
    }
 #  endif /* RETROFLAT_VDP && RETROFLAT_OS_UNIX */
 
@@ -3990,7 +4048,23 @@ cleanup:
             goto skip_vdp;
          }
 
+         if(
+            RETROFLAT_VDP_FLAG_PXLOCK ==
+               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
+         ) {
+            retroflat_px_lock( &(g_retroflat_state->buffer) );
+            retroflat_px_lock( g_retroflat_state->vdp_buffer );
+         }
+
          retval = vdp_flip( g_retroflat_state );
+
+         if(
+            RETROFLAT_VDP_FLAG_PXLOCK ==
+               (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
+         ) {
+            retroflat_px_release( &(g_retroflat_state->buffer) );
+            retroflat_px_release( g_retroflat_state->vdp_buffer );
+         }
 
 skip_vdp:
 
