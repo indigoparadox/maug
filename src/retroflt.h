@@ -1192,7 +1192,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
    (bmp)->autolock_refs++; \
-   debug_printf( 0, "refs++: %d", (bmp)->autolock_refs ); \
    if( \
       1 == (bmp)->autolock_refs && \
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
@@ -1200,7 +1199,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
    ) { \
       GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
-      debug_printf( 0, "bits: %p", (bmp)->bits ); \
       assert( NULL == (bmp)->bits ); \
       (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
       assert( NULL != (bmp)->bits ); \
@@ -1211,7 +1209,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_px_release( bmp ) \
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
-   debug_printf( 0, "refs--: %d", (bmp)->autolock_refs ); \
    if( \
       0 == (bmp)->autolock_refs && \
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
