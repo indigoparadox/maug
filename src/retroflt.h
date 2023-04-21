@@ -799,6 +799,7 @@ struct RETROFLAT_GLTEX {
 typedef FILE* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
+   size_t sz;
    uint8_t flags;
    BITMAP* b;
 };
@@ -807,6 +808,8 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -903,6 +906,7 @@ typedef int RETROFLAT_COLOR_DEF;
 typedef FILE* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
+   size_t sz;
    uint8_t flags;
    SDL_Surface* surface;
 #  ifdef RETROFLAT_API_SDL1
@@ -982,6 +986,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->surface->w)
 #  ifdef RETROFLAT_API_SDL1
 #     define retroflat_bitmap_locked( bmp ) \
          (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
@@ -1091,6 +1097,7 @@ typedef int RETROFLAT_CONFIG;
 #  endif /* RETROFLAT_API_WIN32 */
 
 struct RETROFLAT_BITMAP {
+   size_t sz;
    uint8_t flags;
    HBITMAP b;
    HBITMAP mask;
@@ -1098,9 +1105,6 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
-   ssize_t w;
-   /* Under WinG, this might be negative! */
-   ssize_t h;
    uint8_t
 #ifdef RETROFLAT_API_WIN16
    far
@@ -1212,6 +1216,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #endif /* RETROFLAT_OPENGL */
 
+#  define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
@@ -1233,16 +1239,14 @@ extern HBRUSH gc_retroflat_win_brushes[];
       assert( (bmp)->bmi.header.biBitCount == 32 ); \
       assert( (bmp)->bmi.header.biWidth > 0 ); \
       assert( (bmp)->bmi.header.biHeight > 0 ); \
-      assert( (bmp)->bmi.header.biWidth == (bmp)->w ); \
-      assert( (bmp)->bmi.header.biHeight == (bmp)->h ); \
       assert( (bmp)->bmi.header.biSizeImage == \
-         (bmp)->h * (bmp)->w * 4 ); \
+         (bmp)->bmi.header.biWidth * (bmp)->bmi.header.biHeight * 4 ); \
       (bmp)->bits = VirtualAlloc( \
          0, (bmp)->bmi.header.biSizeImage, \
          MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ); \
       assert( NULL != (bmp)->bits ); \
-      GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
-         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
+      GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->bmi.header.biHeight, \
+         (bmp)->bits, (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
    }
 
 #  define retroflat_px_release( bmp ) \
@@ -1256,8 +1260,9 @@ extern HBRUSH gc_retroflat_win_brushes[];
       /* TODO: Causes alpha blending in mdemos? */ \
       if( \
          SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
-            (bmp)->h, (bmp)->bits, \
-            (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < (bmp)->h \
+            (bmp)->bmi.header.biHeight, (bmp)->bits, \
+            (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < \
+               (bmp)->bmi.header.biHeight \
       ) { \
          error_printf( "SetDIBits failed!" ); \
       } \
@@ -1407,6 +1412,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 typedef void* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
+   size_t sz;
+   uint8_t flags;
    uint16_t* b;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
@@ -1447,6 +1454,8 @@ typedef int RETROFLAT_COLOR_DEF;
 
 /* TODO? */
 #  define retroflat_quit( retval_in )
+#  define retroflat_bitmap_w( bmp ) (0)
+#  define retroflat_bitmap_h( bmp ) (0)
 #  define retroflat_bitmap_ok( bitmap ) (0)
 
 #elif defined( RETROFLAT_API_GLUT )
@@ -1467,6 +1476,7 @@ typedef FILE* RETROFLAT_CONFIG;
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
+   size_t sz;
    uint8_t flags;
    struct RETROFLAT_GLTEX tex;
    ssize_t w;
@@ -1475,6 +1485,9 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) 0
+/* TODO */
+#  define retroflat_bitmap_w( bmp ) (0)
+#  define retroflat_bitmap_h( bmp ) (0)
 
 /*! \brief Special lock used before per-pixel operations because of SDL1. */
 #  define retroflat_px_lock( bmp )
@@ -1576,6 +1589,9 @@ typedef FILE* RETROFLAT_CONFIG;
  * Please see the \ref maug_retroflt_bitmap for more information.
  */
 struct RETROFLAT_BITMAP {
+   /*! \brief Size of the bitmap structure, used to check VDP compatibility. */
+   size_t sz;
+   /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
 };
 
@@ -4276,6 +4292,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       goto cleanup;
    }
 
+   /* TODO: Setup bitmap header. */
    bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
    bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
    bmp_out->w = bmp_read_uint32( &(bmp_buffer[0x12]) );
@@ -4477,9 +4494,6 @@ cleanup:
    assert( 0 == bmp_out->bmi.header.biWidth % 8 );
    assert( 0 == bmp_out->bmi.header.biHeight % 8 );
 
-   bmp_out->w = bmp_out->bmi.header.biWidth;
-   bmp_out->h = bmp_out->bmi.header.biHeight;
-
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
@@ -4510,8 +4524,25 @@ cleanup:
 
    GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
 
-   bmp_out->w = bm.bmWidth;
-   bmp_out->h = bm.bmHeight;
+   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+   bmp_out->bmi.header.biCompression = BI_RGB;
+   bmp_out->bmi.header.biWidth = bm.bmWidth;
+   bmp_out->bmi.header.biHeight = bm.bmHeight;
+   bmp_out->bmi.header.biPlanes = bm.bmPlanes;
+   bmp_out->bmi.header.biBitCount = bm.bmBitsPixel;
+   bmp_out->bmi.header.biSizeImage =
+      bmp_out->bmi.header.biWidth *
+      bmp_out->bmi.header.biHeight *
+      (bm.bmBitsPixel / sizeof( uint8_t ));
+
+   /*
+   GetDIBits( g_retroflat_state->hdc_win, bmp_out->b, 0, 0, NULL,
+      (BITMAPINFO*)&(bmp_out->bmi), DIB_RGB_COLORS );
+
+   assert( 1 == bmp_out->bmi.header.biPlanes );
+   assert( bmp_out->w == bmp_out->bmi.header.biWidth );
+   assert( bmp_out->h == bmp_out->bmi.header.biHeight );
+   */
 
    retval = retroflat_bitmap_win_transparency(
       bmp_out, bm.bmWidth, bm.bmHeight );
@@ -4552,6 +4583,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -4662,8 +4695,6 @@ cleanup:
 #     endif /* RETROFLAT_WING */
    bmp_out->bmi.header.biBitCount = 32;
    bmp_out->bmi.header.biSizeImage = w * h * 4;
-   bmp_out->w = w;
-   bmp_out->h = h;
 
    GetSystemPaletteEntries(
       g_retroflat_state->hdc_win, 0, RETROFLAT_BMP_COLORS_SZ_MAX, palette );

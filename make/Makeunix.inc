@@ -15,14 +15,6 @@ ifeq ("$(LDFLAGS_GCC64_UNIX)","")
 	LDFLAGS_GCC64_UNIX :=
 endif
 
-ifeq ("$(VDP)","1")
-	CFLAGS_GCC_UNIX += -DRETROFLAT_VDP
-	LDFLAGS_GCC_UNIX += -ldl
-	CFLAGS_GCC64_UNIX += -DRETROFLAT_VDP
-	LDFLAGS_GCC64_UNIX += -ldl
-	SDL_VER_UNIX := 1
-endif
-
 ifneq ("$(RELEASE)","RELEASE")
 	# Build debug unless release specified.
 	GCC_FSAN := -fsanitize=address -fsanitize=leak -fsanitize=undefined 
@@ -60,14 +52,20 @@ OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXSDL
 
+ifeq ("$$(VDP)","1")
+	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
+	LDFLAGS_GCC_UNIX_SDL += -ldl
+	SDL_VER_UNIX := 1
+endif
+
 ifeq ("$$(SDL_VER_UNIX)","1")
-	CFLAGS_GCC_UNIX_SDL := \
+	CFLAGS_GCC_UNIX_SDL += \
 		-DRETROFLAT_API_SDL1 $$(shell pkg-config sdl --cflags)
-	LDFLAGS_GCC_UNIX_SDL := $$(shell pkg-config sdl --libs)
+	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl --libs)
 else
-	CFLAGS_GCC_UNIX_SDL := \
+	CFLAGS_GCC_UNIX_SDL += \
 		-DRETROFLAT_API_SDL2 $$(shell pkg-config sdl2 --cflags)
-	LDFLAGS_GCC_UNIX_SDL := $$(shell pkg-config sdl2 --libs)
+	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --libs)
 endif
 
 $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
