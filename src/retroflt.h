@@ -1237,7 +1237,9 @@ extern HBRUSH gc_retroflat_win_brushes[];
       assert( (bmp)->bmi.header.biHeight == (bmp)->h ); \
       assert( (bmp)->bmi.header.biSizeImage == \
          (bmp)->h * (bmp)->w * 4 ); \
-      (bmp)->bits = calloc( 1, (bmp)->bmi.header.biSizeImage ); \
+      (bmp)->bits = VirtualAlloc( \
+         0, (bmp)->bmi.header.biSizeImage, \
+         MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ); \
       assert( NULL != (bmp)->bits ); \
       GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->h, (bmp)->bits, \
          (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
@@ -1259,7 +1261,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
       ) { \
          error_printf( "SetDIBits failed!" ); \
       } \
-      free( (bmp)->bits ); \
+      VirtualFree( (bmp)->bits, 0, MEM_RELEASE ); \
       (bmp)->bits = NULL; \
    }
 
@@ -4650,6 +4652,8 @@ cleanup:
    debug_printf( 0, "creating bitmap..." );
 
    bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+   bmp_out->bmi.header.biPlanes = 1;
+   bmp_out->bmi.header.biCompression = BI_RGB;
    bmp_out->bmi.header.biWidth = w;
 #     ifdef RETROFLAT_WING
    bmp_out->bmi.header.biHeight *= h;
@@ -4838,56 +4842,62 @@ cleanup:
 
 #endif /* RETROFLAT_XPM */
 
-void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap ) {
+void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL != bitmap->tex.bytes_h ) {
-      if( NULL != bitmap->tex.bytes ) {
-         maug_munlock( bitmap->tex.bytes_h, bitmap->tex.bytes );
+   if( NULL != bmp->tex.bytes_h ) {
+      if( NULL != bmp->tex.bytes ) {
+         maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
       }
       
-      maug_mfree( bitmap->tex.bytes_h );
+      maug_mfree( bmp->tex.bytes_h );
    }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
-   if( NULL == bitmap->b ) {
+   if( NULL == bmp->b ) {
       return;
    }
 
-   destroy_bitmap( bitmap->b );
-   bitmap->b = NULL;
+   destroy_bitmap( bmp->b );
+   bmp->b = NULL;
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
-   assert( NULL != bitmap );
-   assert( NULL != bitmap->surface );
+   assert( NULL != bmp );
+   assert( NULL != bmp->surface );
 
 #     ifndef RETROFLAT_API_SDL1
-   assert( NULL != bitmap->texture );
+   assert( NULL != bmp->texture );
 
-   SDL_DestroyTexture( bitmap->texture );
-   bitmap->texture = NULL;
+   SDL_DestroyTexture( bmp->texture );
+   bmp->texture = NULL;
 #     endif /* !RETROFLAT_API_SDL1 */
 
-   SDL_FreeSurface( bitmap->surface );
-   bitmap->surface = NULL;
+   SDL_FreeSurface( bmp->surface );
+   bmp->surface = NULL;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16 == */
 
-   if( (HBITMAP)NULL != bitmap->b ) {
-      DeleteObject( bitmap->b );
-      bitmap->b = (HBITMAP)NULL;
+   if( NULL != bmp->old_hbm_b ) {
+      SelectObject( bmp->hdc_b, bmp->old_hbm_b );
+      bmp->old_hbm_b = NULL;
+      bmp->old_hbm_b = (HBITMAP)NULL;
    }
 
-   if( (HBITMAP)NULL != bitmap->mask ) {
-      DeleteObject( bitmap->mask );
-      bitmap->mask = (HBITMAP)NULL;
+   if( (HBITMAP)NULL != bmp->b ) {
+      DeleteObject( bmp->b );
+      bmp->b = (HBITMAP)NULL;
+   }
+
+   if( (HBITMAP)NULL != bmp->mask ) {
+      DeleteObject( bmp->mask );
+      bmp->mask = (HBITMAP)NULL;
    }
 
 #  else
