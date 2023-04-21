@@ -1253,7 +1253,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
          (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
-      /* TODO: This just blacks out the bitmap. Palette issue? */ \
+      /* TODO: Causes alpha blending in mdemos? */ \
       if( \
          SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
             (bmp)->h, (bmp)->bits, \
