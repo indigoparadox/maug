@@ -820,6 +820,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
 
@@ -1006,6 +1007,7 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_buffer() \
       (NULL == g_retroflat_state->vdp_buffer ? \
          &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+#  define retroflat_root_win() (NULL) /* TODO */
 
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
 /* Special pixel lock JUST for SDL1 surfaces. */
@@ -1284,6 +1286,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_screen_buffer() \
       (NULL == g_retroflat_state->vdp_buffer ? \
          &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+#  define retroflat_root_win() (g_retroflat_state->window)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
@@ -1451,6 +1454,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_root_win() (NULL) /* TODO */
 
 #  define END_OF_MAIN()
 
@@ -1497,6 +1501,7 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
 #  define END_OF_MAIN()
 
@@ -2715,7 +2720,9 @@ void retroflat_message(
    va_list vargs;
 #  ifdef RETROFLAT_API_SDL2
    uint32_t sdl_msg_flags = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN )) || \
+   (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_WIN )) || \
+   defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    uint32_t win_msg_flags = 0;
 #  endif
 
@@ -2725,9 +2732,6 @@ void retroflat_message(
 
 #  if defined( RETROFLAT_API_ALLEGRO )
    allegro_message( "%s", msg_out );
-#  elif defined( RETROFLAT_API_SDL1 )
-   /* TODO: Use a dialog box? */
-   error_printf( "%s", msg_out );
 #  elif defined( RETROFLAT_API_SDL2 )
    switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
    case RETROFLAT_MSG_FLAG_ERROR:
@@ -2745,7 +2749,9 @@ void retroflat_message(
 
    SDL_ShowSimpleMessageBox(
       sdl_msg_flags, title, msg_out, g_retroflat_state->window );
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN )) || \
+   (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_WIN )) || \
+   defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
    case RETROFLAT_MSG_FLAG_ERROR:
       win_msg_flags |= MB_ICONSTOP;
@@ -2760,10 +2766,9 @@ void retroflat_message(
       break;
    }
 
-   MessageBox( g_retroflat_state->window, msg_out, title, win_msg_flags );
-#  elif defined( RETROFLAT_API_GLUT )
-   /* TODO: Use a dialog box? */
-   error_printf( "%s", msg_out );
+   MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
+#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_UNIX )) || \
+   (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_UNIX ))
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
