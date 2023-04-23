@@ -773,7 +773,14 @@ struct RETROFLAT_GLTEX {
 };
 #endif /* RETROFLAT_OPENGL */
 
-/* === Platform-Specific Includes and Defines === */
+/* === OS-Specific Includes and Defines === */
+
+#if defined( RETROFLAT_OS_WIN ) && !defined( MAUG_WINDOWS_H )
+#  include <windows.h>
+#  define MAUG_WINDOWS_H
+#endif /* !MAUG_WINDOWS_H */
+
+/* === API-Specific Includes and Defines === */
 
 #if defined( RETROFLAT_API_ALLEGRO )
 
@@ -1042,11 +1049,6 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
-
-#ifndef MAUG_WINDOWS_H
-#  include <windows.h>
-#  define MAUG_WINDOWS_H
-#endif /* !MAUG_WINDOWS_H */
 
 #  include <mmsystem.h>
 
