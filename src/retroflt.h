@@ -2769,6 +2769,10 @@ void retroflat_message(
    MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
 #  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_UNIX )) || \
    (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_UNIX ))
+
+   /* TODO */
+   error_printf( "%s", msg_out );
+
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
