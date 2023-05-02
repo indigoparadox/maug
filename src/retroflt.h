@@ -1226,15 +1226,19 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #endif /* RETROFLAT_OPENGL */
 
+/* TODO: This is a parallel bitmap system... maybe move OPENGL stuff into its
+ *       own header that takes over graphics stuff in OPENGL mode? */
 #  ifdef RETROFLAT_OPENGL
 #     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
 #  else
 #     define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
+#     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 #  endif /* RETROFLAT_OPENGL */
+/* TODO: Adapt this for the OPENGL test above? */
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
-#  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
 #  ifdef RETROFLAT_VDP
 
