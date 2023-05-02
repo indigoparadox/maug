@@ -206,9 +206,9 @@ struct RETROGLU_PROJ_ARGS {
 };
 
 #define retroglu_tex_px_x_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->texture.w)
+   ((px) * 1.0 / sprite->texture.tex.w)
 #define retroglu_tex_px_y_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->texture.h)
+   ((px) * 1.0 / sprite->texture.tex.h)
 
 #define retroglu_scr_px_x_to_f( px ) \
    (float)(((px) * 1.0 / (retroflat_screen_w() / 2)) - 1.0)

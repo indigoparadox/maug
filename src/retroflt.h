@@ -770,6 +770,8 @@ struct RETROFLAT_GLTEX {
    uint32_t sz;
    uint8_t* px;
    uint32_t id;
+   size_t w;
+   size_t h;
 };
 #endif /* RETROFLAT_OPENGL */
 
@@ -808,8 +810,13 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
-#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->h)
+#  endif /* RETROFLAT_OPENGL */
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -919,8 +926,6 @@ struct RETROFLAT_BITMAP {
 #  endif /* RETROFLAT_API_SDL1 */
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
-   ssize_t w;
-   ssize_t h;
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -986,8 +991,13 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
-#  define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->surface->w)
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->surface->h)
+#  endif /* RETROFLAT_OPENGL */
 #  ifdef RETROFLAT_API_SDL1
 #     define retroflat_bitmap_locked( bmp ) \
          (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
@@ -1216,8 +1226,13 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #endif /* RETROFLAT_OPENGL */
 
-#  define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
+#  endif /* RETROFLAT_OPENGL */
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
@@ -1593,6 +1608,7 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   struct RETROFLAT_GLTEX tex;
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
@@ -4021,7 +4037,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
       /* Update stored texture if it exists. */
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
-      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->w, bmp->h, 0,
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 
@@ -4295,8 +4311,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* TODO: Setup bitmap header. */
    bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
    bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
-   bmp_out->w = bmp_read_uint32( &(bmp_buffer[0x12]) );
-   bmp_out->h = bmp_read_uint32( &(bmp_buffer[0x16]) );
+   bmp_out->tex.w = bmp_read_uint32( &(bmp_buffer[0x12]) );
+   bmp_out->tex.h = bmp_read_uint32( &(bmp_buffer[0x16]) );
    bmp_out->tex.bpp = bmp_read_uint32( &(bmp_buffer[0x1c]) );
    if( 24 != bmp_out->tex.bpp ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -4308,8 +4324,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->w, bmp_out->h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
+      bmp_out->tex.w, bmp_out->tex.h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4335,7 +4351,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 #ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->w, bmp_out->h, 0,
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 
@@ -4588,12 +4604,12 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   bmp_out->w = w;
-   bmp_out->h = h;
+   bmp_out->tex.w = w;
+   bmp_out->tex.h = h;
    /* TODO: Overflow checking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->w, bmp_out->h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
+      bmp_out->tex.w, bmp_out->tex.h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4601,7 +4617,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* TODO: Overflow checking. */
    maug_mzero(
-      bmp_out->tex.bytes, bmp_out->w * bmp_out->h * sizeof( uint32_t ) );
+      bmp_out->tex.bytes,
+      bmp_out->tex.w * bmp_out->tex.h * sizeof( uint32_t ) );
 
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
 
@@ -4982,8 +4999,8 @@ void retroflat_blit_bitmap(
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          /* TODO: Handle transparency! */
          memcpy(
-            &(target->tex.bytes[(((y_iter * target->w) + d_x) * 4)]),
-            &(src->tex.bytes[(((y_iter * src->w) + s_x) * 4)]),
+            &(target->tex.bytes[(((y_iter * target->tex.w) + d_x) * 4)]),
+            &(src->tex.bytes[(((y_iter * src->tex.w) + s_x) * 4)]),
             w * 4 );
       }
       maug_munlock( src->tex.bytes_h, src->tex.bytes );
@@ -5108,13 +5125,13 @@ void retroflat_px(
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 
-   target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
       g_retroflat_state->tex_palette[color_idx][0];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 1] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
       g_retroflat_state->tex_palette[color_idx][1];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 2] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
       g_retroflat_state->tex_palette[color_idx][2];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 3] = 0xff;
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -5176,10 +5193,10 @@ void retroflat_px(
       /* Modify target bits directly (faster) if available! */
       /* WinG bitmaps are 8-bit palettized, so use the index directly. */
       if( 0 > target->h ) {
-         target->bits[((target->h - 1 - y) * target->w) + x] =
+         target->bits[((target->h - 1 - y) * target->tex.w) + x] =
             color_idx;
       } else {
-         target->bits[(y * target->w) + x] =
+         target->bits[(y * target->tex.w) + x] =
             color_idx;
       }
    } else {
