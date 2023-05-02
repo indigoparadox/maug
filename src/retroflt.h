@@ -1115,11 +1115,11 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
-   uint8_t
-#ifdef RETROFLAT_API_WIN16
-   far
-#endif /* RETROFLAT_API_WIN16 */
-   * bits;
+#  ifdef RETROFLAT_API_WIN16
+   uint8_t far* bits;
+#  else
+	uint8_t* bits;
+#  endif /* RETROFLAT_API_WIN16 */
    ssize_t autolock_refs;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
@@ -4620,7 +4620,9 @@ MERROR_RETVAL retroflat_create_bitmap(
       bmp_out->tex.bytes,
       bmp_out->tex.w * bmp_out->tex.h * sizeof( uint32_t ) );
 
+#     ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+#     endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
    if( NULL != bmp_out->tex.bytes ) {

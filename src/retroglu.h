@@ -1172,7 +1172,7 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    maug_mlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
    maug_cleanup_if_null_alloc( uint8_t*, sprite->texture.tex.bytes );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
+      sprite->texture.tex.w, sprite->texture.tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE,
       sprite->texture.tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */

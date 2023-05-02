@@ -37,5 +37,9 @@ typedef unsigned long uint32_t;
 
 #endif /* MAUG_OS_* */
 
+#ifdef MAUG_ANCIENT_C
+typedef uint32_t ssize_t;
+#endif /* MAUG_ANCIENT_C */
+
 #endif /* !MTYPES_H */
 
