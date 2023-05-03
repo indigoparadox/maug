@@ -4,7 +4,7 @@ Augmented minimal standard library for C89 and legacy compilers.
 
 **The API is currently in flux and is not yet completely final!**
 
-Current maug-based projects may be found under [https://github.com/topics/maug](The maug topic on GitHub)!
+Current maug-based projects may be found under [The maug topic on GitHub](https://github.com/topics/maug)!
 
 ## Design Constraints
 
