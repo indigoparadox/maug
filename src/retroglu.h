@@ -118,6 +118,11 @@ struct RETROGLU_VERTEX {
    float z;
 };
 
+struct RETROGLU_VTEXTURE {
+   float u;
+   float v;
+};
+
 struct RETROGLU_MATERIAL {
    float ambient[4];
    float diffuse[4];
@@ -151,7 +156,7 @@ struct RETROGLU_OBJ {
    uint16_t vertices_sz;
    struct RETROGLU_VERTEX vnormals[RETROGLU_VERTICES_SZ_MAX];
    uint16_t vnormals_sz;
-   struct RETROGLU_VERTEX vtextures[RETROGLU_VERTICES_SZ_MAX];
+   struct RETROGLU_VTEXTURE vtextures[RETROGLU_VERTICES_SZ_MAX];
    uint16_t vtextures_sz;
    /**
     * \brief List of faces from an OBJ file. Faces comprise a list of polygons
