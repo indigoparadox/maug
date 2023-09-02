@@ -1242,6 +1242,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  ifdef RETROFLAT_VDP
 
+#  ifdef RETROFLAT_API_WIN16
+#     error "VDP not supported in Win16!"
+#  endif /* RETROFLAT_API_WIN16 */
+
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \

@@ -78,10 +78,6 @@ ifeq ("$(WING)","1")
 	CFLAGS_WATCOM386_WIN += -DRETROFLAT_WING
 endif
 
-ifeq ("$(VDP)","1")
-	CFLAGS_WATCOM386_WIN += -DRETROFLAT_VDP
-endif
-
 CFLAGS_GCC_WIN_WIN32 := -DRETROFLAT_API_WIN32
 CFLAGS_GCC64_WIN_WIN32 := -DRETROFLAT_API_WIN32
 
@@ -103,6 +99,10 @@ ifeq ("$$(CFLAGS_WATCOM386_WIN_WIN32)","")
 endif
 ifeq ("$$(LDFLAGS_WATCOM386_WIN_WIN32)","")
 	LDFLAGS_WATCOM386_WIN_WIN32 := system nt_win
+endif
+
+ifeq ("$$(VDP)","1")
+	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
 $(1)nt.exe: \
@@ -231,8 +231,6 @@ TGTWIN16=$(TGT_WATCOM_WIN_WIN16)
 
 # ---
 
-# TODO: WinG32 nor WinG seem to want to compile...
-
 define TGT_WATCOM386_WIN_WIN16
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_WIN16)","")
@@ -274,6 +272,10 @@ TGTWIN386=$(TGT_WATCOM386_WIN_WIN16)
 
 define TGT_GCC_WIN_WIN32
 
+ifeq ("$$(VDP)","1")
+	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
+endif
+
 $(1)ntg.exe: \
 $$(addprefix $$(OBJDIR_GCC_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
 $$(RES_GCC_WIN_WIN32_DEP)
@@ -296,6 +298,10 @@ TGTWINNTGCC=$(TGT_GCC_WIN_WIN32)
 # ---
 
 define TGT_GCC64_WIN_WIN32
+
+ifeq ("$$(VDP)","1")
+	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
+endif
 
 ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
