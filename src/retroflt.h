@@ -1578,6 +1578,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_8		   '8'
 #  define RETROFLAT_KEY_9		   '9'
 
+#elif defined( RETROFLAT_API_CGA )
+
 #else
 #  warning "not implemented"
 
@@ -1864,6 +1866,8 @@ struct RETROFLAT_STATE {
    size_t               retroflat_next;
    retroflat_loop_iter  loop_iter;
    int16_t              retroflat_last_key;
+
+#  elif defined( RETROFLAT_API_CGA )
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2644,6 +2648,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    g_retroflat_state->loop_data = (void*)data;
    glutMainLoop();
 
+#  elif defined( RETROFLAT_API_CGA )
+
 #  else
 #     warning "loop not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -2782,6 +2788,9 @@ void retroflat_message(
 #  elif defined( RETROFLAT_API_GLUT )
    /* TODO: Use a dialog box? */
    error_printf( "%s", msg_out );
+
+#  elif defined( RETROFLAT_API_CGA )
+
 #  else
 #     warning "not implemented"
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
