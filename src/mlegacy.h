@@ -6,6 +6,8 @@
 #  define MAUG_OS_WIN
 #elif defined( RETROFLAT_OS_NDS )
 #  define MAUG_OS_NDS
+#elif defined( RETROFLAT_OS_DOS )
+#  define MAUG_OS_DOS
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef PATH_MAX
@@ -28,6 +30,8 @@
 #  define MAUG_OS_PALM
 #elif defined( PLATFORM_WIN ) || defined( RETROFLAT_OS_WIN )
 #  define MAUG_OS_WIN
+#elif defined( PLATFORM_DOS )
+#  define MAUG_OS_DOS
 #endif /* PLATFORM_* */
 
 #if defined( RETROFLAT_API_WIN16 )
