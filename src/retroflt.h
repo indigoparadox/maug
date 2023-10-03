@@ -1584,6 +1584,74 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_CGA )
 
+typedef uint8_t RETROFLAT_COLOR_DEF;
+
+struct RETROFLAT_BITMAP {
+   size_t sz;
+   uint8_t flags;
+   uint8_t* b;
+};
+
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_w() 320
+#  define retroflat_screen_h() 200
+
+/* TODO: DOS Keycodes */
+
+#  define RETROFLAT_KEY_BKSP  0
+#  define RETROFLAT_KEY_DASH  '-'
+#  define RETROFLAT_KEY_SLASH '/'
+#  define RETROFLAT_KEY_PERIOD '.'
+#  define RETROFLAT_KEY_COMMA ','
+#  define RETROFLAT_KEY_SEMICOLON ';'
+#  define RETROFLAT_KEY_UP	   0
+#  define RETROFLAT_KEY_DOWN	0
+#  define RETROFLAT_KEY_RIGHT	0
+#  define RETROFLAT_KEY_LEFT	0
+#  define RETROFLAT_KEY_A	   0x41
+#  define RETROFLAT_KEY_B	   0x42
+#  define RETROFLAT_KEY_C	   0x43
+#  define RETROFLAT_KEY_D	   0x44
+#  define RETROFLAT_KEY_E	   0x45
+#  define RETROFLAT_KEY_F	   0x46
+#  define RETROFLAT_KEY_G	   0x47
+#  define RETROFLAT_KEY_H	   0x48
+#  define RETROFLAT_KEY_I	   0x49
+#  define RETROFLAT_KEY_J	   0x4a
+#  define RETROFLAT_KEY_K	   0x4b
+#  define RETROFLAT_KEY_L	   0x4c
+#  define RETROFLAT_KEY_M	   0x4d
+#  define RETROFLAT_KEY_N	   0x4e
+#  define RETROFLAT_KEY_O	   0x4f
+#  define RETROFLAT_KEY_P	   0x50
+#  define RETROFLAT_KEY_Q	   0x51
+#  define RETROFLAT_KEY_R	   0x52
+#  define RETROFLAT_KEY_S	   0x53
+#  define RETROFLAT_KEY_T	   0x54
+#  define RETROFLAT_KEY_U	   0x55
+#  define RETROFLAT_KEY_V	   0x56
+#  define RETROFLAT_KEY_W	   0x57
+#  define RETROFLAT_KEY_X	   0x58
+#  define RETROFLAT_KEY_Y	   0x59
+#  define RETROFLAT_KEY_Z	   0x60
+#  define RETROFLAT_KEY_0     0x30
+#  define RETROFLAT_KEY_1     0x31
+#  define RETROFLAT_KEY_2     0x32
+#  define RETROFLAT_KEY_3     0x33
+#  define RETROFLAT_KEY_4     0x34
+#  define RETROFLAT_KEY_5     0x35
+#  define RETROFLAT_KEY_6     0x36
+#  define RETROFLAT_KEY_7     0x37
+#  define RETROFLAT_KEY_8     0x38
+#  define RETROFLAT_KEY_9     0x39
+#  define RETROFLAT_KEY_TAB	0
+#  define RETROFLAT_KEY_SPACE	0
+#  define RETROFLAT_KEY_ESC	0
+#  define RETROFLAT_KEY_ENTER	0
+#  define RETROFLAT_KEY_HOME	0
+#  define RETROFLAT_KEY_END	0
+
+
 #else
 #  warning "not implemented"
 
@@ -3573,6 +3641,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
+
+#  elif defined( RETORFLAT_API_CGA )
+
+   /* TODO: DOS init. */
 
 #  else
 #     warning "init not implemented"
