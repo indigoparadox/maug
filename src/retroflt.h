@@ -1584,6 +1584,18 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_CGA )
 
+#  define END_OF_MAIN()
+
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
+
+typedef FILE* RETROFLAT_CONFIG;
+
+#  define retroflat_quit( retval_in ) \
+   g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+   g_retroflat_state->retval = retval_in;
+
 typedef uint8_t RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
@@ -1598,16 +1610,13 @@ struct RETROFLAT_BITMAP {
 
 /* TODO: DOS Keycodes */
 
-#  define RETROFLAT_KEY_BKSP  0
+#  define RETROFLAT_KEY_BKSP  0x08
+#  define RETROFLAT_KEY_GRAVE 0x60
 #  define RETROFLAT_KEY_DASH  '-'
 #  define RETROFLAT_KEY_SLASH '/'
 #  define RETROFLAT_KEY_PERIOD '.'
 #  define RETROFLAT_KEY_COMMA ','
 #  define RETROFLAT_KEY_SEMICOLON ';'
-#  define RETROFLAT_KEY_UP	   0
-#  define RETROFLAT_KEY_DOWN	0
-#  define RETROFLAT_KEY_RIGHT	0
-#  define RETROFLAT_KEY_LEFT	0
 #  define RETROFLAT_KEY_A	   0x41
 #  define RETROFLAT_KEY_B	   0x42
 #  define RETROFLAT_KEY_C	   0x43
@@ -1645,12 +1654,17 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_8     0x38
 #  define RETROFLAT_KEY_9     0x39
 #  define RETROFLAT_KEY_TAB	0
-#  define RETROFLAT_KEY_SPACE	0
+#  define RETROFLAT_KEY_SPACE	0x20
 #  define RETROFLAT_KEY_ESC	0
-#  define RETROFLAT_KEY_ENTER	0
+#  define RETROFLAT_KEY_ENTER	0x0d
 #  define RETROFLAT_KEY_HOME	0
 #  define RETROFLAT_KEY_END	0
 
+/* TODO: Handle arrow keys. */
+#  define RETROFLAT_KEY_UP	   'w'
+#  define RETROFLAT_KEY_DOWN	's'
+#  define RETROFLAT_KEY_RIGHT	'd'
+#  define RETROFLAT_KEY_LEFT	'a'
 
 #else
 #  warning "not implemented"
@@ -1853,6 +1867,7 @@ struct RETROFLAT_STATE {
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
+   /* TODO: ifdef guard for VDP? */
    /**
     * \brief A buffer assembled and passed to the VDP for its use,
     *        or NULL if no VDP is loaded.
