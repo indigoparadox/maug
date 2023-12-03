@@ -151,7 +151,8 @@
  * | Define                | Description                                      |
  * | --------------------- | ------------------------------------------------ |
  * | RETROFLAT_OS_WIN      | Specify that the program will run on Windows.    |
- * | RETROFLAT_OS_DOS      | Specify that the program will run on DOS.        | 
+ * | RETROFLAT_OS_DOS      | Specify that the program will run on DOS DPMI.   | 
+ * | RETROFLAT_OS_DOS_REAL | Specify that the program will run DOS real mode. | 
  * | RETROFLAT_OS_UNIX     | Specify that the program will run on UNIX/Linux. |
  *
  * ## API/Library Selection Definitions
@@ -1584,6 +1585,17 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_CGA )
 
+#  ifndef RETROFLAT_DOS_TIMER_DIV
+/* #define RETROFLAT_DOS_TIMER_DIV 1103 */
+#     define RETROFLAT_DOS_TIMER_DIV 100
+#  endif /* !RETROFLAT_DOS_TIMER_DIV */
+
+#  ifndef NO_I86
+#     include <i86.h>
+#  endif /* NO_I86 */
+#  include <dos.h>
+#  include <conio.h>
+
 #  define END_OF_MAIN()
 
 #  ifndef RETROFLAT_CONFIG_USE_FILE
@@ -1666,8 +1678,10 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_RIGHT	'd'
 #  define RETROFLAT_KEY_LEFT	'a'
 
+typedef void (__interrupt __far* retroflat_intfunc)( void );
+
 #else
-#  warning "not implemented"
+#  pragma message( "warning: not implemented" )
 
 /**
  * \addtogroup maug_retroflt_config
@@ -1908,7 +1922,6 @@ struct RETROFLAT_STATE {
    unsigned int         last_mouse_y;
 #  endif /* RETROFLAT_OS_DOS */
    unsigned int         close_button;
-   unsigned long        ms;
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -1955,6 +1968,8 @@ struct RETROFLAT_STATE {
    int16_t              retroflat_last_key;
 
 #  elif defined( RETROFLAT_API_CGA )
+
+   retroflat_intfunc old_timer_interrupt;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2256,6 +2271,7 @@ size_t retroflat_config_read(
 
 #ifdef RETROFLT_C
 
+volatile g_ms = 0;
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
@@ -2685,7 +2701,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 #  elif defined( RETROFLAT_API_ALLEGRO ) || \
    defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_LIBNDS )
+   defined( RETROFLAT_API_LIBNDS ) || \
+   defined( RETROFLAT_API_CGA )
 
    uint32_t next = 0,
       now = 0;
@@ -2735,10 +2752,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    g_retroflat_state->loop_data = (void*)data;
    glutMainLoop();
 
-#  elif defined( RETROFLAT_API_CGA )
-
 #  else
-#     warning "loop not implemented"
+#     pragma message( "warning: loop not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
@@ -2878,8 +2893,10 @@ void retroflat_message(
 
 #  elif defined( RETROFLAT_API_CGA )
 
+   /* TODO: Display error somehow. */
+
 #  else
-#     warning "not implemented"
+#     pragma message( "warning: not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    va_end( vargs );
@@ -3012,7 +3029,7 @@ void retroflat_on_ms_tick() {
    if( NULL == g_retroflat_state ) {
       debug_printf( 1, "no state!" );
    } else {
-      g_retroflat_state->ms++;
+      g_ms++;
    }
 }
 
@@ -3025,11 +3042,32 @@ END_OF_FUNCTION( retroflat_on_close_button )
 
 /* === */
 
+#  ifdef RETROFLAT_API_CGA
+
+void __interrupt __far retroflat_timer_handler() {
+   static unsigned long count = 0;
+
+   ++g_ms;
+   count += RETROFLAT_DOS_TIMER_DIV; /* Original DOS timer in parallel. */
+   if( 65536 <= count ) {
+      /* Call the original handler. */
+      count -= 65536;
+      _chain_intr( g_retroflat_state->old_timer_interrupt );
+   } else {
+      /* Acknowledge interrupt */
+      outp( 0x20, 0x20 );
+   }
+}
+
+#  endif /* RETROFLAT_API_CGA */
+
+/* === */
+
 /* Still inside RETROFLT_C! */
 
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
-   /* = Begin Init = */
+   /* = Declare Init Vars = */
 
    int retval = 0;
 #  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
@@ -3054,7 +3092,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
+#  elif defined( RETROFLAT_API_CGA )
+   union REGS r;
+   struct SREGS s;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* = Begin Init Procedure = */
 
 #  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 #     if defined( RETROFLAT_SDL_ICO )
@@ -3657,12 +3700,50 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
 
-#  elif defined( RETORFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_CGA )
 
    /* TODO: DOS init. */
 
+   debug_printf( 3, "memory available before growth: %u", _memavl() );
+   _nheapgrow();
+   debug_printf( 3, "memory available after growth: %u", _memavl() );
+
+   /* Setup timer handler. */
+
+   _disable();
+
+   /* Backup original handler for later. */
+   segread( &s );
+   r.h.al = 0x08;
+   r.h.ah = 0x35;
+   int86x( 0x21, &r, &r, &s );
+   g_retroflat_state->old_timer_interrupt =
+      (retroflat_intfunc)MK_FP( s.es, r.x.bx );
+
+   /* Install new interrupt handler. */
+   g_ms = 0;
+   r.h.al = 0x08;
+   r.h.ah = 0x25;
+   s.ds = FP_SEG( retroflat_timer_handler );
+   r.x.dx = FP_OFF( retroflat_timer_handler );
+   int86x( 0x21, &r, &r, &s );
+
+   /* Set resolution of timer chip to 1ms. */
+   outp( 0x43, 0x36 );
+   outp( 0x40, (uint8_t)(RETROFLAT_DOS_TIMER_DIV & 0xff) );
+   outp( 0x40, (uint8_t)((RETROFLAT_DOS_TIMER_DIV >> 8) & 0xff) );
+
+   _enable();
+
+   /* Setup graphics. */
+
+   r.h.ah = 0x0b;
+   r.h.bh = 0x01;
+   r.h.bl = 0x01; /* "Cold" palette. */
+	int86( 0x10, &r, &r );
+
 #  else
-#     warning "init not implemented"
+#     pragma message( "warning: init not implemented" )
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
@@ -3823,7 +3904,7 @@ void retroflat_shutdown( int retval ) {
    /* TODO */
 
 #  else
-#     warning "shutdown not implemented"
+#     pragma message( "warning: shutdown not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
    maug_munlock( g_retroflat_state_h, g_retroflat_state );
@@ -3919,7 +4000,7 @@ void retroflat_set_title( const char* format, ... ) {
 #elif defined( RETROFLAT_API_GLUT )
    glutSetWindowTitle( title );
 #else
-#     warning "set title implemented"
+#     pragma message( "warning: set title implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
 
    va_end( vargs );
@@ -3932,7 +4013,7 @@ uint32_t retroflat_get_ms() {
 
    /* == Allegro == */
 
-   return g_retroflat_state->ms;
+   return g_ms;
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    
@@ -3957,7 +4038,7 @@ uint32_t retroflat_get_ms() {
    return glutGet( GLUT_ELAPSED_TIME );
 
 #  else
-#  warning "get_ms not implemented"
+#  pragma message( "warning: get_ms not implemented" )
 #  endif /* RETROFLAT_API_* */
 }
 
@@ -4110,7 +4191,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "draw lock not implemented"
+#     pragma message( "warning: draw lock not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4292,7 +4373,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "draw release not implemented"
+#     pragma message( "warning: draw release not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4685,7 +4766,7 @@ cleanup:
 #     endif /* RETROFLAT_API_WIN16 */
 
 #  else
-#     warning "load bitmap not implemented"
+#     pragma message( "warning: load bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4867,7 +4948,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "create bitmap not implemented"
+#     pragma message( "warning: create bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return retval;
@@ -5055,7 +5136,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    }
 
 #  else
-#     warning "destroy bitmap not implemented"
+#     pragma message( "warning: destroy bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5189,7 +5270,7 @@ cleanup:
    }
 
 #  else
-#     warning "blit bitmap not implemented"
+#     pragma message( "warning: blit bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
@@ -5325,7 +5406,7 @@ void retroflat_px(
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
 #  else
-#     warning "px not implemented"
+#     pragma message( "warning: px not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 }
@@ -5438,7 +5519,7 @@ cleanup:
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  else
-#     warning "rect not implemented"
+#     pragma message( "warning: rect not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5527,7 +5608,7 @@ cleanup:
    }
 
 #  else
-#     warning "line not implemented"
+#     pragma message( "warning: line not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5598,7 +5679,7 @@ cleanup:
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  else
-#     warning "ellipse not implemented"
+#     pragma message( "warning: ellipse not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5705,7 +5786,7 @@ cleanup:
    SelectObject( target->hdc_b, old_font );
 
 #  else
-#     warning "string sz not implemented"
+#     pragma message( "warning: string sz not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5826,7 +5907,7 @@ cleanup:
       g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
 
 #  else
-#     warning "string not implemented"
+#     pragma message( "warning: string not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -6031,7 +6112,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    g_retroflat_state->retroflat_last_key = 0;
 
 #  else
-#     warning "poll input not implemented"
+#     pragma message( "warning: poll input not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return key_out;
@@ -6087,7 +6168,7 @@ cleanup:
    }
 
 #  else
-#     warning "config close not implemented"
+#     pragma message( "warning: config close not implemented" )
 #  endif
 
    return retval;
@@ -6114,7 +6195,7 @@ void retroflat_config_close( RETROFLAT_CONFIG* config ) {
    /* TODO */
 
 #  else
-#     warning "config close not implemented"
+#     pragma message( "warning: config close not implemented" )
 #  endif
 
 }
@@ -6257,7 +6338,7 @@ cleanup:
    /* TODO */
 
 #  else
-#     warning "config read not implemented"
+#     pragma message( "warning: config read not implemented" )
 #  endif
 
    return retval;
