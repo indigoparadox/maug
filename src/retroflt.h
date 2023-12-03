@@ -1585,10 +1585,18 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_CGA )
 
+#  ifndef RETROFLAT_SOFT_SHAPES
+/* TODO: Accelerate lines. */
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
 #  ifndef RETROFLAT_DOS_TIMER_DIV
 /* #define RETROFLAT_DOS_TIMER_DIV 1103 */
 #     define RETROFLAT_DOS_TIMER_DIV 100
 #  endif /* !RETROFLAT_DOS_TIMER_DIV */
+
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 
 #  ifndef NO_I86
 #     include <i86.h>
@@ -1680,6 +1688,10 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_LEFT	'a'
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
+
+#  ifdef RETROFLT_C
+static uint8_t far* g_retroflat_scr = (uint8_t far*)0xB8000000L;
+#  endif /* RETROFLT_C */
 
 #else
 #  pragma message( "warning: not implemented" )
@@ -5334,6 +5346,10 @@ void retroflat_px(
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #  elif defined( RETROFLAT_API_SDL2 )
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#  elif defined( RETROFLAT_API_CGA )
+   uint16_t screen_byte_offset = 0,
+      screen_bit_offset = 0;
+   uint8_t color = 0;
 #  endif /* RETROFLAT_API_SDL1 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -5448,6 +5464,35 @@ void retroflat_px(
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
+
+#  elif defined( RETROFLAT_API_CGA )
+
+   /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
+   /* Divide result by 4 since it's 2 bits per pixel. */
+   screen_byte_offset = (((y / 2) * 320) + x) / 4;
+   /* Shift the bits over by the remainder. */
+   screen_bit_offset = 6 - (((((y / 2) * 320) + x) % 4) * 2);
+
+   if( RETROFLAT_COLOR_BLACK == color_idx ) {
+      color = 0;
+   } else {
+      color = 1;
+   }
+
+   if( 1 == y % 2 ) {
+      /* 0x2000 = difference between even/odd CGA planes. */
+      g_retroflat_scr[0x2000 + screen_byte_offset] &=
+         /* 0x03 = 2-bit pixel mask. */
+         ~(0x03 << screen_bit_offset);
+      g_retroflat_scr[0x2000 + screen_byte_offset] |= 
+         ((color & 0x03) << screen_bit_offset);
+   } else {
+      /* 0x03 = 2-bit pixel mask. */
+      g_retroflat_scr[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
+      g_retroflat_scr[screen_byte_offset] |=
+         /* 0x03 = 2-bit pixel mask. */
+         ((color & 0x03) << screen_bit_offset);
+   }
 
 #  else
 #     pragma message( "warning: px not implemented" )
