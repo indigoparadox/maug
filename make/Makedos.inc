@@ -4,7 +4,9 @@
 # Setup default CFLAGS/LDFLAGS for all DOS targets.
 ifeq ("$(CFLAGS_WATCOM386_DOS)","")
 	CFLAGS_WATCOM386_DOS := -DRETROFLAT_OS_DOS 
-	CFLAGS_WATCOM_DOS := -DRETROFLAT_OS_DOS 
+endif
+ifeq ("$(CFLAGS_WATCOM_DOS)","")
+	CFLAGS_WATCOM_DOS := -DRETROFLAT_OS_DOS_REAL
 endif
 ifeq ("$(LDFLAGS_WATCOM386_DOS)","")
 	LDFLAGS_WATCOM_DOS :=
@@ -45,10 +47,10 @@ define TGTDOSCGA
 
 ifeq ("$$(CFLAGS_WATCOM_DOS_CGA)","")
 	CFLAGS_WATCOM_DOS_CGA := \
-		-bt=dos -DRETROFLAT_API_CGA
+		-bt=dos -mm -DRETROFLAT_API_CGA
 endif
 ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
-	LDFLAGS_WATCOM_DOS_CGA := system dos
+	LDFLAGS_WATCOM_DOS_CGA := system dos option stack=8k
 endif
 
 $(1)c.exe: $$(addprefix obj/dos_cga/,$$(subst .c,.o,$$(C_FILES)))
