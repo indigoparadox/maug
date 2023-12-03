@@ -1595,6 +1595,7 @@ struct RETROFLAT_BITMAP {
 #  endif /* NO_I86 */
 #  include <dos.h>
 #  include <conio.h>
+#  include <malloc.h>
 
 #  define END_OF_MAIN()
 
@@ -1667,7 +1668,7 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_9     0x39
 #  define RETROFLAT_KEY_TAB	0
 #  define RETROFLAT_KEY_SPACE	0x20
-#  define RETROFLAT_KEY_ESC	0
+#  define RETROFLAT_KEY_ESC	0x1b
 #  define RETROFLAT_KEY_ENTER	0x0d
 #  define RETROFLAT_KEY_HOME	0
 #  define RETROFLAT_KEY_END	0
@@ -1970,6 +1971,7 @@ struct RETROFLAT_STATE {
 #  elif defined( RETROFLAT_API_CGA )
 
    retroflat_intfunc old_timer_interrupt;
+   uint8_t old_video_mode;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2729,7 +2731,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          next = 0;
       }
    } while(
-      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
+      RETROFLAT_FLAGS_RUNNING == 
+         (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3737,10 +3740,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup graphics. */
 
-   r.h.ah = 0x0b;
-   r.h.bh = 0x01;
-   r.h.bl = 0x01; /* "Cold" palette. */
-	int86( 0x10, &r, &r );
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = 0x0f00; /* Service: Get video mode. */
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+   g_retroflat_state->old_video_mode = r.h.al;
+   debug_printf( 2, "saved old video mode: 0x%02x",
+      g_retroflat_state->old_video_mode );
+
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = 0x04; /* Service: CGA 320x200x2bpp */
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+
+   debug_printf( 3, "gfx" );
 
 #  else
 #     pragma message( "warning: init not implemented" )
@@ -3818,6 +3829,11 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+#  if defined( RETROFLAT_API_CGA )
+   union REGS r;
+   struct SREGS s;
+#  endif /* RETROFLAT_API_CGA */
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
@@ -3902,6 +3918,34 @@ void retroflat_shutdown( int retval ) {
 #  elif defined( RETROFLAT_API_GLUT )
 
    /* TODO */
+
+#  elif defined( RETROFLAT_API_CGA )
+
+   debug_printf( 3, "restoring video mode 0x%02x...",
+      g_retroflat_state->old_video_mode );
+
+   /* Restore old video mode. */
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = g_retroflat_state->old_video_mode;
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+
+   debug_printf( 3, "restoring timer interrupt..." );
+
+   /* Re-install original interrupt handler. */
+   _disable();
+   segread( &s );
+   r.h.al = 0x08;
+   r.h.ah = 0x25;
+   s.ds = FP_SEG( g_retroflat_state->old_timer_interrupt );
+   r.x.dx = FP_OFF( g_retroflat_state->old_timer_interrupt );
+   int86x( 0x21, &r, &r, &s );
+
+   /* Reset timer chip resolution to 18.2...ms. */
+   outp( 0x43,0x36 );
+   outp( 0x40,0x00 );
+   outp( 0x40,0x00 );
+
+   _enable();
 
 #  else
 #     pragma message( "warning: shutdown not implemented" )
@@ -4009,7 +4053,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_CGA )
 
    /* == Allegro == */
 
@@ -5914,7 +5958,7 @@ cleanup:
 /* === */
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
-#  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
+#  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;
    union REGS outregs;
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
@@ -5927,7 +5971,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -6110,6 +6154,18 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
+
+#  elif defined( RETROFLAT_API_CGA )
+
+   /* TODO: Poll the mouse. */
+
+   if( kbhit() ) {
+      /* Poll the keyboard. */
+      key_out = getch();
+      while( kbhit() ) {
+         getch();
+      }
+   }
 
 #  else
 #     pragma message( "warning: poll input not implemented" )
