@@ -47,7 +47,7 @@ define TGTDOSCGA
 
 ifeq ("$$(CFLAGS_WATCOM_DOS_CGA)","")
 	CFLAGS_WATCOM_DOS_CGA := \
-		-bt=dos -mm -DRETROFLAT_API_CGA
+		-bt=dos -mm -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_CGA
 endif
 ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
 	LDFLAGS_WATCOM_DOS_CGA := system dos option stack=8k

@@ -1583,7 +1583,7 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_8		   '8'
 #  define RETROFLAT_KEY_9		   '9'
 
-#elif defined( RETROFLAT_API_CGA )
+#elif defined( RETROFLAT_API_PC_BIOS )
 
 #  define RETROFLAT_CGA_COLOR_BLACK        0
 #  define RETROFLAT_CGA_COLOR_CYAN         1
@@ -1985,7 +1985,7 @@ struct RETROFLAT_STATE {
    retroflat_loop_iter  loop_iter;
    int16_t              retroflat_last_key;
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
    retroflat_intfunc old_timer_interrupt;
    uint8_t old_video_mode;
@@ -2723,7 +2723,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
    defined( RETROFLAT_API_LIBNDS ) || \
-   defined( RETROFLAT_API_CGA )
+   defined( RETROFLAT_API_PC_BIOS )
 
    uint32_t next = 0,
       now = 0;
@@ -2913,7 +2913,7 @@ void retroflat_message(
    /* TODO: Use a dialog box? */
    error_printf( "%s", msg_out );
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: Display error somehow. */
 
@@ -3064,7 +3064,7 @@ END_OF_FUNCTION( retroflat_on_close_button )
 
 /* === */
 
-#  ifdef RETROFLAT_API_CGA
+#  ifdef RETROFLAT_API_PC_BIOS
 
 void __interrupt __far retroflat_timer_handler() {
    static unsigned long count = 0;
@@ -3081,7 +3081,7 @@ void __interrupt __far retroflat_timer_handler() {
    }
 }
 
-#  endif /* RETROFLAT_API_CGA */
+#  endif /* RETROFLAT_API_PC_BIOS */
 
 /* === */
 
@@ -3114,7 +3114,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
    union REGS r;
    struct SREGS s;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -3722,7 +3722,7 @@ XXXZ
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: DOS init. */
 
@@ -3757,6 +3757,8 @@ XXXZ
 
    _enable();
 
+   debug_printf( 3, "timers initialized..." );
+
    /* Setup graphics. */
 
    memset( &r, 0, sizeof( r ) );
@@ -3770,7 +3772,7 @@ XXXZ
    r.x.ax = 0x04; /* Service: CGA 320x200x2bpp */
 	int86( 0x10, &r, &r ); /* Call video interrupt. */
 
-   debug_printf( 3, "gfx" );
+   debug_printf( 3, "graphics initialized..." );
 
    /* Initialize color table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -3859,10 +3861,10 @@ cleanup:
 
 void retroflat_shutdown( int retval ) {
 
-#  if defined( RETROFLAT_API_CGA )
+#  if defined( RETROFLAT_API_PC_BIOS )
    union REGS r;
    struct SREGS s;
-#  endif /* RETROFLAT_API_CGA */
+#  endif /* RETROFLAT_API_PC_BIOS */
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
@@ -3948,7 +3950,7 @@ void retroflat_shutdown( int retval ) {
 
    /* TODO */
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
    debug_printf( 3, "restoring video mode 0x%02x...",
       g_retroflat_state->old_video_mode );
@@ -4082,7 +4084,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_CGA )
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
 
    /* == Allegro == */
 
@@ -5363,7 +5365,7 @@ void retroflat_px(
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #  elif defined( RETROFLAT_API_SDL2 )
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
    uint16_t screen_byte_offset = 0,
       screen_bit_offset = 0;
    uint8_t color = 0;
@@ -5482,9 +5484,9 @@ void retroflat_px(
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
-   /* == DOS CGA == */
+   /* == DOS PC_BIOS == */
 
    /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
    /* Divide result by 4 since it's 2 bits per pixel. */
@@ -6220,7 +6222,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
 
-#  elif defined( RETROFLAT_API_CGA )
+#  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: Poll the mouse. */
 
