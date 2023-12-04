@@ -272,12 +272,12 @@
    f( 6, brown,     BROWN,     170, 85,  0,   CYAN,    MAGENTA ) \
    f( 7, gray,      GRAY,      170, 170, 170, WHITE,   BLACK   ) \
    f( 8, darkgray,  DARKGRAY,  85,  85,  85,  WHITE,   BLACK   ) \
-   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    CYAN    ) \
+   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    WHITE   ) \
    f( 10, green,    GREEN,     85,  255, 85,  CYAN,    CYAN    ) \
    f( 11, cyan,     CYAN,      85,  255, 255, CYAN,    CYAN    ) \
-   f( 12, red,      RED,       255, 85,  85,  MAGENTA, MAGENTA ) \
+   f( 12, red,      RED,       255, 85,  85,  MAGENTA, WHITE   ) \
    f( 13, magenta,  MAGENTA,   255, 85,  255, MAGENTA, MAGENTA ) \
-   f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    WHITE   ) \
+   f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    MAGENTA ) \
    f( 15, white,    WHITE,     255, 255, 255, WHITE,   WHITE   )
 
 typedef int8_t RETROFLAT_COLOR;
@@ -3772,11 +3772,12 @@ XXXZ
 
    debug_printf( 3, "gfx" );
 
-   /* TODO: Initialize dither tables. */
+   /* Initialize color table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       g_retroflat_state->cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT )
 
+   /* Initialize dither table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       g_retroflat_state->cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
@@ -5491,8 +5492,12 @@ void retroflat_px(
    /* Shift the bits over by the remainder. */
    screen_bit_offset = 6 - (((((y / 2) * 320) + x) % 4) * 2);
 
-   /* TODO: Vary color by X/Y even/odd status and dither table. */
-   color = g_retroflat_state->cga_color_table[color_idx];
+   /* Dither colors on odd/even squares. */
+   if( x % 2 == y % 2 ) {
+      color = g_retroflat_state->cga_color_table[color_idx];
+   } else {
+      color = g_retroflat_state->cga_dither_table[color_idx];
+   }
 
    if( 1 == y % 2 ) {
       /* 0x2000 = difference between even/odd CGA planes. */
