@@ -3138,7 +3138,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 == sizeof( int8_t ) );
    assert( NULL != args );
 
-   debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes",
+   debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
 
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
@@ -3611,7 +3611,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "setting up graphics timer every %d ms...",
       (int)(1000 / RETROFLAT_FPS) );
    if( !SetTimer(
-      g_retroflat_state->window, RETROFLAT_WIN_GFX_TIMER_ID, (int)(1000 / RETROFLAT_FPS), NULL )
+      g_retroflat_state->window,
+      RETROFLAT_WIN_GFX_TIMER_ID,
+      (int)(1000 / RETROFLAT_FPS), NULL )
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not create graphics timer!" );
@@ -3670,13 +3672,17 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup the background engine. */
 
    /* Put map at base 2, but stow tiles up after the bitmap BG at base 7. */
-   g_retroflat_state->bg_id = bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
-   dmaFillWords( 0, g_retroflat_state->bg_tiles, sizeof( g_retroflat_state->bg_tiles ) );
+   g_retroflat_state->bg_id =
+      bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
+   dmaFillWords( 0, g_retroflat_state->bg_tiles,
+      sizeof( g_retroflat_state->bg_tiles ) );
    bgSetPriority( g_retroflat_state->bg_id, 2 );
 
    /* Put map at base 3, and tiles at base 0. */
-   g_retroflat_state->window_id = bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
-   dmaFillWords( 0, g_retroflat_state->window_tiles, sizeof( g_retroflat_state->window_tiles ) );
+   g_retroflat_state->window_id =
+      bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
+   dmaFillWords( 0, g_retroflat_state->window_tiles,
+      sizeof( g_retroflat_state->window_tiles ) );
    bgSetPriority( g_retroflat_state->window_id, 1 );
 
    /* Put bitmap BG at base 1, leaving map-addressable space at base 0. */
