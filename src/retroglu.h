@@ -351,7 +351,7 @@ void retroglu_string(
 
 #ifdef RETROGLU_C
 
-#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    MAUG_CONST float RETROGLU_COLOR_ ## name_u[] = { \
       (float)((float)r * 1.0f / 255.0f), \
       (float)((float)g * 1.0f / 255.0f), \
@@ -1380,7 +1380,7 @@ cleanup:
 
 #else
 
-#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    extern MAUG_CONST float RETROGLU_COLOR_ ## name_u[];
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GL )
