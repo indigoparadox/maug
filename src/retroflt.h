@@ -263,22 +263,22 @@
  */
 
 #define RETROFLAT_COLOR_TABLE( f ) \
-   f( 0, black,     BLACK,     0,   0,   0,   BLACK,   0       ) \
+   f( 0, black,     BLACK,     0,   0,   0,   BLACK,   BLACK   ) \
    f( 1, darkblue,  DARKBLUE,  0,   0,   170, CYAN,    BLACK   ) \
    f( 2, darkgreen, DARKGREEN, 0,   170, 0,   CYAN,    BLACK   ) \
-   f( 3, teal,      TEAL,      0,   170, 170, CYAN,    0       ) \
+   f( 3, teal,      TEAL,      0,   170, 170, CYAN,    CYAN    ) \
    f( 4, darkred,   DARKRED,   170, 0,   0,   MAGENTA, BLACK   ) \
    f( 5, violet,    VIOLET,    170, 0,   170, MAGENTA, BLACK   ) \
    f( 6, brown,     BROWN,     170, 85,  0,   CYAN,    MAGENTA ) \
    f( 7, gray,      GRAY,      170, 170, 170, WHITE,   BLACK   ) \
    f( 8, darkgray,  DARKGRAY,  85,  85,  85,  WHITE,   BLACK   ) \
-   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    0       ) \
-   f( 10, green,    GREEN,     85,  255, 85,  CYAN,    0       ) \
-   f( 11, cyan,     CYAN,      85,  255, 255, CYAN,    0       ) \
-   f( 12, red,      RED,       255, 85,  85,  MAGENTA, 0       ) \
-   f( 13, magenta,  MAGENTA,   255, 85,  255, MAGENTA, 0       ) \
+   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    CYAN    ) \
+   f( 10, green,    GREEN,     85,  255, 85,  CYAN,    CYAN    ) \
+   f( 11, cyan,     CYAN,      85,  255, 255, CYAN,    CYAN    ) \
+   f( 12, red,      RED,       255, 85,  85,  MAGENTA, MAGENTA ) \
+   f( 13, magenta,  MAGENTA,   255, 85,  255, MAGENTA, MAGENTA ) \
    f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    WHITE   ) \
-   f( 15, white,    WHITE,     255, 255, 255, WHITE,   0       )
+   f( 15, white,    WHITE,     255, 255, 255, WHITE,   WHITE   )
 
 typedef int8_t RETROFLAT_COLOR;
 
@@ -1585,6 +1585,11 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_CGA )
 
+#  define RETROFLAT_CGA_COLOR_BLACK        0
+#  define RETROFLAT_CGA_COLOR_CYAN         1
+#  define RETROFLAT_CGA_COLOR_MAGENTA      2
+#  define RETROFLAT_CGA_COLOR_WHITE        3
+
 #  ifndef RETROFLAT_SOFT_SHAPES
 /* TODO: Accelerate lines. */
 #     define RETROFLAT_SOFT_SHAPES
@@ -1691,8 +1696,6 @@ typedef void (__interrupt __far* retroflat_intfunc)( void );
 
 #  ifdef RETROFLT_C
 static uint8_t far* g_retroflat_scr = (uint8_t far*)0xB8000000L;
-static uint8_t* gc_retroflat_cga_color_table = NULL;
-static uint8_t* gc_retroflat_cga_flags_table = NULL;
 #  endif /* RETROFLT_C */
 
 #else
@@ -1986,6 +1989,8 @@ struct RETROFLAT_STATE {
 
    retroflat_intfunc old_timer_interrupt;
    uint8_t old_video_mode;
+   uint8_t cga_color_table[16];
+   uint8_t cga_dither_table[16];
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -3698,7 +3703,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* == GLUT == */
 
 #     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+XXXZ
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
@@ -3768,6 +3773,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 3, "gfx" );
 
    /* TODO: Initialize dither tables. */
+#     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      g_retroflat_state->cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT )
+
+#     define RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      g_retroflat_state->cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
 
 #  else
 #     pragma message( "warning: init not implemented" )
@@ -5471,17 +5483,16 @@ void retroflat_px(
 
 #  elif defined( RETROFLAT_API_CGA )
 
+   /* == DOS CGA == */
+
    /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
    /* Divide result by 4 since it's 2 bits per pixel. */
    screen_byte_offset = (((y / 2) * 320) + x) / 4;
    /* Shift the bits over by the remainder. */
    screen_bit_offset = 6 - (((((y / 2) * 320) + x) % 4) * 2);
 
-   if( RETROFLAT_COLOR_BLACK == color_idx ) {
-      color = 0;
-   } else {
-      color = 1;
-   }
+   /* TODO: Vary color by X/Y even/odd status and dither table. */
+   color = g_retroflat_state->cga_color_table[color_idx];
 
    if( 1 == y % 2 ) {
       /* 0x2000 = difference between even/odd CGA planes. */
