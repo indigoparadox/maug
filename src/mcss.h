@@ -211,7 +211,7 @@ static MAUG_CONST char* gc_mcss_pstate_names[] = {
    ""
 };
 
-#define MCSS_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b ) \
+#define MCSS_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    #name_u,
 
 static MAUG_CONST char* gc_mcss_color_names[] = {
@@ -638,7 +638,7 @@ MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {
       goto cleanup;
    }
 
-   #define MCSS_COLOR_TABLE_HUES( idx, name_l, name_u, r, g, b ) \
+   #define MCSS_COLOR_TABLE_HUES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       parser->colors[idx] = RETROFLAT_COLOR_ ## name_u;
 
    RETROFLAT_COLOR_TABLE( MCSS_COLOR_TABLE_HUES )

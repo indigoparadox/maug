@@ -118,6 +118,11 @@ struct RETROGLU_VERTEX {
    float z;
 };
 
+struct RETROGLU_VTEXTURE {
+   float u;
+   float v;
+};
+
 struct RETROGLU_MATERIAL {
    float ambient[4];
    float diffuse[4];
@@ -151,7 +156,7 @@ struct RETROGLU_OBJ {
    uint16_t vertices_sz;
    struct RETROGLU_VERTEX vnormals[RETROGLU_VERTICES_SZ_MAX];
    uint16_t vnormals_sz;
-   struct RETROGLU_VERTEX vtextures[RETROGLU_VERTICES_SZ_MAX];
+   struct RETROGLU_VTEXTURE vtextures[RETROGLU_VERTICES_SZ_MAX];
    uint16_t vtextures_sz;
    /**
     * \brief List of faces from an OBJ file. Faces comprise a list of polygons
@@ -206,9 +211,9 @@ struct RETROGLU_PROJ_ARGS {
 };
 
 #define retroglu_tex_px_x_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->texture.w)
+   ((px) * 1.0 / sprite->texture.tex.w)
 #define retroglu_tex_px_y_to_f( px, sprite ) \
-   ((px) * 1.0 / sprite->texture.h)
+   ((px) * 1.0 / sprite->texture.tex.h)
 
 #define retroglu_scr_px_x_to_f( px ) \
    (float)(((px) * 1.0 / (retroflat_screen_w() / 2)) - 1.0)
@@ -346,7 +351,7 @@ void retroglu_string(
 
 #ifdef RETROGLU_C
 
-#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    MAUG_CONST float RETROGLU_COLOR_ ## name_u[] = { \
       (float)((float)r * 1.0f / 255.0f), \
       (float)((float)g * 1.0f / 255.0f), \
@@ -1172,7 +1177,7 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    maug_mlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
    maug_cleanup_if_null_alloc( uint8_t*, sprite->texture.tex.bytes );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
+      sprite->texture.tex.w, sprite->texture.tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE,
       sprite->texture.tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
@@ -1375,7 +1380,7 @@ cleanup:
 
 #else
 
-#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    extern MAUG_CONST float RETROGLU_COLOR_ ## name_u[];
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GL )

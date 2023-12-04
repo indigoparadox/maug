@@ -11,6 +11,9 @@
 #  define MAUG_CONST const
 #endif /* MAUG_OS_PALM */
 
+/* This can be included sooner if needed, since it has a guard. */
+#include <msect.h>
+
 #if !defined( MAUG_WINDOWS_H ) && defined( MAUG_OS_WIN )
 #  include <windows.h>
 #  define MAUG_WINDOWS_H
