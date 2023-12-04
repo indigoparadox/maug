@@ -44,11 +44,9 @@ int main( int argc, char** argv ) {
    MAUG_MHANDLE data_h = (MAUG_MHANDLE)NULL;
    struct dataa(TEMPLATE)* data = NULL;
    
-   memset( &data, '\0', sizeof( struct dataa(TEMPLATE) ) );
-
    /* === Setup === */
 
-   memset( &args, '\0', struct RETROFLAT_ARGS );
+   memset( &args, '\0', sizeof( struct RETROFLAT_ARGS ) );
 
    args.screen_w = 320;
    args.screen_h = 200;
@@ -68,7 +66,7 @@ int main( int argc, char** argv ) {
 
    /* === Main Loop === */
 
-   retroflat_loop( (retroflat_loop_iter)loopa(template), &data );
+   retroflat_loop( (retroflat_loop_iter)loopa(template), data );
 
 cleanup:
 

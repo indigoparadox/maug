@@ -151,7 +151,8 @@
  * | Define                | Description                                      |
  * | --------------------- | ------------------------------------------------ |
  * | RETROFLAT_OS_WIN      | Specify that the program will run on Windows.    |
- * | RETROFLAT_OS_DOS      | Specify that the program will run on DOS.        | 
+ * | RETROFLAT_OS_DOS      | Specify that the program will run on DOS DPMI.   | 
+ * | RETROFLAT_OS_DOS_REAL | Specify that the program will run DOS real mode. | 
  * | RETROFLAT_OS_UNIX     | Specify that the program will run on UNIX/Linux. |
  *
  * ## API/Library Selection Definitions
@@ -262,22 +263,22 @@
  */
 
 #define RETROFLAT_COLOR_TABLE( f ) \
-   f( 0, black, BLACK, 0, 0, 0 ) \
-   f( 1, darkblue, DARKBLUE, 0, 0, 170 ) \
-   f( 2, darkgreen, DARKGREEN, 0, 170, 0 ) \
-   f( 3, teal, TEAL, 0, 170, 170 ) \
-   f( 4, darkred, DARKRED, 170, 0, 0 ) \
-   f( 5, violet, VIOLET, 170, 0, 170 ) \
-   f( 6, brown, BROWN, 170, 85, 0 ) \
-   f( 7, gray, GRAY, 170, 170, 170 ) \
-   f( 8, darkgray, DARKGRAY, 85, 85, 85 ) \
-   f( 9, blue, BLUE, 85, 85, 255 ) \
-   f( 10, green, GREEN, 85, 255, 85 ) \
-   f( 11, cyan, CYAN, 85, 255, 255 ) \
-   f( 12, red, RED, 255, 85, 85 ) \
-   f( 13, magenta, MAGENTA, 255, 85, 255 ) \
-   f( 14, yellow, YELLOW, 255, 255, 85 ) \
-   f( 15, white, WHITE, 255, 255, 255 )
+   f( 0, black,     BLACK,     0,   0,   0,   BLACK,   BLACK   ) \
+   f( 1, darkblue,  DARKBLUE,  0,   0,   170, CYAN,    BLACK   ) \
+   f( 2, darkgreen, DARKGREEN, 0,   170, 0,   CYAN,    BLACK   ) \
+   f( 3, teal,      TEAL,      0,   170, 170, CYAN,    CYAN    ) \
+   f( 4, darkred,   DARKRED,   170, 0,   0,   MAGENTA, BLACK   ) \
+   f( 5, violet,    VIOLET,    170, 0,   170, MAGENTA, BLACK   ) \
+   f( 6, brown,     BROWN,     170, 85,  0,   CYAN,    MAGENTA ) \
+   f( 7, gray,      GRAY,      170, 170, 170, WHITE,   BLACK   ) \
+   f( 8, darkgray,  DARKGRAY,  85,  85,  85,  WHITE,   BLACK   ) \
+   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    WHITE   ) \
+   f( 10, green,    GREEN,     85,  255, 85,  CYAN,    CYAN    ) \
+   f( 11, cyan,     CYAN,      85,  255, 255, CYAN,    CYAN    ) \
+   f( 12, red,      RED,       255, 85,  85,  MAGENTA, WHITE   ) \
+   f( 13, magenta,  MAGENTA,   255, 85,  255, MAGENTA, MAGENTA ) \
+   f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    MAGENTA ) \
+   f( 15, white,    WHITE,     255, 255, 255, WHITE,   WHITE   )
 
 typedef int8_t RETROFLAT_COLOR;
 
@@ -770,6 +771,8 @@ struct RETROFLAT_GLTEX {
    uint32_t sz;
    uint8_t* px;
    uint32_t id;
+   size_t w;
+   size_t h;
 };
 #endif /* RETROFLAT_OPENGL */
 
@@ -815,8 +818,13 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
-#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->h)
+#  endif /* RETROFLAT_OPENGL */
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -927,8 +935,6 @@ struct RETROFLAT_BITMAP {
 #  endif /* RETROFLAT_API_SDL1 */
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
-   ssize_t w;
-   ssize_t h;
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -994,8 +1000,13 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
-#  define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->surface->w)
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->surface->h)
+#  endif /* RETROFLAT_OPENGL */
 #  ifdef RETROFLAT_API_SDL1
 #     define retroflat_bitmap_locked( bmp ) \
          (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
@@ -1109,11 +1120,11 @@ struct RETROFLAT_BITMAP {
    HDC hdc_mask;
    HBITMAP old_hbm_b;
    HBITMAP old_hbm_mask;
-   uint8_t
-#ifdef RETROFLAT_API_WIN16
-   far
-#endif /* RETROFLAT_API_WIN16 */
-   * bits;
+#  ifdef RETROFLAT_API_WIN16
+   uint8_t far* bits;
+#  else
+	uint8_t* bits;
+#  endif /* RETROFLAT_API_WIN16 */
    ssize_t autolock_refs;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
@@ -1146,13 +1157,13 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 /* === Setup Brush Cache === */
 
 /* This will be initialized in setup, so just preserve the number. */
-#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          (HBRUSH)NULL,
 
-#     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          gc_retroflat_win_brushes[idx] = CreateSolidBrush( RGB( r, g, b ) );
 
-#     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    if( (HBRUSH)NULL != gc_retroflat_win_brushes[idx] ) { \
       DeleteObject( gc_retroflat_win_brushes[idx] ); \
       gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
@@ -1162,14 +1173,14 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* === Setup Pen Cache === */
 
-#  define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    (HPEN)NULL,
 
-#     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          gc_retroflat_win_pens[idx] = CreatePen( \
             PS_SOLID, RETROFLAT_LINE_THICKNESS, RGB( r, g, b ) );
 
-#     define RETROFLAT_COLOR_TABLE_WIN_PENRM( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_PENRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          if( (HPEN)NULL != gc_retroflat_win_pens[idx] ) { \
             DeleteObject( gc_retroflat_win_pens[idx] ); \
             gc_retroflat_win_pens[idx] = (HPEN)NULL; \
@@ -1220,12 +1231,25 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #endif /* RETROFLAT_OPENGL */
 
-#  define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
-#  define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
+/* TODO: This is a parallel bitmap system... maybe move OPENGL stuff into its
+ *       own header that takes over graphics stuff in OPENGL mode? */
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
+#  else
+#     define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
+#     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
+#  endif /* RETROFLAT_OPENGL */
+/* TODO: Adapt this for the OPENGL test above? */
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
-#  define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
 #  ifdef RETROFLAT_VDP
+
+#  ifdef RETROFLAT_API_WIN16
+#     error "VDP not supported in Win16!"
+#  endif /* RETROFLAT_API_WIN16 */
 
 /* TODO: Check alloc! */
 #  define retroflat_px_lock( bmp ) \
@@ -1566,8 +1590,123 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_8		   '8'
 #  define RETROFLAT_KEY_9		   '9'
 
+#elif defined( RETROFLAT_API_PC_BIOS )
+
+#  define RETROFLAT_CGA_COLOR_BLACK        0
+#  define RETROFLAT_CGA_COLOR_CYAN         1
+#  define RETROFLAT_CGA_COLOR_MAGENTA      2
+#  define RETROFLAT_CGA_COLOR_WHITE        3
+
+#  ifndef RETROFLAT_SOFT_SHAPES
+/* TODO: Accelerate lines. */
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
+#  ifndef RETROFLAT_DOS_TIMER_DIV
+/* #define RETROFLAT_DOS_TIMER_DIV 1103 */
+#     define RETROFLAT_DOS_TIMER_DIV 100
+#  endif /* !RETROFLAT_DOS_TIMER_DIV */
+
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
+
+#  ifndef NO_I86
+#     include <i86.h>
+#  endif /* NO_I86 */
+#  include <dos.h>
+#  include <conio.h>
+#  include <malloc.h>
+
+#  define END_OF_MAIN()
+
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
+
+typedef FILE* RETROFLAT_CONFIG;
+
+#  define retroflat_quit( retval_in ) \
+   g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+   g_retroflat_state->retval = retval_in;
+
+typedef uint8_t RETROFLAT_COLOR_DEF;
+
+struct RETROFLAT_BITMAP {
+   size_t sz;
+   uint8_t flags;
+   uint8_t* b;
+};
+
+#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_w() 320
+#  define retroflat_screen_h() 200
+
+/* TODO: DOS Keycodes */
+
+#  define RETROFLAT_KEY_BKSP  0x08
+#  define RETROFLAT_KEY_GRAVE 0x60
+#  define RETROFLAT_KEY_DASH  '-'
+#  define RETROFLAT_KEY_SLASH '/'
+#  define RETROFLAT_KEY_PERIOD '.'
+#  define RETROFLAT_KEY_COMMA ','
+#  define RETROFLAT_KEY_SEMICOLON ';'
+#  define RETROFLAT_KEY_A	   0x41
+#  define RETROFLAT_KEY_B	   0x42
+#  define RETROFLAT_KEY_C	   0x43
+#  define RETROFLAT_KEY_D	   0x44
+#  define RETROFLAT_KEY_E	   0x45
+#  define RETROFLAT_KEY_F	   0x46
+#  define RETROFLAT_KEY_G	   0x47
+#  define RETROFLAT_KEY_H	   0x48
+#  define RETROFLAT_KEY_I	   0x49
+#  define RETROFLAT_KEY_J	   0x4a
+#  define RETROFLAT_KEY_K	   0x4b
+#  define RETROFLAT_KEY_L	   0x4c
+#  define RETROFLAT_KEY_M	   0x4d
+#  define RETROFLAT_KEY_N	   0x4e
+#  define RETROFLAT_KEY_O	   0x4f
+#  define RETROFLAT_KEY_P	   0x50
+#  define RETROFLAT_KEY_Q	   0x51
+#  define RETROFLAT_KEY_R	   0x52
+#  define RETROFLAT_KEY_S	   0x53
+#  define RETROFLAT_KEY_T	   0x54
+#  define RETROFLAT_KEY_U	   0x55
+#  define RETROFLAT_KEY_V	   0x56
+#  define RETROFLAT_KEY_W	   0x57
+#  define RETROFLAT_KEY_X	   0x58
+#  define RETROFLAT_KEY_Y	   0x59
+#  define RETROFLAT_KEY_Z	   0x60
+#  define RETROFLAT_KEY_0     0x30
+#  define RETROFLAT_KEY_1     0x31
+#  define RETROFLAT_KEY_2     0x32
+#  define RETROFLAT_KEY_3     0x33
+#  define RETROFLAT_KEY_4     0x34
+#  define RETROFLAT_KEY_5     0x35
+#  define RETROFLAT_KEY_6     0x36
+#  define RETROFLAT_KEY_7     0x37
+#  define RETROFLAT_KEY_8     0x38
+#  define RETROFLAT_KEY_9     0x39
+#  define RETROFLAT_KEY_TAB	0
+#  define RETROFLAT_KEY_SPACE	0x20
+#  define RETROFLAT_KEY_ESC	0x1b
+#  define RETROFLAT_KEY_ENTER	0x0d
+#  define RETROFLAT_KEY_HOME	0
+#  define RETROFLAT_KEY_END	0
+
+/* TODO: Handle arrow keys. */
+#  define RETROFLAT_KEY_UP	   'w'
+#  define RETROFLAT_KEY_DOWN	's'
+#  define RETROFLAT_KEY_RIGHT	'd'
+#  define RETROFLAT_KEY_LEFT	'a'
+
+typedef void (__interrupt __far* retroflat_intfunc)( void );
+
+#  ifdef RETROFLT_C
+static uint8_t far* g_retroflat_scr = (uint8_t far*)0xB8000000L;
+#  endif /* RETROFLT_C */
+
 #else
-#  warning "not implemented"
+#  pragma message( "warning: not implemented" )
 
 /**
  * \addtogroup maug_retroflt_config
@@ -1600,6 +1739,7 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   struct RETROFLAT_GLTEX tex;
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
@@ -1766,6 +1906,7 @@ struct RETROFLAT_STATE {
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
+   /* TODO: ifdef guard for VDP? */
    /**
     * \brief A buffer assembled and passed to the VDP for its use,
     *        or NULL if no VDP is loaded.
@@ -1806,7 +1947,6 @@ struct RETROFLAT_STATE {
    unsigned int         last_mouse_y;
 #  endif /* RETROFLAT_OS_DOS */
    unsigned int         close_button;
-   unsigned long        ms;
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -1851,6 +1991,13 @@ struct RETROFLAT_STATE {
    size_t               retroflat_next;
    retroflat_loop_iter  loop_iter;
    int16_t              retroflat_last_key;
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   retroflat_intfunc old_timer_interrupt;
+   uint8_t old_video_mode;
+   uint8_t cga_color_table[16];
+   uint8_t cga_dither_table[16];
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2152,15 +2299,16 @@ size_t retroflat_config_read(
 
 #ifdef RETROFLT_C
 
+static volatile uint32_t g_ms = 0;
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
-#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
-#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    #name_u,
 
 MAUG_CONST char* gc_retroflat_color_names[] = {
@@ -2581,7 +2729,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 #  elif defined( RETROFLAT_API_ALLEGRO ) || \
    defined( RETROFLAT_API_SDL1 ) || \
    defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_LIBNDS )
+   defined( RETROFLAT_API_LIBNDS ) || \
+   defined( RETROFLAT_API_PC_BIOS )
 
    uint32_t next = 0,
       now = 0;
@@ -2608,7 +2757,8 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          next = 0;
       }
    } while(
-      RETROFLAT_FLAGS_RUNNING == (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
+      RETROFLAT_FLAGS_RUNNING == 
+         (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -2632,7 +2782,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    glutMainLoop();
 
 #  else
-#     warning "loop not implemented"
+#     pragma message( "warning: loop not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
@@ -2773,8 +2923,12 @@ void retroflat_message(
    /* TODO */
    error_printf( "%s", msg_out );
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* TODO: Display error somehow. */
+
 #  else
-#     warning "not implemented"
+#     pragma message( "warning: not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    va_end( vargs );
@@ -2907,7 +3061,7 @@ void retroflat_on_ms_tick() {
    if( NULL == g_retroflat_state ) {
       debug_printf( 1, "no state!" );
    } else {
-      g_retroflat_state->ms++;
+      g_ms++;
    }
 }
 
@@ -2920,11 +3074,32 @@ END_OF_FUNCTION( retroflat_on_close_button )
 
 /* === */
 
+#  ifdef RETROFLAT_API_PC_BIOS
+
+void __interrupt __far retroflat_timer_handler() {
+   static unsigned long count = 0;
+
+   ++g_ms;
+   count += RETROFLAT_DOS_TIMER_DIV; /* Original DOS timer in parallel. */
+   if( 65536 <= count ) {
+      /* Call the original handler. */
+      count -= 65536;
+      _chain_intr( g_retroflat_state->old_timer_interrupt );
+   } else {
+      /* Acknowledge interrupt */
+      outp( 0x20, 0x20 );
+   }
+}
+
+#  endif /* RETROFLAT_API_PC_BIOS */
+
+/* === */
+
 /* Still inside RETROFLT_C! */
 
 int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
-   /* = Begin Init = */
+   /* = Declare Init Vars = */
 
    int retval = 0;
 #  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
@@ -2949,7 +3124,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
+#  elif defined( RETROFLAT_API_PC_BIOS )
+   union REGS r;
+   struct SREGS s;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* = Begin Init Procedure = */
 
 #  if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 #     if defined( RETROFLAT_SDL_ICO )
@@ -2968,7 +3148,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 == sizeof( int8_t ) );
    assert( NULL != args );
 
-   debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes",
+   debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
 
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
@@ -3067,7 +3247,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  ifdef RETROFLAT_OPENGL
    debug_printf( 1, "setting up texture palette..." );
-#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          g_retroflat_state->tex_palette[idx][0] = r; \
          g_retroflat_state->tex_palette[idx][1] = g; \
          g_retroflat_state->tex_palette[idx][2] = b;
@@ -3110,7 +3290,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b, cgac, cgad ) \
          g_retroflat_state->palette[i] = makecol( r, g, b );
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
@@ -3165,10 +3345,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
@@ -3247,10 +3427,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
@@ -3299,10 +3479,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup color palettes. */
    /* TODO: For WinG, try to make the indexes match system palette? */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RGB( r, g, b );
 #     endif /* RETROFLAT_OPENGL */
 
@@ -3441,7 +3621,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "setting up graphics timer every %d ms...",
       (int)(1000 / RETROFLAT_FPS) );
    if( !SetTimer(
-      g_retroflat_state->window, RETROFLAT_WIN_GFX_TIMER_ID, (int)(1000 / RETROFLAT_FPS), NULL )
+      g_retroflat_state->window,
+      RETROFLAT_WIN_GFX_TIMER_ID,
+      (int)(1000 / RETROFLAT_FPS), NULL )
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not create graphics timer!" );
@@ -3461,7 +3643,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* == Nintendo DS == */
 
    /* Setup color constants. */
-#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
 
@@ -3500,13 +3682,17 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup the background engine. */
 
    /* Put map at base 2, but stow tiles up after the bitmap BG at base 7. */
-   g_retroflat_state->bg_id = bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
-   dmaFillWords( 0, g_retroflat_state->bg_tiles, sizeof( g_retroflat_state->bg_tiles ) );
+   g_retroflat_state->bg_id =
+      bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
+   dmaFillWords( 0, g_retroflat_state->bg_tiles,
+      sizeof( g_retroflat_state->bg_tiles ) );
    bgSetPriority( g_retroflat_state->bg_id, 2 );
 
    /* Put map at base 3, and tiles at base 0. */
-   g_retroflat_state->window_id = bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
-   dmaFillWords( 0, g_retroflat_state->window_tiles, sizeof( g_retroflat_state->window_tiles ) );
+   g_retroflat_state->window_id =
+      bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
+   dmaFillWords( 0, g_retroflat_state->window_tiles,
+      sizeof( g_retroflat_state->window_tiles ) );
    bgSetPriority( g_retroflat_state->window_id, 1 );
 
    /* Put bitmap BG at base 1, leaving map-addressable space at base 0. */
@@ -3532,8 +3718,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == GLUT == */
 
-#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd ) \
-         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+XXXZ
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
@@ -3552,8 +3738,70 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* TODO: DOS init. */
+
+   debug_printf( 3, "memory available before growth: %u", _memavl() );
+   _nheapgrow();
+   debug_printf( 3, "memory available after growth: %u", _memavl() );
+
+   /* Setup timer handler. */
+
+   _disable();
+
+   /* Backup original handler for later. */
+   segread( &s );
+   r.h.al = 0x08;
+   r.h.ah = 0x35;
+   int86x( 0x21, &r, &r, &s );
+   g_retroflat_state->old_timer_interrupt =
+      (retroflat_intfunc)MK_FP( s.es, r.x.bx );
+
+   /* Install new interrupt handler. */
+   g_ms = 0;
+   r.h.al = 0x08;
+   r.h.ah = 0x25;
+   s.ds = FP_SEG( retroflat_timer_handler );
+   r.x.dx = FP_OFF( retroflat_timer_handler );
+   int86x( 0x21, &r, &r, &s );
+
+   /* Set resolution of timer chip to 1ms. */
+   outp( 0x43, 0x36 );
+   outp( 0x40, (uint8_t)(RETROFLAT_DOS_TIMER_DIV & 0xff) );
+   outp( 0x40, (uint8_t)((RETROFLAT_DOS_TIMER_DIV >> 8) & 0xff) );
+
+   _enable();
+
+   debug_printf( 3, "timers initialized..." );
+
+   /* Setup graphics. */
+
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = 0x0f00; /* Service: Get video mode. */
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+   g_retroflat_state->old_video_mode = r.h.al;
+   debug_printf( 2, "saved old video mode: 0x%02x",
+      g_retroflat_state->old_video_mode );
+
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = 0x04; /* Service: CGA 320x200x2bpp */
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+
+   debug_printf( 3, "graphics initialized..." );
+
+   /* Initialize color table. */
+#     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      g_retroflat_state->cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT )
+
+   /* Initialize dither table. */
+#     define RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      g_retroflat_state->cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
+
 #  else
-#     warning "init not implemented"
+#     pragma message( "warning: init not implemented" )
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
 #  if defined( RETROFLAT_SOFT_SHAPES )
@@ -3628,6 +3876,11 @@ cleanup:
 /* === */
 
 void retroflat_shutdown( int retval ) {
+
+#  if defined( RETROFLAT_API_PC_BIOS )
+   union REGS r;
+   struct SREGS s;
+#  endif /* RETROFLAT_API_PC_BIOS */
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
@@ -3713,8 +3966,36 @@ void retroflat_shutdown( int retval ) {
 
    /* TODO */
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   debug_printf( 3, "restoring video mode 0x%02x...",
+      g_retroflat_state->old_video_mode );
+
+   /* Restore old video mode. */
+   memset( &r, 0, sizeof( r ) );
+   r.x.ax = g_retroflat_state->old_video_mode;
+	int86( 0x10, &r, &r ); /* Call video interrupt. */
+
+   debug_printf( 3, "restoring timer interrupt..." );
+
+   /* Re-install original interrupt handler. */
+   _disable();
+   segread( &s );
+   r.h.al = 0x08;
+   r.h.ah = 0x25;
+   s.ds = FP_SEG( g_retroflat_state->old_timer_interrupt );
+   r.x.dx = FP_OFF( g_retroflat_state->old_timer_interrupt );
+   int86x( 0x21, &r, &r, &s );
+
+   /* Reset timer chip resolution to 18.2...ms. */
+   outp( 0x43,0x36 );
+   outp( 0x40,0x00 );
+   outp( 0x40,0x00 );
+
+   _enable();
+
 #  else
-#     warning "shutdown not implemented"
+#     pragma message( "warning: shutdown not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 */
 
    maug_munlock( g_retroflat_state_h, g_retroflat_state );
@@ -3810,7 +4091,7 @@ void retroflat_set_title( const char* format, ... ) {
 #elif defined( RETROFLAT_API_GLUT )
    glutSetWindowTitle( title );
 #else
-#     warning "set title implemented"
+#     pragma message( "warning: set title implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL */
 
    va_end( vargs );
@@ -3819,11 +4100,11 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO )
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
 
    /* == Allegro == */
 
-   return g_retroflat_state->ms;
+   return g_ms;
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    
@@ -3848,7 +4129,7 @@ uint32_t retroflat_get_ms() {
    return glutGet( GLUT_ELAPSED_TIME );
 
 #  else
-#  warning "get_ms not implemented"
+#  pragma message( "warning: get_ms not implemented" )
 #  endif /* RETROFLAT_API_* */
 }
 
@@ -4001,7 +4282,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "draw lock not implemented"
+#     pragma message( "warning: draw lock not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4032,7 +4313,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
       /* Update stored texture if it exists. */
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
-      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->w, bmp->h, 0,
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 
@@ -4183,7 +4464,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "draw release not implemented"
+#     pragma message( "warning: draw release not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4306,8 +4587,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* TODO: Setup bitmap header. */
    bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
    bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
-   bmp_out->w = bmp_read_uint32( &(bmp_buffer[0x12]) );
-   bmp_out->h = bmp_read_uint32( &(bmp_buffer[0x16]) );
+   bmp_out->tex.w = bmp_read_uint32( &(bmp_buffer[0x12]) );
+   bmp_out->tex.h = bmp_read_uint32( &(bmp_buffer[0x16]) );
    bmp_out->tex.bpp = bmp_read_uint32( &(bmp_buffer[0x1c]) );
    if( 24 != bmp_out->tex.bpp ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -4319,8 +4600,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->w, bmp_out->h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
+      bmp_out->tex.w, bmp_out->tex.h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4346,7 +4627,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 #ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->w, bmp_out->h, 0,
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
 #endif /* !RETROGLU_NO_TEXTURES */
 
@@ -4576,7 +4857,7 @@ cleanup:
 #     endif /* RETROFLAT_API_WIN16 */
 
 #  else
-#     warning "load bitmap not implemented"
+#     pragma message( "warning: load bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
    return retval;
@@ -4599,12 +4880,12 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   bmp_out->w = w;
-   bmp_out->h = h;
+   bmp_out->tex.w = w;
+   bmp_out->tex.h = h;
    /* TODO: Overflow checking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->w, bmp_out->h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->w * bmp_out->h, 4 );
+      bmp_out->tex.w, bmp_out->tex.h );
+   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -4612,9 +4893,12 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* TODO: Overflow checking. */
    maug_mzero(
-      bmp_out->tex.bytes, bmp_out->w * bmp_out->h * sizeof( uint32_t ) );
+      bmp_out->tex.bytes,
+      bmp_out->tex.w * bmp_out->tex.h * sizeof( uint32_t ) );
 
+#     ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+#     endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
    if( NULL != bmp_out->tex.bytes ) {
@@ -4755,7 +5039,7 @@ cleanup:
 cleanup:
 
 #  else
-#     warning "create bitmap not implemented"
+#     pragma message( "warning: create bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return retval;
@@ -4943,7 +5227,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    }
 
 #  else
-#     warning "destroy bitmap not implemented"
+#     pragma message( "warning: destroy bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -4993,8 +5277,8 @@ void retroflat_blit_bitmap(
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          /* TODO: Handle transparency! */
          memcpy(
-            &(target->tex.bytes[(((y_iter * target->w) + d_x) * 4)]),
-            &(src->tex.bytes[(((y_iter * src->w) + s_x) * 4)]),
+            &(target->tex.bytes[(((y_iter * target->tex.w) + d_x) * 4)]),
+            &(src->tex.bytes[(((y_iter * src->tex.w) + s_x) * 4)]),
             w * 4 );
       }
       maug_munlock( src->tex.bytes_h, src->tex.bytes );
@@ -5077,7 +5361,7 @@ cleanup:
    }
 
 #  else
-#     warning "blit bitmap not implemented"
+#     pragma message( "warning: blit bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
@@ -5097,6 +5381,10 @@ void retroflat_px(
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #  elif defined( RETROFLAT_API_SDL2 )
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#  elif defined( RETROFLAT_API_PC_BIOS )
+   uint16_t screen_byte_offset = 0,
+      screen_bit_offset = 0;
+   uint8_t color = 0;
 #  endif /* RETROFLAT_API_SDL1 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -5119,13 +5407,13 @@ void retroflat_px(
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 
-   target->tex.bytes[(((y * target->w) + x) * 4) + 0] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
       g_retroflat_state->tex_palette[color_idx][0];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 1] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
       g_retroflat_state->tex_palette[color_idx][1];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 2] =
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
       g_retroflat_state->tex_palette[color_idx][2];
-   target->tex.bytes[(((y * target->w) + x) * 4) + 3] = 0xff;
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -5187,10 +5475,10 @@ void retroflat_px(
       /* Modify target bits directly (faster) if available! */
       /* WinG bitmaps are 8-bit palettized, so use the index directly. */
       if( 0 > target->h ) {
-         target->bits[((target->h - 1 - y) * target->w) + x] =
+         target->bits[((target->h - 1 - y) * target->tex.w) + x] =
             color_idx;
       } else {
-         target->bits[(y * target->w) + x] =
+         target->bits[(y * target->tex.w) + x] =
             color_idx;
       }
    } else {
@@ -5212,8 +5500,40 @@ void retroflat_px(
    px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* == DOS PC_BIOS == */
+
+   /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
+   /* Divide result by 4 since it's 2 bits per pixel. */
+   screen_byte_offset = (((y / 2) * 320) + x) / 4;
+   /* Shift the bits over by the remainder. */
+   screen_bit_offset = 6 - (((((y / 2) * 320) + x) % 4) * 2);
+
+   /* Dither colors on odd/even squares. */
+   if( x % 2 == y % 2 ) {
+      color = g_retroflat_state->cga_color_table[color_idx];
+   } else {
+      color = g_retroflat_state->cga_dither_table[color_idx];
+   }
+
+   if( 1 == y % 2 ) {
+      /* 0x2000 = difference between even/odd CGA planes. */
+      g_retroflat_scr[0x2000 + screen_byte_offset] &=
+         /* 0x03 = 2-bit pixel mask. */
+         ~(0x03 << screen_bit_offset);
+      g_retroflat_scr[0x2000 + screen_byte_offset] |= 
+         ((color & 0x03) << screen_bit_offset);
+   } else {
+      /* 0x03 = 2-bit pixel mask. */
+      g_retroflat_scr[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
+      g_retroflat_scr[screen_byte_offset] |=
+         /* 0x03 = 2-bit pixel mask. */
+         ((color & 0x03) << screen_bit_offset);
+   }
+
 #  else
-#     warning "px not implemented"
+#     pragma message( "warning: px not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 }
@@ -5326,7 +5646,7 @@ cleanup:
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  else
-#     warning "rect not implemented"
+#     pragma message( "warning: rect not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5415,7 +5735,7 @@ cleanup:
    }
 
 #  else
-#     warning "line not implemented"
+#     pragma message( "warning: line not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5486,7 +5806,7 @@ cleanup:
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  else
-#     warning "ellipse not implemented"
+#     pragma message( "warning: ellipse not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5593,7 +5913,7 @@ cleanup:
    SelectObject( target->hdc_b, old_font );
 
 #  else
-#     warning "string sz not implemented"
+#     pragma message( "warning: string sz not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
@@ -5714,14 +6034,14 @@ cleanup:
       g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
 
 #  else
-#     warning "string not implemented"
+#     pragma message( "warning: string not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
 /* === */
 
 int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
-#  if defined( RETROFLAT_API_ALLEGRO ) && defined( RETROFLAT_OS_DOS )
+#  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;
    union REGS outregs;
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
@@ -5734,7 +6054,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-#  ifdef RETROFLAT_API_ALLEGRO
+#  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -5918,8 +6238,25 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* TODO: Poll the mouse. */
+
+   if( kbhit() ) {
+      /* Poll the keyboard. */
+      key_out = getch();
+      if(
+         RETROFLAT_FLAGS_KEY_REPEAT !=
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
+      ) {
+         while( kbhit() ) {
+            getch();
+         }
+      }
+   }
+
 #  else
-#     warning "poll input not implemented"
+#     pragma message( "warning: poll input not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    return key_out;
@@ -5975,7 +6312,7 @@ cleanup:
    }
 
 #  else
-#     warning "config close not implemented"
+#     pragma message( "warning: config close not implemented" )
 #  endif
 
    return retval;
@@ -6002,7 +6339,7 @@ void retroflat_config_close( RETROFLAT_CONFIG* config ) {
    /* TODO */
 
 #  else
-#     warning "config close not implemented"
+#     pragma message( "warning: config close not implemented" )
 #  endif
 
 }
@@ -6145,7 +6482,7 @@ cleanup:
    /* TODO */
 
 #  else
-#     warning "config read not implemented"
+#     pragma message( "warning: config read not implemented" )
 #  endif
 
    return retval;
@@ -6153,7 +6490,7 @@ cleanup:
 
 #elif !defined( RETROVDP_C ) /* End of RETROFLT_C */
 
-#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
