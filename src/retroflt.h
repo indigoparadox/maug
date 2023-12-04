@@ -2285,7 +2285,7 @@ size_t retroflat_config_read(
 
 #ifdef RETROFLT_C
 
-volatile g_ms = 0;
+static volatile uint32_t g_ms = 0;
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
@@ -6207,8 +6207,13 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    if( kbhit() ) {
       /* Poll the keyboard. */
       key_out = getch();
-      while( kbhit() ) {
-         getch();
+      if(
+         RETROFLAT_FLAGS_KEY_REPEAT !=
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
+      ) {
+         while( kbhit() ) {
+            getch();
+         }
       }
    }
 
