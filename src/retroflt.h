@@ -263,22 +263,22 @@
  */
 
 #define RETROFLAT_COLOR_TABLE( f ) \
-   f( 0, black, BLACK, 0, 0, 0 ) \
-   f( 1, darkblue, DARKBLUE, 0, 0, 170 ) \
-   f( 2, darkgreen, DARKGREEN, 0, 170, 0 ) \
-   f( 3, teal, TEAL, 0, 170, 170 ) \
-   f( 4, darkred, DARKRED, 170, 0, 0 ) \
-   f( 5, violet, VIOLET, 170, 0, 170 ) \
-   f( 6, brown, BROWN, 170, 85, 0 ) \
-   f( 7, gray, GRAY, 170, 170, 170 ) \
-   f( 8, darkgray, DARKGRAY, 85, 85, 85 ) \
-   f( 9, blue, BLUE, 85, 85, 255 ) \
-   f( 10, green, GREEN, 85, 255, 85 ) \
-   f( 11, cyan, CYAN, 85, 255, 255 ) \
-   f( 12, red, RED, 255, 85, 85 ) \
-   f( 13, magenta, MAGENTA, 255, 85, 255 ) \
-   f( 14, yellow, YELLOW, 255, 255, 85 ) \
-   f( 15, white, WHITE, 255, 255, 255 )
+   f( 0, black,     BLACK,     0,   0,   0,   BLACK,   0       ) \
+   f( 1, darkblue,  DARKBLUE,  0,   0,   170, CYAN,    BLACK   ) \
+   f( 2, darkgreen, DARKGREEN, 0,   170, 0,   CYAN,    BLACK   ) \
+   f( 3, teal,      TEAL,      0,   170, 170, CYAN,    0       ) \
+   f( 4, darkred,   DARKRED,   170, 0,   0,   MAGENTA, BLACK   ) \
+   f( 5, violet,    VIOLET,    170, 0,   170, MAGENTA, BLACK   ) \
+   f( 6, brown,     BROWN,     170, 85,  0,   CYAN,    MAGENTA ) \
+   f( 7, gray,      GRAY,      170, 170, 170, WHITE,   BLACK   ) \
+   f( 8, darkgray,  DARKGRAY,  85,  85,  85,  WHITE,   BLACK   ) \
+   f( 9, blue,      BLUE,      85,  85,  255, CYAN,    0       ) \
+   f( 10, green,    GREEN,     85,  255, 85,  CYAN,    0       ) \
+   f( 11, cyan,     CYAN,      85,  255, 255, CYAN,    0       ) \
+   f( 12, red,      RED,       255, 85,  85,  MAGENTA, 0       ) \
+   f( 13, magenta,  MAGENTA,   255, 85,  255, MAGENTA, 0       ) \
+   f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    WHITE   ) \
+   f( 15, white,    WHITE,     255, 255, 255, WHITE,   0       )
 
 typedef int8_t RETROFLAT_COLOR;
 
@@ -1153,13 +1153,13 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 /* === Setup Brush Cache === */
 
 /* This will be initialized in setup, so just preserve the number. */
-#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          (HBRUSH)NULL,
 
-#     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          gc_retroflat_win_brushes[idx] = CreateSolidBrush( RGB( r, g, b ) );
 
-#     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    if( (HBRUSH)NULL != gc_retroflat_win_brushes[idx] ) { \
       DeleteObject( gc_retroflat_win_brushes[idx] ); \
       gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
@@ -1169,14 +1169,14 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* === Setup Pen Cache === */
 
-#  define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    (HPEN)NULL,
 
-#     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          gc_retroflat_win_pens[idx] = CreatePen( \
             PS_SOLID, RETROFLAT_LINE_THICKNESS, RGB( r, g, b ) );
 
-#     define RETROFLAT_COLOR_TABLE_WIN_PENRM( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_PENRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          if( (HPEN)NULL != gc_retroflat_win_pens[idx] ) { \
             DeleteObject( gc_retroflat_win_pens[idx] ); \
             gc_retroflat_win_pens[idx] = (HPEN)NULL; \
@@ -1691,6 +1691,8 @@ typedef void (__interrupt __far* retroflat_intfunc)( void );
 
 #  ifdef RETROFLT_C
 static uint8_t far* g_retroflat_scr = (uint8_t far*)0xB8000000L;
+static uint8_t* gc_retroflat_cga_color_table = NULL;
+static uint8_t* gc_retroflat_cga_flags_table = NULL;
 #  endif /* RETROFLT_C */
 
 #else
@@ -2289,12 +2291,12 @@ static volatile uint32_t g_ms = 0;
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
-#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
-#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    #name_u,
 
 MAUG_CONST char* gc_retroflat_color_names[] = {
@@ -3230,7 +3232,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  ifdef RETROFLAT_OPENGL
    debug_printf( 1, "setting up texture palette..." );
-#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          g_retroflat_state->tex_palette[idx][0] = r; \
          g_retroflat_state->tex_palette[idx][1] = g; \
          g_retroflat_state->tex_palette[idx][2] = b;
@@ -3273,7 +3275,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b ) \
+#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b, cgac, cgad ) \
          g_retroflat_state->palette[i] = makecol( r, g, b );
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
@@ -3328,10 +3330,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
@@ -3410,10 +3412,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd ) \
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
@@ -3462,10 +3464,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup color palettes. */
    /* TODO: For WinG, try to make the indexes match system palette? */
 #     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 #     else
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b ) \
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RGB( r, g, b );
 #     endif /* RETROFLAT_OPENGL */
 
@@ -3624,7 +3626,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* == Nintendo DS == */
 
    /* Setup color constants. */
-#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b ) \
+#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
 
@@ -3695,7 +3697,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == GLUT == */
 
-#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd ) \
+#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
          g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
@@ -3764,6 +3766,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 	int86( 0x10, &r, &r ); /* Call video interrupt. */
 
    debug_printf( 3, "gfx" );
+
+   /* TODO: Initialize dither tables. */
 
 #  else
 #     pragma message( "warning: init not implemented" )
@@ -6452,7 +6456,7 @@ cleanup:
 
 #elif !defined( RETROVDP_C ) /* End of RETROFLT_C */
 
-#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b ) \
+#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
