@@ -244,6 +244,7 @@ cleanup:
    }
    debug_printf( 3, "sequencer connected to to: %u:%u",
       g_retrosnd_state.out_client, g_retrosnd_state.out_port );
+   g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
 
 cleanup:
 #  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
@@ -259,6 +260,10 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
+
+   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+      return;
+   }
 
 #  ifdef RETROSND_API_GUS
    /* TODO */
@@ -291,6 +296,10 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
+
+   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+      return;
+   }
 
 #  ifdef RETROSND_API_GUS
    /* TODO */
@@ -328,6 +337,10 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
+   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+      return;
+   }
+
 #  ifdef RETROSND_API_GUS
    /* TODO */
 #  elif defined( RETROSND_API_MPU )
@@ -363,6 +376,10 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
+   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+      return;
+   }
+
 #  ifdef RETROSND_API_GUS
    /* TODO */
 #  elif defined( RETROSND_API_MPU )
@@ -392,6 +409,11 @@ cleanup:
 /* === */
 
 void retrosnd_shutdown() {
+
+   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+      return;
+   }
+
 #  ifdef RETROSND_API_GUS
    /* TODO */
 #  elif defined( RETROSND_API_ALSA )
