@@ -797,6 +797,7 @@ INPUT                  = \
    src/retrofp.h \
    src/retrosft.h \
    src/retrocon.h \
+   src/retrosnd.h \
    src/marge.h \
    src/merror.h \
    src/uprintf.h \
