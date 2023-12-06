@@ -6,8 +6,11 @@
 
 #define RETROSND_VOICE_GUNSHOT   128
 
-#if defined( RETROSND_API_GUS ) || defined( RETROSND_API_MPU )
+#if defined( RETROSND_API_GUS )
 #  include <conio.h>
+#elif defined( RETROSND_API_MPU )
+#  include <conio.h>
+#  define RETROSND_MPU_FLAG_OUTPUT 0x40
 #elif defined( RETROSND_API_ALSA )
 #  include <alsa/asoundlib.h>
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
@@ -28,7 +31,7 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args );
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
 
-void retrosnd_midi_set_control( uint8_t channel, uint16_t key, uint16_t val );
+void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val );
 
 void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
 
@@ -72,6 +75,22 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
    debug_printf( 1, "read: 0x%02x", b );
 
    return b;
+}
+
+#  elif defined( RETROSND_API_MPU )
+
+static uint8_t retrosnd_mpu_not_ready() {
+   uint8_t b = 0;
+   b = inp( g_retrosnd_state.io_base + 0x01 ) & RETROSND_MPU_FLAG_OUTPUT;
+   if( b ) {
+      debug_printf( 2, "waiting for MPU-401..." );
+   }
+   return b;
+}
+
+static void retrosnd_mpu_write_byte( uint8_t b_in ) {
+   while( retrosnd_mpu_not_ready() );
+   outp( g_retrosnd_state.io_base, b_in );
 }
 
 #  elif defined( RETROSND_API_ALSA )
@@ -128,7 +147,14 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
 #  elif defined( RETROSND_API_MPU )
 
-   /* TODO */
+   g_retrosnd_state.io_base = 0x330;
+
+   while( retrosnd_mpu_not_ready() );
+
+   debug_printf( 3, "placing MPU-401 in UART mode..." );
+   outp( g_retrosnd_state.io_base + 0x01, 0xff );
+
+   debug_printf( 3, "MPU-401 ready!" );
 
 #  elif defined( RETROSND_API_ALSA )
    
@@ -181,7 +207,18 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
-#  ifdef RETROSND_API_ALSA
+#  ifdef RETROSND_API_GUS
+   /* TODO */
+#  elif defined( RETROSND_API_MPU )
+
+   /* Write MIDI message to MPU port, one byte at a time. */
+
+   /* 0xc0 (program change) | lower-nibble for channel. */
+   retrosnd_mpu_write_byte( 0xc0 | (channel & 0x0f) );
+
+   retrosnd_mpu_write_byte( voice );
+
+#  elif defined( RETROSND_API_ALSA )
    debug_printf( 3, "setting channel %u to voice: %u", channel, voice );
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_pgmchange( &ev, channel, voice );
@@ -191,12 +228,25 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 
 /* === */
 
-void retrosnd_midi_set_control( uint8_t channel, uint16_t key, uint16_t val ) {
+void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 #  ifdef RETROSND_API_ALSA
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
-#  ifdef RETROSND_API_ALSA
+#  ifdef RETROSND_API_GUS
+   /* TODO */
+#  elif defined( RETROSND_API_MPU )
+
+   /* Write MIDI message to MPU port, one byte at a time. */
+
+   /* 0xb0 (controller) | lower-nibble for channel. */
+   retrosnd_mpu_write_byte( 0xb0 | (channel & 0x0f) );
+
+   retrosnd_mpu_write_byte( key );
+
+   retrosnd_mpu_write_byte( val );
+
+#  elif defined( RETROSND_API_ALSA )
    debug_printf( 3, "setting channel %u controller %u to: %u", 
       channel, key, val );
    retrosnd_alsa_ev( &ev );
@@ -212,7 +262,20 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
-#  ifdef RETROSND_API_ALSA
+#  ifdef RETROSND_API_GUS
+   /* TODO */
+#  elif defined( RETROSND_API_MPU )
+
+   /* Write MIDI message to MPU port, one byte at a time. */
+
+   /* 0x90 (note on) | lower-nibble for channel. */
+   retrosnd_mpu_write_byte( 0x90 | (channel & 0x0f) );
+
+   retrosnd_mpu_write_byte( pitch );
+
+   retrosnd_mpu_write_byte( vel );
+
+#  elif defined( RETROSND_API_ALSA )
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
@@ -227,7 +290,20 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
-#  ifdef RETROSND_API_ALSA
+#  ifdef RETROSND_API_GUS
+   /* TODO */
+#  elif defined( RETROSND_API_MPU )
+
+   /* Write MIDI message to MPU port, one byte at a time. */
+
+   /* 0x80 (note off) | lower-nibble for channel. */
+   retrosnd_mpu_write_byte( 0x80 | (channel & 0x0f) );
+
+   retrosnd_mpu_write_byte( pitch );
+
+   retrosnd_mpu_write_byte( vel );
+
+#  elif defined( RETROSND_API_ALSA )
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
@@ -238,7 +314,11 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 /* === */
 
 void retrosnd_shutdown() {
-#  ifdef RETROSND_API_ALSA
+#  ifdef RETROSND_API_GUS
+   /* TODO */
+#  elif defined( RETROSND_API_MPU )
+
+#  elif defined( RETROSND_API_ALSA )
    snd_seq_close( g_retrosnd_state.seq_handle );
 #  endif /* RETROSND_API_ALSA */
 }
