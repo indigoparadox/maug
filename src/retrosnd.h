@@ -2,7 +2,9 @@
 #ifndef RETROSND_H
 #define RETROSND_H
 
-#  define RETROSND_FLAG_INIT 0x01
+#define RETROSND_FLAG_INIT 0x01
+
+#define RETROSND_VOICE_GUNSHOT   128
 
 #if defined( RETROSND_API_GUS ) || defined( RETROSND_API_MPU )
 #  include <conio.h>
@@ -21,6 +23,18 @@ struct RETROSND_STATE {
    int out_port;
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 };
+
+int16_t retrosnd_init( struct RETROFLAT_ARGS* args );
+
+void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
+
+void retrosnd_midi_set_control( uint8_t channel, uint16_t key, uint16_t val );
+
+void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
+
+void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
+
+void retrosnd_shutdown();
 
 #ifdef RETROSND_C
 
@@ -60,7 +74,25 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
    return b;
 }
 
-#  endif /* RETROSND_API_GUS */
+#  elif defined( RETROSND_API_ALSA )
+
+static void retrosnd_alsa_ev( snd_seq_event_t* ev ) {
+   snd_seq_ev_clear( ev );
+   snd_seq_ev_set_direct( ev );
+   snd_seq_ev_set_source( ev, g_retrosnd_state.seq_port );
+   /* snd_seq_ev_set_dest(
+      ev, g_retrosnd_state.out_client, g_retrosnd_state.out_port ); */
+   snd_seq_ev_set_subs( ev );
+}
+
+static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
+   snd_seq_event_output( g_retrosnd_state.seq_handle, ev );
+   snd_seq_drain_output( g_retrosnd_state.seq_handle );
+}
+
+#  endif /* RETROSND_API_GUS || RETROSND_API_ALSA */
+
+/* === */
 
 int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
@@ -105,7 +137,7 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
    g_retrosnd_state.out_port = 0;
 
    retval = snd_seq_open(
-      &(g_retrosnd_state.seq_handle), "default", SND_SEQ_OPEN_DUPLEX, 0 );
+      &(g_retrosnd_state.seq_handle), "default", SND_SEQ_OPEN_OUTPUT, 0 );
    if( 0 > retval ) {
       error_printf( "could not open sequencer!" );
       retval = MERROR_SND;
@@ -125,8 +157,15 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
    }
    debug_printf( 3, "sequencer opened port: %d", g_retrosnd_state.seq_port );
 
-   snd_seq_connect_to(
+   retval = snd_seq_connect_to(
       g_retrosnd_state.seq_handle, g_retrosnd_state.seq_port,
+      g_retrosnd_state.out_client, g_retrosnd_state.out_port );
+   if( 0 > retval ) {
+      error_printf( "could not connect sequencer to %u:%u!",
+         g_retrosnd_state.out_client, g_retrosnd_state.out_port );
+      goto cleanup;
+   }
+   debug_printf( 3, "sequencer connected to to: %u:%u",
       g_retrosnd_state.out_client, g_retrosnd_state.out_port );
 
 cleanup:
@@ -135,23 +174,73 @@ cleanup:
    return retval;
 }
 
-void retrosnd_midi_note_on() {
+/* === */
+
+void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
+#  ifdef RETROSND_API_ALSA
    snd_seq_event_t ev;
+#  endif /* RETROSND_API_ALSA */
 
-   snd_seq_ev_clear( &ev );
-   snd_seq_ev_set_direct( &ev );
-   snd_seq_ev_set_source( &ev, g_retrosnd_state.seq_port );
-   /* snd_seq_ev_set_dest( &ev, 128, 1 ); */
-   snd_seq_ev_set_dest( &ev, 127, 0 );
-   /* snd_seq_ev_set_subs( &ev ); */
-   snd_seq_ev_set_noteon( &ev, 0, 60, 127 );
-   snd_seq_event_output( g_retrosnd_state.seq_handle, &ev );
-
-   snd_seq_drain_output( g_retrosnd_state.seq_handle );
+#  ifdef RETROSND_API_ALSA
+   debug_printf( 3, "setting channel %u to voice: %u", channel, voice );
+   retrosnd_alsa_ev( &ev );
+   snd_seq_ev_set_pgmchange( &ev, channel, voice );
+   retrosnd_alsa_ev_send( &ev );
+#  endif /* RETROSND_API_ALSA */
 }
 
+/* === */
+
+void retrosnd_midi_set_control( uint8_t channel, uint16_t key, uint16_t val ) {
+#  ifdef RETROSND_API_ALSA
+   snd_seq_event_t ev;
+#  endif /* RETROSND_API_ALSA */
+
+#  ifdef RETROSND_API_ALSA
+   debug_printf( 3, "setting channel %u controller %u to: %u", 
+      channel, key, val );
+   retrosnd_alsa_ev( &ev );
+   snd_seq_ev_set_controller( &ev, channel, key, val );
+   retrosnd_alsa_ev_send( &ev );
+#  endif /* RETROSND_API_ALSA */
+}
+
+/* === */
+
+void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#  ifdef RETROSND_API_ALSA
+   snd_seq_event_t ev;
+#  endif /* RETROSND_API_ALSA */
+
+#  ifdef RETROSND_API_ALSA
+   retrosnd_alsa_ev( &ev );
+   snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
+   retrosnd_alsa_ev_send( &ev );
+#  endif /* RETROSND_API_ALSA */
+
+}
+
+/* === */
+
+void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#  ifdef RETROSND_API_ALSA
+   snd_seq_event_t ev;
+#  endif /* RETROSND_API_ALSA */
+
+#  ifdef RETROSND_API_ALSA
+   retrosnd_alsa_ev( &ev );
+   snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
+   retrosnd_alsa_ev_send( &ev );
+#  endif /* RETROSND_API_ALSA */
+
+}
+
+/* === */
+
 void retrosnd_shutdown() {
+#  ifdef RETROSND_API_ALSA
    snd_seq_close( g_retrosnd_state.seq_handle );
+#  endif /* RETROSND_API_ALSA */
 }
 
 #endif /* RETROSND_C */
