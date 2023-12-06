@@ -30,6 +30,8 @@ struct RETROSND_STATE {
    int seq_port;
    int out_client;
    int out_port;
+#elif defined( RETROSND_API_WINMM )
+   HMIDIOUT mo_handle;
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 };
 
@@ -149,6 +151,9 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
 #  elif defined( RETROSND_API_MPU )
    int16_t timeout = 0;
 #  elif defined( RETROSND_API_ALSA )
+#  elif defined( RETROSND_API_WINMM )
+   MIDIOUTCAPS midi_caps;
+   uint32_t num_devs = 0;
 #  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
@@ -158,6 +163,7 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
 #  if defined( RETROSND_API_MPU )
       debug_printf( 3, "assuming 0x330..." );
       args->snd_io_base = 0x330;
+#  elif defined( RETROSND_API_WINMM )
 #  else
       return retval;
 #  endif /* RETROSND_API_MPU */
@@ -247,6 +253,29 @@ cleanup:
    g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
 
 cleanup:
+#  elif defined( RETROSND_API_WINMM )
+
+   num_devs = midiOutGetNumDevs();
+   if( 0 == num_devs || num_devs < args->snd_io_base ) {
+      error_printf( "no MIDI devices found!" );
+      retval = MERROR_SND;
+      goto cleanup;
+   }
+   midiOutGetDevCaps( args->snd_io_base, &midi_caps, sizeof( MIDIOUTCAPS ) );
+
+   if( MMSYSERR_NOERROR != midiOutOpen(
+      &(g_retrosnd_state.mo_handle), args->snd_io_base, 0, 0, CALLBACK_WINDOW
+   ) ) {
+      error_printf( "could not open MIDI device: %s", midi_caps.szPname );
+      retval = MERROR_SND;
+      goto cleanup;
+   }
+   debug_printf( 3, "opened MIDI device: %s", midi_caps.szPname );
+   g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
+
+cleanup:
+#  else
+#     pragma message( "warning: init not implemented" )
 #  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
 
    return retval;
@@ -285,6 +314,11 @@ cleanup:
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_pgmchange( &ev, channel, voice );
    retrosnd_alsa_ev_send( &ev );
+#  elif defined( RETROSND_API_WINMM )
+   midiOutShortMsg( g_retrosnd_state.mo_handle,
+      (((voice & 0xff) << 8) | 0xc0 | (channel & 0x0f)) );
+#  else
+#     pragma message( "warning: set_voice not implemented" )
 #  endif /* RETROSND_API_ALSA */
 }
 
@@ -325,6 +359,12 @@ cleanup:
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_controller( &ev, channel, key, val );
    retrosnd_alsa_ev_send( &ev );
+#  elif defined( RETROSND_API_WINMM )
+   midiOutShortMsg( g_retrosnd_state.mo_handle,
+      (((val & 0xff) << 16) | ((key & 0xff) << 8) | 0xb0 | (channel & 0x0f))
+   );
+#  else
+#     pragma message( "warning: set_control not implemented" )
 #  endif /* RETROSND_API_ALSA */
 }
 
@@ -363,6 +403,12 @@ cleanup:
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
+#  elif defined( RETROSND_API_WINMM )
+   midiOutShortMsg( g_retrosnd_state.mo_handle,
+      (((vel & 0xff) << 16) | ((pitch & 0xff) << 8) | 0x90 | (channel & 0x0f))
+   );
+#  else
+#     pragma message( "warning: note_on not implemented" )
 #  endif /* RETROSND_API_ALSA */
 
 }
@@ -402,6 +448,12 @@ cleanup:
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
+#  elif defined( RETROSND_API_WINMM )
+   midiOutShortMsg( g_retrosnd_state.mo_handle,
+      (((vel & 0xff) << 16) | ((pitch & 0xff) << 8) | 0x80 | (channel & 0x0f))
+   );
+#  else
+#     pragma message( "warning: note_off not implemented" )
 #  endif /* RETROSND_API_ALSA */
 
 }
@@ -418,6 +470,8 @@ void retrosnd_shutdown() {
    /* TODO */
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_close( g_retrosnd_state.seq_handle );
+#  else
+#     pragma message( "warning: shutdown not implemented" )
 #  endif /* RETROSND_API_ALSA */
 }
 

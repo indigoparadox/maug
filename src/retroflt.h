@@ -1891,8 +1891,12 @@ struct RETROFLAT_ARGS {
    uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
+#  if defined( RETROSND_API_WINMM )
+   UINT snd_io_base;
+#  else
    /*! \brief Base address for sound device. */
    uint16_t snd_io_base;
+#  endif /* RETROSND_API_WINMM */
 };
 
 /*! \brief Global singleton containing state for the current platform. */
