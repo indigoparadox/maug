@@ -4,6 +4,7 @@
 # Setup default CFLAGS/LDFLAGS for all Windows targets.
 ifeq ("$(CFLAGS_WATCOM_WIN)","")
 	CFLAGS_WATCOM_WIN := -DRETROFLAT_OS_WIN -DRETROSND_API_WINMM
+	CFLAGS_WATCOM_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_WATCOM_WIN)","")
 	LDFLAGS_WATCOM_WIN := libr mmsystem
@@ -11,6 +12,7 @@ endif
 
 ifeq ("$(CFLAGS_WATCOM386_WIN)","")
 	CFLAGS_WATCOM386_WIN := -DRETROFLAT_OS_WIN  -DRETROSND_API_WINMM
+	CFLAGS_WATCOM386_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_WATCOM386_WIN)","")
 	LDFLAGS_WATCOM386_WIN := libr winmm
@@ -18,6 +20,7 @@ endif
 
 ifeq ("$(CFLAGS_GCC_WIN)","")
 	CFLAGS_GCC_WIN := -march=i486 -DRETROFLAT_OS_WIN -DRETROSND_API_WINMM
+	CFLAGS_GCC_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_GCC_WIN)","")
 	LDFLAGS_GCC_WIN := -mwindows -lgdi32 -lwinmm
@@ -25,6 +28,7 @@ endif
 
 ifeq ("$(CFLAGS_GCC64_WIN)","")
 	CFLAGS_GCC64_WIN := -DRETROFLAT_OS_WIN  -DRETROSND_API_WINMM
+	CFLAGS_GCC64_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_GCC64_WIN)","")
 	LDFLAGS_GCC64_WIN := -mwindows -lgdi32
