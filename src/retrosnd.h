@@ -470,6 +470,9 @@ void retrosnd_shutdown() {
    /* TODO */
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_close( g_retrosnd_state.seq_handle );
+#  elif defined( RETROSND_API_MPU )
+#  elif defined( RETROSND_API_WINMM )
+   midiOutClose( g_retrosnd_state.mo_handle );
 #  else
 #     pragma message( "warning: shutdown not implemented" )
 #  endif /* RETROSND_API_ALSA */
