@@ -20,6 +20,8 @@
  *
  * You may include this header in other .c files, as well, but RETROFLT_C
  * should \b ONLY be declared \b ONCE in the entire program.
+ *
+ * maug.h should also be included before this header.
  */
 
 /**

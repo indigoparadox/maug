@@ -2,8 +2,45 @@
 #ifndef RETROSND_H
 #define RETROSND_H
 
+/**
+ * \addtogroup maug_retrosnd RetroSound API
+ * \brief Abstraction layer header for sound on retro systems.
+ * \{
+ *
+ * \file retrosnd.h
+ * \brief Abstraction layer header for sound on retro systems.
+ *
+ * RetroSound is a compatibility layer for making sound
+ * on various platforms, including Windows, MS-DOS or Linux.
+ *
+ * To use, define RETROSND_C before including this header from your main.c.
+ *
+ * You may include this header in other .c files, as well, but RETROSND_C
+ * should \b ONLY be declared \b ONCE in the entire program.
+ *
+ * It is *highly* advised to use this in conjunction with retroflt.h.
+ *
+ * maug.h should also be included before this header.
+ */
+
+/**
+ * \addtogroup maug_retrosnd_flags RetroSound State Flags
+ * \brief Flags indicating global state for the RETROSND_STATE::flags field.
+ * \{
+ */
+
+/**
+ * \brief Flag in RETROSND_STATE::flags indicating initialization was
+ *        successful.
+ */
 #define RETROSND_FLAG_INIT 0x01
 
+/*! \} */ /* maug_retrosnd_flags */
+
+/**
+ * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
+ *        sound effect.
+ */
 #define RETROSND_VOICE_GUNSHOT   128
 
 #if defined( RETROSND_API_GUS )
@@ -18,7 +55,13 @@
    (((uint16_t)(seq) << 8) | ((port) & 0xff))
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 
+/**
+ * \brief Internal retrosound state struct. Most fields are platform-specific.
+ */
 struct RETROSND_STATE {
+   /**
+    * \brief Bitfield indicating global state with \ref maug_retrosnd_flags.
+    */
    uint8_t flags;
 #if defined( RETROSND_API_GUS )
    uint16_t io_base;
@@ -35,7 +78,15 @@ struct RETROSND_STATE {
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 };
 
-int16_t retrosnd_init( struct RETROFLAT_ARGS* args );
+/**
+ * \brief Initialize retrosnd engine.
+ * \param args A pointer to the RETROSND_ARGS struct initialized by
+ *        the calling program.
+ *
+ * The RETROSND_ARGS::snd_io_base field must be initialized with the address
+ * or other platform-specific indicator of the MIDI device to use.
+ */
+MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args );
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
 
@@ -144,8 +195,8 @@ static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
 
 /* === */
 
-int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
-   int16_t retval = MERROR_OK;
+MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
+   MERROR_RETVAL retval = MERROR_OK;
 #  ifdef RETROSND_API_GUS
    uint8_t b = 0;
 #  elif defined( RETROSND_API_MPU )
@@ -479,6 +530,8 @@ void retrosnd_shutdown() {
 }
 
 #endif /* RETROSND_C */
+
+/*! \} */ /* maug_retrosnd */
 
 #endif /* !RETROSND_H */
 
