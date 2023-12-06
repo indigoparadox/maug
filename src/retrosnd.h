@@ -2,21 +2,31 @@
 #ifndef RETROSND_H
 #define RETROSND_H
 
-#ifdef RETROSND_API_GUS
+#  define RETROSND_FLAG_INIT 0x01
+
+#if defined( RETROSND_API_GUS ) || defined( RETROSND_API_MPU )
 #  include <conio.h>
-#endif /* RETROSND_API_GUS */
+#elif defined( RETROSND_API_ALSA )
+#  include <alsa/asoundlib.h>
+#endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 
 struct RETROSND_STATE {
-#ifdef RETROSND_API_GUS
+   uint8_t flags;
+#if defined( RETROSND_API_GUS ) || defined( RETROSND_API_MPU )
    uint16_t io_base;
-#endif /* RETROSND_API_GUS */
+#elif defined( RETROSND_API_ALSA )
+   snd_seq_t* seq_handle;
+   int seq_port;
+   int out_client;
+   int out_port;
+#endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 };
 
 #ifdef RETROSND_C
-struct RETROSND_STATE g_retrosnd_state;
-#endif /* RETROSND_C */
 
-#if defined( RETROSND_API_GUS ) && defined( RETROSND_C )
+struct RETROSND_STATE g_retrosnd_state;
+
+#  if defined( RETROSND_API_GUS )
 
 static void retrosnd_gus_poke( uint32_t loc, uint8_t b ) {
    uint16_t add_lo = loc & 0xffff;
@@ -50,13 +60,23 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
    return b;
 }
 
-#endif /* RETROSND_API_GUS && RETROSND_C */
+#  endif /* RETROSND_API_GUS */
 
 int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
+
+   int16_t retval = MERROR_OK;
+
+#  ifdef RETROSND_API_GUS
    uint8_t b = 0;
+#  elif defined( RETROSND_API_ALSA )
+#  endif /* RETROSND_API_GUS || RETROSND_API_ALSA */
 
-#ifdef RETROSND_API_GUS
+   /* Clear all flags to start. */
+   g_retrosnd_state.flags = 0;
 
+#  ifdef RETROSND_API_GUS
+
+   /* TODO: Make I/O base configurable. */
    g_retrosnd_state.io_base = 0x220;
    
    outp( g_retrosnd_state.io_base + 0x103, 0x4c );
@@ -71,16 +91,70 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
    b = retrosnd_gus_peek( 0 );
    if( 0xf == b ) {
       debug_printf( 3, "found gravis ultrasound!" );
+      g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
    }
 
-#endif /* RETROSND_API_GUS */
+#  elif defined( RETROSND_API_MPU )
 
-   return RETROFLAT_OK;
+   /* TODO */
+
+#  elif defined( RETROSND_API_ALSA )
+   
+   /* TODO: Make destination seq/port configurable. */
+   g_retrosnd_state.out_client = 128;
+   g_retrosnd_state.out_port = 0;
+
+   retval = snd_seq_open(
+      &(g_retrosnd_state.seq_handle), "default", SND_SEQ_OPEN_DUPLEX, 0 );
+   if( 0 > retval ) {
+      error_printf( "could not open sequencer!" );
+      retval = MERROR_SND;
+      goto cleanup;
+   }
+   debug_printf( 3, "sequencer initialized" );
+
+   g_retrosnd_state.seq_port = snd_seq_create_simple_port(
+      g_retrosnd_state.seq_handle, "retrosnd",
+      SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE,
+      SND_SEQ_PORT_TYPE_APPLICATION );
+
+   if( 0 > g_retrosnd_state.seq_port ) {
+      error_printf( "could not open MIDI port!" );
+      retval = MERROR_SND;
+      goto cleanup;
+   }
+   debug_printf( 3, "sequencer opened port: %d", g_retrosnd_state.seq_port );
+
+   snd_seq_connect_to(
+      g_retrosnd_state.seq_handle, g_retrosnd_state.seq_port,
+      g_retrosnd_state.out_client, g_retrosnd_state.out_port );
+
+cleanup:
+#  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
+
+   return retval;
+}
+
+void retrosnd_midi_note_on() {
+   snd_seq_event_t ev;
+
+   snd_seq_ev_clear( &ev );
+   snd_seq_ev_set_direct( &ev );
+   snd_seq_ev_set_source( &ev, g_retrosnd_state.seq_port );
+   /* snd_seq_ev_set_dest( &ev, 128, 1 ); */
+   snd_seq_ev_set_dest( &ev, 127, 0 );
+   /* snd_seq_ev_set_subs( &ev ); */
+   snd_seq_ev_set_noteon( &ev, 0, 60, 127 );
+   snd_seq_event_output( g_retrosnd_state.seq_handle, &ev );
+
+   snd_seq_drain_output( g_retrosnd_state.seq_handle );
 }
 
 void retrosnd_shutdown() {
-
+   snd_seq_close( g_retrosnd_state.seq_handle );
 }
+
+#endif /* RETROSND_C */
 
 #endif /* !RETROSND_H */
 
