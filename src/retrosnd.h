@@ -11,14 +11,20 @@
 #elif defined( RETROSND_API_MPU )
 #  include <conio.h>
 #  define RETROSND_MPU_FLAG_OUTPUT 0x40
+#  define RETROSND_MPU_TIMEOUT 30
 #elif defined( RETROSND_API_ALSA )
 #  include <alsa/asoundlib.h>
+#  define retrosnd_set_alsa_seq( seq, port ) \
+   (((uint16_t)(seq) << 8) | ((port) & 0xff))
 #endif /* RETROSND_API_GUS || RETROSND_API_MPU */
 
 struct RETROSND_STATE {
    uint8_t flags;
-#if defined( RETROSND_API_GUS ) || defined( RETROSND_API_MPU )
+#if defined( RETROSND_API_GUS )
    uint16_t io_base;
+#elif defined( RETROSND_API_MPU )
+   uint16_t io_base;
+   uint8_t io_timeout;
 #elif defined( RETROSND_API_ALSA )
    snd_seq_t* seq_handle;
    int seq_port;
@@ -79,18 +85,41 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
 
 #  elif defined( RETROSND_API_MPU )
 
-static uint8_t retrosnd_mpu_not_ready() {
+static MERROR_RETVAL retrosnd_mpu_not_ready( int16_t* timeout ) {
    uint8_t b = 0;
    b = inp( g_retrosnd_state.io_base + 0x01 ) & RETROSND_MPU_FLAG_OUTPUT;
-   if( b ) {
-      debug_printf( 2, "waiting for MPU-401..." );
+   if( (NULL == timeout || 0 < *timeout) && 0 != b ) {
+      if( NULL == timeout ) {
+         debug_printf( 2, "waiting for MPU-401..." );
+      } else {
+         debug_printf( 2, "waiting for MPU-401 (%u)...", *timeout );
+         (*timeout)--;
+      }
+      return MERROR_WAIT;
+   } else if( NULL != timeout && 0 == *timeout ) {
+      error_printf( "timed out waiting for MPU-401!" );
+      return MERROR_TIMEOUT;
+   } else {
+      debug_printf( 2, "MPU ready within time limit" );
+      return MERROR_OK;
    }
-   return b;
 }
 
-static void retrosnd_mpu_write_byte( uint8_t b_in ) {
-   while( retrosnd_mpu_not_ready() );
-   outp( g_retrosnd_state.io_base, b_in );
+static MERROR_RETVAL retrosnd_mpu_write_byte( uint8_t b_in ) {
+   int16_t timeout = RETROSND_MPU_TIMEOUT;
+   MERROR_RETVAL retval = MERROR_OK;
+   do {
+      retval = retrosnd_mpu_not_ready( &timeout );
+      if( MERROR_TIMEOUT == retval ) {
+         goto cleanup;
+      }
+   } while( MERROR_WAIT == retval );
+   if( MERROR_TIMEOUT != retval ) {
+      debug_printf( 1, "writing 0x%02x to MPU-401...", b_in );
+      outp( g_retrosnd_state.io_base, b_in );
+   }
+cleanup:
+   return retval;
 }
 
 #  elif defined( RETROSND_API_ALSA )
@@ -114,13 +143,25 @@ static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
 /* === */
 
 int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
-
    int16_t retval = MERROR_OK;
-
 #  ifdef RETROSND_API_GUS
    uint8_t b = 0;
+#  elif defined( RETROSND_API_MPU )
+   int16_t timeout = 0;
 #  elif defined( RETROSND_API_ALSA )
-#  endif /* RETROSND_API_GUS || RETROSND_API_ALSA */
+#  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
+
+   assert( 2 <= sizeof( MERROR_RETVAL ) );
+
+   if( 0 == args->snd_io_base ) {
+      error_printf( "I/O base not specified!" );
+#  if defined( RETROSND_API_MPU )
+      debug_printf( 3, "assuming 0x330..." );
+      args->snd_io_base = 0x330;
+#  else
+      return retval;
+#  endif /* RETROSND_API_MPU */
+   }
 
    /* Clear all flags to start. */
    g_retrosnd_state.flags = 0;
@@ -149,18 +190,28 @@ int16_t retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    g_retrosnd_state.io_base = 0x330;
 
-   while( retrosnd_mpu_not_ready() );
+   timeout = RETROSND_MPU_TIMEOUT;
+   do {
+      retval = retrosnd_mpu_not_ready( &timeout );
+      if( MERROR_TIMEOUT == retval ) {
+         error_printf( "cancelling initialization!" );
+         retval = MERROR_SND;
+         goto cleanup;
+      }
+   } while( MERROR_WAIT == retval );
 
    debug_printf( 3, "placing MPU-401 in UART mode..." );
    outp( g_retrosnd_state.io_base + 0x01, 0xff );
 
    debug_printf( 3, "MPU-401 ready!" );
+   g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
 
+cleanup:
 #  elif defined( RETROSND_API_ALSA )
    
    /* TODO: Make destination seq/port configurable. */
-   g_retrosnd_state.out_client = 128;
-   g_retrosnd_state.out_port = 0;
+   g_retrosnd_state.out_client = (args->snd_io_base >> 8) & 0xff;
+   g_retrosnd_state.out_port = args->snd_io_base & 0xff;
 
    retval = snd_seq_open(
       &(g_retrosnd_state.seq_handle), "default", SND_SEQ_OPEN_OUTPUT, 0 );
@@ -203,7 +254,9 @@ cleanup:
 /* === */
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
-#  ifdef RETROSND_API_ALSA
+#  if defined( RETROSND_API_MPU )
+   MERROR_RETVAL retval = 0;
+#  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
@@ -214,10 +267,14 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
    /* Write MIDI message to MPU port, one byte at a time. */
 
    /* 0xc0 (program change) | lower-nibble for channel. */
-   retrosnd_mpu_write_byte( 0xc0 | (channel & 0x0f) );
+   retval = retrosnd_mpu_write_byte( 0xc0 | (channel & 0x0f) );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( voice );
+   retval = retrosnd_mpu_write_byte( voice );
+   maug_cleanup_if_not_ok();
 
+cleanup:
+   return;
 #  elif defined( RETROSND_API_ALSA )
    debug_printf( 3, "setting channel %u to voice: %u", channel, voice );
    retrosnd_alsa_ev( &ev );
@@ -229,7 +286,9 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 /* === */
 
 void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
-#  ifdef RETROSND_API_ALSA
+#  if defined( RETROSND_API_MPU )
+   MERROR_RETVAL retval = 0;
+#  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
@@ -240,12 +299,17 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
    /* Write MIDI message to MPU port, one byte at a time. */
 
    /* 0xb0 (controller) | lower-nibble for channel. */
-   retrosnd_mpu_write_byte( 0xb0 | (channel & 0x0f) );
+   retval = retrosnd_mpu_write_byte( 0xb0 | (channel & 0x0f) );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( key );
+   retval = retrosnd_mpu_write_byte( key );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( val );
+   retval = retrosnd_mpu_write_byte( val );
+   maug_cleanup_if_not_ok();
 
+cleanup:
+   return;
 #  elif defined( RETROSND_API_ALSA )
    debug_printf( 3, "setting channel %u controller %u to: %u", 
       channel, key, val );
@@ -258,7 +322,9 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 /* === */
 
 void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
-#  ifdef RETROSND_API_ALSA
+#  if defined( RETROSND_API_MPU )
+   MERROR_RETVAL retval = 0;
+#  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
@@ -269,12 +335,17 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    /* Write MIDI message to MPU port, one byte at a time. */
 
    /* 0x90 (note on) | lower-nibble for channel. */
-   retrosnd_mpu_write_byte( 0x90 | (channel & 0x0f) );
+   retval = retrosnd_mpu_write_byte( 0x90 | (channel & 0x0f) );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( pitch );
+   retval = retrosnd_mpu_write_byte( pitch );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( vel );
+   retval = retrosnd_mpu_write_byte( vel );
+   maug_cleanup_if_not_ok();
 
+cleanup:
+   return;
 #  elif defined( RETROSND_API_ALSA )
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
@@ -286,7 +357,9 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 /* === */
 
 void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
-#  ifdef RETROSND_API_ALSA
+#  if defined( RETROSND_API_MPU )
+   MERROR_RETVAL retval = 0;
+#  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_ALSA */
 
@@ -297,12 +370,17 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    /* Write MIDI message to MPU port, one byte at a time. */
 
    /* 0x80 (note off) | lower-nibble for channel. */
-   retrosnd_mpu_write_byte( 0x80 | (channel & 0x0f) );
+   retval = retrosnd_mpu_write_byte( 0x80 | (channel & 0x0f) );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( pitch );
+   retval = retrosnd_mpu_write_byte( pitch );
+   maug_cleanup_if_not_ok();
 
-   retrosnd_mpu_write_byte( vel );
+   retval = retrosnd_mpu_write_byte( vel );
+   maug_cleanup_if_not_ok();
 
+cleanup:
+   return;
 #  elif defined( RETROSND_API_ALSA )
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
@@ -316,8 +394,6 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 void retrosnd_shutdown() {
 #  ifdef RETROSND_API_GUS
    /* TODO */
-#  elif defined( RETROSND_API_MPU )
-
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_close( g_retrosnd_state.seq_handle );
 #  endif /* RETROSND_API_ALSA */
