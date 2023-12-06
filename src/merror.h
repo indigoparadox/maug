@@ -34,6 +34,8 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_GUI      0x20
 
+#define MERROR_SND      0x40
+
 /*! \} */ /* maug_error_retvals */
 
 #define maug_cleanup_if_null_msg( type, ptr, err, msg ) \
