@@ -18,23 +18,27 @@
  */
 typedef int MERROR_RETVAL;
 
-#define MERROR_OK       0x00
+#define MERROR_OK       0x0000
 
-#define MERROR_MARGE    0x01
+#define MERROR_MARGE    0x0001
 
-#define MERROR_ALLOC    0x02
+#define MERROR_ALLOC    0x0002
 
-#define MERROR_OVERFLOW 0x04
+#define MERROR_OVERFLOW 0x0004
 
-#define MERROR_FILE     0x08
+#define MERROR_FILE     0x0008
 
-#define MERROR_USR      0x0f
+#define MERROR_USR      0x000f
 
-#define MERROR_PARSE    0x10
+#define MERROR_PARSE    0x0010
 
-#define MERROR_GUI      0x20
+#define MERROR_GUI      0x0020
 
-#define MERROR_SND      0x40
+#define MERROR_SND      0x0040
+
+#define MERROR_WAIT     0x0080
+
+#define MERROR_TIMEOUT  0x00f0
 
 /*! \} */ /* maug_error_retvals */
 
