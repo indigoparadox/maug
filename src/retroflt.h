@@ -670,7 +670,7 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 #endif /* RETROFLAT_OS_DOS */
 
 /*! \brief Maximum size of the assets path, to allow room for appending. */
-#define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX / 2)
+#define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX >> 1)
 
 #ifndef NDS_OAM_ACTIVE
 /*! \brief Active sprite engine screen on Nintendo DS. */
@@ -2934,6 +2934,7 @@ void retroflat_message(
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: Display error somehow. */
+   error_printf( "%s", msg_out );
 
 #  else
 #     pragma message( "warning: not implemented" )
@@ -5514,18 +5515,19 @@ void retroflat_px(
 
    /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
    /* Divide result by 4 since it's 2 bits per pixel. */
-   screen_byte_offset = (((y / 2) * 320) + x) / 4;
+   screen_byte_offset = (((y >> 1) * 320) + x) >> 2;
    /* Shift the bits over by the remainder. */
-   screen_bit_offset = 6 - (((((y / 2) * 320) + x) % 4) * 2);
+   /* TODO: Factor out this modulo to shift/and. */
+   screen_bit_offset = 6 - (((((y >> 1) * 320) + x) % 4) << 1);
 
    /* Dither colors on odd/even squares. */
-   if( x % 2 == y % 2 ) {
+   if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
       color = g_retroflat_state->cga_color_table[color_idx];
    } else {
       color = g_retroflat_state->cga_dither_table[color_idx];
    }
 
-   if( 1 == y % 2 ) {
+   if( y & 0x01 ) {
       /* 0x2000 = difference between even/odd CGA planes. */
       g_retroflat_scr[0x2000 + screen_byte_offset] &=
          /* 0x03 = 2-bit pixel mask. */
@@ -5791,9 +5793,12 @@ void retroflat_ellipse(
    assert( NULL != target->b );
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      ellipsefill( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
+      /* >> 1 performs better than / 2 on lousy old DOS compilers. */
+      ellipsefill(
+         target->b, x + (w >> 1), y + (h >> 1), w >> 1, h >> 1, color );
    } else {
-      ellipse( target->b, x + (w / 2), y + (h / 2), w / 2, h / 2, color );
+      /* >> 1 performs better than / 2 on lousy old DOS compilers. */
+      ellipse( target->b, x + (w >> 1), y + (h >> 1), w >> 1, h >> 1, color );
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
