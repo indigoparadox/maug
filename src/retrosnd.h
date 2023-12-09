@@ -336,6 +336,7 @@ cleanup:
    if( 0 > retval ) {
       error_printf( "could not connect sequencer to %u:%u!",
          g_retrosnd_state.out_client, g_retrosnd_state.out_port );
+      retval = MERROR_SND;
       goto cleanup;
    }
    debug_printf( 3, "sequencer connected to to: %u:%u",
