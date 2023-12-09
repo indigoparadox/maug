@@ -37,11 +37,23 @@
 
 /*! \} */ /* maug_retrosnd_flags */
 
+#define RETROSND_VOICE_BREATH       122
+
+#define RETROSND_VOICE_SEASHORE     123
+
+#define RETROSND_VOICE_BIRD_TWEET   124
+
+#define RETROSND_VOICE_PHONE_RING   125
+
+#define RETROSND_VOICE_HELICOPTER   126
+
+#define RETROSND_VOICE_APPLAUSE     127
+
 /**
  * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
  *        sound effect.
  */
-#define RETROSND_VOICE_GUNSHOT   128
+#define RETROSND_VOICE_GUNSHOT      128
 
 #if defined( RETROSND_API_GUS )
 #  include <conio.h>
