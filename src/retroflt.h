@@ -930,6 +930,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
+#  if !defined( RETROFLAT_SOFT_LINES ) && !defined( RETROFLAT_OPENGL )
+/* TODO: Do we need soft lines for this? */
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
+
 typedef FILE* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
@@ -5875,7 +5880,7 @@ void retroflat_line(
 
    /* == SDL2 == */
 
-   assert( retroflat_bitmap_locked( target );
+   assert( retroflat_bitmap_locked( target ) );
 
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
