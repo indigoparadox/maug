@@ -2167,7 +2167,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
  */
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int w, int h );
+   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -2191,7 +2191,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int x, int y, uint8_t flags );
+   int16_t x, int16_t y, uint8_t flags );
 
 /**
  * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
@@ -2205,7 +2205,7 @@ void retroflat_px(
  */
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int x, int y, int w, int h, uint8_t flags );
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
 
 /**
  * \brief Draw an ellipse onto the target ::RETROFLAT_BITMAP.
@@ -2219,7 +2219,7 @@ void retroflat_rect(
  */
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int x, int y, int w, int h, uint8_t flags );
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
 
 /**
  * \brief Draw a straight line onto the target ::RETROFLAT_BITMAP.
@@ -2234,7 +2234,7 @@ void retroflat_ellipse(
  */
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int x1, int y1, int x2, int y2, uint8_t flags );
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags );
 
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
 
@@ -2273,7 +2273,7 @@ void retroflat_string_sz(
  */
 void retroflat_string(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, int str_sz, const char* font_str, int16_t x_orig, int16_t y_orig,
    uint8_t flags );
 
 /*! \} */ /* maug_retroflt_bitmap */
@@ -2745,7 +2745,7 @@ void APIENTRY
 #else
 void
 #endif /* RETROFLAT_OS_OS2 */
-retroflat_glut_key( unsigned char key, int x, int y ) {
+retroflat_glut_key( unsigned char key, int16_t x, int16_t y ) {
    g_retroflat_state->retroflat_last_key = key;
 }
 
@@ -4628,7 +4628,7 @@ cleanup:
 #if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
 
 static int retroflat_bitmap_win_transparency(
-   struct RETROFLAT_BITMAP* bmp_out, int w, int h  
+   struct RETROFLAT_BITMAP* bmp_out, int16_t w, int16_t h  
 ) {
    int retval = RETROFLAT_OK;
    unsigned long txp_color = 0;
@@ -5388,7 +5388,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int w, int h
+   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
 #  if defined( RETROFLAT_OPENGL )
    size_t y_iter = 0;
@@ -5523,7 +5523,7 @@ cleanup:
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int x, int y, uint8_t flags
+   int16_t x, int16_t y, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_API_SDL1 )
@@ -5704,7 +5704,7 @@ void retroflat_px(
 
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int x, int y, int w, int h, uint8_t flags
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
 #if defined( RETROFLAT_OPENGL )
    float aspect_ratio = 0,
@@ -5816,7 +5816,7 @@ cleanup:
 
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int x1, int y1, int x2, int y2, uint8_t flags
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_SOFT_SHAPES )
@@ -5905,7 +5905,7 @@ cleanup:
 
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int x, int y, int w, int h, uint8_t flags
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_SOFT_SHAPES )
@@ -6086,7 +6086,7 @@ cleanup:
 
 void retroflat_string(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int x_orig, int y_orig,
+   const char* str, int str_sz, const char* font_str, int16_t x_orig, int16_t y_orig,
    uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
