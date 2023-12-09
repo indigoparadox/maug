@@ -203,8 +203,14 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    int16_t timeout = 0;
 #  elif defined( RETROSND_API_ALSA )
 #  elif defined( RETROSND_API_WINMM )
+   int i = 0;
+   MAUG_MHANDLE devs_list_buf_h = NULL;
+   char* devs_list_buf = NULL;
+   MAUG_MHANDLE devs_list_buf_new = NULL;
+   size_t devs_list_buf_sz = 512;
    MIDIOUTCAPS midi_caps;
    uint32_t num_devs = 0;
+   size_t devs_list_buf_pos = 0;
 #  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
@@ -265,8 +271,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
 cleanup:
 #  elif defined( RETROSND_API_ALSA )
+
+   /* TODO: If the /rsl arg was specified, show a list of MIDI devices. */
    
-   /* TODO: Make destination seq/port configurable. */
+   /* Make destination seq/port configurable. */
    g_retrosnd_state.out_client = (args->snd_io_base >> 8) & 0xff;
    g_retrosnd_state.out_port = args->snd_io_base & 0xff;
 
@@ -307,6 +315,57 @@ cleanup:
 #  elif defined( RETROSND_API_WINMM )
 
    num_devs = midiOutGetNumDevs();
+
+   /* If the /rsl arg was specified, show a list of MIDI devices. */
+   if(
+      RETROSND_ARGS_FLAG_LIST_DEVS ==
+      (RETROSND_ARGS_FLAG_LIST_DEVS & args->snd_flags)
+   ) {
+      devs_list_buf_h = maug_malloc( 1, devs_list_buf_sz );
+
+      maug_mlock( devs_list_buf_h, devs_list_buf );
+      strncat(
+         devs_list_buf, "MIDI devices:\n", strlen( "MIDI devices:\n" ) );
+      maug_munlock( devs_list_buf_h, devs_list_buf );
+
+      for( i = 0 ; num_devs > i ; i++ ) {
+         midiOutGetDevCaps( i, &midi_caps, sizeof( MIDIOUTCAPS ) );
+         if(
+            /* +2 for newline and NULL. */
+            devs_list_buf_pos + 2 + strlen( midi_caps.szPname )
+            > devs_list_buf_sz
+         ) {
+            /* Grow buffer if we need to. */
+            devs_list_buf_sz *= 2;
+            devs_list_buf_new =
+               maug_mrealloc( devs_list_buf_h, 1, devs_list_buf_sz );
+            maug_cleanup_if_null_alloc( MAUG_MHANDLE, devs_list_buf_new );
+            devs_list_buf_h = devs_list_buf_new;
+         }
+         assert( devs_list_buf_sz + 2 + strlen( midi_caps.szPname )
+            > devs_list_buf_sz );
+
+         /* Copy the current device name into the buffer. */
+         maug_mlock( devs_list_buf_h, devs_list_buf );
+         strcpy( &(devs_list_buf[devs_list_buf_pos]), midi_caps.szPname );
+         devs_list_buf_pos += strlen( midi_caps.szPname );
+         devs_list_buf[devs_list_buf_pos++] = '\n';
+         devs_list_buf[devs_list_buf_pos] = '\0';
+         maug_munlock( devs_list_buf_h, devs_list_buf );
+      }
+
+      /* Show the list dialog. */
+      maug_mlock( devs_list_buf_h, devs_list_buf );
+      retroflat_message( RETROFLAT_MSG_FLAG_INFO,
+         "MIDI Devices", "%s", devs_list_buf );
+      maug_munlock( devs_list_buf_h, devs_list_buf );
+
+      /* Cleanup the list and quit. */
+      maug_mfree( devs_list_buf_h );
+      retroflat_quit( 0 );
+   }
+
+   /* Try to open the specified device. */
    if( 0 == num_devs || num_devs < args->snd_io_base ) {
       error_printf( "no MIDI devices found!" );
       retval = MERROR_SND;
