@@ -484,6 +484,15 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 /*! \} */ /* maug_retroflt_vdp */
 
 /**
+ * \relates RETROFLAT_ARGS
+ * \{
+ */
+
+#define RETROSND_ARGS_FLAG_LIST_DEVS 0x01
+
+/*! \} */
+
+/**
  * \addtogroup maug_retroflt_bitmap RetroFlat Bitmap API
  * \brief Tools for loading bitmaps from disk and drawing them on-screen.
  *
@@ -1893,6 +1902,7 @@ struct RETROFLAT_ARGS {
    uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
+   UINT snd_flags;
 #  if defined( RETROSND_API_WINMM )
    UINT snd_io_base;
 #  else
@@ -2943,6 +2953,17 @@ void retroflat_message(
    va_end( vargs );
 }
 
+#  ifdef RETROSND_ARGS
+
+static int retrosnd_cli_rsl( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      args->snd_flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
+   }
+   return RETROFLAT_OK;
+}
+
+#  endif /* RETROSND_ARGS */
+
 #  ifdef RETROFLAT_SCREENSAVER
 
 /* Windows screensaver (.scr) command-line arguments. */
@@ -3180,6 +3201,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: parsing args..." );
 
    /* All platforms: add command-line args based on compile definitons. */
+
+#  ifdef RETROSND_ARGS
+   /* TODO: Add arg to specify MIDI device. */
+	maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
+      "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, NULL, args );
+#  endif /* RETROSND_ARGS */
 
 #  ifdef RETROFLAT_SCREENSAVER
 	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
