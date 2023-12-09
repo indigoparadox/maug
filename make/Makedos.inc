@@ -49,9 +49,15 @@ endef
 
 define TGTDOSBIOS
 
+ifeq ("$$(RETROFLAT_DOS_MEM_LARGE), "1")
+   CFLAGS_WATCOM_DOS_BIOS_M := -ml
+else
+	CFLAGS_WATCOM_DOS_BIOS_M := -mm
+endif
+
 ifeq ("$$(CFLAGS_WATCOM_DOS_BIOS)","")
 	CFLAGS_WATCOM_DOS_BIOS := \
-		-bt=dos -mm -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_BIOS
+		-bt=dos -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_BIOS
 endif
 ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
 	LDFLAGS_WATCOM_DOS_BIOS := system dos option stack=8k
@@ -65,7 +71,7 @@ $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES)))
 obj/dos_bios/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM) \
-		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) \
+		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS_BIOS_M) $$(CFLAGS_WATCOM_DOS) \
 		$$(CFLAGS_WATCOM_DOS_BIOS) \
 		-fo=$$@ $$(<:%.c=%)
 
