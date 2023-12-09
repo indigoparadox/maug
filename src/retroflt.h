@@ -3873,7 +3873,12 @@ XXXZ
    /* TODO: DOS init. */
 
    debug_printf( 3, "memory available before growth: %u", _memavl() );
+#     ifdef RETROFLAT_DOS_MEM_LARGE
+   /* TODO: Should this check/init be in mmem.h instead? */
+   _fheapgrow();
+#     else
    _nheapgrow();
+#     endif /* RETROFLAT_DOS_MEM_LARGE */
    debug_printf( 3, "memory available after growth: %u", _memavl() );
 
    /* Setup timer handler. */

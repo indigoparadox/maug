@@ -50,7 +50,7 @@ endef
 define TGTDOSBIOS
 
 ifeq ("$$(RETROFLAT_DOS_MEM_LARGE), "1")
-   CFLAGS_WATCOM_DOS_BIOS_M := -ml
+   CFLAGS_WATCOM_DOS_BIOS_M := -ml -DRETROFLAT_DOS_MEM_L
 else
 	CFLAGS_WATCOM_DOS_BIOS_M := -mm
 endif
