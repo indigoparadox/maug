@@ -1445,6 +1445,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
+#  ifndef RETROFLAT_SOFT_LINES
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
+
 #  define BG_TILE_W_PX 8
 #  define BG_TILE_H_PX 8
 #  define BG_W_TILES 32
@@ -2371,7 +2375,8 @@ struct RETROFLAT_WING_MODULE g_w;
 
 /* === Function Definitions === */
 
-#  if defined( RETROFLAT_SOFT_SHAPES ) && !defined( MAUG_NO_AUTO_C )
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )) \
+   && !defined( MAUG_NO_AUTO_C )
 #     define RETROFP_C
 #     include <retrofp.h>
 #     define RETROSFT_C
@@ -3962,10 +3967,10 @@ XXXZ
 #     pragma message( "warning: init not implemented" )
 #  endif  /* RETROFLAT_API_ALLEGRO */
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )
    retval = retrosoft_init();
    maug_cleanup_if_not_ok();
-#  endif /* RETROFLAT_SOFT_SHAPES */
+#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  if defined( RETROFLAT_OPENGL )
    retval = retrosoft_init();
@@ -5824,7 +5829,7 @@ void retroflat_line(
    int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
 ) {
 #  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_SOFT_LINES )
 #  elif defined( RETROFLAT_API_SDL2 )
    MERROR_RETVAL retval = MERROR_OK;
    int locked_target_internal = 0;
@@ -5855,7 +5860,7 @@ void retroflat_line(
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
    }
 
-#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_SOFT_LINES )
 
    retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
 
@@ -6675,10 +6680,11 @@ extern MAUG_CONST char* gc_retroflat_color_names[];
 
 #  include <uprintf.h>
 
-#  if defined( RETROFLAT_SOFT_SHAPES ) && !defined( MAUG_NO_AUTO_C )
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES) \
+   && !defined( MAUG_NO_AUTO_C )
 #     include <retrofp.h>
 #     include <retrosft.h>
-#  endif /* RETROFLAT_SOFT_SHAPES */
+#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
 #     include <retroglu.h>
