@@ -49,23 +49,23 @@
 
 #define RETROSND_VOICE_APPLAUSE     127
 
+#define RETROSND_PC_BIOS_MPU        0x01
+#define RETROSND_PC_BIOS_GUS        0x02
+#define RETROSND_PC_BIOS_SB         0x04
+
 /**
  * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
  *        sound effect.
  */
 #define RETROSND_VOICE_GUNSHOT      128
 
-#if defined( RETROSND_API_GUS )
-#  include <conio.h>
-#elif defined( RETROSND_API_MPU )
+#if defined( RETROSND_API_PC_BIOS )
 #  include <conio.h>
 #  define RETROSND_MPU_FLAG_OUTPUT 0x40
 #  define RETROSND_MPU_TIMEOUT 30
 #elif defined( RETROSND_API_ALSA )
 #  include <alsa/asoundlib.h>
-#  define retrosnd_set_alsa_seq( seq, port ) \
-   (((uint16_t)(seq) << 8) | ((port) & 0xff))
-#endif /* RETROSND_API_GUS || RETROSND_API_MPU */
+#endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
 /**
  * \brief Internal retrosound state struct. Most fields are platform-specific.
@@ -75,11 +75,10 @@ struct RETROSND_STATE {
     * \brief Bitfield indicating global state with \ref maug_retrosnd_flags.
     */
    uint8_t flags;
-#if defined( RETROSND_API_GUS )
-   uint16_t io_base;
-#elif defined( RETROSND_API_MPU )
+#if defined( RETROSND_API_PC_BIOS )
    uint16_t io_base;
    uint8_t io_timeout;
+   uint8_t driver;
 #elif defined( RETROSND_API_ALSA )
    snd_seq_t* seq_handle;
    int seq_port;
@@ -87,7 +86,7 @@ struct RETROSND_STATE {
    int out_port;
 #elif defined( RETROSND_API_WINMM )
    HMIDIOUT mo_handle;
-#endif /* RETROSND_API_GUS || RETROSND_API_MPU */
+#endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 };
 
 /**
@@ -114,7 +113,7 @@ void retrosnd_shutdown();
 
 struct RETROSND_STATE g_retrosnd_state;
 
-#  if defined( RETROSND_API_GUS )
+#  if defined( RETROSND_API_PC_BIOS )
 
 static void retrosnd_gus_poke( uint32_t loc, uint8_t b ) {
    uint16_t add_lo = loc & 0xffff;
@@ -147,8 +146,6 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
 
    return b;
 }
-
-#  elif defined( RETROSND_API_MPU )
 
 static MERROR_RETVAL retrosnd_mpu_not_ready( int16_t* timeout ) {
    uint8_t b = 0;
@@ -209,9 +206,8 @@ static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
 
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  ifdef RETROSND_API_GUS
+#  ifdef RETROSND_API_PC_BIOS
    uint8_t b = 0;
-#  elif defined( RETROSND_API_MPU )
    int16_t timeout = 0;
 #  elif defined( RETROSND_API_ALSA )
 #  elif defined( RETROSND_API_WINMM )
@@ -223,62 +219,85 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MIDIOUTCAPS midi_caps;
    uint32_t num_devs = 0;
    size_t devs_list_buf_pos = 0;
-#  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_WINMM || RETROSND_API_ALSA */
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
 
-   if( 0 == args->snd_io_base ) {
-      error_printf( "I/O base not specified!" );
-#  if defined( RETROSND_API_MPU )
-      debug_printf( 3, "assuming 0x330..." );
-      args->snd_io_base = 0x330;
-#  elif defined( RETROSND_API_WINMM )
-#  else
-      return retval;
-#  endif /* RETROSND_API_MPU */
-   }
+#  if defined( RETROSND_API_PC_BIOS )
 
    /* Clear all flags to start. */
    g_retrosnd_state.flags = 0;
 
-#  ifdef RETROSND_API_GUS
+   if( 0 == args->snd_io_base ) {
+      /* Select default port. */
+      error_printf( "I/O base not specified!" );
+      switch( args->snd_driver ) {
+      case RETROSND_PC_BIOS_MPU:
+         debug_printf( 3, "assuming 0x330..." );
+         args->snd_io_base = 0x330;
+         break;
 
-   /* TODO: Make I/O base configurable. */
-   g_retrosnd_state.io_base = 0x220;
-   
-   outp( g_retrosnd_state.io_base + 0x103, 0x4c );
-   outp( g_retrosnd_state.io_base + 0x105, 0 );
-   sleep( 1 );
-   outp( g_retrosnd_state.io_base + 0x103, 0x4c );
-   outp( g_retrosnd_state.io_base + 0x105, 1 );
+      case RETROSND_PC_BIOS_GUS:
+         /* TODO: Read port from ULTRASND env variable. */
+         args->snd_io_base = 0x220;
+         break;
 
-   retrosnd_gus_poke( 0, 0xf );
-   retrosnd_gus_poke( 0x100, 0x55 );
-
-   b = retrosnd_gus_peek( 0 );
-   if( 0xf == b ) {
-      debug_printf( 3, "found gravis ultrasound!" );
-      g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
+      case RETROSND_PC_BIOS_SB:
+         /* TODO: Read port from BLASTER env variable. */
+         break;
+      }
+      return retval;
    }
 
-#  elif defined( RETROSND_API_MPU )
+   g_retrosnd_state.io_base = args->snd_io_base;
+   g_retrosnd_state.driver = args->snd_driver;
+   
+   /* Perform actual init. */
+   switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_GUS:
+      /* Write values to GUS memory. */
+      outp( g_retrosnd_state.io_base + 0x103, 0x4c );
+      outp( g_retrosnd_state.io_base + 0x105, 0 );
+      sleep( 1 );
+      outp( g_retrosnd_state.io_base + 0x103, 0x4c );
+      outp( g_retrosnd_state.io_base + 0x105, 1 );
 
-   g_retrosnd_state.io_base = 0x330;
+      retrosnd_gus_poke( 0, 0xf );
+      retrosnd_gus_poke( 0x100, 0x55 );
 
-   timeout = RETROSND_MPU_TIMEOUT;
-   do {
-      retval = retrosnd_mpu_not_ready( &timeout );
-      if( MERROR_TIMEOUT == retval ) {
-         error_printf( "cancelling initialization!" );
+      /* Confirm values read are the same as those written. */
+      b = retrosnd_gus_peek( 0 );
+      if( 0xf != b ) {
+         error_printf( "gravis ultrasound not found!" );
          retval = MERROR_SND;
          goto cleanup;
       }
-   } while( MERROR_WAIT == retval );
 
-   debug_printf( 3, "placing MPU-401 in UART mode..." );
-   outp( g_retrosnd_state.io_base + 0x01, 0xff );
+      debug_printf( 3, "gravis ultrasound ready!" );
+      break;
 
-   debug_printf( 3, "MPU-401 ready!" );
+   case RETROSND_PC_BIOS_MPU:
+      timeout = RETROSND_MPU_TIMEOUT;
+      do {
+         retval = retrosnd_mpu_not_ready( &timeout );
+         if( MERROR_TIMEOUT == retval ) {
+            error_printf( "cancelling initialization!" );
+            retval = MERROR_SND;
+            goto cleanup;
+         }
+      } while( MERROR_WAIT == retval );
+
+      debug_printf( 3, "placing MPU-401 in UART mode..." );
+      outp( g_retrosnd_state.io_base + 0x01, 0xff );
+
+      debug_printf( 3, "MPU-401 ready!" );
+      break;
+
+   case RETROSND_PC_BIOS_SB:
+      /* TODO */
+      break;
+   }
+
    g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
 
 cleanup:
@@ -287,8 +306,8 @@ cleanup:
    /* TODO: If the /rsl arg was specified, show a list of MIDI devices. */
    
    /* Make destination seq/port configurable. */
-   g_retrosnd_state.out_client = (args->snd_io_base >> 8) & 0xff;
-   g_retrosnd_state.out_port = args->snd_io_base & 0xff;
+   g_retrosnd_state.out_client = args->snd_client;
+   g_retrosnd_state.out_port = args->snd_port;
 
    retval = snd_seq_open(
       &(g_retrosnd_state.seq_handle), "default", SND_SEQ_OPEN_OUTPUT, 0 );
@@ -398,7 +417,7 @@ cleanup:
 cleanup:
 #  else
 #     pragma message( "warning: init not implemented" )
-#  endif /* RETROSND_API_GUS || RETROSND_API_MPU || RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
    return retval;
 }
@@ -406,28 +425,37 @@ cleanup:
 /* === */
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
-#  if defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
    }
 
-#  ifdef RETROSND_API_GUS
-   /* TODO */
-#  elif defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
+   switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_MPU:
+      /* Write MIDI message to MPU port, one byte at a time. */
 
-   /* Write MIDI message to MPU port, one byte at a time. */
+      /* 0xc0 (program change) | lower-nibble for channel. */
+      retval = retrosnd_mpu_write_byte( 0xc0 | (channel & 0x0f) );
+      maug_cleanup_if_not_ok();
 
-   /* 0xc0 (program change) | lower-nibble for channel. */
-   retval = retrosnd_mpu_write_byte( 0xc0 | (channel & 0x0f) );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( voice );
+      maug_cleanup_if_not_ok();
+      break;
 
-   retval = retrosnd_mpu_write_byte( voice );
-   maug_cleanup_if_not_ok();
+   case RETROSND_PC_BIOS_GUS:
+      /* TODO */
+      break;
+
+   case RETROSND_PC_BIOS_SB:
+      /* TODO */
+      break;
+   }
 
 cleanup:
    return;
@@ -441,37 +469,47 @@ cleanup:
       (((voice & 0xff) << 8) | 0xc0 | (channel & 0x0f)) );
 #  else
 #     pragma message( "warning: set_voice not implemented" )
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 }
 
 /* === */
 
 void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
-#  if defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
    }
 
-#  ifdef RETROSND_API_GUS
-   /* TODO */
-#  elif defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
 
-   /* Write MIDI message to MPU port, one byte at a time. */
+   switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_MPU:
+      /* Write MIDI message to MPU port, one byte at a time. */
 
-   /* 0xb0 (controller) | lower-nibble for channel. */
-   retval = retrosnd_mpu_write_byte( 0xb0 | (channel & 0x0f) );
-   maug_cleanup_if_not_ok();
+      /* 0xb0 (controller) | lower-nibble for channel. */
+      retval = retrosnd_mpu_write_byte( 0xb0 | (channel & 0x0f) );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( key );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( key );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( val );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( val );
+      maug_cleanup_if_not_ok();
+      break;
+
+   case RETROSND_PC_BIOS_GUS:
+      /* TODO */
+      break;
+
+   case RETROSND_PC_BIOS_SB:
+      /* TODO */
+      break;
+   }
 
 cleanup:
    return;
@@ -487,37 +525,47 @@ cleanup:
    );
 #  else
 #     pragma message( "warning: set_control not implemented" )
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 }
 
 /* === */
 
 void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
-#  if defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
    }
 
-#  ifdef RETROSND_API_GUS
-   /* TODO */
-#  elif defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
 
-   /* Write MIDI message to MPU port, one byte at a time. */
+   switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_MPU:
+      /* Write MIDI message to MPU port, one byte at a time. */
 
-   /* 0x90 (note on) | lower-nibble for channel. */
-   retval = retrosnd_mpu_write_byte( 0x90 | (channel & 0x0f) );
-   maug_cleanup_if_not_ok();
+      /* 0x90 (note on) | lower-nibble for channel. */
+      retval = retrosnd_mpu_write_byte( 0x90 | (channel & 0x0f) );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( pitch );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( pitch );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( vel );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( vel );
+      maug_cleanup_if_not_ok();
+      break;
+
+   case RETROSND_PC_BIOS_GUS:
+      /* TODO */
+      break;
+
+   case RETROSND_PC_BIOS_SB:
+      /* TODO */
+      break;
+   }
 
 cleanup:
    return;
@@ -531,14 +579,14 @@ cleanup:
    );
 #  else
 #     pragma message( "warning: note_on not implemented" )
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
 }
 
 /* === */
 
 void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
-#  if defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
@@ -548,21 +596,31 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
-#  ifdef RETROSND_API_GUS
-   /* TODO */
-#  elif defined( RETROSND_API_MPU )
+#  if defined( RETROSND_API_PC_BIOS )
 
-   /* Write MIDI message to MPU port, one byte at a time. */
+   switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_MPU:
+      /* Write MIDI message to MPU port, one byte at a time. */
 
-   /* 0x80 (note off) | lower-nibble for channel. */
-   retval = retrosnd_mpu_write_byte( 0x80 | (channel & 0x0f) );
-   maug_cleanup_if_not_ok();
+      /* 0x80 (note off) | lower-nibble for channel. */
+      retval = retrosnd_mpu_write_byte( 0x80 | (channel & 0x0f) );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( pitch );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( pitch );
+      maug_cleanup_if_not_ok();
 
-   retval = retrosnd_mpu_write_byte( vel );
-   maug_cleanup_if_not_ok();
+      retval = retrosnd_mpu_write_byte( vel );
+      maug_cleanup_if_not_ok();
+      break;
+
+   case RETROSND_PC_BIOS_GUS:
+      /* TODO */
+      break;
+
+   case RETROSND_PC_BIOS_SB:
+      /* TODO */
+      break;
+   }
 
 cleanup:
    return;
@@ -576,7 +634,7 @@ cleanup:
    );
 #  else
 #     pragma message( "warning: note_off not implemented" )
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
 }
 
@@ -588,16 +646,15 @@ void retrosnd_shutdown() {
       return;
    }
 
-#  ifdef RETROSND_API_GUS
+#  ifdef RETROSND_API_PC_BIOS
    /* TODO */
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_close( g_retrosnd_state.seq_handle );
-#  elif defined( RETROSND_API_MPU )
 #  elif defined( RETROSND_API_WINMM )
    midiOutClose( g_retrosnd_state.mo_handle );
 #  else
 #     pragma message( "warning: shutdown not implemented" )
-#  endif /* RETROSND_API_ALSA */
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 }
 
 #endif /* RETROSND_C */
