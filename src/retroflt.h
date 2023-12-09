@@ -3870,7 +3870,7 @@ XXXZ
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   /* TODO: DOS init. */
+   /* == DOS PC_BIOS == */
 
    debug_printf( 3, "memory available before growth: %u", _memavl() );
 #     ifdef RETROFLAT_DOS_MEM_LARGE
