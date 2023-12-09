@@ -3943,7 +3943,7 @@ XXXZ
    }
 
    memset( &r, 0, sizeof( r ) );
-   r.x.ax = args->screen_mode;
+   r.h.al = args->screen_mode;
    int86( 0x10, &r, &r ); /* Call video interrupt. */
 
    debug_printf( 3, "graphics initialized..." );
