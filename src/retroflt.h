@@ -1902,12 +1902,17 @@ struct RETROFLAT_ARGS {
    uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
-   UINT snd_flags;
+   uint8_t snd_flags;
 #  if defined( RETROSND_API_WINMM )
    UINT snd_io_base;
-#  else
-   /*! \brief Base address for sound device. */
+#  elif defined( RETROSND_API_PC_BIOS )
    uint16_t snd_io_base;
+   uint8_t snd_driver;
+#  elif defined( RETROSND_API_ALSA )
+   uint8_t snd_client;
+   uint8_t snd_port;
+#  else
+#     pragma message( "warning: sound args not specified" )
 #  endif /* RETROSND_API_WINMM */
 };
 
@@ -2962,6 +2967,34 @@ static int retrosnd_cli_rsl( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
+static int retrosnd_cli_rsd( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      /* TODO: Parse device. */
+   }
+   return RETROFLAT_OK;
+}
+
+static int retrosnd_cli_rsd_def(
+   const char* arg, struct RETROFLAT_ARGS* args
+) {
+   /* TODO: Default to env variable. */
+#     ifdef RETROSND_API_PC_BIOS
+   if( 0 == args->snd_driver ) {
+      args->snd_driver = 1; /* MPU-401 */
+   }
+   if( 0 == args->snd_io_base ) {
+      args->snd_io_base = 0x330; /* MPU-401 */
+   }
+#     elif defined( RETROSND_API_ALSA )
+   if( 0 == args->snd_client ) {
+      args->snd_client = 128;
+   }
+#     endif /* RETROSND_API_PC_BIOS */
+   return RETROFLAT_OK;
+}
+
 #  endif /* RETROSND_ARGS */
 
 #  ifdef RETROFLAT_SCREENSAVER
@@ -3203,7 +3236,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* All platforms: add command-line args based on compile definitons. */
 
 #  ifdef RETROSND_ARGS
-   /* TODO: Add arg to specify MIDI device. */
+	maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
+      "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd,
+         (maug_cli_cb)retrosnd_cli_rsd_def, args );
 	maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
       "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, NULL, args );
 #  endif /* RETROSND_ARGS */
