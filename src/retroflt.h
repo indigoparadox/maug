@@ -6680,7 +6680,7 @@ extern MAUG_CONST char* gc_retroflat_color_names[];
 
 #  include <uprintf.h>
 
-#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES) \
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES)) \
    && !defined( MAUG_NO_AUTO_C )
 #     include <retrofp.h>
 #     include <retrosft.h>
