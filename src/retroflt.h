@@ -1603,6 +1603,14 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
+/* Explicity screen sizes aren't supported, only screen modes handled in
+ * special cases during init.
+ */
+#  define RETROFLAT_NO_CLI_SZ
+
+#  define RETROFLAT_SCREEN_MODE_CGA       0x04
+#  define RETROFLAT_SCREEN_MODE_VGA       0x13
+
 #  define RETROFLAT_CGA_COLOR_BLACK        0
 #  define RETROFLAT_CGA_COLOR_CYAN         1
 #  define RETROFLAT_CGA_COLOR_MAGENTA      2
@@ -1894,10 +1902,14 @@ struct RETROFLAT_ARGS {
     */
    char* title;
    /*! \brief Desired screen or window width in pixels. */
+#  ifdef RETROFLAT_API_PC_BIOS
+   uint8_t screen_mode;
+#  elif !defined( RETROFLAT_NO_CLI_SZ )
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
    /*! \brief Relative path under which bitmap assets are stored. */
+#  endif /* RETROFLAT_API_PC_BIOS */
    char* assets_path;
    uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
@@ -2021,6 +2033,7 @@ struct RETROFLAT_STATE {
    uint8_t old_video_mode;
    uint8_t cga_color_table[16];
    uint8_t cga_dither_table[16];
+   uint8_t screen_mode;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -2979,9 +2992,14 @@ static int retrosnd_cli_rsd( const char* arg, struct RETROFLAT_ARGS* args ) {
 static int retrosnd_cli_rsd_def(
    const char* arg, struct RETROFLAT_ARGS* args
 ) {
+   char* env_var = NULL;
+   int i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+
    /* TODO: Default to env variable. */
 #     ifdef RETROSND_API_PC_BIOS
    if( 0 == args->snd_driver ) {
+      env_var = getenv( "MAUG_MIDI" );
       args->snd_driver = 1; /* MPU-401 */
    }
    if( 0 == args->snd_io_base ) {
@@ -2989,10 +3007,28 @@ static int retrosnd_cli_rsd_def(
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
-      args->snd_client = 128;
+      env_var = getenv( "MAUG_MIDI" );
+      /* Return MERROR_OK since this isn't fatal and will just cause sound
+       * init to fail later.
+       */
+      maug_cleanup_if_null_msg(
+         char*, env_var, MERROR_OK, "MAUG_MIDI variable not found!" );
+      debug_printf( 2, "MAUG_MIDI: %s", env_var );
+      for( i = 0 ; strlen( env_var ) > i ; i++ ) {
+         if( ':' == env_var[i] ) {
+            /* Split into two null-terminated strings. */
+            env_var[i] = '\0';
+         }
+      }
+
+      args->snd_client = atoi( env_var );
+      args->snd_port = atoi( &(env_var[i + 1]) );
    }
+
+cleanup:
 #     endif /* RETROSND_API_PC_BIOS */
-   return RETROFLAT_OK;
+
+   return retval;
 }
 
 #  endif /* RETROSND_ARGS */
@@ -3018,7 +3054,25 @@ static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 #  endif /* RETROFLAT_SCREENSAVER */
 
-#  ifndef RETROFLAT_NO_CLI_SZ
+#  ifdef RETROFLAT_API_PC_BIOS
+
+static int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfm", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_mode = atoi( arg );
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_mode ) {
+      args->screen_mode = RETROFLAT_SCREEN_MODE_CGA;
+   }
+   return RETROFLAT_OK;
+}
+
+#  elif !defined( RETROFLAT_NO_CLI_SZ )
 
 static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
@@ -3052,7 +3106,7 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
    return RETROFLAT_OK;
 }
 
-#  endif /* !RETROFLAT_NO_CLI_SZ */
+#  endif /* RETROFLAT_API_PC_BIOS || !RETROFLAT_NO_CLI_SZ */
 
 #  ifndef MAUG_NO_CONFIG
 
@@ -3250,7 +3304,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, NULL, args );
 #  endif /* RETROFLAT_SCREENSAVER */
 
-#  ifndef RETROFLAT_NO_CLI_SZ
+#  ifdef RETROFLAT_API_PC_BIOS
+   maug_add_arg( MAUG_CLI_SIGIL "rfm", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the screen mode.", 0,
+      (maug_cli_cb)retroflat_cli_rfm,
+      (maug_cli_cb)retroflat_cli_rfm_def, args );
+#  elif !defined( RETROFLAT_NO_CLI_SZ )
    maug_add_arg( MAUG_CLI_SIGIL "rfw", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen width.", 0,
       (maug_cli_cb)retroflat_cli_rfw,
@@ -3307,14 +3366,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
-   /* Setup intended screen size.
-    * These may be forced/modified by the platform-specific section below!
-    */
+#  if !defined( RETROFLAT_NO_CLI_SZ )
+   /* Setup intended screen size. */
    /* TODO: Handle window resizing someday! */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
    g_retroflat_state->screen_w = args->screen_w;
    g_retroflat_state->screen_h = args->screen_h;
+#  endif /* RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_OPENGL
    debug_printf( 1, "setting up texture palette..." );
@@ -3855,9 +3914,32 @@ XXXZ
    debug_printf( 2, "saved old video mode: 0x%02x",
       g_retroflat_state->old_video_mode );
 
+   /* TODO: Put all screen mode dimensions in a LUT. */
+   g_retroflat_state->screen_mode = args->screen_mode;
+   switch( args->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_CGA:
+      g_retroflat_state->screen_v_w = 320;
+      g_retroflat_state->screen_v_h = 200;
+      g_retroflat_state->screen_w = 320;
+      g_retroflat_state->screen_h = 200;
+      break;
+
+   case RETROFLAT_SCREEN_MODE_VGA:
+      g_retroflat_state->screen_v_w = 320;
+      g_retroflat_state->screen_v_h = 200;
+      g_retroflat_state->screen_w = 320;
+      g_retroflat_state->screen_h = 200;
+      break;
+
+   default:
+      error_printf( "unsupported video mode!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    memset( &r, 0, sizeof( r ) );
-   r.x.ax = 0x04; /* Service: CGA 320x200x2bpp */
-	int86( 0x10, &r, &r ); /* Call video interrupt. */
+   r.x.ax = args->screen_mode;
+   int86( 0x10, &r, &r ); /* Call video interrupt. */
 
    debug_printf( 3, "graphics initialized..." );
 
@@ -5575,33 +5657,41 @@ void retroflat_px(
 
    /* == DOS PC_BIOS == */
 
-   /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
-   /* Divide result by 4 since it's 2 bits per pixel. */
-   screen_byte_offset = (((y >> 1) * 320) + x) >> 2;
-   /* Shift the bits over by the remainder. */
-   /* TODO: Factor out this modulo to shift/and. */
-   screen_bit_offset = 6 - (((((y >> 1) * 320) + x) % 4) << 1);
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_CGA:
+      /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
+      /* Divide result by 4 since it's 2 bits per pixel. */
+      screen_byte_offset = (((y >> 1) * 320) + x) >> 2;
+      /* Shift the bits over by the remainder. */
+      /* TODO: Factor out this modulo to shift/and. */
+      screen_bit_offset = 6 - (((((y >> 1) * 320) + x) % 4) << 1);
 
-   /* Dither colors on odd/even squares. */
-   if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
-      color = g_retroflat_state->cga_color_table[color_idx];
-   } else {
-      color = g_retroflat_state->cga_dither_table[color_idx];
-   }
+      /* Dither colors on odd/even squares. */
+      if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
+         color = g_retroflat_state->cga_color_table[color_idx];
+      } else {
+         color = g_retroflat_state->cga_dither_table[color_idx];
+      }
 
-   if( y & 0x01 ) {
-      /* 0x2000 = difference between even/odd CGA planes. */
-      g_retroflat_scr[0x2000 + screen_byte_offset] &=
+      if( y & 0x01 ) {
+         /* 0x2000 = difference between even/odd CGA planes. */
+         g_retroflat_scr[0x2000 + screen_byte_offset] &=
+            /* 0x03 = 2-bit pixel mask. */
+            ~(0x03 << screen_bit_offset);
+         g_retroflat_scr[0x2000 + screen_byte_offset] |= 
+            ((color & 0x03) << screen_bit_offset);
+      } else {
          /* 0x03 = 2-bit pixel mask. */
-         ~(0x03 << screen_bit_offset);
-      g_retroflat_scr[0x2000 + screen_byte_offset] |= 
-         ((color & 0x03) << screen_bit_offset);
-   } else {
-      /* 0x03 = 2-bit pixel mask. */
-      g_retroflat_scr[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
-      g_retroflat_scr[screen_byte_offset] |=
-         /* 0x03 = 2-bit pixel mask. */
-         ((color & 0x03) << screen_bit_offset);
+         g_retroflat_scr[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
+         g_retroflat_scr[screen_byte_offset] |=
+            /* 0x03 = 2-bit pixel mask. */
+            ((color & 0x03) << screen_bit_offset);
+      }
+      break;
+
+   case RETROFLAT_SCREEN_MODE_VGA:
+      /* TODO */
+      break;
    }
 
 #  else

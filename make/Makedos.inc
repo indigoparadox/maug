@@ -47,29 +47,29 @@ endef
 
 # ---
 
-define TGTDOSCGA
+define TGTDOSBIOS
 
-ifeq ("$$(CFLAGS_WATCOM_DOS_CGA)","")
-	CFLAGS_WATCOM_DOS_CGA := \
-		-bt=dos -mm -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_CGA
+ifeq ("$$(CFLAGS_WATCOM_DOS_BIOS)","")
+	CFLAGS_WATCOM_DOS_BIOS := \
+		-bt=dos -mm -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_BIOS
 endif
 ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
-	LDFLAGS_WATCOM_DOS_CGA := system dos option stack=8k
+	LDFLAGS_WATCOM_DOS_BIOS := system dos option stack=8k
 endif
 
-$(1)c.exe: $$(addprefix obj/dos_cga/,$$(subst .c,.o,$$(C_FILES)))
+$(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM) name $$@ \
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
-		$$(LDFLAGS_WATCOM_DOS_CGA) fil {$$^}
+		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
 
-obj/dos_cga/%.o: %.c | $(MAUG_DEPS)
+obj/dos_bios/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) \
-		$$(CFLAGS_WATCOM_DOS_CGA) \
+		$$(CFLAGS_WATCOM_DOS_BIOS) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)c.exe
+CLEAN_TARGETS += $(1)b.exe
 
 endef
 
