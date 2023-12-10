@@ -200,7 +200,7 @@ void retrosoft_line_strategy(
 
 }
 
-#ifdef RETROFLAT_SOFT_LINES
+#if defined( RETROFLAT_OPENGL ) || defined( RETROFLAT_SOFT_LINES )
 
 void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -244,7 +244,7 @@ void retrosoft_line(
    retroflat_px_release( target );
 }
 
-#endif /* RETROFLAT_SOFT_LINES */
+#endif /* RETROFLAT_OPENGL || RETROFLAT_SOFT_LINES */
 
 /* === */
 
