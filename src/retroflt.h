@@ -3014,10 +3014,10 @@ static int retrosnd_cli_rsd_def(
 #     ifdef RETROSND_API_PC_BIOS
    if( 0 == args->snd_driver ) {
       env_var = getenv( "MAUG_MIDI" );
-      args->snd_driver = 4; /* MPU-401 */
+      args->snd_driver = 1; /* MPU-401 */
    }
    if( 0 == args->snd_io_base ) {
-      args->snd_io_base = 0x388; /* MPU-401 */
+      args->snd_io_base = 0x330; /* MPU-401 */
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
