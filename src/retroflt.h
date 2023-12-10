@@ -57,7 +57,7 @@
  *         * /
  *       void example_loop( struct EXAMPLE_DATA* data ) {
  *          struct RETROFLAT_INPUT input_evt;
- *          int input = 0;
+ *          int16_t input = 0;
  *       
  *          / * Start loop. * /
  *          input = retroflat_poll_input( &input_evt );
@@ -1726,10 +1726,10 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_END	0
 
 /* TODO: Handle arrow keys. */
-#  define RETROFLAT_KEY_UP	   'w'
-#  define RETROFLAT_KEY_DOWN	's'
-#  define RETROFLAT_KEY_RIGHT	'd'
-#  define RETROFLAT_KEY_LEFT	'a'
+#  define RETROFLAT_KEY_UP	   -3
+#  define RETROFLAT_KEY_DOWN	-4
+#  define RETROFLAT_KEY_RIGHT	-5
+#  define RETROFLAT_KEY_LEFT	-6
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
@@ -2301,7 +2301,7 @@ void retroflat_string(
  * \param input Pointer to a ::RETROFLAT_INPUT struct to store extended info.
  * \return A symbol from \ref maug_retroflt_keydefs.
  */
-int retroflat_poll_input( struct RETROFLAT_INPUT* input );
+int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
@@ -6225,7 +6225,7 @@ cleanup:
 
 /* === */
 
-int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;
    union REGS outregs;
@@ -6233,7 +6233,7 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;
 #  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
-   int key_out = 0;
+   int16_t key_out = 0;
 
    assert( NULL != input );
 
@@ -6430,6 +6430,17 @@ int retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    if( kbhit() ) {
       /* Poll the keyboard. */
       key_out = getch();
+      debug_printf( 2, "key: 0x%02x", key_out );
+      if( 0 == key_out ) {
+         /* Special key was pressed that returns two scan codes. */
+         key_out = getch();
+         switch( key_out ) {
+         case 0x48: key_out = RETROFLAT_KEY_UP; break;
+         case 0x4b: key_out = RETROFLAT_KEY_LEFT; break;
+         case 0x4d: key_out = RETROFLAT_KEY_RIGHT; break;
+         case 0x50: key_out = RETROFLAT_KEY_DOWN; break;
+         }
+      }
       if(
          RETROFLAT_FLAGS_KEY_REPEAT !=
          (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
