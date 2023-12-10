@@ -1626,9 +1626,13 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_CGA_COLOR_WHITE        3
 
 #  ifndef RETROFLAT_SOFT_SHAPES
-/* TODO: Accelerate lines. */
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
+
+/* TODO: Accelerate lines. */
+#  ifndef RETROFLAT_SOFT_LINES
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
 
 #  ifndef RETROFLAT_DOS_TIMER_DIV
 /* #define RETROFLAT_DOS_TIMER_DIV 1103 */
@@ -3010,10 +3014,10 @@ static int retrosnd_cli_rsd_def(
 #     ifdef RETROSND_API_PC_BIOS
    if( 0 == args->snd_driver ) {
       env_var = getenv( "MAUG_MIDI" );
-      args->snd_driver = 1; /* MPU-401 */
+      args->snd_driver = 4; /* MPU-401 */
    }
    if( 0 == args->snd_io_base ) {
-      args->snd_io_base = 0x330; /* MPU-401 */
+      args->snd_io_base = 0x388; /* MPU-401 */
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
@@ -3956,7 +3960,8 @@ XXXZ
    r.h.al = args->screen_mode;
    int86( 0x10, &r, &r ); /* Call video interrupt. */
 
-   debug_printf( 3, "graphics initialized..." );
+   debug_printf(
+      3, "graphics initialized (mode 0x%02x)...", args->screen_mode );
 
    /* Initialize color table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
