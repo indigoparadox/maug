@@ -1722,14 +1722,17 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_SPACE	0x20
 #  define RETROFLAT_KEY_ESC	0x1b
 #  define RETROFLAT_KEY_ENTER	0x0d
-#  define RETROFLAT_KEY_HOME	0
-#  define RETROFLAT_KEY_END	0
 
-/* TODO: Handle arrow keys. */
-#  define RETROFLAT_KEY_UP	   -3
-#  define RETROFLAT_KEY_DOWN	-4
-#  define RETROFLAT_KEY_RIGHT	-5
-#  define RETROFLAT_KEY_LEFT	-6
+/* Handle keys that send a double-code. */
+#  define RETROFLAT_KEY_UP	      -3
+#  define RETROFLAT_KEY_DOWN	   -4
+#  define RETROFLAT_KEY_RIGHT	   -5
+#  define RETROFLAT_KEY_LEFT	   -6
+#  define RETROFLAT_KEY_HOME	   -7
+#  define RETROFLAT_KEY_END	   -8
+#  define RETROFLAT_KEY_PGUP     -9
+#  define RETROFLAT_KEY_PGDN     -10
+#  define RETROFLAT_KEY_DELETE   -11
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
@@ -6439,6 +6442,11 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          case 0x4b: key_out = RETROFLAT_KEY_LEFT; break;
          case 0x4d: key_out = RETROFLAT_KEY_RIGHT; break;
          case 0x50: key_out = RETROFLAT_KEY_DOWN; break;
+         case 0x4f: key_out = RETROFLAT_KEY_HOME; break;
+         case 0x47: key_out = RETROFLAT_KEY_END; break;
+         case 0x51: key_out = RETROFLAT_KEY_PGDN; break;
+         case 0x49: key_out = RETROFLAT_KEY_PGUP; break;
+         case 0x53: key_out = RETROFLAT_KEY_DELETE; break;
          }
       }
       if(
