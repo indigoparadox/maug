@@ -31,7 +31,7 @@ ifeq ("$(CFLAGS_GCC64_WIN)","")
 	CFLAGS_GCC64_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_GCC64_WIN)","")
-	LDFLAGS_GCC64_WIN := -mwindows -lgdi32
+	LDFLAGS_GCC64_WIN := -mwindows -lgdi32 -lwinmm
 endif
 
 ifeq ("$(RELEASE)","RELEASE")
@@ -311,16 +311,21 @@ ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
 endif
 
+# GCC64 for Windows gives undefined references to __fentry__ -g/-pg are used?
+
 $(1)64.exe: \
 $$(addprefix $$(OBJDIR_GCC64_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
 $$(RES_GCC64_WIN_WIN32_DEP)
 	$$(LD_GCC_MINGW64) -m64 -o $$@ $$^ \
+		$$(subst -pg,,$$(subst -g,,$$(LDFLAGS_GCC64))) \
 		$$(LDFLAGS_GCC64_WIN) $$(LDFLAGS_GCC64_WIN_WIN32)
 
 $$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW64) -m64 \
-		$$(CFLAGS_GCC64) $$(CFLAGS_GCC64_WIN) $$(CFLAGS_GCC64_WIN_WIN32) \
+		$$(subst -pg,,$$(subst -g,,$$(CFLAGS_GCC64))) \
+		$$(CFLAGS_GCC64_WIN) \
+		$$(CFLAGS_GCC64_WIN_WIN32) \
 		-o $$@ -c $$<
 
 CLEAN_TARGETS += $(1)64.exe
