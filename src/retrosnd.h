@@ -56,9 +56,10 @@
 
 #define RETROSND_VOICE_APPLAUSE     127
 
-#define RETROSND_PC_BIOS_MPU        0x01
-#define RETROSND_PC_BIOS_GUS        0x02
-#define RETROSND_PC_BIOS_ADLIB      0x04
+#define RETROSND_PC_BIOS_SPKR       0x01
+#define RETROSND_PC_BIOS_MPU        0x02
+#define RETROSND_PC_BIOS_GUS        0x04
+#define RETROSND_PC_BIOS_ADLIB      0x08
 
 /**
  * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
@@ -258,6 +259,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       /* Select default port. */
       error_printf( "I/O base not specified!" );
       switch( args->snd_driver ) {
+      case RETROSND_PC_BIOS_SPKR:
+         /* TODO */
+         break;
+
       case RETROSND_PC_BIOS_MPU:
          debug_printf( 3, "assuming 0x330..." );
          args->snd_io_base = 0x330;
@@ -282,6 +287,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    
    /* Perform actual init. */
    switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_SPKR:
+      /* TODO */
+      break;
+
    case RETROSND_PC_BIOS_GUS:
       /* Write values to GUS memory. */
       outp( g_retrosnd_state.io_base + 0x103, 0x4c );
@@ -577,6 +586,10 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 #  if defined( RETROSND_API_PC_BIOS )
 
    switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_SPKR:
+      /* TODO */
+      break;
+
    case RETROSND_PC_BIOS_MPU:
       /* Write MIDI message to MPU port, one byte at a time. */
 
@@ -647,6 +660,10 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 #  if defined( RETROSND_API_PC_BIOS )
 
    switch( g_retrosnd_state.driver ) {
+   case RETROSND_PC_BIOS_SPKR:
+      /* TODO */
+      break;
+
    case RETROSND_PC_BIOS_MPU:
       /* Write MIDI message to MPU port, one byte at a time. */
 
