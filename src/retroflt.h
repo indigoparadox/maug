@@ -818,6 +818,7 @@ struct RETROFLAT_GLTEX {
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef FILE* RETROFLAT_CONFIG;
+typedef uint32_t RETROFLAT_MS;
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -936,6 +937,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_SOFT_LINES */
 
 typedef FILE* RETROFLAT_CONFIG;
+typedef uint32_t RETROFLAT_MS;
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -1099,6 +1101,7 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
    f( HBITMAP, WinGCreateBitmap, 1003 ) \
    f( BOOL, WinGStretchBlt, 1009 )
 
+typedef uint32_t RETROFLAT_MS;
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
 typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
@@ -1458,6 +1461,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define BG_TILE_H_PX 8
 #  define BG_W_TILES 32
 
+typedef uint32_t RETROFLAT_MS;
 typedef void* RETROFLAT_CONFIG;
 
 struct RETROFLAT_BITMAP {
@@ -1520,6 +1524,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #  ifndef RETROFLAT_CONFIG_USE_FILE
 #     define RETROFLAT_CONFIG_USE_FILE
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
+
+typedef uint32_t RETROFLAT_MS;
 
 typedef FILE* RETROFLAT_CONFIG;
 
@@ -1611,6 +1617,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_9		   '9'
 
 #elif defined( RETROFLAT_API_PC_BIOS )
+
+typedef uint16_t RETROFLAT_MS;
 
 /* Explicity screen sizes aren't supported, only screen modes handled in
  * special cases during init.
@@ -2098,7 +2106,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
 
 void retroflat_set_title( const char* format, ... );
 
-uint32_t retroflat_get_ms();
+RETROFLAT_MS retroflat_get_ms();
 
 uint32_t retroflat_get_rand();
 
@@ -2351,7 +2359,9 @@ size_t retroflat_config_read(
 
 #ifdef RETROFLT_C
 
-static volatile uint32_t g_ms = 0;
+#if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
+static volatile RETROFLAT_MS g_ms = 0;
+#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_PC_BIOS */
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
@@ -2785,7 +2795,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    defined( RETROFLAT_API_LIBNDS ) || \
    defined( RETROFLAT_API_PC_BIOS )
 
-   uint32_t next = 0,
+   RETROFLAT_MS next = 0,
       now = 0;
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
@@ -4275,8 +4285,8 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-uint32_t retroflat_get_ms() {
-#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
+RETROFLAT_MS retroflat_get_ms() {
+#  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4303,6 +4313,10 @@ uint32_t retroflat_get_ms() {
    /* == GLUT == */
 
    return glutGet( GLUT_ELAPSED_TIME );
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   return /**((uint16_t far*)0x046c) >> 4;*/ g_ms;
 
 #  else
 #  pragma message( "warning: get_ms not implemented" )
