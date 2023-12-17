@@ -1942,7 +1942,7 @@ struct RETROFLAT_ARGS {
    char* config_path;
    uint8_t snd_flags;
 #  if defined( RETROSND_API_WINMM )
-   UINT snd_io_base;
+   UINT snd_dev_id;
 #  elif defined( RETROSND_API_PC_BIOS )
    uint16_t snd_io_base;
    uint8_t snd_driver;
@@ -3013,7 +3013,14 @@ static int retrosnd_cli_rsd( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
+#     ifdef RETROSND_API_PC_BIOS
       /* TODO: Parse device. */
+#     elif defined( RETROSND_API_ALSA )
+      /* TODO: Parse device. */
+#     elif defined( RETROSND_API_WINMM )
+      debug_printf( 3, "setting MIDI device to rsd arg: %s", arg );
+      args->snd_dev_id = atoi( arg );
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
    }
    return RETROFLAT_OK;
 }
@@ -3025,13 +3032,14 @@ static int retrosnd_cli_rsd_def(
    int i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO: Default to env variable. */
 #     ifdef RETROSND_API_PC_BIOS
    if( 0 == args->snd_driver ) {
       env_var = getenv( "MAUG_MIDI" );
+      /* TODO: Default to env variable. */
       args->snd_driver = 2; /* MPU-401 */
    }
    if( 0 == args->snd_io_base ) {
+      /* TODO: Default to env variable. */
       args->snd_io_base = 0x330; /* MPU-401 */
    }
 #     elif defined( RETROSND_API_ALSA )
@@ -3055,7 +3063,17 @@ static int retrosnd_cli_rsd_def(
    }
 
 cleanup:
-#     endif /* RETROSND_API_PC_BIOS */
+#     elif defined( RETROSND_API_WINMM )
+   env_var = getenv( "MAUG_MIDI" );
+   if( NULL != env_var && 0 < strlen( env_var ) ) {
+      debug_printf(
+         3, "setting MIDI device to MAUG_MIDI env var: %s", env_var );
+      args->snd_dev_id = atoi( env_var );
+   } else {
+      debug_printf( 3, "setting MIDI device to 0" );
+      args->snd_dev_id = 0;
+   }
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
    return retval;
 }
