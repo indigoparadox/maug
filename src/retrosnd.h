@@ -246,6 +246,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MIDIOUTCAPS midi_caps;
    uint32_t num_devs = 0;
    size_t devs_list_buf_pos = 0;
+   UINT moo_retval = 0;
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_WINMM || RETROSND_API_ALSA */
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
@@ -439,17 +440,19 @@ cleanup:
    }
 
    /* Try to open the specified device. */
-   if( 0 == num_devs || num_devs < args->snd_io_base ) {
+   if( 0 == num_devs || num_devs < args->snd_dev_id ) {
       error_printf( "no MIDI devices found!" );
       retval = MERROR_SND;
       goto cleanup;
    }
-   midiOutGetDevCaps( args->snd_io_base, &midi_caps, sizeof( MIDIOUTCAPS ) );
+   midiOutGetDevCaps( args->snd_dev_id, &midi_caps, sizeof( MIDIOUTCAPS ) );
 
-   if( MMSYSERR_NOERROR != midiOutOpen(
-      &(g_retrosnd_state.mo_handle), args->snd_io_base, 0, 0, CALLBACK_WINDOW
-   ) ) {
-      error_printf( "could not open MIDI device: %s", midi_caps.szPname );
+   debug_printf( 3, "attempting to open MIDI device %u...", args->snd_dev_id );
+   moo_retval = midiOutOpen(
+      &(g_retrosnd_state.mo_handle), args->snd_dev_id, 0, 0, CALLBACK_NULL );
+   if( MMSYSERR_NOERROR != moo_retval ) {
+      error_printf( "could not open MIDI device: %s: %d",
+         midi_caps.szPname, moo_retval );
       retval = MERROR_SND;
       goto cleanup;
    }
