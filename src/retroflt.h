@@ -1077,6 +1077,8 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 
 /* == Win16/Win32 == */
 
+typedef uint32_t RETROFLAT_MS;
+
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
