@@ -3032,25 +3032,41 @@ static int retrosnd_cli_rsd_def(
    int i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
+   env_var = getenv( "MAUG_MIDI" );
+
+   /* Return MERROR_OK since this isn't fatal and will just cause sound
+      * init to fail later.
+      */
+   maug_cleanup_if_null_msg(
+      char*, env_var, MERROR_OK, "MAUG_MIDI variable not found!" );
+
+   debug_printf( 2, "env: MAUG_MIDI: %s", env_var );
+
 #     ifdef RETROSND_API_PC_BIOS
-   if( 0 == args->snd_driver ) {
-      env_var = getenv( "MAUG_MIDI" );
-      /* TODO: Default to env variable. */
-      args->snd_driver = 2; /* MPU-401 */
-   }
-   if( 0 == args->snd_io_base ) {
-      /* TODO: Default to env variable. */
-      args->snd_io_base = 0x330; /* MPU-401 */
+   if( NULL != env_var ) {
+      /* Turn comma separator into NULL split. */
+      for( i = 0 ; strlen( env_var ) > i ; i++ ) {
+         if( ',' == env_var[i] ) {
+            /* Split into two null-terminated strings. */
+            env_var[i] = '\0';
+         }
+      }
+
+      if( 0 == strcmp( env_var, "mpu" ) ) {
+         debug_printf( 3, "selecting MIDI driver: mpu" );
+         args->snd_driver = 2;
+      } else if( 0 == strcmp( env_var, "gus" ) ) {
+         debug_printf( 3, "selecting MIDI driver: gus" );
+         args->snd_driver = 4;
+      } else if( 0 == strcmp( env_var, "adlib" ) ) {
+         debug_printf( 3, "selecting MIDI driver: adlib" );
+         args->snd_driver = 8;
+      }
+      args->snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
+      debug_printf( 3, "setting MIDI I/O base: %u", args->snd_io_base );
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
-      env_var = getenv( "MAUG_MIDI" );
-      /* Return MERROR_OK since this isn't fatal and will just cause sound
-       * init to fail later.
-       */
-      maug_cleanup_if_null_msg(
-         char*, env_var, MERROR_OK, "MAUG_MIDI variable not found!" );
-      debug_printf( 2, "MAUG_MIDI: %s", env_var );
       for( i = 0 ; strlen( env_var ) > i ; i++ ) {
          if( ':' == env_var[i] ) {
             /* Split into two null-terminated strings. */
@@ -3059,22 +3075,21 @@ static int retrosnd_cli_rsd_def(
       }
 
       args->snd_client = atoi( env_var );
-      args->snd_port = atoi( &(env_var[i + 1]) );
+      args->snd_port = atoi( &(env_var[i]) );
+      debug_printf( 3, "setting MIDI device to: %u:%u",
+         args->snd_client, args->snd_port );
    }
 
-cleanup:
 #     elif defined( RETROSND_API_WINMM )
-   env_var = getenv( "MAUG_MIDI" );
-   if( NULL != env_var && 0 < strlen( env_var ) ) {
-      debug_printf(
-         3, "setting MIDI device to MAUG_MIDI env var: %s", env_var );
+   if( NULL != env_var ) {
       args->snd_dev_id = atoi( env_var );
    } else {
-      debug_printf( 3, "setting MIDI device to 0" );
       args->snd_dev_id = 0;
    }
+   debug_printf( 3, "setting MIDI device to: %u", args->snd_dev_id );
 #     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
+cleanup:
    return retval;
 }
 
