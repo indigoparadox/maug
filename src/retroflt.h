@@ -5729,6 +5729,8 @@ void retroflat_px(
 
    /* == DOS PC_BIOS == */
 
+   /* TODO: Determine if we're drawing on-screen or on a bitmap. */
+
    switch( g_retroflat_state->screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
