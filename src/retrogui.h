@@ -806,6 +806,7 @@ RETROGUI_IDC retrogui_poll_ctls(
    if( 0 == *p_input ) {
       goto reset_debounce;
 
+#     ifndef RETROGUI_NO_MOUSE
    } else if(
       RETROFLAT_MOUSE_B_LEFT == *p_input ||
       RETROFLAT_MOUSE_B_RIGHT == *p_input
@@ -846,6 +847,7 @@ RETROGUI_IDC retrogui_poll_ctls(
          }
          break;
       }
+#     endif /* !RETROGUI_NO_MOUSE */
 
    } else {
 
