@@ -926,6 +926,9 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 #  include <SDL.h>
+#  ifdef RETROFLAT_API_SDL1
+#     include <SDL_getenv.h>
+#  endif /* RETROFLAT_API_SDL1 */
 
 #  if !defined( RETROFLAT_SOFT_SHAPES ) && !defined( RETROFLAT_OPENGL )
 #     define RETROFLAT_SOFT_SHAPES
@@ -1934,8 +1937,12 @@ struct RETROFLAT_ARGS {
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
-   /*! \brief Relative path under which bitmap assets are stored. */
+   /*! \brief Desired window X position in pixels. */
+   int screen_x;
+   /*! \brief Desired window Y position in pixels. */
+   int screen_y;
 #  endif /* RETROFLAT_API_PC_BIOS */
+   /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
    uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
@@ -3136,8 +3143,40 @@ static int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args )
 
 #  elif !defined( RETROFLAT_NO_CLI_SZ )
 
-static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfx( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_x = atoi( arg );
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfx_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_w ) {
+      args->screen_x = 0;
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfy( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_y = atoi( arg );
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfy_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_h ) {
+      args->screen_y = 0;
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
@@ -3153,7 +3192,7 @@ static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args )
 }
 
 static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfh", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
@@ -3291,12 +3330,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    RECT wr = { 0, 0, 0, 0 };
    DWORD window_style = RETROFLAT_WIN_STYLE;
    DWORD window_style_ex = 0;
-   int wx = CW_USEDEFAULT,
-      wy = CW_USEDEFAULT,
-      ww = 0,
+   int ww = 0,
       wh = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
+   char sdl_video_parms[256] = "";
 #     if defined( RETROFLAT_OPENGL )
    int gl_retval = 0,
       gl_depth = 16;
@@ -3374,6 +3412,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfm,
       (maug_cli_cb)retroflat_cli_rfm_def, args );
 #  elif !defined( RETROFLAT_NO_CLI_SZ )
+   maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the screen X position.", 0,
+      (maug_cli_cb)retroflat_cli_rfx,
+      (maug_cli_cb)retroflat_cli_rfx_def, args );
+   maug_add_arg( MAUG_CLI_SIGIL "rfy", MAUG_CLI_SIGIL_SZ + 4,
+      "Set the screen Y position.", 0,
+      (maug_cli_cb)retroflat_cli_rfy,
+      (maug_cli_cb)retroflat_cli_rfy_def, args );
    maug_add_arg( MAUG_CLI_SIGIL "rfw", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen width.", 0,
       (maug_cli_cb)retroflat_cli_rfw,
@@ -3474,6 +3520,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    ) {
 #     else
    if( 
+      /* TODO: Set window position. */
       set_gfx_mode(
          GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 )
    ) {
@@ -3525,8 +3572,23 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == SDL1 == */
 
+   /* Random seed. */
    srand( time( NULL ) );
 
+   /* Setup default screen position. */
+   if( 0 == args->screen_x ) {
+      /* TODO: Get screen width so we can center! */
+   }
+
+   if( 0 == args->screen_y ) {
+      /* TODO: Get screen height so we can center! */
+   }
+
+   maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
+       args->screen_x, args->screen_y );
+   putenv( sdl_video_parms );
+
+   /* Startup video. */
    if( SDL_Init( SDL_INIT_VIDEO ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
@@ -3633,7 +3695,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Create the main window. */
    g_retroflat_state->window = SDL_CreateWindow( args->title,
-      SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+      SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
       args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
    maug_cleanup_if_null( SDL_Window*, g_retroflat_state->window, RETROFLAT_ERROR_GRAPHICS );
 
@@ -3770,8 +3832,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       /* Make window fullscreen and on top. */
       window_style_ex = WS_EX_TOPMOST;
       window_style = WS_POPUP | WS_VISIBLE;
-      wx = 0;
-      wy = 0;
+      /* X/Y are hardcoded to zero below, so just get desired window size. */
       wr.left = 0;
       wr.top = 0;
       wr.right = GetSystemMetrics( SM_CXSCREEN );
@@ -3782,8 +3843,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Open in a centered window. */
    ww = wr.right - wr.left;
    wh = wr.bottom - wr.top;
-   wx = (GetSystemMetrics( SM_CXSCREEN ) / 2) - (ww / 2);
-   wy = (GetSystemMetrics( SM_CYSCREEN ) / 2) - (wh / 2);
+   if( 0 == args->screen_x ) {
+      args->screen_x = (GetSystemMetrics( SM_CXSCREEN ) / 2) - (ww / 2);
+   }
+   if( 0 == args->screen_y ) {
+      args->screen_y = (GetSystemMetrics( SM_CYSCREEN ) / 2) - (wh / 2);
+   }
 #     endif /* !RETROFLAT_API_WINCE */
 #     ifdef RETROFLAT_SCREENSAVER
    }
@@ -3795,7 +3860,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_API_WINCE
       0, 0, CW_USEDEFAULT, CW_USEDEFAULT,
 #     else
-      wx, wy, ww, wh,
+      args->screen_x, args->screen_y, ww, wh,
 #     endif /* RETROFLAT_API_WINCE */
 #     ifdef RETROFLAT_SCREENSAVER
       g_retroflat_state->parent
@@ -3934,6 +3999,9 @@ XXXZ
       glut_init_flags |= GLUT_DOUBLE;
    }
    glutInitDisplayMode( glut_init_flags );
+   if( 0 < args->screen_x || 0 < args->screen_y ) {
+      glutInitWindowPosition( args->screen_x, args->screen_y );
+   }
    glutInitWindowSize(
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
    glutCreateWindow( args->title );
