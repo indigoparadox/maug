@@ -440,8 +440,12 @@ cleanup:
    }
 
    /* Try to open the specified device. */
-   if( 0 == num_devs || num_devs < args->snd_dev_id ) {
+   if( 0 == num_devs ) {
       error_printf( "no MIDI devices found!" );
+      retval = MERROR_SND;
+      goto cleanup;
+   } else if( num_devs < args->snd_dev_id ) {
+      error_printf( "invalid MIDI device index: %d", args->snd_dev_id );
       retval = MERROR_SND;
       goto cleanup;
    }
