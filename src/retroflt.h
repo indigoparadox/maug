@@ -93,12 +93,13 @@
  *          struct EXAMPLE_DATA data;
  *          struct RETROFLAT_ARGS args;
  *
+ *          / * Startup logging before all else so we catch everything. * /
+ *          logging_init();
+ *
  *          / * Setup the args to retroflat_init() below to create a window 
- *            * titled "Example Program", 320x200 pixels large, and load
- *            * bitmaps from the "assets" subdirectory next to the executable.
+ *            * titled "Example Program", and load bitmaps from the "assets"
+ *            * subdirectory next to the executable.
  *            * /
- *          args.screen_w = 320;
- *          args.screen_h = 200;
  *          args.title = "Example Program";
  *          args.assets_path = "assets";
  *       
@@ -124,6 +125,9 @@
  *       
  *          / * This must be called at the end of the program! * /
  *          retroflat_shutdown( retval );
+ *
+ *          / * Shutdown logging after all else so we catch everything. * /
+ *          logging_init();
  *       
  *          return retval;
  *       }
