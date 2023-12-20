@@ -1562,6 +1562,9 @@ struct RETROFLAT_BITMAP {
 
 #  define GLUT_SPECIAL_KEY_OFFSET 0x80
 
+#  define RETROFLAT_MOUSE_B_LEFT    -1
+#  define RETROFLAT_MOUSE_B_RIGHT   -2
+
 #  define RETROFLAT_KEY_UP	      (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_UP)
 #  define RETROFLAT_KEY_DOWN     (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_DOWN)
 #  define RETROFLAT_KEY_RIGHT	   (GLUT_SPECIAL_KEY_OFFSET + GLUT_KEY_RIGHT)
@@ -2781,7 +2784,7 @@ void APIENTRY
 #else
 void
 #endif /* RETROFLAT_OS_OS2 */
-retroflat_glut_key( unsigned char key, int16_t x, int16_t y ) {
+retroflat_glut_key( unsigned char key, int x, int y ) {
    g_retroflat_state->retroflat_last_key = key;
 }
 
@@ -4007,7 +4010,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* == GLUT == */
 
 #     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-XXXZ
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
@@ -6576,6 +6578,8 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
 
+   /* TODO: Handle mouse. */
+
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: Poll the mouse. */
@@ -6612,6 +6616,8 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  else
 #     pragma message( "warning: poll input not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   /* TODO: Handle NDS input! */
 
    return key_out;
 }
