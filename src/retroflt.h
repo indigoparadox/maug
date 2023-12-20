@@ -3292,7 +3292,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    DWORD window_style = RETROFLAT_WIN_STYLE;
    DWORD window_style_ex = 0;
    int wx = CW_USEDEFAULT,
-      wy = CW_USEDEFAULT;
+      wy = CW_USEDEFAULT,
+      ww = 0,
+      wh = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
 #     if defined( RETROFLAT_OPENGL )
@@ -3774,6 +3776,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       wr.top = 0;
       wr.right = GetSystemMetrics( SM_CXSCREEN );
       wr.bottom = GetSystemMetrics( SM_CYSCREEN );
+   } else {
+#     endif /* RETROFLAT_SCREENSAVER */
+#     ifndef RETROFLAT_API_WINCE
+   /* Open in a centered window. */
+   ww = wr.right - wr.left;
+   wh = wr.bottom - wr.top;
+   wx = (GetSystemMetrics( SM_CXSCREEN ) / 2) - (ww / 2);
+   wy = (GetSystemMetrics( SM_CYSCREEN ) / 2) - (wh / 2);
+#     endif /* !RETROFLAT_API_WINCE */
+#     ifdef RETROFLAT_SCREENSAVER
    }
 #     endif /* RETROFLAT_SCREENSAVER */
 
@@ -3783,8 +3795,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_API_WINCE
       0, 0, CW_USEDEFAULT, CW_USEDEFAULT,
 #     else
-      wx, wy,
-      wr.right - wr.left, wr.bottom - wr.top,
+      wx, wy, ww, wh,
 #     endif /* RETROFLAT_API_WINCE */
 #     ifdef RETROFLAT_SCREENSAVER
       g_retroflat_state->parent
