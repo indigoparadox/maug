@@ -3039,18 +3039,18 @@ static int retrosnd_cli_rsd_def(
    int i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   env_var = getenv( "MAUG_MIDI" );
-
-   /* Return MERROR_OK since this isn't fatal and will just cause sound
-      * init to fail later.
-      */
-   maug_cleanup_if_null_msg(
-      char*, env_var, MERROR_OK, "MAUG_MIDI variable not found!" );
-
-   debug_printf( 2, "env: MAUG_MIDI: %s", env_var );
-
 #     ifdef RETROSND_API_PC_BIOS
    if( NULL != env_var ) {
+      env_var = getenv( "MAUG_MIDI_DOS" );
+
+      /* Return MERROR_OK since this isn't fatal and will just cause sound
+         * init to fail later.
+         */
+      maug_cleanup_if_null_msg(
+         char*, env_var, MERROR_OK, "MAUG_MIDI_DOS variable not found!" );
+
+      debug_printf( 2, "env: MAUG_MIDI_DOS: %s", env_var );
+
       /* Turn comma separator into NULL split. */
       for( i = 0 ; strlen( env_var ) > i ; i++ ) {
          if( ',' == env_var[i] ) {
@@ -3074,6 +3074,16 @@ static int retrosnd_cli_rsd_def(
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
+      env_var = getenv( "MAUG_MIDI_ALSA" );
+
+      /* Return MERROR_OK since this isn't fatal and will just cause sound
+         * init to fail later.
+         */
+      maug_cleanup_if_null_msg(
+         char*, env_var, MERROR_OK, "MAUG_MIDI_ALSA variable not found!" );
+
+      debug_printf( 2, "env: MAUG_MIDI_ALSA: %s", env_var );
+
       for( i = 0 ; strlen( env_var ) > i ; i++ ) {
          if( ':' == env_var[i] ) {
             /* Split into two null-terminated strings. */
@@ -3088,6 +3098,16 @@ static int retrosnd_cli_rsd_def(
    }
 
 #     elif defined( RETROSND_API_WINMM )
+   env_var = getenv( "MAUG_MIDI_WIN" );
+
+   /* Return MERROR_OK since this isn't fatal and will just cause sound
+      * init to fail later.
+      */
+   maug_cleanup_if_null_msg(
+      char*, env_var, MERROR_OK, "MAUG_MIDI_WIN variable not found!" );
+
+   debug_printf( 2, "env: MAUG_MIDI_WIN: %s", env_var );
+
    if( NULL != env_var ) {
       args->snd_dev_id = atoi( env_var );
    } else {
