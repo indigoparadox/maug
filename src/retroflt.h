@@ -3618,6 +3618,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 3, "maximum window size: %ux%u",
       info->current_w, info->current_h );
 
+   /* TODO: Maximum screen size detection returns bogus values in Windows! */
+
    /* Setup default screen position. */
    if( 0 == args->screen_x ) {
       /* Get screen width so we can center! */
