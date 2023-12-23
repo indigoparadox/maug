@@ -1549,7 +1549,8 @@ struct RETROFLAT_BITMAP {
 };
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
-#  define retroflat_bitmap_locked( bmp ) 0
+#  define retroflat_bitmap_locked( bmp ) \
+      (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
 /* TODO */
 #  define retroflat_bitmap_w( bmp ) (0)
 #  define retroflat_bitmap_h( bmp ) (0)
@@ -4014,7 +4015,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* == GLUT == */
 
 #     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-
+         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
    glutInit( &argc, argv );
