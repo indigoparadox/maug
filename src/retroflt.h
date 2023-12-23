@@ -5193,6 +5193,16 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   if( w > 256 ) {
+      error_printf( "warning! attempting to create texture with w > 256 ("
+         SIZE_T_FMT "). This may not work on Win32!", w );
+   }
+
+   if( h > 256 ) {
+      error_printf( "warning! attempting to create texture with h > 256 ("
+         SIZE_T_FMT "). This may not work on Win32!", h );
+   }
+
    bmp_out->tex.w = w;
    bmp_out->tex.h = h;
    /* TODO: Overflow checking. */
@@ -5719,6 +5729,16 @@ void retroflat_px(
 
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
+
+#     ifndef( RETROFLAT_NO_BOUNDSC )
+   if( x >= target->tex.w ) {
+      return;
+   }
+
+   if( y >= target->tex.h ) {
+      return;
+   }
+#     endif /* !RETROFLAT_NO_BOUNDSC */
 
    /* Draw pixel colors from texture palette. */
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
