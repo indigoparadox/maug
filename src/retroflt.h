@@ -3615,6 +3615,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    info = SDL_GetVideoInfo();
    maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
 
+   debug_printf( 3, "maximum window size: %ux%u",
+      info->current_w, info->current_h );
+
    /* Setup default screen position. */
    if( 0 == args->screen_x ) {
       /* Get screen width so we can center! */
