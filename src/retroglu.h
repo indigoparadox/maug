@@ -210,6 +210,32 @@ struct RETROGLU_PROJ_ARGS {
    float far_plane;
 };
 
+#define retroglu_push( x, y, x_f, y_f, aspect_f ) \
+   /* Switch to projection setup. */ \
+   glMatrixMode( GL_PROJECTION ); \
+   glPushMatrix(); \
+   /* Lighting makes overlay text hard to see. */ \
+   glDisable( GL_LIGHTING ); \
+   /* Use ortho for overlay. */ \
+   glLoadIdentity(); \
+   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
+   glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f ); \
+   /* -1 to 1 is 2! */ \
+   aspect_f *= 2.0f; \
+   /* Assuming width > height for aspect ratio. */ \
+   x_f = ((x) * aspect_f / retroflat_screen_w()) - (aspect_f / 2); \
+   /* Vertical coords also need to be inverted because OpenGL. */ \
+   y_f = 1.0f - ((y) * 2.0f / retroflat_screen_h()); \
+
+#define retroglu_whf( w, h, w_f, h_f, aspect_f ) \
+   w_f = ((w) * aspect_f / retroflat_screen_w()); \
+   h_f = ((h) * 2.0f / retroflat_screen_h());
+
+#define retroglu_pop() \
+   /* Restore modelview. */ \
+   glPopMatrix(); \
+   glMatrixMode( GL_MODELVIEW );
+
 #define retroglu_tex_px_x_to_f( px, sprite ) \
    ((px) * 1.0 / sprite->texture.tex.w)
 #define retroglu_tex_px_y_to_f( px, sprite ) \

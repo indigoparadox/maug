@@ -2127,32 +2127,6 @@ RETROFLAT_MS retroflat_get_ms();
 
 uint32_t retroflat_get_rand();
 
-#define retroflat_opengl_push( x, y, x_f, y_f, aspect_f ) \
-   /* Switch to projection setup. */ \
-   glMatrixMode( GL_PROJECTION ); \
-   glPushMatrix(); \
-   /* Lighting makes overlay text hard to see. */ \
-   glDisable( GL_LIGHTING ); \
-   /* Use ortho for overlay. */ \
-   glLoadIdentity(); \
-   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
-   glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f ); \
-   /* -1 to 1 is 2! */ \
-   aspect_f *= 2.0f; \
-   /* Assuming width > height for aspect ratio. */ \
-   x_f = ((x) * aspect_f / retroflat_screen_w()) - (aspect_f / 2); \
-   /* Vertical coords also need to be inverted because OpenGL. */ \
-   y_f = 1.0f - ((y) * 2.0f / retroflat_screen_h()); \
-
-#define retroflat_opengl_whf( w, h, w_f, h_f, aspect_f ) \
-   w_f = ((w) * aspect_f / retroflat_screen_w()); \
-   h_f = ((h) * 2.0f / retroflat_screen_h());
-
-#define retroflat_opengl_pop() \
-   /* Restore modelview. */ \
-   glPopMatrix(); \
-   glMatrixMode( GL_MODELVIEW );
-
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{
@@ -5923,8 +5897,8 @@ void retroflat_rect(
    if( NULL == target || retroflat_screen_buffer() == target ) {
       /* Draw directly to the screen. */
 
-      retroflat_opengl_push( x, y, screen_x, screen_y, aspect_ratio );
-      retroflat_opengl_whf( w, h, screen_w, screen_h, aspect_ratio );
+      retroglu_push( x, y, screen_x, screen_y, aspect_ratio );
+      retroglu_whf( w, h, screen_w, screen_h, aspect_ratio );
 
       glBegin( GL_TRIANGLES );
       glColor3fv( g_retroflat_state->palette[color_idx] );
@@ -5937,7 +5911,7 @@ void retroflat_rect(
       glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
       glEnd();
       
-      retroflat_opengl_pop();
+      retroglu_pop();
    } else {
       retrosoft_rect( target, color_idx, x, y, w, h, flags );
    }
@@ -6311,13 +6285,13 @@ void retroflat_string(
 #  if defined( RETROFLAT_OPENGL )
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
-      retroflat_opengl_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
+      retroglu_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
       retroglu_string(
          screen_x, screen_y, 0, 
          g_retroflat_state->palette[color], str, str_sz, font_str, flags );
 
-      retroflat_opengl_pop();
+      retroglu_pop();
    } else {
       retrosoft_string(
          target, color, str, str_sz, font_str, x_orig, y_orig, flags );
