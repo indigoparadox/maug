@@ -5720,12 +5720,15 @@ void retroflat_px(
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 
+   /* Draw pixel colors from texture palette. */
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
       g_retroflat_state->tex_palette[color_idx][0];
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
       g_retroflat_state->tex_palette[color_idx][1];
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
       g_retroflat_state->tex_palette[color_idx][2];
+
+   /* Set pixel as opaque. */
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
@@ -5895,11 +5898,12 @@ void retroflat_rect(
 #  if defined( RETROFLAT_OPENGL )
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
-      /* Draw directly to the screen. */
 
-      retroglu_push( x, y, screen_x, screen_y, aspect_ratio );
+      /* Push new overlay projection parms before we create a new overlay. */
+      retroglu_push_overlay( x, y, screen_x, screen_y, aspect_ratio );
       retroglu_whf( w, h, screen_w, screen_h, aspect_ratio );
 
+      /* Create the overlay poly with a solid color. */
       glBegin( GL_TRIANGLES );
       glColor3fv( g_retroflat_state->palette[color_idx] );
       glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
@@ -5911,8 +5915,9 @@ void retroflat_rect(
       glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
       glEnd();
       
-      retroglu_pop();
+      retroglu_pop_overlay();
    } else {
+      /* Draw the rect onto the given 2D texture. */
       retrosoft_rect( target, color_idx, x, y, w, h, flags );
    }
 
@@ -6285,14 +6290,17 @@ void retroflat_string(
 #  if defined( RETROFLAT_OPENGL )
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
-      retroglu_push( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
+      /* Push new overlay projection parms before we create a new overlay. */
+      retroglu_push_overlay( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
 
       retroglu_string(
          screen_x, screen_y, 0, 
          g_retroflat_state->palette[color], str, str_sz, font_str, flags );
 
-      retroglu_pop();
+      retroglu_pop_overlay();
    } else {
+      /* Assume drawing surface is already configured inside a push_overlay()
+       * call and draw to its texture. */
       retrosoft_string(
          target, color, str, str_sz, font_str, x_orig, y_orig, flags );
    }
