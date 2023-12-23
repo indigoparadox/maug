@@ -5730,7 +5730,7 @@ void retroflat_px(
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 
-#     ifndef( RETROFLAT_NO_BOUNDSC )
+#     if !defined( RETROFLAT_NO_BOUNDSC )
    if( x >= target->tex.w ) {
       return;
    }
