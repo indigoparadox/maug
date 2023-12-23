@@ -3603,20 +3603,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Random seed. */
    srand( time( NULL ) );
 
-   /* Setup default screen position. */
-   if( 0 == args->screen_x ) {
-      /* TODO: Get screen width so we can center! */
-   }
-
-   if( 0 == args->screen_y ) {
-      /* TODO: Get screen height so we can center! */
-   }
-
-   maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
-       args->screen_x, args->screen_y );
-   putenv( sdl_video_parms );
-
-   /* Startup video. */
+   /* Startup SDL. */
    if( SDL_Init( SDL_INIT_VIDEO ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
@@ -3624,8 +3611,24 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+   /* Get info on best available video mode. */
    info = SDL_GetVideoInfo();
    maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
+
+   /* Setup default screen position. */
+   if( 0 == args->screen_x ) {
+      /* Get screen width so we can center! */
+      args->screen_x = (info->current_w / 2) - (args->screen_w / 2);
+   }
+
+   if( 0 == args->screen_y ) {
+      /* Get screen height so we can center! */
+      args->screen_y = (info->current_h / 2) - (args->screen_h / 2);
+   }
+
+   maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
+       args->screen_x, args->screen_y );
+   putenv( sdl_video_parms );
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
