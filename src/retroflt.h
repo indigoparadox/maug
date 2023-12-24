@@ -2789,7 +2789,7 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
 /* === */
 
 int retroflat_loop(
-   retroflat_loop_iter loop_iter, retroflat_loop_iter frame_iter, void* data
+   retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
 
 #  if defined( RETROFLAT_OS_WASM )
@@ -2818,22 +2818,15 @@ int retroflat_loop(
 #     ifdef RETROFLAT_API_LIBNDS
          swiWaitForVBlank();
 #     endif /* RETROFLAT_API_LIBNDS */
-         if( NULL != frame_iter ) {
-            /* A frame iterator was given, so assume the loop iterator happens
-             * every loop iteration and the frame iterator alone will be locked
-             * to the FPS below.
-             */
+         if( NULL != loop_iter ) {
+            /* Run the loop iter as many times as possible. */
             loop_iter( data );
          }
          continue;
       }
       if( NULL != frame_iter ) {
+         /* Run the frame iterator once per FPS tick. */
          frame_iter( data );
-      } else {
-         /* No frame iterator was given, so loop iterator is the frame
-          * iterator.
-          */
-         loop_iter( data );
       }
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
