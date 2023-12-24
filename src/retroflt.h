@@ -117,9 +117,10 @@
  *       
  *          / * === Main Loop === * /
  *          / * Call example_loop( data ) repeatedly, until it calls
- *            * retroflat_quit().
+ *            * retroflat_quit(). Passing it as the first arg means it will
+ *            * be capped by the framerate.
  *            * /
- *          retroflat_loop( (retroflat_loop_iter)example_loop, &data );
+ *          retroflat_loop( (retroflat_loop_iter)example_loop, NULL, &data );
  *       
  *       cleanup:
  *       
@@ -619,13 +620,21 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 #  define RETROFLAT_WINDOW_CLASS "RetroFlatWindowClass"
 #endif /* !RETROFLAT_WINDOW_CLASS */
 
-#ifndef RETROFLAT_WIN_GFX_TIMER_ID
+#ifndef RETROFLAT_WIN_FRAME_TIMER_ID
 /**
- * \brief Unique ID for the timer that execute graphics ticks in Win16/Win32.
+ * \brief Unique ID for the timer that execute frame draws in Win16/Win32.
  *        Is a \ref maug_retroflt_cdefs_page.
  */
-#  define RETROFLAT_WIN_GFX_TIMER_ID 6001
-#endif /* !RETROFLAT_WIN_GFX_TIMER_ID */
+#  define RETROFLAT_WIN_FRAME_TIMER_ID 6001
+#endif /* !RETROFLAT_WIN_FRAME_TIMER_ID */
+
+#ifndef RETROFLAT_WIN_LOOP_TIMER_ID
+/**
+ * \brief Unique ID for the timer that execute loop ticks in Win16/Win32.
+ *        Is a \ref maug_retroflt_cdefs_page.
+ */
+#  define RETROFLAT_WIN_LOOP_TIMER_ID 6002
+#endif /* !RETROFLAT_WIN_LOOP_TIMER_ID */
 
 #ifndef RETROFLAT_MSG_MAX
 /**
@@ -2635,8 +2644,25 @@ static LRESULT CALLBACK WndProc(
             break;
          }
 
-         /* TODO: Work in frame_iter if provided. */
-         g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+         if( RETROFLAT_WIN_FRAME_TIMER_ID == wParam ) {
+            /* Frame timer has expired. */
+            if( NULL != g_retroflat_state->frame_iter ) {
+               g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
+            } else {
+               /* No frame iterator, so we don't need this timer! */
+               KillTimer(
+                  g_retroflat_state->window, RETROFLAT_WIN_FRAME_TIMER_ID );
+            }
+         } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
+            /* Loop/tick timer has expired. */
+            if( NULL != g_retroflat_state->loop_iter ) {
+               g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+            } else {
+               /* No loop iterator, so we don't need this timer! */
+               KillTimer(
+                  g_retroflat_state->window, RETROFLAT_WIN_LOOP_TIMER_ID );
+            }
+         }
          break;
 
       case WM_COMMAND:
@@ -3928,11 +3954,25 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (int)(1000 / RETROFLAT_FPS) );
    if( !SetTimer(
       g_retroflat_state->window,
-      RETROFLAT_WIN_GFX_TIMER_ID,
+      RETROFLAT_WIN_FRAME_TIMER_ID,
       (int)(1000 / RETROFLAT_FPS), NULL )
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Could not create graphics timer!" );
+         "Error", "Could not create frame timer!" );
+      retval = RETROFLAT_ERROR_TIMER;
+      goto cleanup;
+   }
+
+   /* Create the loop timer for now... we'll check if there's a loop tick
+    * iterator available on the first frame tick, and if not, we'll
+    * kill it there.
+    */
+   if( !SetTimer(
+      g_retroflat_state->window,
+      RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
+   ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not create loop timer!" );
       retval = RETROFLAT_ERROR_TIMER;
       goto cleanup;
    }
