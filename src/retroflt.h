@@ -2054,6 +2054,7 @@ struct RETROFLAT_STATE {
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
    retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
 
 #elif defined( RETROFLAT_API_LIBNDS )
 
@@ -2070,6 +2071,7 @@ struct RETROFLAT_STATE {
 
    size_t               retroflat_next;
    retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
    int16_t              retroflat_last_key;
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
@@ -2093,7 +2095,8 @@ struct RETROFLAT_STATE {
  *        to enter the main loop. The main loop will continuously call
  *        loop_iter with data as an argument until retroflat_quit() is called.
  */
-MERROR_RETVAL retroflat_loop( retroflat_loop_iter iter, void* data );
+MERROR_RETVAL retroflat_loop(
+   retroflat_loop_iter loop_iter, retroflat_loop_iter frame_iter, void* data );
 
 /**
  * \brief Display a message in a dialog box and/or on stderr.
@@ -2632,6 +2635,7 @@ static LRESULT CALLBACK WndProc(
             break;
          }
 
+         /* TODO: Work in frame_iter if provided. */
          g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
          break;
 
@@ -2730,6 +2734,7 @@ void APIENTRY
 void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_display( void ) {
+   /* TODO: Work in frame_iter if provided. */
    if( NULL != g_retroflat_state->loop_iter ) {
       g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
    }
@@ -2783,10 +2788,13 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
 
 /* === */
 
-int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
+int retroflat_loop(
+   retroflat_loop_iter loop_iter, retroflat_loop_iter frame_iter, void* data
+) {
 
 #  if defined( RETROFLAT_OS_WASM )
 
+   /* TODO: Work in frame_iter if provided. */
    emscripten_cancel_main_loop();
    emscripten_set_main_loop_arg( loop_iter, data, 0, 0 );
 
@@ -2806,18 +2814,33 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
          (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
          retroflat_get_ms() < next
       ) {
-         /* Sleep/low power for a bid. */
+         /* Sleep/low power for a bit. */
 #     ifdef RETROFLAT_API_LIBNDS
          swiWaitForVBlank();
 #     endif /* RETROFLAT_API_LIBNDS */
+         if( NULL != frame_iter ) {
+            /* A frame iterator was given, so assume the loop iterator happens
+             * every loop iteration and the frame iterator alone will be locked
+             * to the FPS below.
+             */
+            loop_iter( data );
+         }
          continue;
       }
-      loop_iter( data );
+      if( NULL != frame_iter ) {
+         frame_iter( data );
+      } else {
+         /* No frame iterator was given, so loop iterator is the frame
+          * iterator.
+          */
+         loop_iter( data );
+      }
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
          next = now + retroflat_fps_next();
       } else {
          /* Rollover protection. */
+         /* TODO: Add difference from now/next to 0 here. */
          next = 0;
       }
    } while(
@@ -2830,6 +2853,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
 
    /* Handle Windows messages until quit. */
    do {
@@ -2843,6 +2867,7 @@ int retroflat_loop( retroflat_loop_iter loop_iter, void* data ) {
 
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
    glutMainLoop();
 
 #  else
