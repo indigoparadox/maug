@@ -2893,6 +2893,8 @@ int retroflat_loop(
       }
    }
 
+   /* TODO: loop_iter is artificially slow on Windows! */
+
    /* Handle Windows messages until quit. */
    do {
       g_retroflat_state->msg_retval =
