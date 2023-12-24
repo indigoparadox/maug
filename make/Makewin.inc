@@ -137,10 +137,10 @@ define TGT_WATCOM386_WIN_GLUT
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_GLUT)","")
 	CFLAGS_WATCOM386_WIN_GLUT := \
-		-mf -5r -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
+		-mf -5s -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
 endif
 ifeq ("$$(LDFLAGS_WATCOM386_WIN_GLUT)","")
-	LDFLAGS_WATCOM386_WIN_GLUT := system nt_win
+	LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
 endif
 
 $(1)ntgl.exe: \

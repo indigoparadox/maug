@@ -39,6 +39,7 @@ $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).ico: $(1).bmp
 
 $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).rc: $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).ico
 	echo "$$(WIN_ICO_RES_ID)   ICON   \"$$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).ico\"" > $$@
+	echo "GLUT_ICON   ICON   \"$$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).ico\"" >> $$@
 
 $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).res: $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).rc
 	wrc -r $$< -bt=nt -fo=$$@

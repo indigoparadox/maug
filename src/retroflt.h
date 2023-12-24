@@ -1523,10 +1523,14 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #elif defined( RETROFLAT_API_GLUT )
 
-#ifndef RETROFLAT_OPENGL
-#  error "RETROFLAT_API_GLUT specified without RETROFLAT_OPENGL!"
-#  define RETROFLAT_OPENGL
-#endif /* !RETROFLAT_OPENGL */
+#  ifndef RETROFLAT_OPENGL
+#     error "RETROFLAT_API_GLUT specified without RETROFLAT_OPENGL!"
+#     define RETROFLAT_OPENGL
+#  endif /* !RETROFLAT_OPENGL */
+
+#  ifdef __WATCOMC__
+#     define GLUT_DISABLE_ATEXIT_HACK
+#  endif
 
 #include <GL/glut.h>
 
@@ -2758,12 +2762,18 @@ retroflat_glut_idle( void ) {
    }
 }
 
-#ifdef RETROFLAT_OS_OS2
+#     ifdef RETROFLAT_OS_OS2
 void APIENTRY
-#else
+#     elif defined( RETROFLAT_OS_WIN )
+void 
+#     else
 void
-#endif /* RETROFLAT_OS_OS2 */
+#     endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_key( unsigned char key, int x, int y ) {
+#     ifdef RETROFLAT_OS_WIN
+      /* key -= 109; */
+#     endif /* RETROFLAT_OS_WIN */
+   debug_printf( 0, "key: %c (0x%02x)", key, key );
    g_retroflat_state->retroflat_last_key = key;
 }
 
