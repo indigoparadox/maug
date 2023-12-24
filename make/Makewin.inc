@@ -136,6 +136,7 @@ TGTWINNT=$(TGT_WATCOM386_WIN_WIN32)
 define TGT_WATCOM386_WIN_GLUT
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_GLUT)","")
+	# GLUT requires stack calling (-5s).
 	CFLAGS_WATCOM386_WIN_GLUT := \
 		-mf -5s -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
 endif
