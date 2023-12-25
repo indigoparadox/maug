@@ -4307,6 +4307,16 @@ void retroflat_shutdown( int retval ) {
 
    /* TODO: Windows shutdown? */
 
+   /* Stop frame timer if available. */
+   if( NULL != g_retroflat_state->frame_iter ) {
+      KillTimer( g_retroflat_state->window, RETROFLAT_WIN_FRAME_TIMER_ID );
+   }
+
+   /* Stop loop timer if available. */
+   if( NULL != g_retroflat_state->loop_iter ) {
+      KillTimer( g_retroflat_state->window, RETROFLAT_WIN_LOOP_TIMER_ID );
+   }
+
    if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
       /* Return the default object into the HDC. */
       SelectObject(
