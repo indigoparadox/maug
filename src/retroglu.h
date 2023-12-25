@@ -30,8 +30,6 @@
 #  define RETROGLU_SPRITE_TEX_FRAMES_SZ 10
 #endif /* !RETROGLU_SPRITE_TEX_FRAMES_SZ */
 
-#define RETROGLU_FLAGS_INIT_VERTICES 0x01
-
 #ifdef MAUG_OS_NDS
 typedef int GLint;
 #  define RETROGLU_NO_TEXTURES
@@ -176,6 +174,25 @@ struct RETROGLU_OBJ {
 #define RETROGLU_SPRITE_X 0
 #define RETROGLU_SPRITE_Y 1
 
+#ifndef RETROGLU_SPRITE_LIST_SZ_MAX
+#  define RETROGLU_SPRITE_LIST_SZ_MAX 10
+#endif /* !RETROGLU_SPRITE_LIST_SZ_MAX */
+
+/**
+ * \brief If draw lists are disabled, this struct holds a list of params for
+ *        retroglu_set_sprite_clip() so that the sprite can be drawn
+ *        without a list.
+ */
+struct RETROGLU_SPRITE_PARMS {
+   uint32_t front_px;
+   uint32_t front_py;
+   uint32_t back_px;
+   uint32_t back_py;
+   uint32_t pw;
+   uint32_t ph;
+   uint8_t flags;
+};
+
 struct RETROGLU_SPRITE {
    float vertices_front[6][2];
    float vtexture_front[6][2];
@@ -188,6 +205,11 @@ struct RETROGLU_SPRITE {
    int rotate_y;
    RETROGLU_COLOR color;
    struct RETROFLAT_BITMAP texture;
+#ifdef RETROGLU_NO_LISTS
+   struct RETROGLU_SPRITE_PARMS parms[RETROGLU_SPRITE_LIST_SZ_MAX];
+#else
+   GLint lists[RETROGLU_SPRITE_LIST_SZ_MAX];
+#endif /* RETROGLU_NO_LISTS */
 };
 
 struct RETROGLU_TILE {
@@ -383,13 +405,41 @@ void retroglu_set_sprite_clip(
    struct RETROGLU_SPRITE* sprite,
    uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
    uint32_t pw, uint32_t ph, uint8_t flags );
+ 
+/**
+ * \brief Setup the sprite vertices for the poly the sprite will be drawn on.
+ *        This should be called once when the sprite is initialized, but
+ *        calling it again later shouldn't hurt.
+ */
+void retroglu_init_sprite_vertices( struct RETROGLU_SPRITE* sprite );
 
 void retroglu_set_sprite_pos(
    struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py );
 
 void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite );
 
+/**
+ * \brief Draw the given sprite. This function never uses a list, and can
+ *        therefore be used to create a draw list.
+ */
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite );
+
+/**
+ * \brief If lists are enabled, prerender the sprite to a list using the
+ *        given params to retroglu_set_sprite_clip().
+ *
+ * \note If lists are not enabled, this call does nothing.
+ */
+void retroglu_prerender_sprite(
+   struct RETROGLU_SPRITE* sprite, int list_idx,
+   uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
+   uint32_t pw, uint32_t ph, uint8_t flags );
+
+/**
+ * \brief If lists are enabled, render the sprite list at list_idx. Otherwise,
+ *        draw the sprite using retroglu_draw_sprite().
+ */
+void retroglu_jitrender_sprite( struct RETROGLU_SPRITE* sprite, int list_idx );
 
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite );
 
@@ -1030,12 +1080,9 @@ void retroglu_set_tile_clip(
    /* Lower Left */
    tile->vtexture[5][RETROGLU_SPRITE_X] = clip_tex_x;
    tile->vtexture[5][RETROGLU_SPRITE_Y] = clip_tex_y;
+}
 
-   if(
-      RETROGLU_FLAGS_INIT_VERTICES != (RETROGLU_FLAGS_INIT_VERTICES & flags)
-   ) {
-      return;
-   }
+void retroglu_init_tile_vertices( struct RETROGLU_TILE* tile ) {
 
    /* == Front Face Vertices == */
 
@@ -1139,12 +1186,11 @@ void retroglu_set_sprite_clip(
    /* Lower Left */
    sprite->vtexture_back[5][RETROGLU_SPRITE_X] = clip_tex_bx;
    sprite->vtexture_back[5][RETROGLU_SPRITE_Y] = clip_tex_by;
+}
 
-   if(
-      RETROGLU_FLAGS_INIT_VERTICES != (RETROGLU_FLAGS_INIT_VERTICES & flags)
-   ) {
-      return;
-   }
+/* === */
+
+void retroglu_init_sprite_vertices( struct RETROGLU_SPRITE* sprite ) {
 
    /* == Front Face Vertices == */
 
@@ -1199,6 +1245,8 @@ void retroglu_set_sprite_clip(
    sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1;
 }
 
+/* === */
+
 void retroglu_set_sprite_pos(
    struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py
 ) {
@@ -1206,12 +1254,16 @@ void retroglu_set_sprite_pos(
    sprite->translate_y = retroglu_scr_px_y_to_f( py );
 }
 
+/* === */
+
 void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
    /* Set the matrix to translate/rotate/scale based on sprite props. */
    glTranslatef( sprite->translate_x, sprite->translate_y, 0 );
    glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
    glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
 }
+
+/* === */
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
@@ -1260,6 +1312,54 @@ cleanup:
    }
 #endif /* !RETROGLU_NO_TEXTURES */
 }
+
+/* === */
+
+void retroglu_prerender_sprite(
+   struct RETROGLU_SPRITE* sprite, int list_idx,
+   uint32_t front_px, uint32_t front_py, uint32_t back_px, uint32_t back_py,
+   uint32_t pw, uint32_t ph, uint8_t flags
+) {
+#ifdef RETROGLU_NO_LISTS
+   sprite->parms[list_idx].front_px = front_px;
+   sprite->parms[list_idx].front_py = front_py;
+   sprite->parms[list_idx].back_px = back_px;
+   sprite->parms[list_idx].back_py = back_py;
+   sprite->parms[list_idx].pw = pw;
+   sprite->parms[list_idx].ph = ph;
+   sprite->parms[list_idx].flags = flags;
+#else
+   /* Prerender the sprite to a GL list to call later. */
+   sprite->lists[list_idx] = glGenLists( 1 );
+   retroglu_set_sprite_clip(
+      sprite, front_px, front_py, back_px, back_py, pw, ph, flags );
+   glNewList( sprite->lists[list_idx], GL_COMPILE );
+   retroglu_draw_sprite( sprite );
+   glEndList();
+#endif /* RETROGLU_NO_LISTS */
+}
+
+/* === */
+
+void retroglu_jitrender_sprite( struct RETROGLU_SPRITE* sprite, int list_idx ) {
+#ifdef RETROGLU_NO_LISTS
+   /* Prerender the sprite to a GL list to call later. */
+   retroglu_set_sprite_clip(
+      sprite,
+      sprite->parms[list_idx].front_px,
+      sprite->parms[list_idx].front_py,
+      sprite->parms[list_idx].back_px,
+      sprite->parms[list_idx].back_py,
+      sprite->parms[list_idx].pw,
+      sprite->parms[list_idx].ph,
+      sprite->parms[list_idx].flags );
+   retroglu_draw_sprite( sprite );
+#else
+   glCallList( sprite->lists[list_idx] );
+#endif /* RETROGLU_NO_LISTS */
+}
+
+/* === */
 
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
    if( NULL != sprite->texture.tex.bytes_h ) {
