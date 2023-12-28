@@ -3668,6 +3668,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 3, "maximum window size: %ux%u",
       info->current_w, info->current_h );
 
+#     ifndef RETROFLAT_OS_WIN
+
    /* TODO: Maximum screen size detection returns bogus values in Windows! */
 
    /* Setup default screen position. */
@@ -3684,6 +3686,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
        args->screen_x, args->screen_y );
    putenv( sdl_video_parms );
+
+#     endif /* !RETROFLAT_OS_WIN */
 
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
