@@ -719,6 +719,11 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 /*! \} */ /* maug_retroflt_compiling */
 
 /**
+ * \brief Path/name used to load an asset from disk.
+ */
+typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
+
+/**
  * \brief Prototype for the main loop function passed to retroflat_loop().
  */
 typedef void (*retroflat_loop_iter)(void* data);
@@ -6667,6 +6672,8 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #  elif defined( RETROFLAT_API_GLUT )
 
+   /* TODO: Implement RETROFLAT_MOD_SHIFT. */
+
    key_out = g_retroflat_state->retroflat_last_key;
    g_retroflat_state->retroflat_last_key = 0;
 
@@ -6675,6 +6682,8 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* TODO: Poll the mouse. */
+
+   /* TODO: Implement RETROFLAT_MOD_SHIFT. */
 
    if( kbhit() ) {
       /* Poll the keyboard. */
