@@ -200,7 +200,9 @@ void retrosoft_line_strategy(
 
 }
 
-#if defined( RETROFLAT_OPENGL ) || defined( RETROFLAT_SOFT_LINES )
+#if defined( RETROFLAT_OPENGL ) || \
+   defined( RETROFLAT_API_PC_BIOS ) || \
+   defined( RETROFLAT_SOFT_LINES )
 
 void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,

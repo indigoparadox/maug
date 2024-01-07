@@ -1682,11 +1682,6 @@ typedef uint16_t RETROFLAT_MS;
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
-/* TODO: Accelerate lines. */
-#  ifndef RETROFLAT_SOFT_LINES
-#     define RETROFLAT_SOFT_LINES
-#  endif /* !RETROFLAT_SOFT_LINES */
-
 #  ifndef RETROFLAT_DOS_TIMER_DIV
 /* #define RETROFLAT_DOS_TIMER_DIV 1103 */
 #     define RETROFLAT_DOS_TIMER_DIV 100
@@ -1790,7 +1785,8 @@ struct RETROFLAT_BITMAP {
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
 #  ifdef RETROFLT_C
-static uint8_t far* g_retroflat_scr = (uint8_t far*)0xB8000000L;
+static uint8_t far* g_retroflat_cga = (uint8_t far*)0xB8000000L;
+static uint8_t far* g_retroflat_vga = (uint8_t far*)0xA0000000L;
 #  endif /* RETROFLT_C */
 
 #else
@@ -3233,7 +3229,8 @@ static int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == args->screen_mode ) {
-      args->screen_mode = RETROFLAT_SCREEN_MODE_CGA;
+      /* TODO: Autodetect best available? */
+      args->screen_mode = RETROFLAT_SCREEN_MODE_VGA;
    }
    return RETROFLAT_OK;
 }
@@ -5956,22 +5953,23 @@ void retroflat_px(
 
       if( y & 0x01 ) {
          /* 0x2000 = difference between even/odd CGA planes. */
-         g_retroflat_scr[0x2000 + screen_byte_offset] &=
+         g_retroflat_cga[0x2000 + screen_byte_offset] &=
             /* 0x03 = 2-bit pixel mask. */
             ~(0x03 << screen_bit_offset);
-         g_retroflat_scr[0x2000 + screen_byte_offset] |= 
+         g_retroflat_cga[0x2000 + screen_byte_offset] |= 
             ((color & 0x03) << screen_bit_offset);
       } else {
          /* 0x03 = 2-bit pixel mask. */
-         g_retroflat_scr[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
-         g_retroflat_scr[screen_byte_offset] |=
+         g_retroflat_cga[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
+         g_retroflat_cga[screen_byte_offset] |=
             /* 0x03 = 2-bit pixel mask. */
             ((color & 0x03) << screen_bit_offset);
       }
       break;
 
    case RETROFLAT_SCREEN_MODE_VGA:
-      /* TODO */
+      screen_byte_offset = ((y * 320) + x);
+      g_retroflat_vga[screen_byte_offset] = color_idx;
       break;
    }
 
@@ -6177,6 +6175,23 @@ cleanup:
    if( (HPEN)NULL != pen ) {
       SelectObject( target->hdc_b, old_pen );
       DeleteObject( pen );
+   }
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* == DOS PC_BIOS == */
+
+   /* TODO: Determine if we're drawing on-screen or on a bitmap. */
+
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_CGA:
+      retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+      break;
+
+   case RETROFLAT_SCREEN_MODE_VGA:
+      /* TODO: Try accelerated 2D. */
+      retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+      break;
    }
 
 #  else
