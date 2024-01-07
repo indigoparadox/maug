@@ -719,9 +719,23 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 /*! \} */ /* maug_retroflt_compiling */
 
 /**
+ * \addtogroup maug_retroflt_assets RetroFlat Assets API
+ * \brief Functions and macros for handling graphical asset files.
+ * \todo This is kind of a mess and needs better integration with the rest!
+ * \{
+ */
+
+/**
  * \brief Path/name used to load an asset from disk.
  */
 typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
+
+/**
+ * \brief Compare two asset paths. Return 0 if they're the same.
+ */
+#define retroflat_cmp_asset_path( a, b ) strncmp( a, b, RETROFLAT_PATH_MAX )
+
+/*! \} */ /* maug_retroflt_assets */
 
 /**
  * \brief Prototype for the main loop function passed to retroflat_loop().
