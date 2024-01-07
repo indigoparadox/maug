@@ -200,8 +200,6 @@ struct RETROGLU_SPRITE {
    float vtexture_back[6][2];
    float translate_x;
    float translate_y;
-   float scale_x;
-   float scale_y;
    int rotate_y;
    RETROGLU_COLOR color;
    struct RETROFLAT_BITMAP texture;
@@ -295,9 +293,7 @@ struct RETROGLU_PROJ_ARGS {
 #define retroglu_set_sprite_tex( sprite, texture_id, bmp_w, bmp_h ) \
    sprite->texture_id = texture_id; \
    sprite->texture_w = bmp_w; \
-   sprite->texture_h = bmp_h; \
-   sprite->scale_x = 1.0f; \
-   sprite->scale_y = 1.0f;
+   sprite->texture_h = bmp_h;
 
 #define retroglu_set_sprite_color( sprite, color_in ) \
    memcpy( (sprite)->color, (color_in), 3 * sizeof( float ) )
@@ -412,6 +408,9 @@ void retroglu_set_sprite_clip(
  *        calling it again later shouldn't hurt.
  */
 void retroglu_init_sprite_vertices( struct RETROGLU_SPRITE* sprite );
+
+void retroglu_init_sprite_vertices_scale(
+   struct RETROGLU_SPRITE* sprite, float scale );
 
 void retroglu_set_sprite_pos(
    struct RETROGLU_SPRITE* sprite, uint32_t px, uint32_t py );
@@ -1191,58 +1190,66 @@ void retroglu_set_sprite_clip(
 /* === */
 
 void retroglu_init_sprite_vertices( struct RETROGLU_SPRITE* sprite ) {
+   retroglu_init_sprite_vertices_scale( sprite, 1.0f );
+}
+
+/* === */
+
+void retroglu_init_sprite_vertices_scale(
+   struct RETROGLU_SPRITE* sprite, float scale
+) {
 
    /* == Front Face Vertices == */
 
    /* Lower-Left */
-   sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_front[0][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_front[0][RETROGLU_SPRITE_Y] = -1.0f * scale;
    
    /* Lower-Right */
-   sprite->vertices_front[1][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_front[1][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_front[1][RETROGLU_SPRITE_Y] = -1.0f * scale;
    
    /* Upper-Right */
-   sprite->vertices_front[2][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_front[2][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_front[2][RETROGLU_SPRITE_Y] = scale;
 
    /* Upper-Right */
-   sprite->vertices_front[3][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_front[3][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_front[3][RETROGLU_SPRITE_Y] = scale;
 
    /* Upper-Left */
-   sprite->vertices_front[4][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_front[4][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_front[4][RETROGLU_SPRITE_Y] = scale;
 
    /* Lower-Left */
-   sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_front[5][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_front[5][RETROGLU_SPRITE_Y] = -1.0f * scale;
 
    /* == Back Face Vertices == */
 
    /* Lower-Right */
-   sprite->vertices_back[0][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_back[0][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_back[0][RETROGLU_SPRITE_Y] = -1.0f * scale;
 
    /* Lower-Left */
-   sprite->vertices_back[1][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_back[1][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_back[1][RETROGLU_SPRITE_Y] = -1.0f * scale;
 
    /* Upper-Left */
-   sprite->vertices_back[2][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_back[2][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_back[2][RETROGLU_SPRITE_Y] = scale;
 
    /* Upper-Left */
-   sprite->vertices_back[3][RETROGLU_SPRITE_X] = -1;
-   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_back[3][RETROGLU_SPRITE_X] = -1.0f * scale;
+   sprite->vertices_back[3][RETROGLU_SPRITE_Y] = scale;
 
    /* Upper-Right */
-   sprite->vertices_back[4][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = 1;
+   sprite->vertices_back[4][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_back[4][RETROGLU_SPRITE_Y] = scale;
 
    /* Lower-Right */
-   sprite->vertices_back[5][RETROGLU_SPRITE_X] = 1;
-   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1;
+   sprite->vertices_back[5][RETROGLU_SPRITE_X] = scale;
+   sprite->vertices_back[5][RETROGLU_SPRITE_Y] = -1.0f * scale;
 }
 
 /* === */
@@ -1259,7 +1266,6 @@ void retroglu_set_sprite_pos(
 void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
    /* Set the matrix to translate/rotate/scale based on sprite props. */
    glTranslatef( sprite->translate_x, sprite->translate_y, 0 );
-   glScalef( sprite->scale_x, sprite->scale_y, 1.0f );
    glRotatef( sprite->rotate_y, 0.0f, 1.0f, 0.0f );
 }
 
@@ -1285,8 +1291,8 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
 #endif /* !RETROGLU_NO_TEXTURES */
 #ifndef MAUG_OS_NDS
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 #endif /* !MAUG_OS_NDS */
 
    glBegin( GL_TRIANGLES );
@@ -1488,8 +1494,8 @@ void retroglu_string(
       glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[0][str[i] - ' '] );
 #endif /* RETROGLU_NO_TEXTURES */
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
       
       glBegin( GL_TRIANGLES );
 
