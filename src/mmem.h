@@ -48,6 +48,11 @@ typedef void* MAUG_MHANDLE;
  */
 #define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
 
+/**
+ * \brief Zero the block of memory pointed to by ptr.
+ *
+ * \warn This should be used on pointers, not handles!
+ */
 #define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
 
 #define maug_mfree( handle ) free( handle ); handle = NULL;
