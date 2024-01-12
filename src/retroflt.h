@@ -3895,8 +3895,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #     endif /* RETROFLAT_WING */
 
-   debug_printf( 1, "retroflat: creating window class..." );
-
    /* Get the *real* size of the window, including titlebar. */
    wr.right = g_retroflat_state->screen_v_w;
    wr.bottom = g_retroflat_state->screen_v_h;
@@ -3906,6 +3904,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    memset(
       &(g_retroflat_state->buffer), '\0', sizeof( struct RETROFLAT_BITMAP ) );
+
+   debug_printf( 1, "retroflat: creating window class..." );
+
    memset( &wc, '\0', sizeof( WNDCLASS ) );
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
