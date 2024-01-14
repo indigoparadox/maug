@@ -985,7 +985,7 @@ MERROR_RETVAL retroglu_parse_obj_file(
 
    debug_printf(
       RETROGLU_TRACE_LVL,
-      "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
+      "parsed %s, %u vertices, %u materials",
       filename_path, obj->vertices_sz, obj->materials_sz );
 
    return retval;
