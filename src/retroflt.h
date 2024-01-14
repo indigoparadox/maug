@@ -2458,8 +2458,8 @@ struct RETROFLAT_WING_MODULE g_w;
 static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
-   PAINTSTRUCT ps;
 #     ifndef RETROFLAT_OPENGL
+   PAINTSTRUCT ps;
    HDC hdc_paint = (HDC)NULL;
 #     endif /* !RETROFLAT_OPENGL */
 #     if defined( RETROFLAT_OPENGL )
@@ -3950,7 +3950,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_SCREENSAVER
    if( (HWND)0 != g_retroflat_state->parent ) {
       /* Shrink the child window into the parent. */
-      debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32,
+      debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32_FMT,
          g_retroflat_state->parent );
       window_style = WS_CHILD;
       GetClientRect( g_retroflat_state->parent, &wr );
@@ -4901,7 +4901,8 @@ cleanup:
 
 /* === */
 
-#if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
+#if (defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )) && \
+!defined( RETROFLAT_OPENGL )
 
 static int retroflat_bitmap_win_transparency(
    struct RETROFLAT_BITMAP* bmp_out, int16_t w, int16_t h  
@@ -5298,7 +5299,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if (defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )) && \
+!defined( RETROFLAT_OPENGL )
    int i = 0;
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
