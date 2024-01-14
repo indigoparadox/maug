@@ -398,8 +398,7 @@ cleanup:
       devs_list_buf_h = maug_malloc( 1, devs_list_buf_sz );
 
       maug_mlock( devs_list_buf_h, devs_list_buf );
-      strncat(
-         devs_list_buf, "MIDI devices:\n", strlen( "MIDI devices:\n" ) );
+      strncpy( devs_list_buf, "MIDI devices:\n", devs_list_buf_sz );
       maug_munlock( devs_list_buf_h, devs_list_buf );
 
       for( i = 0 ; num_devs > i ; i++ ) {
@@ -528,7 +527,9 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
+#  elif defined( RETROSND_API_WINMM )
+   uint32_t midi_msg = 0;
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
@@ -569,9 +570,12 @@ cleanup:
    snd_seq_ev_set_controller( &ev, channel, key, val );
    retrosnd_alsa_ev_send( &ev );
 #  elif defined( RETROSND_API_WINMM )
-   midiOutShortMsg( g_retrosnd_state.mo_handle,
-      (((val & 0xff) << 16) | ((key & 0xff) << 8) | 0xb0 | (channel & 0x0f))
-   );
+   midi_msg |= (val & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (key & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (channel & 0x0f) | 0xb0;
+   midiOutShortMsg( g_retrosnd_state.mo_handle, midi_msg );
 #  else
 #     pragma message( "warning: set_control not implemented" )
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
@@ -584,7 +588,9 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
+#  elif defined( RETROSND_API_WINMM )
+   uint32_t midi_msg = 0;
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
@@ -642,9 +648,12 @@ cleanup:
    snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
 #  elif defined( RETROSND_API_WINMM )
-   midiOutShortMsg( g_retrosnd_state.mo_handle,
-      (((vel & 0xff) << 16) | ((pitch & 0xff) << 8) | 0x90 | (channel & 0x0f))
-   );
+   midi_msg |= (vel & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (pitch & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (channel & 0x0f) | 0x90;
+   midiOutShortMsg( g_retrosnd_state.mo_handle, midi_msg );
 #  else
 #     pragma message( "warning: note_on not implemented" )
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
@@ -658,7 +667,9 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    MERROR_RETVAL retval = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
-#  endif /* RETROSND_API_ALSA */
+#  elif defined( RETROSND_API_WINMM )
+   uint32_t midi_msg = 0;
+#  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
@@ -701,9 +712,12 @@ cleanup:
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
 #  elif defined( RETROSND_API_WINMM )
-   midiOutShortMsg( g_retrosnd_state.mo_handle,
-      (((vel & 0xff) << 16) | ((pitch & 0xff) << 8) | 0x80 | (channel & 0x0f))
-   );
+   midi_msg |= (vel & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (pitch & 0xff);
+   midi_msg <<= 8;
+   midi_msg |= (channel & 0x0f) | 0x80;
+   midiOutShortMsg( g_retrosnd_state.mo_handle, midi_msg );
 #  else
 #     pragma message( "warning: note_off not implemented" )
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
