@@ -2066,12 +2066,10 @@ struct RETROFLAT_STATE {
 #  ifdef RETROFLAT_SCREENSAVER
    HWND                 parent;
 #  endif /* RETROFLAT_SCREENSAVER */
-   MSG                  msg;
    HDC                  hdc_win;
 #  ifdef RETROFLAT_OPENGL
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
-   int                  msg_retval;
    uint8_t              last_key;
    uint8_t              vk_mods;
    unsigned int         last_mouse;
@@ -2875,6 +2873,8 @@ int retroflat_loop(
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int retval = 0;
+   int msg_retval = 0;
+   MSG msg;
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -2912,11 +2912,14 @@ int retroflat_loop(
 
    /* Handle Windows messages until quit. */
    do {
-      g_retroflat_state->msg_retval =
-         GetMessage( &(g_retroflat_state->msg), 0, 0, 0 );
-      TranslateMessage( &(g_retroflat_state->msg) );
-      DispatchMessage( &(g_retroflat_state->msg) );
-   } while( 0 < g_retroflat_state->msg_retval );
+      msg_retval = GetMessage( &msg, 0, 0, 0 );
+      TranslateMessage( &msg );
+      DispatchMessage( &msg );
+      if( WM_QUIT == msg.message ) {
+         /* Get retval from PostQuitMessage(). */
+         retval = msg.wParam;
+      }
+   } while( WM_QUIT != &msg.message && 0 < msg_retval );
 
 cleanup:
 #  elif defined( RETROFLAT_API_GLUT )
@@ -3420,7 +3423,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    struct SREGS sregs;
 #     endif
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   WNDCLASS wc = { 0 };
+   WNDCLASS wc;
    RECT wr = { 0, 0, 0, 0 };
    DWORD window_style = RETROFLAT_WIN_STYLE;
    DWORD window_style_ex = 0;
@@ -4536,7 +4539,7 @@ RETROFLAT_MS retroflat_get_ms() {
    return /**((uint16_t far*)0x046c) >> 4;*/ g_ms;
 
 #  else
-#  pragma message( "warning: get_ms not implemented" )
+#     pragma message( "warning: get_ms not implemented" )
 #  endif /* RETROFLAT_API_* */
 }
 
