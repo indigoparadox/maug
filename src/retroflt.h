@@ -852,6 +852,8 @@ struct RETROFLAT_GLTEX {
 typedef FILE* RETROFLAT_CONFIG;
 typedef uint32_t RETROFLAT_MS;
 
+#define RETROFLAT_MS_FMT "%u"
+
 struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
@@ -973,6 +975,8 @@ typedef int RETROFLAT_COLOR_DEF;
 
 typedef FILE* RETROFLAT_CONFIG;
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%u"
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -1114,6 +1118,8 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 
 typedef uint32_t RETROFLAT_MS;
 
+#define RETROFLAT_MS_FMT "%lu"
+
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
@@ -1139,6 +1145,9 @@ typedef uint32_t RETROFLAT_MS;
    f( BOOL, WinGStretchBlt, 1009 )
 
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%lu"
+
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
 typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
@@ -1501,6 +1510,8 @@ extern HBRUSH gc_retroflat_win_brushes[];
 typedef uint32_t RETROFLAT_MS;
 typedef void* RETROFLAT_CONFIG;
 
+#define RETROFLAT_MS_FMT "%lu"
+
 struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
@@ -1567,6 +1578,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%lu"
 
 typedef FILE* RETROFLAT_CONFIG;
 
@@ -1664,6 +1677,8 @@ struct RETROFLAT_BITMAP {
 #elif defined( RETROFLAT_API_PC_BIOS )
 
 typedef uint16_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%u"
 
 /* Explicity screen sizes aren't supported, only screen modes handled in
  * special cases during init.
@@ -2821,6 +2836,7 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
 int retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
+   int retval = 0;
 
 #  if defined( RETROFLAT_OS_WASM )
 
@@ -2870,9 +2886,9 @@ int retroflat_loop(
       RETROFLAT_FLAGS_RUNNING == 
          (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
+   retval = g_retroflat_state->retval;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int retval = 0;
    int msg_retval = 0;
    MSG msg;
 
@@ -2919,7 +2935,7 @@ int retroflat_loop(
          /* Get retval from PostQuitMessage(). */
          retval = msg.wParam;
       }
-   } while( WM_QUIT != &msg.message && 0 < msg_retval );
+   } while( WM_QUIT != msg.message && 0 < msg_retval );
 
 cleanup:
 #  elif defined( RETROFLAT_API_GLUT )
@@ -2928,13 +2944,14 @@ cleanup:
    g_retroflat_state->loop_data = (void*)data;
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
    glutMainLoop();
+   retval = g_retroflat_state->retval;
 
 #  else
 #     pragma message( "warning: loop not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
-   return g_retroflat_state->retval;
+   return retval;
 }
 
 /* === */
@@ -3112,8 +3129,10 @@ static int retrosnd_cli_rsd_def(
    const char* arg, struct RETROFLAT_ARGS* args
 ) {
    char* env_var = NULL;
-   int i = 0;
    MERROR_RETVAL retval = MERROR_OK;
+#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
+   int i = 0;
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
 #     ifdef RETROSND_API_PC_BIOS
    if( NULL != env_var ) {
@@ -5670,7 +5689,6 @@ void retroflat_blit_bitmap(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifndef RETROFLAT_OPENGL
@@ -5997,9 +6015,7 @@ void retroflat_rect(
       screen_h = 0;
 #elif defined( RETROFLAT_API_SDL2 )
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
    HBRUSH old_brush = (HBRUSH)NULL;
-   int locked_target_internal = 0;
    HPEN old_pen = (HPEN)NULL;
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -6087,7 +6103,7 @@ void retroflat_rect(
 
    Rectangle( target->hdc_b, x, y, x + w, y + h );
 
-cleanup:
+/* cleanup: */
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
@@ -6107,14 +6123,11 @@ void retroflat_line(
 #  elif defined( RETROFLAT_SOFT_LINES )
 #  elif defined( RETROFLAT_API_SDL2 )
    MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
    POINT points[2];
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -6174,7 +6187,7 @@ void retroflat_line(
 
    Polyline( target->hdc_b, points, 2 );
 
-cleanup:
+/* cleanup: */
 
    if( (HPEN)NULL != pen ) {
       SelectObject( target->hdc_b, old_pen );
@@ -6214,8 +6227,6 @@ void retroflat_ellipse(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color ) {
@@ -6267,7 +6278,7 @@ void retroflat_ellipse(
 
    Ellipse( target->hdc_b, x, y, x + w, y + h );
 
-cleanup:
+/* cleanup: */
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
@@ -6317,8 +6328,6 @@ void retroflat_string_sz(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    SIZE sz;
    HFONT font;
    HFONT old_font;
@@ -6375,7 +6384,7 @@ cleanup:
    *w_out = sz.cx;
    *h_out = sz.cy;
 
-cleanup:
+/* cleanup: */
 
    SelectObject( target->hdc_b, old_font );
 
@@ -6400,8 +6409,6 @@ void retroflat_string(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    RECT rect;
    SIZE sz;
    HFONT font;
@@ -6495,7 +6502,7 @@ cleanup:
 
    DrawText( target->hdc_b, str, str_sz, &rect, 0 );
 
-cleanup:
+/* cleanup: */
 
    SelectObject( target->hdc_b, old_font );
 
