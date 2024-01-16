@@ -13,7 +13,7 @@ struct dataa(TEMPLATE) {
 };
 
 void loopa(template)( struct dataa(TEMPLATE)* data ) {
-   int16_t input = 0;
+   RETROFLAT_IN_KEY input = 0;
    struct RETROFLAT_INPUT input_evt;
 
    /* Input */

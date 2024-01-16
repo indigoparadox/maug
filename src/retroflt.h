@@ -57,7 +57,7 @@
  *         * /
  *       void example_loop( struct EXAMPLE_DATA* data ) {
  *          struct RETROFLAT_INPUT input_evt;
- *          int16_t input = 0;
+ *          RETROFLAT_IN_KEY input = 0;
  *       
  *          / * Start loop. * /
  *          input = retroflat_poll_input( &input_evt );
@@ -885,6 +885,7 @@ struct RETROFLAT_GLTEX {
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef FILE* RETROFLAT_CONFIG;
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 
 #define RETROFLAT_MS_FMT "%u"
@@ -1009,6 +1010,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_SOFT_LINES */
 
 typedef FILE* RETROFLAT_CONFIG;
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 
 #define RETROFLAT_MS_FMT "%u"
@@ -1156,6 +1158,7 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 
 /* == Win16/Win32 == */
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 
 #  define RETROFLAT_MS_FMT "%lu"
@@ -1184,6 +1187,7 @@ typedef uint32_t RETROFLAT_MS;
    f( HBITMAP, WinGCreateBitmap, 1003 ) \
    f( BOOL, WinGStretchBlt, 1009 )
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 
 #     define RETROFLAT_MS_FMT "%lu"
@@ -2398,7 +2402,7 @@ void retroflat_string(
  * \param input Pointer to a ::RETROFLAT_INPUT struct to store extended info.
  * \return A symbol from \ref maug_retroflt_keydefs.
  */
-int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input );
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
@@ -3273,10 +3277,21 @@ cleanup:
 /* Windows screensaver (.scr) command-line arguments. */
 
 static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
+#ifdef __WIN64__
+   /* 64-bit Windows has 64-bit pointers! */
+   intptr_t hwnd_long = 0;
+#else
+   long hwnd_long = 0;
+#endif /* __GNUC__ */
    if( 0 == strncmp( MAUG_CLI_SIGIL "p", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
       /* The next arg must be the new var. */
    } else {
-      g_retroflat_state->parent = (HWND)atoi( arg );
+#ifdef __WIN64__
+      hwnd_long = atoll( arg );
+#else
+      hwnd_long = atol( arg );
+#endif /* __GNUC__ */
+      g_retroflat_state->parent = (HWND)hwnd_long;
    }
    return RETROFLAT_OK;
 }
@@ -4001,7 +4016,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_SCREENSAVER
    if( (HWND)0 != g_retroflat_state->parent ) {
       /* Shrink the child window into the parent. */
-      debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32_FMT,
+      debug_printf( 1, "retroflat: using window parent: %p",
          g_retroflat_state->parent );
       window_style = WS_CHILD;
       GetClientRect( g_retroflat_state->parent, &wr );
@@ -5695,7 +5710,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL != bmp->old_hbm_b ) {
       SelectObject( bmp->hdc_b, bmp->old_hbm_b );
-      bmp->old_hbm_b = NULL;
+      bmp->old_hbm_b = (HBITMAP)NULL;
       bmp->old_hbm_b = (HBITMAP)NULL;
    }
 
@@ -6051,17 +6066,18 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-#if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
    float aspect_ratio = 0,
       screen_x = 0,
       screen_y = 0,
       screen_w = 0,
       screen_h = 0;
-#elif defined( RETROFLAT_API_SDL2 )
-#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HBRUSH old_brush = (HBRUSH)NULL;
    HPEN old_pen = (HPEN)NULL;
-#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -6561,7 +6577,7 @@ cleanup:
 
 /* === */
 
-int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;
    union REGS outregs;
@@ -6569,7 +6585,7 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;
 #  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
-   int16_t key_out = 0;
+   RETROFLAT_IN_KEY key_out = 0;
 
    assert( NULL != input );
 

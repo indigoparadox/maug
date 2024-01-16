@@ -78,8 +78,17 @@ MERROR_RETVAL retrocon_exec_line(
 
 int retrocon_debounce( struct RETROCON* con, int c );
 
+/**
+ * \brief Process input from retroflat_poll_input() and apply it to the
+ *        console, if open.
+ *
+ * \param p_c Pointer to the input value returned from retroflat_poll_input().
+ * \note This function will set input to 0 (nothing) if it was handled by
+ *       an open console!
+ */
 MERROR_RETVAL retrocon_input(
-   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt );
+   struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
+   struct RETROFLAT_INPUT* input_evt );
 
 #ifdef RETROCON_C
 
@@ -269,7 +278,7 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
 }
 
 MERROR_RETVAL retrocon_input(
-   struct RETROCON* con, int* p_c, struct RETROFLAT_INPUT* input_evt
+   struct RETROCON* con, int16_t* p_c, struct RETROFLAT_INPUT* input_evt
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int c = 0;
