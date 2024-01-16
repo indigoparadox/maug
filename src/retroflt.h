@@ -187,14 +187,14 @@
  *
  * These are \b NOT mutually exclusive.
  *
- * | Define                | Description                                       |
- * | --------------------- | ------------------------------------------------- |
- * | RETROFLAT_MOUSE       | Force-enable mouse on broken APIs (DANGEROUS!)    |
- * | RETROFLAT_TXP_R       | Specify R component of bitmap transparent color.  |
- * | RETROFLAT_TXP_G       | Specify G component of bitmap transparent color.  |
- * | RETROFLAT_TXP_B       | Specify B component of bitmap transparent color.  |
- * | RETROFLAT_BITMAP_EXT  | Specify file extension for bitmap assets.         |
- * | RETROFLAT_RESIZABLE   | Allow resizing the RetroFlat window.              |
+ * | Define                 | Description                                      |
+ * | ---------------------- | -------------------------------------------------|
+ * | RETROFLAT_MOUSE        | Force-enable mouse on broken APIs (DANGEROUS!)   |
+ * | RETROFLAT_TXP_R        | Specify R component of bitmap transparent color. |
+ * | RETROFLAT_TXP_G        | Specify G component of bitmap transparent color. |
+ * | RETROFLAT_TXP_B        | Specify B component of bitmap transparent color. |
+ * | RETROFLAT_BITMAP_EXT   | Specify file extension for bitmap assets.        |
+ * | RETROFLAT_NO_RESIZABLE | Disallow resizing the RetroFlat window.          |
  *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *
@@ -405,6 +405,11 @@ typedef int8_t RETROFLAT_COLOR;
  * \warning This flag should only be set inside retroflat!
  */
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
+
+/**
+ * \brief Only supported on some platforms: Attempt to scale screen by 2X.
+ */
+#define RETROFLAT_FLAGS_SCALE2X 0x10
 
 /*! \} */ /* maug_retroflt_flags */
 
@@ -706,11 +711,11 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #if defined( RETROFLAT_API_SDL2 )
-#  if defined( RETROFLAT_RESIZABLE )
+#  if !defined( NO_RETROFLAT_RESIZABLE )
 #     define RETROFLAT_WIN_FLAGS SDL_WINDOW_RESIZABLE
 #  else
 #     define RETROFLAT_WIN_FLAGS 0
-#  endif /* RETROFLAT_RESIZABLE */
+#  endif /* !NO_RETROFLAT_RESIZABLE */
 #endif /* RETROFLAT_API_SDL2 */
 
 #if defined( RETROFLAT_API_SDL1 )
@@ -1010,7 +1015,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_SOFT_LINES */
 
 typedef FILE* RETROFLAT_CONFIG;
+#ifdef RETROFLAT_API_SDL2
+typedef int32_t RETROFLAT_IN_KEY;
+#else
 typedef int16_t RETROFLAT_IN_KEY;
+#endif /* RETROFLAT_API_SDL2 */
 typedef uint32_t RETROFLAT_MS;
 
 #define RETROFLAT_MS_FMT "%u"
@@ -1772,6 +1781,7 @@ struct RETROFLAT_BITMAP {
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+/* TODO: Vary based on current screen mode! */
 #  define retroflat_screen_w() 320
 #  define retroflat_screen_h() 200
 
@@ -2020,8 +2030,13 @@ struct RETROFLAT_ARGS {
     *        target platform.
     */
    char* title;
-   /*! \brief Desired screen or window width in pixels. */
+   /*! \brief Relative path under which bitmap assets are stored. */
+   char* assets_path;
+   uint8_t flags;
+   /*! \brief Relative path of local config file (if not using registry). */
+   char* config_path;
 #  ifdef RETROFLAT_API_PC_BIOS
+   /*! \brief Desired screen or window width in pixels. */
    uint8_t screen_mode;
 #  elif !defined( RETROFLAT_NO_CLI_SZ )
    int screen_w;
@@ -2032,11 +2047,6 @@ struct RETROFLAT_ARGS {
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
 #  endif /* RETROFLAT_API_PC_BIOS */
-   /*! \brief Relative path under which bitmap assets are stored. */
-   char* assets_path;
-   uint8_t flags;
-   /*! \brief Relative path of local config file (if not using registry). */
-   char* config_path;
    uint8_t snd_flags;
 #  if defined( RETROSND_API_WINMM )
    UINT snd_dev_id;
@@ -2089,9 +2099,24 @@ defined( RETROVDP_C )
 #  endif /* RETROFLAT_VDP || DOCUMENTATION || RETROVDP_C */
 
    /* These are used by VDP so should be standardized/not put in plat-spec! */
+
+   /**
+    * \brief The screen width as seen by our program, before scaling.
+    *
+    * This is the scale of the buffer, which the platform-specific code
+    * should then scale to match screen_v_h on blit.
+    */
    int                  screen_v_w;
+   /**
+    * \brief The screen height as seen by our program, before scaling.
+    *
+    * This is the scale of the buffer, which the platform-specific code
+    * should then scale to match screen_v_w on blit.
+    */
    int                  screen_v_h;
+   /*! \brief The screen width as seen by the system, after scaling. */
    int                  screen_w;
+   /*! \brief The screen height as seen by the system, after scaling. */
    int                  screen_h;
 
    /* WARNING: The VDP requires the state specifier to be the same size
@@ -2569,8 +2594,8 @@ static LRESULT CALLBACK WndProc(
             * in our WndProc!
             */
             retroflat_create_bitmap(
-               g_retroflat_state->screen_w,
-               g_retroflat_state->screen_h,
+               g_retroflat_state->screen_v_w,
+               g_retroflat_state->screen_v_h,
                &(g_retroflat_state->buffer),
                RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
             if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
@@ -2648,8 +2673,8 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->screen_w, g_retroflat_state->screen_h,
             g_retroflat_state->buffer.hdc_b,
             0, 0,
-            g_retroflat_state->screen_w,
-            g_retroflat_state->screen_h,
+            g_retroflat_state->screen_v_w,
+            g_retroflat_state->screen_v_h,
             SRCCOPY
          );
 #        ifdef RETROFLAT_WING
@@ -2704,6 +2729,8 @@ static LRESULT CALLBACK WndProc(
          g_retroflat_state->last_mouse_x = GET_X_LPARAM( lParam );
          g_retroflat_state->last_mouse_y = GET_Y_LPARAM( lParam );
          break;
+
+      /* TODO: Handle resize message. */
 
       case WM_DESTROY:
          if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
@@ -3360,11 +3387,27 @@ static int retroflat_cli_rfy_def( const char* arg, struct RETROFLAT_ARGS* args )
    return RETROFLAT_OK;
 }
 
+static void retroflat_cli_apply_scale( struct RETROFLAT_ARGS* args ) {
+#if defined( RETROFLAT_API_SDL2 )
+   /*
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      args->screen_w *= 2;
+      debug_printf( 1, "doubling screen_w to: %d", args->screen_w );
+      args->screen_h *= 2;
+      debug_printf( 1, "doubling screen_h to: %d", args->screen_h );
+   }
+   */
+#endif /* RETROFLAT_API_SDL2 */
+}
+
 static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
+      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
@@ -3373,6 +3416,7 @@ static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args )
    if( 0 == args->screen_w ) {
       args->screen_w = 320;
    }
+   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
@@ -3381,6 +3425,7 @@ static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
+      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
@@ -3389,6 +3434,7 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
    if( 0 == args->screen_h ) {
       args->screen_h = 200;
    }
+   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
@@ -3666,8 +3712,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* TODO: Handle window resizing someday! */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   g_retroflat_state->screen_w = args->screen_w;
-   g_retroflat_state->screen_h = args->screen_h;
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      debug_printf( 1, "setting SDL window scale to 2x..." );
+      g_retroflat_state->screen_w = args->screen_w * 2;
+      g_retroflat_state->screen_h = args->screen_h * 2;
+   } else {
+      g_retroflat_state->screen_w = args->screen_w;
+      g_retroflat_state->screen_h = args->screen_h;
+   }
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_OPENGL
@@ -3782,12 +3836,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup default screen position. */
    if( 0 == args->screen_x ) {
       /* Get screen width so we can center! */
-      args->screen_x = (info->current_w / 2) - (args->screen_w / 2);
+      args->screen_x = (info->current_w / 2) -
+         (g_retroflat_state->screen_w / 2);
    }
 
    if( 0 == args->screen_y ) {
       /* Get screen height so we can center! */
-      args->screen_y = (info->current_h / 2) - (args->screen_h / 2);
+      args->screen_y = (info->current_h / 2) -
+         (g_retroflat_state->screen_h / 2);
    }
 
    maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
@@ -3842,7 +3898,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_SDL_ICO */
 
    g_retroflat_state->buffer.surface = SDL_SetVideoMode(
-      args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
       | SDL_OPENGL
@@ -3909,6 +3966,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+   /* TODO: This doesn't seem to do anything. */
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      debug_printf( 1, "setting SDL window scale to 2x..." );
+      SDL_RenderSetScale( g_retroflat_state->buffer.renderer, 2.0f, 2.0f );
+   }
 
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
@@ -3984,8 +4049,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_WING */
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = g_retroflat_state->screen_v_w;
-   wr.bottom = g_retroflat_state->screen_v_h;
+   wr.right = g_retroflat_state->screen_w;
+   wr.bottom = g_retroflat_state->screen_h;
 #     ifndef RETROFLAT_API_WINCE
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */
@@ -4071,8 +4136,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_API_WINCE
    /* Force screen size. */
    GetClientRect( g_retroflat_state->window, &wr );
-   g_retroflat_state->screen_v_w = wr.right - wr.left;
-   g_retroflat_state->screen_v_h = wr.bottom - wr.top;
+   g_retroflat_state->screen_w = wr.right - wr.left;
+   g_retroflat_state->screen_h = wr.bottom - wr.top;
 #     endif /* RETROFLAT_API_WINCE */
 
    if( !g_retroflat_state->window ) {
@@ -4186,8 +4251,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( 0 < args->screen_x || 0 < args->screen_y ) {
       glutInitWindowPosition( args->screen_x, args->screen_y );
    }
+   /* TODO: Handle screen scaling? */
    glutInitWindowSize(
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
    glutCreateWindow( args->title );
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
