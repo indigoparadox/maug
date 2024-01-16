@@ -139,7 +139,8 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc( struct RETROGUI* gui, size_t idc );
  *         since last poll.
  */
 RETROGUI_IDC retrogui_poll_ctls(
-   struct RETROGUI* gui, int* p_input, struct RETROFLAT_INPUT* input_evt );
+   struct RETROGUI* gui, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt );
 
 void retrogui_redraw_ctls( struct RETROGUI* gui );
 
@@ -175,7 +176,8 @@ MAUG_CONST char* gc_retrogui_ctl_names[] = {
 
 static RETROGUI_IDC retrogui_click_NONE( 
    struct RETROGUI* gui,
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -183,7 +185,8 @@ static RETROGUI_IDC retrogui_click_NONE(
 }
 
 static RETROGUI_IDC retrogui_key_NONE( 
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -212,7 +215,8 @@ static MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
 
 static RETROGUI_IDC retrogui_click_LISTBOX( 
    struct RETROGUI* gui,
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
    size_t i = 0,
@@ -256,7 +260,8 @@ static RETROGUI_IDC retrogui_click_LISTBOX(
 }
 
 static RETROGUI_IDC retrogui_key_LISTBOX( 
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -448,7 +453,8 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
 
 static RETROGUI_IDC retrogui_click_BUTTON( 
    struct RETROGUI* gui,
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -459,7 +465,8 @@ static RETROGUI_IDC retrogui_click_BUTTON(
 }
 
 static RETROGUI_IDC retrogui_key_BUTTON( 
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -532,7 +539,8 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
 
 static RETROGUI_IDC retrogui_click_TEXTBOX(
    struct RETROGUI* gui,
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
@@ -540,7 +548,8 @@ static RETROGUI_IDC retrogui_click_TEXTBOX(
 }
 
 static RETROGUI_IDC retrogui_key_TEXTBOX(
-   union RETROGUI_CTL* ctl, int* p_input, struct RETROFLAT_INPUT* input_evt
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
    char c = '\0';
@@ -759,7 +768,8 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc(
 }
 
 RETROGUI_IDC retrogui_poll_ctls( 
-   struct RETROGUI* gui, int* p_input, struct RETROFLAT_INPUT* input_evt
+   struct RETROGUI* gui, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    size_t i = 0,
       mouse_x = 0,
