@@ -124,11 +124,16 @@
  *       
  *       cleanup:
  *       
+ *       / * Don't run cleanup stuff under WASM. * /
+ *       #ifndef RETROFLAT_OS_WASM
+ *
  *          / * This must be called at the end of the program! * /
  *          retroflat_shutdown( retval );
  *
  *          / * Shutdown logging after all else so we catch everything. * /
- *          logging_init();
+ *          logging_shutdown();
+ *
+ *       #endif / * RETROFLAT_OS_WASM * /
  *       
  *          return retval;
  *       }
