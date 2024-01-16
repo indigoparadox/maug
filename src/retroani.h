@@ -44,43 +44,9 @@
 /*! \brief Return from animate_create() indicating a problem. */
 #define RETROANI_ERROR -1
 
-#if 0
-#define RETROANI_COLOR_BLACK      0
-#define RETROANI_COLOR_CYAN       1
-#define RETROANI_COLOR_MAGENTA    2
-#define RETROANI_COLOR_WHITE      3
-
-#ifdef DEPTH_VGA
-
-#define RETROANI_COLOR_DARKBLUE   4
-#define RETROANI_COLOR_DARKGREEN  5
-#define RETROANI_COLOR_TEAL       6
-#define RETROANI_COLOR_DARKRED    7
-#define RETROANI_COLOR_VIOLET     8
-#define RETROANI_COLOR_BROWN      9
-#define RETROANI_COLOR_GRAY       10
-#define RETROANI_COLOR_DARKGRAY   11
-#define RETROANI_COLOR_BLUE       12
-#define RETROANI_COLOR_GREEN      13
-#define RETROANI_COLOR_RED        15
-#define RETROANI_COLOR_YELLOW     16
-
-#endif /* DEPTH_VGA */
-#endif
-
-#ifdef DEPTH_VGA
-
 #define RETROANI_TEMP_LOW()    RETROFLAT_COLOR_RED
 #define RETROANI_TEMP_MED()    RETROFLAT_COLOR_YELLOW
 #define RETROANI_TEMP_HIGH()   RETROFLAT_COLOR_WHITE
-
-#else
-
-#define RETROANI_TEMP_LOW()    RETROFLAT_COLOR_MAGENTA
-#define RETROANI_TEMP_MED()    RETROFLAT_COLOR_CYAN
-#define RETROANI_TEMP_HIGH()   RETROFLAT_COLOR_WHITE
-
-#endif /* DEPTH_VGA */
 
 /**
  * \addtogroup unilayer_animate_flags Unilayer Animation Flags
@@ -120,9 +86,11 @@
 #define RETROANI_TILE_H 16
 #define RETROANI_TILE_SZ (RETROANI_TILE_W * RETROANI_TILE_H)
 
-#define RETROANI_FIRE_COOLING_MAX 10
-#define RETROANI_FIRE_COOLING_MIN 5
+#define RETROANI_FIRE_COOLING_MAX 35
+#define RETROANI_FIRE_COOLING_MIN 25
 #define RETROANI_FIRE_WIND 1
+#define RETROANI_FIRE_HEAT_INIT 70
+#define RETROANI_FIRE_HEAT_RANGE 40
 
 #define RETROANI_TEXT_HEADER_Y_OFFSET   0
 #define RETROANI_TEXT_HEADER_Y_COUNT    1
@@ -290,7 +258,9 @@ void retroani_draw_FIRE( struct RETROANI* a ) {
       for( x = 0 ; RETROANI_TILE_W > x ; x++ ) {
          idx = ((RETROANI_TILE_H - 1) * RETROANI_TILE_W) + x;
          /* a->tile[idx] = graphics_get_random( 70, 101 ); */
-         a->tile[idx] = 70 + retroflat_get_rand() % 101;
+         a->tile[idx] = RETROANI_FIRE_HEAT_INIT +
+            retroflat_get_rand() % RETROANI_FIRE_HEAT_RANGE;
+         assert( 0 < a->tile[idx] );
       }
 
       a->flags |= RETROANI_FLAG_INIT;
@@ -664,6 +634,9 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
       p_x = 0,
       p_y = 0;
 
+   /* Lock the target buffer for per-pixel manipulation. */
+   retroflat_px_lock( a->target );
+
    /* Iterate over every tile covered by the animation's screen area. */
    for( t_y = y_orig ; a->h > t_y ; t_y += RETROANI_TILE_H ) {
       for( t_x = 0 ; a->w > t_x ; t_x += RETROANI_TILE_W ) {
@@ -710,6 +683,8 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
          }
       }
    }
+
+   retroflat_px_release( a->target );
 }
 
 void retroani_frame(

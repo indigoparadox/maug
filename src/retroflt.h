@@ -918,6 +918,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  define retroflat_quit( retval_in ) \
    g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
@@ -1131,14 +1135,20 @@ struct RETROFLAT_BITMAP {
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
 /* Special pixel lock JUST for SDL1 surfaces. */
 #     define retroflat_px_lock( bmp ) \
-         assert( NULL != bmp ); \
-         (bmp)->autolock_refs++; \
-         SDL_LockSurface( (bmp)->surface );
+         if( NULL != bmp ) { \
+            (bmp)->autolock_refs++; \
+            SDL_LockSurface( (bmp)->surface ); \
+         }
 #     define retroflat_px_release( bmp ) \
-         assert( NULL != bmp ); \
-         assert( 0 < (bmp)->autolock_refs ); \
-         (bmp)->autolock_refs--; \
-         SDL_UnlockSurface( (bmp)->surface );
+         if( NULL != bmp ) { \
+            assert( 0 < (bmp)->autolock_refs ); \
+            (bmp)->autolock_refs--; \
+            SDL_UnlockSurface( (bmp)->surface ); \
+         }
+#     ifdef RETROFLAT_VDP
+#        define retroflat_vdp_lock( bmp ) retroflat_px_lock( bmp )
+#        define retroflat_vdp_release( bmp ) retroflat_px_release( bmp )
+#     endif /* RETROFLAT_VDP */
 #  else
 /* Pixel lock above does not apply to SDL2 surfaces or bitmap textures. */
 #     define retroflat_px_lock( bmp )
@@ -1357,7 +1367,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #        error "VDP not supported in Win16!"
 #     endif /* RETROFLAT_API_WIN16 */
 
-#     define retroflat_px_lock( bmp ) \
+#     define retroflat_vdp_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
    (bmp)->autolock_refs++; \
@@ -1384,7 +1394,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
          (bmp)->bits, (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
    }
 
-#     define retroflat_px_release( bmp ) \
+#     define retroflat_vdp_release( bmp ) \
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
    if( \
@@ -1412,12 +1422,12 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  else
 
-#     define retroflat_px_lock( bmp )
-#     define retroflat_px_release( bmp )
 #     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 #  endif /* RETROFLAT_VDP */
 
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_root_win() (g_retroflat_state->window)
@@ -1592,6 +1602,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
@@ -1650,6 +1664,10 @@ struct RETROFLAT_BITMAP {
 /*! \brief Special lock used before per-pixel operations because of SDL1. */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -1752,6 +1770,11 @@ typedef uint16_t RETROFLAT_MS;
 
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  ifndef NO_I86
 #     include <i86.h>
@@ -4602,8 +4625,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_px_lock( &(g_retroflat_state->buffer) );
-      retroflat_px_lock( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_lock( &(g_retroflat_state->buffer) );
+      retroflat_vdp_lock( g_retroflat_state->vdp_buffer );
    }
 
    retval = vdp_proc( g_retroflat_state );
@@ -4613,8 +4636,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_px_release( &(g_retroflat_state->buffer) );
-      retroflat_px_release( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_release( &(g_retroflat_state->buffer) );
+      retroflat_vdp_release( g_retroflat_state->vdp_buffer );
    }
 
 #     ifdef RETROFLAT_OS_WIN
