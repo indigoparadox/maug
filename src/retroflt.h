@@ -1543,6 +1543,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define BG_TILE_H_PX 8
 #  define BG_W_TILES 32
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 typedef void* RETROFLAT_CONFIG;
 
@@ -1613,6 +1614,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_CONFIG_USE_FILE
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 
 #define RETROFLAT_MS_FMT "%lu"
@@ -1712,6 +1714,7 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint16_t RETROFLAT_MS;
 
 #define RETROFLAT_MS_FMT "%u"
