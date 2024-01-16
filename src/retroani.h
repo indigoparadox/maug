@@ -44,6 +44,7 @@
 /*! \brief Return from animate_create() indicating a problem. */
 #define RETROANI_ERROR -1
 
+#if 0
 #define RETROANI_COLOR_BLACK      0
 #define RETROANI_COLOR_CYAN       1
 #define RETROANI_COLOR_MAGENTA    2
@@ -65,6 +66,7 @@
 #define RETROANI_COLOR_YELLOW     16
 
 #endif /* DEPTH_VGA */
+#endif
 
 #ifdef DEPTH_VGA
 

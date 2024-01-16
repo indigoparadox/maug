@@ -278,7 +278,8 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
 }
 
 MERROR_RETVAL retrocon_input(
-   struct RETROCON* con, int16_t* p_c, struct RETROFLAT_INPUT* input_evt
+   struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
+   struct RETROFLAT_INPUT* input_evt
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int c = 0;
