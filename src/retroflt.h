@@ -3014,7 +3014,7 @@ cleanup:
 
 /* === */
 
-char retroflat_vk_to_ascii( int k, uint8_t flags ) {
+char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    char c = 0;
    char offset_lower = 0;
 
