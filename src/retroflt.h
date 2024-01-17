@@ -128,7 +128,7 @@
  *          retroflat_shutdown( retval );
  *
  *          / * Shutdown logging after all else so we catch everything. * /
- *          logging_init();
+ *          logging_shutdown();
  *       
  *          return retval;
  *       }
