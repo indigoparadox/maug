@@ -2,6 +2,8 @@
 #ifndef RETROGXC_H
 #define RETROGXC_H
 
+#include <maug.h>
+
 #ifndef RETROGXC_INITIAL_SZ
 #  define RETROGXC_INITIAL_SZ 16
 #endif /* !RETROGXC_INITIAL_SZ */
@@ -28,25 +30,29 @@ int16_t retrogxc_blit_at(
 
 #ifdef RETROGXC_C
 
-static MEMORY_HANDLE gs_retrogxc_handle = (MEMORY_HANDLE)NULL;
+static MAUG_MHANDLE gs_retrogxc_handle = (MAUG_MHANDLE)NULL;
 static int16_t gs_retrogxc_sz = 0;
 
 /* === */
 
 int16_t retrogxc_init() {
+   int16_t retval = 0;
+
    gs_retrogxc_handle = maug_malloc(
       RETROGXC_INITIAL_SZ, sizeof( struct RETROFLAT_CACHE_BITMAP ) );
    gs_retrogxc_sz = RETROGXC_INITIAL_SZ;
 
    size_printf( 3, "bitmap struct", sizeof( struct RETROFLAT_CACHE_BITMAP ) );
 
-   if( (MEMORY_HANDLE)NULL != gs_retrogxc_handle ) {
+   if( (MAUG_MHANDLE)NULL != gs_retrogxc_handle ) {
       size_printf( 3, "initial graphics cache",
          sizeof( struct RETROFLAT_CACHE_BITMAP ) * RETROGXC_INITIAL_SZ );
    } else {
       error_printf( "unable to initialize graphics cache!" );
-      retval = 0;
+      retval = MERROR_GUI;
    }
+
+   return retval;
 }
 
 /* === */
@@ -63,7 +69,7 @@ void retrogxc_clear_cache() {
          dropped_count++;
       }
    }
-   maug_mzero( (MEMORY_PTR)bitmaps,
+   maug_mzero( bitmaps,
       sizeof( struct RETROFLAT_CACHE_BITMAP ) * gs_retrogxc_sz );
    maug_munlock( gs_retrogxc_handle, bitmaps );
    
@@ -141,8 +147,8 @@ int16_t retrogxc_blit_at(
       retval = MERROR_FILE;
       goto cleanup;
    }
-   retval = retroflat_blit_bitmap(
-      bitmap_blit, target, s_x, s_y, d_x, d_y, w, h );
+   retroflat_blit_bitmap(
+      &(bitmap_blit->bitmap), target, s_x, s_y, d_x, d_y, w, h );
 
 cleanup:
 
