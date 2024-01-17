@@ -4480,14 +4480,21 @@ void retroflat_shutdown( int retval ) {
    retrosoft_shutdown();
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
-#  if defined( RETROFLAT_OS_WASM )
-   /* Do nothing, start the main loop later. */
-   return;
-#  elif defined( RETROFLAT_API_ALLEGRO )
+#  ifdef RETROFLAT_OPENGL
+   retroglu_destroy_glyph_tex();
+#  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_VDP
    /* TODO: Destroy the VDP buffer! */
 #  endif /* RETROFLAT_VDP */
+
+   /* === Platform-Specific Shutdown === */
+
+#  if defined( RETROFLAT_OS_WASM )
+   /* Do nothing, start the main loop later. */
+   return;
+
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -5453,8 +5460,11 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if (defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )) && \
-!defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
+#     ifndef RETROGLU_NO_TEXTURES
+   GLenum error = GL_NO_ERROR;
+#     endif /* !RETROGLU_NO_TEXTURES */
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int i = 0;
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -5478,7 +5488,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->tex.w = w;
    bmp_out->tex.h = h;
    /* TODO: Overflow checking. */
-   debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
+   debug_printf( 1, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       bmp_out->tex.w, bmp_out->tex.h );
    bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
@@ -5493,6 +5503,11 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #     ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+   debug_printf( 1, "assigned bitmap texture: %u", bmp_out->tex.id );
+   error = glGetError();
+   if( GL_NO_ERROR != error ) {
+      error_printf( "error generating texture: %u", error );
+   }
 #     endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
@@ -5776,6 +5791,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( 0 < bmp->tex.id ) {
+      debug_printf( 1, "destroying bitmap texture: %u", bmp->tex.id );
       glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
    }
 

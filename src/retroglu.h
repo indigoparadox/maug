@@ -452,6 +452,8 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite );
 
 MERROR_RETVAL retroglu_init_glyph_tex();
 
+void retroglu_destroy_glyph_tex();
+
 void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
    const char* str, int str_sz, const char* font_str, uint8_t flags );
@@ -1472,6 +1474,25 @@ cleanup:
    /* TODO: Destroy loaded textures if failure. */
 
    return retval;
+}
+
+/* === */
+
+void retroglu_destroy_glyph_tex() {
+
+#ifndef RETROGLU_NO_TEXTURES
+   size_t i = 0,
+      j = 0;
+
+   debug_printf( RETROGLU_TRACE_LVL, "destroying glyph textures..." );
+
+   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+         glDeleteTextures( 1, (GLuint*)&(g_retroglu_font_tex[i][j]) );
+      }
+   }
+#endif /* !RETROGLU_NO_TEXTURES */
+
 }
 
 /* === */
