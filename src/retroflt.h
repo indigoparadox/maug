@@ -1586,12 +1586,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_KEY_D           KEY_RIGHT
 #     define RETROFLAT_KEY_W           KEY_UP
 #     define RETROFLAT_KEY_S           KEY_DOWN
-#  else
-#     define RETROFLAT_KEY_LEFT        KEY_LEFT
-#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#     define RETROFLAT_KEY_UP          KEY_UP
-#     define RETROFLAT_KEY_DOWN        KEY_DOWN
 #  endif /* RETROFLAT_NDS_WASD */
+#  define RETROFLAT_KEY_LEFT        KEY_LEFT
+#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
+#  define RETROFLAT_KEY_UP          KEY_UP
+#  define RETROFLAT_KEY_DOWN        KEY_DOWN
 #  define RETROFLAT_KEY_ENTER       KEY_START
 #  define RETROFLAT_KEY_SPACE       KEY_A
 #  define RETROFLAT_KEY_ESC         KEY_B
@@ -3064,6 +3063,8 @@ cleanup:
 
 /* === */
 
+#  if !defined( RETROFLAT_NO_KEYBOARD )
+
 char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    char c = 0;
    char offset_lower = 0;
@@ -3133,6 +3134,8 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
    return c;
 }
+
+#endif /* !RETROFLAT_NO_KEYBOARD */
 
 /* === */
 
@@ -5771,6 +5774,8 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       
       maug_mfree( bmp->tex.bytes_h );
    }
+
+   glGenTextures( 1, (GLuint*)&(bmp->tex.id) );
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
