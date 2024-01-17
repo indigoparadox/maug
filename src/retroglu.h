@@ -1383,6 +1383,10 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
       
       maug_mfree( sprite->texture.tex.bytes_h );
    }
+
+   if( 0 < sprite->texture.tex.id ) {
+      glDeleteTextures( 1, (GLuint*)&(sprite->texture.tex.id) );
+   }
 }
 
 /* === */

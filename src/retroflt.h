@@ -5775,7 +5775,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       maug_mfree( bmp->tex.bytes_h );
    }
 
-   glGenTextures( 1, (GLuint*)&(bmp->tex.id) );
+   if( 0 < bmp->tex.id ) {
+      glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
+   }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
