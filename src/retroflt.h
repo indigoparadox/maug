@@ -57,7 +57,7 @@
  *         * /
  *       void example_loop( struct EXAMPLE_DATA* data ) {
  *          struct RETROFLAT_INPUT input_evt;
- *          int16_t input = 0;
+ *          RETROFLAT_IN_KEY input = 0;
  *       
  *          / * Start loop. * /
  *          input = retroflat_poll_input( &input_evt );
@@ -124,11 +124,16 @@
  *       
  *       cleanup:
  *       
+ *       / * Don't run cleanup stuff under WASM. * /
+ *       #ifndef RETROFLAT_OS_WASM
+ *
  *          / * This must be called at the end of the program! * /
  *          retroflat_shutdown( retval );
  *
  *          / * Shutdown logging after all else so we catch everything. * /
  *          logging_shutdown();
+ *
+ *       #endif / * RETROFLAT_OS_WASM * /
  *       
  *          return retval;
  *       }
@@ -164,28 +169,32 @@
  *
  * ## API/Library Selection Definitions
  *
- * These are mutually exclusive.
+ * These are mutually exclusive. \ref maug_retroglu is only supported on
+ * some (32-bit and up) platforms.
  *
- * | Define                | Description                                      |
- * | --------------------- | ------------------------------------------------ |
- * | RETROFLAT_API_ALLEGRO | Specify that the program will link Allegro.      |
- * | RETROFLAT_API_SDL1    | Specify that the program will link SDL 1.2.      |
- * | RETROFLAT_API_SDL2    | Specify that the program will link SDL 2.        |
- * | RETROFLAT_API_WIN16   | Specify that the program will use Win 3.1x API.  |
- * | RETROFLAT_API_WIN32   | Specify that the program will use Win32/NT API.  |
+ * | Define                | Description        | Supports OpenGL |
+ * | --------------------- | ------------------ | --------------- |
+ * | RETROFLAT_API_ALLEGRO | Allegro            | No              |
+ * | RETROFLAT_API_SDL1    | SDL 1.2            | Yes             |
+ * | RETROFLAT_API_SDL2    | SDL 2              | No              |
+ * | RETROFLAT_API_WIN16   | Windows 3.1x API   | No              |
+ * | RETROFLAT_API_WIN32   | Win32/NT API       | Yes             |
+ * | RETROFLAT_API_NDS     | Nintendo DS        | Yes (Limited)   |
+ * | RETROFLAT_API_PC_BIOS | MS-DOS w/ PC BIOS  | No              |
+ * | RETROFLAT_API_GLUT    | GLUT (OpenGL-Only) | Yes             |
  *
  * ## Option Definitions
  *
  * These are \b NOT mutually exclusive.
  *
- * | Define                | Description                                       |
- * | --------------------- | ------------------------------------------------- |
- * | RETROFLAT_MOUSE       | Force-enable mouse on broken APIs (DANGEROUS!)    |
- * | RETROFLAT_TXP_R       | Specify R component of bitmap transparent color.  |
- * | RETROFLAT_TXP_G       | Specify G component of bitmap transparent color.  |
- * | RETROFLAT_TXP_B       | Specify B component of bitmap transparent color.  |
- * | RETROFLAT_BITMAP_EXT  | Specify file extension for bitmap assets.         |
- * | RETROFLAT_RESIZABLE   | Allow resizing the RetroFlat window.              |
+ * | Define                 | Description                                      |
+ * | ---------------------- | -------------------------------------------------|
+ * | RETROFLAT_MOUSE        | Force-enable mouse on broken APIs (DANGEROUS!)   |
+ * | RETROFLAT_TXP_R        | Specify R component of bitmap transparent color. |
+ * | RETROFLAT_TXP_G        | Specify G component of bitmap transparent color. |
+ * | RETROFLAT_TXP_B        | Specify B component of bitmap transparent color. |
+ * | RETROFLAT_BITMAP_EXT   | Specify file extension for bitmap assets.        |
+ * | RETROFLAT_NO_RESIZABLE | Disallow resizing the RetroFlat window.          |
  *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *
@@ -269,6 +278,16 @@
  * \{
  */
 
+/**
+ * \brief This macro defines all colors supported by RetroFlat for
+ *        primative operations, particularly using retroflat_px().
+ *
+ * The fields are:
+ * index, name (lowercase), name (uppercase), red, green, blue, cga on-color, cga off-color
+ *
+ * On-color and off-color are used for dithering... odd pixels get one and
+ * even pixels get the other.
+ */
 #define RETROFLAT_COLOR_TABLE( f ) \
    f( 0, black,     BLACK,     0,   0,   0,   BLACK,   BLACK   ) \
    f( 1, darkblue,  DARKBLUE,  0,   0,   170, CYAN,    BLACK   ) \
@@ -287,13 +306,12 @@
    f( 14, yellow,   YELLOW,    255, 255, 85,  CYAN,    MAGENTA ) \
    f( 15, white,    WHITE,     255, 255, 255, WHITE,   WHITE   )
 
+/*! \brief Defines an index in the platform-specific color-table. */
 typedef int8_t RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_NULL (-1)
 
-#ifndef RETROFLAT_COLORS_SZ
 #  define RETROFLAT_COLORS_SZ 16
-#endif /* !RETROFLAT_COLORS_SZ */
 
 /*! \} */
 
@@ -388,6 +406,11 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
 
+/**
+ * \brief Only supported on some platforms: Attempt to scale screen by 2X.
+ */
+#define RETROFLAT_FLAGS_SCALE2X 0x10
+
 /*! \} */ /* maug_retroflt_flags */
 
 /**
@@ -437,15 +460,32 @@ typedef int8_t RETROFLAT_COLOR;
 
 /**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
+ * \brief These flags can be passed to retroflat_message() to indicate the
+ *        type of message being conveyed.
  * \{
  */
 
+/*! \brief This mask covers all possible icon/type flags. */
 #define RETROFLAT_MSG_FLAG_TYPE_MASK 0x07
 
+/**
+ * \brief This icon/type flag indicates an error. It will try to display
+ *        messages in an urgent way with a red icon, if possible.
+ */
 #define RETROFLAT_MSG_FLAG_ERROR 0x01
 
+/**
+ * \brief This icon/type flag indicates an informational notice. It will try 
+ *        to display messages in a definite way, with an i or speech bubble
+ *        icon, if possible.
+ */
 #define RETROFLAT_MSG_FLAG_INFO 0x02
 
+/**
+ * \brief This icon/type flag indicates a condition the user should be aware
+ *        of. It will try to display messages in an urgent way with a yellow
+ *        icon, if possible.
+ */
 #define RETROFLAT_MSG_FLAG_WARNING 0x04
 
 /*! \} */ /* maug_retroflt_msg_flags */
@@ -459,7 +499,7 @@ struct RETROFLAT_STATE;
  * The VDP system allows for a plugin to post-process frames in programs that
  * use RetroFlat. The VDP is provided with a bitmap of every frame
  * in RETROFLAT_STATE::vdp_buffer which it processes and outputs to
- * RETROFLAT_STATE::buffer.
+ * RETROFLAT_STATE::buffer, which is then displayed on the screen.
  *
  * \{
  */
@@ -671,11 +711,11 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #if defined( RETROFLAT_API_SDL2 )
-#  if defined( RETROFLAT_RESIZABLE )
+#  if !defined( NO_RETROFLAT_RESIZABLE )
 #     define RETROFLAT_WIN_FLAGS SDL_WINDOW_RESIZABLE
 #  else
 #     define RETROFLAT_WIN_FLAGS 0
-#  endif /* RETROFLAT_RESIZABLE */
+#  endif /* !NO_RETROFLAT_RESIZABLE */
 #endif /* RETROFLAT_API_SDL2 */
 
 #if defined( RETROFLAT_API_SDL1 )
@@ -850,7 +890,10 @@ struct RETROFLAT_GLTEX {
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef FILE* RETROFLAT_CONFIG;
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%u"
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -875,6 +918,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  define retroflat_quit( retval_in ) \
    g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
@@ -972,7 +1019,14 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_SOFT_LINES */
 
 typedef FILE* RETROFLAT_CONFIG;
+#ifdef RETROFLAT_API_SDL2
+typedef int32_t RETROFLAT_IN_KEY;
+#else
+typedef int16_t RETROFLAT_IN_KEY;
+#endif /* RETROFLAT_API_SDL2 */
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%u"
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -1068,22 +1122,33 @@ struct RETROFLAT_BITMAP {
 #  endif
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_screen_buffer() \
-      (NULL == g_retroflat_state->vdp_buffer ? \
+
+#  ifdef RETROFLAT_VDP
+#     define retroflat_screen_buffer() \
+         (NULL == g_retroflat_state->vdp_buffer ? \
          &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+#  else
+#     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  endif /* RETROFLAT_VDP */
 #  define retroflat_root_win() (NULL) /* TODO */
 
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
 /* Special pixel lock JUST for SDL1 surfaces. */
 #     define retroflat_px_lock( bmp ) \
-         assert( NULL != bmp ); \
-         (bmp)->autolock_refs++; \
-         SDL_LockSurface( (bmp)->surface );
+         if( NULL != bmp ) { \
+            (bmp)->autolock_refs++; \
+            SDL_LockSurface( (bmp)->surface ); \
+         }
 #     define retroflat_px_release( bmp ) \
-         assert( NULL != bmp ); \
-         assert( 0 < (bmp)->autolock_refs ); \
-         (bmp)->autolock_refs--; \
-         SDL_UnlockSurface( (bmp)->surface );
+         if( NULL != bmp ) { \
+            assert( 0 < (bmp)->autolock_refs ); \
+            (bmp)->autolock_refs--; \
+            SDL_UnlockSurface( (bmp)->surface ); \
+         }
+#     ifdef RETROFLAT_VDP
+#        define retroflat_vdp_lock( bmp ) retroflat_px_lock( bmp )
+#        define retroflat_vdp_release( bmp ) retroflat_px_release( bmp )
+#     endif /* RETROFLAT_VDP */
 #  else
 /* Pixel lock above does not apply to SDL2 surfaces or bitmap textures. */
 #     define retroflat_px_lock( bmp )
@@ -1112,7 +1177,10 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 
 /* == Win16/Win32 == */
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
+
+#  define RETROFLAT_MS_FMT "%lu"
 
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for win16"
@@ -1138,7 +1206,11 @@ typedef uint32_t RETROFLAT_MS;
    f( HBITMAP, WinGCreateBitmap, 1003 ) \
    f( BOOL, WinGStretchBlt, 1009 )
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
+
+#     define RETROFLAT_MS_FMT "%lu"
+
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
 typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
@@ -1188,18 +1260,6 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
 };
 
-/* TODO: Remove this in favor of mmem.h. */
-#  if defined( RETROFLAT_C ) && defined( RETROFLAT_API_WINCE )
-void* calloc( size_t n, size_t s ) {
-   void* out = NULL;
-
-   out = malloc( n * s );
-   memset( out, '\0', n * s );
-
-   return out;
-}
-#  endif /* RETROFLAT_API_WINCE */
-
 #  ifdef RETROFLAT_OPENGL
 
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
@@ -1229,7 +1289,7 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* === Setup Pen Cache === */
 
-#  define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+#     define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    (HPEN)NULL,
 
 #     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -1271,21 +1331,21 @@ extern HBRUSH gc_retroflat_win_brushes[];
          }
 
 /* Create a pen and set it to the target HDC. */
-#        define retroflat_win_setup_pen( old_pen, target, color, flags ) \
-            old_pen = \
-               SelectObject( target->hdc_b, gc_retroflat_win_pens[color] );
+#     define retroflat_win_setup_pen( old_pen, target, color, flags ) \
+         old_pen = \
+            SelectObject( target->hdc_b, gc_retroflat_win_pens[color] );
 
-#        define retroflat_win_cleanup_brush( old_brush, target ) \
-            if( (HBRUSH)NULL != old_brush ) { \
-               SelectObject( target->hdc_b, old_brush ); \
-            }
+#     define retroflat_win_cleanup_brush( old_brush, target ) \
+         if( (HBRUSH)NULL != old_brush ) { \
+            SelectObject( target->hdc_b, old_brush ); \
+         }
 
-#  define retroflat_win_cleanup_pen( old_pen, target ) \
-            if( (HPEN)NULL != old_pen ) { \
-               SelectObject( target->hdc_b, old_pen ); \
-            }
+#     define retroflat_win_cleanup_pen( old_pen, target ) \
+         if( (HPEN)NULL != old_pen ) { \
+            SelectObject( target->hdc_b, old_pen ); \
+         }
 
-#endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_OPENGL */
 
 /* TODO: This is a parallel bitmap system... maybe move OPENGL stuff into its
  *       own header that takes over graphics stuff in OPENGL mode? */
@@ -1303,12 +1363,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  ifdef RETROFLAT_VDP
 
-#  ifdef RETROFLAT_API_WIN16
-#     error "VDP not supported in Win16!"
-#  endif /* RETROFLAT_API_WIN16 */
+#     ifdef RETROFLAT_API_WIN16
+#        error "VDP not supported in Win16!"
+#     endif /* RETROFLAT_API_WIN16 */
 
-/* TODO: Check alloc! */
-#  define retroflat_px_lock( bmp ) \
+#     define retroflat_vdp_lock( bmp ) \
    assert( NULL != (bmp)->hdc_b ); \
    /* Confirm header info. */ \
    (bmp)->autolock_refs++; \
@@ -1317,8 +1376,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
       RETROFLAT_FLAGS_SCREEN_BUFFER != \
          (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
-      /* GetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, 0, NULL, \
-         (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); */ \
       assert( NULL == (bmp)->bits ); \
       assert( (bmp)->bmi.header.biBitCount == 32 ); \
       assert( (bmp)->bmi.header.biWidth > 0 ); \
@@ -1328,12 +1385,16 @@ extern HBRUSH gc_retroflat_win_brushes[];
       (bmp)->bits = VirtualAlloc( \
          0, (bmp)->bmi.header.biSizeImage, \
          MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ); \
+      /* TODO: Check alloc without assert! */ \
       assert( NULL != (bmp)->bits ); \
+      /* Get bitmap bits from bitmap HDC into bitmap->bits so that the bitmap
+       * can be altered byte-by-byte.
+       */ \
       GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->bmi.header.biHeight, \
          (bmp)->bits, (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
    }
 
-#  define retroflat_px_release( bmp ) \
+#     define retroflat_vdp_release( bmp ) \
    assert( 0 < (bmp)->autolock_refs ); \
    (bmp)->autolock_refs--; \
    if( \
@@ -1343,6 +1404,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
    ) { \
       /* TODO: Causes alpha blending in mdemos? */ \
       if( \
+         /* Set bitmap bits from bitmap->bits into HDC. */ \
          SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
             (bmp)->bmi.header.biHeight, (bmp)->bits, \
             (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < \
@@ -1354,18 +1416,20 @@ extern HBRUSH gc_retroflat_win_brushes[];
       (bmp)->bits = NULL; \
    }
 
+#     define retroflat_screen_buffer() \
+         (NULL == g_retroflat_state->vdp_buffer ? \
+         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+
 #  else
 
-#     define retroflat_px_lock( bmp )
-#     define retroflat_px_release( bmp )
+#     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 #  endif /* RETROFLAT_VDP */
 
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_screen_buffer() \
-      (NULL == g_retroflat_state->vdp_buffer ? \
-         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
 #  define retroflat_root_win() (g_retroflat_state->window)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
@@ -1498,8 +1562,11 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define BG_TILE_H_PX 8
 #  define BG_W_TILES 32
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
 typedef void* RETROFLAT_CONFIG;
+
+#define RETROFLAT_MS_FMT "%lu"
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -1535,6 +1602,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
@@ -1566,7 +1637,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_CONFIG_USE_FILE
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%lu"
 
 typedef FILE* RETROFLAT_CONFIG;
 
@@ -1590,6 +1664,10 @@ struct RETROFLAT_BITMAP {
 /*! \brief Special lock used before per-pixel operations because of SDL1. */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -1663,7 +1741,10 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
+typedef int16_t RETROFLAT_IN_KEY;
 typedef uint16_t RETROFLAT_MS;
+
+#define RETROFLAT_MS_FMT "%u"
 
 /* Explicity screen sizes aren't supported, only screen modes handled in
  * special cases during init.
@@ -1689,6 +1770,11 @@ typedef uint16_t RETROFLAT_MS;
 
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
+
+#  ifdef RETROFLAT_VDP
+#     define retroflat_vdp_lock( bmp )
+#     define retroflat_vdp_release( bmp )
+#  endif /* RETROFLAT_VDP */
 
 #  ifndef NO_I86
 #     include <i86.h>
@@ -1718,6 +1804,7 @@ struct RETROFLAT_BITMAP {
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+/* TODO: Vary based on current screen mode! */
 #  define retroflat_screen_w() 320
 #  define retroflat_screen_h() 200
 
@@ -1966,8 +2053,13 @@ struct RETROFLAT_ARGS {
     *        target platform.
     */
    char* title;
-   /*! \brief Desired screen or window width in pixels. */
+   /*! \brief Relative path under which bitmap assets are stored. */
+   char* assets_path;
+   uint8_t flags;
+   /*! \brief Relative path of local config file (if not using registry). */
+   char* config_path;
 #  ifdef RETROFLAT_API_PC_BIOS
+   /*! \brief Desired screen or window width in pixels. */
    uint8_t screen_mode;
 #  elif !defined( RETROFLAT_NO_CLI_SZ )
    int screen_w;
@@ -1978,11 +2070,6 @@ struct RETROFLAT_ARGS {
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
 #  endif /* RETROFLAT_API_PC_BIOS */
-   /*! \brief Relative path under which bitmap assets are stored. */
-   char* assets_path;
-   uint8_t flags;
-   /*! \brief Relative path of local config file (if not using registry). */
-   char* config_path;
    uint8_t snd_flags;
 #  if defined( RETROSND_API_WINMM )
    UINT snd_dev_id;
@@ -2010,38 +2097,62 @@ struct RETROFLAT_STATE {
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
-   /* TODO: ifdef guard for VDP? */
+#  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION ) || \
+defined( RETROVDP_C )
    /**
-    * \brief A buffer assembled and passed to the VDP for its use,
-    *        or NULL if no VDP is loaded.
+    * \brief A buffer assembled and passed to the \ref maug_retroflt_vdp for
+    *        it to modify, or NULL if no VDP is loaded.
     */
    struct RETROFLAT_BITMAP* vdp_buffer;
-#ifdef RETROFLAT_OS_WIN
+#     ifdef RETROFLAT_OS_WIN
    HMODULE vdp_exe;
-#else
-   /*! \brief A handle for the loaded VDP module. */
+#     else
+   /*! \brief A handle for the loaded \ref maug_retroflt_vdp module. */
    void* vdp_exe;
-#endif /* RETROFLAT_OS_WIN */
-   /*! \brief Pointer to data defined by the VDP for its use. */
+#     endif /* RETROFLAT_OS_WIN */
+   /**
+    * \brief Pointer to data defined by the \ref maug_retroflt_vdp for its
+    *        use.
+    */
    void* vdp_data;
    /*! \brief CLI args passed with -vdp to the \ref maug_retroflt_vdp. */
    char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
    /*! \brief Flags set by the \ref maug_retroflt_vdp. */
    uint8_t vdp_flags;
+#  endif /* RETROFLAT_VDP || DOCUMENTATION || RETROVDP_C */
 
    /* These are used by VDP so should be standardized/not put in plat-spec! */
+
+   /**
+    * \brief The screen width as seen by our program, before scaling.
+    *
+    * This is the scale of the buffer, which the platform-specific code
+    * should then scale to match screen_v_h on blit.
+    */
    int                  screen_v_w;
+   /**
+    * \brief The screen height as seen by our program, before scaling.
+    *
+    * This is the scale of the buffer, which the platform-specific code
+    * should then scale to match screen_v_w on blit.
+    */
    int                  screen_v_h;
+   /*! \brief The screen width as seen by the system, after scaling. */
    int                  screen_w;
+   /*! \brief The screen height as seen by the system, after scaling. */
    int                  screen_h;
+
+   /* WARNING: The VDP requires the state specifier to be the same size
+    *          as the one it was compiled for! Do not modify above here!
+    */
 
    /* TODO: Put these in a platform-specific struct of some kind to maintain
     *       consistent state struct size for VDP?
     */
 
-#if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
-#endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_OPENGL */
 
 #if defined( RETROFLAT_API_ALLEGRO )
 
@@ -2066,12 +2177,10 @@ struct RETROFLAT_STATE {
 #  ifdef RETROFLAT_SCREENSAVER
    HWND                 parent;
 #  endif /* RETROFLAT_SCREENSAVER */
-   MSG                  msg;
    HDC                  hdc_win;
 #  ifdef RETROFLAT_OPENGL
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
-   int                  msg_retval;
    uint8_t              last_key;
    uint8_t              vk_mods;
    unsigned int         last_mouse;
@@ -2080,7 +2189,7 @@ struct RETROFLAT_STATE {
    retroflat_loop_iter  loop_iter;
    retroflat_loop_iter  frame_iter;
 
-#elif defined( RETROFLAT_API_LIBNDS )
+#  elif defined( RETROFLAT_API_LIBNDS )
 
    uint16_t*            sprite_frames[NDS_SPRITES_ACTIVE];
    int                  bg_id;
@@ -2148,9 +2257,19 @@ MERROR_RETVAL retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* arg
  */
 void retroflat_shutdown( int retval );
 
-#  ifdef RETROFLAT_VDP
+#  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION )
+/**
+ * \addtogroup maug_retroflt_vdp
+ * \{
+ */
+
+/**
+ * \brief Call a function from the retroflat VDP.
+ */
 MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
-#  endif /* RETROFLAT_VDP */
+
+/*! \} */ /* maug_retroflt_vdp */
+#  endif /* RETROFLAT_VDP || DOCUMENTATION */
 
 void retroflat_set_title( const char* format, ... );
 
@@ -2334,7 +2453,7 @@ void retroflat_string(
  * \param input Pointer to a ::RETROFLAT_INPUT struct to store extended info.
  * \return A symbol from \ref maug_retroflt_keydefs.
  */
-int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input );
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
 
@@ -2381,19 +2500,19 @@ size_t retroflat_config_read(
 
 #ifdef RETROFLT_C
 
-#if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
+#  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
 static volatile RETROFLAT_MS g_ms = 0;
-#endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_PC_BIOS */
+#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_PC_BIOS */
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
-#define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
+#  define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
-#define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   #name_u,
+#  define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+      #name_u,
 
 MAUG_CONST char* gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
@@ -2445,8 +2564,8 @@ struct RETROFLAT_WING_MODULE g_w;
 static LRESULT CALLBACK WndProc(
    HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 ) {
-   PAINTSTRUCT ps;
 #     ifndef RETROFLAT_OPENGL
+   PAINTSTRUCT ps;
    HDC hdc_paint = (HDC)NULL;
 #     endif /* !RETROFLAT_OPENGL */
 #     if defined( RETROFLAT_OPENGL )
@@ -2498,8 +2617,8 @@ static LRESULT CALLBACK WndProc(
             * in our WndProc!
             */
             retroflat_create_bitmap(
-               g_retroflat_state->screen_w,
-               g_retroflat_state->screen_h,
+               g_retroflat_state->screen_v_w,
+               g_retroflat_state->screen_v_h,
                &(g_retroflat_state->buffer),
                RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
             if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
@@ -2577,8 +2696,8 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->screen_w, g_retroflat_state->screen_h,
             g_retroflat_state->buffer.hdc_b,
             0, 0,
-            g_retroflat_state->screen_w,
-            g_retroflat_state->screen_h,
+            g_retroflat_state->screen_v_w,
+            g_retroflat_state->screen_v_h,
             SRCCOPY
          );
 #        ifdef RETROFLAT_WING
@@ -2633,6 +2752,8 @@ static LRESULT CALLBACK WndProc(
          g_retroflat_state->last_mouse_x = GET_X_LPARAM( lParam );
          g_retroflat_state->last_mouse_y = GET_Y_LPARAM( lParam );
          break;
+
+      /* TODO: Handle resize message. */
 
       case WM_DESTROY:
          if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
@@ -2823,6 +2944,7 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
 int retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
+   int retval = 0;
 
 #  if defined( RETROFLAT_OS_WASM )
 
@@ -2872,9 +2994,11 @@ int retroflat_loop(
       RETROFLAT_FLAGS_RUNNING == 
          (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
+   retval = g_retroflat_state->retval;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int retval = 0;
+   int msg_retval = 0;
+   MSG msg;
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -2912,11 +3036,14 @@ int retroflat_loop(
 
    /* Handle Windows messages until quit. */
    do {
-      g_retroflat_state->msg_retval =
-         GetMessage( &(g_retroflat_state->msg), 0, 0, 0 );
-      TranslateMessage( &(g_retroflat_state->msg) );
-      DispatchMessage( &(g_retroflat_state->msg) );
-   } while( 0 < g_retroflat_state->msg_retval );
+      msg_retval = GetMessage( &msg, 0, 0, 0 );
+      TranslateMessage( &msg );
+      DispatchMessage( &msg );
+      if( WM_QUIT == msg.message ) {
+         /* Get retval from PostQuitMessage(). */
+         retval = msg.wParam;
+      }
+   } while( WM_QUIT != msg.message && 0 < msg_retval );
 
 cleanup:
 #  elif defined( RETROFLAT_API_GLUT )
@@ -2925,18 +3052,19 @@ cleanup:
    g_retroflat_state->loop_data = (void*)data;
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
    glutMainLoop();
+   retval = g_retroflat_state->retval;
 
 #  else
 #     pragma message( "warning: loop not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* This should be set by retroflat_quit(). */
-   return g_retroflat_state->retval;
+   return retval;
 }
 
 /* === */
 
-char retroflat_vk_to_ascii( int k, uint8_t flags ) {
+char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    char c = 0;
    char offset_lower = 0;
 
@@ -3109,8 +3237,10 @@ static int retrosnd_cli_rsd_def(
    const char* arg, struct RETROFLAT_ARGS* args
 ) {
    char* env_var = NULL;
-   int i = 0;
    MERROR_RETVAL retval = MERROR_OK;
+#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
+   int i = 0;
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
 #     ifdef RETROSND_API_PC_BIOS
    if( NULL != env_var ) {
@@ -3200,10 +3330,21 @@ cleanup:
 /* Windows screensaver (.scr) command-line arguments. */
 
 static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
+#ifdef __WIN64__
+   /* 64-bit Windows has 64-bit pointers! */
+   intptr_t hwnd_long = 0;
+#else
+   long hwnd_long = 0;
+#endif /* __GNUC__ */
    if( 0 == strncmp( MAUG_CLI_SIGIL "p", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
       /* The next arg must be the new var. */
    } else {
-      g_retroflat_state->parent = (HWND)atoi( arg );
+#ifdef __WIN64__
+      hwnd_long = atoll( arg );
+#else
+      hwnd_long = atol( arg );
+#endif /* __GNUC__ */
+      g_retroflat_state->parent = (HWND)hwnd_long;
    }
    return RETROFLAT_OK;
 }
@@ -3269,11 +3410,27 @@ static int retroflat_cli_rfy_def( const char* arg, struct RETROFLAT_ARGS* args )
    return RETROFLAT_OK;
 }
 
+static void retroflat_cli_apply_scale( struct RETROFLAT_ARGS* args ) {
+#if defined( RETROFLAT_API_SDL2 )
+   /*
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      args->screen_w *= 2;
+      debug_printf( 1, "doubling screen_w to: %d", args->screen_w );
+      args->screen_h *= 2;
+      debug_printf( 1, "doubling screen_h to: %d", args->screen_h );
+   }
+   */
+#endif /* RETROFLAT_API_SDL2 */
+}
+
 static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
+      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
@@ -3282,6 +3439,7 @@ static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args )
    if( 0 == args->screen_w ) {
       args->screen_w = 320;
    }
+   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
@@ -3290,6 +3448,7 @@ static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
+      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
@@ -3298,6 +3457,7 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
    if( 0 == args->screen_h ) {
       args->screen_h = 200;
    }
+   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
@@ -3420,7 +3580,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    struct SREGS sregs;
 #     endif
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   WNDCLASS wc = { 0 };
+   WNDCLASS wc;
    RECT wr = { 0, 0, 0, 0 };
    DWORD window_style = RETROFLAT_WIN_STYLE;
    DWORD window_style_ex = 0;
@@ -3575,8 +3735,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* TODO: Handle window resizing someday! */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   g_retroflat_state->screen_w = args->screen_w;
-   g_retroflat_state->screen_h = args->screen_h;
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      debug_printf( 1, "setting SDL window scale to 2x..." );
+      g_retroflat_state->screen_w = args->screen_w * 2;
+      g_retroflat_state->screen_h = args->screen_h * 2;
+   } else {
+      g_retroflat_state->screen_w = args->screen_w;
+      g_retroflat_state->screen_h = args->screen_h;
+   }
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_OPENGL
@@ -3691,12 +3859,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup default screen position. */
    if( 0 == args->screen_x ) {
       /* Get screen width so we can center! */
-      args->screen_x = (info->current_w / 2) - (args->screen_w / 2);
+      args->screen_x = (info->current_w / 2) -
+         (g_retroflat_state->screen_w / 2);
    }
 
    if( 0 == args->screen_y ) {
       /* Get screen height so we can center! */
-      args->screen_y = (info->current_h / 2) - (args->screen_h / 2);
+      args->screen_y = (info->current_h / 2) -
+         (g_retroflat_state->screen_h / 2);
    }
 
    maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
@@ -3751,7 +3921,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_SDL_ICO */
 
    g_retroflat_state->buffer.surface = SDL_SetVideoMode(
-      args->screen_w, args->screen_h, info->vfmt->BitsPerPixel,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
       | SDL_OPENGL
@@ -3818,6 +3989,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
       SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+   /* TODO: This doesn't seem to do anything. */
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      debug_printf( 1, "setting SDL window scale to 2x..." );
+      SDL_RenderSetScale( g_retroflat_state->buffer.renderer, 2.0f, 2.0f );
+   }
 
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
@@ -3893,8 +4072,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_WING */
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = g_retroflat_state->screen_v_w;
-   wr.bottom = g_retroflat_state->screen_v_h;
+   wr.right = g_retroflat_state->screen_w;
+   wr.bottom = g_retroflat_state->screen_h;
 #     ifndef RETROFLAT_API_WINCE
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */
@@ -3928,7 +4107,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_SCREENSAVER
    if( (HWND)0 != g_retroflat_state->parent ) {
       /* Shrink the child window into the parent. */
-      debug_printf( 1, "retroflat: using window parent: " UPRINTF_U32,
+      debug_printf( 1, "retroflat: using window parent: %p",
          g_retroflat_state->parent );
       window_style = WS_CHILD;
       GetClientRect( g_retroflat_state->parent, &wr );
@@ -3980,8 +4159,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_API_WINCE
    /* Force screen size. */
    GetClientRect( g_retroflat_state->window, &wr );
-   g_retroflat_state->screen_v_w = wr.right - wr.left;
-   g_retroflat_state->screen_v_h = wr.bottom - wr.top;
+   g_retroflat_state->screen_w = wr.right - wr.left;
+   g_retroflat_state->screen_h = wr.bottom - wr.top;
 #     endif /* RETROFLAT_API_WINCE */
 
    if( !g_retroflat_state->window ) {
@@ -4095,8 +4274,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( 0 < args->screen_x || 0 < args->screen_y ) {
       glutInitWindowPosition( args->screen_x, args->screen_y );
    }
+   /* TODO: Handle screen scaling? */
    glutInitWindowSize(
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
    glutCreateWindow( args->title );
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
@@ -4445,8 +4625,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_px_lock( &(g_retroflat_state->buffer) );
-      retroflat_px_lock( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_lock( &(g_retroflat_state->buffer) );
+      retroflat_vdp_lock( g_retroflat_state->vdp_buffer );
    }
 
    retval = vdp_proc( g_retroflat_state );
@@ -4456,8 +4636,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_px_release( &(g_retroflat_state->buffer) );
-      retroflat_px_release( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_release( &(g_retroflat_state->buffer) );
+      retroflat_vdp_release( g_retroflat_state->vdp_buffer );
    }
 
 #     ifdef RETROFLAT_OS_WIN
@@ -4536,7 +4716,7 @@ RETROFLAT_MS retroflat_get_ms() {
    return /**((uint16_t far*)0x046c) >> 4;*/ g_ms;
 
 #  else
-#  pragma message( "warning: get_ms not implemented" )
+#     pragma message( "warning: get_ms not implemented" )
 #  endif /* RETROFLAT_API_* */
 }
 
@@ -4722,6 +4902,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
       /* Unlock texture bitmap. */
@@ -4879,7 +5060,8 @@ cleanup:
 
 /* === */
 
-#if defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
+#if (defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )) && \
+!defined( RETROFLAT_OPENGL )
 
 static int retroflat_bitmap_win_transparency(
    struct RETROFLAT_BITMAP* bmp_out, int16_t w, int16_t h  
@@ -5036,6 +5218,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
+   glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
@@ -5234,15 +5417,6 @@ cleanup:
       bmp_out->bmi.header.biHeight *
       (bm.bmBitsPixel / sizeof( uint8_t ));
 
-   /*
-   GetDIBits( g_retroflat_state->hdc_win, bmp_out->b, 0, 0, NULL,
-      (BITMAPINFO*)&(bmp_out->bmi), DIB_RGB_COLORS );
-
-   assert( 1 == bmp_out->bmi.header.biPlanes );
-   assert( bmp_out->w == bmp_out->bmi.header.biWidth );
-   assert( bmp_out->h == bmp_out->bmi.header.biHeight );
-   */
-
    retval = retroflat_bitmap_win_transparency(
       bmp_out, bm.bmWidth, bm.bmHeight );
 
@@ -5276,7 +5450,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if (defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )) && \
+!defined( RETROFLAT_OPENGL )
    int i = 0;
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -5629,7 +5804,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL != bmp->old_hbm_b ) {
       SelectObject( bmp->hdc_b, bmp->old_hbm_b );
-      bmp->old_hbm_b = NULL;
+      bmp->old_hbm_b = (HBITMAP)NULL;
       bmp->old_hbm_b = (HBITMAP)NULL;
    }
 
@@ -5667,7 +5842,6 @@ void retroflat_blit_bitmap(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifndef RETROFLAT_OPENGL
@@ -5986,19 +6160,18 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-#if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
    float aspect_ratio = 0,
       screen_x = 0,
       screen_y = 0,
       screen_w = 0,
       screen_h = 0;
-#elif defined( RETROFLAT_API_SDL2 )
-#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+#  elif defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HBRUSH old_brush = (HBRUSH)NULL;
-   int locked_target_internal = 0;
    HPEN old_pen = (HPEN)NULL;
-#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -6084,7 +6257,7 @@ void retroflat_rect(
 
    Rectangle( target->hdc_b, x, y, x + w, y + h );
 
-cleanup:
+/* cleanup: */
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
@@ -6104,14 +6277,11 @@ void retroflat_line(
 #  elif defined( RETROFLAT_SOFT_LINES )
 #  elif defined( RETROFLAT_API_SDL2 )
    MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN pen = (HPEN)NULL;
    HPEN old_pen = (HPEN)NULL;
    POINT points[2];
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -6171,7 +6341,7 @@ void retroflat_line(
 
    Polyline( target->hdc_b, points, 2 );
 
-cleanup:
+/* cleanup: */
 
    if( (HPEN)NULL != pen ) {
       SelectObject( target->hdc_b, old_pen );
@@ -6211,8 +6381,6 @@ void retroflat_ellipse(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    HPEN old_pen = (HPEN)NULL;
    HBRUSH old_brush = (HBRUSH)NULL;
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color ) {
@@ -6264,7 +6432,7 @@ void retroflat_ellipse(
 
    Ellipse( target->hdc_b, x, y, x + w, y + h );
 
-cleanup:
+/* cleanup: */
 
    retroflat_win_cleanup_brush( old_brush, target )
    retroflat_win_cleanup_pen( old_pen, target )
@@ -6314,8 +6482,6 @@ void retroflat_string_sz(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    SIZE sz;
    HFONT font;
    HFONT old_font;
@@ -6372,7 +6538,7 @@ cleanup:
    *w_out = sz.cx;
    *h_out = sz.cy;
 
-cleanup:
+/* cleanup: */
 
    SelectObject( target->hdc_b, old_font );
 
@@ -6397,8 +6563,6 @@ void retroflat_string(
    FONT* font_data = NULL;
    int font_loaded = 0;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_target_internal = 0;
    RECT rect;
    SIZE sz;
    HFONT font;
@@ -6492,7 +6656,7 @@ cleanup:
 
    DrawText( target->hdc_b, str, str_sz, &rect, 0 );
 
-cleanup:
+/* cleanup: */
 
    SelectObject( target->hdc_b, old_font );
 
@@ -6507,7 +6671,7 @@ cleanup:
 
 /* === */
 
-int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;
    union REGS outregs;
@@ -6515,7 +6679,7 @@ int16_t retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;
 #  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
-   int16_t key_out = 0;
+   RETROFLAT_IN_KEY key_out = 0;
 
    assert( NULL != input );
 

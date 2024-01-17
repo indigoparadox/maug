@@ -13,7 +13,7 @@ struct dataa(TEMPLATE) {
 };
 
 void loopa(template)( struct dataa(TEMPLATE)* data ) {
-   int input = 0;
+   RETROFLAT_IN_KEY input = 0;
    struct RETROFLAT_INPUT input_evt;
 
    /* Input */
@@ -46,12 +46,12 @@ int main( int argc, char** argv ) {
    
    /* === Setup === */
 
+   logging_init();
+
    memset( &args, '\0', sizeof( struct RETROFLAT_ARGS ) );
 
-   args.screen_w = 320;
-   args.screen_h = 200;
    args.title = "template";
-   args.assets_path = "";
+   args.assets_path = "assets";
    
    retval = retroflat_init( argc, argv, &args );
    if( RETROFLAT_OK != retval ) {
@@ -81,6 +81,8 @@ cleanup:
    }
 
    retroflat_shutdown( retval );
+
+   logging_shutdown();
 
 #endif /* !RETROFLAT_OS_WASM */
 

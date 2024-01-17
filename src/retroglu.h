@@ -985,7 +985,7 @@ MERROR_RETVAL retroglu_parse_obj_file(
 
    debug_printf(
       RETROGLU_TRACE_LVL,
-      "parsed %s, " UPRINTF_U32 " vertices, " UPRINTF_U32 " materials",
+      "parsed %s, %u vertices, %u materials",
       filename_path, obj->vertices_sz, obj->materials_sz );
 
    return retval;
@@ -1494,8 +1494,8 @@ void retroglu_string(
       glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[0][str[i] - ' '] );
 #endif /* RETROGLU_NO_TEXTURES */
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
       
       glBegin( GL_TRIANGLES );
 
