@@ -4902,6 +4902,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
       /* Unlock texture bitmap. */
@@ -5217,6 +5218,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
+   glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
