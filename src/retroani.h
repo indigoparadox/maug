@@ -111,6 +111,9 @@ struct RETROANI_FRAME {
 };
 #endif
 
+#define retroani_set_target( ani_stack, ani_idx, bitmap ) \
+   ani_stack[ani_idx].target = bitmap;
+
 /*! \brief Internal representation of an animation. Do not call directly; use
  *         retroani_create() instead.
  */
