@@ -230,6 +230,14 @@ struct RETROGLU_PROJ_ARGS {
    float far_plane;
 };
 
+#ifdef RETROFLAT_API_LIBNDS
+#  define retroglu_enable_lightning()
+#  define retroglu_disable_lightning()
+#else
+#  define retroglu_enable_lightning() glEnable( GL_LIGHTING )
+#  define retroglu_disable_lightning() glDisable( GL_LIGHTING )
+#endif /* RETROFLAT_API_NDS */
+
 /**
  * \addtogroup maug_retroglu_overlay RetroGLU Overlay API
  * \brief Convenience macros for drawing a 2D overlay using transparent
@@ -246,7 +254,7 @@ struct RETROGLU_PROJ_ARGS {
    glMatrixMode( GL_PROJECTION ); \
    glPushMatrix(); \
    /* Lighting makes overlay text hard to see. */ \
-   glDisable( GL_LIGHTING ); \
+   retroglu_disable_lightning(); \
    /* Use ortho for overlay. */ \
    glLoadIdentity(); \
    aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
