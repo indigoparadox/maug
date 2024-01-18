@@ -195,6 +195,7 @@
  * | RETROFLAT_TXP_B        | Specify B component of bitmap transparent color. |
  * | RETROFLAT_BITMAP_EXT   | Specify file extension for bitmap assets.        |
  * | RETROFLAT_NO_RESIZABLE | Disallow resizing the RetroFlat window.          |
+ * | RETROFLAT_NO_BLANK_INIT| Do not blank screen on retroflat_ini().          |
  *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *
@@ -205,9 +206,8 @@
  * but this is the only one that has been tested. No other specific libraries
  * are required. The Windows API is used directly.
  *
- * Outlined below is a basic GNU Makefile for using OpenWatcom to cross-compile
- * a Win16 application under GNU/Linux. This Makefile assumes the following
- * variable definitions from the environment:
+ * The Watcom Makefile includes assume the following variable definitions
+ * from the environment:
  *
  * - \b $WATCOM should be set to the path where the OpenWatcom compiler has
  *   been extracted, containing the binw, binl, h, and lib386 directories
@@ -217,48 +217,44 @@
  *
  * For an example of the main.c file, please see \ref maug_retroflt_example.
  *
- * The Makefile is as follows:
+ * ## Makefile
+ *
+ * An example to use the unified Makefile include follows. Please name it
+ * "Makefile" in the root directory of the project and replace "exampl" with a
+ * 6-character binary name for best results!
  *
  *       # A list of C files included in the project. These must be provided
  *       # by you. In this example, our program only has one file.
- *       EXAMPLE_C_FILES := main.c
+ *       C_FILES := main.c
  *
- *       # A basic set of defines to instruct RetroFlat to use The Win16 API on
- *       # the (target) Windows OS.
- *       DEFINES := -DRETROFLAT_OS_WIN -DRETROFLAT_API_WIN16
+ *       # Project-specific defines to pass to EVERY target.
+ *       GLOBAL_DEFINES := 
  *     
- *       # Including the defines above, these flags will be passed to the C
- *       # compiler in the rules, below. The -i flags specify that we want
- *       # to include the Windows headers from OpenWatcom, as well as the
- *       # RetroFlat header directory located in ./maug/src. The
- *       # -bt=windows flag specifies that we want to compile code for Win16.
- *       CFLAGS := $(DEFINES) -bt=windows -i$(WATCOM)/h/win -imaug/src
+ *       # Include the template Makefile that will create targets for
+ *       # platforms as specified below.
+ *       include maug/Makefile.inc
  *
- *       # The only mandatory linker flag for our example is -l=win386, which
- *       # instructs the Watcom linker to target the win386 32-bit Windows
- *       # extender, which we will include with our executable below. This
- *       # allows our program to run on Windows 3.x without us having to
- *       # observe 16-bit memory constraints or deal with LocalHeaps or
- *       # handle locking.
- *       LDFLAGS := -l=win386
- *      
- *       # This rule handles compiling all object files requested by the next
- *       # rule from their respective C code files.
- *       %.o: %.c
- *     	   wcc386 $(CFLAGS) -fo=$@ $(<:%.c=%)
+ *       # Build these targets by default.
+ *       all: exampl.sdl examplb.exe examplnt.exe
+ *       
+ *       # Create an icon from exampl.bmp for SDL to use for its window.
+ *       $(eval $(call TGTSDLICO,mdemo))
  *
- *       # This rule builds the intermediate LE executable to which the win386
- *       # extender will be prepended. The -fe flag specifies the name of the
- *       # executable to create.
- *       examplew.rex: $(subst .c,.o,$(EXAMPLE_C_FILES))
- *      	   wcl386 $(LDFLAGS) -fe=$@ $^
- *      
- *       # This rule builds the final executable, by prepending the win386
- *       # extender located in the OpenWatcom installation directory to the
- *       # Intermediate file created in the previous rule.
- *       examplew.exe: examplew.rex
- *      	   wbind $< -s $(WATCOM)/binw/win386.ext -R $@
+ *       $(eval $(call TGTUNIXSDL,mdemo))
  *
+ *       # Build a DOS real-mode target.
+ *       $(eval $(call TGTDOSBIOS,exampl))
+ *
+ *       # Create an icon and resource file from exampl.bmp for Windows
+ *       # targets to use.
+ *       $(eval $(call TGTWINICO,exampl))
+ *
+ *       # Build a Windows NT 32-bit target.
+ *       $(eval $(call TGTWINNT,exampl))
+ *
+ *       # Remove built files from previously defined targets.
+ *       clean:
+ *       	rm -rf $(CLEAN_TARGETS)
  * \}
  */
 
@@ -4457,6 +4453,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 skip_vdp:
 
 #  endif /* RETROFLAT_VDP */
+
+#  ifndef RETROFLAT_NO_BLANK_INIT
+   retroflat_draw_lock( NULL );
+   retroflat_rect(
+      NULL, RETROFLAT_COLOR_BLACK, 0, 0,
+      retroflat_screen_w(), retroflat_screen_h(),
+      RETROFLAT_FLAGS_FILL );
+   retroflat_draw_release( NULL );
+#  endif /* !RETROFLAT_NO_BLANK_INIT */
 
 cleanup:
 
