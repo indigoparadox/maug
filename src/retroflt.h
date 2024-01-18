@@ -612,6 +612,14 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
+#ifndef RETROFLAT_DEFAULT_SCREEN_W
+#  define RETROFLAT_DEFAULT_SCREEN_W 320
+#endif /* RETROFLAT_DEFAULT_SCREEN_W */
+
+#ifndef RETROFLAT_DEFAULT_SCREEN_H
+#  define RETROFLAT_DEFAULT_SCREEN_H 200
+#endif /* RETROFLAT_DEFAULT_SCREEN_H */
+
 #ifndef RETROFLAT_GL_Z
 #  define RETROFLAT_GL_Z -0.001
 #endif /* !RETROFLAT_GL_Z */
@@ -1586,12 +1594,11 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_KEY_D           KEY_RIGHT
 #     define RETROFLAT_KEY_W           KEY_UP
 #     define RETROFLAT_KEY_S           KEY_DOWN
-#  else
-#     define RETROFLAT_KEY_LEFT        KEY_LEFT
-#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#     define RETROFLAT_KEY_UP          KEY_UP
-#     define RETROFLAT_KEY_DOWN        KEY_DOWN
 #  endif /* RETROFLAT_NDS_WASD */
+#  define RETROFLAT_KEY_LEFT        KEY_LEFT
+#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
+#  define RETROFLAT_KEY_UP          KEY_UP
+#  define RETROFLAT_KEY_DOWN        KEY_DOWN
 #  define RETROFLAT_KEY_ENTER       KEY_START
 #  define RETROFLAT_KEY_SPACE       KEY_A
 #  define RETROFLAT_KEY_ESC         KEY_B
@@ -3067,6 +3074,8 @@ cleanup:
 
 /* === */
 
+#  if !defined( RETROFLAT_NO_KEYBOARD )
+
 char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    char c = 0;
    char offset_lower = 0;
@@ -3136,6 +3145,8 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
    return c;
 }
+
+#endif /* !RETROFLAT_NO_KEYBOARD */
 
 /* === */
 
@@ -3441,7 +3452,7 @@ static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == args->screen_w ) {
-      args->screen_w = 320;
+      args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
    }
    retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
@@ -3459,7 +3470,7 @@ static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == args->screen_h ) {
-      args->screen_h = 200;
+      args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
    }
    retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
@@ -4461,6 +4472,8 @@ void retroflat_shutdown( int retval ) {
    struct SREGS s;
 #  endif /* RETROFLAT_API_PC_BIOS */
 
+   debug_printf( 1, "retroflat shutdown called..." );
+
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
       retroflat_vdp_call( "retroflat_vdp_shutdown" );
@@ -4474,23 +4487,30 @@ void retroflat_shutdown( int retval ) {
    }
 
    if( NULL != g_retroflat_state->vdp_buffer ) {
+      debug_printf( 1, "destroying VPD buffer..." );
       retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
       free( g_retroflat_state->vdp_buffer );
    }
 #  endif /* RETROFLAT_VDP */
 
-#  if defined( RETROFLAT_SOFT_SHAPES )
+#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
+defined( RETROFLAT_OPENGL )
+   debug_printf( 1, "calling retrosoft shutdown..." );
    retrosoft_shutdown();
 #  endif /* RETROFLAT_SOFT_SHAPES */
+
+#  ifdef RETROFLAT_OPENGL
+   debug_printf( 1, "destroying GL glyphs..." );
+   retroglu_destroy_glyph_tex();
+#  endif /* RETROFLAT_OPENGL */
+
+   /* === Platform-Specific Shutdown === */
 
 #  if defined( RETROFLAT_OS_WASM )
    /* Do nothing, start the main loop later. */
    return;
-#  elif defined( RETROFLAT_API_ALLEGRO )
 
-#  ifdef RETROFLAT_VDP
-   /* TODO: Destroy the VDP buffer! */
-#  endif /* RETROFLAT_VDP */
+#  elif defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
 
@@ -4911,6 +4931,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
       /* Unlock texture bitmap. */
@@ -5226,6 +5247,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
+   glBindTexture( GL_TEXTURE_2D, 0 );
 #endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
@@ -5457,8 +5479,11 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if (defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )) && \
-!defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
+#     ifndef RETROGLU_NO_TEXTURES
+   GLenum error = GL_NO_ERROR;
+#     endif /* !RETROGLU_NO_TEXTURES */
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    int i = 0;
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -5497,6 +5522,11 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #     ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
+   debug_printf( 0, "assigned bitmap texture: %u", bmp_out->tex.id );
+   error = glGetError();
+   if( GL_NO_ERROR != error ) {
+      error_printf( "error generating texture: %u", error );
+   }
 #     endif /* !RETROGLU_NO_TEXTURES */
 
 cleanup:
@@ -5777,6 +5807,11 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       }
       
       maug_mfree( bmp->tex.bytes_h );
+   }
+
+   if( 0 < bmp->tex.id ) {
+      debug_printf( 0, "destroying bitmap texture: %u", bmp->tex.id );
+      glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
    }
 
 #  elif defined( RETROFLAT_API_ALLEGRO )

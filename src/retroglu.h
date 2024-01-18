@@ -230,6 +230,14 @@ struct RETROGLU_PROJ_ARGS {
    float far_plane;
 };
 
+#ifdef RETROFLAT_API_LIBNDS
+#  define retroglu_enable_lightning()
+#  define retroglu_disable_lightning()
+#else
+#  define retroglu_enable_lightning() glEnable( GL_LIGHTING )
+#  define retroglu_disable_lightning() glDisable( GL_LIGHTING )
+#endif /* RETROFLAT_API_NDS */
+
 /**
  * \addtogroup maug_retroglu_overlay RetroGLU Overlay API
  * \brief Convenience macros for drawing a 2D overlay using transparent
@@ -246,7 +254,7 @@ struct RETROGLU_PROJ_ARGS {
    glMatrixMode( GL_PROJECTION ); \
    glPushMatrix(); \
    /* Lighting makes overlay text hard to see. */ \
-   glDisable( GL_LIGHTING ); \
+   retroglu_disable_lightning(); \
    /* Use ortho for overlay. */ \
    glLoadIdentity(); \
    aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
@@ -443,6 +451,8 @@ void retroglu_jitrender_sprite( struct RETROGLU_SPRITE* sprite, int list_idx );
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite );
 
 MERROR_RETVAL retroglu_init_glyph_tex();
+
+void retroglu_destroy_glyph_tex();
 
 void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
@@ -1375,6 +1385,10 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
       
       maug_mfree( sprite->texture.tex.bytes_h );
    }
+
+   if( 0 < sprite->texture.tex.id ) {
+      glDeleteTextures( 1, (GLuint*)&(sprite->texture.tex.id) );
+   }
 }
 
 /* === */
@@ -1460,6 +1474,25 @@ cleanup:
    /* TODO: Destroy loaded textures if failure. */
 
    return retval;
+}
+
+/* === */
+
+void retroglu_destroy_glyph_tex() {
+
+#ifndef RETROGLU_NO_TEXTURES
+   size_t i = 0,
+      j = 0;
+
+   debug_printf( RETROGLU_TRACE_LVL, "destroying glyph textures..." );
+
+   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
+      for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
+         glDeleteTextures( 1, (GLuint*)&(g_retroglu_font_tex[i][j]) );
+      }
+   }
+#endif /* !RETROGLU_NO_TEXTURES */
+
 }
 
 /* === */
