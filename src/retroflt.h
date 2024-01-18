@@ -612,6 +612,14 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
+#ifndef RETROFLAT_DEFAULT_SCREEN_W
+#  define RETROFLAT_DEFAULT_SCREEN_W 320
+#endif /* RETROFLAT_DEFAULT_SCREEN_W */
+
+#ifndef RETROFLAT_DEFAULT_SCREEN_H
+#  define RETROFLAT_DEFAULT_SCREEN_H 200
+#endif /* RETROFLAT_DEFAULT_SCREEN_H */
+
 #ifndef RETROFLAT_GL_Z
 #  define RETROFLAT_GL_Z -0.001
 #endif /* !RETROFLAT_GL_Z */
@@ -3440,7 +3448,7 @@ static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == args->screen_w ) {
-      args->screen_w = 320;
+      args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
    }
    retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
@@ -3458,7 +3466,7 @@ static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == args->screen_h ) {
-      args->screen_h = 200;
+      args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
    }
    retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
