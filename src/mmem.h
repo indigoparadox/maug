@@ -28,6 +28,8 @@ typedef void* MAUG_MHANDLE;
 
 #define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
 
+#define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
+
 #define maug_mfree( handle ) free( handle ); handle = NULL;
 
 #define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
@@ -54,6 +56,8 @@ typedef void* MAUG_MHANDLE;
  * \warn This should be used on pointers, not handles!
  */
 #define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
+
+#define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
 
 #define maug_mfree( handle ) free( handle ); handle = NULL;
 
