@@ -1869,6 +1869,9 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_PGDN     -10
 #  define RETROFLAT_KEY_DELETE   -11
 
+#  define RETROFLAT_MOUSE_B_LEFT    -100
+#  define RETROFLAT_MOUSE_B_RIGHT   -200
+
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
 #  ifdef RETROFLT_C
@@ -3364,6 +3367,7 @@ static int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_mode = atoi( arg );
+      debug_printf( 3, "choosing screen mode: %u", args->screen_mode );
    }
    return RETROFLAT_OK;
 }
@@ -4337,6 +4341,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    g_retroflat_state->screen_mode = args->screen_mode;
    switch( args->screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
+      debug_printf( 3, "using CGA 320x200x4 colors" );
       g_retroflat_state->screen_v_w = 320;
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
@@ -4344,6 +4349,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       break;
 
    case RETROFLAT_SCREEN_MODE_VGA:
+      debug_printf( 3, "using VGA 320x200x16 colors" );
       g_retroflat_state->screen_v_w = 320;
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
@@ -4551,24 +4557,27 @@ void retroflat_shutdown( int retval ) {
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   debug_printf( 3, "restoring video mode 0x%02x...",
-      g_retroflat_state->old_video_mode );
+   if( 0 != g_retroflat_state->old_video_mode ) {
+      /* Restore old video mode. */
+      debug_printf( 3, "restoring video mode 0x%02x...",
+         g_retroflat_state->old_video_mode );
 
-   /* Restore old video mode. */
-   memset( &r, 0, sizeof( r ) );
-   r.x.ax = g_retroflat_state->old_video_mode;
-	int86( 0x10, &r, &r ); /* Call video interrupt. */
+      memset( &r, 0, sizeof( r ) );
+      r.x.ax = g_retroflat_state->old_video_mode;
+      int86( 0x10, &r, &r ); /* Call video interrupt. */
+   }
 
-   debug_printf( 3, "restoring timer interrupt..." );
-
-   /* Re-install original interrupt handler. */
-   _disable();
-   segread( &s );
-   r.h.al = 0x08;
-   r.h.ah = 0x25;
-   s.ds = FP_SEG( g_retroflat_state->old_timer_interrupt );
-   r.x.dx = FP_OFF( g_retroflat_state->old_timer_interrupt );
-   int86x( 0x21, &r, &r, &s );
+   if( NULL != g_retroflat_state->old_timer_interrupt ) {
+      /* Re-install original interrupt handler. */
+      debug_printf( 3, "restoring timer interrupt..." );
+      _disable();
+      segread( &s );
+      r.h.al = 0x08;
+      r.h.ah = 0x25;
+      s.ds = FP_SEG( g_retroflat_state->old_timer_interrupt );
+      r.x.dx = FP_OFF( g_retroflat_state->old_timer_interrupt );
+      int86x( 0x21, &r, &r, &s );
+   }
 
    /* Reset timer chip resolution to 18.2...ms. */
    outp( 0x43,0x36 );

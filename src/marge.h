@@ -26,6 +26,8 @@
 #  define MAUG_CLI_SIGIL "/"
 #elif !defined( MAUG_CLI_SIGIL ) && defined( MAUG_OS_DOS )
 #  define MAUG_CLI_SIGIL "/"
+#elif !defined( MAUG_CLI_SIGIL ) && defined( MAUG_OS_DOS_REAL )
+#  define MAUG_CLI_SIGIL "/"
 #elif !defined( MAUG_CLI_SIGIL )
 /**
  * \brief Default flag to prepend to CLI arguments. Is "/" on Windows/DOS and
