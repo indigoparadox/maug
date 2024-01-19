@@ -6898,11 +6898,13 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    SDL_PollEvent( &event );
 
-   if( SDL_QUIT == event.type ) {
+   switch( event.type ) {
+   case SDL_QUIT:
       /* Handle SDL window close. */
       retroflat_quit( 0 );
+      break;
 
-   } else if( SDL_KEYDOWN == event.type ) {
+   case SDL_KEYDOWN:
       key_out = event.key.keysym.sym;
 
       if(
@@ -6927,19 +6929,14 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       ) {
          while( (eres = SDL_PollEvent( &event )) );
       }
+      break;
 
-   } else if( SDL_MOUSEBUTTONUP == event.type ) {
+   case SDL_MOUSEBUTTONUP:
       /* Stop dragging. */
       g_retroflat_state->mouse_state = 0;
+      break;
 
-   } else if( 0 != g_retroflat_state->mouse_state ) {
-
-      /* Update coordinates and keep dragging. */
-
-      SDL_GetMouseState( &(input->mouse_x), &(input->mouse_y) );
-      key_out = g_retroflat_state->mouse_state;
-
-   } else if( SDL_MOUSEBUTTONDOWN == event.type ) {
+   case SDL_MOUSEBUTTONDOWN:
 
       /* Begin dragging. */
 
@@ -6957,9 +6954,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
       /* Flush key buffer to improve responsiveness. */
       /*while( (eres = SDL_PollEvent( &event )) );*/
+      break;
 
 #  if !defined( RETROFLAT_API_SDL1 )
-   } else if( SDL_WINDOWEVENT == event.type ) {
+   case SDL_WINDOWEVENT:
       switch( event.window.event ) {
       case SDL_WINDOWEVENT_RESIZED:
          retroflat_on_resize( event.window.data1, event.window.data2 );
@@ -6968,8 +6966,19 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
                event.window.data1, event.window.data2,
                g_retroflat_state->on_resize_data );
          }
+         break;
       }
+      break;
 #  endif /* !RETROFLAT_API_SDL1 */
+
+   default:
+      /* Check for mouse dragging if mouse was previously held down. */
+      if( 0 != g_retroflat_state->mouse_state ) {
+         /* Update coordinates and keep dragging. */
+         SDL_GetMouseState( &(input->mouse_x), &(input->mouse_y) );
+         key_out = g_retroflat_state->mouse_state;
+      }
+      break;
    }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
