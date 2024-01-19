@@ -39,6 +39,14 @@
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_U32_FMT */
 
+#ifndef UPRINTF_X32_FMT
+#  if __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#     define UPRINTF_X32_FMT "%lx"
+#  elif __LONG_WIDTH__ == 64
+#     define UPRINTF_X32_FMT "%x"
+#  endif /* __LONG_WIDTH__ */
+#endif /* !UPRINTF_X32_FMT */
+
 #ifndef NEWLINE_STR
 /* TODO: Autodetect. */
 #define NEWLINE_STR "\n"
