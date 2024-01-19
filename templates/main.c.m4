@@ -66,7 +66,7 @@ int main( int argc, char** argv ) {
 
    /* === Main Loop === */
 
-   retroflat_loop( (retroflat_loop_iter)loopa(template), data );
+   retroflat_loop( (retroflat_loop_iter)loopa(template), NULL, data );
 
 cleanup:
 
