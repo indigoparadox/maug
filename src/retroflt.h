@@ -524,6 +524,9 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
 /*! \} */ /* maug_retroflt_vdp */
 
+typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
+   uint16_t new_w, uint16_t new_h, void* data );
+
 /**
  * \relates RETROFLAT_ARGS
  * \{
@@ -2156,6 +2159,9 @@ defined( RETROVDP_C )
     *       consistent state struct size for VDP?
     */
 
+   retroflat_proc_resize_t on_resize;
+   void* on_resize_data;
+
 #  if defined( RETROFLAT_OPENGL )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
@@ -2453,6 +2459,11 @@ void retroflat_get_palette( uint8_t idx, uint32_t* rgb );
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb );
 
 /*! \} */ /* maug_retroflt_bitmap */
+
+void retroflat_set_proc_resize(
+   retroflat_proc_resize_t on_resize_in, void* data_in );
+
+void retroflat_resize_v();
 
 /**
  * \addtogroup maug_retroflt_input
@@ -2775,6 +2786,11 @@ static LRESULT CALLBACK WndProc(
 
       case WM_SIZE:
          retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
+         if( NULL != g_retroflat_state->on_resize ) {
+            g_retroflat_state->on_resize(
+               LOWORD( lParam ), HIWORD( lParam ),
+               g_retroflat_state->on_resize_data );
+         }
          break;
 
       case WM_TIMER:
@@ -6755,15 +6771,44 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
-   g_retroflat_state->palette[idx].r = rgb & 0xff;
+   g_retroflat_state->palette[idx].b = rgb & 0xff;
    g_retroflat_state->palette[idx].g = (rgb & 0xff00) >> 8;
-   g_retroflat_state->palette[idx].b = (rgb & 0xff0000) >> 16;
+   g_retroflat_state->palette[idx].r = (rgb & 0xff0000) >> 16;
 
 #  else
 #     pragma message( "warning: set palette not implemented" )
 #  endif
 
    return retval;
+}
+
+/* === */
+
+void retroflat_set_proc_resize(
+   retroflat_proc_resize_t on_resize_in, void* data_in
+) {
+   g_retroflat_state->on_resize = on_resize_in;
+   g_retroflat_state->on_resize_data = data_in;
+}
+
+/* === */
+
+void retroflat_resize_v() {
+#  if defined( RETROFLAT_API_SDL2 )
+
+   g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
+   g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
+
+   assert( NULL != g_retroflat_state->buffer.texture );
+   SDL_DestroyTexture( g_retroflat_state->buffer.texture );
+
+   /* Create the buffer texture. */
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+#  endif /* RETROFLAT_API_SDL2 */
 }
 
 /* === */
@@ -6918,6 +6963,11 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       switch( event.window.event ) {
       case SDL_WINDOWEVENT_RESIZED:
          retroflat_on_resize( event.window.data1, event.window.data2 );
+         if( NULL != g_retroflat_state->on_resize ) {
+            g_retroflat_state->on_resize(
+               event.window.data1, event.window.data2,
+               g_retroflat_state->on_resize_data );
+         }
       }
 #  endif /* !RETROFLAT_API_SDL1 */
    }
