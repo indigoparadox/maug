@@ -2807,13 +2807,11 @@ static LRESULT CALLBACK WndProc(
          }
 
          if( RETROFLAT_WIN_FRAME_TIMER_ID == wParam ) {
-            debug_printf( 3, "frame tick" );
             /* Frame timer has expired. */
             assert( NULL != g_retroflat_state->frame_iter );
             g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
          } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
             /* Loop/tick timer has expired. */
-            debug_printf( 3, "loop tick" );
             assert( NULL != g_retroflat_state->loop_iter );
             g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
          }
