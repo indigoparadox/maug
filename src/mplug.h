@@ -4,6 +4,8 @@
 
 typedef MERROR_RETVAL (*mplug_proc_t)( void* data, size_t data_sz );
 
+/* TODO: Have plugins have a way to set log output. */
+
 #ifdef RETROFLAT_OS_WIN
 typedef HMODULE mplug_mod_t;
 #  define MPLUG_EXPORT extern __declspec( dllexport )
