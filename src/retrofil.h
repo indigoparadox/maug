@@ -2,10 +2,31 @@
 #ifndef RETROFIL_H
 #define RETROFIL_H
 
-MERROR_RETVAL retrofil_open_read(
-   const char* filename, MAUG_MHANDLE* p_bytes_ptr, size_t* p_bytes_sz );
+/**
+ * \addtogroup maug_retrofil RetroFile API
+ * \brief Abstraction layer for dealing with files on retro systems.
+ * \{
+ */
 
-void retrofil_close_read( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz );
+/**
+ * \file retrofil.h
+ */
+
+/**
+ * \brief Open a file and read it into memory or memory-map it.
+ * \param filename NULL-terminated path to file to open.
+ * \param p_bytes_h Pointer to MAUG_MHANDLE to open into.
+ * \param p_bytes_sz Pointer to size_t in which to store file size.
+ */
+MERROR_RETVAL retrofil_open_mread(
+   const char* filename, MAUG_MHANDLE* p_bytes_h, size_t* p_bytes_sz );
+
+/**
+ * \brief Close a file opened with retrofil_open_mread().
+ * \param bytes_ptr_h MAUG_MHANDLE opened by retrofil_open_mread().
+ * \param bytes_sz Same size value passed from retrofil_open_mread().
+ */
+void retrofil_close_mread( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz );
 
 #ifdef RETROFIL_C
 
@@ -18,7 +39,7 @@ void retrofil_close_read( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz );
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
-MERROR_RETVAL retrofil_open_read(
+MERROR_RETVAL retrofil_open_mread(
    const char* filename, MAUG_MHANDLE* p_bytes_ptr_h, size_t* p_bytes_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -94,7 +115,7 @@ cleanup:
    return retval;
 }
 
-void retrofil_close_read( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz ) {
+void retrofil_close_mread( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz ) {
 #ifdef RETROFLAT_OS_UNIX
    munmap( bytes_ptr_h, bytes_sz );
 #else
@@ -103,6 +124,8 @@ void retrofil_close_read( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz ) {
 }
 
 #endif /* RETROFIL_C */
+
+/*! \} */ /* maug_retrofil */
 
 #endif /* !RETROFIL_H */
 
