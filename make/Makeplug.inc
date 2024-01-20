@@ -33,5 +33,7 @@ $$(OBJDIR_GCC_UNIX_PLUG)/%.o: %.c
 	$$(CC_GCC) -Isrc -Imaug/src \
 		-DRETROFLAT_OS_UNIX $$(PLUGIN_DEFINES) -o $$@ -fpic -c $$^
 
+CLEAN_TARGETS += $(1).so
+
 endef
 
