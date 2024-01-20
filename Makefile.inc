@@ -88,4 +88,5 @@ include maug/make/Makewasm.inc
 include maug/make/Makedos.inc
 include maug/make/Makends.inc
 include maug/make/Makeos2.inc
+include maug/make/Makeplug.inc
 
