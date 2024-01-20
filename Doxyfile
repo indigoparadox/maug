@@ -799,6 +799,8 @@ INPUT                  = \
    src/retrocon.h \
    src/retrosnd.h \
    src/marge.h \
+   src/mplug.h \
+   src/retrofil.h \
    src/merror.h \
    src/uprintf.h \
    src/mmem.h \
