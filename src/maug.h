@@ -33,6 +33,11 @@
 #endif /* MAUG_C */
 #include <marge.h>
 
+#ifdef MAUG_C
+#  define MPLUG_C
+#endif /* MAUG_C */
+#include <mplug.h>
+
 #ifndef MAUG_NO_RETRO
 #ifdef MAUG_C
 #  define RETROFLT_C
