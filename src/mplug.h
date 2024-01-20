@@ -18,6 +18,8 @@ MERROR_RETVAL mplug_load(
 MERROR_RETVAL mplug_call(
    mplug_mod_t mod_exe, const char* proc_name, void* data, size_t data_sz );
 
+void mplug_free( mplug_mod_t mod_exe );
+
 #ifdef MPLUG_C
 
 #ifdef RETROFLAT_OS_WIN
