@@ -13,7 +13,7 @@ $(1).dll: $$(addprefix $$(OBJDIR_WATCOM_WIN32_PLUG)/,$$(subst .c,.o,$(2)))
 
 $$(OBJDIR_WATCOM_WIN32_PLUG)/%.o: %.c
 	$$(MD) "$$(dir $$@)"
-	$$(CC_WATCOM386) -Isrc -Imaug/src \
+	$$(CC_WATCOM386) -Isrc -Imaug/src $$(CFLAGS_WATCOM386) \
 		-I$$(WATCOM)/h/nt -bd $$< -fo=$$@ \
 		-DRETROFLAT_OS_WIN $$(PLUGIN_DEFINES) -mf -5r -fp5
 
@@ -30,7 +30,7 @@ $(1).so: $$(addprefix $$(OBJDIR_GCC_UNIX_PLUG)/,$$(subst .c,.o,$(2)))
 
 $$(OBJDIR_GCC_UNIX_PLUG)/%.o: %.c
 	$$(MD) "$$(dir $$@)"
-	$$(CC_GCC) -Isrc -Imaug/src \
+	$$(CC_GCC) -Isrc -Imaug/src $$(CFLAGS_GCC) \
 		-DRETROFLAT_OS_UNIX $$(PLUGIN_DEFINES) -o $$@ -fpic -c $$^
 
 CLEAN_TARGETS += $(1).so
