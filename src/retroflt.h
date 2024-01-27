@@ -337,7 +337,12 @@ typedef int8_t RETROFLAT_COLOR;
 
 /*! \} */ /* maug_retroflt_retval */
 
-#define bmp_read_uint32( b ) (*((uint32_t*)(b)))
+#define retroflat_read_lsbf_32( bytes, offset ) \
+   ((bytes[offset]) | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) \
+   | (bytes[offset + 3] << 24))
+
+#define retroflat_read_lsbf_16( bytes, offset ) \
+   ((bytes[offset]) | (bytes[offset + 1] << 8))
 
 /**
  * \addtogroup maug_retroflt_drawing RetroFlat Drawing API
@@ -5165,7 +5170,15 @@ MERROR_RETVAL retroflat_load_bitmap(
    size_t bmp_buffer_sz = 0,
       bmp_buffer_read = 0;
    MAUG_MHANDLE bmp_buffer_h = (MAUG_MHANDLE)NULL;
-   uint32_t bmp_offset = 0;
+   uint32_t bmp_in_offset = 0,
+      bmp_color = 0,
+      bmp_in_sz = 0;
+   uint32_t* bmp_palette = NULL;
+   uint8_t bmp_r = 0,
+      bmp_g = 0,
+      bmp_b = 0,
+      bmp_in_bpp = 0,
+      bmp_color_idx = 0;
    size_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
@@ -5219,7 +5232,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* Offsets hardcoded based on windows bitmap. */
 
    /* TODO: Support other bitmap formats? */
-   if( 40 != bmp_read_uint32( &(bmp_buffer[0x0e]) ) ) {
+   if( 40 != retroflat_read_lsbf_32( bmp_buffer, 0x0e ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
          "Unable to determine texture bitmap format: %d", bmp_buffer[0x0e] );
       retval = RETROFLAT_ERROR_BITMAP;
@@ -5227,18 +5240,20 @@ MERROR_RETVAL retroflat_load_bitmap(
    }
 
    /* TODO: Setup bitmap header. */
-   bmp_offset = bmp_read_uint32( &(bmp_buffer[0x0a]) );
-   bmp_out->tex.sz = bmp_buffer_sz - bmp_offset;
-   bmp_out->tex.w = bmp_read_uint32( &(bmp_buffer[0x12]) );
-   bmp_out->tex.h = bmp_read_uint32( &(bmp_buffer[0x16]) );
-   bmp_out->tex.bpp = bmp_read_uint32( &(bmp_buffer[0x1c]) );
-   if( 24 != bmp_out->tex.bpp ) {
+   bmp_in_offset = retroflat_read_lsbf_32( bmp_buffer, 0x0a );
+   bmp_out->tex.w = retroflat_read_lsbf_32( bmp_buffer, 0x12 );
+   bmp_out->tex.h = retroflat_read_lsbf_32( bmp_buffer, 0x16 );
+   bmp_out->tex.sz = bmp_out->tex.w * bmp_out->tex.h * 4;
+   bmp_in_sz = bmp_buffer_sz - bmp_in_offset;
+   bmp_out->tex.bpp = 24;
+   bmp_in_bpp = retroflat_read_lsbf_16( bmp_buffer, 0x1c );
+   if( 24 != bmp_in_bpp && 8 != bmp_in_bpp ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Invalid texture bitmap depth: %d",
-         bmp_out->tex.bpp );
+         "Error", "Invalid texture bitmap depth: %d", bmp_in_bpp );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
+   bmp_palette = &(bmp_buffer[54]); /* Just after the header. */
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
@@ -5249,15 +5264,37 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
 
+   /* 24-bit is 3-bytes per pixel. */
+   if( 24 == bmp_in_bpp ) {
+      bmp_in_sz /= 3;
+   }
+
+   /* TODO: Work perpix bitmap loader in here and handle non-div-by-4
+    *       dimensions!
+    */
+
    /* Unpack bitmap BGR into BGRA with color key. */
-   for( i = 0 ; bmp_out->tex.sz / 3 > i ; i++ ) {
-      bmp_out->tex.bytes[i * 4] = bmp_buffer[bmp_offset + (i * 3) + 2];
-      bmp_out->tex.bytes[(i * 4) + 1] = bmp_buffer[bmp_offset + (i * 3) + 1];
-      bmp_out->tex.bytes[(i * 4) + 2] = bmp_buffer[bmp_offset + (i * 3)];
+   for( i = 0 ; bmp_in_sz > i ; i++ ) {
+      if( 24 == bmp_in_bpp ) {
+         /* Grab the color from the buffer directly. */
+         bmp_r = bmp_buffer[bmp_in_offset + (i * 3) + 2];
+         bmp_g = bmp_buffer[bmp_in_offset + (i * 3) + 1];
+         bmp_b = bmp_buffer[bmp_in_offset + (i * 3)];
+      } else if( 8 == bmp_in_bpp ) {
+         /* Grab the color from the palette by index. */
+         bmp_color_idx = bmp_buffer[bmp_in_offset + i];
+         bmp_color = bmp_palette[bmp_color_idx];
+         bmp_r = (bmp_color >> 16) & 0xff;
+         bmp_g = (bmp_color >> 8) & 0xff;
+         bmp_b = bmp_color & 0xff;
+      }
+      bmp_out->tex.bytes[i * 4] = bmp_r;
+      bmp_out->tex.bytes[(i * 4) + 1] = bmp_g;
+      bmp_out->tex.bytes[(i * 4) + 2] = bmp_b;
       if(
-         RETROFLAT_TXP_R == bmp_buffer[bmp_offset + (i * 3) + 2] &&
-         RETROFLAT_TXP_G == bmp_buffer[bmp_offset + (i * 3) + 1] &&
-         RETROFLAT_TXP_B == bmp_buffer[bmp_offset + (i * 3)]
+         RETROFLAT_TXP_R == bmp_r &&
+         RETROFLAT_TXP_G == bmp_g &&
+         RETROFLAT_TXP_B == bmp_b
       ) {
          /* Transparent pixel found. */
          bmp_out->tex.bytes[(i * 4) + 3] = 0x00;
