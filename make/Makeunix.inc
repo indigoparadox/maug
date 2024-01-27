@@ -6,13 +6,13 @@ ifeq ("$(CFLAGS_GCC_UNIX)","")
 	CFLAGS_GCC_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_API_ALSA -DRETROSND_ARGS
 endif
 ifeq ("$(LDFLAGS_GCC_UNIX)","")
-	LDFLAGS_GCC_UNIX := -lasound
+	LDFLAGS_GCC_UNIX := -lasound -ldl
 endif
 ifeq ("$(CFLAGS_GCC64_UNIX)","")
 	CFLAGS_GCC64_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_API_ALSA -DRETROSND_ARGS
 endif
 ifeq ("$(LDFLAGS_GCC64_UNIX)","")
-	LDFLAGS_GCC64_UNIX := -lasound
+	LDFLAGS_GCC64_UNIX := -lasound -ldl
 endif
 
 ifneq ("$(RELEASE)","RELEASE")
@@ -54,7 +54,7 @@ define TGTUNIXSDL
 
 ifeq ("$$(VDP)","1")
 	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
-	LDFLAGS_GCC_UNIX_SDL += -ldl
+	#LDFLAGS_GCC_UNIX_SDL += -ldl
 	SDL_VER_UNIX := 1
 endif
 
