@@ -24,8 +24,7 @@ void mplug_free( mplug_mod_t mod_exe );
 
 #ifdef MPLUG_C
 
-#ifdef RETROFLAT_OS_WIN
-#else
+#if defined( RETROFLAT_OS_UNIX )
 #  include <dlfcn.h>
 #endif /* RETROFLAT_OS_WIN */
 
@@ -53,7 +52,7 @@ MERROR_RETVAL mplug_load(
    }
    *p_mod_exe = LoadLibrary( plugin_path );
 #else
-#  error "dlopen undefined!"
+#  pragma message( "warning: dlopen undefined!" )
 #endif /* RETROFLAT_OS_UNIX */
 
    if( NULL == *p_mod_exe ) {
@@ -82,7 +81,7 @@ MERROR_RETVAL mplug_call(
    maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX, "%s_", proc_name );
    plugin_proc = (mplug_proc_t)GetProcAddress( mod_exe, proc_name_ex );
 #else
-#  error "dlsym undefined!"
+#  pragma message( "dlsym undefined!" )
 #endif
 
    if( (mplug_proc_t)NULL == plugin_proc ) {
@@ -103,7 +102,7 @@ void mplug_free( mplug_mod_t mod_exe ) {
 #elif defined( RETROFLAT_OS_WIN )
    FreeLibrary( mod_exe );
 #else
-#  error "dlclose undefined!"
+#  pragma message( "dlclose undefined!" )
 #endif /* RETROFLAT_OS_UNIX || RETROFLAT_OS_WIN */
 }
 
