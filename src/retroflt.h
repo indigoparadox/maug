@@ -5253,7 +5253,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
-   bmp_palette = &(bmp_buffer[54]); /* Just after the header. */
+   bmp_palette = (uint32_t*)&(bmp_buffer[54]); /* Just after the header. */
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
