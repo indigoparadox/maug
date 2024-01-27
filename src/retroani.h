@@ -13,6 +13,10 @@
  *  \brief Tools for making common animations and effects.
  */
 
+#ifndef RETROANI_DEFAUL_MSPF
+#  define RETROANI_DEFAUL_MSPF 100
+#endif /* !RETROANI_DEFAUL_MSPF */
+
 /**
  * \addtogroup unilayer_animate_effects_sect Unilayer Animation Effects
  * \{
@@ -114,6 +118,9 @@ struct RETROANI_FRAME {
 #define retroani_set_target( ani_stack, ani_idx, bitmap ) \
    ani_stack[ani_idx].target = bitmap;
 
+#define retroani_set_mspf( ani_stack, ani_idx, mspf ) \
+   ani_stack[ani_idx].mspf = mspf;
+
 /*! \brief Internal representation of an animation. Do not call directly; use
  *         retroani_create() instead.
  */
@@ -138,6 +145,8 @@ struct RETROANI {
    /*! \brief Data specific to particular animation playing. */
    int8_t tile[RETROANI_TILE_SZ];
    struct RETROFLAT_BITMAP* target;
+   uint32_t next_frame_ms;
+   uint16_t mspf;
 };
 
 /*! \brief Callback to call on active animations for every frame. */
@@ -617,6 +626,9 @@ int8_t retroani_create(
    ani_stack[i].w = w;
    ani_stack[i].h = h;
    ani_stack[i].type = type;
+   ani_stack[i].target = NULL;
+   ani_stack[i].next_frame_ms = 0;
+   ani_stack[i].mspf = RETROANI_DEFAUL_MSPF;
    maug_mzero( &(ani_stack[i].tile), RETROANI_TILE_SZ );
 
 cleanup:
@@ -694,17 +706,23 @@ void retroani_frame(
    struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
 ) {
    int8_t i = 0;
+   uint32_t now_ms = 0;
+
+   now_ms = retroflat_get_ms();
 
    for( i = 0 ; ani_stack_sz > i ; i++ ) {
       if(
-         RETROANI_FLAG_ACTIVE != (ani_stack[i].flags & RETROANI_FLAG_ACTIVE) ||
-         RETROANI_FLAG_PAUSED == (ani_stack[i].flags & RETROANI_FLAG_PAUSED) ||
-         flags != (flags & ani_stack[i].flags)
-         
+         RETROANI_FLAG_ACTIVE != 
+            (ani_stack[i].flags & RETROANI_FLAG_ACTIVE) ||
+         RETROANI_FLAG_PAUSED ==
+            (ani_stack[i].flags & RETROANI_FLAG_PAUSED) ||
+         flags != (flags & ani_stack[i].flags) ||
+            now_ms < ani_stack[i].next_frame_ms
       ) {
          continue;
       }
       gc_animate_draw[ani_stack[i].type]( &(ani_stack[i]) );
+      ani_stack[i].next_frame_ms = now_ms + ani_stack[i].mspf;
    }
 }
 
