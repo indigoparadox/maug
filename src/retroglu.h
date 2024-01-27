@@ -391,14 +391,6 @@ MERROR_RETVAL retroglu_parse_obj_file(
 
 /*! \} */ /* maug_retroglu_obj_fsm */
 
-MERROR_RETVAL retroglu_load_tex_bmp(
-   const char* filename, uint32_t* p_texture_id,
-   uint32_t* p_bmp_w, uint32_t* p_bmp_h );
-
-int retroglu_load_tex_bmp_data(
-   const uint8_t* bmp_buf, uint32_t bmp_buf_sz, uint32_t* p_texture_id,
-   uint32_t* p_bmp_w, uint32_t* p_bmp_h );
-
 void retroglu_draw_poly( struct RETROGLU_OBJ* obj );
 
 void retroglu_set_tile_clip(
