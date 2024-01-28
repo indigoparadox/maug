@@ -133,8 +133,6 @@ typedef MERROR_RETVAL
 
 struct MTILEMAP_PARSER {
    uint8_t mstate;
-   uint8_t mstate_prev1;
-   uint8_t mstate_prev2;
    /* TODO: Use flags and combine these. */
    uint8_t pass;
    uint8_t mode;
@@ -195,16 +193,10 @@ mtilemap_free( struct MTILEMAP* t );
 
 /* TODO: Better swap logic. */
 #define mtilemap_parser_mstate( parser, new_mstate ) \
-   if( new_mstate != parser->mstate_prev1 ) { \
-      parser->mstate_prev2 = parser->mstate_prev1; \
-      parser->mstate_prev1 = parser->mstate; \
-   } \
    parser->mstate = new_mstate; \
    debug_printf( \
-      MTILEMAP_TRACE_LVL, "parser mstate: %s (prev1: %s, prev2: %s)", \
-         gc_mtilemap_mstate_names[parser->mstate], \
-         gc_mtilemap_mstate_names[parser->mstate_prev1], \
-         gc_mtilemap_mstate_names[parser->mstate_prev2] );
+      MTILEMAP_TRACE_LVL, "parser mstate: %s", \
+         gc_mtilemap_mstate_names[parser->mstate] );
 
 #  define MTILEMAP_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
       static MAUG_CONST uint8_t name = idx;
@@ -424,13 +416,15 @@ static void mtilemap_parser_match_token(
       ) {
          debug_printf(
             MTILEMAP_TRACE_LVL,
-            "found token %s but incorrect parent %s (%d) (needs %s (%d))!",
+            "found token \"%s\" but incorrect parent %s (%d) "
+               "(needs %s (%d))!",
             token,
             gc_mtilemap_mstate_names[parser->mstate],
             parser->mstate,
             gc_mtilemap_mstate_names[gc_mtilemap_mstate_parents[j]],
             gc_mtilemap_mstate_parents[j] );
-         return;
+         j++;
+         continue;
 
       } else if(
          /* None works in all modes! */
@@ -441,7 +435,8 @@ static void mtilemap_parser_match_token(
             MTILEMAP_TRACE_LVL, "found token %s but incorrect mode %u!",
             token,
             gc_mtilemap_mstate_modes[j] );
-         return;
+         j++;
+         continue;
 
       } else {
          /* Found it! */
@@ -627,9 +622,7 @@ MERROR_RETVAL mtilemap_parser_parse_token(
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
 
       } else if( MTILEMAP_MSTATE_HEIGHT == parser->mstate ) {
-         if(
-            0 == parser->pass 
-         ) {
+         if( 0 == parser->pass ) {
             parser->t->tiles_h = atoi( token );
             debug_printf(
                MTILEMAP_TRACE_LVL, "tilemap height: %d",
@@ -638,16 +631,13 @@ MERROR_RETVAL mtilemap_parser_parse_token(
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
 
       } else if( MTILEMAP_MSTATE_WIDTH == parser->mstate ) {
-         if(
-            0 == parser->pass &&
-            MTILEMAP_MSTATE_TILESETS == parser->mstate_prev2
-         ) {
+         if( 0 == parser->pass ) {
             parser->t->tiles_w = atoi( token );
             debug_printf(
                MTILEMAP_TRACE_LVL, "tilemap width: %d",
                parser->t->tiles_w );
          }
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
 
       } else if( MTILEMAP_MSTATE_LAYER_NAME == parser->mstate ) {
          /* TODO: Store */
@@ -786,8 +776,6 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
       /* Reset tilemap parser. */
       parser->mstate = 0;
-      parser->mstate_prev1 = 0;
-      parser->mstate_prev2 = 0;
 
       /* Reset JSON parser. */
       maug_mzero( &(parser->jparser), sizeof( struct MJSON_PARSER ) );
