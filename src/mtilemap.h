@@ -57,6 +57,9 @@
 #define MTILEMAP_CPROP_TYPE_STR     3
 #define MTILEMAP_CPROP_TYPE_BOOL    4
 
+#define MTILEMAP_PARSER_MODE_MAP    0
+#define MTILEMAP_PARSER_MODE_DEFS   1
+
 /*! \} */ /* maug_tilemap_defs_types */
 
 /*! \brief Data store for MTILEMAP_CPROP::value. */
@@ -132,7 +135,9 @@ struct MTILEMAP_PARSER {
    uint8_t mstate;
    uint8_t mstate_prev1;
    uint8_t mstate_prev2;
+   /* TODO: Use flags and combine these. */
    uint8_t pass;
+   uint8_t mode;
    size_t tileset_id_cur;
    struct MTILEMAP* t;
    mtilemap_tj_parse_cb tj_parse_cb;
@@ -140,24 +145,25 @@ struct MTILEMAP_PARSER {
 };
 
 #define MTILEMAP_PARSER_MSTATE_TABLE( f ) \
-   f( MTILEMAP_MSTATE_NONE,         0, "", 0 ) \
-   f( MTILEMAP_MSTATE_HEIGHT,       1, "height",   0 ) \
-   f( MTILEMAP_MSTATE_WIDTH,        2, "width",    0 ) \
-   f( MTILEMAP_MSTATE_LAYERS,       3, "layers",   0 ) \
-   f( MTILEMAP_MSTATE_LAYER_DATA,   4, "data",     3 /* MSTATE_LAYERS */ ) \
-   f( MTILEMAP_MSTATE_LAYER_NAME,   5, "name",     3 /* MSTATE_LAYERS */ ) \
-   f( MTILEMAP_MSTATE_TILES,        6, "tiles",    0 ) \
-   f( MTILEMAP_MSTATE_TILES_ID,     7, "id",       6 /* MSTATE_TILES */ ) \
-   f( MTILEMAP_MSTATE_TILES_IMAGE,  8, "image",    6 /* MSTATE_TILES */ ) \
-   f( MTILEMAP_MSTATE_TILESETS,     9, "tilesets", 0 ) \
-   f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source",  9 /* MSTATE_TILESETS */ ) \
-   f( MTILEMAP_MSTATE_TILESETS_FGID,11, "firstgid",9 /* MSTATE_TILESETS */ ) \
-   f( MTILEMAP_MSTATE_TILESETS_PROP,12, "firstgid",9 /* MSTATE_TILESETS */ ) \
-   f( MTILEMAP_MSTATE_GRID,         13, "grid",    0 ) \
-   f( MTILEMAP_MSTATE_TILES_PROP,   14, "properties",6 /* MSTATE_TILES */ ) \
-   f( MTILEMAP_MSTATE_TILES_PROP_N, 15, "name",14 /* M_TILES_PROP */ ) \
-   f( MTILEMAP_MSTATE_TILES_PROP_T, 16, "type",14 /* M_TILES_PROP */ ) \
-   f( MTILEMAP_MSTATE_TILES_PROP_V, 17, "value",14 /* M_TILES_PROP */ ) \
+   f( MTILEMAP_MSTATE_NONE,         0, "", 0, 0 ) \
+   f( MTILEMAP_MSTATE_HEIGHT,       1, "height",   0              , 0 ) \
+   f( MTILEMAP_MSTATE_WIDTH,        2, "width",    0              , 0 ) \
+   f( MTILEMAP_MSTATE_LAYERS,       3, "layers",   0              , 0 ) \
+   f( MTILEMAP_MSTATE_LAYER_DATA,   4, "data",     18 /* LAYERS */, 0 ) \
+   f( MTILEMAP_MSTATE_LAYER_NAME,   5, "name",     18 /* LAYERS */, 0 ) \
+   f( MTILEMAP_MSTATE_TILES,        6, "tiles",    0              , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_ID,     7, "id",       6 /* TILES */  , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_IMAGE,  8, "image",    6 /* TILES */  , 1 ) \
+   f( MTILEMAP_MSTATE_TILESETS,     9, "tilesets", 0              , 0 ) \
+   f( MTILEMAP_MSTATE_TILESETS_SRC, 10, "source",  9 /* TILESETS */, 0 ) \
+   f( MTILEMAP_MSTATE_TILESETS_FGID,11, "firstgid",9 /* TILESETS */, 0 ) \
+   f( MTILEMAP_MSTATE_TILESETS_PROP,12, "firstgid",9 /* TILESETS */, 0 ) \
+   f( MTILEMAP_MSTATE_GRID,         13, "grid",    0               , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_PROP,   14, "properties",6 /* TILES */ , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_N, 15, "name",14 /* TILES_PROP */ , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_T, 16, "type",14 /* TILES_PROP */ , 1 ) \
+   f( MTILEMAP_MSTATE_TILES_PROP_V, 17, "value",14 /* TILES_PROP */, 1 ) \
+   f( MTILEMAP_MSTATE_LAYER,       18, "layers", 3                 , 0 )
 
 MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
@@ -200,12 +206,12 @@ mtilemap_free( struct MTILEMAP* t );
          gc_mtilemap_mstate_names[parser->mstate_prev1], \
          gc_mtilemap_mstate_names[parser->mstate_prev2] );
 
-#  define MTILEMAP_PARSER_MSTATE_TABLE_CONST( name, idx, token, parent ) \
+#  define MTILEMAP_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
       static MAUG_CONST uint8_t name = idx;
 
 MTILEMAP_PARSER_MSTATE_TABLE( MTILEMAP_PARSER_MSTATE_TABLE_CONST )
 
-#  define MTILEMAP_PARSER_MSTATE_TABLE_NAME( name, idx, token, parent ) \
+#  define MTILEMAP_PARSER_MSTATE_TABLE_NAME( name, idx, tokn, parent, m ) \
       #name,
 
 static MAUG_CONST char* gc_mtilemap_mstate_names[] = {
@@ -213,19 +219,27 @@ static MAUG_CONST char* gc_mtilemap_mstate_names[] = {
    ""
 };
 
-#  define MTILEMAP_PARSER_MSTATE_TABLE_TOKEN( name, idx, token, parent ) \
-      token,
+#  define MTILEMAP_PARSER_MSTATE_TABLE_TOKEN( name, idx, tokn, parent, m ) \
+      tokn,
 
 static MAUG_CONST char* gc_mtilemap_mstate_tokens[] = {
    MTILEMAP_PARSER_MSTATE_TABLE( MTILEMAP_PARSER_MSTATE_TABLE_TOKEN )
    ""
 };
 
-#  define MTILEMAP_PARSER_MSTATE_TABLE_PARENT( name, idx, token, parent ) \
+#  define MTILEMAP_PARSER_MSTATE_TABLE_PARNT( name, idx, tokn, parent, m ) \
       parent,
 
 static MAUG_CONST uint8_t gc_mtilemap_mstate_parents[] = {
-   MTILEMAP_PARSER_MSTATE_TABLE( MTILEMAP_PARSER_MSTATE_TABLE_PARENT )
+   MTILEMAP_PARSER_MSTATE_TABLE( MTILEMAP_PARSER_MSTATE_TABLE_PARNT )
+   0
+};
+
+#  define MTILEMAP_PARSER_MSTATE_TABLE_MODE( name, idx, tokn, parent, m ) \
+      m,
+
+static MAUG_CONST uint8_t gc_mtilemap_mstate_modes[] = {
+   MTILEMAP_PARSER_MSTATE_TABLE( MTILEMAP_PARSER_MSTATE_TABLE_MODE )
    0
 };
 
@@ -384,74 +398,78 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mtilemap_parser_parse_token(
-   const char* token, size_t token_sz, void* parser_arg
+static void mtilemap_parser_match_token(
+   const char* token, size_t token_sz, struct MTILEMAP_PARSER* parser
 ) {
    size_t j = 1;
+
+   /* Figure out what the key is for. */
+   while( '\0' != gc_mtilemap_mstate_tokens[j][0] ) {
+      if(
+         /* Make sure tokens match. */
+         strlen( gc_mtilemap_mstate_tokens[j] ) != token_sz ||
+         0 != strncmp(
+            token, gc_mtilemap_mstate_tokens[j], token_sz
+         )
+      ) {
+         j++;
+         continue;
+
+      } else if(
+         /* This state can only be
+          * reached THROUGH that parent state. This allows us to have
+          * keys with the same name but different parents!
+          */
+         parser->mstate != gc_mtilemap_mstate_parents[j]
+      ) {
+         debug_printf(
+            MTILEMAP_TRACE_LVL,
+            "found token %s but incorrect parent %s (%d) (needs %s (%d))!",
+            token,
+            gc_mtilemap_mstate_names[parser->mstate],
+            parser->mstate,
+            gc_mtilemap_mstate_names[gc_mtilemap_mstate_parents[j]],
+            gc_mtilemap_mstate_parents[j] );
+         return;
+
+      } else if(
+         /* None works in all modes! */
+         /* MTILEMAP_MSTATE_NONE != parser->mstate && */
+         parser->mode != gc_mtilemap_mstate_modes[j]
+      ) {
+         debug_printf(
+            MTILEMAP_TRACE_LVL, "found token %s but incorrect mode %u!",
+            token,
+            gc_mtilemap_mstate_modes[j] );
+         return;
+
+      } else {
+         /* Found it! */
+         mtilemap_parser_mstate( parser, j );
+         return;
+      }
+   }
+}
+
+/* === */
+
+MERROR_RETVAL mtilemap_parser_parse_tiledef_token(
+   const char* token, size_t token_sz, void* parser_arg
+) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MTILEMAP_TILE_DEF* tile_defs = NULL;
-   struct MTILEMAP_LAYER* layers = NULL;
-   struct MTILEMAP_LAYER* tiles_layer = NULL;
    struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parser_arg;
-   size_t* tiles = NULL;
 
    if( 0 < parser->t->tile_defs_sz ) {
       maug_mlock( parser->t->tile_defs, tile_defs );
       maug_cleanup_if_null_alloc( struct MTILEMAP_TILE_DEF*, tile_defs );
    }
 
-   if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
-
-      if(
-         1 == parser->pass && MTILEMAP_MSTATE_LAYER_DATA == parser->mstate
-      ) {
-
-         /* TODO: Can we read tiles ahead of time to know and allocate that
-          *       many in advance? */
-
-         maug_mlock( parser->t->layers, layers );
-         maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
-         tiles_layer = &(layers[parser->t->layers_sz - 1]);
-
-         if( tiles_layer->tiles_sz + 1 >= tiles_layer->tiles_sz_max ) {
-            retval = mtilemap_alloc_tiles(
-               tiles_layer,
-               0 == tiles_layer->tiles_sz_max ? MTILEMAP_TILES_SZ_INIT : 
-                  tiles_layer->tiles_sz_max * 2 );
-            maug_cleanup_if_not_ok();
-         }
-
-         maug_mlock( tiles_layer->tiles, tiles );
-         maug_cleanup_if_null_alloc( size_t*, tiles );
-
-         /* Parse tilemap tile. */
-         tiles[tiles_layer->tiles_sz] = atoi( token );
-         tiles_layer->tiles_sz++;
-
-      }
-      goto cleanup;
-
-   } else if(
+   if(
       MTILEMAP_PSTATE_OBJECT_VAL == 
          mjson_parser_pstate( &(parser->jparser) )
    ) {
-      if( MTILEMAP_MSTATE_TILESETS_FGID == parser->mstate ) {
-         if( 1 == parser->pass ) {
-            parser->t->tileset_fgid = atoi( token );
-            debug_printf(
-               MTILEMAP_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
-               parser->t->tileset_fgid );
-         }
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
-
-      } else if( MTILEMAP_MSTATE_TILESETS_SRC == parser->mstate ) {
-         if( 1 == parser->pass ) {
-            debug_printf( MTILEMAP_TRACE_LVL, "parsing %s...", token );
-            parser->tj_parse_cb( token, parser->t );
-         }
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
-
-      } else if( MTILEMAP_MSTATE_TILES_ID == parser->mstate ) {
+      if( MTILEMAP_MSTATE_TILES_ID == parser->mstate ) {
          if( 1 == parser->pass ) {
             /* Parse tile ID. */
             parser->tileset_id_cur = atoi( token );
@@ -521,6 +539,93 @@ MERROR_RETVAL mtilemap_parser_parse_token(
          }
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
 
+      } else if( MTILEMAP_MSTATE_GRID == parser->mstate ) {
+         /* TODO: Remove grid mstate? */
+         /* This only has an mstate to differentiate its height/width
+          * children from those in the tileset root.
+          */
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
+      }
+      goto cleanup;
+   }
+
+   mtilemap_parser_match_token( token, token_sz, parser );
+
+cleanup:
+
+   if( NULL != tile_defs ) {
+      maug_munlock( parser->t->tile_defs, tile_defs );
+   }
+
+   return retval;
+}
+
+MERROR_RETVAL mtilemap_parser_parse_token(
+   const char* token, size_t token_sz, void* parser_arg
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MTILEMAP_TILE_DEF* tile_defs = NULL;
+   struct MTILEMAP_LAYER* layers = NULL;
+   struct MTILEMAP_LAYER* tiles_layer = NULL;
+   struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parser_arg;
+   size_t* tiles = NULL;
+
+   if( 0 < parser->t->tile_defs_sz ) {
+      maug_mlock( parser->t->tile_defs, tile_defs );
+      maug_cleanup_if_null_alloc( struct MTILEMAP_TILE_DEF*, tile_defs );
+   }
+
+   if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
+
+      if(
+         1 == parser->pass && MTILEMAP_MSTATE_LAYER_DATA == parser->mstate
+      ) {
+
+         /* TODO: Can we read tiles ahead of time to know and allocate that
+          *       many in advance? */
+
+         maug_mlock( parser->t->layers, layers );
+         maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
+         tiles_layer = &(layers[parser->t->layers_sz - 1]);
+
+         if( tiles_layer->tiles_sz + 1 >= tiles_layer->tiles_sz_max ) {
+            retval = mtilemap_alloc_tiles(
+               tiles_layer,
+               0 == tiles_layer->tiles_sz_max ? MTILEMAP_TILES_SZ_INIT : 
+                  tiles_layer->tiles_sz_max * 2 );
+            maug_cleanup_if_not_ok();
+         }
+
+         maug_mlock( tiles_layer->tiles, tiles );
+         maug_cleanup_if_null_alloc( size_t*, tiles );
+
+         /* Parse tilemap tile. */
+         tiles[tiles_layer->tiles_sz] = atoi( token );
+         tiles_layer->tiles_sz++;
+
+      }
+      goto cleanup;
+
+   } else if(
+      MTILEMAP_PSTATE_OBJECT_VAL == 
+         mjson_parser_pstate( &(parser->jparser) )
+   ) {
+      if( MTILEMAP_MSTATE_TILESETS_FGID == parser->mstate ) {
+         if( 1 == parser->pass ) {
+            parser->t->tileset_fgid = atoi( token );
+            debug_printf(
+               MTILEMAP_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
+               parser->t->tileset_fgid );
+         }
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
+
+      } else if( MTILEMAP_MSTATE_TILESETS_SRC == parser->mstate ) {
+         if( 1 == parser->pass ) {
+            debug_printf( MTILEMAP_TRACE_LVL, "parsing %s...", token );
+            parser->tj_parse_cb( token, parser->t );
+         }
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
+
       } else if( MTILEMAP_MSTATE_HEIGHT == parser->mstate ) {
          if(
             0 == parser->pass 
@@ -542,42 +647,17 @@ MERROR_RETVAL mtilemap_parser_parse_token(
                MTILEMAP_TRACE_LVL, "tilemap width: %d",
                parser->t->tiles_w );
          }
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
 
       } else if( MTILEMAP_MSTATE_LAYER_NAME == parser->mstate ) {
          /* TODO: Store */
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
+         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
          
-      } else if( MTILEMAP_MSTATE_GRID == parser->mstate ) {
-         /* This only has an mstate to differentiate its height/width
-          * children from those in the tileset root.
-          */
-         mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
-
       }
       goto cleanup;
    }
 
-   /* Figure out what the key is for. */
-   while( '\0' != gc_mtilemap_mstate_tokens[j][0] ) {
-      if(
-         /* This state can only be
-          * reached THROUGH that parent state. This allows us to have
-          * keys with the same name but different parents!
-          */
-         parser->mstate == gc_mtilemap_mstate_parents[j] &&
-         /* Make sure tokens match. */
-         strlen( gc_mtilemap_mstate_tokens[j] ) == token_sz &&
-         0 == strncmp(
-            token, gc_mtilemap_mstate_tokens[j], token_sz
-         )
-      ) {
-         /* Found it! */
-         mtilemap_parser_mstate( parser, j );
-         break;
-      }
-      j++;
-   }
+   mtilemap_parser_match_token( token, token_sz, parser );
 
    /* Special prep work. */
 
@@ -619,10 +699,15 @@ MERROR_RETVAL mtilemap_json_close_list( void* parg ) {
    struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parg;
 
    if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
-      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
+      assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
+
    } else if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
+      assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
       mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
+
    } else if( MTILEMAP_MSTATE_TILESETS == parser->mstate ) {
+      assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
       mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
    }
 
@@ -631,11 +716,26 @@ MERROR_RETVAL mtilemap_json_close_list( void* parg ) {
 
 /* === */
 
-MERROR_RETVAL mtilemap_json_close_val( void* parg ) {
+MERROR_RETVAL mtilemap_json_open_obj( void* parg ) {
    struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parg;
 
-   debug_printf( MTILEMAP_TRACE_LVL, "closing val: %s",
-      gc_mtilemap_mstate_names[parser->mstate] );
+   if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
+      assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
+   }
+
+   return MERROR_OK;
+}
+
+/* === */
+
+MERROR_RETVAL mtilemap_json_close_obj( void* parg ) {
+   struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parg;
+
+   if( MTILEMAP_MSTATE_LAYER == parser->mstate ) {
+      assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
+   }
 
    return MERROR_OK;
 }
@@ -667,7 +767,10 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
    /* Setup filename path. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
-   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
+   maug_snprintf(
+      filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
+
+   debug_printf( MTILEMAP_TRACE_LVL, "opening %s...", filename_path );
 
    /* TODO: fread chars one by one from disk using retrofil_cread. */
    retval = retrofil_open_mread( filename_path, &bytes_h, &bytes_sz );
@@ -688,12 +791,26 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
       /* Reset JSON parser. */
       maug_mzero( &(parser->jparser), sizeof( struct MJSON_PARSER ) );
-      parser->jparser.token_parser = mtilemap_parser_parse_token;
-      parser->jparser.token_parser_arg = parser;
-      parser->jparser.close_list = mtilemap_json_close_list;
-      parser->jparser.close_list_arg = parser;
-      parser->jparser.close_val = mtilemap_json_close_val;
-      parser->jparser.close_val_arg = parser;
+
+      /* Figure out if we're parsing a .tmj or .tsj. */
+      if( 's' == strrchr( filename, '.' )[2] ) {
+         debug_printf( MTILEMAP_TRACE_LVL, "(tiledefs mode)" );
+         parser->mode = MTILEMAP_PARSER_MODE_DEFS;
+         parser->jparser.token_parser = mtilemap_parser_parse_tiledef_token;
+         parser->jparser.token_parser_arg = parser;
+      } else {
+         debug_printf( MTILEMAP_TRACE_LVL, "(tilemap mode)" );
+         parser->mode = MTILEMAP_PARSER_MODE_MAP;
+
+         parser->jparser.close_list = mtilemap_json_close_list;
+         parser->jparser.close_list_arg = parser;
+         parser->jparser.open_obj = mtilemap_json_open_obj;
+         parser->jparser.open_obj_arg = parser;
+         parser->jparser.close_obj = mtilemap_json_close_obj;
+         parser->jparser.close_obj_arg = parser;
+         parser->jparser.token_parser = mtilemap_parser_parse_token;
+         parser->jparser.token_parser_arg = parser;
+      }
 
       for( i = 0 ; bytes_sz > i ; i++ ) {
          retval = mjson_parse_c( &(parser->jparser), bytes[i] );
@@ -703,6 +820,9 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
          }
       }
    }
+
+   debug_printf(
+      MTILEMAP_TRACE_LVL, "finished parsing %s...", filename_path );
 
 cleanup:
 
