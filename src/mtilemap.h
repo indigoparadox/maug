@@ -3,6 +3,10 @@
 #define MTILEMAP_H
 
 #include <mparser.h>
+#include <mjson.h>
+/* TODO: mtilemap should be renamed retrotm. m should never depend on retro. */
+/* TODO: Also retrofil should be mfil. Oh dear. */
+#include <retrofil.h>
 
 /**
  * \addtogroup maug_tilemap Tilemap API
@@ -14,10 +18,6 @@
 #ifndef MTILEMAP_NAME_SZ_MAX
 #  define MTILEMAP_NAME_SZ_MAX 10
 #endif /* !MTILEMAP_NAME_SZ_MAX */
-
-#ifndef MTILEMAP_TOKEN_SZ_MAX
-#  define MTILEMAP_TOKEN_SZ_MAX 4096
-#endif /* !MTILEMAP_TOKEN_SZ_MAX */
 
 #ifndef MTILEMAP_TILES_SZ_INIT
 #  define MTILEMAP_TILES_SZ_INIT 10
@@ -36,7 +36,7 @@
 #endif /* !MTILEMAP_CPROP_STR_SZ_MAX */
 
 #ifndef MTILEMAP_TRACE_LVL
-#  define MTILEMAP_TRACE_LVL 0
+#  define MTILEMAP_TRACE_LVL 1
 #endif /* !MTILEMAP_TRACE_LVL */
 
 #define MTILEMAP_FLAG_ACTIVE 0x1
@@ -129,24 +129,13 @@ typedef MERROR_RETVAL
 (*mtilemap_tj_parse_cb)( const char* filename, struct MTILEMAP* t );
 
 struct MTILEMAP_PARSER {
-   uint8_t pstate[MPARSER_STACK_SZ_MAX];
-   size_t pstate_sz;
    uint8_t mstate;
    uint8_t mstate_prev;
-   size_t i;
-   char token[MTILEMAP_TOKEN_SZ_MAX];
-   size_t token_sz;
    size_t tileset_id_cur;
    struct MTILEMAP* t;
    mtilemap_tj_parse_cb tj_parse_cb;
+   struct MJSON_PARSER jparser;
 };
-
-#define MTILEMAP_PARSER_PSTATE_TABLE( f ) \
-   f( MTILEMAP_PSTATE_NONE, 0 ) \
-   f( MTILEMAP_PSTATE_OBJECT_KEY, 1 ) \
-   f( MTILEMAP_PSTATE_OBJECT_VAL, 2 ) \
-   f( MTILEMAP_PSTATE_STRING, 3 ) \
-   f( MTILEMAP_PSTATE_LIST, 4 )
 
 #define MTILEMAP_PARSER_MSTATE_TABLE( f ) \
    f( MTILEMAP_MSTATE_NONE,         0, "", 0 ) \
@@ -195,32 +184,6 @@ mtilemap_free( struct MTILEMAP* t );
 #  include <mparser.h>
 
 /* TODO: Function names should be verb_noun! */
-
-#define mtilemap_parser_pstate( parser ) \
-   (parser->pstate_sz > 0 ? \
-      parser->pstate[parser->pstate_sz - 1] : MTILEMAP_PSTATE_NONE)
-
-#define mtilemap_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mtilemap, parser, new_pstate )
-
-#define mtilemap_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( mtilemap, parser )
-
-#define mtilemap_parser_invalid_c( parser, c, retval ) \
-   mparser_invalid_c( mtilemap, parser, c, retval )
-
-#define mtilemap_parser_reset_token( parser ) \
-   mparser_reset_token( mtilemap, parser )
-
-#define mtilemap_parser_append_token( parser, c ) \
-   mparser_append_token( mtilemap, parser, c, MTILEMAP_TOKEN_SZ_MAX )
-
-MTILEMAP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
-
-static MAUG_CONST char* gc_mtilemap_pstate_names[] = {
-   MTILEMAP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_NAME )
-   ""
-};
 
 /* TODO: Better swap logic. */
 #define mtilemap_parser_mstate( parser, new_mstate ) \
@@ -409,12 +372,15 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
+MERROR_RETVAL mtilemap_parser_parse_token(
+   const char* token, size_t token_sz, void* parser_arg
+) {
    size_t j = 1;
    MERROR_RETVAL retval = MERROR_OK;
    struct MTILEMAP_TILE_DEF* tile_defs = NULL;
    struct MTILEMAP_LAYER* layers = NULL;
    struct MTILEMAP_LAYER* tiles_layer = NULL;
+   struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parser_arg;
    size_t* tiles = NULL;
 
    if( 0 < parser->t->tile_defs_sz ) {
@@ -422,7 +388,7 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
       maug_cleanup_if_null_alloc( struct MTILEMAP_TILE_DEF*, tile_defs );
    }
 
-   if( MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ) {
+   if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
 
       if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
 
@@ -445,29 +411,31 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
          maug_cleanup_if_null_alloc( size_t*, tiles );
 
          /* Parse tilemap tile. */
-         tiles[tiles_layer->tiles_sz] = atoi( parser->token );
+         tiles[tiles_layer->tiles_sz] = atoi( token );
          tiles_layer->tiles_sz++;
 
       }
       goto cleanup;
 
    } else if(
-      MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser )
+      MTILEMAP_PSTATE_OBJECT_VAL == 
+         mjson_parser_pstate( &(parser->jparser) )
    ) {
       if( MTILEMAP_MSTATE_TILESETS_FGID == parser->mstate ) {
-         parser->t->tileset_fgid = atoi( parser->token );
-         debug_printf( MTILEMAP_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
+         parser->t->tileset_fgid = atoi( token );
+         debug_printf(
+            MTILEMAP_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
             parser->t->tileset_fgid );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
 
       } else if( MTILEMAP_MSTATE_TILESETS_SRC == parser->mstate ) {
-         debug_printf( MTILEMAP_TRACE_LVL, "parsing %s...", parser->token );
-         parser->tj_parse_cb( parser->token, parser->t );
+         debug_printf( MTILEMAP_TRACE_LVL, "parsing %s...", token );
+         parser->tj_parse_cb( token, parser->t );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILESETS );
 
       } else if( MTILEMAP_MSTATE_TILES_ID == parser->mstate ) {
          /* Parse tile ID. */
-         parser->tileset_id_cur = atoi( parser->token );
+         parser->tileset_id_cur = atoi( token );
          debug_printf(
             MTILEMAP_TRACE_LVL,
             "select tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
@@ -489,7 +457,7 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
          /* Parse tile image. */
          strncpy(
             tile_defs[parser->tileset_id_cur].image_path,
-            parser->token,
+            token,
             MTILEMAP_TILESET_IMAGE_STR_SZ_MAX );
 
          debug_printf(
@@ -504,30 +472,30 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
       } else if( MTILEMAP_MSTATE_TILES_PROP_N == parser->mstate ) {
          retval = mtilemap_parser_tile_set_cprop_name(
             parser->tileset_id_cur,
-            &(tile_defs[parser->tileset_id_cur]), parser->token );
+            &(tile_defs[parser->tileset_id_cur]), token );
          maug_cleanup_if_not_ok();
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
 
       } else if( MTILEMAP_MSTATE_TILES_PROP_T == parser->mstate ) {
          retval = mtilemap_parser_tile_set_cprop_type(
-            &(tile_defs[parser->tileset_id_cur]), parser->token );
+            &(tile_defs[parser->tileset_id_cur]), token );
          maug_cleanup_if_not_ok();
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
 
       } else if( MTILEMAP_MSTATE_TILES_PROP_V == parser->mstate ) {
          retval = mtilemap_parser_tile_set_cprop_value(
-            &(tile_defs[parser->tileset_id_cur]), parser->token );
+            &(tile_defs[parser->tileset_id_cur]), token );
          maug_cleanup_if_not_ok();
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_TILES_PROP );
 
       } else if( MTILEMAP_MSTATE_HEIGHT == parser->mstate ) {
-         parser->t->tiles_h = atoi( parser->token );
+         parser->t->tiles_h = atoi( token );
          debug_printf(
             MTILEMAP_TRACE_LVL, "tilemap height: %d", parser->t->tiles_h );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
 
       } else if( MTILEMAP_MSTATE_WIDTH == parser->mstate ) {
-         parser->t->tiles_w = atoi( parser->token );
+         parser->t->tiles_w = atoi( token );
          debug_printf(
             MTILEMAP_TRACE_LVL, "tilemap width: %d", parser->t->tiles_h );
          mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
@@ -555,9 +523,9 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
           */
          parser->mstate == gc_mtilemap_mstate_parents[j] &&
          /* Make sure tokens match. */
-         strlen( gc_mtilemap_mstate_tokens[j] ) == parser->token_sz &&
+         strlen( gc_mtilemap_mstate_tokens[j] ) == token_sz &&
          0 == strncmp(
-            parser->token, gc_mtilemap_mstate_tokens[j], parser->token_sz
+            token, gc_mtilemap_mstate_tokens[j], token_sz
          )
       ) {
          /* Found it! */
@@ -600,170 +568,18 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL
-mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c ) {
-   MERROR_RETVAL retval = MERROR_OK;
+MERROR_RETVAL mtilemap_json_close_list( void* parg ) {
+   struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parg;
 
-   /* debug_printf( MTILEMAP_TRACE_LVL, "c: %c", c ); */
-
-   switch( c ) {
-   case '\r':
-   case '\n':
-   case '\t':
-   case ' ':
-      if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         mtilemap_parser_append_token( parser, c );
-      }
-      break;
-
-   case '{':
-      if(
-         MTILEMAP_PSTATE_NONE == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
-         mtilemap_parser_reset_token( parser );
-
-      } else if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case '}':
-      if( MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser ) ) {
-         retval = mtilemap_parser_parse_token( parser );
-         maug_cleanup_if_not_ok();
-         mtilemap_parser_pstate_pop( parser );
-         mtilemap_parser_pstate_pop( parser ); /* Pop key */
-         mtilemap_parser_reset_token( parser );
-
-      } else if(
-         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case '[':
-      if(
-         MTILEMAP_PSTATE_NONE == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_LIST );
-         mtilemap_parser_reset_token( parser );
-
-      } else if(
-         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case ']':
-      if( MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ) {
-         retval = mtilemap_parser_parse_token( parser );
-         maug_cleanup_if_not_ok();
-         mtilemap_parser_pstate_pop( parser );
-         mtilemap_parser_reset_token( parser );
-
-         if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
-
-         } else if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
-
-         } else if( MTILEMAP_MSTATE_TILESETS == parser->mstate ) {
-            mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
-
-         }
-
-      } else if(
-         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case '"':
-      if(
-         MTILEMAP_PSTATE_OBJECT_KEY == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_STRING );
-
-      } else if( MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser ) ) {
-         debug_printf( MTILEMAP_TRACE_LVL, "finished string: %s", parser->token );
-         mtilemap_parser_pstate_pop( parser );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case ',':
-      if( MTILEMAP_PSTATE_OBJECT_VAL == mtilemap_parser_pstate( parser ) ) {
-         retval = mtilemap_parser_parse_token( parser );
-         maug_cleanup_if_not_ok();
-         mtilemap_parser_pstate_pop( parser );
-         mtilemap_parser_pstate_pop( parser ); /* Pop key */
-         mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
-         mtilemap_parser_reset_token( parser );
-
-      } else if( MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ) {
-         retval = mtilemap_parser_parse_token( parser );
-         maug_cleanup_if_not_ok();
-         mtilemap_parser_reset_token( parser );
-
-      } else if(
-         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   case ':':
-      if( MTILEMAP_PSTATE_OBJECT_KEY == mtilemap_parser_pstate( parser ) ) {
-         retval = mtilemap_parser_parse_token( parser );
-         maug_cleanup_if_not_ok();
-         mtilemap_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_VAL );
-         mtilemap_parser_reset_token( parser );
-
-      } else if(
-         MTILEMAP_PSTATE_STRING == mtilemap_parser_pstate( parser )
-      ) {
-         mtilemap_parser_append_token( parser, c );
-
-      } else {
-         mtilemap_parser_invalid_c( parser, c, retval );
-      }
-      break;
-
-   default:
-      mtilemap_parser_append_token( parser, c );
-      break;
+   if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
+   } else if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
+   } else if( MTILEMAP_MSTATE_TILESETS == parser->mstate ) {
+      mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_NONE );
    }
 
-cleanup:
-
-   return retval;
+   return MERROR_OK;
 }
 
 /* === */
@@ -774,6 +590,10 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct MTILEMAP_PARSER* parser = NULL;
    char filename_path[RETROFLAT_PATH_MAX];
+   MAUG_MHANDLE bytes_h = (MAUG_MHANDLE)NULL;
+   size_t bytes_sz = 0;
+   uint8_t* bytes = NULL;
+   size_t i = 0;
 
    /* Initialize parser. */
    parser_h = maug_malloc( 1, sizeof( struct MTILEMAP_PARSER ) );
@@ -785,17 +605,41 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
 
    parser->t = t;
    parser->tj_parse_cb = mtilemap_parse_json_file;
+   parser->jparser.token_parser = mtilemap_parser_parse_token;
+   parser->jparser.token_parser_arg = parser;
+   parser->jparser.close_list = mtilemap_json_close_list;
+   parser->jparser.close_list_arg = parser;
 
    /* Setup filename path. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
 
-   retval = mparser_file(
-      filename_path, parser, (mparser_cb)mtilemap_parse_json_c );
+   /* TODO: fread chars one by one from disk using retrofil_cread. */
+   retval = retrofil_open_mread( filename_path, &bytes_h, &bytes_sz );
    maug_cleanup_if_not_ok();
 
+   maug_mlock( bytes_h, bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, bytes );
+
+   /* Parse JSON and react to state. */
+   for( i = 0 ; bytes_sz > i ; i++ ) {
+      retval = mjson_parse_c( &(parser->jparser), bytes[i] );
+      if( MERROR_OK != retval ) {
+         error_printf( "error parsing JSON!" );
+         goto cleanup;
+      }
+   }
+
 cleanup:
+
+   if( NULL != bytes ) {
+      maug_munlock( bytes_h, bytes );
+   }
+
+   if( NULL != bytes_h ) {
+      retrofil_close_mread( &bytes_h, bytes_sz );
+   }
 
    if( NULL != parser ) {
       maug_munlock( parser_h, parser );

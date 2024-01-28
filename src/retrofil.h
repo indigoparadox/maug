@@ -12,6 +12,8 @@
  * \file retrofil.h
  */
 
+/* TODO: open_cread: return a handle and reach chars via macro by offset. */
+
 /**
  * \brief Open a file and read it into memory or memory-map it.
  * \param filename NULL-terminated path to file to open.
