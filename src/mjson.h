@@ -32,6 +32,10 @@ struct MJSON_PARSER {
    void* token_parser_arg;
    mjson_parse_close_cb close_list;
    void* close_list_arg;
+   mjson_parse_close_cb open_obj;
+   void* open_obj_arg;
+   mjson_parse_close_cb close_obj;
+   void* close_obj_arg;
    mjson_parse_close_cb close_val;
    void* close_val_arg;
    size_t i;
@@ -96,8 +100,15 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser ) ||
          MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser )
       ) {
+         /* Starting to read a new object... it's gonna start with a key
+          * for its first child!
+          */
          mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
          mjson_parser_reset_token( parser );
+
+         if( NULL != parser->open_obj ) {
+            parser->open_obj( parser->open_obj_arg );
+         }
 
       } else if( MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
          mjson_parser_append_token( parser, c );
@@ -114,6 +125,10 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_pstate_pop( parser );
          mjson_parser_pstate_pop( parser ); /* Pop key */
          mjson_parser_reset_token( parser );
+
+         if( NULL != parser->close_obj ) {
+            parser->close_obj( parser->close_obj_arg );
+         }
 
       } else if(
          MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
