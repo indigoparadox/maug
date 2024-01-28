@@ -136,6 +136,8 @@ struct MTILEMAP_PARSER {
    /* TODO: Use flags and combine these. */
    uint8_t pass;
    uint8_t mode;
+   size_t layer_tile_iter;
+   size_t pass_layer_iter;
    size_t tileset_id_cur;
    struct MTILEMAP* t;
    mtilemap_tj_parse_cb tj_parse_cb;
@@ -573,31 +575,31 @@ MERROR_RETVAL mtilemap_parser_parse_token(
    if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
 
       if(
-         1 == parser->pass && MTILEMAP_MSTATE_LAYER_DATA == parser->mstate
+         0 == parser->pass &&
+         MTILEMAP_MSTATE_LAYER_DATA == parser->mstate
       ) {
-
-         /* TODO: Can we read tiles ahead of time to know and allocate that
-          *       many in advance? */
-
+         parser->layer_tile_iter++;
+      } if(
+         1 == parser->pass &&
+         MTILEMAP_MSTATE_LAYER_DATA == parser->mstate
+      ) {
          maug_mlock( parser->t->layers, layers );
          maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
-         tiles_layer = &(layers[parser->t->layers_sz - 1]);
-
-         if( tiles_layer->tiles_sz + 1 >= tiles_layer->tiles_sz_max ) {
-            retval = mtilemap_alloc_tiles(
-               tiles_layer,
-               0 == tiles_layer->tiles_sz_max ? MTILEMAP_TILES_SZ_INIT : 
-                  tiles_layer->tiles_sz_max * 2 );
-            maug_cleanup_if_not_ok();
-         }
+         debug_printf( MTILEMAP_TRACE_LVL,
+            "selecting layer " SIZE_T_FMT "...",
+            parser->pass_layer_iter );
+         tiles_layer = &(layers[parser->pass_layer_iter]);
 
          maug_mlock( tiles_layer->tiles, tiles );
          maug_cleanup_if_null_alloc( size_t*, tiles );
 
          /* Parse tilemap tile. */
-         tiles[tiles_layer->tiles_sz] = atoi( token );
+         debug_printf( MTILEMAP_TRACE_LVL,
+            "layer " SIZE_T_FMT " tile: " SIZE_T_FMT,
+            parser->pass_layer_iter, parser->layer_tile_iter );
+         tiles[parser->layer_tile_iter] = atoi( token );
          tiles_layer->tiles_sz++;
-
+         parser->layer_tile_iter++;
       }
       goto cleanup;
 
@@ -649,23 +651,6 @@ MERROR_RETVAL mtilemap_parser_parse_token(
 
    mtilemap_parser_match_token( token, token_sz, parser );
 
-   /* Special prep work. */
-
-   if(
-      MTILEMAP_MSTATE_LAYER_DATA == parser->mstate &&
-      1 == parser->pass /* We have width/height. */
-   ) {
-
-      if( NULL != layers ) {
-         maug_munlock( parser->t->layers, layers );
-         maug_cleanup_if_null_alloc(
-            struct MTILEMAP_LAYER*, parser->t->layers );
-      }
-
-      retval = mtilemap_alloc_layers( parser->t, parser->t->layers_sz + 1 );
-      maug_cleanup_if_not_ok();
-   }
-
 cleanup:
 
    if( NULL != tile_defs ) {
@@ -673,7 +658,7 @@ cleanup:
    }
 
    if( NULL != tiles ) {
-      maug_munlock( layers[parser->t->layers_sz - 1].tiles, tiles );
+      maug_munlock( layers[parser->pass_layer_iter].tiles, tiles );
    }
 
    if( NULL != layers ) {
@@ -690,6 +675,7 @@ MERROR_RETVAL mtilemap_json_close_list( void* parg ) {
 
    if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
       assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      assert( parser->layer_tile_iter == 1600 );
       mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
 
    } else if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
@@ -711,6 +697,9 @@ MERROR_RETVAL mtilemap_json_open_obj( void* parg ) {
 
    if( MTILEMAP_MSTATE_LAYERS == parser->mstate ) {
       assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      /* Reset on open so count is retained for allocating after first 
+       * pass. */
+      parser->layer_tile_iter = 0;
       mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYER );
    }
 
@@ -724,6 +713,12 @@ MERROR_RETVAL mtilemap_json_close_obj( void* parg ) {
 
    if( MTILEMAP_MSTATE_LAYER == parser->mstate ) {
       assert( MTILEMAP_PARSER_MODE_MAP == parser->mode );
+      assert( parser->layer_tile_iter == 1600 );
+      debug_printf( MTILEMAP_TRACE_LVL,
+         "incrementing pass layer to " SIZE_T_FMT " after " SIZE_T_FMT
+            " tiles...",
+         parser->pass_layer_iter + 1, parser->layer_tile_iter );
+      parser->pass_layer_iter++;
       mtilemap_parser_mstate( parser, MTILEMAP_MSTATE_LAYERS );
    }
 
@@ -741,7 +736,9 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
    MAUG_MHANDLE bytes_h = (MAUG_MHANDLE)NULL;
    size_t bytes_sz = 0;
    uint8_t* bytes = NULL;
-   size_t i = 0;
+   size_t i = 0, j = 0;
+   struct MTILEMAP_LAYER* layers = NULL;
+   struct MTILEMAP_LAYER* tiles_layer = NULL;
 
    /* Initialize parser. */
    parser_h = maug_malloc( 1, sizeof( struct MTILEMAP_PARSER ) );
@@ -798,6 +795,29 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
          parser->jparser.close_obj_arg = parser;
          parser->jparser.token_parser = mtilemap_parser_parse_token;
          parser->jparser.token_parser_arg = parser;
+
+         if( 1 == parser->pass ) {
+            /* Starting second pass, allocate tilemap structs. */
+            retval = mtilemap_alloc_layers(
+               parser->t, parser->pass_layer_iter );
+            maug_cleanup_if_not_ok();
+
+            /* Allocate tiles for the new layers. */
+            for( j = 0 ; parser->pass_layer_iter > j ; j++ ) {
+               debug_printf( MTILEMAP_TRACE_LVL,
+                  "allocating " SIZE_T_FMT " tiles for layer " SIZE_T_FMT
+                     "...",
+                  parser->layer_tile_iter, j );
+               maug_mlock( parser->t->layers, layers );
+               maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
+               tiles_layer = &(layers[j]);
+               retval = mtilemap_alloc_tiles(
+                  tiles_layer, parser->layer_tile_iter );
+               maug_munlock( parser->t->layers, layers );
+               maug_cleanup_if_not_ok();
+            }
+         }
+         parser->pass_layer_iter = 0;
       }
 
       for( i = 0 ; bytes_sz > i ; i++ ) {
@@ -806,6 +826,12 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
             error_printf( "error parsing JSON!" );
             goto cleanup;
          }
+      }
+
+      if( 's' != strrchr( filename, '.' )[2] ) {
+         debug_printf( MTILEMAP_TRACE_LVL,
+            "pass %u found " SIZE_T_FMT " layers",
+            parser->pass, parser->pass_layer_iter );
       }
    }
 
@@ -884,24 +910,12 @@ MERROR_RETVAL mtilemap_alloc_layers( struct MTILEMAP* t, size_t ndefs ) {
    struct MTILEMAP_LAYER* layers = NULL;
    MERROR_RETVAL retval = MERROR_OK;
    size_t zero_sz = 0;
-   MAUG_MHANDLE layers_new_h = NULL;
 
-   /* TODO: Use layers_sz_max */
-
-   if( 0 == t->layers_sz ) {
-      debug_printf( MTILEMAP_TRACE_LVL,
-         "alloc for layer #" SIZE_T_FMT " (" SIZE_T_FMT " bytes)...",
-         ndefs, sizeof( struct MTILEMAP_LAYER ) );
-      t->layers = maug_malloc( ndefs, sizeof( struct MTILEMAP_LAYER ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, t->layers );
-
-   } else {
-      debug_printf( MTILEMAP_TRACE_LVL,
-         "realloc for layer #" SIZE_T_FMT " (" SIZE_T_FMT " bytes)...",
-         ndefs, sizeof( struct MTILEMAP_LAYER ) );
-      maug_mrealloc_test(
-         layers_new_h, t->layers, ndefs, sizeof( struct MTILEMAP_LAYER ) );
-   }
+   debug_printf( MTILEMAP_TRACE_LVL,
+      "alloc for layer #" SIZE_T_FMT " (" SIZE_T_FMT " bytes)...",
+      ndefs, sizeof( struct MTILEMAP_LAYER ) );
+   t->layers = maug_malloc( ndefs, sizeof( struct MTILEMAP_LAYER ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, t->layers );
 
    /* Zero new allocs. */
    maug_mlock( t->layers, layers );
@@ -913,7 +927,7 @@ MERROR_RETVAL mtilemap_alloc_layers( struct MTILEMAP* t, size_t ndefs ) {
       &(layers[t->layers_sz]),
       zero_sz * sizeof( struct MTILEMAP_LAYER ) );
 
-   t->layers_sz++;
+   t->layers_sz = ndefs;
 
 cleanup:
 
