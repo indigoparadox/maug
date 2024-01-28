@@ -90,14 +90,16 @@ struct MTILEMAP_TILE_DEF {
 /*! \} */ /* maug_tilemap_defs */
 
 struct MTILEMAP_LAYER {
+   size_t tiles_sz;
+   size_t tiles_sz_max;
 #ifdef MAUG_NO_MMEM
    size_t* tiles;
 #else
    MAUG_MHANDLE tiles;
 #endif /* MAUG_NO_MMEM */
-   size_t tiles_sz;
-   size_t tiles_sz_max;
 };
+
+/* TODO: Rework this based on perpix grid to reduce lockable handles needed. */
 
 struct MTILEMAP {
    char name[MTILEMAP_NAME_SZ_MAX];
@@ -423,6 +425,9 @@ MERROR_RETVAL mtilemap_parser_parse_token( struct MTILEMAP_PARSER* parser ) {
    if( MTILEMAP_PSTATE_LIST == mtilemap_parser_pstate( parser ) ) {
 
       if( MTILEMAP_MSTATE_LAYER_DATA == parser->mstate ) {
+
+         /* TODO: Can we read tiles ahead of time to know and allocate that
+          *       many in advance? */
 
          maug_mlock( parser->t->layers, layers );
          maug_cleanup_if_null_alloc( struct MTILEMAP_LAYER*, layers );
