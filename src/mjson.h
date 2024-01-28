@@ -32,6 +32,8 @@ struct MJSON_PARSER {
    void* token_parser_arg;
    mjson_parse_close_cb close_list;
    void* close_list_arg;
+   mjson_parse_close_cb close_val;
+   void* close_val_arg;
    size_t i;
    char last_c;
 };
@@ -149,7 +151,9 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_pstate_pop( parser );
          mjson_parser_reset_token( parser );
 
-         parser->close_list( parser->close_list_arg );
+         if( NULL != parser->close_list ) {
+            parser->close_list( parser->close_list_arg );
+         }
 
       } else if(
          MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
@@ -185,6 +189,10 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_pstate_pop( parser ); /* Pop key */
          mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
          mjson_parser_reset_token( parser );
+
+         if( NULL != parser->close_val ) {
+            parser->close_val( parser->close_val_arg );
+         }
 
       } else if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
