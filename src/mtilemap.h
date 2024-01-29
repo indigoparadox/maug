@@ -130,8 +130,8 @@ struct MTILEMAP_PARSER {
    f( MTILESTATE_GRID,              13, "grid",    0               , 1 ) \
    f( MTILESTATE_TILES_PROP,        14, "properties",6 /* TILES */ , 1 ) \
    f( MTILESTATE_LAYER,             15, "layers", /* [sic] */ 3    , 0 ) \
-   f( MTILESTATE_TILES_PROP_ROT_X, 16, "rotate_x", 14/* TILES_PROP */, 1 ) \
-   f( MTILESTATE_TILES_PROP_ROT_Z, 17, "rotate_z", 14/* TILES_PROP */, 1 )
+   f( MTILESTATE_TILES_PROP_NAME,   16, "name",    14 /* TILES_PROP */ , 1 ) \
+   f( MTILESTATE_TILES_PROP_VAL,    17, "value",   14 /* TILES_PROP */ , 1 )
 
 MERROR_RETVAL
 mtilemap_parse_json_c( struct MTILEMAP_PARSER* parser, char c );
@@ -320,6 +320,33 @@ MERROR_RETVAL mtilemap_parser_parse_tiledef_token(
          }
          mtilemap_parser_mstate( parser, MTILESTATE_TILES );
 
+      } else if(
+         MTILESTATE_TILES_PROP_NAME == parser->mstate &&
+         1 == parser->pass
+      ) {
+
+         if( 0 == strncmp(
+            parser->jparser.token,
+            "rotate_x",
+            parser->jparser.token_sz
+         ) ) {
+            /* Found flag: rotate X! */
+            /* TODO: Read boolean value. */
+            assert( parser->tileset_id_cur < parser->t->tile_defs_sz );
+            tile_defs[parser->tileset_id_cur].flags |= 
+               MTILEMAP_TILE_FLAG_ROT_X;
+         }
+
+         /* TODO: Read boolean Z and fire particles prop/flag. */
+
+         mtilemap_parser_mstate( parser, MTILESTATE_TILES_PROP );
+
+      } else if(
+         MTILESTATE_TILES_PROP_VAL == parser->mstate &&
+         1 == parser->pass
+      ) {
+
+         mtilemap_parser_mstate( parser, MTILESTATE_TILES_PROP );
       }
       goto cleanup;
    }
@@ -512,6 +539,26 @@ MERROR_RETVAL mtilemap_json_close_obj( void* parg ) {
 
 /* === */
 
+#if 0
+MERROR_RETVAL mtilemap_json_close_val( void* parg ) {
+   struct MTILEMAP_PARSER* parser = (struct MTILEMAP_PARSER*)parg;
+
+   if(
+      MTILESTATE_TILES_PROP == parser->mstate
+   ) {
+      assert( MTILEMAP_PARSER_MODE_DEFS == parser->mode );
+   
+      debug_printf( 1, "prop: %s", parser->jparser.token );
+
+      /* mtilemap_parser_mstate( parser, MTILESTATE_TILES_PROP_ROT_X ); */
+   }
+
+   return MERROR_OK;
+}
+#endif
+
+/* === */
+
 MERROR_RETVAL
 mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -572,6 +619,10 @@ mtilemap_parse_json_file( const char* filename, struct MTILEMAP* t ) {
          parser->jparser.close_list_arg = parser;
          parser->jparser.close_obj = mtilemap_json_close_obj;
          parser->jparser.close_obj_arg = parser;
+         /*
+         parser->jparser.close_val = mtilemap_json_close_val;
+         parser->jparser.close_val_arg = parser;
+         */
 
       } else {
          debug_printf( MTILEMAP_TRACE_LVL, "(tilemap mode)" );
