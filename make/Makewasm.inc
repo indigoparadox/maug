@@ -3,7 +3,7 @@
 
 define TGTWASMSDL
 
-EMCC_FLAGS_SDL := -DRETROFLAT_OS_WASM -Imaug/src
+EMCC_FLAGS_SDL := -DRETROFLAT_OS_WASM
 
 ifeq ("$$(OPENGL)","1")
    WASM_SDL_VER := 1
@@ -17,11 +17,11 @@ else
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))
-	$$(EMCC) -o $$@ $$^ $$(EMCC_FLAGS_SDL)
+	$$(EMCC) -o $$@ $$^ $$(LDFLAGS_EMCC) $$(EMCC_FLAGS_SDL)
 
 obj/wasm/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
-	$$(EMCC) -c -o $$@ $$< $$(EMCC_FLAGS_SDL)
+	$$(EMCC) -c -o $$@ $$< $$(CFLAGS_EMCC) $$(EMCC_FLAGS_SDL)
 
 CLEAN_TARGETS += $(1).html $(1).js $(1).wasm
 
