@@ -1,38 +1,44 @@
 
-#ifndef RETROFIL_H
-#define RETROFIL_H
+#ifndef MFILE_H
+#define MFILE_H
 
 /**
- * \addtogroup maug_retrofil RetroFile API
+ * \addtogroup maug_mfile RetroFile API
  * \brief Abstraction layer for dealing with files on retro systems.
  * \{
  */
 
 /**
- * \file retrofil.h
+ * \file mfile.h
  */
 
 /* TODO: open_cread: return a handle and reach chars via macro by offset. */
 
+struct MFILE_CADDY {
+   FILE* handle;
+   size_t sz;
+};
+
+typedef struct MFILE_CADDY mfile_t;
+
+#define mfile_has_bytes( p_file ) (ftell( (p_file)->handle ) < (p_file)->sz)
+
+#define mfile_cread( p_file, c ) fread( &c, 1, 1, (p_file)->handle )
+
 /**
  * \brief Open a file and read it into memory or memory-map it.
  * \param filename NULL-terminated path to file to open.
- * \param p_bytes_h Pointer to MAUG_MHANDLE to open into.
- * \param p_bytes_sz Pointer to size_t in which to store file size.
  */
-MERROR_RETVAL retrofil_open_mread(
-   const char* filename, MAUG_MHANDLE* p_bytes_h, size_t* p_bytes_sz );
+MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file );
 
 /**
- * \brief Close a file opened with retrofil_open_mread().
- * \param bytes_ptr_h MAUG_MHANDLE opened by retrofil_open_mread().
- * \param bytes_sz Same size value passed from retrofil_open_mread().
+ * \brief Close a file opened with mfile_open_read().
  */
-void retrofil_close_mread( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz );
+void mfile_close( mfile_t* p_file );
 
-#ifdef RETROFIL_C
+#ifdef MFILE_C
 
-#ifdef RETROFLAT_OS_UNIX
+#ifdef MFILE_MMAP
 #  include <sys/mman.h> /* mmap() */
 #  include <unistd.h> /* close() */
 #  include <fcntl.h> /* open() */
@@ -41,20 +47,17 @@ void retrofil_close_mread( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz );
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
-MERROR_RETVAL retrofil_open_mread(
-   const char* filename, MAUG_MHANDLE* p_bytes_ptr_h, size_t* p_bytes_sz
-) {
+MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-#ifdef RETROFLAT_OS_UNIX
+#  ifdef MFILE_MMAP
+   uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
-#else
-   size_t bytes_rd = 0;
-   FILE* in_file = NULL;
-   uint8_t* bytes_ptr = NULL;
-#endif /* !RETROFLAT_OS_UNIX */
+#  endif /* MFILE_MMAP */
 
-#ifdef RETROFLAT_OS_UNIX
+   /* MAUG_MHANDLE* p_bytes_ptr_h, size_t* p_bytes_sz */
+
+#  ifdef MFILE_MMAP
 
    in_file = open( filename, O_RDONLY );
    if( 0 >= in_file ) {
@@ -76,19 +79,23 @@ cleanup:
       close( in_file );
    }
 
-#else
+#  else
 
-   in_file = fopen( filename, "rb" );
-   if( NULL == in_file ) {
+   p_file->handle = fopen( filename, "rb" );
+   if( NULL == p_file->handle ) {
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
-   fseek( in_file, 0, SEEK_END );
-   *p_bytes_sz = ftell( in_file );
-   fseek( in_file, 0, SEEK_SET );
+   fseek( p_file->handle, 0, SEEK_END );
+   p_file->sz = ftell( p_file->handle );
+   fseek( p_file->handle, 0, SEEK_SET );
 
+   debug_printf( 1, "opened file %s (" SIZE_T_FMT " bytes)...",
+      filename, p_file->sz );
+
+/*
    *p_bytes_ptr_h = maug_malloc( 1, *p_bytes_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_bytes_ptr_h );
 
@@ -112,22 +119,27 @@ cleanup:
       fclose( in_file );
    }
 
-#endif /* RETROFLAT_OS_UNIX */
+*/
+
+cleanup:
+
+#  endif /* MFILE_MMAP */
 
    return retval;
 }
 
-void retrofil_close_mread( MAUG_MHANDLE bytes_ptr_h, size_t bytes_sz ) {
-#ifdef RETROFLAT_OS_UNIX
+void mfile_close( mfile_t* p_file ) {
+#  ifdef MFILE_MMAP
    munmap( bytes_ptr_h, bytes_sz );
-#else
-   maug_mfree( bytes_ptr_h );
-#endif /* RETROFLAT_OS_UNIX */
+#  else
+   /* maug_mfree( bytes_ptr_h ); */
+   fclose( p_file->handle );
+#  endif /* MFILE_MMAP */
 }
 
-#endif /* RETROFIL_C */
+#endif /* MFILE_C */
 
-/*! \} */ /* maug_retrofil */
+/*! \} */ /* maug_mfile */
 
-#endif /* !RETROFIL_H */
+#endif /* !MFILE_H */
 

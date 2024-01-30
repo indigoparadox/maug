@@ -580,6 +580,10 @@ void maug_vsnprintf(
       last = c;
    }
 
+   /* Add a terminating null if it'll fit! */
+   maug_bufcat( '\0', buffer, buffer_idx,
+      buffer_sz, cleanup );
+
 cleanup:
    return;
 }
