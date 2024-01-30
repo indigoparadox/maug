@@ -32,7 +32,7 @@
 #endif /* !MTILEMAP_TILE_SCALE */
 
 #ifndef MTILEMAP_TRACE_LVL
-#  define MTILEMAP_TRACE_LVL 1
+#  define MTILEMAP_TRACE_LVL 0
 #endif /* !MTILEMAP_TRACE_LVL */
 
 #define MTILEMAP_FLAG_ACTIVE 0x1
@@ -70,11 +70,6 @@ struct MTILEMAP_TILE_DEF {
 
 struct MTILEMAP_LAYER {
    size_t sz;
-#ifdef MAUG_NO_MMEM
-   mtilemap_tile_t* tiles_h;
-#else
-   MAUG_MHANDLE tiles_h;
-#endif /* MAUG_NO_MMEM */
 };
 
 /* TODO: Rework this based on perpix grid to reduce lockable handles needed. */
@@ -89,11 +84,12 @@ struct MTILEMAP {
    uint8_t tiles_w;
 };
 
-#define mtilemap_get_first_layer( t ) \
-   (struct MTILEMAP_LAYER*)(((uint8_t*)(t)) + (t)->layers_offset)
+#define mtilemap_get_tile( tilemap, layer, x, y ) \
+   (mtilemap_get_tiles_p( layer )[(y * tilemap->tiles_w) + x])
 
-#define mtilemap_get_next_layer( t, l ) \
-   (struct MTILEMAP_LAYER*)(((uint8_t*)(l)) + (l)->layer_sz)
+#define mtilemap_get_tiles_p( layer ) \
+   ((mtilemap_tile_t*)(((uint8_t*)(layer)) + \
+   sizeof( struct MTILEMAP_LAYER )))
 
 /**
  * \addtogroup maug_tilemap_parser Tilemap Parser
@@ -412,10 +408,7 @@ MERROR_RETVAL mtilemap_parser_parse_token(
             parser->t, parser->pass_layer_iter );
          assert( NULL != tiles_layer );
 
-         assert( NULL == tiles );
-         assert( NULL != tiles_layer->tiles_h );
-         maug_mlock( tiles_layer->tiles_h, tiles );
-         maug_cleanup_if_null_alloc( mtilemap_tile_t*, tiles );
+         tiles = mtilemap_get_tiles_p( tiles_layer );
 
          /* Parse tilemap tile. */
          debug_printf( MTILEMAP_TRACE_LVL,
@@ -487,10 +480,6 @@ cleanup:
 
    if( NULL != tile_defs ) {
       maug_munlock( *(parser->p_tile_defs_h), tile_defs );
-   }
-
-   if( NULL != tiles ) {
-      maug_munlock( tiles_layer->tiles_h, tiles );
    }
 
    return retval;
@@ -768,8 +757,9 @@ MERROR_RETVAL mtilemap_alloc_tile_defs(
 
    assert( 0 == *p_tile_defs_count );
    assert( NULL == *p_tile_defs_h );
-   debug_printf( MTILEMAP_TRACE_LVL,
-      "allocating " SIZE_T_FMT " tile_defs...", ndefs );
+   debug_printf( 1, "allocating " SIZE_T_FMT " tile definitions ("
+      SIZE_T_FMT " bytes)...",
+      ndefs, ndefs * sizeof( struct MTILEMAP_TILE_DEF ) );
    *p_tile_defs_h =
       maug_malloc( ndefs, sizeof( struct MTILEMAP_TILE_DEF ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_tile_defs_h );
@@ -825,9 +815,6 @@ MERROR_RETVAL mtilemap_alloc(
       assert( NULL != layer_iter );
       layer_iter->sz = sizeof( struct MTILEMAP_LAYER ) +
          (w * h * sizeof( mtilemap_tile_t ));
-
-      retval = mtilemap_alloc_tiles( layer_iter,
-         tilemap->tiles_w * tilemap->tiles_h );
       maug_cleanup_if_not_ok();
    }
 
@@ -837,51 +824,6 @@ cleanup:
       maug_munlock( *p_tilemap_h, tilemap );
    }
 
-   return retval;
-}
-
-/* === */
-
-MERROR_RETVAL mtilemap_alloc_tiles(
-   struct MTILEMAP_LAYER* layer, size_t ndefs
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   mtilemap_tile_t* tiles = NULL;
-
-   debug_printf( MTILEMAP_TRACE_LVL,
-      "allocating %d tiles...",
-      MTILEMAP_TILES_SZ_INIT );
-   layer->tiles_h = maug_malloc( ndefs, sizeof( mtilemap_tile_t ) );
-   maug_cleanup_if_null_alloc( mtilemap_tile_t*, layer->tiles_h );
-
-   /* Zero new allocs. */
-   maug_mlock( layer->tiles_h, tiles );
-   maug_cleanup_if_null_alloc( mtilemap_tile_t*, tiles );
-   maug_mzero( tiles, ndefs * sizeof( mtilemap_tile_t ) );
-
-cleanup:
-
-   if( NULL != tiles ) {
-      maug_munlock( layer->tiles_h, tiles );
-   }
-
-   return retval;
-}
-
-/* === */
-
-MERROR_RETVAL mtilemap_free( struct MTILEMAP* t ) {
-   size_t i = 0;
-   struct MTILEMAP_LAYER* layer = NULL;
-   MERROR_RETVAL retval = MERROR_OK;
-
-   for( i = 0 ; t->layers_count > i ; i++ ) {
-      layer = mtilemap_get_layer_p( t, i );
-      if( NULL != layer->tiles_h ) {
-         maug_mfree( layer->tiles_h );
-      }
-   }
- 
    return retval;
 }
 
