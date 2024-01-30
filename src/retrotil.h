@@ -16,26 +16,24 @@
  */
 
 #ifndef RETROTILE_NAME_SZ_MAX
+/*! \brief Maximum number of chars in a RETROTILE::name. */
 #  define RETROTILE_NAME_SZ_MAX 10
 #endif /* !RETROTILE_NAME_SZ_MAX */
 
-#ifndef RETROTILE_TILES_SZ_INIT
-#  define RETROTILE_TILES_SZ_INIT 10
-#endif /* !RETROTILE_TILES_SZ_INIT */
-
 #ifndef RETROTILE_TILESET_IMAGE_STR_SZ_MAX
+/*! \brief Maximum number of chars in a RETROTILE_TILE_DEF::image_path. */
 #  define RETROTILE_TILESET_IMAGE_STR_SZ_MAX 48
 #endif /* !RETROTILE_TILESET_IMAGE_STR_SZ_MAX */
 
-#ifndef RETROTILE_TILE_SCALE
-#  define RETROTILE_TILE_SCALE 1.0f
-#endif /* !RETROTILE_TILE_SCALE */
+#ifndef RETROTILE_TILE_SCALE_DEFAULT
+/*! \brief Default value for RETROTILE::tile_scale. */
+#  define RETROTILE_TILE_SCALE_DEFAULT 1.0f
+#endif /* !RETROTILE_TILE_SCALE_DEFAULT */
 
 #ifndef RETROTILE_TRACE_LVL
+/*! \brief If defined, bring debug printf statements up to this level. */
 #  define RETROTILE_TRACE_LVL 0
 #endif /* !RETROTILE_TRACE_LVL */
-
-#define RETROTILE_FLAG_ACTIVE 0x1
 
 /**
  * \addtogroup \maug_tilemap_defs Tilemap Tile Definitions
@@ -82,6 +80,7 @@ struct RETROTILE {
    size_t tileset_fgid;
    uint8_t tiles_h;
    uint8_t tiles_w;
+   float tile_scale;
 };
 
 #define retrotile_get_tile( tilemap, layer, x, y ) \
@@ -809,6 +808,7 @@ MERROR_RETVAL retrotile_alloc(
    tilemap->layers_count = layers_count;
    tilemap->tiles_w = w;
    tilemap->tiles_h = h;
+   tilemap->tile_scale = RETROTILE_TILE_SCALE_DEFAULT;
 
    for( i = 0 ; layers_count > i ; i++ ) {
       layer_iter = retrotile_get_layer_p( tilemap, i );
