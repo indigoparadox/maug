@@ -25,6 +25,8 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_cread( p_file, c ) fread( &c, 1, 1, (p_file)->handle )
 
+#define mfile_reset( p_file ) fseek( (p_file)->handle, 0, SEEK_SET )
+
 /**
  * \brief Open a file and read it into memory or memory-map it.
  * \param filename NULL-terminated path to file to open.

@@ -4,8 +4,7 @@
 
 #include <mparser.h>
 #include <mjson.h>
-/* TODO: Also retrofil should be mfil. Oh dear. */
-#include <retrofil.h>
+#include <mfile.h>
 
 /**
  * \addtogroup maug_tilemap Tilemap API
@@ -575,10 +574,9 @@ MERROR_RETVAL retrotile_parse_json_file(
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_PARSER* parser = NULL;
    char filename_path[RETROFLAT_PATH_MAX];
-   MAUG_MHANDLE bytes_h = (MAUG_MHANDLE)NULL;
-   size_t bytes_sz = 0;
-   uint8_t* bytes = NULL;
    size_t i = 0;
+   mfile_t buffer;
+   char c;
 
    /* Initialize parser. */
    parser_h = maug_malloc( 1, sizeof( struct RETROTILE_PARSER ) );
@@ -599,11 +597,8 @@ MERROR_RETVAL retrotile_parse_json_file(
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
 
    /* TODO: fread chars one by one from disk using retrofil_cread. */
-   retval = retrofil_open_mread( filename_path, &bytes_h, &bytes_sz );
+   retval = mfile_open_read( filename_path, &buffer );
    maug_cleanup_if_not_ok();
-
-   maug_mlock( bytes_h, bytes );
-   maug_cleanup_if_null_alloc( uint8_t*, bytes );
 
    assert( NULL != p_tile_defs_count );
 
@@ -673,13 +668,16 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->pass_layer_iter = 0;
       }
 
-      for( i = 0 ; bytes_sz > i ; i++ ) {
-         retval = mjson_parse_c( &(parser->jparser), bytes[i] );
+      while( mfile_has_bytes( &buffer ) ) {
+         mfile_cread( &buffer, c );
+         retval = mjson_parse_c( &(parser->jparser), c );
          if( MERROR_OK != retval ) {
             error_printf( "error parsing JSON!" );
             goto cleanup;
          }
       }
+
+      mfile_reset( &buffer );
 
       if( 's' != strrchr( filename, '.' )[2] ) {
          debug_printf( RETROTILE_TRACE_LVL,
@@ -692,14 +690,6 @@ MERROR_RETVAL retrotile_parse_json_file(
       RETROTILE_TRACE_LVL, "finished parsing %s...", filename_path );
 
 cleanup:
-
-   if( NULL != bytes ) {
-      maug_munlock( bytes_h, bytes );
-   }
-
-   if( NULL != bytes_h ) {
-      retrofil_close_mread( &bytes_h, bytes_sz );
-   }
 
    if( NULL != parser ) {
       if( NULL != parser->t ) {
