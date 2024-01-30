@@ -4,7 +4,6 @@
 
 #include <mparser.h>
 #include <mjson.h>
-/* TODO: retrotile should be renamed retrotm. m should never depend on retro. */
 /* TODO: Also retrofil should be mfil. Oh dear. */
 #include <retrofil.h>
 
@@ -69,8 +68,6 @@ struct RETROTILE_TILE_DEF {
 struct RETROTILE_LAYER {
    size_t sz;
 };
-
-/* TODO: Rework this based on perpix grid to reduce lockable handles needed. */
 
 struct RETROTILE {
    uint32_t sz;
