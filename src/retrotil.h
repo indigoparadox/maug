@@ -574,7 +574,6 @@ MERROR_RETVAL retrotile_parse_json_file(
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_PARSER* parser = NULL;
    char filename_path[RETROFLAT_PATH_MAX];
-   size_t i = 0;
    mfile_t buffer;
    char c;
 
