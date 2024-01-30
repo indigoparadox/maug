@@ -8,12 +8,12 @@
 #  define MJSON_TOKEN_SZ_MAX 4096
 #endif /* !MJSON_TOKEN_SZ_MAX */
 
-#define MTILEMAP_PARSER_PSTATE_TABLE( f ) \
-   f( MTILEMAP_PSTATE_NONE, 0 ) \
-   f( MTILEMAP_PSTATE_OBJECT_KEY, 1 ) \
-   f( MTILEMAP_PSTATE_OBJECT_VAL, 2 ) \
-   f( MTILEMAP_PSTATE_STRING, 3 ) \
-   f( MTILEMAP_PSTATE_LIST, 4 )
+#define MJSON_PARSER_PSTATE_TABLE( f ) \
+   f( MJSON_PSTATE_NONE, 0 ) \
+   f( MJSON_PSTATE_OBJECT_KEY, 1 ) \
+   f( MJSON_PSTATE_OBJECT_VAL, 2 ) \
+   f( MJSON_PSTATE_STRING, 3 ) \
+   f( MJSON_PSTATE_LIST, 4 )
 
 typedef MERROR_RETVAL
 (*mjson_parse_token_cb)( const char* token, size_t token_sz, void* arg );
@@ -44,7 +44,7 @@ struct MJSON_PARSER {
 
 #define mjson_parser_pstate( parser ) \
    ((parser)->pstate_sz > 0 ? \
-      (parser)->pstate[(parser)->pstate_sz - 1] : MTILEMAP_PSTATE_NONE)
+      (parser)->pstate[(parser)->pstate_sz - 1] : MJSON_PSTATE_NONE)
 
 #define mjson_parser_pstate_push( parser, new_pstate ) \
    mparser_pstate_push( mjson, parser, new_pstate )
@@ -74,10 +74,10 @@ struct MJSON_PARSER {
 #define MJSON_PSTATE_TABLE_NAME( name, idx ) \
    #name,
 
-MTILEMAP_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_CONST )
+MJSON_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_CONST )
 
 MAUG_CONST char* gc_mjson_pstate_names[] = {
-   MTILEMAP_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_NAME )
+   MJSON_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_NAME )
    ""
 };
 
@@ -89,28 +89,28 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
    case '\n':
    case '\t':
    case ' ':
-      if( MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
+      if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
          mjson_parser_append_token( parser, c );
       }
       break;
 
    case '{':
       if(
-         MTILEMAP_PSTATE_NONE == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser )
+         MJSON_PSTATE_NONE == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_LIST == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser )
       ) {
          /* Starting to read a new object... it's gonna start with a key
           * for its first child!
           */
-         mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
+         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->open_obj ) {
             parser->open_obj( parser->open_obj_arg );
          }
 
-      } else if( MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
+      } else if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
          mjson_parser_append_token( parser, c );
 
       } else {
@@ -119,7 +119,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
 
    case '}':
-      if( MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ) {
+      if( MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
          mjson_parser_pstate_pop( parser );
@@ -131,7 +131,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          }
 
       } else if(
-         MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
+         MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
          mjson_parser_append_token( parser, c );
 
@@ -142,15 +142,15 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
 
    case '[':
       if(
-         MTILEMAP_PSTATE_NONE == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser )
+         MJSON_PSTATE_NONE == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_LIST == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_LIST );
+         mjson_parser_pstate_push( parser, MJSON_PSTATE_LIST );
          mjson_parser_reset_token( parser );
 
       } else if(
-         MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
+         MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
          mjson_parser_append_token( parser, c );
 
@@ -160,7 +160,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
 
    case ']':
-      if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
+      if( MJSON_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
          mjson_parser_pstate_pop( parser );
@@ -171,7 +171,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          }
 
       } else if(
-         MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
+         MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
          mjson_parser_append_token( parser, c );
 
@@ -182,13 +182,13 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
 
    case '"':
       if(
-         MTILEMAP_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
-         MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser )
+         MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
+         MJSON_PSTATE_LIST == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_STRING );
+         mjson_parser_pstate_push( parser, MJSON_PSTATE_STRING );
 
-      } else if( MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
+      } else if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
          mjson_parser_pstate_pop( parser );
 
       } else {
@@ -197,25 +197,25 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
 
    case ',':
-      if( MTILEMAP_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ) {
+      if( MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
          mjson_parser_pstate_pop( parser );
          mjson_parser_pstate_pop( parser ); /* Pop key */
-         mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_KEY );
+         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->close_val ) {
             parser->close_val( parser->close_val_arg );
          }
 
-      } else if( MTILEMAP_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
+      } else if( MJSON_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
          mjson_parser_reset_token( parser );
 
       } else if(
-         MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
+         MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
          mjson_parser_append_token( parser, c );
 
@@ -225,14 +225,14 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
 
    case ':':
-      if( MTILEMAP_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
+      if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
-         mjson_parser_pstate_push( parser, MTILEMAP_PSTATE_OBJECT_VAL );
+         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_VAL );
          mjson_parser_reset_token( parser );
 
       } else if(
-         MTILEMAP_PSTATE_STRING == mjson_parser_pstate( parser )
+         MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
          mjson_parser_append_token( parser, c );
 
@@ -258,7 +258,7 @@ cleanup:
 #  define MJSON_PSTATE_TABLE_CONST( name, idx ) \
       extern MAUG_CONST uint8_t name;
 
-MTILEMAP_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_CONST )
+MJSON_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_CONST )
 
 extern MAUG_CONST char* gc_mjson_pstate_names[];
 
