@@ -31,8 +31,12 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u16read_lsbf_at( p_file, p_u16, idx ) \
    fseek( (p_file)->handle, idx, SEEK_SET ); \
+   fread( p_u16, 1, 2, (p_file)->handle );
+
+#if 0
    fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->handle ); \
    fread( ((uint8_t*)p_u16), 1, 1, (p_file)->handle );
+#endif
 
 #define mfile_u32read_at( p_file, p_u32, idx ) \
    fseek( (p_file)->handle, idx, SEEK_SET ); \
@@ -40,10 +44,14 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u32read_lsbf_at( p_file, p_u32, idx ) \
    fseek( (p_file)->handle, idx, SEEK_SET ); \
+   fread( p_u32, 1, 4, (p_file)->handle ); \
+
+#if 0
    fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->handle ); \
    fread( (((uint8_t*)p_u32) + 2), 1, 1, (p_file)->handle ); \
    fread( (((uint8_t*)p_u32) + 1), 1, 1, (p_file)->handle ); \
    fread( ((uint8_t*)p_u32), 1, 1, (p_file)->handle );
+#endif
 
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
