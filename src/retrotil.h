@@ -46,14 +46,14 @@
 #define RETROTILE_PARSER_MODE_MAP    0
 #define RETROTILE_PARSER_MODE_DEFS   1
 
-#define RETROTILE_TILE_FLAG_BLOCK       1
-#define RETROTILE_TILE_FLAG_ROT_X       2
-#define RETROTILE_TILE_FLAG_ROT_Z       4
-#define RETROTILE_TILE_FLAG_PRTCL_FIRE  8
+#define RETROTILE_TILE_FLAG_BLOCK      0x01
+#define RETROTILE_TILE_FLAG_ROT_X      0x02
+#define RETROTILE_TILE_FLAG_ROT_Z      0x04
+#define RETROTILE_TILE_FLAG_PRTCL_FIRE 0x08
 
 /*! \} */ /* maug_tilemap_defs_types */
 
-typedef uint16_t retrotile_tile_t;
+typedef int16_t retrotile_tile_t;
 
 #define RETROTILE_IDX_FMT "%u"
 
@@ -91,8 +91,7 @@ struct RETROTILE {
  * \{
  */
 
-typedef MERROR_RETVAL
-(*retrotile_tj_parse_cb)(
+typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
    const char* filename, MAUG_MHANDLE* p_tm_h,
    MAUG_MHANDLE* p_td_h, size_t* p_td_c );
 
@@ -152,15 +151,8 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
 MERROR_RETVAL retrotile_alloc_tile_defs(
    MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count, size_t ndefs );
 
-MERROR_RETVAL
-retrotile_alloc(
+MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count );
-
-MERROR_RETVAL
-retrotile_alloc_tiles( struct RETROTILE_LAYER* layer, size_t ndefs );
-
-MERROR_RETVAL
-retrotile_free( struct RETROTILE* t );
 
 #ifdef RETROTIL_C
 
