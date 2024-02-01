@@ -5159,6 +5159,9 @@ cleanup:
 
 #endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
+/* TODO: Use mfile API and create an mformat lib to handle different
+ *       formats using perpix loader code.
+ */
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out
 ) {
