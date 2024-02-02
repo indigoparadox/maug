@@ -286,11 +286,16 @@ MERROR_RETVAL mfmt_read_bmp_px(
          (y * header_bmp_info->width) + x );
 
       if( 0 == bit_idx ) {
+         /*
+         TODO: Nail down file sizes.
          if( byte_idx >= file_sz ) {
-            error_printf( "input bitmap has insufficient size!" );
+            error_printf(
+               "input bitmap has insufficient size " SIZE_T_FMT " bytes)!",
+               file_sz );
             retval = MERROR_OVERFLOW;
             goto cleanup;
          }
+         */
 
          /* Move on to a new byte. */
          mfile_cread_at(
