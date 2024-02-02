@@ -57,6 +57,7 @@ typedef struct MFILE_CADDY mfile_t;
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       *p_c = (p_file)->mem_buffer[idx]; \
+      (p_file)->mem_cursor += 1; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -71,6 +72,7 @@ typedef struct MFILE_CADDY mfile_t;
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx]; \
       ((uint8_t*)(p_u16))[1] = (p_file)->mem_buffer[idx + 1]; \
+      (p_file)->mem_cursor += 2; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -84,6 +86,7 @@ typedef struct MFILE_CADDY mfile_t;
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx + 1]; \
       ((uint8_t*)(p_u16))[1] = (p_file)->mem_buffer[idx]; \
+      (p_file)->mem_cursor += 2; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -102,6 +105,7 @@ typedef struct MFILE_CADDY mfile_t;
       ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[idx + 1]; \
       ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[idx + 2]; \
       ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[idx + 3]; \
+      (p_file)->mem_cursor += 4; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -117,6 +121,7 @@ typedef struct MFILE_CADDY mfile_t;
       ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[idx + 1]; \
       ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[idx + 2]; \
       ((uint8_t*)(p_u32))[0] = (p_file)->mem_buffer[idx + 3]; \
+      (p_file)->mem_cursor += 4; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -254,8 +259,13 @@ void mfile_close( mfile_t* p_file ) {
 #  else
    /* maug_mfree( bytes_ptr_h ); */
    switch( p_file->type ) {
+   case 0:
+      /* Do nothing silently. */
+      break;
+
    case MFILE_CADDY_TYPE_FILE_READ:
       fclose( p_file->h.file );
+      p_file->type = 0;
       break;
 
    case MFILE_CADDY_TYPE_MEM_BUFFER:
@@ -263,6 +273,7 @@ void mfile_close( mfile_t* p_file ) {
          maug_munlock( p_file->h.mem, p_file->mem_buffer );
          debug_printf( 1, "unlocked handle %p from file %p...",
             p_file->h.mem, p_file );
+         p_file->type = 0;
       }
       break;
       
