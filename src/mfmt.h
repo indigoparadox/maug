@@ -4,6 +4,21 @@
 
 #include <mfile.h>
 
+/**
+ * \addtogroup maug_fmt Maug File Format API
+ * \{
+ */
+
+/**
+ * \file mfmt.h
+ */
+
+/**
+ * \addtogroup maug_fmt_bmp Maug File Format: Bitmap
+ * \brief Constants and functions describing the Windows bitmap format.
+ * \{
+ */
+
 #define MFMT_BMPINFO_OFS_WIDTH 4
 #define MFMT_BMPINFO_OFS_HEIGHT 8
 #define MFMT_BMPINFO_OFS_COLOR_PLANES 12
@@ -15,42 +30,91 @@
 #define MFMT_BMPINFO_OFS_PAL_SZ 32
 #define MFMT_BMPINFO_OFS_IMP_COLORS 36
 
+/*! \brief MFMT_STRUCT_BMPINFO::compression value indicating none. */
 #define MFMT_BMP_COMPRESSION_NONE (0)
+/*! \brief MFMT_STRUCT_BMPINFO::compression value indicating 8-bit RLE. */
+#define MFMT_BMP_COMPRESSION_RLE8 (1)
+/*! \brief MFMT_STRUCT_BMPINFO::compression value indicating 4-bit RLE. */
 #define MFMT_BMP_COMPRESSION_RLE4 (2)
+
+/*! \} */ /* maug_fmt_bmp */
 
 #define MFMT_DECOMP_FLAG_4BIT 0x01
 #define MFMT_DECOMP_FLAG_8BIT 0x02
 
+#ifndef MFMT_TRACE_BMP_LVL
+#  define MFMT_TRACE_BMP_LVL 0
+#endif /* !MFMT_TRACE_BMP_LVL */
+
+/*! \brief Generic image description struct. */
 struct MFMT_STRUCT {
+   /*! \brief Size of this struct (use to tell apart). */
    uint32_t sz;
 };
 
+/**
+ * \addtogroup maug_fmt_bmp
+ * \{
+ */
+
+/*! \brief BITMAPINFO struct that comes before Windows bitmap data. */
 struct MFMT_STRUCT_BMPINFO {
+   /*! \brief Size of this struct in bytes (only 40 is supported). */
    uint32_t sz;
+   /*! \brief Width of the bitmap in pixels. */
    int32_t width;
+   /*! \brief Height of the bitmap in pixels. */
    int32_t height;
+   /*! \brief Number of color planes (only 0 or 1 are supported). */
    uint16_t color_planes;
+   /*! \brief Number of bits per pixel (only =<8 are supported). */
    uint16_t bpp;
+   /*! \brief Type of compression used. */
    uint32_t compression;
+   /*! \brief Size of pixel data in bytes. */
    uint32_t img_sz;
+   /*! \brief Horizontal resolution in pixels per inch (unsupported). */
    uint32_t hres;
+   /*! \brief Vertical resolution in pixels per inch (unsupported). */
    uint32_t vres;
+   /*! \brief Number of palette colors in this bitmap (<256 supported). */
    uint32_t palette_ncolors;
+   /*! \bried Number of important colors (unsupported). */
    uint32_t imp_colors;
 };
 
+/*! \} */ /* maug_fmt_bmp */
+
+/**
+ * \brief Callback to decode compressed data.
+ * \param p_file_in Pointer to file to read compressed data from.
+ * \param file_offset Number of bytes into p_file where data starts.
+ * \param file_sz Number of bytes of compressed data in p_file.
+ * \param buffer_out Unlocked handle to write uncompressed data to.
+ * \param buffer_out_sz Maximum number of bytes buffer_out can hold.
+ * \param flags Additional flags for compression options.
+ */
 typedef MERROR_RETVAL (*mfmt_decode)(
    mfile_t* p_file_in, size_t file_offset, size_t file_sz,
    MAUG_MHANDLE buffer_out, size_t buffer_out_sz, uint8_t flags );
 
+/**
+ * \brief Callback to read image header and get properties.
+ */
 typedef MERROR_RETVAL (*mfmt_read_header_cb)(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
    uint32_t file_offset, size_t file_sz );
 
+/**
+ * \brief Callback to read image palette into 24-bit RGB values.
+ */
 typedef MERROR_RETVAL (*mfmt_read_palette_cb)(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
 
+/**
+ * \brief Callback to read image pixels into 8-bit values.
+ */
 typedef MERROR_RETVAL (*mfmt_read_px_cb)(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
@@ -127,17 +191,21 @@ MERROR_RETVAL mfmt_read_bmp_header(
       retval = MERROR_FILE;
       goto cleanup;
    }
-   debug_printf( 2, "bitmap header is %u bytes", file_hdr_sz );
+   debug_printf(
+      MFMT_TRACE_BMP_LVL, "bitmap header is %u bytes", file_hdr_sz );
 
    /* Read bitmap image dimensions. */
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->width),
-      file_offset + 4 );
+      file_offset + MFMT_BMPINFO_OFS_WIDTH );
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->height),
-      file_offset + 8 );
+      file_offset + MFMT_BMPINFO_OFS_HEIGHT );
+
+   mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->img_sz),
+      file_offset + MFMT_BMPINFO_OFS_SZ );
 
    /* Check that we're a palettized image. */
    mfile_u16read_lsbf_at( p_file_in, &(header_bmp_info->bpp),
-      file_offset + 14 );
+      file_offset + MFMT_BMPINFO_OFS_BPP );
    if( 8 < header_bmp_info->bpp ) {
       error_printf( "invalid bitmap bpp: %u", header_bmp_info->bpp );
       retval = MERROR_FILE;
@@ -146,7 +214,8 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    /* Make sure there's no weird compression. */
    mfile_u32read_lsbf_at( p_file_in,
-      &(header_bmp_info->compression), file_offset + 16 );
+      &(header_bmp_info->compression),
+      file_offset + MFMT_BMPINFO_OFS_COMPRESSION );
    if( 
       MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression &&
       MFMT_BMP_COMPRESSION_RLE4 != header_bmp_info->compression
@@ -158,7 +227,8 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    mfile_u32read_lsbf_at( p_file_in,
-      &(header_bmp_info->palette_ncolors), file_offset + 32 );
+      &(header_bmp_info->palette_ncolors),
+      file_offset + MFMT_BMPINFO_OFS_PAL_SZ );
 
    debug_printf( 2, "bitmap is " UPRINTF_S32_FMT " x " UPRINTF_S32_FMT
       ", %u bpp (palette has " UPRINTF_U32_FMT " colors)",
@@ -194,7 +264,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
       }
       mfile_u32read_lsbf_at( p_file_in, &(palette[i]),
          file_offset + (i * 4) );
-      debug_printf( 1,
+      debug_printf( MFMT_TRACE_BMP_LVL,
          "set palette entry " SIZE_T_FMT " to " UPRINTF_X32_FMT,
          i, palette[i] );
    }
@@ -264,7 +334,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, decomp_buffer_h );
 
       retval = mfmt_decode_rle(
-         p_file_in, file_offset, file_sz,
+         p_file_in, file_offset, header_bmp_info->img_sz,
          decomp_buffer_h, header_bmp_info->width * header_bmp_info->height,
          MFMT_DECOMP_FLAG_4BIT );
       maug_cleanup_if_not_ok();
@@ -282,7 +352,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
 
-      debug_printf( 1,
+      debug_printf( MFMT_TRACE_BMP_LVL,
          "bmp: byte_idx %u (" SIZE_T_FMT 
          "), bit %u (%u), row %d, col %d (%u)",
          byte_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
@@ -366,6 +436,8 @@ cleanup:
 }
 
 #endif /* MFMT_C */
+
+/*! \} */ /* maug_fmt */
 
 #endif /* !MFMT_H */
 
