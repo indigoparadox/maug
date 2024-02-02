@@ -182,7 +182,31 @@ MERROR_RETVAL mfmt_read_bmp_px(
       retval = MERROR_FILE;
       goto cleanup;
    }
+
+   if( 0 == header_bmp_info->height ) {
+      error_printf( "bitmap height is 0!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
  
+   if( 0 == header_bmp_info->width ) {
+      error_printf( "bitmap width is 0!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   if( 0 == header_bmp_info->bpp ) {
+      error_printf( "bitmap BPP is 0!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   if( 8 < header_bmp_info->bpp ) {
+      error_printf( ">8BPP bitmaps not supported!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
    /* TODO: Handle upside-down? */
    y = header_bmp_info->height - 1;
    while( header_bmp_info->height > y ) {
@@ -190,9 +214,16 @@ MERROR_RETVAL mfmt_read_bmp_px(
       pixel_buffer = 0;
 
       debug_printf( 0, "bmp: byte_idx %u, bit %u (%u), row %d, col %d (%u)",
-         byte_idx, bit_idx, header_bmp_info->bpp, y, x, (y * header_bmp_info->width) + x );
+         byte_idx, bit_idx, header_bmp_info->bpp, y, x,
+         (y * header_bmp_info->width) + x );
 
       if( 0 == bit_idx ) {
+         if( byte_idx >= file_sz ) {
+            error_printf( "input bitmap has insufficient size!" );
+            retval = MERROR_OVERFLOW;
+            goto cleanup;
+         }
+
          /* Move on to a new byte. */
          mfile_cread_at(
             p_file_in, &(byte_buffer), file_offset + byte_idx );
@@ -208,9 +239,6 @@ MERROR_RETVAL mfmt_read_bmp_px(
             byte_mask |= 0x80;
          }
       }
-
-      /* TODO: Bounds checking! */
-      /* assert( (y * sz_x) + x < (buf_sz * (8 / grid->bpp)) ); */
 
       /* Use the byte mask to place the bits for this pixel in the
        * pixel buffer.
