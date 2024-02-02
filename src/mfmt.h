@@ -16,6 +16,10 @@
 #define MFMT_BMPINFO_OFS_IMP_COLORS 36
 
 #define MFMT_BMP_COMPRESSION_NONE (0)
+#define MFMT_BMP_COMPRESSION_RLE4 (2)
+
+#define MFMT_DECOMP_FLAG_4BIT 0x01
+#define MFMT_DECOMP_FLAG_8BIT 0x02
 
 struct MFMT_STRUCT {
    uint32_t sz;
@@ -35,6 +39,10 @@ struct MFMT_STRUCT_BMPINFO {
    uint32_t imp_colors;
 };
 
+typedef MERROR_RETVAL (*mfmt_decode)(
+   mfile_t* p_file_in, size_t file_offset, size_t file_sz,
+   MAUG_MHANDLE buffer_out, size_t buffer_out_sz, uint8_t flags );
+
 typedef MERROR_RETVAL (*mfmt_read_header_cb)(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
    uint32_t file_offset, size_t file_sz );
@@ -47,6 +55,10 @@ typedef MERROR_RETVAL (*mfmt_read_px_cb)(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
 
+MERROR_RETVAL mfmt_decode_rle(
+   mfile_t* p_file_in, size_t file_offset, size_t file_sz,
+   MAUG_MHANDLE buffer_out, size_t buffer_out_sz, uint8_t flags );
+
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
    uint32_t file_offset, size_t file_sz );
@@ -55,11 +67,40 @@ MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
 
+/**
+ * \brief Read \ref mfmt_bitmap pixels into an 8-bit memory bitmap.
+ */
 MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
 
 #ifdef MFMT_C
+
+MERROR_RETVAL mfmt_decode_rle(
+   mfile_t* p_file_in, size_t file_offset, size_t file_sz,
+   MAUG_MHANDLE buffer_out_h, size_t buffer_out_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t* buffer_out = NULL;
+   size_t in_byte_cur = 0,
+      out_byte_cur = 0;
+   uint8_t in_bit_cur = 0,
+      out_bit_cur = 0;
+
+   debug_printf( 1, "decompressing RLE into temporary buffer..." );
+
+   maug_mlock( buffer_out_h, buffer_out );
+
+   /* TODO */
+
+/* cleanup: */
+
+   if( NULL != buffer_out ) {
+      maug_munlock( buffer_out_h, buffer_out );
+   }
+   
+   return retval;
+}
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
@@ -106,7 +147,10 @@ MERROR_RETVAL mfmt_read_bmp_header(
    /* Make sure there's no weird compression. */
    mfile_u32read_lsbf_at( p_file_in,
       &(header_bmp_info->compression), file_offset + 16 );
-   if( MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression ) {
+   if( 
+      MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression &&
+      MFMT_BMP_COMPRESSION_RLE4 != header_bmp_info->compression
+   ) {
       error_printf( "invalid bitmap compression: %u",
          header_bmp_info->compression );
       retval = MERROR_FILE;
@@ -174,6 +218,9 @@ MERROR_RETVAL mfmt_read_bmp_px(
    uint8_t byte_buffer = 0,
       byte_mask = 0,
       pixel_buffer = 0;
+   MAUG_MHANDLE decomp_buffer_h = (MAUG_MHANDLE)NULL;
+   mfile_t file_decomp;
+   mfile_t *p_file_bmp = p_file_in;
 
    if( 40 == header->sz ) {
       header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header;
@@ -207,6 +254,27 @@ MERROR_RETVAL mfmt_read_bmp_px(
       goto cleanup;
    }
 
+   if( MFMT_BMP_COMPRESSION_RLE4 == header_bmp_info->compression ) {
+      debug_printf( 1, "allocating decompression buffer..." );
+
+      /* Create a temporary memory buffer and decompress into it. */
+      decomp_buffer_h = maug_malloc(
+         header_bmp_info->width, header_bmp_info->height );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, decomp_buffer_h );
+
+      retval = mfmt_decode_rle(
+         p_file_in, file_offset, file_sz,
+         decomp_buffer_h, header_bmp_info->width * header_bmp_info->height,
+         MFMT_DECOMP_FLAG_4BIT );
+      maug_cleanup_if_not_ok();
+
+      retval = mfile_lock_buffer( decomp_buffer_h, &file_decomp );
+      maug_cleanup_if_not_ok();
+
+      /* Switch out the file used below for the decomp buffer mfile_t. */
+      p_file_bmp = &file_decomp;
+   }
+
    /* TODO: Handle upside-down? */
    y = header_bmp_info->height - 1;
    while( header_bmp_info->height > y ) {
@@ -226,7 +294,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
          /* Move on to a new byte. */
          mfile_cread_at(
-            p_file_in, &(byte_buffer), file_offset + byte_idx );
+            p_file_bmp, &(byte_buffer), file_offset + byte_idx );
          byte_idx++;
 
          /* Start at 8 bits from the right (0 from the left). */
@@ -279,6 +347,14 @@ MERROR_RETVAL mfmt_read_bmp_px(
    }
 
 cleanup:
+
+   mfile_close( &file_decomp );
+   /* decomp_buffer_h = file_decomp.h.mem; */
+
+   if( NULL != decomp_buffer_h ) {
+      debug_printf( 1, "freeing decomp buffer %p...", decomp_buffer_h );
+      maug_mfree( decomp_buffer_h );
+   }
 
    return retval;
 }
