@@ -12,50 +12,123 @@
  * \file mfile.h
  */
 
-/* TODO: open_cread: return a handle and reach chars via macro by offset. */
+#define MFILE_CADDY_TYPE_FILE_READ 0x01
+
+#define MFILE_CADDY_TYPE_MEM_BUFFER 0x80
+
+union MFILE_HANDLE {
+   FILE* file;
+   MAUG_MHANDLE mem;
+};
 
 struct MFILE_CADDY {
-   FILE* handle;
+   uint8_t type;
+   union MFILE_HANDLE h;
    size_t sz;
+   size_t mem_cursor;
+   uint8_t* mem_buffer;
 };
 
 typedef struct MFILE_CADDY mfile_t;
 
-#define mfile_has_bytes( p_file ) (ftell( (p_file)->handle ) < (p_file)->sz)
+#define mfile_default_case( p_file ) \
+   default: \
+      error_printf( "unknown file type: %d", (p_file)->type ); \
+      break;
 
-#define mfile_cread( p_file, p_c ) fread( p_c, 1, 1, (p_file)->handle )
+#define mfile_has_bytes( p_file ) \
+   ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
+      ftell( (p_file)->h.file ) : \
+      (p_file)->mem_cursor) < (p_file)->sz)
 
-#define mfile_cread_at( p_file, p_c, idx ) fseek( (p_file)->handle, idx, SEEK_SET ); fread( p_c, 1, 1, (p_file)->handle )
+#define mfile_cread( p_file, p_c ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fread( p_c, 1, 1, (p_file)->h.file ); \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
-#define mfile_u16read_at( p_file, p_u16, idx ) fseek( (p_file)->handle, idx, SEEK_SET ); fread( p_u16, 1, 2, (p_file)->handle )
+#define mfile_cread_at( p_file, p_c, idx ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      fread( p_c, 1, 1, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      *p_c = (p_file)->mem_buffer[idx]; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
+
+#define mfile_u16read_at( p_file, p_u16, idx ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->h.file ); \
+      fread( ((uint8_t*)p_u16), 1, 1, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx]; \
+      ((uint8_t*)(p_u16))[1] = (p_file)->mem_buffer[idx + 1]; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
 #define mfile_u16read_lsbf_at( p_file, p_u16, idx ) \
-   fseek( (p_file)->handle, idx, SEEK_SET ); \
-   fread( p_u16, 1, 2, (p_file)->handle );
-
-#if 0
-   fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->handle ); \
-   fread( ((uint8_t*)p_u16), 1, 1, (p_file)->handle );
-#endif
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      fread( p_u16, 1, 2, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx + 1]; \
+      ((uint8_t*)(p_u16))[1] = (p_file)->mem_buffer[idx]; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
 #define mfile_u32read_at( p_file, p_u32, idx ) \
-   fseek( (p_file)->handle, idx, SEEK_SET ); \
-   fread( p_u32, 1, 4, (p_file)->handle )
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->h.file ); \
+      fread( (((uint8_t*)p_u32) + 2), 1, 1, (p_file)->h.file ); \
+      fread( (((uint8_t*)p_u32) + 1), 1, 1, (p_file)->h.file ); \
+      fread( ((uint8_t*)p_u32), 1, 1, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_u32))[0] = (p_file)->mem_buffer[idx]; \
+      ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[idx + 1]; \
+      ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[idx + 2]; \
+      ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[idx + 3]; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
 #define mfile_u32read_lsbf_at( p_file, p_u32, idx ) \
-   fseek( (p_file)->handle, idx, SEEK_SET ); \
-   fread( p_u32, 1, 4, (p_file)->handle ); \
-
-#if 0
-   fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->handle ); \
-   fread( (((uint8_t*)p_u32) + 2), 1, 1, (p_file)->handle ); \
-   fread( (((uint8_t*)p_u32) + 1), 1, 1, (p_file)->handle ); \
-   fread( ((uint8_t*)p_u32), 1, 1, (p_file)->handle );
-#endif
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      fread( p_u32, 1, 4, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[idx]; \
+      ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[idx + 1]; \
+      ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[idx + 2]; \
+      ((uint8_t*)(p_u32))[0] = (p_file)->mem_buffer[idx + 3]; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
-#define mfile_reset( p_file ) fseek( (p_file)->handle, 0, SEEK_SET )
+#define mfile_reset( p_file ) fseek( (p_file)->h.file, 0, SEEK_SET )
+
+/**
+ * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
+ */
+MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE, mfile_t* p_file );
 
 /**
  * \brief Open a file and read it into memory or memory-map it.
@@ -78,6 +151,19 @@ void mfile_close( mfile_t* p_file );
 #else
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
+
+MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE handle, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "locking handle %p as file %p...",
+      handle, p_file );
+
+   maug_mzero( p_file, sizeof( mfile_t ) );
+   maug_mlock( handle, p_file->mem_buffer );
+   p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
+
+   return retval;
+}
 
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -113,19 +199,21 @@ cleanup:
 
 #  else
 
-   p_file->handle = fopen( filename, "rb" );
-   if( NULL == p_file->handle ) {
+   p_file->h.file = fopen( filename, "rb" );
+   if( NULL == p_file->h.file ) {
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
-   fseek( p_file->handle, 0, SEEK_END );
-   p_file->sz = ftell( p_file->handle );
-   fseek( p_file->handle, 0, SEEK_SET );
+   fseek( p_file->h.file, 0, SEEK_END );
+   p_file->sz = ftell( p_file->h.file );
+   fseek( p_file->h.file, 0, SEEK_SET );
 
    debug_printf( 1, "opened file %s (" SIZE_T_FMT " bytes)...",
       filename, p_file->sz );
+
+   p_file->type = MFILE_CADDY_TYPE_FILE_READ;
 
 /*
    *p_bytes_ptr_h = maug_malloc( 1, *p_bytes_sz );
@@ -165,7 +253,21 @@ void mfile_close( mfile_t* p_file ) {
    munmap( bytes_ptr_h, bytes_sz );
 #  else
    /* maug_mfree( bytes_ptr_h ); */
-   fclose( p_file->handle );
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE_READ:
+      fclose( p_file->h.file );
+      break;
+
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      if( NULL != p_file->mem_buffer ) {
+         maug_munlock( p_file->h.mem, p_file->mem_buffer );
+         debug_printf( 1, "unlocked handle %p from file %p...",
+            p_file->h.mem, p_file );
+      }
+      break;
+      
+   mfile_default_case( p_file );
+   }
 #  endif /* MFILE_MMAP */
 }
 
