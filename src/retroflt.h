@@ -5168,19 +5168,17 @@ MERROR_RETVAL retroflat_load_bitmap(
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
-   FILE* bmp_file = NULL;
-   uint8_t* bmp_buffer = NULL;
-   size_t bmp_buffer_sz = 0,
-      bmp_buffer_read = 0;
-   MAUG_MHANDLE bmp_buffer_h = (MAUG_MHANDLE)NULL;
-   uint32_t bmp_in_offset = 0,
-      bmp_color = 0,
-      bmp_in_sz = 0;
+   mfile_t bmp_file;
+   struct MFMT_STRUCT_BMPINFO header_bmp_info;
+   MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
+   uint32_t bmp_color = 0;
    uint32_t* bmp_palette = NULL;
+   MAUG_MHANDLE bmp_px_h = (MAUG_MHANDLE)NULL;
+   uint8_t* bmp_px = NULL;
+   size_t bmp_px_sz = 0;
    uint8_t bmp_r = 0,
       bmp_g = 0,
       bmp_b = 0,
-      bmp_in_bpp = 0,
       bmp_color_idx = 0;
    size_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
@@ -5209,54 +5207,51 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   /* TODO: Create new RGBA texture. */
+   retval = mfile_open_read( filename_path, &bmp_file );
+   maug_cleanup_if_not_ok();
 
-   bmp_file = fopen( filename_path, "rb" );
-   maug_cleanup_if_null_alloc( FILE*, bmp_file );
+   /* TODO: mfmt file detection system. */
+   header_bmp_info.sz = 40;
 
-   fseek( bmp_file, 0, SEEK_END );
-   bmp_buffer_sz = ftell( bmp_file );
-   fseek( bmp_file, 0, SEEK_SET );
+   retval = mfmt_read_bmp_header(
+      (struct MFMT_STRUCT*)&header_bmp_info,
+      &bmp_file, 14, mfile_get_sz( &bmp_file ) - 14 );
+   maug_cleanup_if_not_ok();
 
-   bmp_buffer_h = maug_malloc( bmp_buffer_sz, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_buffer_h );
-
-   maug_mlock( bmp_buffer_h, bmp_buffer );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_buffer );
-
-   bmp_buffer_read = fread( bmp_buffer, 1, bmp_buffer_sz, bmp_file );
-   if( bmp_buffer_read < bmp_buffer_sz ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Could not read bitmap file!" );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   /* Offsets hardcoded based on windows bitmap. */
-
-   /* TODO: Support other bitmap formats? */
-   if( 40 != retroflat_read_lsbf_32( bmp_buffer, 0x0e ) ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Unable to determine texture bitmap format: %d", bmp_buffer[0x0e] );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-
-   /* TODO: Setup bitmap header. */
-   bmp_in_offset = retroflat_read_lsbf_32( bmp_buffer, 0x0a );
-   bmp_out->tex.w = retroflat_read_lsbf_32( bmp_buffer, 0x12 );
-   bmp_out->tex.h = retroflat_read_lsbf_32( bmp_buffer, 0x16 );
+   /* Setup bitmap options from header. */
+   bmp_out->tex.w = header_bmp_info.width;
+   bmp_out->tex.h = header_bmp_info.height;
    bmp_out->tex.sz = bmp_out->tex.w * bmp_out->tex.h * 4;
-   bmp_in_sz = bmp_buffer_sz - bmp_in_offset;
    bmp_out->tex.bpp = 24;
-   bmp_in_bpp = retroflat_read_lsbf_16( bmp_buffer, 0x1c );
-   if( 24 != bmp_in_bpp && 8 != bmp_in_bpp ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Invalid texture bitmap depth: %d", bmp_in_bpp );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-   bmp_palette = (uint32_t*)&(bmp_buffer[54]); /* Just after the header. */
+
+   /* Allocate a space for the bitmap palette. */
+   bmp_palette_h = maug_malloc( 4, header_bmp_info.palette_ncolors );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_palette_h );
+
+   maug_mlock( bmp_palette_h, bmp_palette );
+   maug_cleanup_if_null_alloc( uint32_t*, bmp_palette );
+
+   retval = mfmt_read_bmp_palette( 
+      (struct MFMT_STRUCT*)&header_bmp_info,
+      bmp_palette, 4 * header_bmp_info.palette_ncolors,
+      &bmp_file, 54, mfile_get_sz( &bmp_file ) - 54 );
+   maug_cleanup_if_not_ok();
+
+   /* Allocate a space for the bitmap pixels. */
+   bmp_px_sz = header_bmp_info.width * header_bmp_info.height;
+   bmp_px_h = maug_malloc( 1, bmp_px_sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_px_h );
+
+   maug_mlock( bmp_px_h, bmp_px );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
+
+   retval = mfmt_read_bmp_px( 
+      (struct MFMT_STRUCT*)&header_bmp_info,
+      bmp_px, bmp_px_sz,
+      &bmp_file, 54 + (4 * header_bmp_info.palette_ncolors),
+      mfile_get_sz( &bmp_file ) - 54 -
+         (4 * header_bmp_info.palette_ncolors) );
+   maug_cleanup_if_not_ok();
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
@@ -5267,30 +5262,15 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
 
-   /* 24-bit is 3-bytes per pixel. */
-   if( 24 == bmp_in_bpp ) {
-      bmp_in_sz /= 3;
-   }
+   /* Unpack palletized bitmap into BGRA with color key. */
+   for( i = 0 ; bmp_px_sz > i ; i++ ) {
+      /* Grab the color from the palette by index. */
+      bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
+      bmp_color = bmp_palette[bmp_color_idx];
+      bmp_r = (bmp_color >> 16) & 0xff;
+      bmp_g = (bmp_color >> 8) & 0xff;
+      bmp_b = bmp_color & 0xff;
 
-   /* TODO: Work perpix bitmap loader in here and handle non-div-by-4
-    *       dimensions!
-    */
-
-   /* Unpack bitmap BGR into BGRA with color key. */
-   for( i = 0 ; bmp_in_sz > i ; i++ ) {
-      if( 24 == bmp_in_bpp ) {
-         /* Grab the color from the buffer directly. */
-         bmp_r = bmp_buffer[bmp_in_offset + (i * 3) + 2];
-         bmp_g = bmp_buffer[bmp_in_offset + (i * 3) + 1];
-         bmp_b = bmp_buffer[bmp_in_offset + (i * 3)];
-      } else if( 8 == bmp_in_bpp ) {
-         /* Grab the color from the palette by index. */
-         bmp_color_idx = bmp_buffer[bmp_in_offset + i];
-         bmp_color = bmp_palette[bmp_color_idx];
-         bmp_r = (bmp_color >> 16) & 0xff;
-         bmp_g = (bmp_color >> 8) & 0xff;
-         bmp_b = bmp_color & 0xff;
-      }
       bmp_out->tex.bytes[i * 4] = bmp_r;
       bmp_out->tex.bytes[(i * 4) + 1] = bmp_g;
       bmp_out->tex.bytes[(i * 4) + 2] = bmp_b;
@@ -5320,17 +5300,23 @@ cleanup:
       maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
    }
 
-   if( NULL != bmp_buffer ) {
-      maug_munlock( bmp_buffer_h, bmp_buffer );
+   if( NULL != bmp_px ) {
+      maug_munlock( bmp_px_h, bmp_px );
    }
 
-   if( (MAUG_MHANDLE)NULL != bmp_buffer_h ) {
-      maug_mfree( bmp_buffer_h );
+   if( NULL != bmp_px_h ) {
+      maug_mfree( bmp_px_h );
    }
 
-   if( NULL != bmp_file ) {
-      fclose( bmp_file );
+   if( NULL != bmp_palette ) {
+      maug_munlock( bmp_palette_h, bmp_palette );
    }
+
+   if( NULL != bmp_palette_h ) {
+      maug_mfree( bmp_palette_h );
+   }
+
+   mfile_close( &bmp_file );
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
