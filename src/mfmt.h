@@ -490,7 +490,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
    uint32_t x = 0,
       y = 0,
       i = 0,
-      byte_idx = 0,
+      byte_in_idx = 0,
+      byte_out_idx = 0,
       bit_idx = 0;
    uint8_t byte_buffer = 0,
       byte_mask = 0,
@@ -563,15 +564,15 @@ MERROR_RETVAL mfmt_read_bmp_px(
       pixel_buffer = 0;
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "bmp: byte_idx " UPRINTF_U32_FMT " (" SIZE_T_FMT 
+         "bmp: byte_in_idx " UPRINTF_U32_FMT " (" SIZE_T_FMT 
             "), bit " UPRINTF_U32_FMT " (%u), row " UPRINTF_U32_FMT
             ", col " UPRINTF_U32_FMT " ("
             UPRINTF_U32_FMT ")",
-         byte_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
+         byte_in_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
          (y * header_bmp_info->width) + x );
 
       if( 0 == bit_idx ) {
-         if( byte_idx >= file_sz ) {
+         if( byte_in_idx >= file_sz ) {
             /* TODO: Figure out why ICO parser messes up size. */
             error_printf(
                "input bitmap has insufficient size " SIZE_T_FMT " bytes)!",
@@ -582,8 +583,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
          /* Move on to a new byte. */
          mfile_cread_at(
-            p_file_bmp, &(byte_buffer), file_offset + byte_idx );
-         byte_idx++;
+            p_file_bmp, &(byte_buffer), file_offset + byte_in_idx );
+         byte_in_idx++;
 
          /* Start at 8 bits from the right (0 from the left). */
          bit_idx = 8;
@@ -613,7 +614,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
          byte_mask, bit_idx, pixel_buffer );
 
       /* Place the pixel buffer at the X/Y in the grid. */
-      px[(y * header_bmp_info->width) + x] = pixel_buffer;
+      px[byte_out_idx] = pixel_buffer;
+      byte_out_idx++;
 
       /* Increment the bits position byte mask by the bpp so it's pointing
        * to the next pixel in the bitmap for the next go around.
@@ -625,11 +627,13 @@ MERROR_RETVAL mfmt_read_bmp_px(
       /* Move to the next pixel. */
       x++;
       if( x >= header_bmp_info->width ) {
+         assert( 0 == byte_out_idx % 4 );
+
          /* Move to the next row. */
          y--;
          x = 0;
-         while( byte_idx % 4 != 0 ) {
-            byte_idx++;
+         while( byte_in_idx % 4 != 0 ) {
+            byte_in_idx++;
          }
          /* Get past the padding. */
       }
