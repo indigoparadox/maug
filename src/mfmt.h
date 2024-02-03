@@ -557,8 +557,12 @@ MERROR_RETVAL mfmt_read_bmp_px(
       p_file_bmp = &file_decomp;
    }
 
+   /* TODO: Handle padding for non-conforming images. */
+   assert( 0 == header_bmp_info->width % 4 );
+
    /* TODO: Handle upside-down? */
    y = header_bmp_info->height - 1;
+   byte_out_idx = px_sz - header_bmp_info->height;
    while( header_bmp_info->height > y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
@@ -570,6 +574,9 @@ MERROR_RETVAL mfmt_read_bmp_px(
             UPRINTF_U32_FMT ")",
          byte_in_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
          (y * header_bmp_info->width) + x );
+
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "byte_out_idx: " UPRINTF_U32_FMT, byte_out_idx );
 
       if( 0 == bit_idx ) {
          if( byte_in_idx >= file_sz ) {
@@ -627,7 +634,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
       /* Move to the next pixel. */
       x++;
       if( x >= header_bmp_info->width ) {
-         assert( 0 == byte_out_idx % 4 );
+         /* assert( 0 == byte_out_idx % 4 ); */
 
          /* Move to the next row. */
          y--;
@@ -635,7 +642,11 @@ MERROR_RETVAL mfmt_read_bmp_px(
          while( byte_in_idx % 4 != 0 ) {
             byte_in_idx++;
          }
-         /* Get past the padding. */
+
+         byte_out_idx = 
+            ((y) * header_bmp_info->width);
+
+         /* TODO Get past the padding. */
       }
    }
 
