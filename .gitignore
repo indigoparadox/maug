@@ -1,3 +1,5 @@
 doc
 *.bak
 $DSync*
+mcheck
+obj
