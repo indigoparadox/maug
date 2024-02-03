@@ -148,14 +148,137 @@ MERROR_RETVAL mfmt_decode_rle(
    uint8_t* buffer_out = NULL;
    size_t in_byte_cur = 0,
       out_byte_cur = 0;
-   uint8_t in_bit_cur = 0,
-      out_bit_cur = 0;
+   uint8_t out_mask_cur = 0xf0,
+      run_char = 0,
+      run_count = 0,
+      decode_state = 0,
+      unpadded_written = 0,
+      line_written = 0,
+      byte_buffer = 0;
+
+   #define MFMT_RLE_DECODE_RUN         0
+   #define MFMT_RLE_DECODE_CHAR        1
+   #define MFMT_RLE_DECODE_ABS_RIGHT   2
+   #define MFMT_RLE_DECODE_ABS_DOWN    3
+   #define MFMT_RLE_DECODE_ESC         4
+   #define MFMT_RLE_DECODE_LITERAL     5
+
+   #define mfmt_decode_rle_state( new_state ) \
+      debug_printf( 1, "new state: %s", #new_state ); \
+      decode_state = new_state;
+
+   #define mfmt_decode_rle_advance_mask() \
+      out_mask_cur >>= 4; \
+      if( 0 == out_mask_cur ) { \
+         out_byte_cur++; \
+         buffer_out[out_byte_cur] = 0; \
+         out_mask_cur = 0xf0; \
+      }
 
    debug_printf( 1, "decompressing RLE into temporary buffer..." );
 
    maug_mlock( buffer_out_h, buffer_out );
 
    /* TODO */
+   do {
+      mfile_cread_at(
+         p_file_in, &(byte_buffer), file_offset + in_byte_cur++ );
+      debug_printf( 1, "processing byte " SIZE_T_FMT ": 0x%02x",
+         in_byte_cur, byte_buffer );
+
+      switch( byte_buffer ) {
+      case 0:
+         if( MFMT_RLE_DECODE_RUN == decode_state ) {
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_ESC );
+            break;
+         } else if( MFMT_RLE_DECODE_ESC == decode_state ) {
+            debug_printf( 1, "EOL: %u bytes written", line_written );
+            line_written = 0;
+            /* TODO: EOL */
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
+            break;
+         }
+
+      case 1:
+         if( MFMT_RLE_DECODE_ESC == decode_state ) {
+            debug_printf( 1, "EOBM" );
+            /* TODO: EOBM */
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
+            break;
+         }
+
+      case 2:
+         if( MFMT_RLE_DECODE_ESC == decode_state ) {
+            debug_printf( 1, "absolute mode: right" );
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_ABS_RIGHT );
+            break;
+         }
+
+      default:
+         switch( decode_state ) {
+         case MFMT_RLE_DECODE_LITERAL:
+            /* TODO */
+            if( 0 < run_count ) {
+               run_count -= 2;
+               unpadded_written += 2;
+               line_written += 2;
+               debug_printf( 1, "writing literal: 0x%02x (%u left)",
+                  byte_buffer, run_count );
+               buffer_out[out_byte_cur++] = byte_buffer;
+            } else {
+               if( 0 == unpadded_written % 4 ) {
+                  debug_printf( 1, "unpadded: %u", unpadded_written );
+                  assert( 0 == byte_buffer );
+                  unpadded_written += 2;
+               } else {
+                  /* Pad to word-size/16-bits. */
+                  mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
+               }
+            }
+            break;
+
+         case MFMT_RLE_DECODE_ESC:
+            run_count = byte_buffer;
+            unpadded_written = 0;
+            debug_printf( 1, "literal mode: %u nibbles", run_count );
+            assert( 0 == run_count % 2 );
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_LITERAL );
+            break;
+
+         case MFMT_RLE_DECODE_ABS_RIGHT:
+            debug_printf( 1, "absolute mode: up" );
+            /* TODO */
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_ABS_DOWN );
+            break;
+
+         case MFMT_RLE_DECODE_RUN:
+            run_count = byte_buffer;
+            debug_printf( 1, "starting run: %u nibbles", run_count );
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_CHAR );
+            break;
+
+         case MFMT_RLE_DECODE_CHAR:
+            assert( 0 != run_count );
+            run_char = byte_buffer;
+            debug_printf( 1,
+               "%u-long run of 0x%02x...", run_count, run_char );
+            do {
+               debug_printf( 1, "writing 0x%02x & 0x%02x #%u...",
+                  run_char, out_mask_cur, run_count );
+               buffer_out[out_byte_cur] |= (run_char & out_mask_cur);
+               mfmt_decode_rle_advance_mask();
+               line_written++;
+               run_count--;
+            } while( 0 < run_count );
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
+            break;
+
+         }
+         break;
+      }
+   } while( in_byte_cur < file_sz );
+
+   debug_printf( 1, "wrote " SIZE_T_FMT " bytes", out_byte_cur );
 
 /* cleanup: */
 
