@@ -157,7 +157,7 @@ MERROR_RETVAL mfmt_decode_rle(
       run_count = 0,
       decode_state = 0,
       unpadded_written = 0,
-      line_written = 0,
+      line_px_written = 0,
       lines_out = 0,
       byte_buffer = 0;
 
@@ -176,10 +176,10 @@ MERROR_RETVAL mfmt_decode_rle(
       decode_state = new_state;
 
    #define mfmt_decode_rle_check_eol() \
-      if( line_written >= line_w ) { \
+      if( line_px_written >= line_w ) { \
          debug_printf( MFMT_TRACE_RLE_LVL, \
             "EOL: %u px written (between runs)", \
-            line_written ); \
+            line_px_written ); \
          mfmt_decode_rle_reset_line(); \
       }
 
@@ -197,15 +197,15 @@ MERROR_RETVAL mfmt_decode_rle(
       }
 
    #define mfmt_decode_rle_reset_line() \
-      assert( line_w == line_written ); \
-      line_written = 0; \
+      assert( line_w == line_px_written ); \
+      line_px_written = 0; \
       out_mask_cur = 0xf0; \
       lines_out++; \
       debug_printf( MFMT_TRACE_RLE_LVL, "now on line: %u", lines_out );
 
    #define mfmt_decode_rle_inc_line_w( incr ) \
-      line_written += incr; \
-      assert( line_w >= line_written );
+      line_px_written += incr; \
+      assert( line_w >= line_px_written );
 
    debug_printf( 1, "decompressing RLE into temporary buffer..." );
 
@@ -215,8 +215,8 @@ MERROR_RETVAL mfmt_decode_rle(
       mfile_cread_at(
          p_file_in, &(byte_buffer), file_offset + in_byte_cur++ );
       debug_printf( MFMT_TRACE_RLE_LVL, "in byte " SIZE_T_FMT
-         ": 0x%02x, out byte " SIZE_T_FMT ", line byte: %u",
-         in_byte_cur, byte_buffer, out_byte_cur, line_written );
+         ": 0x%02x, out byte " SIZE_T_FMT ", line px: %u",
+         in_byte_cur, byte_buffer, out_byte_cur, line_px_written );
       
       switch( byte_buffer ) {
       case 0:
@@ -233,14 +233,14 @@ MERROR_RETVAL mfmt_decode_rle(
          } else if( MFMT_RLE_DECODE_ESC == decode_state ) {
             /* This is an EOL marker. */
             debug_printf( MFMT_TRACE_RLE_LVL,
-               "EOL: %u px written", line_written );
-            while( line_written < line_w ) {
+               "EOL: %u px written", line_px_written );
+            while( line_px_written < line_w ) {
                /* Pad out the end of the line. */
-               assert( 0 == line_written % 2 );
+               assert( 0 == line_px_written % 2 );
                buffer_out[out_byte_cur++] = 0x00;
                mfmt_decode_rle_inc_line_w( 2 );
                debug_printf( MFMT_TRACE_RLE_LVL,
-                  "padded line (%u written)", line_written );
+                  "padded line (%u written)", line_px_written );
             }
             mfmt_decode_rle_reset_line();
 
@@ -256,12 +256,12 @@ MERROR_RETVAL mfmt_decode_rle(
 
             while( out_byte_cur < buffer_out_sz ) {
                /* Pad out the end of the line. */
-               assert( 0 == line_written % 2 );
+               assert( 0 == line_px_written % 2 );
                mfmt_decode_rle_check_eol();
                buffer_out[out_byte_cur++] = 0x00;
                mfmt_decode_rle_inc_line_w( 2 );
                debug_printf( MFMT_TRACE_RLE_LVL,
-                  "padded file (%u written)", line_written );
+                  "padded file (%u written)", line_px_written );
             }
 
             mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
@@ -294,11 +294,12 @@ MERROR_RETVAL mfmt_decode_rle(
             if( 0 == run_count ) {
                if( 0 != unpadded_written % 4 ) {
                   /* Uneven number of literals copied. */
+                  /* Ignore the byte, as it's a pad to word-size/16-bits. */
                   debug_printf( MFMT_TRACE_RLE_LVL,
-                     "unpadded: %u", unpadded_written );
+                     "unpadded: %u, next is pad byte", unpadded_written );
+                  /* assert( 0 == byte_buffer ); */
                   mfmt_decode_rle_state( MFMT_RLE_DECODE_LITERAL_PAD );
                } else {
-                  /* Ignore the byte, as it's a pad to word-size/16-bits. */
 
                   /* Diversion over, go back to hunting for runs. */
                   mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
@@ -340,8 +341,8 @@ MERROR_RETVAL mfmt_decode_rle(
             do {
                /* Expand the run into the prescribed number of nibbles. */
                debug_printf( MFMT_TRACE_RLE_LVL,
-                  "writing 0x%02x & 0x%02x #%u...",
-                  run_char, out_mask_cur, run_count );
+                  "writing 0x%02x & 0x%02x #%u (line px #%u)...",
+                  run_char, out_mask_cur, run_count, line_px_written );
                buffer_out[out_byte_cur] |= (run_char & out_mask_cur);
                mfmt_decode_rle_advance_mask();
                mfmt_decode_rle_inc_line_w( 1 );
