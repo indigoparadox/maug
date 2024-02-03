@@ -499,6 +499,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
    mfile_t file_decomp;
    mfile_t *p_file_bmp = p_file_in;
 
+   /* Check header for validation and info on how to decode pixels. */
+
    if( 40 == header->sz ) {
       header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header;
    } else {
@@ -605,7 +607,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
           * minus 1 * bpp.
           */
          (bit_idx - header_bmp_info->bpp);
-      debug_printf( 0,
+      debug_printf( MFMT_TRACE_BMP_LVL,
          "byte_mask: 0x%02x, bit_idx: " UPRINTF_U32_FMT
             ", pixel_buffer: 0x%02x",
          byte_mask, bit_idx, pixel_buffer );
