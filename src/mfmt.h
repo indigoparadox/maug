@@ -216,11 +216,6 @@ MERROR_RETVAL mfmt_decode_rle(
          ": 0x%02x, out byte " SIZE_T_FMT ", line byte: %u",
          in_byte_cur, byte_buffer, out_byte_cur, line_written );
       
-      if( out_byte_cur > 492 ) {
-         /* XXX */
-         return 0;
-      }
-
       switch( byte_buffer ) {
       case 0:
          if( MFMT_RLE_DECODE_RUN == decode_state ) {
