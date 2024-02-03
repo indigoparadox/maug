@@ -183,6 +183,7 @@ MERROR_RETVAL mfmt_decode_rle(
          mfmt_decode_rle_reset_line(); \
       }
 
+   /* Flip between odd/even nibble as advanced. */
    #define mfmt_decode_rle_advance_mask() \
       out_mask_cur >>= 4; \
       if( 0 == out_mask_cur ) { \
@@ -198,6 +199,7 @@ MERROR_RETVAL mfmt_decode_rle(
    #define mfmt_decode_rle_reset_line() \
       assert( line_w == line_written ); \
       line_written = 0; \
+      out_mask_cur = 0xf0; \
       lines_out++; \
       debug_printf( MFMT_TRACE_RLE_LVL, "now on line: %u", lines_out );
 
@@ -229,7 +231,7 @@ MERROR_RETVAL mfmt_decode_rle(
             break;
 
          } else if( MFMT_RLE_DECODE_ESC == decode_state ) {
-            /* This is an EOL market. */
+            /* This is an EOL marker. */
             debug_printf( MFMT_TRACE_RLE_LVL,
                "EOL: %u px written", line_written );
             while( line_written < line_w ) {
@@ -250,7 +252,18 @@ MERROR_RETVAL mfmt_decode_rle(
       case 1:
          if( MFMT_RLE_DECODE_ESC == decode_state ) {
             debug_printf( MFMT_TRACE_RLE_LVL, "EOBM" );
-            /* TODO: EOBM */
+            /* End of bitmap, so pad the rest of the file. */
+
+            while( out_byte_cur < buffer_out_sz ) {
+               /* Pad out the end of the line. */
+               assert( 0 == line_written % 2 );
+               mfmt_decode_rle_check_eol();
+               buffer_out[out_byte_cur++] = 0x00;
+               mfmt_decode_rle_inc_line_w( 2 );
+               debug_printf( MFMT_TRACE_RLE_LVL,
+                  "padded file (%u written)", line_written );
+            }
+
             mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
             break;
          }
@@ -258,6 +271,7 @@ MERROR_RETVAL mfmt_decode_rle(
       case 2:
          if( MFMT_RLE_DECODE_ESC == decode_state ) {
             debug_printf( MFMT_TRACE_RLE_LVL, "absolute mode: right" );
+            /* TODO: Absolute mode. */
             assert( 1 == 0 );
             mfmt_decode_rle_state( MFMT_RLE_DECODE_ABS_RIGHT );
             break;
@@ -303,7 +317,7 @@ MERROR_RETVAL mfmt_decode_rle(
 
          case MFMT_RLE_DECODE_ABS_RIGHT:
             debug_printf( MFMT_TRACE_RLE_LVL, "absolute mode: up" );
-            /* TODO */
+            /* TODO: Absolute mode. */
             assert( 1 == 0 );
             mfmt_decode_rle_state( MFMT_RLE_DECODE_ABS_DOWN );
             break;
@@ -324,6 +338,7 @@ MERROR_RETVAL mfmt_decode_rle(
             debug_printf( MFMT_TRACE_RLE_LVL,
                "%u-long run of 0x%02x...", run_count, run_char );
             do {
+               /* Expand the run into the prescribed number of nibbles. */
                debug_printf( MFMT_TRACE_RLE_LVL,
                   "writing 0x%02x & 0x%02x #%u...",
                   run_char, out_mask_cur, run_count );
@@ -332,11 +347,6 @@ MERROR_RETVAL mfmt_decode_rle(
                mfmt_decode_rle_inc_line_w( 1 );
                run_count--;
 
-               /* if( line_written >= line_w ) {
-                  debug_printf( 1, "EOL: %u px written (mid-run)",
-                     line_written );
-                  mfmt_decode_rle_reset_line();
-               } */
             } while( 0 < run_count );
 
             /* Diversion over, go back to hunting for runs. */
