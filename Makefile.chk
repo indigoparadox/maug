@@ -5,7 +5,7 @@ CHECK_C_FILES := \
    check/check.c \
    check/chkmfmt.c
 
-CFLAGS_CHECK := -Isrc -DMAUG_OS_UNIX -DMAUG_NO_RETRO -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=1
+CFLAGS_CHECK := -Isrc -DMAUG_OS_UNIX -DMAUG_NO_RETRO -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=1 -DMFMT_TRACE_RLE_LVL=1
 
 mcheck: $(addprefix obj/,$(subst .c,.o,$(CHECK_C_FILES)))
 	$(CC) -o $@ $^ $(shell pkg-config --libs check)

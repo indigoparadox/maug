@@ -167,6 +167,7 @@ MERROR_RETVAL mfmt_decode_rle(
    #define MFMT_RLE_DECODE_ABS_DOWN    3
    #define MFMT_RLE_DECODE_ESC         4
    #define MFMT_RLE_DECODE_LITERAL     5
+   #define MFMT_RLE_DECODE_LITERAL_PAD 6
 
    assert( flags == MFMT_DECOMP_FLAG_4BIT );
 
@@ -214,11 +215,22 @@ MERROR_RETVAL mfmt_decode_rle(
       debug_printf( MFMT_TRACE_RLE_LVL, "in byte " SIZE_T_FMT
          ": 0x%02x, out byte " SIZE_T_FMT ", line byte: %u",
          in_byte_cur, byte_buffer, out_byte_cur, line_written );
+      
+      if( out_byte_cur > 492 ) {
+         /* XXX */
+         return 0;
+      }
 
       switch( byte_buffer ) {
       case 0:
          if( MFMT_RLE_DECODE_RUN == decode_state ) {
             mfmt_decode_rle_state( MFMT_RLE_DECODE_ESC );
+            break;
+
+         } else if( MFMT_RLE_DECODE_LITERAL_PAD == decode_state ) {
+            /* This is just a padding byte to make sure literals are %16. */
+            assert( 0 == byte_buffer );
+            mfmt_decode_rle_state( MFMT_RLE_DECODE_RUN );
             break;
 
          } else if( MFMT_RLE_DECODE_ESC == decode_state ) {
@@ -228,7 +240,7 @@ MERROR_RETVAL mfmt_decode_rle(
             while( line_written < line_w ) {
                /* Pad out the end of the line. */
                assert( 0 == line_written % 2 );
-               buffer_out[out_byte_cur++] = 0xff;
+               buffer_out[out_byte_cur++] = 0x00;
                mfmt_decode_rle_inc_line_w( 2 );
                debug_printf( MFMT_TRACE_RLE_LVL,
                   "padded line (%u written)", line_written );
@@ -262,20 +274,20 @@ MERROR_RETVAL mfmt_decode_rle(
 
             mfmt_decode_rle_check_eol();
 
-            if( 0 < run_count ) {
-               run_count -= 2;
-               unpadded_written += 2;
-               mfmt_decode_rle_inc_line_w( 2 );
-               debug_printf( MFMT_TRACE_RLE_LVL,
-                  "writing literal: 0x%02x (%u left)",
-                  byte_buffer, run_count );
-               buffer_out[out_byte_cur++] = byte_buffer;
-            } else {
-               if( 0 == unpadded_written % 4 ) {
+            run_count -= 2;
+            unpadded_written += 2;
+            mfmt_decode_rle_inc_line_w( 2 );
+            debug_printf( MFMT_TRACE_RLE_LVL,
+               "writing literal: 0x%02x (%u left, unpadded run val: %u)",
+               byte_buffer, run_count, unpadded_written );
+            buffer_out[out_byte_cur++] = byte_buffer;
+
+            if( 0 == run_count ) {
+               if( 0 != unpadded_written % 4 ) {
+                  /* Uneven number of literals copied. */
                   debug_printf( MFMT_TRACE_RLE_LVL,
                      "unpadded: %u", unpadded_written );
-                  /* assert( 0 == byte_buffer ); */
-                  unpadded_written += 2;
+                  mfmt_decode_rle_state( MFMT_RLE_DECODE_LITERAL_PAD );
                } else {
                   /* Ignore the byte, as it's a pad to word-size/16-bits. */
 
@@ -325,13 +337,11 @@ MERROR_RETVAL mfmt_decode_rle(
                mfmt_decode_rle_inc_line_w( 1 );
                run_count--;
 
-               /*
-               if( line_written > line_w ) {
+               /* if( line_written >= line_w ) {
                   debug_printf( 1, "EOL: %u px written (mid-run)",
                      line_written );
-                  line_written = 0;
-               }
-               */
+                  mfmt_decode_rle_reset_line();
+               } */
             } while( 0 < run_count );
 
             /* Diversion over, go back to hunting for runs. */
