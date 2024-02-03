@@ -392,12 +392,13 @@ MERROR_RETVAL mfmt_read_bmp_header(
    mfile_u32read_lsbf_at( p_file_in, &(file_hdr_sz),
       file_offset );
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
-      error_printf( "invalid header size: %u", file_hdr_sz );
+      error_printf( "invalid header size: " UPRINTF_U32_FMT, file_hdr_sz );
       retval = MERROR_FILE;
       goto cleanup;
    }
    debug_printf(
-      MFMT_TRACE_BMP_LVL, "bitmap header is %u bytes", file_hdr_sz );
+      MFMT_TRACE_BMP_LVL, "bitmap header is " UPRINTF_U32_FMT " bytes",
+      file_hdr_sz );
 
    /* Read bitmap image dimensions. */
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->width),
@@ -425,7 +426,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
       MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression &&
       MFMT_BMP_COMPRESSION_RLE4 != header_bmp_info->compression
    ) {
-      error_printf( "invalid bitmap compression: %u",
+      error_printf( "invalid bitmap compression: " UPRINTF_U32_FMT,
          header_bmp_info->compression );
       retval = MERROR_FILE;
       goto cleanup;
@@ -559,8 +560,10 @@ MERROR_RETVAL mfmt_read_bmp_px(
       pixel_buffer = 0;
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "bmp: byte_idx %u (" SIZE_T_FMT 
-         "), bit %u (%u), row %d, col %d (%u)",
+         "bmp: byte_idx " UPRINTF_U32_FMT " (" SIZE_T_FMT 
+            "), bit " UPRINTF_U32_FMT " (%u), row " UPRINTF_U32_FMT
+            ", col " UPRINTF_U32_FMT " ("
+            UPRINTF_U32_FMT ")",
          byte_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
          (y * header_bmp_info->width) + x );
 
@@ -602,7 +605,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
           */
          (bit_idx - header_bmp_info->bpp);
       debug_printf( 0,
-         "byte_mask: 0x%02x, bit_idx: %u, pixel_buffer: 0x%02x",
+         "byte_mask: 0x%02x, bit_idx: " UPRINTF_U32_FMT
+            ", pixel_buffer: 0x%02x",
          byte_mask, bit_idx, pixel_buffer );
 
       /* Place the pixel buffer at the X/Y in the grid. */
