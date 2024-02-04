@@ -48,11 +48,18 @@
 #endif /* MAUG_C */
 #include <mplug.h>
 
-#ifndef MAUG_NO_RETRO
 #ifdef MAUG_C
-#  define RETROFLT_C
+#  define MJSON_C
 #endif /* MAUG_C */
-#include <retroflt.h>
+
+#ifndef MAUG_NO_RETRO
+#  ifdef MAUG_C
+#     define RETROFLT_C
+#  endif /* MAUG_C */
+#  include <retroflt.h>
+#  ifdef MAUG_C
+#     define RETROTIL_C
+#  endif /* MAUG_C */
 #endif /* !MAUG_NO_RETRO */
 
 #endif /* MAUG_H */
