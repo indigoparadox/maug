@@ -152,9 +152,13 @@ MERROR_RETVAL retrotile_parse_json_file(
 
 /*! \} */ /* maug_tilemap_parser */
 
+typedef MERROR_RETVAL (*retrotile_gen_cb)(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data );
+
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
-   size_t layer_iter, void* data );
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data );
 
 struct RETROTILE_LAYER* retrotile_get_layer_p(
    struct RETROTILE* tilemap, uint32_t layer_idx );
@@ -711,7 +715,7 @@ cleanup:
 
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
-   size_t layer_idx, void* data
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data
 ) {
    int16_t iter_x = 0,
       iter_y = 0,
@@ -805,6 +809,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
          }
 
          /* Fill in missing corner. */
+         /* TODO: Peek off-sector and grab nearest corners if available. */
          avg = min_z + (rand() % (max_z - min_z));
          debug_printf( RETROTILE_TRACE_LVL, 
             "missing corner coord %d x %d: rand: %d",
@@ -812,7 +817,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
          
          assert( min_z <= avg );
 
-         *tile_iter = avg;
+         *tile_iter = avg / tuning;
 
          /* tiles[tile_idx].terrain = avg;
          tiles[tile_idx].z = avg / BLOCK_Z_DIVISOR; */
@@ -887,7 +892,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
             data_ds_sub.sect_x, data_ds_sub.sect_y, data_ds_sub.sect_w );
 
          retrotile_gen_diamond_square_iter(
-            t, min_z, max_z, layer_idx, &data_ds_sub );
+            t, min_z, max_z, tuning, layer_idx, flags, &data_ds_sub );
       }
    }
 
