@@ -671,7 +671,7 @@ MERROR_RETVAL retrotile_parse_json_file(
       }
 
       while( mfile_has_bytes( &buffer ) ) {
-         mfile_cread( &buffer, c );
+         mfile_cread( &buffer, &c );
          retval = mjson_parse_c( &(parser->jparser), c );
          if( MERROR_OK != retval ) {
             error_printf( "error parsing JSON!" );

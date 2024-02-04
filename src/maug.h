@@ -34,6 +34,16 @@
 #include <marge.h>
 
 #ifdef MAUG_C
+#  define MFILE_C
+#endif /* MAUG_C */
+#include <mfile.h>
+
+#ifdef MAUG_C
+#  define MFMT_C
+#endif /* MAUG_C */
+#include <mfmt.h>
+
+#ifdef MAUG_C
 #  define MPLUG_C
 #endif /* MAUG_C */
 #include <mplug.h>
