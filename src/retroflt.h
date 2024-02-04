@@ -5169,7 +5169,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    int retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
    mfile_t bmp_file;
-   struct MFMT_STRUCT_BMPINFO header_bmp_info;
+   struct MFMT_STRUCT_BMPFILE header_bmp;
    MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
    uint32_t bmp_color = 0;
    uint32_t* bmp_palette = NULL;
@@ -5212,34 +5212,36 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
 
    /* TODO: mfmt file detection system. */
-   header_bmp_info.sz = 40;
+   header_bmp.magic[0] = 'B';
+   header_bmp.magic[1] = 'M';
+   header_bmp.info.sz = 40;
 
    retval = mfmt_read_bmp_header(
-      (struct MFMT_STRUCT*)&header_bmp_info,
-      &bmp_file, 14, mfile_get_sz( &bmp_file ) - 14, &bmp_flags );
+      (struct MFMT_STRUCT*)&header_bmp,
+      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Setup bitmap options from header. */
-   bmp_out->tex.w = header_bmp_info.width;
-   bmp_out->tex.h = header_bmp_info.height;
+   bmp_out->tex.w = header_bmp.info.width;
+   bmp_out->tex.h = header_bmp.info.height;
    bmp_out->tex.sz = bmp_out->tex.w * bmp_out->tex.h * 4;
    bmp_out->tex.bpp = 24;
 
    /* Allocate a space for the bitmap palette. */
-   bmp_palette_h = maug_malloc( 4, header_bmp_info.palette_ncolors );
+   bmp_palette_h = maug_malloc( 4, header_bmp.info.palette_ncolors );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_palette_h );
 
    maug_mlock( bmp_palette_h, bmp_palette );
    maug_cleanup_if_null_alloc( uint32_t*, bmp_palette );
 
    retval = mfmt_read_bmp_palette( 
-      (struct MFMT_STRUCT*)&header_bmp_info,
-      bmp_palette, 4 * header_bmp_info.palette_ncolors,
-      &bmp_file, 54, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
+      (struct MFMT_STRUCT*)&header_bmp,
+      bmp_palette, 4 * header_bmp.info.palette_ncolors,
+      &bmp_file, 54 /* TODO */, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Allocate a space for the bitmap pixels. */
-   bmp_px_sz = header_bmp_info.width * header_bmp_info.height;
+   bmp_px_sz = header_bmp.info.width * header_bmp.info.height;
    bmp_px_h = maug_malloc( 1, bmp_px_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_px_h );
 
@@ -5247,11 +5249,10 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
 
    retval = mfmt_read_bmp_px( 
-      (struct MFMT_STRUCT*)&header_bmp_info,
+      (struct MFMT_STRUCT*)&header_bmp,
       bmp_px, bmp_px_sz,
-      &bmp_file, 54 + (4 * header_bmp_info.palette_ncolors),
-      mfile_get_sz( &bmp_file ) - 54 -
-         (4 * header_bmp_info.palette_ncolors), bmp_flags );
+      &bmp_file, header_bmp.px_offset,
+      mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Allocate buffer for unpacking. */
@@ -5267,7 +5268,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    for( i = 0 ; bmp_px_sz > i ; i++ ) {
       /* Grab the color from the palette by index. */
       bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
-      if( bmp_color_idx >= header_bmp_info.palette_ncolors ) {
+      if( bmp_color_idx >= header_bmp.info.palette_ncolors ) {
          error_printf(
             "invalid color at px " SIZE_T_FMT ": " UPRINTF_X32_FMT,
             bmp_px_sz - i - 1, bmp_color_idx );
