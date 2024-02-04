@@ -42,6 +42,8 @@
 #define MFMT_DECOMP_FLAG_4BIT 0x01
 #define MFMT_DECOMP_FLAG_8BIT 0x02
 
+#define MFMT_PX_FLAG_INVERT_Y 0x01
+
 #ifndef MFMT_TRACE_BMP_LVL
 #  define MFMT_TRACE_BMP_LVL 0
 #endif /* !MFMT_TRACE_BMP_LVL */
@@ -107,21 +109,23 @@ typedef MERROR_RETVAL (*mfmt_decode)(
  */
 typedef MERROR_RETVAL (*mfmt_read_header_cb)(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz );
+   uint32_t file_offset, size_t file_sz, uint8_t* p_flags );
 
 /**
  * \brief Callback to read image palette into 24-bit RGB values.
  */
 typedef MERROR_RETVAL (*mfmt_read_palette_cb)(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   uint8_t flags );
 
 /**
  * \brief Callback to read image pixels into 8-bit values.
  */
 typedef MERROR_RETVAL (*mfmt_read_px_cb)(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   uint8_t flags );
 
 MERROR_RETVAL mfmt_decode_rle(
    mfile_t* p_file_in, size_t file_offset, size_t file_sz, size_t line_w,
@@ -129,18 +133,20 @@ MERROR_RETVAL mfmt_decode_rle(
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz );
+   uint32_t file_offset, size_t file_sz, uint8_t* p_flags );
 
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   uint8_t flags );
 
 /**
  * \brief Read \ref mfmt_bitmap pixels into an 8-bit memory bitmap.
  */
 MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz );
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   uint8_t flags );
 
 #ifdef MFMT_C
 
@@ -374,7 +380,7 @@ MERROR_RETVAL mfmt_decode_rle(
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz
+   uint32_t file_offset, size_t file_sz, uint8_t* p_flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
@@ -406,6 +412,11 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + MFMT_BMPINFO_OFS_WIDTH );
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->height),
       file_offset + MFMT_BMPINFO_OFS_HEIGHT );
+   if( 0 > header_bmp_info->height ) {
+      debug_printf(
+         MFMT_TRACE_BMP_LVL, "bitmap Y coordinate is inverted..." );
+      *p_flags |= MFMT_PX_FLAG_INVERT_Y;
+   }
 
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->img_sz),
       file_offset + MFMT_BMPINFO_OFS_SZ );
@@ -449,7 +460,7 @@ cleanup:
 
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
@@ -483,7 +494,7 @@ cleanup:
 
 MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz
+   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
@@ -560,23 +571,24 @@ MERROR_RETVAL mfmt_read_bmp_px(
    /* TODO: Handle padding for non-conforming images. */
    assert( 0 == header_bmp_info->width % 4 );
 
-   /* TODO: Handle upside-down? */
+   #define mfmt_read_bmp_px_out_idx() \
+      (MFMT_PX_FLAG_INVERT_Y == (MFMT_PX_FLAG_INVERT_Y & flags) ? \
+      ((header_bmp_info->height - y - 1) * header_bmp_info->width) : \
+      ((y) * header_bmp_info->width))
+
    y = header_bmp_info->height - 1;
-   byte_out_idx = px_sz - header_bmp_info->height;
+   byte_out_idx = mfmt_read_bmp_px_out_idx();
    while( header_bmp_info->height > y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "bmp: byte_in_idx " UPRINTF_U32_FMT " (" SIZE_T_FMT 
-            "), bit " UPRINTF_U32_FMT " (%u), row " UPRINTF_U32_FMT
-            ", col " UPRINTF_U32_FMT " ("
-            UPRINTF_U32_FMT ")",
-         byte_in_idx, file_sz, bit_idx, header_bmp_info->bpp, y, x,
-         (y * header_bmp_info->width) + x );
+         "byte in: " UPRINTF_U32_FMT " (" SIZE_T_FMT 
+            "), bit " UPRINTF_U32_FMT ", y: " UPRINTF_U32_FMT
+            ", x: " UPRINTF_U32_FMT "), byte out: " UPRINTF_U32_FMT,
+         byte_in_idx, file_sz, bit_idx, y, x, byte_out_idx );
 
-      debug_printf( MFMT_TRACE_BMP_LVL,
-         "byte_out_idx: " UPRINTF_U32_FMT, byte_out_idx );
+      assert( byte_out_idx < px_sz );
 
       if( 0 == bit_idx ) {
          if( byte_in_idx >= file_sz ) {
@@ -636,17 +648,21 @@ MERROR_RETVAL mfmt_read_bmp_px(
       if( x >= header_bmp_info->width ) {
          /* assert( 0 == byte_out_idx % 4 ); */
 
-         /* Move to the next row. */
+         /* Move to the next row of the input. */
          y--;
          x = 0;
          while( byte_in_idx % 4 != 0 ) {
             byte_in_idx++;
          }
 
-         byte_out_idx = 
-            ((y) * header_bmp_info->width);
+         /* Move to the next row of the output. */
+         byte_out_idx = mfmt_read_bmp_px_out_idx();
 
          /* TODO Get past the padding. */
+
+         debug_printf( MFMT_TRACE_BMP_LVL,
+            "new row starting at byte_out_idx: " UPRINTF_U32_FMT,
+            byte_out_idx );
       }
    }
 

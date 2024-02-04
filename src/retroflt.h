@@ -5179,7 +5179,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    uint8_t bmp_r = 0,
       bmp_g = 0,
       bmp_b = 0,
-      bmp_color_idx = 0;
+      bmp_color_idx = 0,
+      bmp_flags = 0;
    size_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
@@ -5215,7 +5216,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    retval = mfmt_read_bmp_header(
       (struct MFMT_STRUCT*)&header_bmp_info,
-      &bmp_file, 14, mfile_get_sz( &bmp_file ) - 14 );
+      &bmp_file, 14, mfile_get_sz( &bmp_file ) - 14, &bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Setup bitmap options from header. */
@@ -5234,7 +5235,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    retval = mfmt_read_bmp_palette( 
       (struct MFMT_STRUCT*)&header_bmp_info,
       bmp_palette, 4 * header_bmp_info.palette_ncolors,
-      &bmp_file, 54, mfile_get_sz( &bmp_file ) - 54 );
+      &bmp_file, 54, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Allocate a space for the bitmap pixels. */
@@ -5250,7 +5251,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_px, bmp_px_sz,
       &bmp_file, 54 + (4 * header_bmp_info.palette_ncolors),
       mfile_get_sz( &bmp_file ) - 54 -
-         (4 * header_bmp_info.palette_ncolors) );
+         (4 * header_bmp_info.palette_ncolors), MFMT_PX_FLAG_INVERT_Y );
    maug_cleanup_if_not_ok();
 
    /* Allocate buffer for unpacking. */
@@ -5266,6 +5267,12 @@ MERROR_RETVAL retroflat_load_bitmap(
    for( i = 0 ; bmp_px_sz > i ; i++ ) {
       /* Grab the color from the palette by index. */
       bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
+      if( bmp_color_idx >= header_bmp_info.palette_ncolors ) {
+         error_printf(
+            "invalid color at px " SIZE_T_FMT ": " UPRINTF_X32_FMT,
+            bmp_px_sz - i - 1, bmp_color_idx );
+         continue;
+      }
       bmp_color = bmp_palette[bmp_color_idx];
       bmp_r = (bmp_color >> 16) & 0xff;
       bmp_g = (bmp_color >> 8) & 0xff;
