@@ -61,7 +61,9 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
    retval = mfmt_read_bmp_px(
       (struct MFMT_STRUCT*)&header_bmp_info,
       check_8bit_out, sizeof( gc_check_8bit ),
-      &check_4bit_file, 0, sizeof( gc_check_4bit ) );
+      &check_4bit_file, 0, sizeof( gc_check_4bit ),
+      /* Force inversion to match test case. */
+      MFMT_PX_FLAG_INVERT_Y );
 
    ck_assert_uint_eq( retval, MERROR_OK );
 
