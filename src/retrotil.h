@@ -79,6 +79,13 @@ struct RETROTILE {
    float tile_scale;
 };
 
+struct RETROTILE_DATA_DS {
+   retrotile_tile_t sect_x;
+   retrotile_tile_t sect_y;
+   retrotile_tile_t sect_w;
+   retrotile_tile_t sect_h;
+};
+
 #define retrotile_get_tile( tilemap, layer, x, y ) \
    (retrotile_get_tiles_p( layer )[(y * tilemap->tiles_w) + x])
 
@@ -144,6 +151,10 @@ MERROR_RETVAL retrotile_parse_json_file(
    MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count );
 
 /*! \} */ /* maug_tilemap_parser */
+
+MERROR_RETVAL retrotile_gen_diamond_square_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   size_t layer_iter, void* data );
 
 struct RETROTILE_LAYER* retrotile_get_layer_p(
    struct RETROTILE* tilemap, uint32_t layer_idx );
@@ -692,6 +703,198 @@ cleanup:
    if( NULL != parser_h ) {
       maug_mfree( parser_h );
    }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrotile_gen_diamond_square_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   size_t layer_idx, void* data
+) {
+   int16_t iter_x = 0,
+      iter_y = 0,
+      iter_depth = 0;
+   int16_t corners_x[2][2];
+   int16_t corners_y[2][2];
+   int32_t avg = 0;
+   /* size_t tile_idx = 0; */
+   struct RETROTILE_DATA_DS data_ds_sub;
+   MAUG_MHANDLE data_ds_h = NULL;
+   struct RETROTILE_DATA_DS* data_ds = NULL;
+   /* retrotile_tile_t* tiles = NULL; */
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROTILE_LAYER* layer = NULL;
+   retrotile_tile_t* tile_iter = NULL;
+
+   /*
+   maug_mlock( t->tiles, tiles );
+   maug_cleanup_if_null_alloc( struct GRIDCITY_TILE*, tiles );
+   */
+
+   layer = retrotile_get_layer_p( t, layer_idx );
+
+   if( NULL == data ) {
+      data_ds_h = maug_malloc( 1, sizeof( struct RETROTILE_DATA_DS ) );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_ds_h );
+      maug_mlock( data_ds_h, data_ds );
+      maug_cleanup_if_null_alloc( struct RETROTILE_DATA_DS*, data_ds );
+      maug_mzero( data_ds, sizeof( struct RETROTILE_DATA_DS ) );
+
+      memset( retrotile_get_tiles_p( layer ), -1,
+         t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) );
+
+      data_ds->sect_w = t->tiles_w;
+      data_ds->sect_h = t->tiles_h;
+   } else {
+      data_ds = (struct RETROTILE_DATA_DS*)data;
+   }
+   assert( NULL != data_ds );
+
+   /* Trivial case; end recursion. */
+   if( 0 == data_ds->sect_w ) {
+      debug_printf(
+         RETROTILE_TRACE_LVL, "%d return: null sector", iter_depth );
+      goto cleanup;
+   }
+
+   if(
+      data_ds->sect_x + data_ds->sect_w > t->tiles_w ||
+      data_ds->sect_y + data_ds->sect_h > t->tiles_h
+   ) {
+      debug_printf(
+         RETROTILE_TRACE_LVL, "%d return: overflow sector", iter_depth );
+      goto cleanup;
+   }
+
+   iter_depth = t->tiles_w / data_ds->sect_w;
+
+   /* Generate missing corner data. */
+   for( iter_y = 0 ; iter_y < 2 ; iter_y++ ) {
+      for( iter_x = 0 ; iter_x < 2 ; iter_x++ ) {
+
+         /* Make sure corner X is in bounds. */
+         corners_x[iter_x][iter_y] =
+            (data_ds->sect_x - 1) + (iter_x * data_ds->sect_w);
+         if( 0 > corners_x[iter_x][iter_y] ) {
+            corners_x[iter_x][iter_y] += 1;
+         }
+
+         /* Make sure corner Y is in bounds. */
+         corners_y[iter_x][iter_y] =
+            (data_ds->sect_y - 1) + (iter_y * data_ds->sect_h);
+         if( 0 > corners_y[iter_x][iter_y] ) {
+            corners_y[iter_x][iter_y] += 1;
+         }
+
+         tile_iter = &(retrotile_get_tile(
+            t, layer,
+            corners_x[iter_x][iter_y],
+            corners_y[iter_x][iter_y] ));
+
+         if( -1 != *tile_iter ) {
+            debug_printf(
+               RETROTILE_TRACE_LVL, "corner coord %d x %d present: %d",
+               corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
+               retrotile_get_tile(
+                  t, layer,
+                  corners_x[iter_x][iter_y],
+                  corners_y[iter_x][iter_y] ) );
+            continue;
+         }
+
+         /* Fill in missing corner. */
+         avg = min_z + (rand() % (max_z - min_z));
+         debug_printf( RETROTILE_TRACE_LVL, 
+            "missing corner coord %d x %d: rand: %d",
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y], avg );
+         
+         assert( min_z <= avg );
+
+         *tile_iter = avg;
+
+         /* tiles[tile_idx].terrain = avg;
+         tiles[tile_idx].z = avg / BLOCK_Z_DIVISOR; */
+      }
+   }
+
+   if( 2 == data_ds->sect_w && 2 == data_ds->sect_h ) {
+      /* Nothing to average, this sector is just corners! */
+      debug_printf(
+         RETROTILE_TRACE_LVL,
+         "%d return: reached innermost point", iter_depth );
+      goto cleanup;
+   }
+   
+   /* Average corner data. */
+   for( iter_y = 0 ; 2 > iter_y ; iter_y++ ) {
+      for( iter_x = 0 ; 2 > iter_x ; iter_x++ ) {
+         tile_iter = &(retrotile_get_tile(
+            t, layer,
+            corners_x[iter_x][iter_y],
+            corners_y[iter_x][iter_y] ));
+         assert( -1 != *tile_iter );
+         debug_printf(
+            RETROTILE_TRACE_LVL, "%d: adding from coords %d x %d: %d",
+            iter_depth,
+            corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
+            *tile_iter );
+         avg += *tile_iter;
+      }
+   }
+
+   avg /= 4;
+   debug_printf( RETROTILE_TRACE_LVL, "%d: avg: %d", iter_depth, avg );
+
+   tile_iter = &(retrotile_get_tile(
+      t, layer,
+      data_ds->sect_x + (data_ds->sect_w / 2),
+      data_ds->sect_y + (data_ds->sect_h / 2) ));
+   if( -1 != *tile_iter ) {
+      debug_printf( RETROTILE_TRACE_LVL, "avg already present at %d x %d!",
+         data_ds->sect_x + (data_ds->sect_w / 2),
+         data_ds->sect_y + (data_ds->sect_h / 2) );
+   }
+   *tile_iter = avg;
+
+   /* assert( 0 <= tiles[tile_idx].terrain );
+
+   maug_munlock( city->tiles, tiles );
+   tiles = NULL; */
+
+   /* Recurse into subsectors. */
+   for(
+      iter_y = data_ds->sect_y ;
+      iter_y < (data_ds->sect_y + data_ds->sect_h) ;
+      iter_y++
+   ) {
+      for(
+         iter_x = data_ds->sect_x ;
+         iter_x < (data_ds->sect_x + data_ds->sect_w) ;
+         iter_x++
+      ) {
+         data_ds_sub.sect_x = data_ds->sect_x + iter_x;
+
+         data_ds_sub.sect_y = data_ds->sect_y + iter_y;
+
+         data_ds_sub.sect_w = data_ds->sect_w / 2;
+         data_ds_sub.sect_h = data_ds->sect_h / 2;
+
+         debug_printf(
+            RETROTILE_TRACE_LVL, "%d: child sector at %d x %d, %d wide",
+            iter_depth,
+            data_ds_sub.sect_x, data_ds_sub.sect_y, data_ds_sub.sect_w );
+
+         retrotile_gen_diamond_square_iter(
+            t, min_z, max_z, layer_idx, &data_ds_sub );
+      }
+   }
+
+   debug_printf(
+      RETROTILE_TRACE_LVL, "%d return: all sectors complete", iter_depth );
+
+cleanup:
 
    return retval;
 }
