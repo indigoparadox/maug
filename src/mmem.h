@@ -15,6 +15,8 @@
 
 #elif defined( MAUG_OS_DOS_REAL )
 
+#include <stdlib.h> /* malloc() */
+
 typedef void* MAUG_MHANDLE;
 
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
