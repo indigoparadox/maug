@@ -5251,7 +5251,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_px, bmp_px_sz,
       &bmp_file, 54 + (4 * header_bmp_info.palette_ncolors),
       mfile_get_sz( &bmp_file ) - 54 -
-         (4 * header_bmp_info.palette_ncolors), MFMT_PX_FLAG_INVERT_Y );
+         (4 * header_bmp_info.palette_ncolors), bmp_flags );
    maug_cleanup_if_not_ok();
 
    /* Allocate buffer for unpacking. */
