@@ -87,7 +87,7 @@ struct RETROTILE_DATA_DS {
 };
 
 #define retrotile_get_tile( tilemap, layer, x, y ) \
-   (retrotile_get_tiles_p( layer )[(y * tilemap->tiles_w) + x])
+   (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
 
 #define retrotile_get_tiles_p( layer ) \
    ((retrotile_tile_t*)(((uint8_t*)(layer)) + \
@@ -157,6 +157,10 @@ typedef MERROR_RETVAL (*retrotile_gen_cb)(
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data );
 
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data );
+
+MERROR_RETVAL retrotile_gen_smooth_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data );
 
@@ -721,7 +725,7 @@ static retrotile_tile_t retrotile_gen_diamond_square_rand(
 
    if( 8 > rand() % 10 ) {
       /* avg = min_z + (rand() % (max_z - min_z)); */
-      avg -= (min_z / 20) + (rand() % (max_z / 20));
+      avg -= (min_z / tuning) + (rand() % (max_z / tuning));
    /* } else {
       avg += (min_z / 10) + (rand() % (max_z / 10)); */
    }
@@ -878,7 +882,6 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROTILE_LAYER* layer = NULL;
    retrotile_tile_t* tile_iter = NULL;
-   retrotile_tile_t highest_gen_tile = 0;
    uint8_t free_ds_data = 0;
 
    /*
@@ -993,6 +996,66 @@ cleanup:
 
    if( free_ds_data && NULL != data_ds_h ) {
       maug_mfree( data_ds_h );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrotile_gen_smooth_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int16_t x = 0,
+      y = 0,
+      side_iter = 0,
+      sides_avail = 0,
+      sides_sum = 0;
+   /* Sides start from 12 on the clock (up). */
+   MAUG_CONST int16_t c_sides_off_x[8] = {  0,  1, 1, 1, 0, -1, -1, -1 };
+   MAUG_CONST int16_t c_sides_off_y[8] = { -1, -1, 0, 1, 1,  1,  0, -1 };
+   struct RETROTILE_LAYER* layer = NULL;
+
+   assert( NULL != t );
+   layer = retrotile_get_layer_p( t, layer_idx );
+   assert( NULL != layer );
+   
+   for( y = 0 ; t->tiles_h > y ; y++ ) {
+      for( x = 0 ; t->tiles_w > x ; x++ ) {
+         /* Reset average. */
+         sides_avail = 0;
+         sides_sum = 0;
+
+         /* Grab values for available sides. */
+         for( side_iter = 0 ; 8 > side_iter ; side_iter++ ) {
+            if(
+               0 > x + c_sides_off_x[side_iter] ||
+               0 > y + c_sides_off_y[side_iter] ||
+               t->tiles_w <= x + c_sides_off_x[side_iter] ||
+               t->tiles_h <= y + c_sides_off_y[side_iter]
+            ) {
+               continue;
+            }
+
+            sides_avail++;
+            debug_printf( 1, "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
+               side_iter,
+               x + c_sides_off_x[side_iter],
+               c_sides_off_x[side_iter],
+               y + c_sides_off_y[side_iter],
+               c_sides_off_y[side_iter],
+               ((y + c_sides_off_y[side_iter]) * t->tiles_w) +
+                  x + c_sides_off_x[side_iter] );
+            sides_sum += retrotile_get_tile(
+               t, layer,
+               x + c_sides_off_x[side_iter],
+               y + c_sides_off_y[side_iter] );
+         }
+
+         retrotile_get_tile( t, layer, x, y ) = sides_sum / sides_avail;
+      }
    }
 
    return retval;
