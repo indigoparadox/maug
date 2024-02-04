@@ -63,6 +63,20 @@ struct MFMT_STRUCT {
  * \{
  */
 
+#define mfmt_bmp_check_header() \
+   if( 40 == header->sz ) { \
+      header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header; \
+   } else if( 0x4d42 == *((uint16_t*)header) ) { \
+      debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected" ); \
+      header_bmp_file = (struct MFMT_STRUCT_BMPFILE*)header; \
+      header_bmp_info = &(header_bmp_file->info); \
+   } else { \
+      error_printf( "unable to select read header!" ); \
+      retval = MERROR_FILE; \
+      goto cleanup; \
+   }
+
+
 /*! \brief BITMAPINFO struct that comes before Windows bitmap data. */
 struct MFMT_STRUCT_BMPINFO {
    /*! \brief Size of this struct in bytes (only 40 is supported). */
@@ -87,6 +101,15 @@ struct MFMT_STRUCT_BMPINFO {
    uint32_t palette_ncolors;
    /*! \bried Number of important colors (unsupported). */
    uint32_t imp_colors;
+};
+
+struct MFMT_STRUCT_BMPFILE {
+   char magic[2];
+   uint32_t file_sz;
+   uint16_t reserved1;
+   uint16_t reserved2;
+   uint32_t px_offset;
+   struct MFMT_STRUCT_BMPINFO info;
 };
 
 /*! \} */ /* maug_fmt_bmp */
@@ -384,20 +407,29 @@ MERROR_RETVAL mfmt_read_bmp_header(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
+   struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    uint32_t file_hdr_sz = 0;
+   size_t header_offset = 0;
 
-   /* TODO: Check header sz (file header or info header). */
-   if( 40 == header->sz ) {
-      header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header;
-   } else {
-      error_printf( "unable to select read header!" );
-      retval = MERROR_FILE;
-      goto cleanup;
+   mfmt_bmp_check_header();
+
+   if( NULL != header_bmp_file ) {
+      header_offset = 14; /* Size of info header. */
+
+      /* Grab file header info. */
+      mfile_u32read_lsbf_at( p_file_in, &(header_bmp_file->file_sz), 
+         file_offset + 2 );
+      mfile_u32read_lsbf_at( p_file_in, &(header_bmp_file->px_offset),
+         file_offset + 10 );
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "bitmap file " UPRINTF_U32_FMT " bytes long, px at "
+            UPRINTF_U32_FMT " bytes",
+         header_bmp_file->file_sz, header_bmp_file->px_offset );
    }
 
    /* Read the bitmap image header. */
    mfile_u32read_lsbf_at( p_file_in, &(file_hdr_sz),
-      file_offset );
+      file_offset + header_offset );
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
       error_printf( "invalid header size: " UPRINTF_U32_FMT, file_hdr_sz );
       retval = MERROR_FILE;
@@ -409,9 +441,9 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    /* Read bitmap image dimensions. */
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->width),
-      file_offset + MFMT_BMPINFO_OFS_WIDTH );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_WIDTH );
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->height),
-      file_offset + MFMT_BMPINFO_OFS_HEIGHT );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_HEIGHT );
    if( 0 > header_bmp_info->height ) {
       debug_printf(
          MFMT_TRACE_BMP_LVL, "bitmap Y coordinate is inverted..." );
@@ -419,11 +451,11 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->img_sz),
-      file_offset + MFMT_BMPINFO_OFS_SZ );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_SZ );
 
    /* Check that we're a palettized image. */
    mfile_u16read_lsbf_at( p_file_in, &(header_bmp_info->bpp),
-      file_offset + MFMT_BMPINFO_OFS_BPP );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_BPP );
    if( 8 < header_bmp_info->bpp ) {
       error_printf( "invalid bitmap bpp: %u", header_bmp_info->bpp );
       retval = MERROR_FILE;
@@ -433,7 +465,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
    /* Make sure there's no weird compression. */
    mfile_u32read_lsbf_at( p_file_in,
       &(header_bmp_info->compression),
-      file_offset + MFMT_BMPINFO_OFS_COMPRESSION );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_COMPRESSION );
    if( 
       MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression &&
       MFMT_BMP_COMPRESSION_RLE4 != header_bmp_info->compression
@@ -446,7 +478,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    mfile_u32read_lsbf_at( p_file_in,
       &(header_bmp_info->palette_ncolors),
-      file_offset + MFMT_BMPINFO_OFS_PAL_SZ );
+      file_offset + header_offset + MFMT_BMPINFO_OFS_PAL_SZ );
 
    debug_printf( 2, "bitmap is " UPRINTF_S32_FMT " x " UPRINTF_S32_FMT
       ", %u bpp (palette has " UPRINTF_U32_FMT " colors)",
@@ -464,15 +496,10 @@ MERROR_RETVAL mfmt_read_bmp_palette(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
+   struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    size_t i = 0;
 
-   if( 40 == header->sz ) {
-      header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header;
-   } else {
-      error_printf( "unable to select read header!" );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
+   mfmt_bmp_check_header();
  
    for( i = 0 ; header_bmp_info->palette_ncolors > i ; i++ ) {
       if( i * 4 > palette_sz ) {
@@ -498,6 +525,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
+   struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    uint32_t x = 0,
       y = 0,
       i = 0,
@@ -513,14 +541,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    /* Check header for validation and info on how to decode pixels. */
 
-   if( 40 == header->sz ) {
-      header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header;
-   } else {
-      error_printf( "unable to select read header!" );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
+   mfmt_bmp_check_header();
+  
    if( 0 == header_bmp_info->height ) {
       error_printf( "bitmap height is 0!" );
       retval = MERROR_FILE;
