@@ -1094,6 +1094,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    struct RETROTILE_LAYER* layer = NULL;
    int16_t spb = RETROTILE_VORONOI_DEFAULT_SPB;
    int16_t drift = RETROTILE_VORONOI_DEFAULT_DRIFT;
+   MAUG_MHANDLE temp_grid_h = (MAUG_MHANDLE)NULL;
    retrotile_tile_t* temp_grid = NULL;
    retrotile_tile_t* tiles = NULL;
    /* Only use 4 cardinal directions. */
@@ -1134,8 +1135,12 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
       }
    }
 
-   temp_grid = calloc(
+   temp_grid_h = maug_malloc(
       sizeof( retrotile_tile_t ), t->tiles_w * t->tiles_h );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, temp_grid_h );
+
+   maug_mlock( temp_grid_h, temp_grid );
+   maug_cleanup_if_null_alloc( retrotile_tile_t*, temp_grid );
 
    /* Grow the sector starting points. */
    while( !finished ) {
@@ -1197,6 +1202,14 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    }
 
 cleanup:
+
+   if( NULL != temp_grid ) {
+      maug_munlock( temp_grid_h, temp_grid );
+   }
+
+   if( NULL != temp_grid_h ) {
+      maug_mfree( temp_grid_h );
+   }
 
    return retval;
 }
