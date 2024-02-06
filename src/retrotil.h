@@ -106,14 +106,6 @@ struct RETROTILE_DATA_DS {
    int16_t sect_h_half;
 };
 
-/*! \brief Internal data structure used by retrotile_gen_voronoi_iter(). */
-struct RETROTILE_DATA_VORONOI {
-   /*! \brief Sector Per Blocks in the Voronoi algorithm. */
-   int16_t spb;
-   /*! \brief Sector starting offset drift. */
-   int16_t drift;
-};
-
 #define retrotile_get_tile( tilemap, layer, x, y ) \
    (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
 
@@ -1088,31 +1080,21 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
       offset_y = 0,
       finished = 0,
       pass_done = 0;
-   uint8_t alloc_internal = 0;
    MERROR_RETVAL retval = MERROR_OK;
-   MAUG_MHANDLE data_h = (MAUG_MHANDLE)NULL;
-   struct RETROTILE_DATA_VORONOI* data_v = NULL;
    struct RETROTILE_LAYER* layer = NULL;
-
-   if( NULL == data ) {
-      alloc_internal = 1;
-      data_h = maug_malloc( 1, sizeof( struct RETROTILE_DATA_VORONOI ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_h );
-      maug_mlock( data_h, data_v );
-      maug_cleanup_if_null_alloc( struct RETROTILE_DATA_VORONOI*, data_v );
-      data_v->spb = RETROTILE_VORONOI_DEFAULT_SPB;
-      data_v->drift = RETROTILE_VORONOI_DEFAULT_DRIFT;
-   } else {
-      data_v = (struct RETROTILE_DATA_VORONOI*)data;
-   }
+   int16_t spb = RETROTILE_VORONOI_DEFAULT_SPB;
+   int16_t drift = RETROTILE_VORONOI_DEFAULT_DRIFT;
 
    layer = retrotile_get_layer_p( t, 0 );
 
+   memset( retrotile_get_tiles_p( layer ), -1,
+      t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) );
+
    /* Generate the initial sector starting points. */
-   for( y = 0 ; t->tiles_w > y ; y += data_v->spb ) {
-      for( x = 0 ; t->tiles_w > x ; x += data_v->spb ) {
-         offset_x = x + ((data_v->drift * -1) + (rand() % data_v->drift));
-         offset_y = y + ((data_v->drift * -1) + (rand() % data_v->drift));
+   for( y = 0 ; t->tiles_w > y ; y += spb ) {
+      for( x = 0 ; t->tiles_w > x ; x += spb ) {
+         offset_x = x + ((drift * -1) + (rand() % drift));
+         offset_y = y + ((drift * -1) + (rand() % drift));
 
          /* Clamp sector offsets onto map borders. */
          if( 0 > offset_x ) {
@@ -1212,14 +1194,6 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    }
 
 cleanup:
-
-   if( alloc_internal && NULL == data_v ) {
-      maug_munlock( data_h, data_v );
-   }
-
-   if( alloc_internal && NULL == data_h ) {
-      maug_mfree( data_h );
-   }
 
    return retval;
 }
