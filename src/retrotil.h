@@ -100,6 +100,10 @@ struct RETROTILE_DATA_DS {
    int16_t sect_w;
    /*! \brief Height of subsector in a given iteration. */
    int16_t sect_h;
+   /*! \brief Half of the width of subsector in a given iteration. */
+   int16_t sect_w_half;
+   /*! \brief Half of the height of subsector in a given iteration. */
+   int16_t sect_h_half;
 };
 
 /*! \brief Internal data structure used by retrotile_gen_voronoi_iter(). */
@@ -963,6 +967,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
       data_ds->sect_w = t->tiles_w;
       data_ds->sect_h = t->tiles_h;
+      data_ds->sect_w_half = data_ds->sect_w >> 1;
+      data_ds->sect_h_half = data_ds->sect_h >> 1;
    } else {
       data_ds = (struct RETROTILE_DATA_DS*)data;
    }
@@ -986,31 +992,28 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
    iter_depth = t->tiles_w / data_ds->sect_w;
 
-   retval = animation_cb( animation_cb_data, iter_depth );
-   maug_cleanup_if_not_ok();
-
    /* Generate/grab corners before averaging them! */
    retrotile_gen_diamond_square_corners(
       corners_x, corners_y, min_z, max_z, tuning, data_ds, layer, t );
 
-   if( 2 == data_ds->sect_w && 2 == data_ds->sect_h ) {
+   if( 2 == data_ds->sect_w || 2 == data_ds->sect_h ) {
       /* Nothing to average, this sector is just corners! */
       debug_printf(
          RETROTILE_TRACE_LVL,
          "%d return: reached innermost point", iter_depth );
-      goto cleanup;
+      goto cleanup; /* Skip further descent regardless. */
    }
    
    avg = retrotile_gen_diamond_square_avg( corners_x, corners_y, t, layer );
 
    tile_iter = &(retrotile_get_tile(
       t, layer,
-      data_ds->sect_x + (data_ds->sect_w / 2),
-      data_ds->sect_y + (data_ds->sect_h / 2) ));
+      data_ds->sect_x + data_ds->sect_w_half,
+      data_ds->sect_y + data_ds->sect_h_half ));
    if( -1 != *tile_iter ) {
       debug_printf( RETROTILE_TRACE_LVL, "avg already present at %d x %d!",
-         data_ds->sect_x + (data_ds->sect_w / 2),
-         data_ds->sect_y + (data_ds->sect_h / 2) );
+         data_ds->sect_x + data_ds->sect_w_half,
+         data_ds->sect_y + data_ds->sect_h_half );
    }
    *tile_iter = avg;
 
@@ -1025,6 +1028,11 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       iter_y < (data_ds->sect_y + data_ds->sect_h) ;
       iter_y++
    ) {
+      if( 0 == iter_depth ) {
+         retval = animation_cb( animation_cb_data, iter_y );
+         maug_cleanup_if_not_ok();
+      }
+
       for(
          iter_x = data_ds->sect_x ;
          iter_x < (data_ds->sect_x + data_ds->sect_w) ;
@@ -1034,8 +1042,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
          data_ds_sub.sect_y = data_ds->sect_y + iter_y;
 
-         data_ds_sub.sect_w = data_ds->sect_w / 2;
-         data_ds_sub.sect_h = data_ds->sect_h / 2;
+         data_ds_sub.sect_w = data_ds->sect_w_half;
+         data_ds_sub.sect_h = data_ds->sect_h_half;
+         data_ds_sub.sect_w_half = data_ds_sub.sect_w >> 1;
+         data_ds_sub.sect_h_half = data_ds_sub.sect_h >> 1;
 
          debug_printf(
             RETROTILE_TRACE_LVL, "%d: child sector at %d x %d, %d wide",
@@ -1256,7 +1266,9 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
             }
 
             sides_avail++;
-            debug_printf( 1, "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
+            debug_printf(
+               RETROTILE_TRACE_LVL,
+               "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
                side_iter,
                x + c_sides_off_x[side_iter],
                c_sides_off_x[side_iter],
