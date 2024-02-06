@@ -188,6 +188,9 @@ typedef MERROR_RETVAL (*retrotile_gen_cb)(
 
 /**
  * \brief Generate tilemap terrain using diamond square algorithm.
+ *
+ * See retrotile_gen_cb() for details.
+ *
  * \warning This can be very slow!
  */
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
@@ -195,6 +198,14 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
+/**
+ * \brief Generate tilemap terrain using voronoi graph.
+ *
+ * See retrotile_gen_cb() for details.
+ *
+ * This is more suitable for purely 2D tilesets, as the changes between
+ * indexes are very abrupt!
+ */
 MERROR_RETVAL retrotile_gen_voronoi_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
@@ -1078,16 +1089,24 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
       y = 0,
       offset_x = 0,
       offset_y = 0,
-      finished = 0,
-      pass_done = 0;
+      finished = 0;
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROTILE_LAYER* layer = NULL;
    int16_t spb = RETROTILE_VORONOI_DEFAULT_SPB;
    int16_t drift = RETROTILE_VORONOI_DEFAULT_DRIFT;
+   retrotile_tile_t* temp_grid = NULL;
+   retrotile_tile_t* tiles = NULL;
+   /* Only use 4 cardinal directions. */
+   MAUG_CONST int16_t c_sides_off_x[4] = {  0, 1, 0, -1 };
+   MAUG_CONST int16_t c_sides_off_y[4] = { -1, 0, 1,  0 };
+   int8_t side_iter = 0;
 
    layer = retrotile_get_layer_p( t, 0 );
 
-   memset( retrotile_get_tiles_p( layer ), -1,
+   tiles = retrotile_get_tiles_p( layer );
+
+   /* Initialize grid to empty. */
+   memset( tiles, -1,
       t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) );
 
    /* Generate the initial sector starting points. */
@@ -1115,80 +1134,64 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
       }
    }
 
+   temp_grid = calloc(
+      sizeof( retrotile_tile_t ), t->tiles_w * t->tiles_h );
+
    /* Grow the sector starting points. */
    while( !finished ) {
       retval = animation_cb( animation_cb_data, -1 );
       maug_cleanup_if_not_ok();
+
+      /* Prepare sampling grid so we're working from unexpanded sections
+       * below.
+       */
+      memcpy(
+         temp_grid, tiles,
+         sizeof( retrotile_tile_t ) * t->tiles_w * t->tiles_h );
+
+      /* Starting another pass, assume finished until proven otherwise. */
       finished = 1;
       for( y = 0 ; t->tiles_h > y ; y++ ) {
-         pass_done = 0;
-         for( x = 0 ; t->tiles_w > x && !pass_done ; x++ ) {
-            if( -1 != retrotile_get_tile( t, layer, x, y ) ) {
+         for( x = 0 ; t->tiles_w > x ; x++ ) {
+            if( -1 == retrotile_get_tile( t, layer, x, y ) ) {
+               /* If there are still unfilled tiles, we're not finished
+                * yet!
+                */
+               finished = 0;
+
                /* Skip filled tile. */
                continue;
             }
 
-            /* This pass still did work, so not finished yet! */
-            finished = 0;
-            
-            if( /* y + 1 */
-               t->tiles_h - 1 > y && -1 != 
-                  retrotile_get_tile( t, layer, x, y + 1 )
-            ) {
-               retrotile_get_tile( t, layer, x, y ) =
-                  retrotile_get_tile( t, layer, x, y + 1 );
-            
-            } else if( /* x - 1 */
-               0 < x && -1 != retrotile_get_tile( t, layer, x - 1, y )
-            ) {
-               retrotile_get_tile( t, layer, x, y ) =
-                  retrotile_get_tile( t, layer, x - 1, y );
-            
-            } else if( /* x + 1 */
-               t->tiles_w - 1 > x && -1 != 
-                  retrotile_get_tile( t, layer, x + 1, y )
-            ) {
-               retrotile_get_tile( t, layer, x, y ) =
-                  retrotile_get_tile( t, layer, x + 1, y );
-            
-            } else if( /* y - 1 */
-               0 < y && -1 != retrotile_get_tile( t, layer, x, y - 1 )
-            ) {
-               retrotile_get_tile( t, layer, x, y ) =
-                  retrotile_get_tile( t, layer, x, y - 1 );
 
-#ifdef RETROGEN_VORONOI_DIAGONAL
-            } else if( /* y + 1, x + 1 */
-               t->tiles_w - 1 > x && t->tiles_h - 1 > y &&
-               -1 != map[((y + 1) * t->tiles_w) + (x + 1)]
-            ) {
-               map[(y * t->tiles_w) + x] = map[((y + 1) * t->tiles_w) + (x + 1)];
+            for( side_iter = 0 ; 4 > side_iter ; side_iter++ ) {
+               debug_printf( RETROTILE_TRACE_LVL,
+                  "%d (%d), %d (%d) (%d, %d)", 
+                  x,
+                  c_sides_off_x[side_iter],
+                  y,
+                  c_sides_off_y[side_iter],
+                  t->tiles_w, t->tiles_h );
             
-            } else if( /* y + 1, x - 1 */
-               0 < x && t->tiles_h - 1 > y &&
-               -1 != map[((y + 1) * t->tiles_w) + (x - 1)]
-            ) {
-               map[(y * t->tiles_w) + x] = map[((y + 1) * t->tiles_w) + (x - 1)];
-            
-            } else if( /* y - 1, x + 1 */
-               t->tiles_w - 1 > x && 0 < y &&
-               -1 != map[((y - 1) * t->tiles_w) + (x + 1)]
-            ) {
-               map[(y * t->tiles_w) + x] = map[((y - 1) * t->tiles_w) + (x + 1)];
-            
-            } else if( /* y - 1, x - 1 */
-               0 < x && 0 < y &&
-               -1 != map[((y - 1) * t->tiles_w) + (x - 1)]
-            ) {
-               map[(y * t->tiles_w) + x] = map[((y - 1) * t->tiles_w) + (x - 1)];
-#endif /* RETROGEN_VORONOI_DIAGONAL */
-
-            } else {
-               /* Nothing done, so skip pass_done below. */
-               continue;
+               /* Iterate through directions to expand. */
+               /* TODO: Add tuning to select directional probability. */
+               if(
+                  0 <= x + c_sides_off_x[side_iter] &&
+                  0 <= y + c_sides_off_y[side_iter] &&
+                  t->tiles_w > x + c_sides_off_x[side_iter] &&
+                  t->tiles_h > y + c_sides_off_y[side_iter] &&
+                  -1 == temp_grid[
+                     ((y + c_sides_off_y[side_iter]) * t->tiles_w) +
+                        (x + c_sides_off_x[side_iter])]
+               ) {
+                  /* Copy center tile to this direction. */
+                  retrotile_get_tile( t, layer,
+                     x + c_sides_off_x[side_iter],
+                     y + c_sides_off_y[side_iter] ) =
+                        retrotile_get_tile( t, layer, x, y );
+                  break;
+               }
             }
-
-            pass_done = 1;
          }
       }
    }
