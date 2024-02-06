@@ -23,6 +23,13 @@
 
 #include <mmem.h>
 
+#if defined( MAUG_OS_DOS_REAL )
+/* Undefine this here so the header can have its own object file from
+ * dosstubs.
+ */
+#  undef MAUG_C
+#endif /* MAUG_OS_DOS_REAL */
+
 #ifdef MAUG_C
 #  define UPRINTF_C
 #endif /* MAUG_C */

@@ -222,7 +222,7 @@ static void error_printf( const char* fmt, ... ) {
 #  define logging_init() g_log_file = platform_fopen( LOG_FILE_NAME, "w" );
 #  define logging_shutdown() platform_fclose( g_log_file );
 
-#  if defined( MAIN_C ) || defined( UPRINTF_C )
+#  if defined( UPRINTF_C )
 platform_file g_log_file = NULL;
 #  else
 extern platform_file g_log_file;

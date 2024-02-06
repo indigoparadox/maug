@@ -16,6 +16,8 @@ ifeq ("$(LDFLAGS_WATCOM_DOS)","")
 	LDFLAGS_WATCOM_DOS :=
 endif
 
+C_MAUG_STUBS := $(wildcard maug/dosstubs/*.c)
+
 # ---
 
 define TGTDOSALE
@@ -49,7 +51,7 @@ endef
 
 define TGTDOSBIOS
 
-ifeq ("$$(RETROFLAT_DOS_MEM_LARGE), "1")
+ifeq ("$$(RETROFLAT_DOS_MEM_LARGE)", "1")
    CFLAGS_WATCOM_DOS_BIOS_M := -ml -DRETROFLAT_DOS_MEM_L
 else
 	CFLAGS_WATCOM_DOS_BIOS_M := -mm
@@ -63,8 +65,8 @@ ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
 	LDFLAGS_WATCOM_DOS_BIOS := system dos option stack=8k
 endif
 
-$(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES)))
-	$$(LD_WATCOM) name $$@ \
+$(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS)))
+	$$(LD_WATCOM) name $$@ option dosseg \
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
 		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
 

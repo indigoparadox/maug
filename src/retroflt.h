@@ -1752,6 +1752,8 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
+#include <time.h> /* For srand() */
+
 typedef int16_t RETROFLAT_IN_KEY;
 typedef uint16_t RETROFLAT_MS;
 
@@ -4321,13 +4323,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == DOS PC_BIOS == */
 
+   srand( time( NULL ) );
+
    debug_printf( 3, "memory available before growth: %u", _memavl() );
 #     ifdef RETROFLAT_DOS_MEM_LARGE
    /* TODO: Should this check/init be in mmem.h instead? */
    _fheapgrow();
-#     else
-   _nheapgrow();
 #     endif /* RETROFLAT_DOS_MEM_LARGE */
+   _nheapgrow();
    debug_printf( 3, "memory available after growth: %u", _memavl() );
 
    /* Setup timer handler. */
@@ -4388,7 +4391,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       break;
 
    default:
-      error_printf( "unsupported video mode!" );
+      error_printf( "unsupported video mode: %d", args->screen_mode );
       retval = MERROR_GUI;
       goto cleanup;
    }

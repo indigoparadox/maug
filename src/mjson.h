@@ -66,6 +66,8 @@ struct MJSON_PARSER {
    parser->token_parser( \
       (parser)->token, (parser)->token_sz, (parser)->token_parser_arg )
 
+MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c );
+
 #ifdef MJSON_C
 
 #define MJSON_PSTATE_TABLE_CONST( name, idx ) \
