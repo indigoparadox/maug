@@ -6170,10 +6170,6 @@ cleanup:
          target_line_offset = ((d_y + y_iter) * (target->w)) + d_x;
          src_line_offset = ((s_y + y_iter) * src->w) + s_x;
          if( target->sz <= target_line_offset + w ) {
-            break;
-         }
-         if( target_line_offset > target_line_offset + w ) {
-            /* Negative overflow. */
             continue;
          }
          /* Blit the line. */
@@ -6384,6 +6380,9 @@ void retroflat_px(
 
    case RETROFLAT_SCREEN_MODE_VGA:
       screen_byte_offset = ((y * target->w) + x);
+      if( target->sz <= screen_byte_offset ) {
+         break;
+      }
       target->px[screen_byte_offset] = color_idx;
       break;
    }
