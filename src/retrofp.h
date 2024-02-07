@@ -20,7 +20,8 @@
  * \brief Given a lookup table, return the corresponding value after trimming
  *        precision and making sure number is valid.
  */
-int16_t retrofp_lut( const int16_t* lut, int16_t num, int16_t mult );
+int16_t retrofp_lut(
+   const int16_t* SEG_MCONST lut, int16_t num, int16_t mult );
 
 #define retrofp_sin( num, mult ) retrofp_lut( g_retrofp_sin, num, mult )
 
@@ -160,7 +161,9 @@ MAUG_CONST int16_t SEG_MCONST g_retrofp_sin[] = {
    -83,
 };
 
-int16_t retrofp_lut( const int16_t* lut, int16_t num, int16_t mult ) {
+int16_t retrofp_lut(
+   const int16_t* SEG_MCONST lut, int16_t num, int16_t mult
+) {
    int16_t cos_out;
    uint8_t neg = 0;
 
@@ -193,8 +196,8 @@ int16_t retrofp_lut( const int16_t* lut, int16_t num, int16_t mult ) {
 
 #else
 
-extern MAUG_CONST int16_t g_retrofp_cos[];
-extern MAUG_CONST int16_t g_retrofp_sin[];
+extern MAUG_CONST int16_t SEG_MCONST g_retrofp_cos[];
+extern MAUG_CONST int16_t SEG_MCONST g_retrofp_sin[];
 
 #endif /* RETROFP_C */
 
