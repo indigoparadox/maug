@@ -1823,7 +1823,7 @@ struct RETROFLAT_BITMAP {
    uint8_t flags;
    int16_t w;
    int16_t h;
-   MAUG_MHANDLE SEG_RETROBMP b_h;
+   uint8_t* px;
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -1896,11 +1896,6 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_RIGHT   -200
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
-
-#  ifdef RETROFLT_C
-static uint8_t far* g_retroflat_cga = (uint8_t far*)0xB8000000L;
-static uint8_t far* g_retroflat_vga = (uint8_t far*)0xA0000000L;
-#  endif /* RETROFLT_C */
 
 #else
 #  pragma message( "warning: not implemented" )
@@ -4393,6 +4388,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
       g_retroflat_state->screen_h = 200;
+      g_retroflat_state->buffer.px = (uint8_t far*)0xB8000000L;
+      g_retroflat_state->buffer.w = 320;
+      g_retroflat_state->buffer.h = 200;
       break;
 
    case RETROFLAT_SCREEN_MODE_VGA:
@@ -4401,6 +4399,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
       g_retroflat_state->screen_h = 200;
+      g_retroflat_state->buffer.px = (uint8_t far*)0xA0000000L;
+      g_retroflat_state->buffer.w = 320;
+      g_retroflat_state->buffer.h = 200;
       break;
 
    default:
@@ -5215,7 +5216,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    uint32_t bmp_color = 0;
    uint8_t bmp_flags = 0;
    size_t bmp_px_sz = 0;
-   uint8_t* SEG_RETROBMP bmp_px = NULL;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -5552,7 +5552,7 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   assert( NULL == bmp_out->b_h );
+   assert( NULL == bmp_out->px );
 
    retval = mfile_open_read( filename_path, &bmp_file );
    maug_cleanup_if_not_ok();
@@ -5580,16 +5580,16 @@ cleanup:
 #endif
 
    /* Allocate a space for the bitmap pixels. */
-   bmp_px_sz = header_bmp.info.width * header_bmp.info.height;
-   bmp_out->b_h = maug_malloc( 1, bmp_px_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->b_h );
-
-   maug_mlock( bmp_out->b_h, bmp_px );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
+   bmp_out->sz = header_bmp.info.width * header_bmp.info.height;
+   /* We're on PC BIOS... we don't need to lock pointers in this
+    * platform-specific code!
+    */
+   bmp_out->px = calloc( header_bmp.info.height, header_bmp.info.width );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
 
    retval = mfmt_read_bmp_px( 
       (struct MFMT_STRUCT*)&header_bmp,
-      bmp_px, bmp_px_sz,
+      bmp_out->px, bmp_out->sz,
       &bmp_file, header_bmp.px_offset,
       mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
@@ -5597,8 +5597,6 @@ cleanup:
    /* Allocate buffer for unpacking. */
 
 cleanup:
-
-   maug_munlock( bmp_out->b_h, bmp_px );
 
 #  else
 #     pragma message( "warning: load bitmap not implemented" )
@@ -5801,6 +5799,22 @@ cleanup:
 
 cleanup:
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   assert( NULL == bmp_out->px );
+
+   bmp_out->w = w;
+   bmp_out->h = h;
+
+   /* Allocate a space for the bitmap pixels. */
+   bmp_out->sz = w * h;
+   /* We're on PC BIOS... we don't need to lock pointers in this
+    * platform-specific code!
+    */
+   bmp_out->px = calloc( w, h );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
+
+cleanup:
 #  else
 #     pragma message( "warning: create bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -5996,8 +6010,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   if( NULL != bmp->b_h ) {
-      maug_mfree( bmp->b_h );
+   if( NULL != bmp->px ) {
+      free( bmp->px );
+      bmp->px = NULL;
    }
 
 #  else
@@ -6024,6 +6039,11 @@ void retroflat_blit_bitmap(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
+#  elif defined( RETROFLAT_API_PC_BIOS )
+   int16_t y_iter = 0;
+   uint8_t* __far target_line_offset = NULL;
+   uint8_t* __far src_line_offset = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifndef RETROFLAT_OPENGL
@@ -6131,6 +6151,27 @@ cleanup:
 
    if( locked_src_internal ) {
       retroflat_draw_release( src );
+   }
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   if( NULL == target ) {
+      target = &(g_retroflat_state->buffer);
+   }
+
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_CGA:
+      /* TODO: CGA bitmap blitting. */
+      break;
+
+   case RETROFLAT_SCREEN_MODE_VGA:
+      for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
+         target_line_offset =
+            &(target->px[(((d_y + y_iter) * target->w) + d_x)]);
+         src_line_offset = &(src->px[(((s_y + y_iter) * src->w) + s_x)]);
+         memcpy( target_line_offset, src_line_offset, w );
+      }
+      break;
    }
 
 #  else
@@ -6291,15 +6332,18 @@ void retroflat_px(
    /* == DOS PC_BIOS == */
 
    /* TODO: Determine if we're drawing on-screen or on a bitmap. */
+   if( NULL == target ) {
+      target = &(g_retroflat_state->buffer);
+   }
 
    switch( g_retroflat_state->screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
       /* Divide result by 4 since it's 2 bits per pixel. */
-      screen_byte_offset = (((y >> 1) * 320) + x) >> 2;
+      screen_byte_offset = (((y >> 1) * target->w) + x) >> 2;
       /* Shift the bits over by the remainder. */
       /* TODO: Factor out this modulo to shift/and. */
-      screen_bit_offset = 6 - (((((y >> 1) * 320) + x) % 4) << 1);
+      screen_bit_offset = 6 - (((((y >> 1) * target->w) + x) % 4) << 1);
 
       /* Dither colors on odd/even squares. */
       if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
@@ -6308,25 +6352,29 @@ void retroflat_px(
          color = g_retroflat_state->cga_dither_table[color_idx];
       }
 
-      if( y & 0x01 ) {
+      if( target != &(g_retroflat_state->buffer) ) {
+         /* TODO: Memory bitmap. */
+
+      } else if( y & 0x01 ) {
          /* 0x2000 = difference between even/odd CGA planes. */
-         g_retroflat_cga[0x2000 + screen_byte_offset] &=
+         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] &=
             /* 0x03 = 2-bit pixel mask. */
             ~(0x03 << screen_bit_offset);
-         g_retroflat_cga[0x2000 + screen_byte_offset] |= 
+         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] |= 
             ((color & 0x03) << screen_bit_offset);
       } else {
          /* 0x03 = 2-bit pixel mask. */
-         g_retroflat_cga[screen_byte_offset] &= ~(0x03 << screen_bit_offset);
-         g_retroflat_cga[screen_byte_offset] |=
+         g_retroflat_state->buffer.px[screen_byte_offset] &= 
+            ~(0x03 << screen_bit_offset);
+         g_retroflat_state->buffer.px[screen_byte_offset] |=
             /* 0x03 = 2-bit pixel mask. */
             ((color & 0x03) << screen_bit_offset);
       }
       break;
 
    case RETROFLAT_SCREEN_MODE_VGA:
-      screen_byte_offset = ((y * 320) + x);
-      g_retroflat_vga[screen_byte_offset] = color_idx;
+      screen_byte_offset = ((y * target->w) + x);
+      target->px[screen_byte_offset] = color_idx;
       break;
    }
 
