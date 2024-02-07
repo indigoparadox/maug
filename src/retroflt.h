@@ -1752,12 +1752,18 @@ struct RETROFLAT_BITMAP {
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
-#include <time.h> /* For srand() */
+#  include <time.h> /* For srand() */
+
+#  ifdef __WATCOMC__
+#     define SEG_RETROBMP __based( __segname( "RETROBMP" ) )
+#  else
+#     define SEG_RETROBMP
+#  endif /* __WATCOMC__ */
 
 typedef int16_t RETROFLAT_IN_KEY;
 typedef uint16_t RETROFLAT_MS;
 
-#define RETROFLAT_MS_FMT "%u"
+#  define RETROFLAT_MS_FMT "%u"
 
 /* Explicity screen sizes aren't supported, only screen modes handled in
  * special cases during init.
@@ -1813,7 +1819,9 @@ typedef uint8_t RETROFLAT_COLOR_DEF;
 struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
-   uint8_t* b;
+   int16_t w;
+   int16_t h;
+   MAUG_MHANDLE SEG_RETROBMP b_h;
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -2540,12 +2548,14 @@ struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
+#if 0
 #  define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       #name_u,
 
 MAUG_CONST char* gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
 };
+#endif
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 /* For now, these are set by WinMain(), so they need to be outside of the
@@ -4329,8 +4339,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_DOS_MEM_LARGE
    /* TODO: Should this check/init be in mmem.h instead? */
    _fheapgrow();
-#     endif /* RETROFLAT_DOS_MEM_LARGE */
+#  else
    _nheapgrow();
+#     endif /* RETROFLAT_DOS_MEM_LARGE */
    debug_printf( 3, "memory available after growth: %u", _memavl() );
 
    /* Setup timer handler. */
@@ -5195,6 +5206,15 @@ MERROR_RETVAL retroflat_load_bitmap(
 #     elif defined( RETROFLAT_API_WIN32 )
    BITMAP bm;
 #     endif /* RETROFLAT_API_WIN32 */
+#  elif defined( RETROFLAT_API_PC_BIOS )
+   mfile_t bmp_file;
+   struct MFMT_STRUCT_BMPFILE header_bmp;
+   MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
+   uint32_t bmp_color = 0;
+   uint8_t bmp_flags = 0;
+   size_t bmp_px_sz = 0;
+   uint8_t* SEG_RETROBMP bmp_px = NULL;
+
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
@@ -5527,6 +5547,56 @@ cleanup:
    }
 
 #     endif /* RETROFLAT_API_WIN16 */
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   assert( NULL == bmp_out->b_h );
+
+   retval = mfile_open_read( filename_path, &bmp_file );
+   maug_cleanup_if_not_ok();
+
+   /* TODO: mfmt file detection system. */
+   header_bmp.magic[0] = 'B';
+   header_bmp.magic[1] = 'M';
+   header_bmp.info.sz = 40;
+
+   retval = mfmt_read_bmp_header(
+      (struct MFMT_STRUCT*)&header_bmp,
+      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
+   maug_cleanup_if_not_ok();
+
+   /* Setup bitmap options from header. */
+   bmp_out->w = header_bmp.info.width;
+   bmp_out->h = header_bmp.info.height;
+
+#if 0
+   retval = mfmt_read_bmp_palette( 
+      (struct MFMT_STRUCT*)&header_bmp,
+      bmp_palette, 4 * header_bmp.info.palette_ncolors,
+      &bmp_file, 54 /* TODO */, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
+   maug_cleanup_if_not_ok();
+#endif
+
+   /* Allocate a space for the bitmap pixels. */
+   bmp_px_sz = header_bmp.info.width * header_bmp.info.height;
+   bmp_out->b_h = maug_malloc( 1, bmp_px_sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->b_h );
+
+   maug_mlock( bmp_out->b_h, bmp_px );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
+
+   retval = mfmt_read_bmp_px( 
+      (struct MFMT_STRUCT*)&header_bmp,
+      bmp_px, bmp_px_sz,
+      &bmp_file, header_bmp.px_offset,
+      mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
+   maug_cleanup_if_not_ok();
+
+   /* Allocate buffer for unpacking. */
+
+cleanup:
+
+   maug_munlock( bmp_out->b_h, bmp_px );
 
 #  else
 #     pragma message( "warning: load bitmap not implemented" )
@@ -5920,6 +5990,12 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    if( (HBITMAP)NULL != bmp->mask ) {
       DeleteObject( bmp->mask );
       bmp->mask = (HBITMAP)NULL;
+   }
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   if( NULL != bmp->b_h ) {
+      maug_mfree( bmp->b_h );
    }
 
 #  else
@@ -7341,7 +7417,9 @@ cleanup:
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
+#if 0
 extern MAUG_CONST char* gc_retroflat_color_names[];
+#endif
 
    extern struct RETROFLAT_STATE* g_retroflat_state;
 #     if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )

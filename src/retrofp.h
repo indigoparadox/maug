@@ -28,7 +28,7 @@ int16_t retrofp_lut( const int16_t* lut, int16_t num, int16_t mult );
 
 #ifdef RETROFP_C
 
-MAUG_CONST int16_t g_retrofp_cos[] = {
+MAUG_CONST int16_t SEG_MCONST g_retrofp_cos[] = {
    1000,
    995,
    980,
@@ -94,7 +94,7 @@ MAUG_CONST int16_t g_retrofp_cos[] = {
    996,
 };
 
-MAUG_CONST int16_t g_retrofp_sin[] = {
+MAUG_CONST int16_t SEG_MCONST g_retrofp_sin[] = {
    0,
    99,
    198,

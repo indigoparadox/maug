@@ -76,7 +76,6 @@ struct MFMT_STRUCT {
       goto cleanup; \
    }
 
-
 /*! \brief BITMAPINFO struct that comes before Windows bitmap data. */
 struct MFMT_STRUCT_BMPINFO {
    /*! \brief Size of this struct in bytes (only 40 is supported). */

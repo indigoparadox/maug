@@ -66,7 +66,7 @@ ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
 endif
 
 $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS)))
-	$$(LD_WATCOM) name $$@ option dosseg \
+	$$(LD_WATCOM) name $$@ option dosseg option map \
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
 		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
 
