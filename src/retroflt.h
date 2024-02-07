@@ -1823,7 +1823,7 @@ struct RETROFLAT_BITMAP {
    uint8_t flags;
    int16_t w;
    int16_t h;
-   uint8_t* px;
+   uint8_t SEG_FAR* px;
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -4388,7 +4388,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
       g_retroflat_state->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t far*)0xB8000000L;
+      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xB8000000L;
       g_retroflat_state->buffer.w = 320;
       g_retroflat_state->buffer.h = 200;
       break;
@@ -4399,7 +4399,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
       g_retroflat_state->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t far*)0xA0000000L;
+      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xA0000000L;
       g_retroflat_state->buffer.w = 320;
       g_retroflat_state->buffer.h = 200;
       g_retroflat_state->buffer.sz = 320 * 200;
@@ -5585,7 +5585,7 @@ cleanup:
    /* We're on PC BIOS... we don't need to lock pointers in this
     * platform-specific code!
     */
-   bmp_out->px = calloc( header_bmp.info.height, header_bmp.info.width );
+   bmp_out->px = _fcalloc( header_bmp.info.height, header_bmp.info.width );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
 
    retval = mfmt_read_bmp_px( 
@@ -5812,7 +5812,7 @@ cleanup:
    /* We're on PC BIOS... we don't need to lock pointers in this
     * platform-specific code!
     */
-   bmp_out->px = calloc( w, h );
+   bmp_out->px = _fcalloc( w, h );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
 
 cleanup:
@@ -6012,7 +6012,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    if( NULL != bmp->px ) {
-      free( bmp->px );
+      _ffree( bmp->px );
       bmp->px = NULL;
    }
 
@@ -6173,7 +6173,7 @@ cleanup:
             continue;
          }
          /* Blit the line. */
-         memcpy(
+         _fmemcpy(
             &(target->px[target_line_offset]),
             &(src->px[src_line_offset]), w );
       }
