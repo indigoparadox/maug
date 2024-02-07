@@ -38,15 +38,15 @@
 
 
 #ifndef MAUG_CLI_ARG_LIST_SZ_MAX
-#  define MAUG_CLI_ARG_LIST_SZ_MAX 50
+#  define MAUG_CLI_ARG_LIST_SZ_MAX 20
 #endif /* !MAUG_CLI_ARG_LIST_SZ_MAX */
 
 #ifndef MAUG_CLI_ARG_HELP_SZ_MAX
-#  define MAUG_CLI_ARG_HELP_SZ_MAX 255
+#  define MAUG_CLI_ARG_HELP_SZ_MAX 127
 #endif /* !MAUG_CLI_ARG_HELP_SZ_MAX */
 
 #ifndef MAUG_CLI_ARG_SZ_MAX
-#  define MAUG_CLI_ARG_SZ_MAX 50
+#  define MAUG_CLI_ARG_SZ_MAX 20
 #endif /* !MAUG_CLI_ARG_SZ_MAX */
 
 typedef MERROR_RETVAL (*maug_cli_cb)( const char* arg, void* data );

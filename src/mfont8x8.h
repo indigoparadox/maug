@@ -10,7 +10,7 @@
 #define FONT_IDX_BASIC 0
 #define FONT_IDX_SCRIPT 1
 
-MAUG_CONST char gc_font8x8[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT][RETROSOFT_GLYPH_W_SZ] = {
+MAUG_CONST char SEG_MCONST gc_font8x8[][RETROSOFT_GLYPHS_COUNT][RETROSOFT_GLYPH_W_SZ] = {
 
 /** 
  * Credits for gc_font8x8_basic:
@@ -131,6 +131,7 @@ MAUG_CONST char gc_font8x8[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT][RETROSO
    { 0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   /*  U+007E (~) */
 },
 
+#ifndef RETROFLAT_NO_FNT_SCRIPT
 /*
  * Credits for gc_font8x8_script:
  *
@@ -240,6 +241,7 @@ MAUG_CONST char gc_font8x8[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT][RETROSO
    { 0x78, 0x60, 0x30, 0xe0, 0x18, 0x18, 0x1e, 0x00 },   /*  U+007D (}) */
    { 0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }    /*  U+007E (~) */
 }
+#endif /* !RETROFLAT_NO_FNT_SCRIPT */
 
 };
 

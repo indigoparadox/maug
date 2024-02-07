@@ -41,6 +41,12 @@
 #  define RETROTILE_VORONOI_DEFAULT_DRIFT 4
 #endif /* !RETROTILE_VORONOI_DEFAULT_DRIFT */
 
+#ifdef MPARSER_TRACE_NAMES
+#  define retrotile_mstate_name( state ) gc_retrotile_mstate_names[state]
+#else
+#  define retrotile_mstate_name( state ) state
+#endif /* MPARSER_TRACE_NAMES */
+
 /**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
  * \{
@@ -242,30 +248,34 @@ MERROR_RETVAL retrotile_alloc(
 
 /* TODO: Function names should be verb_noun! */
 
-/* TODO: Better swap logic. */
 #define retrotile_parser_mstate( parser, new_mstate ) \
-   parser->mstate = new_mstate; \
+   parser->mstate = new_mstate;
+
+#if 0
    debug_printf( \
       RETROTILE_TRACE_LVL, "parser mstate: %s", \
-         gc_retrotile_mstate_names[parser->mstate] );
+         retrotile_mstate_name( parser->mstate ) );
+#endif
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
-      static MAUG_CONST uint8_t name = idx;
+      static MAUG_CONST uint8_t SEG_MCONST name = idx;
 
 RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_CONST )
 
+#ifdef MPARSER_TRACE_NAMES
 #  define RETROTILE_PARSER_MSTATE_TABLE_NAME( name, idx, tokn, parent, m ) \
       #name,
 
-static MAUG_CONST char* gc_retrotile_mstate_names[] = {
+static MAUG_CONST char* SEG_MCONST gc_retrotile_mstate_names[] = {
    RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_NAME )
    ""
 };
+#endif /* MPARSER_TRACE_NAMES */
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_TOKEN( name, idx, tokn, parent, m ) \
       tokn,
 
-static MAUG_CONST char* gc_retrotile_mstate_tokens[] = {
+static MAUG_CONST char* SEG_MCONST gc_retrotile_mstate_tokens[] = {
    RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_TOKEN )
    ""
 };
@@ -273,7 +283,7 @@ static MAUG_CONST char* gc_retrotile_mstate_tokens[] = {
 #  define RETROTILE_PARSER_MSTATE_TABLE_PARNT( name, idx, tokn, parent, m ) \
       parent,
 
-static MAUG_CONST uint8_t gc_retrotile_mstate_parents[] = {
+static MAUG_CONST uint8_t SEG_MCONST gc_retrotile_mstate_parents[] = {
    RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_PARNT )
    0
 };
@@ -281,7 +291,7 @@ static MAUG_CONST uint8_t gc_retrotile_mstate_parents[] = {
 #  define RETROTILE_PARSER_MSTATE_TABLE_MODE( name, idx, tokn, parent, m ) \
       m,
 
-static MAUG_CONST uint8_t gc_retrotile_mstate_modes[] = {
+static MAUG_CONST uint8_t SEG_MCONST gc_retrotile_mstate_modes[] = {
    RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_MODE )
    0
 };
@@ -317,9 +327,9 @@ static void retrotile_parser_match_token(
             "found token \"%s\" but incorrect parent %s (%d) "
                "(needs %s (%d))!",
             token,
-            gc_retrotile_mstate_names[parser->mstate],
+            retrotile_mstate_name( parser->mstate ),
             parser->mstate,
-            gc_retrotile_mstate_names[gc_retrotile_mstate_parents[j]],
+            retrotile_mstate_name( gc_retrotile_mstate_parents[j] ),
             gc_retrotile_mstate_parents[j] );
          j++;
          continue;
@@ -1098,8 +1108,8 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    retrotile_tile_t* temp_grid = NULL;
    retrotile_tile_t* tiles = NULL;
    /* Only use 4 cardinal directions. */
-   MAUG_CONST int16_t c_sides_off_x[4] = {  0, 1, 0, -1 };
-   MAUG_CONST int16_t c_sides_off_y[4] = { -1, 0, 1,  0 };
+   MAUG_CONST int16_t SEG_MCONST c_sides_off_x[4] = {  0, 1, 0, -1 };
+   MAUG_CONST int16_t SEG_MCONST c_sides_off_y[4] = { -1, 0, 1,  0 };
    int8_t side_iter = 0;
 
    layer = retrotile_get_layer_p( t, 0 );
@@ -1228,8 +1238,8 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
       sides_avail = 0,
       sides_sum = 0;
    /* Sides start from 12 on the clock (up). */
-   MAUG_CONST int16_t c_sides_off_x[8] = {  0,  1, 1, 1, 0, -1, -1, -1 };
-   MAUG_CONST int16_t c_sides_off_y[8] = { -1, -1, 0, 1, 1,  1,  0, -1 };
+   MAUG_CONST int16_t SEG_MCONST c_sides_off_x[8] = {  0,  1, 1, 1, 0, -1, -1, -1 };
+   MAUG_CONST int16_t SEG_MCONST c_sides_off_y[8] = { -1, -1, 0, 1, 1,  1,  0, -1 };
    struct RETROTILE_LAYER* layer = NULL;
 
    assert( NULL != t );

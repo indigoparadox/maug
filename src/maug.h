@@ -11,6 +11,12 @@
 #  define MAUG_CONST const
 #endif /* MAUG_OS_PALM */
 
+#if defined( MAUG_OS_DOS_REAL ) && defined( __WATCOMC__ )
+#  define SEG_MCONST __based( __segname( "MCONST" ) )
+#else
+#  define SEG_MCONST
+#endif /* MAUG_OS_DOS_REAL && __WATCOMC__ */
+
 /* This can be included sooner if needed, since it has a guard. */
 #include <msect.h>
 

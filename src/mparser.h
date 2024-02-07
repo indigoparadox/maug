@@ -20,6 +20,17 @@
 #  define MPARSER_STACK_SZ_MAX 256
 #endif /* !MPARSER_STACK_SZ_MAX */
 
+#if 0
+ifdef MPARSER_TRACE_NAMES
+  define mparser_trace_printf( phase, ptype, parser ) \
+   debug_printf( \
+      MPARSER_TRACE_LVL, #ptype " parser pstate " phase ": %s", \
+      gc_ ## ptype ## _pstate_names[mparser_pstate( parser )] ); \
+else
+endif /* MPARSER_TRACE_NAMES */
+#endif
+#  define mparser_trace_printf( phase, ptype, parser )
+
 typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
 /* TODO: Function names should be verb_noun! */
@@ -45,26 +56,20 @@ typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
       (parser)->pstate[(parser)->pstate_sz - 1] : 0)
 
 #define mparser_pstate_push( ptype, parser, new_pstate ) \
-   debug_printf( \
-      MPARSER_TRACE_LVL, #ptype " parser pstate PREPUSH: %s", \
-      gc_ ## ptype ## _pstate_names[mparser_pstate( parser )] ); \
+   mparser_trace_printf( "PREPUSH", #ptype, parser ); \
    /* TODO: Use retval check. */ \
    assert( (parser)->pstate_sz < MPARSER_STACK_SZ_MAX ); \
    (parser)->pstate[parser->pstate_sz++] = new_pstate; \
-   debug_printf( \
-      MPARSER_TRACE_LVL, #ptype " parser pstate PUSH: %s", \
-      gc_ ## ptype ## _pstate_names[mparser_pstate( parser )] );
+   mparser_trace_printf( "POSTPUSH", #ptype, parser );
 
 #define mparser_pstate_pop( ptype, parser ) \
    assert( (parser)->pstate_sz > 0 ); \
    (parser)->pstate_sz--; \
-   debug_printf( \
-      MPARSER_TRACE_LVL, #ptype " parser pstate POP: %s", \
-      gc_ ## ptype ## _pstate_names[mparser_pstate( parser )] );
+   mparser_trace_printf( "POP", #ptype, parser );
 
 #define mparser_invalid_c( ptype, parser, c, retval ) \
-   error_printf( #ptype " parser invalid %c detected at char: " SIZE_T_FMT, \
-      c, parser->i ); \
+   error_printf( #ptype " parser invalid %c detected at char: " \
+      SIZE_T_FMT, c, parser->i ); \
    retval = MERROR_PARSE;
 
 #define mparser_reset_token( ptype, parser ) \
