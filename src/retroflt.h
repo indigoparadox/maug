@@ -4402,6 +4402,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->buffer.px = (uint8_t far*)0xA0000000L;
       g_retroflat_state->buffer.w = 320;
       g_retroflat_state->buffer.h = 200;
+      g_retroflat_state->buffer.sz = 320 * 200;
       break;
 
    default:
@@ -6041,8 +6042,8 @@ void retroflat_blit_bitmap(
    int locked_src_internal = 0;
 #  elif defined( RETROFLAT_API_PC_BIOS )
    int16_t y_iter = 0;
-   uint8_t* __far target_line_offset = NULL;
-   uint8_t* __far src_line_offset = NULL;
+   int16_t target_line_offset = 0;
+   int16_t src_line_offset = 0;
    MERROR_RETVAL retval = MERROR_OK;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -6166,10 +6167,18 @@ cleanup:
 
    case RETROFLAT_SCREEN_MODE_VGA:
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
-         target_line_offset =
-            &(target->px[(((d_y + y_iter) * target->w) + d_x)]);
-         src_line_offset = &(src->px[(((s_y + y_iter) * src->w) + s_x)]);
-         memcpy( target_line_offset, src_line_offset, w );
+         target_line_offset = ((d_y + y_iter) * target->w) + d_x;
+         src_line_offset = ((s_y + y_iter) * src->w) + s_x;
+         if( target->sz <= target_line_offset + w ) {
+            break;
+         }
+         if( 0 > target_line_offset ) {
+            continue;
+         }
+         /* Blit the line. */
+         memcpy(
+            &(target->px[target_line_offset]),
+            &(src->px[src_line_offset]), w );
       }
       break;
    }
