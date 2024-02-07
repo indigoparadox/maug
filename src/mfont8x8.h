@@ -10,7 +10,8 @@
 #define FONT_IDX_BASIC 0
 #define FONT_IDX_SCRIPT 1
 
-MAUG_CONST char SEG_MCONST gc_font8x8[][RETROSOFT_GLYPHS_COUNT][RETROSOFT_GLYPH_W_SZ] = {
+/* TODO: Put in const segment or load from data file. */
+MAUG_CONST char gc_font8x8[][RETROSOFT_GLYPHS_COUNT][RETROSOFT_GLYPH_W_SZ] = {
 
 /** 
  * Credits for gc_font8x8_basic:
