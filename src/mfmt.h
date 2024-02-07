@@ -145,7 +145,7 @@ typedef MERROR_RETVAL (*mfmt_read_palette_cb)(
  * \brief Callback to read image pixels into 8-bit values.
  */
 typedef MERROR_RETVAL (*mfmt_read_px_cb)(
-   struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
    uint8_t flags );
 
@@ -166,7 +166,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
  * \brief Read \ref mfmt_bitmap pixels into an 8-bit memory bitmap.
  */
 MERROR_RETVAL mfmt_read_bmp_px(
-   struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
    uint8_t flags );
 
@@ -519,7 +519,7 @@ cleanup:
 }
 
 MERROR_RETVAL mfmt_read_bmp_px(
-   struct MFMT_STRUCT* header, uint8_t* px, size_t px_sz,
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
    mfile_t* p_file_in, uint32_t file_offset, size_t file_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;

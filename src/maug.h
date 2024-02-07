@@ -36,6 +36,10 @@
  * dosstubs.
  */
 #  undef MAUG_C
+
+#  define SEG_FAR far
+#else
+#  define SEG_FAR
 #endif /* MAUG_OS_DOS_REAL */
 
 #ifdef MAUG_C
