@@ -11,7 +11,9 @@
 #  define MAUG_CONST const
 #endif /* MAUG_OS_PALM */
 
-#if defined( MAUG_OS_DOS_REAL ) && defined( __WATCOMC__ )
+#if defined( MAUG_OS_DOS_REAL ) && \
+   defined( MAUG_DOS_MEM_L ) && \
+   defined( __WATCOMC__ )
 #  define SEG_MCONST __based( __segname( "MCONST" ) )
 #else
 #  define SEG_MCONST

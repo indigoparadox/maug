@@ -1754,7 +1754,9 @@ struct RETROFLAT_BITMAP {
 
 #  include <time.h> /* For srand() */
 
-#  ifdef __WATCOMC__
+#if defined( MAUG_OS_DOS_REAL ) && \
+   defined( MAUG_DOS_MEM_L ) && \
+   defined( __WATCOMC__ )
 #     define SEG_RETROBMP __based( __segname( "RETROBMP" ) )
 #  else
 #     define SEG_RETROBMP
@@ -4336,12 +4338,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    srand( time( NULL ) );
 
    debug_printf( 3, "memory available before growth: %u", _memavl() );
-#     ifdef RETROFLAT_DOS_MEM_LARGE
+#     ifdef MAUG_DOS_MEM_L
    /* TODO: Should this check/init be in mmem.h instead? */
    _fheapgrow();
 #  else
    _nheapgrow();
-#     endif /* RETROFLAT_DOS_MEM_LARGE */
+#  endif /* MAUG_DOS_MEM_L */
    debug_printf( 3, "memory available after growth: %u", _memavl() );
 
    /* Setup timer handler. */
