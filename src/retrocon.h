@@ -2,6 +2,39 @@
 #ifndef RETROCON_H
 #define RETROCON_H
 
+#ifdef RETROFLAT_OS_DOS_REAL
+#  define RETROCON_DISABLE
+#endif
+
+#define RETROCON_DEBOUNCE_WAIT 3
+
+#define RETROCON_FLAG_ACTIVE 0x01
+
+#ifdef RETROCON_DISABLE
+
+struct RETROCON {
+   uint8_t flags;
+   RETROFLAT_COLOR lbuffer_color;
+   RETROFLAT_COLOR sbuffer_color;
+   RETROFLAT_COLOR bg_color;
+};
+
+#  define retrocon_init( con ) (MERROR_OK)
+
+#  define retrocon_add_command( con, cmd, cb, cb_data )
+
+#  define retrocon_display( con, display )
+
+#  define retrocon_print_line( con, line )
+
+#  define retrocon_exec_line( con, line, line_sz )
+
+#  define retrocon_debounce( con, c )
+
+#  define retrocon_input( con, p_c, input_evt )
+
+#else
+
 /**
  * \addtogroup maug_console In-Situ Console API
  * \{
@@ -34,10 +67,6 @@
 #ifndef RETROCON_WIN_H
 #  define RETROCON_WIN_H 110
 #endif /* !RETROCON_WIN_H */
-
-#define RETROCON_DEBOUNCE_WAIT 3
-
-#define RETROCON_FLAG_ACTIVE 0x01
 
 struct RETROCON;
 
@@ -353,6 +382,8 @@ cleanup:
 #endif /* RETROCON_C */
 
 /*! \} */ /* maug_console */
+
+#endif /* RETROCON_DISABLE */
 
 #endif /* !RETROCON_H */
 
