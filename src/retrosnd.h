@@ -87,6 +87,7 @@ struct RETROSND_STATE {
    uint16_t io_base;
    uint8_t io_timeout;
    uint8_t driver;
+   struct RETROSND_ADLIB_VOICE* adlib_voices;
 #elif defined( RETROSND_API_ALSA )
    snd_seq_t* seq_handle;
    int seq_port;
@@ -95,6 +96,22 @@ struct RETROSND_STATE {
 #elif defined( RETROSND_API_WINMM )
    HMIDIOUT mo_handle;
 #endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
+};
+
+struct RETROSND_ADLIB_VOICE {
+   uint8_t mod_char;
+   uint8_t mod_ad_lvl;
+   uint8_t mod_sr_lvl;
+   uint8_t mod_wave_sel;
+   uint8_t mod_key_scale;
+   uint8_t mod_out_lvl;
+   uint8_t feedback;
+   uint8_t car_char;
+   uint8_t car_ad_lvl;
+   uint8_t car_sr_lvl;
+   uint8_t car_wave_sel;
+   uint8_t car_key_scale;
+   uint8_t car_out_lvl;
 };
 
 /**
@@ -337,6 +354,18 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    case RETROSND_PC_BIOS_ADLIB:
       /* Clear all OPL registers. */
       retrosnd_adlib_clear();
+
+      /* This is only used in DOS, so straight calloc is fine here. */
+      g_retrosnd_state.adlib_voices = calloc(
+         32, sizeof( struct RETROSND_ADLIB_VOICE ) );
+      maug_cleanup_if_null_alloc( struct RETROSND_ADLIB_VOICE*,
+         g_retrosnd_state.adlib_voices );
+
+      debug_printf( 1, "OPL voice is " SIZE_T_FMT " bytes (x16 is "
+         SIZE_T_FMT " bytes)",
+         2 * sizeof( struct RETROSND_ADLIB_VOICE ),
+         32 * sizeof( struct RETROSND_ADLIB_VOICE ) );
+
       break;
    }
 
@@ -475,6 +504,9 @@ cleanup:
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 #  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
+   struct RETROSND_ADLIB_VOICE* voice_iter = NULL;
+   mfile_t opl_defs;
+   uint8_t byte_buffer = 0;
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
@@ -502,6 +534,59 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 
    case RETROSND_PC_BIOS_ADLIB:
       /* TODO */
+
+      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
+
+      #define adlib_opl2_offset() (8 + ((voice) * 37))
+
+      #define adlib_read_voice( field, reg, offset ) \
+         mfile_cread_at( &opl_defs, &byte_buffer, \
+            (adlib_opl2_offset() + offset) ); \
+         debug_printf( 1, \
+            "voice %d: " #field ": ofs: %d: 0x%02x -> reg 0x%02x", \
+            voice, offset, byte_buffer, reg ); \
+      retrosnd_adlib_poke( reg + (channel * 3), byte_buffer );
+
+      retval = mfile_open_read( "dmx_dmx.op2", &opl_defs );
+      maug_cleanup_if_not_ok();
+      
+      debug_printf( 1, "reading instrument %d at offset %d",
+         voice, adlib_opl2_offset() );
+
+      /* TODO: Decouple voices so we can have 10/12? */
+
+      voice_iter = &(g_retrosnd_state.adlib_voices[channel * 2]);
+      adlib_read_voice( mod_char, 0x20, 4 );
+      adlib_read_voice( mod_ad_lvl, 0x60, 5 );
+      adlib_read_voice( mod_sr_lvl, 0x80, 6 );
+      adlib_read_voice( mod_wave_sel, 0xe0, 7 );
+      /* adlib_read_voice( mod_key_scale, 8 );
+      adlib_read_voice( mod_out_lvl, 9 ); */
+      adlib_read_voice( feedback, 0xc0, 10 );
+      adlib_read_voice( car_char, 0x23, 11 );
+      adlib_read_voice( car_ad_lvl, 0x63, 12 );
+      adlib_read_voice( car_sr_lvl, 0x83, 13 );
+      adlib_read_voice( car_wave_sel, 0xe3, 14 );
+      /* adlib_read_voice( car_key_scale, 15 );
+      adlib_read_voice( car_out_lvl, 16 ); */
+      #if 0
+      retrosnd_adlib_poke( 0x20, 0x01 ); /* Modulator multiple. */
+      retrosnd_adlib_poke( 0x60, 0xf0 ); /* Modulator attack. */
+      retrosnd_adlib_poke( 0x80, 0x77 ); /* Modulator sustain. */
+      retrosnd_adlib_poke( 0xa0, pitch ); /* Voice frequency. */
+      retrosnd_adlib_poke( 0x23, 0x01 ); /* Carrier multiple. */
+      retrosnd_adlib_poke( 0x63, 0xf0 ); /* Carrier attack. */
+      retrosnd_adlib_poke( 0x83, 0x77 ); /* Carrier sustain. */
+      #endif
+      retrosnd_adlib_poke( 0x40 + (channel * 3), 0x10 ); /* Modulator volume. */
+      retrosnd_adlib_poke( 0x43 + (channel * 3), 0x00 ); /* Carrier volume. */
+      #if 0
+      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 ); /* Turn voice on! */
+      #endif
+ 
+
+      mfile_close( &opl_defs );
+
       break;
    }
 
@@ -623,11 +708,12 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
    case RETROSND_PC_BIOS_ADLIB:
       /* TODO */
-      assert( channel < 9 ); /* TODO: Fail more gracefully on high channel. */
+      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
       /* These values were pretty much just taken from
        * "Programming the Adlib/Sound Blaster FM Music Chips" and still need to
        * be adjusted to resemble instruments/noise.
        */
+      #if 0
       retrosnd_adlib_poke( 0x20, 0x01 ); /* Modulator multiple. */
       retrosnd_adlib_poke( 0x40, 0x10 ); /* Modulator volume. */
       retrosnd_adlib_poke( 0x60, 0xf0 ); /* Modulator attack. */
@@ -637,7 +723,8 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       retrosnd_adlib_poke( 0x43, 0x00 ); /* Carrier volume. */
       retrosnd_adlib_poke( 0x63, 0xf0 ); /* Carrier attack. */
       retrosnd_adlib_poke( 0x83, 0x77 ); /* Carrier sustain. */
-      retrosnd_adlib_poke( 0xb0 + channel, 0x31 ); /* Turn voice on! */
+      #endif
+      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 ); /* Turn voice on! */
       break;
    }
 
@@ -701,7 +788,8 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       break;
 
    case RETROSND_PC_BIOS_ADLIB:
-      retrosnd_adlib_poke( 0xb0 + channel, 0x11 ); /* Turn voice off. */
+      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
+      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x11 ); /* Turn voice off. */
       break;
    }
 
@@ -744,6 +832,8 @@ void retrosnd_shutdown() {
 
    case RETROSND_PC_BIOS_ADLIB:
       retrosnd_adlib_clear();
+      assert( NULL != g_retrosnd_state.adlib_voices );
+      free( g_retrosnd_state.adlib_voices );
       break;
    }
 #  elif defined( RETROSND_API_ALSA )
