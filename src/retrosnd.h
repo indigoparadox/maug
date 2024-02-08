@@ -30,6 +30,14 @@
  * And the MPU-401 interface for being so darn simple!
  */
 
+#ifndef RETROSND_TRACE_LVL
+#  define RETROSND_TRACE_LVL 0
+#endif /* !RETROSND_TRACE_LVL */
+
+#ifndef RETROSND_REG_TRACE_LVL
+#  define RETROSND_REG_TRACE_LVL 0
+#endif /* !RETROSND_REG_TRACE_LVL */
+
 /**
  * \addtogroup maug_retrosnd_flags RetroSound State Flags
  * \brief Flags indicating global state for the RETROSND_STATE::flags field.
@@ -98,22 +106,6 @@ struct RETROSND_STATE {
 #endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 };
 
-struct RETROSND_ADLIB_VOICE {
-   uint8_t mod_char;
-   uint8_t mod_ad_lvl;
-   uint8_t mod_sr_lvl;
-   uint8_t mod_wave_sel;
-   uint8_t mod_key_scale;
-   uint8_t mod_out_lvl;
-   uint8_t feedback;
-   uint8_t car_char;
-   uint8_t car_ad_lvl;
-   uint8_t car_sr_lvl;
-   uint8_t car_wave_sel;
-   uint8_t car_key_scale;
-   uint8_t car_out_lvl;
-};
-
 /**
  * \brief Initialize retrosnd engine.
  * \param args A pointer to the RETROSND_ARGS struct initialized by
@@ -144,7 +136,7 @@ static void retrosnd_gus_poke( uint32_t loc, uint8_t b ) {
    uint16_t add_lo = loc & 0xffff;
    uint8_t add_hi = (uint32_t)((loc & 0xff0000)) >> 16;
 
-   debug_printf( 1,
+   debug_printf( RETROSND_REG_TRACE_LVL,
       "poke hi: 0x%02x, lo: 0x%04x: writing: %02x", add_hi, add_lo, b );
    
    outp( g_retrosnd_state.io_base + 0x103, 0x43 );
@@ -167,7 +159,7 @@ static uint8_t retrosnd_gus_peek( uint32_t loc ) {
 
    b = inp( g_retrosnd_state.io_base + 0x107 );
 
-   debug_printf( 1, "read: 0x%02x", b );
+   debug_printf( RETROSND_REG_TRACE_LVL, "read: 0x%02x", b );
 
    return b;
 }
@@ -177,9 +169,10 @@ static MERROR_RETVAL retrosnd_mpu_not_ready( int16_t* timeout ) {
    b = inp( g_retrosnd_state.io_base + 0x01 ) & RETROSND_MPU_FLAG_OUTPUT;
    if( (NULL == timeout || 0 < *timeout) && 0 != b ) {
       if( NULL == timeout ) {
-         debug_printf( 2, "waiting for MPU-401..." );
+         debug_printf( RETROSND_TRACE_LVL, "waiting for MPU-401..." );
       } else {
-         debug_printf( 2, "waiting for MPU-401 (%u)...", *timeout );
+         debug_printf( RETROSND_TRACE_LVL,
+            "waiting for MPU-401 (%u)...", *timeout );
          (*timeout)--;
       }
       return MERROR_WAIT;
@@ -187,7 +180,7 @@ static MERROR_RETVAL retrosnd_mpu_not_ready( int16_t* timeout ) {
       error_printf( "timed out waiting for MPU-401!" );
       return MERROR_TIMEOUT;
    } else {
-      debug_printf( 2, "MPU ready within time limit" );
+      debug_printf( RETROSND_TRACE_LVL, "MPU ready within time limit" );
       return MERROR_OK;
    }
 }
@@ -202,7 +195,8 @@ static MERROR_RETVAL retrosnd_mpu_write_byte( uint8_t b_in ) {
       }
    } while( MERROR_WAIT == retval );
    if( MERROR_TIMEOUT != retval ) {
-      debug_printf( 1, "writing 0x%02x to MPU-401...", b_in );
+      debug_printf(
+         RETROSND_REG_TRACE_LVL, "writing 0x%02x to MPU-401...", b_in );
       outp( g_retrosnd_state.io_base, b_in );
    }
 cleanup:
@@ -211,6 +205,8 @@ cleanup:
 
 static void retrosnd_adlib_poke( uint8_t reg, uint8_t b_in ) {
    int i = 0;
+   debug_printf(
+      RETROSND_REG_TRACE_LVL, "poke 0x%02x: writing: %02x", reg, b_in );
    outp( g_retrosnd_state.io_base, reg );
    for( i = 0 ; 6 > i ; i++ ) {
       inp( g_retrosnd_state.io_base );
@@ -354,18 +350,6 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    case RETROSND_PC_BIOS_ADLIB:
       /* Clear all OPL registers. */
       retrosnd_adlib_clear();
-
-      /* This is only used in DOS, so straight calloc is fine here. */
-      g_retrosnd_state.adlib_voices = calloc(
-         32, sizeof( struct RETROSND_ADLIB_VOICE ) );
-      maug_cleanup_if_null_alloc( struct RETROSND_ADLIB_VOICE*,
-         g_retrosnd_state.adlib_voices );
-
-      debug_printf( 1, "OPL voice is " SIZE_T_FMT " bytes (x16 is "
-         SIZE_T_FMT " bytes)",
-         2 * sizeof( struct RETROSND_ADLIB_VOICE ),
-         32 * sizeof( struct RETROSND_ADLIB_VOICE ) );
-
       break;
    }
 
@@ -504,7 +488,6 @@ cleanup:
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 #  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
-   struct RETROSND_ADLIB_VOICE* voice_iter = NULL;
    mfile_t opl_defs;
    uint8_t byte_buffer = 0;
 #  elif defined( RETROSND_API_ALSA )
@@ -542,7 +525,7 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       #define adlib_read_voice( field, reg, offset ) \
          mfile_cread_at( &opl_defs, &byte_buffer, \
             (adlib_opl2_offset() + offset) ); \
-         debug_printf( 1, \
+         debug_printf( RETROSND_TRACE_LVL, \
             "voice %d: " #field ": ofs: %d: 0x%02x -> reg 0x%02x", \
             voice, offset, byte_buffer, reg ); \
       retrosnd_adlib_poke( reg + (channel * 3), byte_buffer );
@@ -550,12 +533,12 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       retval = mfile_open_read( "dmx_dmx.op2", &opl_defs );
       maug_cleanup_if_not_ok();
       
-      debug_printf( 1, "reading instrument %d at offset %d",
+      debug_printf(
+         RETROSND_TRACE_LVL, "reading instrument %d at offset %d",
          voice, adlib_opl2_offset() );
 
       /* TODO: Decouple voices so we can have 10/12? */
 
-      voice_iter = &(g_retrosnd_state.adlib_voices[channel * 2]);
       adlib_read_voice( mod_char, 0x20, 4 );
       adlib_read_voice( mod_ad_lvl, 0x60, 5 );
       adlib_read_voice( mod_sr_lvl, 0x80, 6 );
@@ -569,21 +552,8 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       adlib_read_voice( car_wave_sel, 0xe3, 14 );
       /* adlib_read_voice( car_key_scale, 15 );
       adlib_read_voice( car_out_lvl, 16 ); */
-      #if 0
-      retrosnd_adlib_poke( 0x20, 0x01 ); /* Modulator multiple. */
-      retrosnd_adlib_poke( 0x60, 0xf0 ); /* Modulator attack. */
-      retrosnd_adlib_poke( 0x80, 0x77 ); /* Modulator sustain. */
-      retrosnd_adlib_poke( 0xa0, pitch ); /* Voice frequency. */
-      retrosnd_adlib_poke( 0x23, 0x01 ); /* Carrier multiple. */
-      retrosnd_adlib_poke( 0x63, 0xf0 ); /* Carrier attack. */
-      retrosnd_adlib_poke( 0x83, 0x77 ); /* Carrier sustain. */
-      #endif
       retrosnd_adlib_poke( 0x40 + (channel * 3), 0x10 ); /* Modulator volume. */
       retrosnd_adlib_poke( 0x43 + (channel * 3), 0x00 ); /* Carrier volume. */
-      #if 0
-      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 ); /* Turn voice on! */
-      #endif
- 
 
       mfile_close( &opl_defs );
 
@@ -593,7 +563,9 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 cleanup:
    return;
 #  elif defined( RETROSND_API_ALSA )
-   debug_printf( 3, "setting channel %u to voice: %u", channel, voice );
+   debug_printf(
+      RETROSND_TRACE_LVL,
+      "setting channel %u to voice: %u", channel, voice );
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_pgmchange( &ev, channel, voice );
    retrosnd_alsa_ev_send( &ev );
@@ -649,7 +621,8 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 cleanup:
    return;
 #  elif defined( RETROSND_API_ALSA )
-   debug_printf( 3, "setting channel %u controller %u to: %u", 
+   debug_printf( RETROSND_TRACE_LVL,
+      "setting channel %u controller %u to: %u", 
       channel, key, val );
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_controller( &ev, channel, key, val );
@@ -707,24 +680,12 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       break;
 
    case RETROSND_PC_BIOS_ADLIB:
-      /* TODO */
-      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
-      /* These values were pretty much just taken from
-       * "Programming the Adlib/Sound Blaster FM Music Chips" and still need to
-       * be adjusted to resemble instruments/noise.
-       */
-      #if 0
-      retrosnd_adlib_poke( 0x20, 0x01 ); /* Modulator multiple. */
-      retrosnd_adlib_poke( 0x40, 0x10 ); /* Modulator volume. */
-      retrosnd_adlib_poke( 0x60, 0xf0 ); /* Modulator attack. */
-      retrosnd_adlib_poke( 0x80, 0x77 ); /* Modulator sustain. */
-      retrosnd_adlib_poke( 0xa0, pitch ); /* Voice frequency. */
-      retrosnd_adlib_poke( 0x23, 0x01 ); /* Carrier multiple. */
-      retrosnd_adlib_poke( 0x43, 0x00 ); /* Carrier volume. */
-      retrosnd_adlib_poke( 0x63, 0xf0 ); /* Carrier attack. */
-      retrosnd_adlib_poke( 0x83, 0x77 ); /* Carrier sustain. */
-      #endif
-      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 ); /* Turn voice on! */
+      /* TODO: Fail more gracefully on high channel. */
+      assert( channel < 6 );
+      /* Voice frequency. */
+      retrosnd_adlib_poke( 0xa0 + (channel * 3), pitch );
+      /* Turn voice on! */
+      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 );
       break;
    }
 
@@ -788,8 +749,10 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       break;
 
    case RETROSND_PC_BIOS_ADLIB:
-      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
-      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x11 ); /* Turn voice off. */
+      /* TODO: Fail more gracefully on high channel. */
+      assert( channel < 6 );
+      /* Turn voice off. */
+      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x11 );
       break;
    }
 
@@ -832,8 +795,6 @@ void retrosnd_shutdown() {
 
    case RETROSND_PC_BIOS_ADLIB:
       retrosnd_adlib_clear();
-      assert( NULL != g_retrosnd_state.adlib_voices );
-      free( g_retrosnd_state.adlib_voices );
       break;
    }
 #  elif defined( RETROSND_API_ALSA )
