@@ -38,6 +38,8 @@
 #  define RETROSND_REG_TRACE_LVL 0
 #endif /* !RETROSND_REG_TRACE_LVL */
 
+#define SF_BANK_FILENAME_SZ_MAX 30
+
 /**
  * \addtogroup maug_retrosnd_flags RetroSound State Flags
  * \brief Flags indicating global state for the RETROSND_STATE::flags field.
@@ -96,6 +98,7 @@ struct RETROSND_STATE {
    uint8_t io_timeout;
    uint8_t driver;
    struct RETROSND_ADLIB_VOICE* adlib_voices;
+   char sf_bank_filename[SF_BANK_FILENAME_SZ_MAX + 1];
 #elif defined( RETROSND_API_ALSA )
    snd_seq_t* seq_handle;
    int seq_port;
@@ -115,6 +118,11 @@ struct RETROSND_STATE {
  * or other platform-specific indicator of the MIDI device to use.
  */
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args );
+
+/**
+ * \brief Set the name of the voice bank filename to use.
+ */
+void retrosnd_set_sf_bank( const char* filename_in );
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
 
@@ -268,6 +276,11 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    /* Clear all flags to start. */
    g_retrosnd_state.flags = 0;
+
+   /* No bank file by default. */
+   memset(
+      g_retrosnd_state.sf_bank_filename, '\0',
+      SF_BANK_FILENAME_SZ_MAX + 1 );
 
    if( 0 == args->snd_io_base ) {
       /* Select default port. */
@@ -485,20 +498,35 @@ cleanup:
 
 /* === */
 
+void retrosnd_set_sf_bank( const char* filename_in ) {
+#ifdef RETROSND_API_PC_BIOS
+   strncpy( g_retrosnd_state.sf_bank_filename, filename_in,
+      SF_BANK_FILENAME_SZ_MAX );
+#endif /* RETROSND_API_PC_BIOS */
+}
+
+/* === */
+
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 #  if defined( RETROSND_API_PC_BIOS )
    MERROR_RETVAL retval = 0;
    mfile_t opl_defs;
    uint8_t byte_buffer = 0;
+   uint8_t reg_index = 0; /* Adlib register index offset for this chan. */
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
-   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
+   if(
+      RETROSND_FLAG_INIT !=
+      (RETROSND_FLAG_INIT & g_retrosnd_state.flags)
+   ) {
       return;
    }
 
 #  if defined( RETROSND_API_PC_BIOS )
+   memset( &opl_defs, '\0', sizeof( mfile_t ) );
+
    switch( g_retrosnd_state.driver ) {
    case RETROSND_PC_BIOS_MPU:
       /* Write MIDI message to MPU port, one byte at a time. */
@@ -516,52 +544,73 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       break;
 
    case RETROSND_PC_BIOS_ADLIB:
-      /* TODO */
 
-      assert( channel < 6 ); /* TODO: Fail more gracefully on high channel. */
+      /* TODO: Fail more gracefully on high channel. */
+      assert( channel < 6 );
 
+      if( '\0' == g_retrosnd_state.sf_bank_filename[0] ) {
+         error_printf( "no bank file specified!" );
+         goto cleanup;
+      }
+
+      /* Leave space for the second voice register between channels. */
+      reg_index = channel * 3;
+
+      /* TODO: Decouple voices so we can have 10/12 channels? */
+
+      /* Determine offset of voice def in OP2 file. */
       #define adlib_opl2_offset() (8 + ((voice) * 37))
 
+      /* Read specified voice param field into specified reg. */
       #define adlib_read_voice( field, reg, offset ) \
          mfile_cread_at( &opl_defs, &byte_buffer, \
             (adlib_opl2_offset() + offset) ); \
          debug_printf( RETROSND_TRACE_LVL, \
             "voice %d: " #field ": ofs: %d: 0x%02x -> reg 0x%02x", \
             voice, offset, byte_buffer, reg ); \
-      retrosnd_adlib_poke( reg + (channel * 3), byte_buffer );
+      retrosnd_adlib_poke( reg + reg_index, byte_buffer );
 
-      retval = mfile_open_read( "dmx_dmx.op2", &opl_defs );
+      /* Actually open the file. */
+      retval = mfile_open_read(
+         g_retrosnd_state.sf_bank_filename, &opl_defs );
       maug_cleanup_if_not_ok();
       
       debug_printf(
          RETROSND_TRACE_LVL, "reading instrument %d at offset %d",
          voice, adlib_opl2_offset() );
 
-      /* TODO: Decouple voices so we can have 10/12? */
+      /* Here we load the requested instrument parameters index from the
+       * OP2 file into the Adlib registers.
+       *
+       * Offsets come from:
+       * https://moddingwiki.shikadi.net/wiki/OP2_Bank_Format
+       */
 
       adlib_read_voice( mod_char, 0x20, 4 );
       adlib_read_voice( mod_ad_lvl, 0x60, 5 );
       adlib_read_voice( mod_sr_lvl, 0x80, 6 );
       adlib_read_voice( mod_wave_sel, 0xe0, 7 );
       /* adlib_read_voice( mod_key_scale, 8 );
-      adlib_read_voice( mod_out_lvl, 9 ); */
+      adlib_read_voice( mod_out_lvl, 9 ); */ /* TODO */
       adlib_read_voice( feedback, 0xc0, 10 );
       adlib_read_voice( car_char, 0x23, 11 );
       adlib_read_voice( car_ad_lvl, 0x63, 12 );
       adlib_read_voice( car_sr_lvl, 0x83, 13 );
       adlib_read_voice( car_wave_sel, 0xe3, 14 );
       /* adlib_read_voice( car_key_scale, 15 );
-      adlib_read_voice( car_out_lvl, 16 ); */
-      retrosnd_adlib_poke( 0x40 + (channel * 3), 0x10 ); /* Modulator volume. */
-      retrosnd_adlib_poke( 0x43 + (channel * 3), 0x00 ); /* Carrier volume. */
+      adlib_read_voice( car_out_lvl, 16 ); */ /* TODO */
 
-      mfile_close( &opl_defs );
+      /* TODO: Parse these from the file properly. */
+      retrosnd_adlib_poke( 0x40 + reg_index, 0x10 ); /* Mod volume. */
+      retrosnd_adlib_poke( 0x43 + reg_index, 0x00 ); /* Carrier volume. */
 
       break;
    }
 
 cleanup:
-   return;
+
+   mfile_close( &opl_defs );
+
 #  elif defined( RETROSND_API_ALSA )
    debug_printf(
       RETROSND_TRACE_LVL,
