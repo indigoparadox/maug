@@ -3317,6 +3317,11 @@ static int retrosnd_cli_rsd_def(
       }
       args->snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
       debug_printf( 3, "setting MIDI I/O base: %u", args->snd_io_base );
+   } else {
+      /* default */
+      debug_printf( 3, "default MIDI driver: adlib" );
+      args->snd_driver = 8;
+      args->snd_io_base = 0x388;
    }
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
