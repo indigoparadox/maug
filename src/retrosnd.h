@@ -136,6 +136,8 @@ void retrosnd_shutdown();
 
 #ifdef RETROSND_C
 
+MAUG_CONST uint8_t adlib_ch[] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
+
 struct RETROSND_STATE g_retrosnd_state;
 
 #  if defined( RETROSND_API_PC_BIOS )
@@ -512,7 +514,6 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
    MERROR_RETVAL retval = 0;
    mfile_t opl_defs;
    uint8_t byte_buffer = 0;
-   uint8_t reg_index = 0; /* Adlib register index offset for this chan. */
 #  elif defined( RETROSND_API_ALSA )
    snd_seq_event_t ev;
 #  endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
@@ -553,8 +554,8 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
          goto cleanup;
       }
 
-      /* Leave space for the second voice register between channels. */
-      reg_index = channel * 3;
+      debug_printf(
+         RETROSND_TRACE_LVL, "channel: %d, reg: %d", channel, adlib_ch[channel] );
 
       /* TODO: Decouple voices so we can have 10/12 channels? */
 
@@ -568,7 +569,7 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
          debug_printf( RETROSND_TRACE_LVL, \
             "voice %d: " #field ": ofs: %d: 0x%02x -> reg 0x%02x", \
             voice, offset, byte_buffer, reg ); \
-      retrosnd_adlib_poke( reg + reg_index, byte_buffer );
+      retrosnd_adlib_poke( reg + adlib_ch[channel], byte_buffer );
 
       /* Actually open the file. */
       retval = mfile_open_read(
@@ -601,8 +602,8 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       adlib_read_voice( car_out_lvl, 16 ); */ /* TODO */
 
       /* TODO: Parse these from the file properly. */
-      retrosnd_adlib_poke( 0x40 + reg_index, 0x10 ); /* Mod volume. */
-      retrosnd_adlib_poke( 0x43 + reg_index, 0x00 ); /* Carrier volume. */
+      retrosnd_adlib_poke( 0x40 + adlib_ch[channel], 0x10 ); /* Mod volume. */
+      retrosnd_adlib_poke( 0x43 + adlib_ch[channel], 0x00 ); /* Carrier volume. */
 
       break;
    }
@@ -732,9 +733,9 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       /* TODO: Fail more gracefully on high channel. */
       assert( channel < 6 );
       /* Voice frequency. */
-      retrosnd_adlib_poke( 0xa0 + (channel * 3), pitch );
+      retrosnd_adlib_poke( 0xa0 + channel, pitch );
       /* Turn voice on! */
-      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x31 );
+      retrosnd_adlib_poke( 0xb0 + channel, 0x31 );
       break;
    }
 
@@ -801,7 +802,7 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       /* TODO: Fail more gracefully on high channel. */
       assert( channel < 6 );
       /* Turn voice off. */
-      retrosnd_adlib_poke( 0xb0 + (channel * 3), 0x11 );
+      retrosnd_adlib_poke( 0xb0 + channel, 0x11 );
       break;
    }
 
