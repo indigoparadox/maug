@@ -112,6 +112,13 @@ struct RETROTILE_DATA_DS {
    int16_t sect_h_half;
 };
 
+struct RETROTILE_DATA_BORDER {
+   retrotile_tile_t center;
+   retrotile_tile_t outside;
+   /*! \brief If the center and outside match, use this mod-to. */
+   retrotile_tile_t mod_to[4];
+};
+
 #define retrotile_get_tile( tilemap, layer, x, y ) \
    (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
 
@@ -198,6 +205,8 @@ typedef MERROR_RETVAL (*retrotile_gen_cb)(
  * See retrotile_gen_cb() for details.
  *
  * \warning This can be very slow!
+ *
+ * \warning This will generate a complete new tilemap!
  */
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
@@ -211,6 +220,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
  *
  * This is more suitable for purely 2D tilesets, as the changes between
  * indexes are very abrupt!
+ *
+ * \warning This will generate a complete new tilemap!
  */
 MERROR_RETVAL retrotile_gen_voronoi_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
@@ -225,6 +236,17 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
  * as Z values rather than indexes in a table of tile definitions.
  */
 MERROR_RETVAL retrotile_gen_smooth_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
+   retrotile_ani_cb animation_cb, void* animation_cb_data );
+
+/**
+ * \brief Given a list of ::RETROTILE_DATA_BORDER structs, this will
+ *        search for occurrences of RETROTILE_DATA_BORDER::center next to
+ *        RETROTILE_DATA_BORDER::outside and replace with the appropriate
+ *        border between the two!
+ */
+MERROR_RETVAL retrotile_gen_borders_iter(
    struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
@@ -245,6 +267,16 @@ MERROR_RETVAL retrotile_alloc(
 #  include <stdio.h>
 
 #  include <mparser.h>
+
+MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets8_x[8] =
+   {  0,  1, 1, 1, 0, -1, -1, -1 };
+MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets8_y[8] =
+   { -1, -1, 0, 1, 1,  1,  0, -1 };
+
+MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets4_x[4] =
+   {  0, 1, 0, -1 };
+MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets4_y[4] =
+   { -1, 0, 1,  0 };
 
 /* TODO: Function names should be verb_noun! */
 
@@ -1108,8 +1140,6 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    retrotile_tile_t* temp_grid = NULL;
    retrotile_tile_t* tiles = NULL;
    /* Only use 4 cardinal directions. */
-   MAUG_CONST int16_t SEG_MCONST c_sides_off_x[4] = {  0, 1, 0, -1 };
-   MAUG_CONST int16_t SEG_MCONST c_sides_off_y[4] = { -1, 0, 1,  0 };
    int8_t side_iter = 0;
 
    layer = retrotile_get_layer_p( t, 0 );
@@ -1183,26 +1213,27 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
                debug_printf( RETROTILE_TRACE_LVL,
                   "%d (%d), %d (%d) (%d, %d)", 
                   x,
-                  c_sides_off_x[side_iter],
+                  gc_retrotile_offsets4_x[side_iter],
                   y,
-                  c_sides_off_y[side_iter],
+                  gc_retrotile_offsets4_y[side_iter],
                   t->tiles_w, t->tiles_h );
             
                /* Iterate through directions to expand. */
                /* TODO: Add tuning to select directional probability. */
                if(
-                  0 <= x + c_sides_off_x[side_iter] &&
-                  0 <= y + c_sides_off_y[side_iter] &&
-                  t->tiles_w > x + c_sides_off_x[side_iter] &&
-                  t->tiles_h > y + c_sides_off_y[side_iter] &&
+                  0 <= x + gc_retrotile_offsets4_x[side_iter] &&
+                  0 <= y + gc_retrotile_offsets4_y[side_iter] &&
+                  t->tiles_w > x + gc_retrotile_offsets4_x[side_iter] &&
+                  t->tiles_h > y + gc_retrotile_offsets4_y[side_iter] &&
                   -1 == temp_grid[
-                     ((y + c_sides_off_y[side_iter]) * t->tiles_w) +
-                        (x + c_sides_off_x[side_iter])]
+                     ((y + gc_retrotile_offsets4_y[side_iter]) *
+                        t->tiles_w) +
+                           (x + gc_retrotile_offsets4_x[side_iter])]
                ) {
                   /* Copy center tile to this direction. */
                   retrotile_get_tile( t, layer,
-                     x + c_sides_off_x[side_iter],
-                     y + c_sides_off_y[side_iter] ) =
+                     x + gc_retrotile_offsets4_x[side_iter],
+                     y + gc_retrotile_offsets4_y[side_iter] ) =
                         retrotile_get_tile( t, layer, x, y );
                   break;
                }
@@ -1238,8 +1269,6 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
       sides_avail = 0,
       sides_sum = 0;
    /* Sides start from 12 on the clock (up). */
-   MAUG_CONST int16_t SEG_MCONST c_sides_off_x[8] = {  0,  1, 1, 1, 0, -1, -1, -1 };
-   MAUG_CONST int16_t SEG_MCONST c_sides_off_y[8] = { -1, -1, 0, 1, 1,  1,  0, -1 };
    struct RETROTILE_LAYER* layer = NULL;
 
    assert( NULL != t );
@@ -1257,10 +1286,10 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
          /* Grab values for available sides. */
          for( side_iter = 0 ; 8 > side_iter ; side_iter++ ) {
             if(
-               0 > x + c_sides_off_x[side_iter] ||
-               0 > y + c_sides_off_y[side_iter] ||
-               t->tiles_w <= x + c_sides_off_x[side_iter] ||
-               t->tiles_h <= y + c_sides_off_y[side_iter]
+               0 > x + gc_retrotile_offsets8_x[side_iter] ||
+               0 > y + gc_retrotile_offsets8_y[side_iter] ||
+               t->tiles_w <= x + gc_retrotile_offsets8_x[side_iter] ||
+               t->tiles_h <= y + gc_retrotile_offsets8_y[side_iter]
             ) {
                continue;
             }
@@ -1270,16 +1299,16 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
                RETROTILE_TRACE_LVL,
                "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
                side_iter,
-               x + c_sides_off_x[side_iter],
-               c_sides_off_x[side_iter],
-               y + c_sides_off_y[side_iter],
-               c_sides_off_y[side_iter],
-               ((y + c_sides_off_y[side_iter]) * t->tiles_w) +
-                  x + c_sides_off_x[side_iter] );
+               x + gc_retrotile_offsets8_x[side_iter],
+               gc_retrotile_offsets8_x[side_iter],
+               y + gc_retrotile_offsets8_y[side_iter],
+               gc_retrotile_offsets8_y[side_iter],
+               ((y + gc_retrotile_offsets8_y[side_iter]) * t->tiles_w) +
+                  x + gc_retrotile_offsets8_x[side_iter] );
             sides_sum += retrotile_get_tile(
                t, layer,
-               x + c_sides_off_x[side_iter],
-               y + c_sides_off_y[side_iter] );
+               x + gc_retrotile_offsets8_x[side_iter],
+               y + gc_retrotile_offsets8_y[side_iter] );
          }
 
          retrotile_get_tile( t, layer, x, y ) = sides_sum / sides_avail;
@@ -1287,6 +1316,77 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
    }
 
 cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrotile_gen_borders_iter(
+   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
+   retrotile_ani_cb animation_cb, void* animation_cb_data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROTILE_DATA_BORDER* borders =
+      (struct RETROTILE_DATA_BORDER*)data;
+   size_t i = 0,
+      x = 0,
+      y = 0,
+      side = 0;
+   int16_t ctr_iter = 0,
+      outside_iter = 0;
+   struct RETROTILE_LAYER* layer = NULL;
+
+   assert( NULL != t );
+   layer = retrotile_get_layer_p( t, layer_idx );
+   assert( NULL != layer );
+
+   debug_printf( 1, "adding borders..." );
+
+   for( y = 0 ; t->tiles_h > y ; y++ ) {
+      for( x = 0 ; t->tiles_w > x ; x++ ) {
+         i = 0;
+         while( 0 <= borders[i].center ) {
+            /* Compare/grab current center tile. */
+            ctr_iter = retrotile_get_tile( t, layer, x, y );
+            debug_printf( 1,
+               "x: " SIZE_T_FMT ", y: " SIZE_T_FMT ", 0x%04x vs 0x%04x",
+               x, y, ctr_iter, borders[i].center );
+            if( ctr_iter != borders[i].center ) {
+               i++;
+               continue;
+            }
+
+            debug_printf( 1, "comparing sides..." );
+
+            /* Compare four sides. */
+            for( side = 0 ; 4 > side ; side++ ) {
+               if(
+                  x + gc_retrotile_offsets4_x[side] > t->tiles_w ||
+                  y + gc_retrotile_offsets4_y[side] > t->tiles_h
+               ) {
+                  /* Skip out-of-bounds. */
+                  continue;
+               }
+               outside_iter = retrotile_get_tile( t, layer,
+                  x + gc_retrotile_offsets4_x[side],
+                  y + gc_retrotile_offsets4_y[side] );
+               if( outside_iter == borders[i].outside ) {
+                  /* TODO: Handle corners. */
+                  debug_printf( 1, "replacing..." );
+                  retrotile_get_tile( t, layer, x, y ) =
+                     borders[i].mod_to[side];
+                  
+                  break;
+               }
+            }
+
+            /* Tile replaced or not replaceable. */
+            break;
+         }
+      }
+   }
 
    return retval;
 }
