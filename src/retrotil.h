@@ -113,10 +113,11 @@ struct RETROTILE_DATA_DS {
 };
 
 struct RETROTILE_DATA_BORDER {
+   int16_t tiles_changed;
    retrotile_tile_t center;
    retrotile_tile_t outside;
    /*! \brief If the center and outside match, use this mod-to. */
-   retrotile_tile_t mod_to[4];
+   retrotile_tile_t mod_to[8];
 };
 
 #define retrotile_get_tile( tilemap, layer, x, y ) \
@@ -1333,6 +1334,8 @@ MERROR_RETVAL retrotile_gen_borders_iter(
    size_t i = 0,
       x = 0,
       y = 0,
+      x_plus_1 = 0,
+      y_plus_1 = 0,
       side = 0;
    int16_t ctr_iter = 0,
       outside_iter = 0;
@@ -1341,6 +1344,11 @@ MERROR_RETVAL retrotile_gen_borders_iter(
    assert( NULL != t );
    layer = retrotile_get_layer_p( t, layer_idx );
    assert( NULL != layer );
+
+   /* Reset tile counter for all defined borders. */
+   for( i = 0 ; 0 <= borders[i].center ; i++ ) {
+      borders[i].tiles_changed = 0;
+   }
 
    debug_printf( 1, "adding borders..." );
 
@@ -1360,28 +1368,109 @@ MERROR_RETVAL retrotile_gen_borders_iter(
 
             debug_printf( 1, "comparing sides..." );
 
-            /* Compare four sides. */
-            for( side = 0 ; 4 > side ; side++ ) {
+            /* Zeroth pass: look for stick-outs. */
+            for( side = 0 ; 8 > side ; side += 2 ) {
                if(
-                  x + gc_retrotile_offsets4_x[side] > t->tiles_w ||
-                  y + gc_retrotile_offsets4_y[side] > t->tiles_h
+                  x + gc_retrotile_offsets8_x[side] > t->tiles_w ||
+                  y + gc_retrotile_offsets8_y[side] > t->tiles_h
                ) {
                   /* Skip out-of-bounds. */
                   continue;
                }
+               /* Get the outside tile on this side. */
                outside_iter = retrotile_get_tile( t, layer,
-                  x + gc_retrotile_offsets4_x[side],
-                  y + gc_retrotile_offsets4_y[side] );
-               if( outside_iter == borders[i].outside ) {
-                  /* TODO: Handle corners. */
-                  debug_printf( 1, "replacing..." );
+                  x + gc_retrotile_offsets8_x[side],
+                  y + gc_retrotile_offsets8_y[side] );
+
+               /* Get the outside tile next two clock-steps from this one.
+                */
+               if( side + 4 < 8 ) {
+                  x_plus_1 = x + gc_retrotile_offsets8_x[side + 4];
+                  y_plus_1 = y + gc_retrotile_offsets8_y[side + 4];
+               } else {
+                  x_plus_1 = x + gc_retrotile_offsets8_x[side - 4];
+                  y_plus_1 = y + gc_retrotile_offsets8_y[side - 4];
+               }
+
+               if(
+                  x_plus_1 < t->tiles_w && y_plus_1 < t->tiles_h &&
+                  outside_iter == borders[i].outside &&
+                  outside_iter == retrotile_get_tile( t, layer,
+                     x_plus_1, y_plus_1 )
+               ) {
+                  /* This has the outside on two opposing sides, so just
+                   * erase it and use the outside. */
                   retrotile_get_tile( t, layer, x, y ) =
-                     borders[i].mod_to[side];
-                  
-                  break;
+                     borders[i].outside;
+                  borders[i].tiles_changed++;
+                  goto tile_done;
                }
             }
 
+ 
+            /* First pass: look for corners. */
+            for( side = 0 ; 8 > side ; side += 2 ) {
+               if(
+                  x + gc_retrotile_offsets8_x[side] > t->tiles_w ||
+                  y + gc_retrotile_offsets8_y[side] > t->tiles_h
+               ) {
+                  /* Skip out-of-bounds. */
+                  continue;
+               }
+               /* Get the outside tile on this side. */
+               outside_iter = retrotile_get_tile( t, layer,
+                  x + gc_retrotile_offsets8_x[side],
+                  y + gc_retrotile_offsets8_y[side] );
+
+               /* Get the outside tile next two clock-steps from this one.
+                */
+               if( side + 2 < 8 ) {
+                  x_plus_1 = x + gc_retrotile_offsets8_x[side + 2];
+                  y_plus_1 = y + gc_retrotile_offsets8_y[side + 2];
+               } else {
+                  x_plus_1 = x + gc_retrotile_offsets8_x[0];
+                  y_plus_1 = y + gc_retrotile_offsets8_y[0];
+               }
+
+               if(
+                  x_plus_1 < t->tiles_w && y_plus_1 < t->tiles_h &&
+                  outside_iter == borders[i].outside &&
+                  outside_iter == retrotile_get_tile( t, layer,
+                     x_plus_1, y_plus_1 )
+               ) {
+                  /* This has the outside on two sides, so use a corner. */
+                  retrotile_get_tile( t, layer, x, y ) =
+                     borders[i].mod_to[side + 1 < 8 ? side + 1 : 0];
+                  borders[i].tiles_changed++;
+                  goto tile_done;
+               }
+            }
+
+            /* Second pass (if first pass fails): look for edges. */
+            for( side = 0 ; 8 > side ; side += 2 ) {
+               if(
+                  x + gc_retrotile_offsets8_x[side] > t->tiles_w ||
+                  y + gc_retrotile_offsets8_y[side] > t->tiles_h
+               ) {
+                  /* Skip out-of-bounds. */
+                  continue;
+               }
+               /* Get the outside tile on this side. */
+               outside_iter = retrotile_get_tile( t, layer,
+                  x + gc_retrotile_offsets8_x[side],
+                  y + gc_retrotile_offsets8_y[side] );
+
+               if( outside_iter == borders[i].outside ) {
+                  /* It only matches on this side. */
+                  debug_printf( 1, "replacing..." );
+                  retrotile_get_tile( t, layer, x, y ) =
+                     borders[i].mod_to[side];
+                  borders[i].tiles_changed++;
+                  goto tile_done;
+               }
+            }
+
+tile_done:
             /* Tile replaced or not replaceable. */
             break;
          }
