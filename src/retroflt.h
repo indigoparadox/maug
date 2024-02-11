@@ -6917,7 +6917,14 @@ cleanup:
 
 void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
-#  if defined( RETROFLAT_API_SDL2 )
+#  ifdef RETROFLAT_OPENGL
+
+   *p_rgb = 0;
+   *p_rgb |= g_retroflat_state->tex_palette[idx][0] & 0xff;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][1] & 0xff) << 8;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][2] & 0xff) << 16;
+
+#  elif defined( RETROFLAT_API_SDL2 )
 
    *p_rgb = 0;
    *p_rgb |= g_retroflat_state->palette[idx].b & 0xff;
@@ -6935,7 +6942,8 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 3, "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+   debug_printf( 3,
+      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
       idx, rgb );
 
 #  ifdef RETROFLAT_OPENGL
