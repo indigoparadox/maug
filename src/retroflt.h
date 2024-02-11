@@ -1812,6 +1812,8 @@ typedef uint16_t RETROFLAT_MS;
 
 typedef FILE* RETROFLAT_CONFIG;
 
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->px)
+
 #  define retroflat_quit( retval_in ) \
    g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
    g_retroflat_state->retval = retval_in;
