@@ -1556,7 +1556,7 @@ MERROR_RETVAL retrotile_alloc(
       (layers_count * (w * h * sizeof( retrotile_tile_t ) ));
 
    debug_printf( 1, "allocating new tilemap " SIZE_T_FMT "x" SIZE_T_FMT
-      " tiles, " SIZE_T_FMT "layers (" SIZE_T_FMT " bytes)...",
+      " tiles, " SIZE_T_FMT " layers (" SIZE_T_FMT " bytes)...",
       w, h, layers_count, tilemap_sz );
 
    *p_tilemap_h = maug_malloc( 1, tilemap_sz );
