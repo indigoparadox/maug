@@ -367,6 +367,22 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_OPAQUE   0x01
 
 /**
+ * \brief Flag for retroflat_string() and retroflat_string_sz() to print
+ *        text in all capital letters. Non-letters are unmodified.
+ * \todo This has not yet been implemented and is present for backward
+ *       compatibility.
+ */
+#define RETROFLAT_FLAGS_ALL_CAPS 0x02
+
+/**
+ * \brief Flag for retroflat_string() and retroflat_string_sz() to print
+ *        text as outline-only.
+ * \todo This has not yet been implemented and is present for backward
+ *       compatibility.
+ */
+#define RETROFLAT_FLAGS_OUTLINE  0x04
+
+/**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
  *
  * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
