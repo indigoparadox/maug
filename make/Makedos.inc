@@ -65,7 +65,7 @@ ifeq ("$$(LDFLAGS_WATCOM_DOS_ALLEGRO)","")
 	LDFLAGS_WATCOM_DOS_BIOS := system dos option stack=8k
 endif
 
-$(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS)))
+$(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_MPLUG_OVLS)))
 	$$(LD_WATCOM) name $$@ option dosseg option map \
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
 		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
