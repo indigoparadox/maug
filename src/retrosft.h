@@ -241,8 +241,15 @@ void retrosoft_line(
       end[for_axis] > iter[for_axis] ;
       iter[for_axis]++
    ) {
-      retroflat_px(
-         target, color, iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
+
+      if(
+         (size_t)iter[RETROFLAT_LINE_X] < retroflat_screen_w() &&
+         (size_t)iter[RETROFLAT_LINE_Y] < retroflat_screen_h()
+      ) {
+         retroflat_px(
+            target, color,
+            iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
+      }
 
       /* Increment off-axis based on for-axis. */
       if( 0 < delta ) {
