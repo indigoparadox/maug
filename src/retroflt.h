@@ -1842,6 +1842,7 @@ struct RETROFLAT_BITMAP {
    int16_t w;
    int16_t h;
    uint8_t SEG_FAR* px;
+   uint8_t SEG_FAR* mask;
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
@@ -2335,7 +2336,7 @@ uint32_t retroflat_get_rand();
  *         there was a problem (e.g. the bitmap was not found).
  */
 MERROR_RETVAL retroflat_load_bitmap(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out );
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
 MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
@@ -5204,7 +5205,7 @@ cleanup:
  *       formats using perpix loader code.
  */
 MERROR_RETVAL retroflat_load_bitmap(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    int retval = MERROR_OK;
@@ -5240,6 +5241,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    uint32_t bmp_color = 0;
    uint8_t bmp_flags = 0;
    size_t bmp_px_sz = 0;
+   size_t i = 0;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -5332,6 +5334,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_out->tex.bytes[(i * 4) + 1] = bmp_g;
       bmp_out->tex.bytes[(i * 4) + 2] = bmp_b;
       if(
+         RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) &&
          RETROFLAT_TXP_R == bmp_r &&
          RETROFLAT_TXP_G == bmp_g &&
          RETROFLAT_TXP_B == bmp_b
@@ -5439,9 +5442,11 @@ cleanup:
       goto cleanup;
    }
 
-   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-      SDL_MapRGB( bmp_out->surface->format,
-         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
 
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );
@@ -5523,8 +5528,10 @@ cleanup:
       (BITMAPINFO*)&(bmp_out->bmi),
       DIB_RGB_COLORS );
 
-   retval = retroflat_bitmap_win_transparency( bmp_out,
-      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retval = retroflat_bitmap_win_transparency( bmp_out,
+         bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
+   }
 
 #     else
 
@@ -5554,8 +5561,10 @@ cleanup:
       bmp_out->bmi.header.biHeight *
       (bm.bmBitsPixel / sizeof( uint8_t ));
 
-   retval = retroflat_bitmap_win_transparency(
-      bmp_out, bm.bmWidth, bm.bmHeight );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retval = retroflat_bitmap_win_transparency(
+         bmp_out, bm.bmWidth, bm.bmHeight );
+   }
 
 #     endif /* RETROFLAT_API_WIN16 */
 
@@ -5575,6 +5584,9 @@ cleanup:
 #     endif /* RETROFLAT_API_WIN16 */
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* TODO: When loading a bitmap, zero out the color key color so XOR 
+    *       works? */
 
    assert( NULL == bmp_out->px );
 
@@ -5603,6 +5615,8 @@ cleanup:
    maug_cleanup_if_not_ok();
 #endif
 
+   bmp_out->flags = flags;
+
    /* Allocate a space for the bitmap pixels. */
    bmp_out->sz = header_bmp.info.width * header_bmp.info.height;
    /* We're on PC BIOS... we don't need to lock pointers in this
@@ -5617,6 +5631,20 @@ cleanup:
       &bmp_file, header_bmp.px_offset,
       mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
+
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      /* Create a transparency mask based on palette 0. */
+      /* TODO: Use palette index from  global ifdef. */
+      bmp_out->mask = _fcalloc(
+         header_bmp.info.height, header_bmp.info.width );
+      for( i = 0 ; bmp_out->sz > i ; i++ ) {
+         if( 0 == bmp_out->px[i] ) {
+            bmp_out->mask[i] = 0xff;
+         } else {
+            bmp_out->mask[i] = 0x00;
+         }
+      }
+   }
 
    /* Allocate buffer for unpacking. */
 
@@ -5829,6 +5857,7 @@ cleanup:
 
    bmp_out->w = w;
    bmp_out->h = h;
+   bmp_out->flags = flags;
 
    /* Allocate a space for the bitmap pixels. */
    bmp_out->sz = w * h;
@@ -6039,6 +6068,11 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       bmp->px = NULL;
    }
 
+   if( NULL != bmp->mask ) {
+      _ffree( bmp->mask );
+      bmp->mask = NULL;
+   }
+
 #  else
 #     pragma message( "warning: destroy bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -6064,7 +6098,8 @@ void retroflat_blit_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
 #  elif defined( RETROFLAT_API_PC_BIOS )
-   int16_t y_iter = 0;
+   int16_t y_iter = 0,
+      x_iter = 0;
    uint16_t target_line_offset = 0;
    int16_t src_line_offset = 0;
    MERROR_RETVAL retval = MERROR_OK;
@@ -6196,9 +6231,24 @@ cleanup:
             continue;
          }
          /* Blit the line. */
-         _fmemcpy(
-            &(target->px[target_line_offset]),
-            &(src->px[src_line_offset]), w );
+         if(
+            RETROFLAT_FLAGS_OPAQUE ==
+            (RETROFLAT_FLAGS_OPAQUE & src->flags)
+         ) {
+            /* Copy line-by-line for speed. */
+            _fmemcpy(
+               &(target->px[target_line_offset]),
+               &(src->px[src_line_offset]), w );
+         } else {
+            for( x_iter = 0 ; w > x_iter ; x_iter++ ) {
+               /* AND with mask for transparency cutout. */
+               target->px[target_line_offset + x_iter] &=
+                  src->mask[src_line_offset + x_iter];
+               /* Draw into cutout with OR. */
+               target->px[target_line_offset + x_iter] |=
+                  src->px[src_line_offset + x_iter];
+            }
+         }
       }
       break;
    }
