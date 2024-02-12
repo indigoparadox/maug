@@ -67,6 +67,16 @@
 
 /*! \} */ /* retrotile_defs_types */
 
+#define RETROTILE_DIR4_NORTH  0
+#define RETROTILE_DIR4_EAST   1
+#define RETROTILE_DIR4_SOUTH  2
+#define RETROTILE_DIR4_WEST   3
+
+#define RETROTILE_DIR8_NORTH  0
+#define RETROTILE_DIR8_EAST   2
+#define RETROTILE_DIR8_SOUTH  4
+#define RETROTILE_DIR8_WEST   6
+
 typedef int16_t retrotile_tile_t;
 
 #define RETROTILE_IDX_FMT "%u"
@@ -1380,7 +1390,7 @@ MERROR_RETVAL retrotile_gen_borders_iter(
          while( 0 <= borders[i].center ) {
             /* Compare/grab current center tile. */
             ctr_iter = retrotile_get_tile( t, layer, x, y );
-            debug_printf( 1,
+            debug_printf( RETROTILE_TRACE_LVL,
                "x: " SIZE_T_FMT ", y: " SIZE_T_FMT ", 0x%04x vs 0x%04x",
                x, y, ctr_iter, borders[i].center );
             if( ctr_iter != borders[i].center ) {
@@ -1388,7 +1398,7 @@ MERROR_RETVAL retrotile_gen_borders_iter(
                continue;
             }
 
-            debug_printf( 1, "comparing sides..." );
+            debug_printf( RETROTILE_TRACE_LVL, "comparing sides..." );
 
             /* Zeroth pass: look for stick-outs. */
             for( side = 0 ; 8 > side ; side += 2 ) {
@@ -1484,7 +1494,7 @@ MERROR_RETVAL retrotile_gen_borders_iter(
 
                if( outside_iter == borders[i].outside ) {
                   /* It only matches on this side. */
-                  debug_printf( 1, "replacing..." );
+                  debug_printf( RETROTILE_TRACE_LVL, "replacing..." );
                   retrotile_get_tile( t, layer, x, y ) =
                      borders[i].mod_to[side];
                   borders[i].tiles_changed++;
@@ -1610,6 +1620,13 @@ cleanup:
 
    return retval;
 }
+
+#else
+
+extern MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets8_x[8];
+extern MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets8_y[8];
+extern MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets4_x[4];
+extern MAUG_CONST int16_t SEG_MCONST gc_retrotile_offsets4_y[4];
 
 #endif /* RETROTIL_C */
 
