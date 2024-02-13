@@ -21,7 +21,7 @@ void retrogxc_clear_cache();
 
 void retrogxc_shutdown();
 
-int16_t retrogxc_load_bitmap( retroflat_asset_path res_p );
+int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags );
 
 int16_t retrogxc_blit_at(
    uint16_t bitmap_idx, struct RETROFLAT_BITMAP* target,
@@ -90,7 +90,7 @@ void retrogxc_shutdown() {
 
 /* === */
 
-int16_t retrogxc_load_bitmap( retroflat_asset_path res_p ) {
+int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags ) {
    int16_t idx = RETROGXC_ERROR_CACHE_MISS,
       i = 0;
    struct RETROFLAT_CACHE_BITMAP* bitmaps = NULL;
@@ -109,7 +109,7 @@ int16_t retrogxc_load_bitmap( retroflat_asset_path res_p ) {
    debug_printf( 1, "bitmap not found in cache; loading..." );
    for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
       if( retroflat_bitmap_ok( &(bitmaps[i].bitmap) ) ) {
-         if( retroflat_load_bitmap( res_p, &(bitmaps[i].bitmap) ) ) {
+         if( retroflat_load_bitmap( res_p, &(bitmaps[i].bitmap), flags ) ) {
             idx = i;
          }
          goto cleanup;
