@@ -8,14 +8,18 @@
 #  define RETROGXC_INITIAL_SZ 16
 #endif /* !RETROGXC_INITIAL_SZ */
 
-#define RETROGXC_ERROR_CACHE_MISS -1
+#ifndef RETROGXC_TRACE_LVL
+#  define RETROGXC_TRACE_LVL 0
+#endif /* !RETROGXC_TRACE_LVL */
+
+#define RETROGXC_ERROR_CACHE_MISS (-1)
 
 struct RETROFLAT_CACHE_BITMAP {
    struct RETROFLAT_BITMAP bitmap;
    retroflat_asset_path id;
 };
 
-int16_t retrogxc_init();
+MERROR_RETVAL retrogxc_init();
 
 void retrogxc_clear_cache();
 
@@ -23,8 +27,8 @@ void retrogxc_shutdown();
 
 int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags );
 
-int16_t retrogxc_blit_at(
-   uint16_t bitmap_idx, struct RETROFLAT_BITMAP* target,
+int16_t retrogxc_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, int16_t bitmap_idx,
    uint16_t s_x, uint16_t s_y, uint16_t d_x, uint16_t d_y,
    uint16_t w, uint16_t h );
 
@@ -35,21 +39,30 @@ static int16_t gs_retrogxc_sz = 0;
 
 /* === */
 
-int16_t retrogxc_init() {
-   int16_t retval = 0;
+MERROR_RETVAL retrogxc_init() {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFLAT_CACHE_BITMAP* bitmaps = NULL;
 
    gs_retrogxc_handle = maug_malloc(
       RETROGXC_INITIAL_SZ, sizeof( struct RETROFLAT_CACHE_BITMAP ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, gs_retrogxc_handle );
    gs_retrogxc_sz = RETROGXC_INITIAL_SZ;
 
-   size_printf( 3, "bitmap struct", sizeof( struct RETROFLAT_CACHE_BITMAP ) );
+   size_printf( RETROGXC_TRACE_LVL,
+      "bitmap struct", sizeof( struct RETROFLAT_CACHE_BITMAP ) );
+   size_printf( RETROGXC_TRACE_LVL, "initial graphics cache",
+      sizeof( struct RETROFLAT_CACHE_BITMAP ) * gs_retrogxc_sz );
 
-   if( (MAUG_MHANDLE)NULL != gs_retrogxc_handle ) {
-      size_printf( 3, "initial graphics cache",
-         sizeof( struct RETROFLAT_CACHE_BITMAP ) * RETROGXC_INITIAL_SZ );
-   } else {
-      error_printf( "unable to initialize graphics cache!" );
-      retval = MERROR_GUI;
+   maug_mlock( gs_retrogxc_handle, bitmaps );
+   maug_cleanup_if_null_alloc( struct RETROFLAT_CACHE_BITMAP*, bitmaps );
+   maug_mzero(
+      bitmaps,
+      RETROGXC_INITIAL_SZ * sizeof( struct RETROFLAT_CACHE_BITMAP ) );
+
+cleanup:
+
+   if( NULL != bitmaps ) {
+      maug_munlock( gs_retrogxc_handle, bitmaps );
    }
 
    return retval;
@@ -73,7 +86,8 @@ void retrogxc_clear_cache() {
       sizeof( struct RETROFLAT_CACHE_BITMAP ) * gs_retrogxc_sz );
    maug_munlock( gs_retrogxc_handle, bitmaps );
    
-   debug_printf( 2, "graphics cache cleared (%d of %d items)",
+   debug_printf( RETROGXC_TRACE_LVL,
+      "graphics cache cleared (%d of %d items)",
       dropped_count, gs_retrogxc_sz );
 
 #  ifndef NO_GUI
@@ -106,14 +120,22 @@ int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags ) {
    }
 
    /* Bitmap not found. */
-   debug_printf( 1, "bitmap not found in cache; loading..." );
+   debug_printf( RETROGXC_TRACE_LVL,
+      "bitmap %s not found in cache; loading...", res_p );
    for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
       if( retroflat_bitmap_ok( &(bitmaps[i].bitmap) ) ) {
-         if( retroflat_load_bitmap( res_p, &(bitmaps[i].bitmap), flags ) ) {
-            idx = i;
-         }
-         goto cleanup;
+         continue;
       }
+
+      if(
+         MERROR_OK ==
+         retroflat_load_bitmap( res_p, &(bitmaps[i].bitmap), flags )
+      ) {
+         idx = i;
+         debug_printf( RETROGXC_TRACE_LVL,
+            "bitmap %s assigned cache ID: %d", res_p, idx );
+      }
+      goto cleanup;
    }
 
    /* Still not found! */
@@ -130,14 +152,16 @@ cleanup:
 
 /* === */
 
-int16_t retrogxc_blit_at(
-   uint16_t bitmap_idx, struct RETROFLAT_BITMAP* target,
+int16_t retrogxc_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, int16_t bitmap_idx,
    uint16_t s_x, uint16_t s_y, uint16_t d_x, uint16_t d_y,
    uint16_t w, uint16_t h
 ) {
    int16_t retval = 1;
    struct RETROFLAT_CACHE_BITMAP* bitmaps = NULL,
       * bitmap_blit = NULL;
+
+   assert( 0 <= bitmap_idx );
 
    maug_mlock( gs_retrogxc_handle, bitmaps );
    assert( NULL != bitmaps );
@@ -148,7 +172,7 @@ int16_t retrogxc_blit_at(
       goto cleanup;
    }
    retroflat_blit_bitmap(
-      &(bitmap_blit->bitmap), target, s_x, s_y, d_x, d_y, w, h );
+      target, &(bitmap_blit->bitmap), s_x, s_y, d_x, d_y, w, h );
 
 cleanup:
 
