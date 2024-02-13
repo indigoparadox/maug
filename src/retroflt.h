@@ -260,6 +260,10 @@
 
 /* === Generic Includes and Defines === */
 
+#ifndef RETROFLAT_BITMAP_TRACE_LVL
+#  define RETROFLAT_BITMAP_TRACE_LVL 0
+#endif /* !RETROFLAT_BITMAP_TRACE_LVL */
+
 #include <stdarg.h>
 
 #include <marge.h>
@@ -5394,6 +5398,9 @@ cleanup:
 
    /* == SDL1 == */
 
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loading bitmap: %s", filename_path );
+
    tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
    /* TODO: maug_cleanup_if_null()? */
    if( NULL == tmp_surface ) {
@@ -5403,7 +5410,8 @@ cleanup:
       goto cleanup;
    }
 
-   debug_printf( 1, "loaded bitmap: %d x %d", tmp_surface->w, tmp_surface->h );
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loaded bitmap: %d x %d", tmp_surface->w, tmp_surface->h );
 
    bmp_out->surface = SDL_DisplayFormat( tmp_surface );
    if( NULL == bmp_out->surface ) {
@@ -5413,7 +5421,7 @@ cleanup:
       goto cleanup;
    }
 
-   debug_printf( 1, "converted bitmap: %d x %d",
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL, "converted bitmap: %d x %d",
       bmp_out->surface->w, bmp_out->surface->h );
 
    SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
@@ -5429,6 +5437,9 @@ cleanup:
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loading bitmap: %s", filename_path );
 
    bmp_out->renderer = NULL;
    
@@ -5461,6 +5472,9 @@ cleanup:
       }
       goto cleanup;
    }
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "successfully loaded bitmap: %s", filename_path );
 
 cleanup:
 
