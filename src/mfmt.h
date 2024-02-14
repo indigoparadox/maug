@@ -525,9 +525,9 @@ MERROR_RETVAL mfmt_read_bmp_px(
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
-   uint32_t x = 0,
-      y = 0,
-      i = 0,
+   int32_t x = 0,
+      y = 0;
+   uint32_t i = 0,
       byte_in_idx = 0,
       byte_out_idx = 0,
       bit_idx = 0;

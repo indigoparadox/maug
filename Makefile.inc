@@ -50,8 +50,8 @@ ifeq ("$(PEDANTIC)","1")
 endif
 
 ifeq ("$(WERROR)","1")
-	CFLAGS_GCC += -Werror
-	CFLAGS_GCC64 += -Werror
+	CFLAGS_GCC += -Werror -Wsign-compare
+	CFLAGS_GCC64 += -Werror -Wsign-compare
 	CFLAGS_WATCOM += -we
 	CFLAGS_WATCOM386 += -we
 endif

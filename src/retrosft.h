@@ -243,8 +243,8 @@ void retrosoft_line(
    ) {
 
       if(
-         (size_t)iter[RETROFLAT_LINE_X] < retroflat_screen_w() &&
-         (size_t)iter[RETROFLAT_LINE_Y] < retroflat_screen_h()
+         (size_t)iter[RETROFLAT_LINE_X] < (size_t)retroflat_screen_w() &&
+         (size_t)iter[RETROFLAT_LINE_Y] < (size_t)retroflat_screen_h()
       ) {
          retroflat_px(
             target, color,
@@ -271,7 +271,7 @@ void retrosoft_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
-   size_t x_iter = 0,
+   int x_iter = 0,
       y_iter = 0;
 
    retroflat_px_lock( target );
