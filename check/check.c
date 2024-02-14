@@ -16,11 +16,13 @@
    srunner_free( sr_ ## suite_name );
 
 main_add_test_proto( mfmt )
+main_add_test_proto( rtil )
 
 int main( void ) {
    int number_failed = 0;
 
    main_add_test( mfmt );
+   main_add_test( rtil );
 
    return( number_failed == 0 ) ? 0 : 1;
 }
