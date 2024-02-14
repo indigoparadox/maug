@@ -923,7 +923,7 @@ struct RETROFLAT_GLTEX {
 
 typedef FILE* RETROFLAT_CONFIG;
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%u"
 
@@ -1056,7 +1056,7 @@ typedef int32_t RETROFLAT_IN_KEY;
 #else
 typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%u"
 
@@ -1210,7 +1210,7 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 /* == Win16/Win32 == */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%lu"
 
@@ -1239,7 +1239,8 @@ typedef uint32_t RETROFLAT_MS;
    f( BOOL, WinGStretchBlt, 1009 )
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
+typedef uint32_t retroflat_ms_t;
 
 #     define RETROFLAT_MS_FMT "%lu"
 
@@ -1595,7 +1596,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define BG_W_TILES 32
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
 typedef void* RETROFLAT_CONFIG;
 
 #define RETROFLAT_MS_FMT "%lu"
@@ -1669,7 +1670,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t RETROFLAT_MS;
+typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%lu"
 
@@ -1783,7 +1784,7 @@ struct RETROFLAT_BITMAP {
 #  endif /* __WATCOMC__ */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint16_t RETROFLAT_MS;
+typedef uint16_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%u"
 
@@ -2320,7 +2321,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
 
 void retroflat_set_title( const char* format, ... );
 
-RETROFLAT_MS retroflat_get_ms();
+retroflat_ms_t retroflat_get_ms();
 
 uint32_t retroflat_get_rand();
 
@@ -2558,7 +2559,7 @@ size_t retroflat_config_read(
 #ifdef RETROFLT_C
 
 #  if defined( RETROFLAT_API_ALLEGRO ) || defined( RETROFLAT_API_PC_BIOS )
-static volatile RETROFLAT_MS g_ms = 0;
+static volatile retroflat_ms_t g_ms = 0;
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_PC_BIOS */
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
@@ -3020,7 +3021,7 @@ int retroflat_loop(
    defined( RETROFLAT_API_LIBNDS ) || \
    defined( RETROFLAT_API_PC_BIOS )
 
-   RETROFLAT_MS next = 0,
+   retroflat_ms_t next = 0,
       now = 0;
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
@@ -4786,7 +4787,7 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-RETROFLAT_MS retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms() {
 #  if defined( RETROFLAT_API_ALLEGRO )
 
    /* == Allegro == */
