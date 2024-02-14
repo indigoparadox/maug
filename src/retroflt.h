@@ -3305,7 +3305,7 @@ static int retrosnd_cli_rsd_def(
    char* env_var = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 #     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
-   int i = 0;
+   size_t i = 0;
 #     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
 #     ifdef RETROSND_API_PC_BIOS

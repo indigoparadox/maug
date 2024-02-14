@@ -133,6 +133,9 @@ struct RETROTILE_DATA_BORDER {
 #define retrotile_get_tile( tilemap, layer, x, y ) \
    (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
 
+#define retrotile_set_tile( tilemap, layer, x, y, new_val ) \
+   (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
+
 #define retrotile_get_tiles_p( layer ) \
    ((retrotile_tile_t*)(((uint8_t*)(layer)) + \
    sizeof( struct RETROTILE_LAYER )))
@@ -832,10 +835,10 @@ cleanup:
 /* === */
 
 static retrotile_tile_t retrotile_gen_diamond_square_rand(
-   uint32_t min_z, uint32_t max_z, uint32_t tuning,
+   retrotile_tile_t min_z, retrotile_tile_t max_z, uint32_t tuning,
    retrotile_tile_t top_left_z
 ) {
-   int32_t avg = top_left_z;
+   retrotile_tile_t avg = top_left_z;
 
    if( 8 > rand() % 10 ) {
       /* avg = min_z + (rand() % (max_z - min_z)); */
@@ -922,7 +925,6 @@ static void retrotile_gen_diamond_square_corners(
 
          /* Check if corner is already filled in. */
          if( -1 != *tile_iter ) {
-#ifdef DEBUG_RETROTILE
             debug_printf(
                RETROTILE_TRACE_LVL, "corner coord %d x %d present: %d",
                corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
@@ -930,7 +932,6 @@ static void retrotile_gen_diamond_square_corners(
                   t, layer,
                   corners_x[iter_x][iter_y],
                   corners_y[iter_x][iter_y] ) );
-#endif /* DEBUG_RETROTILE */
             continue;
          }
 
@@ -938,12 +939,10 @@ static void retrotile_gen_diamond_square_corners(
          *tile_iter = retrotile_gen_diamond_square_rand(
             min_z, max_z, tuning, top_left_z );
 
-#ifdef DEBUG_RETROTILE
          debug_printf( RETROTILE_TRACE_LVL,
             "missing corner coord %d x %d: %d",
             corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
             *tile_iter );
-#endif /* DEBUG_RETROTILE */
       }
    }
 }
@@ -1044,10 +1043,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       data_ds->sect_x + data_ds->sect_w > t->tiles_w ||
       data_ds->sect_y + data_ds->sect_h > t->tiles_h
    ) {
-#ifdef DEBUG_RETROTILE
       debug_printf(
          RETROTILE_TRACE_LVL, "%d return: overflow sector", iter_depth );
-#endif /* DEBUG_RETROTILE */
       goto cleanup;
    }
 
@@ -1059,11 +1056,9 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
    if( 2 == data_ds->sect_w || 2 == data_ds->sect_h ) {
       /* Nothing to average, this sector is just corners! */
-#ifdef DEBUG_RETROTILE
       debug_printf(
          RETROTILE_TRACE_LVL,
          "%d return: reached innermost point", iter_depth );
-#endif /* DEBUG_RETROTILE */
       goto cleanup; /* Skip further descent regardless. */
    }
    
@@ -1074,14 +1069,12 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       t, layer,
       data_ds->sect_x + data_ds->sect_w_half,
       data_ds->sect_y + data_ds->sect_h_half ));
-#ifdef DEBUG_RETROTILE
    if( -1 != *tile_iter ) {
       debug_printf( RETROTILE_TRACE_LVL, "avg already present at %d x %d!",
          data_ds->sect_x + data_ds->sect_w_half,
          data_ds->sect_y + data_ds->sect_h_half );
       goto cleanup;
    }
-#endif /* DEBUG_RETROTILE */
    *tile_iter = avg;
 
    /* assert( 0 <= tiles[tile_idx].terrain );
@@ -1109,12 +1102,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
          data_ds_sub.sect_w_half = data_ds_sub.sect_w >> 1;
          data_ds_sub.sect_h_half = data_ds_sub.sect_h >> 1;
 
-#ifdef DEBUG_RETROTILE
          debug_printf(
             RETROTILE_TRACE_LVL, "%d: child sector at %d x %d, %d wide",
             iter_depth,
             data_ds_sub.sect_x, data_ds_sub.sect_y, data_ds_sub.sect_w );
-#endif /* DEBUG_RETROTILE */
 
          retval = retrotile_gen_diamond_square_iter(
             t, min_z, max_z, tuning, layer_idx, flags, &data_ds_sub,
@@ -1131,10 +1122,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       maug_cleanup_if_not_ok();
    }
 
-#ifdef DEBUG_RETROTILE
    debug_printf(
       RETROTILE_TRACE_LVL, "%d return: all sectors complete", iter_depth );
-#endif /* DEBUG_RETROTILE */
 
 cleanup:
 
