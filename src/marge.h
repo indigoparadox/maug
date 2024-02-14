@@ -235,7 +235,7 @@ MERROR_RETVAL maug_add_arg(
 
    /* Sanity checking and sizing. */
    if( MAUG_CLI_ARG_LIST_SZ_MAX <= slot_idx ) {
-      return MERROR_MARGE;
+      return MERROR_OVERFLOW;
    }
 
    if( 0 >= arg_sz ) {
