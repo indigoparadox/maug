@@ -11,7 +11,7 @@
 #  define MAUG_CONST const
 #endif /* MAUG_OS_PALM */
 
-#if defined( MAUG_OS_DOS_REAL ) && \
+#if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 )) && \
    defined( MAUG_DOS_MEM_L ) && \
    defined( __WATCOMC__ )
 #  define SEG_MCONST __based( __segname( "MCONST" ) )
@@ -31,7 +31,7 @@
 
 #include <mmem.h>
 
-#if defined( MAUG_OS_DOS_REAL )
+#if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 ))
 /* Undefine this here so the header can have its own object file from
  * dosstubs.
  */
