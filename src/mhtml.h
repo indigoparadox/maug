@@ -738,11 +738,6 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mhtml_parse_file(
-   const char* filename, MAUG_MHANDLE* p_parser_h
-) {
-}
-
 void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
    size_t i = 0;
    char* tag_content = NULL;
