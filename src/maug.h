@@ -69,6 +69,9 @@
 
 #ifdef MAUG_C
 #  define MJSON_C
+#  define MHTML_C
+#  define MHTMR_C
+#  define MPARSER_C
 #endif /* MAUG_C */
 
 #ifndef MAUG_NO_RETRO

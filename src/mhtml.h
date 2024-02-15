@@ -157,10 +157,16 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d );
 
 #ifdef MHTML_C
 
-MHTML_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
+#define MHTML_PSTATE_TABLE_CONST( name, idx ) \
+   MAUG_CONST uint8_t SEG_MCONST name = idx;
+
+MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_CONST )
+
+#define MHTML_PSTATE_TABLE_NAME( name, idx ) \
+   #name,
 
 static MAUG_CONST char* gc_mhtml_pstate_names[] = {
-   MHTML_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_NAME )
+   MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_NAME )
    ""
 };
 
@@ -177,8 +183,11 @@ MAUG_CONST char* gc_mhtml_tag_names[] = {
    ""
 };
 
+#define MHTML_PSTATE_TABLE_NAME( name, idx ) \
+   #name,
+
 static MAUG_CONST char* gc_mhtml_attrib_names[] = {
-   MHTML_ATTRIB_TABLE( MPARSER_PSTATE_TABLE_NAME )
+   MHTML_ATTRIB_TABLE( MHTML_PSTATE_TABLE_NAME )
    ""
 };
 
@@ -528,8 +537,6 @@ cleanup:
 MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "%c", c );
-
    switch( c ) {
    case '<':
       if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
@@ -729,6 +736,11 @@ MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser ) {
 cleanup:
 
    return retval;
+}
+
+MERROR_RETVAL mhtml_parse_file(
+   const char* filename, MAUG_MHANDLE* p_parser_h
+) {
 }
 
 void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {

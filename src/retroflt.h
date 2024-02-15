@@ -2569,14 +2569,12 @@ struct RETROFLAT_STATE* g_retroflat_state = NULL;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
-#if 0
 #  define RETROFLAT_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       #name_u,
 
-MAUG_CONST char* gc_retroflat_color_names[] = {
+MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
 };
-#endif
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 /* For now, these are set by WinMain(), so they need to be outside of the
@@ -7572,9 +7570,7 @@ cleanup:
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
-#if 0
-extern MAUG_CONST char* gc_retroflat_color_names[];
-#endif
+extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 
    extern struct RETROFLAT_STATE* g_retroflat_state;
 #     if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
