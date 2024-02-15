@@ -14,6 +14,10 @@
 #  define MCSS_CLASS_SZ_MAX 128
 #endif /* !MCSS_CLASS_SZ_MAX */
 
+#ifndef MCSS_TRACE_LVL
+#  define MCSS_TRACE_LVL 0
+#endif /* !MCSS_TRACE_LVL */
+
 #define MCSS_STYLE_FLAG_ACTIVE   0x01
 
 #define MCSS_PROP_FLAG_ACTIVE    0x01
@@ -90,8 +94,8 @@
    f( 9, PADDING_TOP, ssize_t, mcss_style_size_t, 0 ) \
    f( 10, PADDING_RIGHT, ssize_t, mcss_style_size_t, 0 ) \
    f( 11, PADDING_BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
-   f( 12, DISPLAY, uint8_t, mcss_style_display, 0 ) \
-   f( 13, POSITION, uint8_t, mcss_style_position, 0 ) \
+   f( 12, DISPLAY, int8_t, mcss_style_display, 0 ) \
+   f( 13, POSITION, int8_t, mcss_style_position, 0 ) \
    f( 14, LEFT, ssize_t, mcss_style_size_t, 0 ) \
    f( 15, TOP, ssize_t, mcss_style_size_t, 0 ) \
    f( 16, RIGHT, ssize_t, mcss_style_size_t, 0 ) \
@@ -231,7 +235,8 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
          0 == strncmp(
             gc_mcss_prop_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "selected style (" SSIZE_T_FMT ") property: %s",
+         debug_printf( MCSS_TRACE_LVL,
+            "selected style (" SSIZE_T_FMT ") property: %s",
             parser->styles_sz - 1, gc_mcss_prop_names[i] );
          parser->prop_key = i;
          goto cleanup;
@@ -249,7 +254,7 @@ cleanup:
 
 MERROR_RETVAL mcss_style_position(
    struct MCSS_PARSER* parser, const char* prop_name,
-   uint8_t* position_out
+   int8_t* position_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -265,7 +270,8 @@ MERROR_RETVAL mcss_style_position(
          0 == strncmp(
             gc_mcss_position_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_position_names[i] );
+         debug_printf( MCSS_TRACE_LVL, "set %s: %s",
+            prop_name, gc_mcss_position_names[i] );
          *position_out = i;
          goto cleanup;
       }
@@ -281,7 +287,7 @@ cleanup:
 
 MERROR_RETVAL mcss_style_display(
    struct MCSS_PARSER* parser, const char* prop_name,
-   uint8_t* display_out
+   int8_t* display_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -297,7 +303,8 @@ MERROR_RETVAL mcss_style_display(
          0 == strncmp(
             gc_mcss_display_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_display_names[i] );
+         debug_printf( MCSS_TRACE_LVL, "set %s: %s",
+            prop_name, gc_mcss_display_names[i] );
          *display_out = i;
          goto cleanup;
       }
@@ -329,7 +336,8 @@ MERROR_RETVAL mcss_style_color(
          0 == strncmp(
             gc_mcss_color_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "set %s: %s", prop_name, gc_mcss_color_names[i] );
+         debug_printf( MCSS_TRACE_LVL, "set %s: %s",
+            prop_name, gc_mcss_color_names[i] );
          *color_out = parser->colors[i];
          goto cleanup;
       }
@@ -359,9 +367,10 @@ MERROR_RETVAL mcss_style_size_t(
    *num_out = atoi( parser->token );
 
    if( MCSS_PROP_FLAG_AUTO == (MCSS_PROP_FLAG_AUTO & parser->prop_flags) ) {
-      debug_printf( 1, "set %s: AUTO", prop_name );
+      debug_printf( MCSS_TRACE_LVL, "set %s: AUTO", prop_name );
    } else {
-      debug_printf( 1, "set %s: " SIZE_T_FMT, prop_name, *num_out );
+      debug_printf( MCSS_TRACE_LVL,
+         "set %s: " SIZE_T_FMT, prop_name, *num_out );
    }
 
    return retval;
@@ -435,7 +444,7 @@ MERROR_RETVAL mcss_push_style_class(
    strncpy( parser->styles[parser->styles_sz - 1].class, class,
       MCSS_CLASS_SZ_MAX );
    parser->styles[parser->styles_sz - 1].class_sz = class_sz;
-   debug_printf( 1, "pushed style block " SIZE_T_FMT ": .%s",
+   debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": .%s",
       parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].class );
 
 cleanup:
@@ -454,7 +463,7 @@ MERROR_RETVAL mcss_push_style_id(
    strncpy( parser->styles[parser->styles_sz - 1].id, id,
       MCSS_ID_SZ_MAX );
    parser->styles[parser->styles_sz - 1].id_sz = id_sz;
-   debug_printf( 1, "pushed style block " SIZE_T_FMT ": #%s",
+   debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": #%s",
       parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].id );
 
 cleanup:
@@ -464,8 +473,6 @@ cleanup:
 
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
-
-   debug_printf( 1, "%c", c );
 
    switch( c ) {
    case ':':
@@ -496,7 +503,7 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
             NULL != strchr( parser->token, '!' ) &&
             0 == strncmp( "!important", strchr( parser->token, '!' ), 10 )
          ) {
-            debug_printf( 1, "marking value !important..." );
+            debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
             parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
          }
          retval = mcss_push_prop_val( parser );
@@ -607,7 +614,7 @@ MERROR_RETVAL mcss_style_init( struct MCSS_STYLE* style ) {
 
 void mcss_parser_free( struct MCSS_PARSER* parser ) {
 
-   debug_printf( 1, "freeing style parser..." );
+   debug_printf( MCSS_TRACE_LVL, "freeing style parser..." );
 
    mcss_parser_unlock( parser );
 
@@ -624,7 +631,7 @@ MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {
 
    /* Perform initial tag allocation. */
    parser->styles_sz_max = MCSS_PARSER_STYLES_INIT_SZ;
-   debug_printf( 1, "allocating " SIZE_T_FMT " styles...",
+   debug_printf( MCSS_TRACE_LVL, "allocating " SIZE_T_FMT " styles...",
       parser->styles_sz_max );
    parser->styles_h = maug_malloc(
       parser->styles_sz_max, sizeof( struct MCSS_STYLE ) );

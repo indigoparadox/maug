@@ -1294,6 +1294,7 @@ struct RETROFLAT_BITMAP {
 };
 
 LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
+char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags );
 
 #  ifdef RETROFLAT_OPENGL
 
