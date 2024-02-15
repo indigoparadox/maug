@@ -1293,6 +1293,8 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
 };
 
+LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
+
 #  ifdef RETROFLAT_OPENGL
 
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
