@@ -6,6 +6,10 @@
 #  define MHTMR_RENDER_NODES_INIT_SZ 10
 #endif /* !MHTMR_RENDER_NODES_INIT_SZ */
 
+#ifndef MHTMR_TRACE_LVL
+#  define MHTMR_TRACE_LVL 0
+#endif /* !MHTMR_TRACE_LVL */
+
 struct MHTMR_RENDER_NODE {
    ssize_t x;
    ssize_t y;
@@ -86,7 +90,8 @@ void mhtml_merge_styles(
 ) {
 
    if(
-      MCSS_STYLE_FLAG_ACTIVE != (MCSS_STYLE_FLAG_ACTIVE & effect_style->flags)
+      MCSS_STYLE_FLAG_ACTIVE !=
+      (MCSS_STYLE_FLAG_ACTIVE & effect_style->flags)
    ) {
       mcss_style_init( effect_style );
    }
@@ -121,24 +126,24 @@ void mhtml_merge_styles(
       ) { \
          /* Inherit parent property. */ \
          if( MCSS_PROP_BACKGROUND_COLOR == p_id ) { \
-            debug_printf( 1, "background color was %s", \
+            debug_printf( MHTMR_TRACE_LVL, "background color was %s", \
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } else if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( 1, "color was %s", \
+            debug_printf( MHTMR_TRACE_LVL, "color was %s", \
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } \
-         debug_printf( 1, "%s using parent %s", \
+         debug_printf( MHTMR_TRACE_LVL, "%s using parent %s", \
             gc_mhtml_tag_names[tag_type], #prop_n ); \
          effect_style->prop_n = parent_style->prop_n; \
          effect_style->prop_n ## _flags = parent_style->prop_n ## _flags; \
          if( MCSS_PROP_BACKGROUND_COLOR == p_id ) { \
-            debug_printf( 1, "background color %s", \
+            debug_printf( MHTMR_TRACE_LVL, "background color %s", \
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } else if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( 1, "color %s", \
+            debug_printf( MHTMR_TRACE_LVL, "color %s", \
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } \
@@ -147,10 +152,10 @@ void mhtml_merge_styles(
          mcss_prop_is_active( tag_style->prop_n ) \
       ) { \
          /* Use new property. */ \
-         debug_printf( 1, "%s using style %s", \
+         debug_printf( MHTMR_TRACE_LVL, "%s using style %s", \
             gc_mhtml_tag_names[tag_type], #prop_n ); \
          if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( 1, "color %s", \
+            debug_printf( MHTMR_TRACE_LVL, "color %s", \
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } \
@@ -171,7 +176,7 @@ void mhtml_merge_styles(
       #define MHTML_TAG_TABLE_DISP( tag_id, tag_name, fields, disp ) \
          } else if( tag_id == tag_type ) { \
             effect_style->DISPLAY = MCSS_DISPLAY_ ## disp; \
-            debug_printf( 1, "%s defaulting to %s DISPLAY", \
+            debug_printf( MHTMR_TRACE_LVL, "%s defaulting to %s DISPLAY", \
                gc_mhtml_tag_names[tag_type], \
                gc_mcss_display_names[effect_style->DISPLAY] );
 
@@ -190,7 +195,7 @@ ssize_t mhtmr_get_next_free_node( struct MHTMR_RENDER_TREE* tree ) {
    MAUG_MHANDLE new_nodes_h = (MAUG_MHANDLE)NULL;
 
    if( NULL != tree->nodes ) {
-      debug_printf( 1, "auto-unlocking nodes..." );
+      debug_printf( MHTMR_TRACE_LVL, "auto-unlocking nodes..." );
       maug_munlock( tree->nodes_h, tree->nodes );
       auto_unlocked = 1;
    }
@@ -222,7 +227,8 @@ ssize_t mhtmr_get_next_free_node( struct MHTMR_RENDER_TREE* tree ) {
    }
 
    /* Zero out the last node, add it to the list, and return its index. */
-   debug_printf( 1, "zeroing node " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
+   debug_printf( MHTMR_TRACE_LVL,
+      "zeroing node " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       tree->nodes_sz, tree->nodes_sz_max );
    maug_mzero( &(tree->nodes[tree->nodes_sz]),
       sizeof( struct MHTMR_RENDER_NODE ) );
@@ -235,7 +241,7 @@ ssize_t mhtmr_get_next_free_node( struct MHTMR_RENDER_TREE* tree ) {
 cleanup:
 
    if( auto_unlocked ) {
-      debug_printf( 1, "auto-locking nodes..." );
+      debug_printf( MHTMR_TRACE_LVL, "auto-locking nodes..." );
       maug_mlock( tree->nodes_h, tree->nodes );
    }
 
@@ -269,7 +275,7 @@ ssize_t mhtmr_add_node_child(
 
    /* Add new child under current node. */
    if( 0 > mhtmr_node( tree, node_parent_idx )->first_child ) {
-      debug_printf( 1, "adding first child..." );
+      debug_printf( MHTMR_TRACE_LVL, "adding first child..." );
       assert( -1 == mhtmr_node( tree, node_parent_idx )->first_child );
       mhtmr_node( tree, node_parent_idx )->first_child = node_new_idx;
    } else {
@@ -309,7 +315,8 @@ MERROR_RETVAL mhtmr_tree_create(
       if( 0 > node_new_idx ) {
          goto cleanup;
       }
-      debug_printf( 1, "created initial root node: " SIZE_T_FMT, node_new_idx );
+      debug_printf( MHTMR_TRACE_LVL,
+         "created initial root node: " SIZE_T_FMT, node_new_idx );
 
       node_idx = node_new_idx;
 
@@ -331,7 +338,7 @@ MERROR_RETVAL mhtmr_tree_create(
 
       mhtmr_node( tree, node_new_idx )->tag = tag_iter_idx;
 
-      debug_printf( 1,
+      debug_printf( MHTMR_TRACE_LVL,
          "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
          node_new_idx, node_idx );
 
@@ -374,7 +381,7 @@ MERROR_RETVAL mhtmr_apply_styles(
                mhtml_tag( parser, tag_idx )->base.classes_sz
             )
          ) {
-            debug_printf( 1, "found style for tag class: %s",
+            debug_printf( MHTMR_TRACE_LVL, "found style for tag class: %s",
                parser->styler.styles[i].class );
 
             mhtml_merge_styles(
@@ -394,7 +401,7 @@ MERROR_RETVAL mhtmr_apply_styles(
                mhtml_tag( parser, tag_idx )->base.id_sz
             )
          ) {
-            debug_printf( 1, "found style for tag ID: %s",
+            debug_printf( MHTMR_TRACE_LVL, "found style for tag ID: %s",
                parser->styler.styles[i].id );
 
             mhtml_merge_styles(
@@ -442,7 +449,8 @@ MERROR_RETVAL mhtmr_tree_size(
       parser, tree, parent_style, &effect_style, node_idx, tag_idx );
 
    if( mcss_prop_is_active( effect_style.POSITION ) ) {
-      debug_printf( 1, "node " SSIZE_T_FMT ": applying %s positioning",
+      debug_printf( MHTMR_TRACE_LVL,
+         "node " SSIZE_T_FMT ": applying %s positioning",
          node_idx, gc_mcss_position_names[effect_style.POSITION] );
       mhtmr_node( tree, node_idx )->pos = effect_style.POSITION;
       mhtmr_node( tree, node_idx )->pos_flags = effect_style.POSITION_flags;
@@ -462,7 +470,7 @@ MERROR_RETVAL mhtmr_tree_size(
          &(mhtmr_node( tree, node_idx )->w),
          &(mhtmr_node( tree, node_idx )->h), 0 );
 
-      debug_printf( 1, "TEXT w: " SIZE_T_FMT, 
+      debug_printf( MHTMR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          mhtmr_node( tree, node_idx )->w );
 
       maug_munlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
@@ -542,7 +550,8 @@ MERROR_RETVAL mhtmr_tree_size(
          if(
             MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
          ) {
-            debug_printf( 1, "PARENT " SSIZE_T_FMT " adding CHILD "
+            debug_printf( MHTMR_TRACE_LVL,
+               "PARENT " SSIZE_T_FMT " adding CHILD "
                SSIZE_T_FMT " HEIGHT " SSIZE_T_FMT,
                node_idx, child_iter_idx,
                mhtmr_node( tree, child_iter_idx )->h );
@@ -829,26 +838,32 @@ void mhtmr_tree_dump(
    ssize_t iter, size_t d
 ) {
    size_t i = 0;
+   char indents[31];
 
    if( 0 > iter ) {
       return;
    }
 
+   /* Generate the indentation. */
+   maug_mzero( indents, 30 );
    for( i = 0 ; d > i ; i++ ) {
-      printf( "   " );
+      if( strlen( indents ) >= 30 ) {
+         break;
+      }
+      strcat( indents, "   " );
    }
 
-   printf(
-      SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
+   /* Print the debug line. */
+   debug_printf(
+      1,
+      "%s" SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
       " (" SSIZE_T_FMT " x " SSIZE_T_FMT ")",
-      iter,
+      indents, iter,
       0 <= tree->nodes[iter].tag ?
-         gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type] : 
-            "ROOT",
+         gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type]
+            : "ROOT",
       tree->nodes[iter].x, tree->nodes[iter].y,
       tree->nodes[iter].w, tree->nodes[iter].h );
-
-   printf( "\n" );
 
    mhtmr_tree_dump( tree, parser, tree->nodes[iter].first_child, d + 1 );
 
@@ -857,7 +872,7 @@ void mhtmr_tree_dump(
 
 void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
 
-   debug_printf( 1, "freeing render nodes..." );
+   debug_printf( MHTMR_TRACE_LVL, "freeing render nodes..." );
 
    mhtmr_tree_unlock( tree );
 
@@ -873,7 +888,8 @@ MERROR_RETVAL mhtmr_tree_init( struct MHTMR_RENDER_TREE* tree ) {
 
    /* Perform initial node allocation. */
    tree->nodes_sz_max = MHTML_PARSER_TAGS_INIT_SZ;
-   debug_printf( 1, "allocating " SIZE_T_FMT " nodes...", tree->nodes_sz_max );
+   debug_printf( MHTMR_TRACE_LVL,
+      "allocating " SIZE_T_FMT " nodes...", tree->nodes_sz_max );
    tree->nodes_h = maug_malloc(
       tree->nodes_sz_max, sizeof( struct MHTMR_RENDER_NODE ) );
    maug_cleanup_if_null_alloc( struct MHTMR_RENDER_NODE*, tree->nodes_h );

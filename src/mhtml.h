@@ -14,6 +14,14 @@
 #  define MCSS_C
 #endif /* MHTML_C */
 
+#ifndef MHTML_DUMP_LINE_SZ
+#  define MHTML_DUMP_LINE_SZ 255
+#endif /* !MHTML_DUMP_LINE_SZ */
+
+#ifndef MHTML_TRACE_LVL
+#  define MHTML_TRACE_LVL 0
+#endif /* !MHTML_TRACE_LVL */
+
 /*! \brief Indicates a text tag contains CSS information to be parsed. */
 #define MHTML_TAG_FLAG_STYLE  0x02
 
@@ -196,7 +204,7 @@ ssize_t mhtml_get_next_free_tag( struct MHTML_PARSER* parser ) {
    MAUG_MHANDLE new_tags_h = (MAUG_MHANDLE)NULL;
 
    if( NULL != parser->tags ) {
-      debug_printf( 1, "auto-unlocking tags..." );
+      debug_printf( MHTML_TRACE_LVL, "auto-unlocking tags..." );
       maug_munlock( parser->tags_h, parser->tags );
       auto_unlocked = 1;
    }
@@ -228,7 +236,8 @@ ssize_t mhtml_get_next_free_tag( struct MHTML_PARSER* parser ) {
    }
 
    /* Zero out the last tag, add it to the list, and return its index. */
-   debug_printf( 1, "zeroing tag " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
+   debug_printf( MHTML_TRACE_LVL,
+      "zeroing tag " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       parser->tags_sz, parser->tags_sz_max );
    maug_mzero( &(parser->tags[parser->tags_sz]), sizeof( union MHTML_TAG ) );
    retidx = parser->tags_sz;
@@ -250,7 +259,7 @@ MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "freeing HTML parser..." );
+   debug_printf( MHTML_TRACE_LVL, "freeing HTML parser..." );
 
    mhtml_parser_lock( parser );
 
@@ -290,11 +299,12 @@ MERROR_RETVAL mhtml_pop_tag( struct MHTML_PARSER* parser ) {
    parser->tag_iter = parser->tags[parser->tag_iter].base.parent;
 
    if( 0 <= parser->tag_iter ) {
-      debug_printf( 1, "moved iter back to tag %s (" SIZE_T_FMT ")",
+      debug_printf( MHTML_TRACE_LVL,
+         "moved iter back to tag %s (" SIZE_T_FMT ")",
          gc_mhtml_tag_names[parser->tags[parser->tag_iter].base.type],
          parser->tag_iter );
    } else {
-      debug_printf( 1, "moved iter back to root (-1)" );
+      debug_printf( MHTML_TRACE_LVL, "moved iter back to root (-1)" );
    }
 
 cleanup:
@@ -334,14 +344,16 @@ MERROR_RETVAL mhtml_push_tag( struct MHTML_PARSER* parser ) {
       } else {
          /* Find the last sibling child. */
          tag_child_idx = parser->tags[parser->tag_iter].base.first_child;
-         debug_printf( 1, "tci: " SSIZE_T_FMT " ns: " SSIZE_T_FMT,
+         debug_printf( MHTML_TRACE_LVL,
+            "tci: " SSIZE_T_FMT " ns: " SSIZE_T_FMT,
             tag_child_idx, parser->tags[tag_child_idx].base.next_sibling );
          while(
             0 <= tag_child_idx &&
             0 <= parser->tags[tag_child_idx].base.next_sibling
          ) {
             tag_child_idx = parser->tags[tag_child_idx].base.next_sibling;
-            debug_printf( 1, "tci: " SSIZE_T_FMT, tag_child_idx );
+            debug_printf( MHTML_TRACE_LVL,
+               "tci: " SSIZE_T_FMT, tag_child_idx );
          }
          assert( 0 <= tag_child_idx );
          parser->tags[tag_child_idx].base.next_sibling = new_tag_idx;
@@ -381,7 +393,8 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
          0 == strncmp(
             gc_mhtml_tag_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "new tag (" SSIZE_T_FMT ") type: %s",
+         debug_printf( MHTML_TRACE_LVL,
+            "new tag (" SSIZE_T_FMT ") type: %s",
             parser->tag_iter, gc_mhtml_tag_names[i] );
          parser->tags[parser->tag_iter].base.type = i;
 
@@ -391,7 +404,8 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
              */
             assert( -1 == parser->body_idx );
             parser->body_idx = parser->tag_iter;
-            debug_printf( 1, "set body index to: " SSIZE_T_FMT,
+            debug_printf( MHTML_TRACE_LVL,
+               "set body index to: " SSIZE_T_FMT,
                parser->body_idx );
          }
 
@@ -434,7 +448,7 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    maug_cleanup_if_null_alloc( char*, tag_content );
 
    if( MHTML_TAG_TYPE_STYLE == parser->tags[parser->tag_iter].base.type ) {
-      debug_printf( 1, "parsing STYLE tag..." );
+      debug_printf( MHTML_TRACE_LVL, "parsing STYLE tag..." );
       for( ; parser->token_sz > i ; i++ ) {
          retval = mcss_parse_c( &(parser->styler), parser->token[i] );
          maug_cleanup_if_not_ok();
@@ -458,7 +472,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   debug_printf( 1, "attrib: %s", parser->token );
+   debug_printf( MHTML_TRACE_LVL, "attrib: %s", parser->token );
 
    mparser_token_upper( parser, i );
 
@@ -470,7 +484,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
          0 == strncmp(
             gc_mhtml_attrib_names[i], parser->token, parser->token_sz )
       ) {
-         debug_printf( 1, "new attrib type: %s", gc_mhtml_attrib_names[i] );
+         debug_printf( MHTML_TRACE_LVL, "new attrib type: %s", gc_mhtml_attrib_names[i] );
          parser->attrib_key = i;
          goto cleanup;
       }
@@ -492,7 +506,7 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    mhtml_parser_lock( parser );
 
    if( MHTML_ATTRIB_KEY_STYLE == parser->attrib_key ) {
-      debug_printf( 1, "style: %s", parser->token );
+      debug_printf( MHTML_TRACE_LVL, "style: %s", parser->token );
       /* TODO: Parse and attach style. */
 
       retval = mcss_push_style( &(parser->styler) );
@@ -710,7 +724,7 @@ MERROR_RETVAL mhtml_parser_init( struct MHTML_PARSER* parser ) {
 
    /* Perform initial tag allocation. */
    parser->tags_sz_max = MHTML_PARSER_TAGS_INIT_SZ;
-   debug_printf( 1, "allocating " SIZE_T_FMT " tags...",
+   debug_printf( MHTML_TRACE_LVL, "allocating " SIZE_T_FMT " tags...",
       parser->tags_sz_max );
    parser->tags_h = maug_malloc(
       parser->tags_sz_max, sizeof( union MHTML_TAG ) );
@@ -737,13 +751,14 @@ void mhtml_dump_tree(
 ) {
    size_t i = 0;
    char* tag_content = NULL;
+   char dump_line[MHTML_DUMP_LINE_SZ + 1];
 
    if( 0 > iter ) {
       return;
    }
 
    for( i = 0 ; d > i ; i++ ) {
-      printf( "   " );
+      maug_snprintf( dump_line, MHTML_DUMP_LINE_SZ, "   " );
    }
    if( MHTML_TAG_TYPE_TEXT == parser->tags[iter].base.type ) {
       maug_mlock( parser->tags[iter].TEXT.content, tag_content );
@@ -752,27 +767,56 @@ void mhtml_dump_tree(
          return;
       }
 
-      printf( "TEXT: %s\n", tag_content );
+      if(
+         strlen( dump_line ) + 7 /* ("TEXT: \n") */
+            + strlen( tag_content ) < MHTML_DUMP_LINE_SZ
+      ) {
+         maug_snprintf( &(dump_line[strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+            "TEXT: %s\n", tag_content );
+      }
 
       maug_munlock( parser->tags[iter].TEXT.content, tag_content );
 
    } else {
-      printf( "%s", gc_mhtml_tag_names[parser->tags[iter].base.type] );
-
-      if( 0 <= parser->tags[iter].base.style ) {
-         printf( " (styled)" );
+      if(
+         strlen( dump_line ) +
+         strlen( gc_mhtml_tag_names[parser->tags[iter].base.type] ) <
+         MHTML_DUMP_LINE_SZ
+      ) {
+         strcat( dump_line,
+            gc_mhtml_tag_names[parser->tags[iter].base.type] );
       }
 
-      if( 0 < parser->tags[iter].base.id_sz ) {
-         printf( " (id: %s)", parser->tags[iter].base.id );
+      if(
+         0 <= parser->tags[iter].base.style &&
+         strlen( dump_line ) + 9 /* (styled) */ < MHTML_DUMP_LINE_SZ
+      ) {
+         strcat( dump_line, " (styled)" );
       }
 
-      if( 0 < parser->tags[iter].base.classes_sz ) {
-         printf( " (classes: %s)", parser->tags[iter].base.classes );
+      if(
+         0 < parser->tags[iter].base.id_sz &&
+         strlen( dump_line ) + 7 /* (id: ) */
+            + strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
+      ) {
+         maug_snprintf( &(dump_line[strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+            " (id: %s)", parser->tags[iter].base.id );
       }
 
-      printf( "\n" );
+      if(
+         0 < parser->tags[iter].base.classes_sz &&
+         strlen( dump_line ) + 12 /* (classes: ) */
+            + strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
+      ) {
+         maug_snprintf( &(dump_line[strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+            " (classes: %s)", parser->tags[iter].base.classes );
+      }
    }
+
+   debug_printf( 1, "%s", dump_line );
 
    mhtml_dump_tree( parser, parser->tags[iter].base.first_child, d + 1 );
 
