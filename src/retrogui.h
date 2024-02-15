@@ -237,7 +237,7 @@ static RETROGUI_IDC retrogui_click_LISTBOX(
          gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
 
       if(
-         input_evt->mouse_y < 
+         (size_t)(input_evt->mouse_y) < 
          ctl->base.y + ((j + 1) * (h + RETROGUI_PADDING))
       ) {
          ctl->LISTBOX.sel_idx = j;

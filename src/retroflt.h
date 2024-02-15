@@ -6098,7 +6098,7 @@ void retroflat_blit_bitmap(
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
 #  if defined( RETROFLAT_OPENGL )
-   size_t y_iter = 0;
+   int y_iter = 0;
 #  elif defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    MERROR_RETVAL retval = MERROR_OK;
    SDL_Rect src_rect;
@@ -6314,11 +6314,11 @@ void retroflat_px(
    assert( retroflat_bitmap_locked( target ) );
 
 #     if !defined( RETROFLAT_NO_BOUNDSC )
-   if( x >= target->tex.w ) {
+   if( (size_t)x >= target->tex.w ) {
       return;
    }
 
-   if( y >= target->tex.h ) {
+   if( (size_t)y >= target->tex.h ) {
       return;
    }
 #     endif /* !RETROFLAT_NO_BOUNDSC */

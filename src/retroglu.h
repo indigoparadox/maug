@@ -355,7 +355,7 @@ struct RETROGLU_PARSER {
    int state;
    int material_idx;
    char token[RETROGLU_PARSER_TOKEN_SZ_MAX];
-   int token_sz;
+   size_t token_sz;
    retroglu_mtl_cb load_mtl;
    void* load_mtl_data;
 };
@@ -448,7 +448,7 @@ void retroglu_destroy_glyph_tex();
 
 void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
-   const char* str, int str_sz, const char* font_str, uint8_t flags );
+   const char* str, size_t str_sz, const char* font_str, uint8_t flags );
 
 #ifdef RETROGLU_C
 
@@ -765,7 +765,8 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          if(
             parser->token_sz == strlen( g_retroglu_token_strings[i] ) &&
             0 == strncmp(
-               parser->token, g_retroglu_token_strings[i], parser->token_sz )
+               parser->token, g_retroglu_token_strings[i],
+               parser->token_sz )
          ) {
             retval = g_retroglu_token_callbacks[i]( parser );
             goto cleanup;
@@ -1493,7 +1494,7 @@ void retroglu_destroy_glyph_tex() {
 
 void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
-   const char* str, int str_sz, const char* font_str, uint8_t flags
+   const char* str, size_t str_sz, const char* font_str, uint8_t flags
 ) {
    size_t i = 0;
 #ifdef RETROGLU_NO_TEXTURES
