@@ -33,6 +33,32 @@ endif /* MPARSER_TRACE_NAMES */
 
 typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
+/**
+ * \brief Given a pstate table, generate numeric constants.
+ */
+#define MPARSER_PSTATE_TABLE_CONST( name, idx ) \
+   MAUG_CONST uint8_t SEG_MCONST name = idx;
+
+/**
+ * \brief Given a pstate table, generate a quoted name for each.
+ */
+#define MPARSER_PSTATE_TABLE_NAME( name, idx ) \
+   #name,
+
+#ifdef MPARSER_TRACE_NAMES
+#  define MPARSER_PSTATE_NAMES( table, global_id ) \
+      MAUG_CONST char* gc_ ## global_id ## _pstate_names[] = { \
+         table( MPARSER_PSTATE_TABLE_NAME ) \
+         "" \
+      };
+#else
+/**
+ * \brief Given a pstate table, generate a list of quoted names if that
+ *        level of debugging is enabled.
+ */
+#  define MPARSER_PSTATE_NAMES( table, global_id )
+#endif /* MPARSER_TRACE_NAMES */
+
 /* TODO: Function names should be verb_noun! */
 
 /* Normalize token case. */

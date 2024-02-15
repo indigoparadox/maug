@@ -162,13 +162,7 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d );
 
 MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_CONST )
 
-#define MHTML_PSTATE_TABLE_NAME( name, idx ) \
-   #name,
-
-static MAUG_CONST char* SEG_MCONST gc_mhtml_pstate_names[] = {
-   MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_NAME )
-   ""
-};
+MPARSER_PSTATE_NAMES( MHTML_PARSER_PSTATE_TABLE, mhtml )
 
 #define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
    MAUG_CONST uint16_t SEG_MCONST MHTML_TAG_TYPE_ ## tag_name = tag_id;

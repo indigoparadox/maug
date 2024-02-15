@@ -70,20 +70,9 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c );
 
 #ifdef MJSON_C
 
-#define MJSON_PSTATE_TABLE_CONST( name, idx ) \
-   MAUG_CONST uint8_t SEG_MCONST name = idx;
+MJSON_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
-#define MJSON_PSTATE_TABLE_NAME( name, idx ) \
-   #name,
-
-MJSON_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_CONST )
-
-#ifdef MPARSER_TRACE_NAMES
-MAUG_CONST char* SEG_MCONST gc_mjson_pstate_names[] = {
-   MJSON_PARSER_PSTATE_TABLE( MJSON_PSTATE_TABLE_NAME )
-   ""
-};
-#endif /* MPARSER_TRACE_NAMES */
+MPARSER_PSTATE_NAMES( MJSON_PARSER_PSTATE_TABLE, mjson )
 
 MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
