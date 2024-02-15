@@ -10,8 +10,6 @@
 #  define MAUG_OS_DOS
 #elif defined( RETROFLAT_OS_DOS_REAL )
 #  define MAUG_OS_DOS_REAL
-#elif defined( RETROFLAT_OS_DOS_REAL )
-#  define MAUG_OS_DOS_REAL
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef PATH_MAX

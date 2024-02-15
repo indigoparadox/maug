@@ -165,20 +165,20 @@ MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_CONST )
 #define MHTML_PSTATE_TABLE_NAME( name, idx ) \
    #name,
 
-static MAUG_CONST char* gc_mhtml_pstate_names[] = {
+static MAUG_CONST char* SEG_MCONST gc_mhtml_pstate_names[] = {
    MHTML_PARSER_PSTATE_TABLE( MHTML_PSTATE_TABLE_NAME )
    ""
 };
 
 #define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
-   MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name = tag_id;
+   MAUG_CONST uint16_t SEG_MCONST MHTML_TAG_TYPE_ ## tag_name = tag_id;
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
 
 #define MHTML_TAG_TABLE_NAMES( tag_id, tag_name, fields, disp ) \
    #tag_name,
 
-MAUG_CONST char* gc_mhtml_tag_names[] = {
+MAUG_CONST char* SEG_MCONST gc_mhtml_tag_names[] = {
    MHTML_TAG_TABLE( MHTML_TAG_TABLE_NAMES )
    ""
 };
@@ -186,13 +186,13 @@ MAUG_CONST char* gc_mhtml_tag_names[] = {
 #define MHTML_PSTATE_TABLE_NAME( name, idx ) \
    #name,
 
-static MAUG_CONST char* gc_mhtml_attrib_names[] = {
+static MAUG_CONST char* SEG_MCONST gc_mhtml_attrib_names[] = {
    MHTML_ATTRIB_TABLE( MHTML_PSTATE_TABLE_NAME )
    ""
 };
 
 #define MHTML_ATTRIB_TABLE_NAME( attrib_name, attrib_id ) \
-   MAUG_CONST uint16_t MHTML_ATTRIB_KEY_ ## attrib_name = attrib_id;
+   MAUG_CONST uint16_t SEG_MCONST MHTML_ATTRIB_KEY_ ## attrib_name = attrib_id;
 
 MHTML_ATTRIB_TABLE( MHTML_ATTRIB_TABLE_NAME )
 
@@ -791,11 +791,11 @@ void mhtml_dump_tree( struct MHTML_PARSER* parser, ssize_t iter, size_t d ) {
 #else
 
 #define MHTML_TAG_TABLE_CONST( tag_id, tag_name, fields, disp ) \
-   extern MAUG_CONST uint16_t MHTML_TAG_TYPE_ ## tag_name;
+   extern MAUG_CONST uint16_t SEG_MCONST MHTML_TAG_TYPE_ ## tag_name;
 
 MHTML_TAG_TABLE( MHTML_TAG_TABLE_CONST )
 
-extern MAUG_CONST char* gc_mhtml_tag_names[];
+extern MAUG_CONST char* SEG_MCONST gc_mhtml_tag_names[];
 
 #endif /* MHTML_C */
 
