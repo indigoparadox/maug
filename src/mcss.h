@@ -204,18 +204,9 @@ MAUG_CONST char* gc_mcss_prop_names[] = {
    ""
 };
 
-#define MCSS_PSTATE_TABLE_CONST( name, idx ) \
-   MAUG_CONST uint8_t SEG_MCONST name = idx;
+MCSS_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
-MCSS_PARSER_PSTATE_TABLE( MCSS_PSTATE_TABLE_CONST )
-
-#define MCSS_PSTATE_TABLE_NAME( name, idx ) \
-   #name,
-
-static MAUG_CONST char* gc_mcss_pstate_names[] = {
-   MCSS_PARSER_PSTATE_TABLE( MCSS_PSTATE_TABLE_NAME )
-   ""
-};
+MPARSER_PSTATE_NAMES( MCSS_PARSER_PSTATE_TABLE, mcss );
 
 #define MCSS_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    #name_u,
