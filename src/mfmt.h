@@ -599,7 +599,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    y = header_bmp_info->height - 1;
    byte_out_idx = mfmt_read_bmp_px_out_idx();
-   while( header_bmp_info->height > y ) {
+   while( 0 < y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
 

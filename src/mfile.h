@@ -38,7 +38,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_has_bytes( p_file ) \
    ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
-      0 < ftell( (p_file)->h.file ) : \
+      (size_t)ftell( (p_file)->h.file ) : \
       (p_file)->mem_cursor) < (p_file)->sz)
 
 #define mfile_cread( p_file, p_c ) \
