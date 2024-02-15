@@ -59,7 +59,7 @@ MERROR_RETVAL retrotile_path_start(
 #ifdef RETROTIL_C
 
 static MERROR_RETVAL retrotile_path_list_append(
-   struct RETROTILE_PATH_NODE* list, size_t* p_list_sz,
+   struct RETROTILE_PATH_NODE* list, size_t* p_list_sz, size_t list_sz_max,
    struct RETROTILE_PATH_NODE* node
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -104,7 +104,7 @@ int8_t retrotile_path_list_lowest_f(
    uint8_t lowest_f_idx = 0;
 
    for( i = 0 ; list_sz > i ; i++ ) {
-      if( list[lowest_f_idx].f > list[i].f ) {
+      if( list[lowest_f_idx].f >= list[i].f ) {
          lowest_f_idx = i;
       }
    }
@@ -127,8 +127,6 @@ static MERROR_RETVAL retrotile_path_list_test_add_child(
    retrotile_blocked_cb blocked_cb, void* blocked_cb_data
 ) {
    uint8_t i = 0;
-   uint16_t a_x = p_adjacent->x,
-      a_y = p_adjacent->y;
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROTILE_PATH_TRACE_LVL,
@@ -156,6 +154,7 @@ static MERROR_RETVAL retrotile_path_list_test_add_child(
          ">> tile %d, %d blocked by mobile or terrain!",
          closed[iter_closed_idx].x + gc_retrotile_offsets4_x[dir],
          closed[iter_closed_idx].y + gc_retrotile_offsets4_y[dir] );
+      retval = RETROTILE_RETVAL_BLOCKED;
       goto cleanup;
    }
 
@@ -167,18 +166,15 @@ static MERROR_RETVAL retrotile_path_list_test_add_child(
       closed[iter_closed_idx].y,
       closed[iter_closed_idx].g );
 
-   p_adjacent->g = closed[iter_closed_idx].g + 1;
-   debug_printf( RETROTILE_PATH_TRACE_LVL,
-      ">> tile distance is %d", p_adjacent->g );
-   
    /* Use Manhattan heuristic since we can only move in 4 dirs. */
-   p_adjacent->h = abs( a_x - tgt_x ) + abs( a_y - tgt_y );
-   debug_printf( RETROTILE_PATH_TRACE_LVL,
-      ">> tile heuristic is %d", p_adjacent->h );
-
+   p_adjacent->g = closed[iter_closed_idx].g + 1;
+   p_adjacent->h =
+      abs( (int16_t)((int16_t)p_adjacent->x - (int16_t)tgt_x) ) +
+      abs( (int16_t)((int16_t)p_adjacent->y - (int16_t)tgt_y) );
    p_adjacent->f = p_adjacent->g + p_adjacent->h;
    debug_printf( RETROTILE_PATH_TRACE_LVL,
-      ">> tile cost is %d", p_adjacent->f );
+      ">> tile dist: %d, heur: %d, cost: %d",
+         p_adjacent->g, p_adjacent->h, p_adjacent->f );
 
    for( i = 0 ; *p_open_sz > i ; i++ ) {
       /* Make sure adjacent is not already on the open list. */
@@ -190,7 +186,8 @@ static MERROR_RETVAL retrotile_path_list_test_add_child(
    /* Add the child to the list. */
    debug_printf( RETROTILE_PATH_TRACE_LVL,
       ">> adding tile to open list" );
-   retval = retrotile_path_list_append( open, p_open_sz, p_adjacent );
+   retval = retrotile_path_list_append(
+      open, p_open_sz, RETROTILE_PATH_LIST_MAX, p_adjacent );
    maug_cleanup_if_not_ok();
 
 cleanup:
@@ -201,21 +198,20 @@ cleanup:
 MERROR_RETVAL retrotile_path_start(
    uint16_t start_x, uint16_t start_y,
    uint16_t tgt_x, uint16_t tgt_y,
-   struct RETROTILE_PATH_NODE* closed,
-   size_t* p_closed_sz, size_t closed_sz_max,
+   struct RETROTILE_PATH_NODE* path,
+   size_t* p_path_sz, size_t path_sz_max,
    struct RETROTILE* t, uint8_t flags,
    retrotile_blocked_cb blocked_cb, void* blocked_cb_data
 ) {
    struct RETROTILE_PATH_NODE open[RETROTILE_PATH_LIST_MAX];
+   struct RETROTILE_PATH_NODE closed[RETROTILE_PATH_LIST_MAX];
    struct RETROTILE_PATH_NODE adjacent;
-   size_t open_sz = 0;
+   size_t open_sz = 0,
+      closed_sz = 0;
    uint8_t iter_idx = 0,
       tgt_reached = 0,
       i = 0;
    MERROR_RETVAL retval = RETROTILE_RETVAL_BLOCKED;
-
-   /* We directly subscript 1 below. */
-   assert( 2 <= closed_sz_max );
 
    /* Zero out lists and nodes. */
    maug_mzero(
@@ -223,14 +219,14 @@ MERROR_RETVAL retrotile_path_start(
       sizeof( struct RETROTILE_PATH_NODE ) * RETROTILE_PATH_LIST_MAX );
    maug_mzero(
       closed, 
-      sizeof( struct RETROTILE_PATH_NODE ) * closed_sz_max );
+      sizeof( struct RETROTILE_PATH_NODE ) * RETROTILE_PATH_LIST_MAX );
    maug_mzero( &adjacent, sizeof( struct RETROTILE_PATH_NODE ) );
-   *p_closed_sz = 0;
    
    /* Add the start node to the open list. */
    adjacent.x = start_x;
    adjacent.y = start_y;
-   retval = retrotile_path_list_append( open, &open_sz, &adjacent );
+   retval = retrotile_path_list_append(
+      open, &open_sz, RETROTILE_PATH_LIST_MAX, &adjacent );
    maug_cleanup_if_not_ok();
    
    debug_printf( RETROTILE_PATH_TRACE_LVL, "---BEGIN PATHFIND---" );
@@ -242,22 +238,35 @@ MERROR_RETVAL retrotile_path_start(
 
       /* Move the iter node to the closed list. */
       debug_printf( RETROTILE_PATH_TRACE_LVL,
-         "moving %d, %d to closed list idx " SIZE_T_FMT
-         " and evaluating...",
-         open[iter_idx].x, open[iter_idx].y, *p_closed_sz );
+         "moving %d, %d to closed[" SIZE_T_FMT
+         "] and evaluating...",
+         open[iter_idx].x, open[iter_idx].y, closed_sz );
       memcpy(
-         &(closed[*p_closed_sz]), &(open[iter_idx]), 
+         &(closed[closed_sz]), &(open[iter_idx]), 
          sizeof( struct RETROTILE_PATH_NODE ) );
       /* This should be identical but it's not: */
       /* retval = retrotile_path_list_append(
          closed, p_closed_sz, &(open[iter_idx]) );
       maug_cleanup_if_not_ok(); */
+      if(
+         /* Don't add block tiles to list. */
+         (NULL != blocked_cb &&
+         RETROTILE_RETVAL_BLOCKED != blocked_cb(
+            open[iter_idx].x,
+            open[iter_idx].y, open[iter_idx].dir, t, blocked_cb_data ))
+      ) {
+         retval = retrotile_path_list_append(
+            path, p_path_sz, path_sz_max, &(open[iter_idx]) );
+         maug_cleanup_if_not_ok();
+      }
       retrotile_path_list_remove( open, &open_sz, iter_idx );
-      iter_idx = *p_closed_sz;
-      (*p_closed_sz)++;
+      iter_idx = closed_sz;
+      (closed_sz)++;
+      debug_printf( RETROTILE_PATH_TRACE_LVL,
+         ">> open list now has " SIZE_T_FMT " tiles", open_sz );
       
       /* Validate closed list size. */
-      if( *p_closed_sz >= closed_sz_max ) {
+      if( closed_sz >= RETROTILE_PATH_LIST_MAX ) {
          debug_printf( RETROTILE_PATH_TRACE_LVL, 
             "> pathfind stack exceeded" );
          retval = MERROR_OVERFLOW; 
@@ -300,7 +309,11 @@ MERROR_RETVAL retrotile_path_start(
          adjacent.dir = i;
          retval = retrotile_path_list_test_add_child(
             &adjacent, i, iter_idx, tgt_x, tgt_y, open, &open_sz,
-            closed, *p_closed_sz, flags, t, blocked_cb, blocked_cb_data );
+            closed, closed_sz, flags, t, blocked_cb, blocked_cb_data );
+         if( RETROTILE_RETVAL_BLOCKED == retval ) {
+            /* TODO */
+            retval = 0;
+         }
          maug_cleanup_if_not_ok();
 
          debug_printf( RETROTILE_PATH_TRACE_LVL,
@@ -311,11 +324,11 @@ MERROR_RETVAL retrotile_path_start(
    if( tgt_reached ) {
       /* Return the next closest tile to the target. */
       debug_printf( RETROTILE_PATH_TRACE_LVL, "> tgt reached! %d, %d",
-         closed[1].x, closed[1].y );
+         path[*p_path_sz - 1].x, path[*p_path_sz - 1].y );
       retval = MERROR_OK;
    } else {
       debug_printf( RETROTILE_PATH_TRACE_LVL,
-         "> blocked! (closed sz " SIZE_T_FMT ")", *p_closed_sz );
+         "> blocked! (closed sz " SIZE_T_FMT ")", *p_path_sz );
    }
 
 cleanup:
