@@ -605,8 +605,8 @@ int8_t retroani_create(
    struct RETROANI* ani_stack, size_t ani_stack_sz,
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
 ) {
-   int8_t i = 0,
-      idx_out = RETROANI_ERROR;
+   int8_t idx_out = RETROANI_ERROR;
+   size_t i = 0;
 
    for( i = 0 ; ani_stack_sz > i ; i++ ) {
       if( !(ani_stack[i].flags & RETROANI_FLAG_ACTIVE) ) {
@@ -705,7 +705,7 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 void retroani_frame(
    struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
 ) {
-   int8_t i = 0;
+   size_t i = 0;
    uint32_t now_ms = 0;
 
    now_ms = retroflat_get_ms();
@@ -729,7 +729,7 @@ void retroani_frame(
 void retroani_pause(
    struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
 ) {
-   int8_t i = 0;
+   size_t i = 0;
 
    for( i = 0 ; ani_stack_sz > i ; i++ ) {
       if( flags == (ani_stack[i].flags & flags) ) {
@@ -741,7 +741,7 @@ void retroani_pause(
 void retroani_resume(
    struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
 ) {
-   int8_t i = 0;
+   size_t i = 0;
 
    for( i = 0 ; ani_stack_sz > i ; i++ ) {
       if( flags == (ani_stack[i].flags & flags) ) {
@@ -759,7 +759,7 @@ void retroani_stop(
 void retroani_stop_all(
    struct RETROANI* ani_stack, size_t ani_stack_sz
 ) {
-   int8_t i = 0;
+   size_t i = 0;
 
    for( i = 0 ; ani_stack_sz > i ; i++ ) {
       retroani_stop( ani_stack, ani_stack_sz, i );
