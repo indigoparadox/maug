@@ -248,7 +248,7 @@ ifeq ("$$(LDFLAGS_WATCOM386_WIN_WIN16)","")
 endif
 
 $(1)w.rex: \
-$(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$(subst .c,.o,$(C_FILES))) | \
+$$(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) | \
 $$(RES_WATCOM386_WIN_WIN16_DEP)
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) \
