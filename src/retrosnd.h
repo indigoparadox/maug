@@ -136,7 +136,7 @@ void retrosnd_shutdown();
 
 #ifdef RETROSND_C
 
-MAUG_CONST uint8_t adlib_ch[] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
+MAUG_CONST uint8_t SEG_MCONST adlib_ch[] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 
 struct RETROSND_STATE g_retrosnd_state;
 
@@ -555,7 +555,8 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
       }
 
       debug_printf(
-         RETROSND_TRACE_LVL, "channel: %d, reg: %d", channel, adlib_ch[channel] );
+         RETROSND_TRACE_LVL, "channel: %d, reg: %d", channel,
+         adlib_ch[channel] );
 
       /* TODO: Decouple voices so we can have 10/12 channels? */
 
