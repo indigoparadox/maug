@@ -8,8 +8,6 @@
  * \file retrogui.h
  */
 
-/* TODO: Implement dirty flag! */
-
 /*! \brief RETROGUI::flags indicating controls should be redrawn. */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
@@ -679,6 +677,7 @@ cleanup:
       ctl->base.y + RETROGUI_PADDING,
       8, 8,
       /* Draw blinking cursor. */
+      /* TODO: Use a global timer to mark this field dirty. */
       gui->focus == ctl->base.idc && retroflat_get_ms() % 30 > 15
          ? RETROFLAT_FLAGS_FILL : 0 );
 
@@ -807,11 +806,14 @@ RETROGUI_IDC retrogui_poll_ctls(
    #define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          idc_out = \
-            retrogui_click_ ## c_name( gui, &(gui->ctls[i]), p_input, input_evt );
+            retrogui_click_ ## c_name( \
+               gui, &(gui->ctls[i]), p_input, input_evt ); \
+         gui->flags |= RETROGUI_FLAGS_DIRTY;
 
    #define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt );
+         idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt ); \
+         gui->flags |= RETROGUI_FLAGS_DIRTY;
 
    if( 0 == *p_input ) {
       goto reset_debounce;
@@ -895,9 +897,17 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
 
    assert( NULL != gui->ctls );
 
+   if(
+      RETROGUI_FLAGS_DIRTY !=
+      (RETROGUI_FLAGS_DIRTY & gui->flags)
+   ) {
+      return;
+   }
+
    #define RETROGUI_CTL_TABLE_REDRAW( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          retrogui_redraw_ ## c_name( gui, &(gui->ctls[i]) ); \
+         gui->flags &= ~RETROGUI_FLAGS_DIRTY;
 
    for( i = 0 ; gui->ctls_sz > i ; i++ ) {
       if( 0 ) {
@@ -943,6 +953,8 @@ MERROR_RETVAL retrogui_push_ctl(
       ctl,
       sizeof( union RETROGUI_CTL ) );
    gui->ctls_sz++;
+
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
 
    #define RETROGUI_CTL_TABLE_PUSH( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
