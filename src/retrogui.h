@@ -38,6 +38,8 @@
       maug_munlock( (gui)->ctls_h, (gui)->ctls ); \
    }
 
+#define retrogui_is_locked( gui ) (NULL != (gui)->ctls)
+
 /*! \brief Unique identifying constant number for controls. */
 typedef size_t RETROGUI_IDC;
 
@@ -154,6 +156,8 @@ MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
 
 MERROR_RETVAL retrogui_init( struct RETROGUI* gui );
+
+void retrogui_free( struct RETROGUI* gui );
 
 #ifdef RETROGUI_C
 

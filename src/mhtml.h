@@ -103,6 +103,8 @@
    } \
    mcss_parser_unlock( &((parser)->styler) );
 
+#define mhtml_parser_is_locked( parser ) (NULL != (parser)->tags)
+
 struct MHTML_TAG_BASE {
    uint16_t type;
    uint8_t flags;

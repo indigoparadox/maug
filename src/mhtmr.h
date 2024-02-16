@@ -55,6 +55,8 @@ struct MHTMR_RENDER_TREE {
       maug_munlock( (tree)->nodes_h, (tree)->nodes ); \
    }
 
+#define mhtmr_tree_is_locked( tree ) (NULL != (tree)->nodes)
+
 MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    size_t x, size_t y, size_t w, size_t h,
