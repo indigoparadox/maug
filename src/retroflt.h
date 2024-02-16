@@ -3684,6 +3684,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_SDL_ICO */
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
+#  ifdef RETROFLAT_COMMIT_HASH
+   debug_printf( 1, "retroflat commit: " RETROFLAT_COMMIT_HASH  );
+#  endif /* RETROFLAT_COMMIT_HASH */
+
    debug_printf( 1, "retroflat: initializing..." );
 
    /* System sanity checks. */
