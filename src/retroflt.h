@@ -1294,7 +1294,6 @@ struct RETROFLAT_BITMAP {
 };
 
 LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
-char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags );
 
 #  ifdef RETROFLAT_OPENGL
 
@@ -2327,6 +2326,10 @@ void retroflat_set_title( const char* format, ... );
 retroflat_ms_t retroflat_get_ms();
 
 uint32_t retroflat_get_rand();
+
+#  if !defined( RETROFLAT_NO_KEYBOARD )
+char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags );
+#  endif /* !RETROFLAT_NO_KEYBOARD */
 
 /**
  * \addtogroup maug_retroflt_bitmap
