@@ -6030,10 +6030,12 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       maug_mfree( bmp->tex.bytes_h );
    }
 
+#ifndef RETROGLU_NO_TEXTURES
    if( 0 < bmp->tex.id ) {
       debug_printf( 0, "destroying bitmap texture: %u", bmp->tex.id );
       glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
    }
+#endif /* !RETROGLU_NO_TEXTURES */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
