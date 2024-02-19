@@ -234,7 +234,7 @@ MERROR_RETVAL maug_add_arg(
    /* TODO: Check for duplicate arg. */
 
    /* Sanity checking and sizing. */
-   if( MAUG_CLI_ARG_LIST_SZ_MAX <= slot_idx ) {
+   if( MAUG_CLI_ARG_LIST_SZ_MAX - 1 <= slot_idx ) {
       return MERROR_OVERFLOW;
    }
 

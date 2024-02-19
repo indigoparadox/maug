@@ -5322,7 +5322,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
       if( bmp_color_idx >= header_bmp.info.palette_ncolors ) {
          error_printf(
-            "invalid color at px " SIZE_T_FMT ": " UPRINTF_X32_FMT,
+            "invalid color at px " SIZE_T_FMT ": %02x",
             bmp_px_sz - i - 1, bmp_color_idx );
          continue;
       }
@@ -5717,7 +5717,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #     ifndef RETROGLU_NO_TEXTURES
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
-   debug_printf( 0, "assigned bitmap texture: %u", bmp_out->tex.id );
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "assigned bitmap texture: " UPRINTF_U32_FMT, bmp_out->tex.id );
    error = glGetError();
    if( GL_NO_ERROR != error ) {
       error_printf( "error generating texture: %u", error );
@@ -5900,10 +5901,13 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       maug_mfree( bmp->tex.bytes_h );
    }
 
+#ifndef RETROGLU_NO_TEXTURES
    if( 0 < bmp->tex.id ) {
-      debug_printf( 0, "destroying bitmap texture: %u", bmp->tex.id );
+      debug_printf( 0, 
+         "destroying bitmap texture: " UPRINTF_U32_FMT, bmp->tex.id );
       glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
    }
+#endif /* !RETROGLU_NO_TEXTURES */
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
@@ -6090,11 +6094,15 @@ void retroflat_blit_bitmap(
       /* Use mask to blit transparency. */
       BitBlt(
          target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
-   }
 
-   /* Do actual blit. */
-   BitBlt(
-      target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
+      /* Do actual blit. */
+      BitBlt(
+         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
+   } else {
+      /* Just overwrite entire rect. */
+      BitBlt(
+         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCCOPY );
+   }
 
 cleanup:
 
