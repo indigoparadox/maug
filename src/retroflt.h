@@ -4684,9 +4684,9 @@ defined( RETROFLAT_OPENGL )
    }
 
    /* Reset timer chip resolution to 18.2...ms. */
-   outp( 0x43,0x36 );
-   outp( 0x40,0x00 );
-   outp( 0x40,0x00 );
+   outp( 0x43, 0x36 );
+   outp( 0x40, 0x00 );
+   outp( 0x40, 0x00 );
 
    _enable();
 
@@ -7030,6 +7030,25 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
    *p_rgb |= ((g_retroflat_state->palette[idx].g & 0xff) << 8);
    *p_rgb |= ((g_retroflat_state->palette[idx].r & 0xff) << 16);
 
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* Set VGA mask register. */
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+      outp( 0x3c6, 0xff );
+      outp( 0x3c7, idx );
+      *p_rgb = 0;
+      *p_rgb |= ((uint32_t)(inp( 0x3c9 ) & 0xff) << 16);
+      *p_rgb |= ((uint32_t)(inp( 0x3c9 ) & 0xff) << 8);
+      *p_rgb |= (inp( 0x3c9 ) & 0xff);
+      break;
+
+   default:
+      error_printf( "could not set palette index %d in screen mode %d!",
+         idx, g_retroflat_state->screen_mode );
+      break;
+   }
+
 #  else
 #     pragma message( "warning: get palette not implemented" )
 #  endif
@@ -7040,6 +7059,9 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_API_PC_BIOS )
+   uint8_t byte_buffer = 0;
+#  endif /* RETROFLAT_API_PC_BIOS */
 
    debug_printf( 3,
       "setting texture palette #%u to " UPRINTF_X32_FMT "...",
@@ -7056,6 +7078,34 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    g_retroflat_state->palette[idx].b = rgb & 0xff;
    g_retroflat_state->palette[idx].g = (rgb & 0xff00) >> 8;
    g_retroflat_state->palette[idx].r = (rgb & 0xff0000) >> 16;
+
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+   /* Set VGA mask register. */
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+      /* TODO: This doesn't seem to be working in DOSBox? */
+      outp( 0x3c6, 0xff );
+      outp( 0x3c8, idx );
+
+      byte_buffer = (rgb >> 16) & 0x3f;
+      debug_printf( 1, "r: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+
+      byte_buffer = (rgb >> 8) & 0x3f;
+      debug_printf( 1, "g: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+
+      byte_buffer = rgb & 0x3f;
+      debug_printf( 1, "b: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+      break;
+
+   default:
+      error_printf( "could not set palette index %d in screen mode %d!",
+         idx, g_retroflat_state->screen_mode );
+      break;
+   }
 
 #  else
 #     pragma message( "warning: set palette not implemented" )
