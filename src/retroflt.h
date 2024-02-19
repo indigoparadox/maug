@@ -6227,11 +6227,15 @@ void retroflat_blit_bitmap(
       /* Use mask to blit transparency. */
       BitBlt(
          target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
-   }
 
-   /* Do actual blit. */
-   BitBlt(
-      target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
+      /* Do actual blit. */
+      BitBlt(
+         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
+   } else {
+      /* Just overwrite entire rect. */
+      BitBlt(
+         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCCOPY );
+   }
 
 cleanup:
 
