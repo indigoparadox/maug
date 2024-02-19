@@ -1379,9 +1379,11 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
       maug_mfree( sprite->texture.tex.bytes_h );
    }
 
+#ifndef RETROGLU_NO_TEXTURES
    if( 0 < sprite->texture.tex.id ) {
       glDeleteTextures( 1, (GLuint*)&(sprite->texture.tex.id) );
    }
+#endif /* !RETROGLU_NO_TEXTURES */
 }
 
 /* === */
@@ -1501,7 +1503,7 @@ void retroglu_string(
    MERROR_RETVAL retval = MERROR_OK;
 #endif /* RETROGLU_NO_TEXTURES */
 
-   if( str_sz <= 0 ) {
+   if( str_sz == 0 ) {
       str_sz = strlen( str );
    }
 
