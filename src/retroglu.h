@@ -1503,7 +1503,7 @@ void retroglu_string(
    MERROR_RETVAL retval = MERROR_OK;
 #endif /* RETROGLU_NO_TEXTURES */
 
-   if( str_sz <= 0 ) {
+   if( str_sz == 0 ) {
       str_sz = strlen( str );
    }
 
