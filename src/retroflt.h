@@ -5161,8 +5161,9 @@ cleanup:
 
 /* === */
 
-#if (defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )) && \
-!defined( RETROFLAT_OPENGL )
+#  if (defined( RETROFLAT_API_WIN16 ) || \
+   defined (RETROFLAT_API_WIN32 )) && \
+   !defined( RETROFLAT_OPENGL )
 
 static int retroflat_bitmap_win_transparency(
    struct RETROFLAT_BITMAP* bmp_out, int16_t w, int16_t h  
@@ -5200,7 +5201,36 @@ cleanup:
    return retval;
 }
 
-#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  elif defined( RETROFLAT_API_PC_BIOS )
+
+static int retroflat_bitmap_dos_transparency(
+   struct RETROFLAT_BITMAP* bmp_out
+) {
+   size_t i = 0;
+
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+
+      debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+         "creating transparency mask for bitmap..." );
+
+      /* Create a transparency mask based on palette 0. */
+      /* TODO: Use transparency palette index from global ifdef. */
+      bmp_out->mask = _fcalloc( bmp_out->w, bmp_out->h );
+      for( i = 0 ; bmp_out->sz > i ; i++ ) {
+         if( 0 == bmp_out->px[i] ) {
+            bmp_out->mask[i] = 0xff;
+         } else {
+            bmp_out->mask[i] = 0x00;
+         }
+      }
+      break;
+   }
+}
+
+#  endif /* RETROFLAT_API_WIN16 || 
+            RETROFLAT_API_WIN32 ||
+            RETROFLAT_API_PC_BIOS */
 
 /* TODO: Use mfile API and create an mformat lib to handle different
  *       formats using perpix loader code.
@@ -5599,6 +5629,8 @@ cleanup:
    /* TODO: When loading a bitmap, zero out the color key color so XOR 
     *       works? */
 
+   /* TODO: Rework for CGA bitmaps. */
+
    assert( NULL == bmp_out->px );
 
    retval = mfile_open_read( filename_path, &bmp_file );
@@ -5644,20 +5676,8 @@ cleanup:
    maug_cleanup_if_not_ok();
 
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      /* Create a transparency mask based on palette 0. */
-      /* TODO: Use palette index from  global ifdef. */
-      bmp_out->mask = _fcalloc(
-         header_bmp.info.height, header_bmp.info.width );
-      for( i = 0 ; bmp_out->sz > i ; i++ ) {
-         if( 0 == bmp_out->px[i] ) {
-            bmp_out->mask[i] = 0xff;
-         } else {
-            bmp_out->mask[i] = 0x00;
-         }
-      }
+      retroflat_bitmap_dos_transparency( bmp_out );
    }
-
-   /* Allocate buffer for unpacking. */
 
 cleanup:
 
