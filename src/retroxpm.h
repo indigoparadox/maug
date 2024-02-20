@@ -71,6 +71,8 @@ xpm_found:
          switch( gc_xpm_data[xpm_idx][17 + y][x] ) {
          case ' ':
             /* Transparent. */
+            /* TODO: Global transparency palette ifdef? */
+            color = RETROFLAT_COLOR_BLACK;
             continue;
          case '.':
             color = RETROFLAT_COLOR_DARKBLUE;
@@ -125,6 +127,21 @@ xpm_found:
 
    retroflat_px_release( bmp_out );
    retroflat_draw_release( bmp_out );
+
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retval = retroflat_bitmap_win_transparency( bmp_out,
+         bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
+   }
+#  elif defined( RETROFLAT_API_PC_BIOS )
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retroflat_bitmap_dos_transparency( bmp_out );
+   }
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+   /* SDL_SetColorKey is called in retroflat_create_bitmap(). */
+#  else
+#     pragma message( "warning: xpm transparency not implemented" )
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 cleanup:
    return retval;
