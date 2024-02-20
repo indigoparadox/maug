@@ -5674,7 +5674,7 @@ cleanup:
    maug_cleanup_if_not_ok();
 
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      retroflat_bitmap_dos_transparency( bmp_out );
+      retval = retroflat_bitmap_dos_transparency( bmp_out );
    }
 
 cleanup:

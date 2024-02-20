@@ -27,6 +27,8 @@ void retrogxc_shutdown();
 
 int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags );
 
+int16_t retrogxc_load_xpm( retroflat_asset_path res_p, uint8_t flags );
+
 int16_t retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, int16_t bitmap_idx,
    uint16_t s_x, uint16_t s_y, uint16_t d_x, uint16_t d_y,
@@ -151,6 +153,58 @@ cleanup:
 }
 
 /* === */
+
+#ifdef RETROFLAT_XPM
+
+int16_t retrogxc_load_xpm( retroflat_asset_path res_p, uint8_t flags ) {
+   int16_t idx = RETROGXC_ERROR_CACHE_MISS,
+      i = 0;
+   struct RETROFLAT_CACHE_BITMAP* bitmaps = NULL;
+
+   maug_mlock( gs_retrogxc_handle, bitmaps );
+
+   /* Try to find the bitmap already in the cache. */
+   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+      if( 0 == retroflat_cmp_asset_path( bitmaps[i].id, res_p ) ) {
+         idx = i;
+         goto cleanup;
+      }
+   }
+
+   /* Bitmap not found. */
+   debug_printf( RETROGXC_TRACE_LVL,
+      "bitmap %s not found in cache; loading...", res_p );
+   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+      if( retroflat_bitmap_ok( &(bitmaps[i].bitmap) ) ) {
+         continue;
+      }
+
+      if(
+         MERROR_OK ==
+         retroflat_load_xpm( res_p, &(bitmaps[i].bitmap), flags )
+      ) {
+         idx = i;
+         debug_printf( RETROGXC_TRACE_LVL,
+            "bitmap %s assigned cache ID: %d", res_p, idx );
+      }
+      goto cleanup;
+   }
+
+   /* Still not found! */
+   error_printf( "unable to load bitmap; cache full?" );
+
+cleanup:
+
+   if( NULL != bitmaps ) {
+      maug_munlock( gs_retrogxc_handle, bitmaps );
+   }
+
+   return idx;
+}
+
+/* === */
+
+#endif /* RETROFLAT_XPM */
 
 int16_t retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, int16_t bitmap_idx,

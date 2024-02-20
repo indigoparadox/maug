@@ -3,7 +3,7 @@
 
 define DIRTOXPMS
 
-$(1)_BITMAPS := $(wildcard $(1)/*)
+$(1)_BITMAPS := $(wildcard $(1)/*.bmp)
 
 $(2)/$(1)_xpm.h: $$($(1)_BITMAPS)
 	# Add include guard.
