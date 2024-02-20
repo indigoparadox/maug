@@ -12,8 +12,8 @@ MERROR_RETVAL retroflat_load_xpm(
 
 #ifdef RETROFLT_C
 
-extern char* gc_xpm_filenames[];
-extern char** gc_xpm_data[];
+extern MAUG_CONST char* SEG_MCONST gc_xpm_filenames[];
+extern MAUG_CONST char** SEG_MCONST gc_xpm_data[];
 
 MERROR_RETVAL retroflat_load_xpm(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
