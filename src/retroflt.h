@@ -634,6 +634,10 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_TXP_B 0x00
 #endif /* !RETROFLAT_TXP_B */
 
+#ifndef RETROFLAT_TXP_PAL_IDX
+#  define RETROFLAT_TXP_PAL_IDX 0
+#endif /* !RETROFLAT_TXP_PAL_IDX */
+
 /*! \} */ /* maug_retroflt_bitmap */
 
 #ifndef RETROFLAT_DEFAULT_SCREEN_W
@@ -1665,7 +1669,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define GLUT_DISABLE_ATEXIT_HACK
 #  endif
 
-#include <GL/glut.h>
+#  include <GL/glut.h>
 
 #  ifndef RETROFLAT_CONFIG_USE_FILE
 #     define RETROFLAT_CONFIG_USE_FILE
@@ -1674,7 +1678,7 @@ typedef int RETROFLAT_COLOR_DEF;
 typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t retroflat_ms_t;
 
-#define RETROFLAT_MS_FMT "%lu"
+#  define RETROFLAT_MS_FMT "%lu"
 
 typedef FILE* RETROFLAT_CONFIG;
 
@@ -1777,7 +1781,7 @@ struct RETROFLAT_BITMAP {
 
 #  include <time.h> /* For srand() */
 
-#if defined( MAUG_OS_DOS_REAL ) && \
+#  if defined( MAUG_OS_DOS_REAL ) && \
    defined( MAUG_DOS_MEM_L ) && \
    defined( __WATCOMC__ )
 #     define SEG_RETROBMP __based( __segname( "RETROBMP" ) )
@@ -1853,9 +1857,11 @@ struct RETROFLAT_BITMAP {
 };
 
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
-/* TODO: Vary based on current screen mode! */
-#  define retroflat_screen_w() 320
-#  define retroflat_screen_h() 200
+
+/* We only explicitly support screen modes with these dimensions anyway.
+ */
+#  define retroflat_screen_w() (g_retroflat_state->buffer.w)
+#  define retroflat_screen_h() (g_retroflat_state->buffer.h)
 
 /* TODO: DOS Keycodes */
 
@@ -5203,9 +5209,10 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-static int retroflat_bitmap_dos_transparency(
+static MERROR_RETVAL retroflat_bitmap_dos_transparency(
    struct RETROFLAT_BITMAP* bmp_out
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
    switch( g_retroflat_state->screen_mode ) {
@@ -5215,10 +5222,10 @@ static int retroflat_bitmap_dos_transparency(
          "creating transparency mask for bitmap..." );
 
       /* Create a transparency mask based on palette 0. */
-      /* TODO: Use transparency palette index from global ifdef. */
       bmp_out->mask = _fcalloc( bmp_out->w, bmp_out->h );
+      maug_cleanup_if_null_alloc( uint8_t*, bmp_out->mask );
       for( i = 0 ; bmp_out->sz > i ; i++ ) {
-         if( 0 == bmp_out->px[i] ) {
+         if( RETROFLAT_TXP_PAL_IDX == bmp_out->px[i] ) {
             bmp_out->mask[i] = 0xff;
          } else {
             bmp_out->mask[i] = 0x00;
@@ -5226,15 +5233,15 @@ static int retroflat_bitmap_dos_transparency(
       }
       break;
    }
+
+cleanup:
+   return retval;
 }
 
 #  endif /* RETROFLAT_API_WIN16 || 
             RETROFLAT_API_WIN32 ||
             RETROFLAT_API_PC_BIOS */
 
-/* TODO: Use mfile API and create an mformat lib to handle different
- *       formats using perpix loader code.
- */
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
@@ -5414,8 +5421,6 @@ cleanup:
    /* == Allegro == */
 
    bmp_out->b = load_bitmap( filename_path, NULL );
-
-   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->b ) {
       allegro_message( "unable to load %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
@@ -5429,7 +5434,6 @@ cleanup:
       "loading bitmap: %s", filename_path );
 
    tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
-   /* TODO: maug_cleanup_if_null()? */
    if( NULL == tmp_surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -5471,8 +5475,6 @@ cleanup:
    bmp_out->renderer = NULL;
    
    bmp_out->surface = SDL_LoadBMP( filename_path );
-
-   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -5488,7 +5490,6 @@ cleanup:
 
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );
-   /* TODO: maug_cleanup_if_null()? */
    if( NULL == bmp_out->texture ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to create texture: %s", SDL_GetError() );
@@ -5626,9 +5627,6 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   /* TODO: When loading a bitmap, zero out the color key color so XOR 
-    *       works? */
-
    /* TODO: Rework for CGA bitmaps. */
 
    assert( NULL == bmp_out->px );
@@ -5724,7 +5722,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* TODO: Overflow checking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       bmp_out->tex.w, bmp_out->tex.h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
+   bmp_out->tex.bytes_h =
+      maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
@@ -5777,17 +5776,17 @@ cleanup:
 
    /* == SDL2 == */
 
-   /* TODO: Handle opaque flag. */
-
    /* Create surface. */
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       /* TODO: Are these masks right? */
       32, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
-   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-      SDL_MapRGB( bmp_out->surface->format,
-         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
 
    /* Convert new surface to texture. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
@@ -5813,7 +5812,9 @@ cleanup:
    ) {
       bmp_out->hdc_b = g_w.WinGCreateDC();
 
-      if( !g_w.WinGRecommendDIBFormat( (BITMAPINFO far*)&(bmp_out->bmi) ) ) {
+      if(
+         !g_w.WinGRecommendDIBFormat( (BITMAPINFO far*)&(bmp_out->bmi) )
+      ) {
          retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
             "Error", "Could not determine recommended format!" );
          retval = RETROFLAT_ERROR_GRAPHICS;
@@ -6137,10 +6138,6 @@ cleanup:
    }
 
    switch( g_retroflat_state->screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_CGA:
-      /* TODO: CGA bitmap blitting. */
-      break;
-
    case RETROFLAT_SCREEN_MODE_VGA:
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          target_line_offset = ((d_y + y_iter) * (target->w)) + d_x;
@@ -6168,6 +6165,11 @@ cleanup:
             }
          }
       }
+      break;
+
+   default:
+      error_printf( "bitmap blit unsupported in video mode: %d",
+         g_retroflat_state->screen_mode );
       break;
    }
 
@@ -6376,6 +6378,11 @@ void retroflat_px(
       }
       target->px[screen_byte_offset] = color_idx;
       break;
+
+   default:
+      error_printf( "pixel blit unsupported in video mode: %d",
+         g_retroflat_state->screen_mode );
+      break;
    }
 
 #  else
@@ -6582,15 +6589,13 @@ void retroflat_line(
 
    /* == DOS PC_BIOS == */
 
-   /* TODO: Determine if we're drawing on-screen or on a bitmap. */
-
    switch( g_retroflat_state->screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_CGA:
+   case RETROFLAT_SCREEN_MODE_VGA:
+      /* TODO: Try accelerated 2D. */
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
       break;
 
-   case RETROFLAT_SCREEN_MODE_VGA:
-      /* TODO: Try accelerated 2D. */
+   default:
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
       break;
    }
