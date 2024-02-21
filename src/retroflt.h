@@ -3337,6 +3337,7 @@ static int retrosnd_cli_rsd_def(
          debug_printf( 3, "selecting MIDI driver: adlib" );
          args->snd_driver = 8;
       }
+      /* TODO: Maug replacement for C99 crutch. */
       args->snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
       debug_printf( 3, "setting MIDI I/O base: %u", args->snd_io_base );
    } else {
