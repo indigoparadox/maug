@@ -25,6 +25,7 @@ struct MFILE_CADDY {
    uint8_t type;
    union MFILE_HANDLE h;
    size_t sz;
+   size_t last_read;
    size_t mem_cursor;
    uint8_t* mem_buffer;
 };
@@ -44,7 +45,7 @@ typedef struct MFILE_CADDY mfile_t;
 #define mfile_cread( p_file, p_c ) \
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
-      fread( p_c, 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read = fread( p_c, 1, 1, (p_file)->h.file ); \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -53,7 +54,7 @@ typedef struct MFILE_CADDY mfile_t;
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
-      fread( p_c, 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read = fread( p_c, 1, 1, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       *p_c = (p_file)->mem_buffer[idx]; \
@@ -66,8 +67,10 @@ typedef struct MFILE_CADDY mfile_t;
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
-      fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->h.file ); \
-      fread( ((uint8_t*)p_u16), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read = \
+         fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read += \
+         fread( ((uint8_t*)p_u16), 1, 1, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx]; \
@@ -81,7 +84,7 @@ typedef struct MFILE_CADDY mfile_t;
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
-      fread( p_u16, 1, 2, (p_file)->h.file ); \
+      (p_file)->last_read = fread( p_u16, 1, 2, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u16))[0] = (p_file)->mem_buffer[idx + 1]; \
@@ -95,10 +98,14 @@ typedef struct MFILE_CADDY mfile_t;
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
-      fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->h.file ); \
-      fread( (((uint8_t*)p_u32) + 2), 1, 1, (p_file)->h.file ); \
-      fread( (((uint8_t*)p_u32) + 1), 1, 1, (p_file)->h.file ); \
-      fread( ((uint8_t*)p_u32), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read = \
+         fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read += \
+         fread( (((uint8_t*)p_u32) + 2), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read += \
+         fread( (((uint8_t*)p_u32) + 1), 1, 1, (p_file)->h.file ); \
+      (p_file)->last_read += \
+         fread( ((uint8_t*)p_u32), 1, 1, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u32))[0] = (p_file)->mem_buffer[idx]; \
@@ -114,7 +121,7 @@ typedef struct MFILE_CADDY mfile_t;
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
-      fread( p_u32, 1, 4, (p_file)->h.file ); \
+      (p_file)->last_read = fread( p_u32, 1, 4, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
       ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[idx]; \
@@ -129,6 +136,8 @@ typedef struct MFILE_CADDY mfile_t;
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
 #define mfile_reset( p_file ) fseek( (p_file)->h.file, 0, SEEK_SET )
+
+MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, size_t buffer_sz );
 
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
@@ -156,6 +165,33 @@ void mfile_close( mfile_t* p_file );
 #else
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
+
+MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
+      mfile_cread( p_f, &(buffer[i]) );
+      if( '\n' == buffer[i] ) {
+         /* Break on newline and overwrite it below. */
+         break;
+      }
+      i++;
+   }
+
+   assert( i < buffer_sz );
+
+   /* Append a null terminator. */
+   buffer[i] = '\0';
+
+   /* Check for potential overflow. */
+   if( i == buffer_sz - 1 ) {
+      error_printf( "overflow reading string from file!" );
+      retval = MERROR_OVERFLOW;
+   }
+
+   return retval;
+}
 
 MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE handle, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;

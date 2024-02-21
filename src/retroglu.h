@@ -643,6 +643,7 @@ void retroglu_parse_init(
 
 #define RETROGLU_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
+      /* TODO: Maug replacement for C99 crutch. */ \
       parser->obj->array[parser->obj->sz].val = strtod( parser->token, NULL ); \
       debug_printf( RETROGLU_TRACE_LVL, "vertex %d " desc ": %f\n", \
          parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \

@@ -286,6 +286,8 @@ void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
 
 void maug_printf( const char* fmt, ... );
 
+/* TODO: void maug_strtou32( const char* str, */
+
 #ifdef UPRINTF_C
 
 uint32_t g_maug_printf_line = 0;
