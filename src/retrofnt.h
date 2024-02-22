@@ -25,6 +25,10 @@ MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
 
+void retrofont_blit_glyph(
+   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   char c, struct RETROFONT* font, int x, int y, uint8_t flags
+
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
@@ -82,7 +86,7 @@ MERROR_RETVAL retrofont_load(
    retval = mfile_open_read( font_name, &font_file );
    maug_cleanup_if_not_ok();
 
-   /* TODO: Figure out font width from file and alloc just enough. */
+   /* Figure out font width from file and alloc just enough. */
    retval = mfile_read_line( &font_file, line, RETROFONT_LINE_SZ );
    maug_cleanup_if_not_ok();
    retrofont_split_glyph_line( line, line_bytes );

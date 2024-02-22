@@ -6,6 +6,8 @@
 #  define RETROCON_DISABLE
 #endif
 
+/* TODO: Use new retrofont API. */
+
 #define RETROCON_DEBOUNCE_WAIT 3
 
 #define RETROCON_FLAG_ACTIVE 0x01
