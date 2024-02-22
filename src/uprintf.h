@@ -271,6 +271,12 @@ int maug_zdigits( size_t num, int base );
       digits_done++; \
    }
 
+/**
+ * \brief Convert a single char hex digit to the int it represents.
+ */
+#define maug_hctoi( c ) \
+   ('9' > (c) ? (c) - '0' : 'a' > (c) ? 10 + (c) - 'A' : 10 + (c) - 'a')
+
 int maug_itoa( long int num, char* dest, int dest_sz, int base );
 
 int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );

@@ -135,7 +135,16 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
-#define mfile_reset( p_file ) fseek( (p_file)->h.file, 0, SEEK_SET )
+#define mfile_reset( p_file ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, 0, SEEK_SET ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      (p_file)->mem_cursor = 0; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
 
 MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, size_t buffer_sz );
 
