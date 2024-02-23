@@ -27,7 +27,7 @@ MERROR_RETVAL retrofont_load(
 
 void retrofont_blit_glyph(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, int x, int y, uint8_t flags
+   char c, struct RETROFONT* font, int x, int y, uint8_t flags );
 
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
