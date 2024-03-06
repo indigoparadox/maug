@@ -1,0 +1,5 @@
+<map id="RETROFLAT_STATE" name="RETROFLAT_STATE">
+<area shape="rect" id="Node000001" title="Global singleton containing state for the current platform." alt="" coords="9,109,157,135"/>
+<area shape="rect" id="Node000002" href="$structRETROFLAT__BITMAP.html" title="Platform&#45;specific bitmap structure. retroflat_bitmap_ok() can be used on a pointer to it to determine..." alt="" coords="5,5,161,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,47,86,109,80,109,80,47"/>
+</map>

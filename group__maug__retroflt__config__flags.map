@@ -1,0 +1,4 @@
+<map id="RetroFlat Config Flags" name="RetroFlat Config Flags">
+<area shape="rect" id="Node000002" href="$group__maug__retroflt__config.html" title="Tools for loading and saving config data between sessions." alt="" coords="5,5,144,31"/>
+<area shape="rect" id="Node000001" title="Flags for the flags parameter of retroflat_config_open()." alt="" coords="192,5,340,31"/>
+</map>

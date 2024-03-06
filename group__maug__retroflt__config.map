@@ -1,0 +1,6 @@
+<map id="RetroFlat Config API" name="RetroFlat Config API">
+<area shape="rect" id="Node000002" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,42,105,68"/>
+<area shape="rect" id="Node000001" title="Tools for loading and saving config data between sessions." alt="" coords="153,42,291,68"/>
+<area shape="rect" id="Node000003" href="$group__maug__retroflt__config__btypes.html" title=" " alt="" coords="339,5,489,46"/>
+<area shape="rect" id="Node000004" href="$group__maug__retroflt__config__flags.html" title="Flags for the flags parameter of retroflat_config_open()." alt="" coords="340,70,488,96"/>
+</map>
