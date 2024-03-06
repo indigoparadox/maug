@@ -455,6 +455,14 @@ MERROR_RETVAL mfmt_read_bmp_header(
       MFMT_TRACE_BMP_LVL, "bitmap header is " UPRINTF_U32_FMT " bytes",
       file_hdr_sz );
 
+   if( 40 > file_sz - (file_offset + header_offset) ) {
+      error_printf(
+         "bitmap header overflow! (only " SIZE_T_FMT " bytes remain!)",
+         file_sz - (file_offset + header_offset) );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
    /* Read bitmap image dimensions. */
    mfile_u32read_lsbf_at( p_file_in, &(header_bmp_info->width),
       file_offset + header_offset + MFMT_BMPINFO_OFS_WIDTH );
@@ -616,7 +624,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    y = header_bmp_info->height - 1;
    byte_out_idx = mfmt_read_bmp_px_out_idx();
-   while( 0 < y ) {
+   while( 0 <= y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
 
@@ -679,6 +687,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
          byte_mask, bit_idx, pixel_buffer );
 
       /* Place the pixel buffer at the X/Y in the grid. */
+      debug_printf( MFMT_TRACE_BMP_LVL, "writing byte %u (x: %u, y: %u)",
+         byte_out_idx, x, y );
       px[byte_out_idx] = pixel_buffer;
       byte_out_idx++;
 
