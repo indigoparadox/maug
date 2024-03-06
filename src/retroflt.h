@@ -5356,6 +5356,14 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* Unpack palletized bitmap into BGRA with color key. */
    for( i = 0 ; bmp_px_sz > i ; i++ ) {
+      if( bmp_px_sz - i - 1 > bmp_px_sz ) {
+         error_printf(
+            "pixel overflow! (" SIZE_T_FMT " of " SIZE_T_FMT " bytes!)",
+            bmp_px_sz - i - 1, bmp_px_sz );
+         retval = MERROR_OVERFLOW;
+         goto cleanup;
+      }
+
       /* Grab the color from the palette by index. */
       bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
       if( bmp_color_idx >= header_bmp.info.palette_ncolors ) {

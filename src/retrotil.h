@@ -553,8 +553,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
                parser->t->tiles_w * parser->t->tiles_h
          ) {
             error_printf(
-               "tile " SIZE_T_FMT " outside of layer tile buffer size "
-               SIZE_T_FMT "!",
+               "tile " SIZE_T_FMT " outside of layer tile buffer size %d!",
                parser->layer_tile_iter,
                parser->t->tiles_w * parser->t->tiles_h );
             retval = MERROR_OVERFLOW;
