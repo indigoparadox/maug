@@ -216,8 +216,13 @@ MERROR_RETVAL mfmt_decode_rle(
       out_mask_cur >>= 4; \
       if( 0 == out_mask_cur ) { \
          out_byte_cur++; \
-         assert( out_byte_cur <= buffer_out_sz ); \
-         if( out_byte_cur < buffer_out_sz ) { \
+         if( out_byte_cur > buffer_out_sz ) { \
+            error_printf( \
+               "out byte " SIZE_T_FMT " outside of " SIZE_T_FMT \
+               " pixel buffer!", out_byte_cur, buffer_out_sz ); \
+            retval = MERROR_OVERFLOW; \
+            goto cleanup; \
+         } else if( out_byte_cur < buffer_out_sz ) { \
             /* We're not at the end of the file yet! */ \
             buffer_out[out_byte_cur] = 0; \
          } \
@@ -225,7 +230,13 @@ MERROR_RETVAL mfmt_decode_rle(
       }
 
    #define mfmt_decode_rle_reset_line() \
-      assert( line_w == line_px_written ); \
+      if( line_w != line_px_written ) { \
+         error_printf( \
+            "line written pixels %u does not match line width " SIZE_T_FMT, \
+            line_px_written, line_w ); \
+         retval = MERROR_OVERFLOW; \
+         goto cleanup; \
+      } \
       line_px_written = 0; \
       out_mask_cur = 0xf0; \
       lines_out++; \
@@ -233,7 +244,13 @@ MERROR_RETVAL mfmt_decode_rle(
 
    #define mfmt_decode_rle_inc_line_w( incr ) \
       line_px_written += incr; \
-      assert( line_w >= line_px_written );
+      if( line_w < line_px_written ) { \
+         error_printf( \
+            "line byte %u outside of " SIZE_T_FMT \
+            " line width!", line_px_written, line_w ); \
+         retval = MERROR_OVERFLOW; \
+         goto cleanup; \
+      }
 
    debug_printf( 1, "decompressing RLE into temporary buffer..." );
 
@@ -391,7 +408,7 @@ MERROR_RETVAL mfmt_decode_rle(
       MFMT_TRACE_RLE_LVL, "wrote " SIZE_T_FMT " bytes (%u lines)",
       out_byte_cur, lines_out );
 
-/* cleanup: */
+cleanup:
 
    if( NULL != buffer_out ) {
       maug_munlock( buffer_out_h, buffer_out );
@@ -609,8 +626,16 @@ MERROR_RETVAL mfmt_read_bmp_px(
             ", x: " UPRINTF_U32_FMT "), byte out: " UPRINTF_U32_FMT,
          byte_in_idx, file_sz, bit_idx, y, x, byte_out_idx );
 
-      assert( byte_out_idx < px_sz );
+      /* Buffer bounds check. */
+      if( px_sz <= byte_out_idx ) {
+         error_printf(
+            "byte " UPRINTF_U32_FMT " outside of " SIZE_T_FMT
+            " pixel buffer!", byte_out_idx, px_sz );
+         retval = MERROR_OVERFLOW;
+         goto cleanup;
+      }
 
+      /* Byte finished check. */
       if( 0 == bit_idx ) {
          if( byte_in_idx >= file_sz ) {
             /* TODO: Figure out why ICO parser messes up size. */
@@ -662,13 +687,10 @@ MERROR_RETVAL mfmt_read_bmp_px(
        */
       byte_mask >>= header_bmp_info->bpp;
       bit_idx -= header_bmp_info->bpp;
-      assert( 8 > bit_idx );
 
       /* Move to the next pixel. */
       x++;
       if( x >= header_bmp_info->width ) {
-         /* assert( 0 == byte_out_idx % 4 ); */
-
          /* Move to the next row of the input. */
          y--;
          x = 0;

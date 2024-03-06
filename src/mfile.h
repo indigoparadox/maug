@@ -188,7 +188,7 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
       i++;
    }
 
-   assert( i < buffer_sz );
+   assert( i < buffer_sz ); /* while() above stops before buffer_sz! */
 
    /* Append a null terminator. */
    buffer[i] = '\0';
