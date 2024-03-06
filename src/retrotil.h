@@ -469,8 +469,14 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             ) ) {
                /* Found flag: rotate X! */
                /* TODO: Read boolean value. */
-               assert( parser->tileset_id_cur < 
-                  *(parser->p_tile_defs_count) );
+               if( parser->tileset_id_cur >= *(parser->p_tile_defs_count) ) {
+                  error_printf(
+                     "tileset ID " SIZE_T_FMT
+                     " outside of tile defs count " SIZE_T_FMT "!",
+                     parser->tileset_id_cur, *(parser->p_tile_defs_count) );
+                  retval = MERROR_OVERFLOW;
+                  goto cleanup;
+               }
                tile_defs[parser->tileset_id_cur].flags |= 
                   RETROTILE_TILE_FLAG_ROT_X;
             }
@@ -541,9 +547,22 @@ MERROR_RETVAL retrotile_parser_parse_token(
          assert( NULL != token );
          assert( NULL != parser );
          assert( NULL != tiles );
-         assert( parser->layer_tile_iter <
-            parser->t->tiles_w * parser->t->tiles_h );
+
+         if(
+            parser->layer_tile_iter >=
+               parser->t->tiles_w * parser->t->tiles_h
+         ) {
+            error_printf(
+               "tile " SIZE_T_FMT " outside of layer tile buffer size "
+               SIZE_T_FMT "!",
+               parser->layer_tile_iter,
+               parser->t->tiles_w * parser->t->tiles_h );
+            retval = MERROR_OVERFLOW;
+            goto cleanup;
+         }
+
          assert( 0 == tiles[parser->layer_tile_iter] );
+
          tiles[parser->layer_tile_iter] = atoi( token );
       }
       parser->layer_tile_iter++;
@@ -671,26 +690,6 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 
    return MERROR_OK;
 }
-
-/* === */
-
-#if 0
-MERROR_RETVAL retrotile_json_close_val( void* parg ) {
-   struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parg;
-
-   if(
-      MTILESTATE_TILES_PROP == parser->mstate
-   ) {
-      assert( RETROTILE_PARSER_MODE_DEFS == parser->mode );
-   
-      debug_printf( 1, "prop: %s", parser->jparser.token );
-
-      /* retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP_ROT_X ); */
-   }
-
-   return MERROR_OK;
-}
-#endif
 
 /* === */
 
@@ -895,6 +894,7 @@ static void retrotile_gen_diamond_square_corners(
       }
    }
 
+   /* Should be handled by the check above. */
    assert( 0 <= corners_x[0][0] );
    assert( 0 <= corners_y[0][0] );
    assert( t->tiles_w > corners_x[0][0] );

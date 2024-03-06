@@ -426,6 +426,7 @@ MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser ) {
    retval = mcss_style_init( &(parser->styles[parser->styles_sz - 1]) );
    maug_cleanup_if_not_ok();
    
+   /* Actual bounds check is in the maug_mrealloc_test() above. */
    assert( parser->styles_sz < parser->styles_sz_max );
 
 cleanup:
