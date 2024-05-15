@@ -108,6 +108,10 @@ typedef int GLint;
 #  define RETROGLU_MATERIAL_LIB_SZ_MAX 32
 #endif /* !RETROGLU_MATERIAL_LIB_SZ_MAX */
 
+typedef void (*retroglu_trans_cb)(
+   float n_x, float n_y, float n_z,
+   float v_x, float v_y, float v_z, void* data );
+
 typedef float RETROGLU_COLOR[4];
 
 struct RETROGLU_VERTEX {
@@ -164,6 +168,8 @@ struct RETROGLU_OBJ {
    uint16_t faces_sz;
    struct RETROGLU_MATERIAL materials[RETROGLU_MATERIALS_SZ_MAX];
    uint16_t materials_sz;
+   retroglu_trans_cb trans_cb;
+   void* trans_cb_data;
 };
 
 /**
@@ -948,6 +954,10 @@ MERROR_RETVAL retroglu_parse_obj_file(
       auto_parser = 1;
    }
 
+   /* Reset the transform callback. */
+   obj->trans_cb = NULL;
+   obj->trans_cb_data = NULL;
+
    /* Build the path to the obj. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
    maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s",
@@ -1024,15 +1034,30 @@ void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
          assert( 0 < obj->faces[i].vertex_idxs[j] );
          assert( 3 == obj->faces[i].vertex_idxs_sz );
 
-         glNormal3f(
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].x,
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].y,
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].z );
+         if( NULL != obj->trans_cb ) {
 
-         glVertex3f(
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].x,
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].y,
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].z );
+            obj->trans_cb(
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].x,
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].y,
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].z,
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].x,
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].y,
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].z,
+               obj->trans_cb_data );
+
+         } else {
+            /* Just draw the vertex normally. */
+
+            glNormal3f(
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].x,
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].y,
+               obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].z );
+
+            glVertex3f(
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].x,
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].y,
+               obj->vertices[obj->faces[i].vertex_idxs[j] - 1].z );
+         }
       }
 
    }
