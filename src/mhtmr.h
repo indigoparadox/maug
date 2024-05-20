@@ -27,6 +27,7 @@ struct MHTMR_RENDER_NODE {
    ssize_t parent;
    ssize_t first_child;
    ssize_t next_sibling;
+   struct RETROFLAT_BITMAP bitmap;
 };
 
 struct MHTMR_RENDER_TREE {
@@ -341,8 +342,26 @@ MERROR_RETVAL mhtmr_tree_create(
       mhtmr_node( tree, node_new_idx )->tag = tag_iter_idx;
 
       debug_printf( MHTMR_TRACE_LVL,
-         "rendering node " SSIZE_T_FMT " under node " SSIZE_T_FMT,
-         node_new_idx, node_idx );
+         "rendering node " SSIZE_T_FMT " (%s) under node " SSIZE_T_FMT,
+         node_new_idx,
+         gc_mhtml_tag_names[mhtml_tag( parser, tag_iter_idx )->base.type],
+         node_idx );
+
+      /* Tag-specific rendering preparations. */
+      if( MHTML_TAG_TYPE_IMG == mhtml_tag( parser, tag_iter_idx )->base.type ) {
+         /* Load the image for rendering later. */
+         retval = retroflat_load_bitmap(
+            mhtml_tag( parser, tag_iter_idx )->IMG.src,
+            &(mhtmr_node( tree, node_new_idx )->bitmap),
+            RETROFLAT_FLAGS_LITERAL_PATH );
+         if( MERROR_OK == retval ) {
+            debug_printf( MHTMR_TRACE_LVL, "loaded img: %s", 
+               mhtml_tag( parser, tag_iter_idx )->IMG.src );
+         } else {
+            error_printf( "could not load img: %s",
+               mhtml_tag( parser, tag_iter_idx )->IMG.src );
+         }
+      }
 
       mhtmr_tree_create( parser, tree, x, y, w, h,
          tag_iter_idx, node_new_idx, d + 1 );
@@ -476,6 +495,21 @@ MERROR_RETVAL mhtmr_tree_size(
          mhtmr_node( tree, node_idx )->w );
 
       maug_munlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
+
+   } else if(
+      0 <= tag_idx &&
+      MHTML_TAG_TYPE_IMG == mhtml_tag( parser, tag_idx )->base.type
+   ) {
+
+      if( retroflat_bitmap_ok( &(mhtmr_node( tree, node_idx )->bitmap) ) ) {
+         mhtmr_node( tree, node_idx )->w =
+            retroflat_bitmap_w( &(mhtmr_node( tree, node_idx )->bitmap) );
+         mhtmr_node( tree, node_idx )->h =
+            retroflat_bitmap_h( &(mhtmr_node( tree, node_idx )->bitmap) );
+      }
+
+      debug_printf( MHTMR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
+         mhtmr_node( tree, node_idx )->w );
 
    } else {
       /* Get sizing of child nodes. */
@@ -811,13 +845,17 @@ void mhtmr_tree_draw(
 
       } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
          /* TODO: Load and blit the image. */
-         retroflat_rect(
-            NULL, RETROFLAT_COLOR_MAGENTA,
-            mhtmr_node( tree, node_idx )->x,
-            mhtmr_node( tree, node_idx )->y,
-            /* mhtmr_node( tree, node_idx )->w,
-            mhtmr_node( tree, node_idx )->h, */ 16, 16,
-            RETROFLAT_FLAGS_FILL );
+         
+         if( retroflat_bitmap_ok( &(mhtmr_node( tree, node_idx )->bitmap) ) ) {
+            retroflat_blit_bitmap(
+               NULL, &(mhtmr_node( tree, node_idx )->bitmap),
+               0, 0,
+               mhtmr_node( tree, node_idx )->x,
+               mhtmr_node( tree, node_idx )->y,
+               16, 16
+               /* mhtmr_node( tree, node_idx )->w,
+               mhtmr_node( tree, node_idx )->h */ );
+         }
 
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {

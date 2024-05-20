@@ -51,7 +51,7 @@
    f(  7, SPAN, void* none;, INLINE ) \
    f(  8, BR, void* none;, INLINE ) \
    f(  9, STYLE, void* none;, NONE ) \
-   f( 10, IMG, void* none;, BLOCK )
+   f( 10, IMG, char src[MHTML_SRC_HREF_SZ_MAX + 1]; size_t src_sz;, BLOCK )
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -122,8 +122,6 @@ struct MHTML_TAG_BASE {
    size_t classes_sz;
    char id[MCSS_ID_SZ_MAX + 1];
    size_t id_sz;
-   char src_href[MHTML_SRC_HREF_SZ_MAX + 1];
-   size_t src_href_sz;
 };
 
 #define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields, disp ) \
@@ -548,10 +546,10 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
    } else if( MHTML_ATTRIB_KEY_SRC == parser->attrib_key ) {
       strncpy(
-         parser->tags[parser->tag_iter].base.src_href,
+         parser->tags[parser->tag_iter].IMG.src,
          parser->token,
          MHTML_SRC_HREF_SZ_MAX );
-      parser->tags[parser->tag_iter].base.src_href_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].IMG.src_sz = parser->token_sz;
    }
 
 cleanup:
@@ -833,13 +831,13 @@ void mhtml_dump_tree(
       }
 
       if(
-         0 < parser->tags[iter].base.src_href_sz &&
+         0 < parser->tags[iter].IMG.src_sz &&
          strlen( dump_line ) + 13 /* (src/href: ) */
-            + strlen( parser->tags[iter].base.src_href ) < MHTML_DUMP_LINE_SZ
+            + strlen( parser->tags[iter].IMG.src ) < MHTML_DUMP_LINE_SZ
       ) {
          maug_snprintf( &(dump_line[strlen( dump_line )]),
             MHTML_DUMP_LINE_SZ - strlen( dump_line ),
-            " (src/href: %s)", parser->tags[iter].base.src_href );
+            " (src/href: %s)", parser->tags[iter].IMG.src );
       }
 
    }
