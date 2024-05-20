@@ -379,6 +379,11 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_ALL_CAPS 0x02
 
 /**
+ * \brief Flag for retroflat_load_bitmap() to not use assets path.
+ */
+#define RETROFLAT_FLAGS_LITERAL_PATH   0x02
+
+/**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
  *        text as outline-only.
  * \todo This has not yet been implemented and is present for backward
@@ -5290,9 +5295,16 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* Build the path to the bitmap. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
-   maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
-      g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
-      filename, RETROFLAT_BITMAP_EXT );
+   if(
+      RETROFLAT_FLAGS_LITERAL_PATH ==
+      (RETROFLAT_FLAGS_LITERAL_PATH & flags)
+   ) {
+      maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s", filename );
+   } else {
+      maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
+         g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
+         filename, RETROFLAT_BITMAP_EXT );
+   }
 
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
