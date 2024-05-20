@@ -18,6 +18,10 @@
 #  define MHTML_DUMP_LINE_SZ 255
 #endif /* !MHTML_DUMP_LINE_SZ */
 
+#ifndef MHTML_SRC_HREF_SZ_MAX
+#  define MHTML_SRC_HREF_SZ_MAX 128
+#endif /* !MHTML_SRC_HREF_SZ_MAX */
+
 #ifndef MHTML_TRACE_LVL
 #  define MHTML_TRACE_LVL 0
 #endif /* !MHTML_TRACE_LVL */
@@ -33,19 +37,21 @@
    f( STYLE, 1 ) \
    f( CLASS, 2 ) \
    f( ID, 3 ) \
-   f( NAME, 4 )
+   f( NAME, 4 ) \
+   f( SRC, 5 )
 
 #define MHTML_TAG_TABLE( f ) \
-   f( 0, NONE, void* none;, NONE ) \
-   f( 1, BODY, void* none;, BLOCK ) \
-   f( 2, DIV, void* none;, BLOCK ) \
-   f( 3, HEAD, void* none;, NONE ) \
-   f( 4, HTML, void* none;, BLOCK ) \
-   f( 5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
-   f( 6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
-   f( 7, SPAN, void* none;, INLINE ) \
-   f( 8, BR, void* none;, INLINE ) \
-   f( 9, STYLE, void* none;, NONE )
+   f(  0, NONE, void* none;, NONE ) \
+   f(  1, BODY, void* none;, BLOCK ) \
+   f(  2, DIV, void* none;, BLOCK ) \
+   f(  3, HEAD, void* none;, NONE ) \
+   f(  4, HTML, void* none;, BLOCK ) \
+   f(  5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
+   f(  6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
+   f(  7, SPAN, void* none;, INLINE ) \
+   f(  8, BR, void* none;, INLINE ) \
+   f(  9, STYLE, void* none;, NONE ) \
+   f( 10, IMG, void* none;, BLOCK )
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -112,10 +118,12 @@ struct MHTML_TAG_BASE {
    ssize_t first_child;
    ssize_t next_sibling;
    ssize_t style;
-   char classes[MCSS_CLASS_SZ_MAX];
+   char classes[MCSS_CLASS_SZ_MAX + 1];
    size_t classes_sz;
-   char id[MCSS_ID_SZ_MAX];
+   char id[MCSS_ID_SZ_MAX + 1];
    size_t id_sz;
+   char src_href[MHTML_SRC_HREF_SZ_MAX + 1];
+   size_t src_href_sz;
 };
 
 #define MHTML_TAG_TABLE_STRUCT( tag_id, tag_name, fields, disp ) \
@@ -537,6 +545,13 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
          parser->token,
          MCSS_ID_SZ_MAX );
       parser->tags[parser->tag_iter].base.id_sz = parser->token_sz;
+
+   } else if( MHTML_ATTRIB_KEY_SRC == parser->attrib_key ) {
+      strncpy(
+         parser->tags[parser->tag_iter].base.src_href,
+         parser->token,
+         MHTML_SRC_HREF_SZ_MAX );
+      parser->tags[parser->tag_iter].base.src_href_sz = parser->token_sz;
    }
 
 cleanup:
@@ -816,6 +831,17 @@ void mhtml_dump_tree(
             MHTML_DUMP_LINE_SZ - strlen( dump_line ),
             " (classes: %s)", parser->tags[iter].base.classes );
       }
+
+      if(
+         0 < parser->tags[iter].base.src_href_sz &&
+         strlen( dump_line ) + 13 /* (src/href: ) */
+            + strlen( parser->tags[iter].base.src_href ) < MHTML_DUMP_LINE_SZ
+      ) {
+         maug_snprintf( &(dump_line[strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+            " (src/href: %s)", parser->tags[iter].base.src_href );
+      }
+
    }
 
    debug_printf( 1, "%s", dump_line );
