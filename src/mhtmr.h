@@ -809,6 +809,16 @@ void mhtmr_tree_draw(
                RETROFLAT_FLAGS_FILL );
          }
 
+      } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
+         /* TODO: Load and blit the image. */
+         retroflat_rect(
+            NULL, RETROFLAT_COLOR_MAGENTA,
+            mhtmr_node( tree, node_idx )->x,
+            mhtmr_node( tree, node_idx )->y,
+            /* mhtmr_node( tree, node_idx )->w,
+            mhtmr_node( tree, node_idx )->h, */ 16, 16,
+            RETROFLAT_FLAGS_FILL );
+
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {
             retroflat_rect(
