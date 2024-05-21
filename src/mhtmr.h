@@ -11,6 +11,7 @@
 #endif /* !MHTMR_TRACE_LVL */
 
 struct MHTMR_RENDER_NODE {
+   /* TODO: Maybe get rid of these and replace them with MCSS_STYLE node? */
    ssize_t x;
    ssize_t y;
    size_t w;
@@ -21,19 +22,26 @@ struct MHTMR_RENDER_NODE {
    size_t m_b;
    uint8_t pos;
    uint8_t pos_flags;
+   uint8_t display;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
+   /*! \brief Index of container's render node in ::MHTMR_RENDER_TREE. */
    ssize_t parent;
+   /*! \brief Index of first child's render node in ::MHTMR_RENDER_TREE. */
    ssize_t first_child;
+   /*! \brief Index of next sibling's render node in ::MHTMR_RENDER_TREE. */
    ssize_t next_sibling;
    struct RETROFLAT_BITMAP bitmap;
 };
 
 struct MHTMR_RENDER_TREE {
    MAUG_MHANDLE nodes_h;
+   /*! \brief Locked pointer to nodes when locked with mhtmr_tree_lock(). */
    struct MHTMR_RENDER_NODE* nodes;
+   /*! \brief Current active number of nodes in MHTMR_RENDER_NODE::nodes_h. */
    size_t nodes_sz;
+   /*! \brief Current alloc'd number of nodes in MHTMR_RENDER_NODE::nodes_h. */
    size_t nodes_sz_max;
 };
 
@@ -63,6 +71,22 @@ MERROR_RETVAL mhtmr_tree_create(
    size_t x, size_t y, size_t w, size_t h,
    ssize_t tag_idx, ssize_t node_idx, size_t d );
 
+/**
+ * \brief Create a style node that is a composite of a parent style and the
+ *        styles applicable to the classes/IDs of a tag and its immediate
+ *        styles.
+ * \param tag_idx Index of a tag in the parser tree to derive styles from.
+ * \param parent_style Locked pointer to an MCSS_STYLE for the parent node
+ *                     to build on.
+ * \param effect_style Locked pointer to an MCSS_STYLE to clear and replace
+ *                     with the combined style information from the parent and
+ *                     indexed tag.
+ */
+MERROR_RETVAL mhtmr_apply_styles(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   struct MCSS_STYLE* parent_style, struct MCSS_STYLE* effect_style,
+   ssize_t tag_idx );
+
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
@@ -85,7 +109,7 @@ MERROR_RETVAL mhtmr_tree_init( struct MHTMR_RENDER_TREE* tree );
 
 #ifdef MHTMR_C
 
-void mhtml_merge_styles(
+static void mhtml_merge_styles(
    struct MCSS_STYLE* effect_style,
    struct MCSS_STYLE* parent_style,
    struct MCSS_STYLE* tag_style,
@@ -377,7 +401,7 @@ cleanup:
 MERROR_RETVAL mhtmr_apply_styles(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    struct MCSS_STYLE* parent_style, struct MCSS_STYLE* effect_style,
-   ssize_t node_idx, ssize_t tag_idx
+   ssize_t tag_idx
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t tag_style_idx = -1;
@@ -467,7 +491,7 @@ MERROR_RETVAL mhtmr_tree_size(
    tag_idx = mhtmr_node( tree, node_idx )->tag;
 
    mhtmr_apply_styles(
-      parser, tree, parent_style, &effect_style, node_idx, tag_idx );
+      parser, tree, parent_style, &effect_style, tag_idx );
 
    if( mcss_prop_is_active( effect_style.POSITION ) ) {
       debug_printf( MHTMR_TRACE_LVL,
@@ -477,6 +501,7 @@ MERROR_RETVAL mhtmr_tree_size(
       mhtmr_node( tree, node_idx )->pos_flags = effect_style.POSITION_flags;
    }
    
+   /* Figure out how big the contents of this node are. */
    if(
       0 <= tag_idx &&
       MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type
@@ -599,6 +624,20 @@ MERROR_RETVAL mhtmr_tree_size(
       }
    }
 
+   /* display */
+
+   if( 
+      mcss_prop_is_active( effect_style.DISPLAY ) &&
+      0 <= tag_idx
+   ) {
+      debug_printf( 1, "%s display: %s",
+         gc_mhtml_tag_names[mhtml_tag( parser, tag_idx )->base.type],
+         gc_mcss_display_names[effect_style.DISPLAY] );
+
+      /* TODO: Apply default display for element type. */
+      mhtmr_node( tree, node_idx )->display = effect_style.DISPLAY;
+   }
+
 cleanup:
 
    return retval;
@@ -627,11 +666,13 @@ MERROR_RETVAL mhtmr_tree_pos(
    tag_idx = mhtmr_node( tree, node_idx )->tag;
 
    mhtmr_apply_styles(
-      parser, tree, parent_style, &effect_style, node_idx, tag_idx );
+      parser, tree, parent_style, &effect_style, tag_idx );
 
    /* x */
 
    if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+      /* This node is positioned absolutely. (Relatively) simple! */
+
       if( mcss_prop_is_active_NOT_flag( effect_style.LEFT, AUTO ) ) {
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
@@ -669,6 +710,8 @@ MERROR_RETVAL mhtmr_tree_pos(
    /* TODO: Add margins of children? */
 
    if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+      /* This node is positioned absolutely. (Relatively) simple! */
+
       if( mcss_prop_is_active_NOT_flag( effect_style.TOP, AUTO ) ) {
 
          child_iter_idx = mhtmr_node( tree, node_idx )->parent;
@@ -698,6 +741,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    } else {
       /* Position relative to other nodes. */
+
       child_iter_idx = mhtmr_node( tree, node_idx )->parent;
       if( 0 <= child_iter_idx ) {
          /* Add top offset of parent. */
