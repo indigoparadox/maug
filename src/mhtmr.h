@@ -487,6 +487,7 @@ MERROR_RETVAL mhtmr_tree_size(
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
    size_t this_line_w = 0;
+   size_t this_line_h = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
@@ -656,13 +657,24 @@ MERROR_RETVAL mhtmr_tree_size(
          }
 
          if( MCSS_DISPLAY_BLOCK == child_style.DISPLAY ) {
-            /* TODO: Sum up the height for each line of INLINE nodes. */
-            mhtmr_node( tree, node_idx )->h +=
-               mhtmr_node( tree, child_iter_idx )->h;
+            /* Add the last line to the running height. */
+            mhtmr_node( tree, node_idx )->h += this_line_h;
+            
+            /* Start a new running line height with this BLOCK node. */
+            this_line_h = mhtmr_node( tree, child_iter_idx )->h;
+         } else {
+            /* Make sure this line is at least as tall as this INLINE node. */
+            if( this_line_h < mhtmr_node( tree, child_iter_idx )->h ) {
+               this_line_h = mhtmr_node( tree, child_iter_idx )->h;
+            }
          }
 
          child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
       }
+
+      /* Add the last line height the node height. */
+      mhtmr_node( tree, node_idx )->h += this_line_h;
+      this_line_h = 0;
    }
 
 cleanup:
