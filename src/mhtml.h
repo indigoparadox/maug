@@ -49,7 +49,7 @@
    f(  5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
    f(  6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
    f(  7, SPAN, void* none;, INLINE ) \
-   f(  8, BR, void* none;, INLINE ) \
+   f(  8, BR, void* none;, BLOCK ) \
    f(  9, STYLE, void* none;, NONE ) \
    f( 10, IMG, char src[MHTML_SRC_HREF_SZ_MAX + 1]; size_t src_sz;, BLOCK )
 

@@ -497,6 +497,13 @@ MERROR_RETVAL mhtmr_tree_size(
       debug_printf( MHTMR_TRACE_LVL,
          "node " SSIZE_T_FMT ": applying %s positioning",
          node_idx, gc_mcss_position_names[effect_style.POSITION] );
+      /* TODO: MCSS_POS_NOTE: I'd like to get rid of this so all positioning
+       *       is done through CSS... unfortunately, we only track the current
+       *       and previous effective styles while working that out later, so
+       *       we need to pin this to the element directly so we can rule it
+       *       out of the box model e.g. when determining x/y coords of its
+       *       neighbors.
+       */
       mhtmr_node( tree, node_idx )->pos = effect_style.POSITION;
       mhtmr_node( tree, node_idx )->pos_flags = effect_style.POSITION_flags;
    }
@@ -567,6 +574,7 @@ MERROR_RETVAL mhtmr_tree_size(
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
          if(
+            /* TODO: See MCSS_POS_NOTE. */
             MCSS_POSITION_ABSOLUTE !=
                mhtmr_node( tree, child_iter_idx )->pos &&
             mhtmr_node( tree, child_iter_idx )->w >
@@ -609,6 +617,7 @@ MERROR_RETVAL mhtmr_tree_size(
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
          if(
+            /* TODO: See MCSS_POS_NOTE. */
             MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
          ) {
             debug_printf( MHTMR_TRACE_LVL,
@@ -629,11 +638,48 @@ cleanup:
    return retval;
 }
 
-/*! \breif Break when we hit explicit position parent. */
+/* TODO: See MCSS_POS_NOTE. */
+/*! \brief Break when we hit explicit position parent. */
 #define mhtmr_break_on_active_pos( iter_idx ) \
    if( mcss_prop_is_active( mhtmr_node( tree, iter_idx )->pos ) ) { \
       break; \
    }
+
+static ssize_t mhtmr_find_prev_sibling_in_box_model(
+   struct MHTMR_RENDER_TREE* tree,
+   size_t node_idx
+) {
+   ssize_t sibling_iter_idx = -1;
+   ssize_t sibling_found_idx = -1;
+
+   if( 0 > mhtmr_node( tree, node_idx )->parent ) {
+      /* Can't determine sibling! */
+      goto cleanup;
+   }
+   
+   sibling_iter_idx = mhtmr_node_parent( tree, node_idx )->first_child;
+
+   if( sibling_iter_idx == node_idx ) {
+      /* No previous siblings! */
+      goto cleanup;
+   }
+
+   while( 0 <= sibling_iter_idx && node_idx != sibling_iter_idx ) {
+      if(
+         /* TODO: See MCSS_POS_NOTE. This is what we were talking about. */
+         MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, sibling_iter_idx )->pos
+      ) {
+         sibling_found_idx = sibling_iter_idx;
+      }
+
+      /* TODO: Reset on <br />? */
+
+      sibling_iter_idx = mhtmr_node( tree, sibling_iter_idx )->next_sibling;
+   }
+
+cleanup:
+   return sibling_found_idx;
+}
 
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
@@ -647,8 +693,6 @@ MERROR_RETVAL mhtmr_tree_pos(
    ssize_t node_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
 
-   maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
-
    if( NULL == mhtmr_node( tree, node_idx ) ) {
       goto cleanup;
    }
@@ -660,7 +704,7 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* x */
 
-   if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+   if( MCSS_POSITION_ABSOLUTE == effect_style.POSITION ) {
       /* This node is positioned absolutely. (Relatively) simple! */
 
       if( mcss_prop_is_active_NOT_flag( effect_style.LEFT, AUTO ) ) {
@@ -690,16 +734,32 @@ MERROR_RETVAL mhtmr_tree_pos(
             effect_style.RIGHT;
       }
 
+   } else if(
+      MCSS_DISPLAY_INLINE == effect_style.DISPLAY &&
+      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY
+   ) {
+
+      child_iter_idx = mhtmr_find_prev_sibling_in_box_model( tree, node_idx );
+      if( 0 <= child_iter_idx ) {
+         /* Place to the right of the previous sibling. */
+         mhtmr_node( tree, node_idx )->x =
+            mhtmr_node( tree, child_iter_idx )->x +
+            mhtmr_node( tree, child_iter_idx )->w;
+      } else {
+         /* No previous siblings, so just put it inside its parent. */
+         mhtmr_node( tree, node_idx )->x =
+            mhtmr_node_parent( tree, node_idx )->x;
+      }
+
    } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
-      mhtmr_node( tree, node_idx )->x =
-         mhtmr_node( tree, mhtmr_node( tree, node_idx )->parent )->x;
+      mhtmr_node( tree, node_idx )->x = mhtmr_node_parent( tree, node_idx )->x;
    }
    
    /* y */
 
    /* TODO: Add margins of children? */
 
-   if( MCSS_POSITION_ABSOLUTE == mhtmr_node( tree, node_idx )->pos ) {
+   if( MCSS_POSITION_ABSOLUTE == effect_style.POSITION ) {
       /* This node is positioned absolutely. (Relatively) simple! */
 
       if( mcss_prop_is_active_NOT_flag( effect_style.TOP, AUTO ) ) {
@@ -727,6 +787,21 @@ MERROR_RETVAL mhtmr_tree_pos(
             mhtmr_node( tree, child_iter_idx )->h - 
             mhtmr_node( tree, node_idx )->h - 
             effect_style.BOTTOM;
+      }
+
+   } else if(
+      MCSS_DISPLAY_INLINE == effect_style.DISPLAY &&
+      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY
+   ) {
+      child_iter_idx = mhtmr_find_prev_sibling_in_box_model( tree, node_idx );
+      if( 0 <= child_iter_idx ) {
+         /* Place to the right of the previous sibling. */
+         mhtmr_node( tree, node_idx )->y =
+            mhtmr_node( tree, child_iter_idx )->y;
+      } else {
+         /* No previous siblings, so just put it inside its parent. */
+         mhtmr_node( tree, node_idx )->y =
+            mhtmr_node_parent( tree, node_idx )->y;
       }
 
    } else {
@@ -788,7 +863,9 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( 
       NULL != parent_style &&
-      mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) && (
+      mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) &&
+      MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
+      (
          /* Block elements should all be on new lines, so pad left. */
          MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
          (
@@ -804,9 +881,14 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( 
       NULL != parent_style &&
-      mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) && (
+      mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) &&
+      MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
+      (
          /* Inline elements should all be on the same line, so pad top. */
-         MCSS_DISPLAY_INLINE == effect_style.DISPLAY ||
+         /* This doesn't work, because padding is added into the X of the
+          * previous element... maybe padding should be separate until render?
+          */
+         /* MCSS_DISPLAY_INLINE == effect_style.DISPLAY || */
          /* Otherwise only pad the first element. */
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
@@ -826,20 +908,26 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* Figure out child positions. */
 
+   maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
    node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
    while( 0 <= node_iter_idx ) {
       mhtmr_tree_pos(
          parser, tree, &child_prev_sibling_style, &effect_style,
          node_iter_idx, d + 1 );
 
-      maug_mcpy(
-         &child_prev_sibling_style, &effect_style,
-         sizeof( struct MCSS_STYLE ) );
-
       node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
    }
  
 cleanup:
+
+   /* We're done with the prev_sibling_style for this iter, so prepare it for
+    * the next called by the parent!
+    */
+   if( NULL != prev_sibling_style ) {
+      maug_mcpy(
+         prev_sibling_style, &effect_style,
+         sizeof( struct MCSS_STYLE ) );
+   }
 
    return retval;
 }
