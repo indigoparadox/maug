@@ -22,7 +22,6 @@ struct MHTMR_RENDER_NODE {
    size_t m_b;
    uint8_t pos;
    uint8_t pos_flags;
-   uint8_t display;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
@@ -622,20 +621,6 @@ MERROR_RETVAL mhtmr_tree_size(
 
          child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
       }
-   }
-
-   /* display */
-
-   if( 
-      mcss_prop_is_active( effect_style.DISPLAY ) &&
-      0 <= tag_idx
-   ) {
-      debug_printf( 1, "%s display: %s",
-         gc_mhtml_tag_names[mhtml_tag( parser, tag_idx )->base.type],
-         gc_mcss_display_names[effect_style.DISPLAY] );
-
-      /* TODO: Apply default display for element type. */
-      mhtmr_node( tree, node_idx )->display = effect_style.DISPLAY;
    }
 
 cleanup:
