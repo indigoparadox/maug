@@ -88,6 +88,7 @@ MERROR_RETVAL mhtmr_apply_styles(
 
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   struct MCSS_STYLE* prev_sibling_style,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
 
 MERROR_RETVAL mhtmr_tree_pos(
@@ -475,13 +476,17 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_size(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   struct MCSS_STYLE* prev_sibling_style,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d
 ) {
    struct MCSS_STYLE effect_style;
+   struct MCSS_STYLE child_prev_sibling_style;
+   struct MCSS_STYLE child_style;
    char* tag_content = NULL;
    ssize_t child_iter_idx = -1;
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
+   size_t this_line_w = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
@@ -546,9 +551,12 @@ MERROR_RETVAL mhtmr_tree_size(
    } else {
       /* Get sizing of child nodes. */
 
+      maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
       node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= node_iter_idx ) {
-         mhtmr_tree_size( parser, tree, &effect_style, node_iter_idx, d + 1 );
+         mhtmr_tree_size(
+            parser, tree, &child_prev_sibling_style, &effect_style,
+            node_iter_idx, d + 1 );
 
          node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
       }
@@ -573,15 +581,36 @@ MERROR_RETVAL mhtmr_tree_size(
       /* Cycle through children and use greatest width. */
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
-         if(
-            /* TODO: See MCSS_POS_NOTE. */
-            MCSS_POSITION_ABSOLUTE !=
-               mhtmr_node( tree, child_iter_idx )->pos &&
-            mhtmr_node( tree, child_iter_idx )->w >
-               mhtmr_node( tree, node_idx )->w
-         ) {
-            mhtmr_node( tree, node_idx )->w =
-               mhtmr_node( tree, child_iter_idx )->w;
+         mhtmr_apply_styles(
+            parser, tree, &effect_style, &child_style,
+            mhtmr_node( tree, child_iter_idx )->tag );
+         
+         /* Skip ABSOLUTE nodes. */
+         if( MCSS_POSITION_ABSOLUTE == child_style.POSITION ) {
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+            continue;
+         }
+
+         if( MCSS_DISPLAY_BLOCK == child_style.DISPLAY ) {
+            /* Reset the line width counter for coming BLOCK node. */
+            this_line_w = 0;
+
+            if(
+               mhtmr_node( tree, child_iter_idx )->w >
+                  mhtmr_node( tree, node_idx )->w
+            ) {
+               /* This BLOCK node is the longest yet! */
+               mhtmr_node( tree, node_idx )->w =
+                  mhtmr_node( tree, child_iter_idx )->w;
+            }
+         } else {
+            /* Add inline node to this node line's width. */
+            this_line_w += mhtmr_node( tree, child_iter_idx )->w;
+
+            if( this_line_w > mhtmr_node( tree, node_idx )->w ) {
+               /* The line of nodes we've been adding up is the longest yet! */
+               mhtmr_node( tree, node_idx )->w = this_line_w;
+            }
          }
          child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
       }
@@ -616,15 +645,18 @@ MERROR_RETVAL mhtmr_tree_size(
       /* Cycle through children and add heights. */
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
-         if(
-            /* TODO: See MCSS_POS_NOTE. */
-            MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
-         ) {
-            debug_printf( MHTMR_TRACE_LVL,
-               "PARENT " SSIZE_T_FMT " adding CHILD "
-               SSIZE_T_FMT " HEIGHT " SSIZE_T_FMT,
-               node_idx, child_iter_idx,
-               mhtmr_node( tree, child_iter_idx )->h );
+         mhtmr_apply_styles(
+            parser, tree, &effect_style, &child_style,
+            mhtmr_node( tree, child_iter_idx )->tag );
+
+         /* Skip ABSOLUTE nodes. */
+         if( MCSS_POSITION_ABSOLUTE == child_style.POSITION ) {
+            child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
+            continue;
+         }
+
+         if( MCSS_DISPLAY_BLOCK == child_style.DISPLAY ) {
+            /* TODO: Sum up the height for each line of INLINE nodes. */
             mhtmr_node( tree, node_idx )->h +=
                mhtmr_node( tree, child_iter_idx )->h;
          }
@@ -634,6 +666,15 @@ MERROR_RETVAL mhtmr_tree_size(
    }
 
 cleanup:
+
+   /* We're done with the prev_sibling_style for this iter, so prepare it for
+    * the next called by the parent!
+    */
+   if( NULL != prev_sibling_style ) {
+      maug_mcpy(
+         prev_sibling_style, &effect_style,
+         sizeof( struct MCSS_STYLE ) );
+   }
 
    return retval;
 }
