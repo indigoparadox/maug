@@ -456,11 +456,14 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    maug_cleanup_if_null_alloc( char*, tag_content );
 
    if( MHTML_TAG_TYPE_STYLE == parser->tags[parser->tag_iter].base.type ) {
+      /* TODO: If it's the last character and there's still a token, process it! */
       debug_printf( MHTML_TRACE_LVL, "parsing STYLE tag..." );
       for( ; parser->token_sz > i ; i++ ) {
          retval = mcss_parse_c( &(parser->styler), parser->token[i] );
          maug_cleanup_if_not_ok();
       }
+      debug_printf( 1, "out of style characters..." );
+      mcss_parser_flush( &(parser->styler) );
       mcss_parser_reset( &(parser->styler) );
    } else {
       /* Copy token to tag text. */
@@ -468,6 +471,8 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       tag_content[parser->token_sz] = '\0';
       parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
    }
+
+   debug_printf( 1, "done processing tag contents..." );
 
    maug_munlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
 
@@ -527,6 +532,8 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
          retval = mcss_parse_c( &(parser->styler), parser->token[i] );
          maug_cleanup_if_not_ok();
       }
+      debug_printf( 1, "out of style characters..." );
+      mcss_parser_flush( &(parser->styler) );
 
       goto cleanup;
 

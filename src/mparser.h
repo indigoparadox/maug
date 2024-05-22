@@ -95,7 +95,7 @@ typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
 #define mparser_invalid_c( ptype, parser, c, retval ) \
    error_printf( #ptype " parser invalid %c detected at char: " \
-      SIZE_T_FMT, c, parser->i ); \
+      SIZE_T_FMT ", state: %u", c, parser->i, mparser_pstate( parser ) ); \
    retval = MERROR_PARSE;
 
 #define mparser_reset_token( ptype, parser ) \
