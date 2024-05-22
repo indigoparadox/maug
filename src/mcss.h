@@ -159,6 +159,8 @@ struct MCSS_PARSER {
 
 MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser );
 
+MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser );
+
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c );
 
 MERROR_RETVAL mcss_style_init( struct MCSS_STYLE* style );
@@ -472,8 +474,46 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
+      debug_printf( 1, "processing value: %s", parser->token );
+      retval = mcss_push_prop_val( parser );
+      maug_cleanup_if_not_ok();
+      mcss_parser_pstate_pop( parser );
+      mcss_parser_reset_token( parser );
+
+   } else if( MCSS_PSTATE_RULE == mcss_parser_pstate( parser ) ) {
+      if(
+         /* TODO: Break this out to make it more resilient. */
+         NULL != strchr( parser->token, '!' ) &&
+         0 == strncmp( "!important", strchr( parser->token, '!' ), 10 )
+      ) {
+         debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
+         parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
+      }
+      retval = mcss_push_prop_val( parser );
+      maug_cleanup_if_not_ok();
+      mcss_parser_pstate_pop( parser ); /* Pop rule. */
+      assert( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) );
+      mcss_parser_pstate_pop( parser );
+      mcss_parser_reset_token( parser );
+
+   } else {
+      /* Not in valid state to flush. */
+      retval = MERROR_PARSE;
+   }
+
+cleanup:
+
+   return retval;
+}
+
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "%c", c );
 
    switch( c ) {
    case ':':
@@ -492,29 +532,7 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       break;
 
    case ';':
-      if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
-         retval = mcss_push_prop_val( parser );
-         maug_cleanup_if_not_ok();
-         mcss_parser_pstate_pop( parser );
-         mcss_parser_reset_token( parser );
-
-      } else if( MCSS_PSTATE_RULE == mcss_parser_pstate( parser ) ) {
-         if(
-            /* TODO: Break this out to make it more resilient. */
-            NULL != strchr( parser->token, '!' ) &&
-            0 == strncmp( "!important", strchr( parser->token, '!' ), 10 )
-         ) {
-            debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
-            parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
-         }
-         retval = mcss_push_prop_val( parser );
-         maug_cleanup_if_not_ok();
-         mcss_parser_pstate_pop( parser ); /* Pop rule. */
-         assert( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) );
-         mcss_parser_pstate_pop( parser );
-         mcss_parser_reset_token( parser );
-
-      } else {
+      if( MERROR_PARSE == mcss_parser_flush( parser ) ) {
          mcss_parser_invalid_c( parser, c, retval );
       }
       break;
