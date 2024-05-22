@@ -92,6 +92,7 @@ MERROR_RETVAL mhtmr_tree_size(
 
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   struct MCSS_STYLE* prev_sibling_style,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
 
 void mhtmr_tree_draw(
@@ -636,13 +637,17 @@ cleanup:
 
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   struct MCSS_STYLE* prev_sibling_style,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d
 ) {
+   struct MCSS_STYLE child_prev_sibling_style;
    struct MCSS_STYLE effect_style;
    ssize_t child_iter_idx = -1;
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
+
+   maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -786,6 +791,10 @@ MERROR_RETVAL mhtmr_tree_pos(
       mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) && (
          /* Block elements should all be on new lines, so pad left. */
          MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
+         (
+            NULL != prev_sibling_style &&
+            MCSS_DISPLAY_BLOCK == prev_sibling_style->DISPLAY
+         ) ||
          /* Otherwise only pad the first element. */
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
@@ -815,9 +824,17 @@ MERROR_RETVAL mhtmr_tree_pos(
       mhtmr_node( tree, node_idx )->bg = effect_style.BACKGROUND_COLOR;
    }
 
+   /* Figure out child positions. */
+
    node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
    while( 0 <= node_iter_idx ) {
-      mhtmr_tree_pos( parser, tree, &effect_style, node_iter_idx, d + 1 );
+      mhtmr_tree_pos(
+         parser, tree, &child_prev_sibling_style, &effect_style,
+         node_iter_idx, d + 1 );
+
+      maug_mcpy(
+         &child_prev_sibling_style, &effect_style,
+         sizeof( struct MCSS_STYLE ) );
 
       node_iter_idx = mhtmr_node( tree, node_iter_idx )->next_sibling;
    }
