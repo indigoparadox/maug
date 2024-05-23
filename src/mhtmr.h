@@ -10,6 +10,11 @@
 #  define MHTMR_TRACE_LVL 0
 #endif /* !MHTMR_TRACE_LVL */
 
+#define MHTMR_EDGE_UNKNOWN 0
+#define MHTMR_EDGE_LEFT    1
+#define MHTMR_EDGE_TOP     2
+#define MHTMR_EDGE_INSIDE  4
+
 struct MHTMR_RENDER_NODE {
    /* TODO: Maybe get rid of these and replace them with MCSS_STYLE node? */
    ssize_t x;
@@ -22,6 +27,7 @@ struct MHTMR_RENDER_NODE {
    size_t m_b;
    uint8_t pos;
    uint8_t pos_flags;
+   uint8_t edge;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
    ssize_t tag;
@@ -746,6 +752,66 @@ cleanup:
    return sibling_found_idx;
 }
 
+static MERROR_RETVAL mhtmr_mark_edge_child_nodes(
+   struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
+   size_t node_parent_idx
+) {
+   ssize_t node_sibling_idx = -1;
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MCSS_STYLE effect_style;
+   size_t col_idx = 0; /* How many nodes right (X)? */
+   size_t row_idx = 0; /* How many nodes down (Y)? */
+
+   node_sibling_idx = mhtmr_node( tree, node_parent_idx )->first_child;
+   while( 0 <= node_sibling_idx ) {
+      maug_mzero( &effect_style, sizeof( struct MCSS_STYLE ) );
+      mhtmr_apply_styles(
+         parser, tree, NULL, &effect_style,
+         mhtmr_node( tree, node_sibling_idx )->tag );
+
+      if( MCSS_POSITION_ABSOLUTE == effect_style.POSITION ) {
+         /* Absolute nodes are never on the edge. */
+         mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_INSIDE;
+
+      } else if( MCSS_DISPLAY_INLINE == effect_style.DISPLAY ) {
+         /* Inline, or something that follows previous column. */
+         if( 0 == col_idx ) {
+            mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_LEFT;
+         }
+         if( 0 == row_idx ) {
+            mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_TOP;
+         }
+         if( 0 < row_idx && 0 < col_idx ) {
+            mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_INSIDE;
+         }
+         col_idx++;
+
+      } else {
+         /* Block, or something else in a new row. */
+         if( 0 == row_idx ) {
+            mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_TOP;
+         } 
+
+         /* Assume block is always on a new line. */
+         mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_LEFT;
+
+         row_idx++;
+         col_idx = 0;
+      }
+
+      debug_printf( 1, "marking node " SIZE_T_FMT " (%s) edge: %u",
+         node_sibling_idx,
+         gc_mhtml_tag_names[parser->tags[
+            mhtmr_node( tree, node_sibling_idx )->tag].base.type],
+         mhtmr_node( tree, node_sibling_idx )->edge );
+
+      node_sibling_idx = 
+         mhtmr_node( tree, node_sibling_idx )->next_sibling;
+   }
+
+   return retval;
+}
+
 MERROR_RETVAL mhtmr_tree_pos(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
    struct MCSS_STYLE* prev_sibling_style,
@@ -930,19 +996,15 @@ MERROR_RETVAL mhtmr_tree_pos(
     *       where elements are in their container.
     */
 
-   if( 
-      NULL != parent_style &&
-      MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
-      (
-         /* Block elements should all be on new lines, so pad left. */
-         /* MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
-         (
-            NULL != prev_sibling_style &&
-            MCSS_DISPLAY_BLOCK == prev_sibling_style->DISPLAY
-         ) || */
-         /* Otherwise only pad the first element. */
-         node_idx == mhtmr_node_parent( tree, node_idx )->first_child
-      )
+   debug_printf( 1, "(d: " SIZE_T_FMT ") node " SIZE_T_FMT " is on edge: %u",
+      d, node_idx, mhtmr_node( tree, node_idx )->edge );
+
+   assert(
+      0 == node_idx ||
+      MHTMR_EDGE_UNKNOWN != mhtmr_node( tree, node_idx )->edge );
+
+   if(
+      MHTMR_EDGE_LEFT == (MHTMR_EDGE_LEFT & mhtmr_node( tree, node_idx )->edge)
    ) {
       /* Try specific left padding first, then try general padding. */
       if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) ) {
@@ -952,21 +1014,10 @@ MERROR_RETVAL mhtmr_tree_pos(
       }
    }
 
-   if( 
-      NULL != parent_style &&
-      MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
-      (
-         /* Inline elements should all be on the same line, so pad top. */
-
-         /* This doesn't work, because padding is added into the X of the
-          * previous element... it pushes each successive element down further.
-          * Maybe padding should be separate until render?
-          */
-         /* MCSS_DISPLAY_INLINE == effect_style.DISPLAY || */
-
-         /* Otherwise only pad the first element. */
-         node_idx == mhtmr_node_parent( tree, node_idx )->first_child
-      )
+   if(
+      MHTMR_EDGE_TOP == (MHTMR_EDGE_TOP & mhtmr_node( tree, node_idx )->edge) &&
+      /* Only apply padding to first node in line. The rest will pick it up. */
+      MHTMR_EDGE_LEFT == (MHTMR_EDGE_LEFT & mhtmr_node( tree, node_idx )->edge)
    ) {
       /* Try specific top padding first, then try general padding. */
       if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) ) {
@@ -988,9 +1039,14 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* Figure out child positions. */
 
+   mhtmr_mark_edge_child_nodes( parser, tree, node_idx );
+
    maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
    node_iter_idx = mhtmr_node( tree, node_idx )->first_child;
    while( 0 <= node_iter_idx ) {
+      /* Mark child nodes on the edge so applying padding can be done. */
+
+      /* Figure out child node positioning. */
       mhtmr_tree_pos(
          parser, tree, &child_prev_sibling_style, &effect_style,
          node_iter_idx, d + 1 );
