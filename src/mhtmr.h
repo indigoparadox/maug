@@ -48,6 +48,8 @@ struct MHTMR_RENDER_TREE {
    size_t nodes_sz;
    /*! \brief Current alloc'd number of nodes in MHTMR_RENDER_NODE::nodes_h. */
    size_t nodes_sz_max;
+   /* TODO: Make this per-node. */
+   MAUG_MHANDLE font_h;
 };
 
 /* TODO: Function names should be verb_noun! */
@@ -70,6 +72,14 @@ struct MHTMR_RENDER_TREE {
    }
 
 #define mhtmr_tree_is_locked( tree ) (NULL != (tree)->nodes)
+
+/* TODO: Make these offset by element scroll on screen. */
+
+#define mhtmr_node_screen_x( tree, node_idx ) \
+   ((tree)->nodes[node_idx].x)
+
+#define mhtmr_node_screen_y( tree, node_idx ) \
+   ((tree)->nodes[node_idx].y)
 
 MERROR_RETVAL mhtmr_tree_create(
    struct MHTML_PARSER* parser, struct MHTMR_RENDER_TREE* tree,
@@ -400,6 +410,8 @@ MERROR_RETVAL mhtmr_tree_create(
       tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
    }
 
+   retval = retrofont_load( "unscii-8.hex", &(tree->font_h), 8, 33, 93 );
+
 cleanup:
 
    return retval;
@@ -495,6 +507,7 @@ MERROR_RETVAL mhtmr_tree_size(
    size_t this_line_w = 0;
    size_t this_line_h = 0;
    MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFONT* font = NULL;
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -505,11 +518,13 @@ MERROR_RETVAL mhtmr_tree_size(
    mhtmr_apply_styles(
       parser, tree, parent_style, &effect_style, tag_idx );
 
+   /* position */
+
    if( mcss_prop_is_active( effect_style.POSITION ) ) {
       debug_printf( MHTMR_TRACE_LVL,
          "node " SSIZE_T_FMT ": applying %s positioning",
          node_idx, gc_mcss_position_names[effect_style.POSITION] );
-      /* TODO: MCSS_POS_NOTE: I'd like to get rid of this so all positioning
+      /* TODO: MCSS_POS_NOTE: We'd like to get rid of this so all positioning
        *       is done through CSS... unfortunately, we only track the current
        *       and previous effective styles while working that out later, so
        *       we need to pin this to the element directly so we can rule it
@@ -519,8 +534,22 @@ MERROR_RETVAL mhtmr_tree_size(
       mhtmr_node( tree, node_idx )->pos = effect_style.POSITION;
       mhtmr_node( tree, node_idx )->pos_flags = effect_style.POSITION_flags;
    }
+
+   /* Grab fixed dimensions before content-based calculations of children, so
+    * we know if there are constraints. If these aren't set, then we'll size
+    * based on childrens' sizes after we determine childrens' sizes below.
+    */
+
+   if( mcss_prop_is_active_NOT_flag( effect_style.WIDTH, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w = effect_style.WIDTH;
+   }
+
+   if( mcss_prop_is_active_NOT_flag( effect_style.HEIGHT, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h = effect_style.HEIGHT;
+   }
    
    /* Figure out how big the contents of this node are. */
+
    if(
       0 <= tag_idx &&
       MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type
@@ -530,10 +559,19 @@ MERROR_RETVAL mhtmr_tree_size(
       maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
       maug_cleanup_if_null_alloc( char*, tag_content );
 
-      retroflat_string_sz( NULL, tag_content,
-         mhtml_tag( parser, tag_idx )->TEXT.content_sz, "",
+      maug_mlock( tree->font_h, font );
+      maug_cleanup_if_null_alloc( struct RETROFONT*, font );
+
+      /* TODO: Constrain node text size to parent size. */
+      retrofont_string_sz(
+         NULL, tag_content, mhtml_tag( parser, tag_idx )->TEXT.content_sz,
+         font,
+         mhtmr_node_parent( tree, node_idx )->w,
+         mhtmr_node_parent( tree, node_idx )->h,
          &(mhtmr_node( tree, node_idx )->w),
          &(mhtmr_node( tree, node_idx )->h), 0 );
+
+      maug_munlock( tree->font_h, font );
 
       debug_printf( MHTMR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          mhtmr_node( tree, node_idx )->w );
@@ -569,12 +607,8 @@ MERROR_RETVAL mhtmr_tree_size(
       }
    }
 
-   /* width */
-
-   if( mcss_prop_is_active_NOT_flag( effect_style.WIDTH, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->w = effect_style.WIDTH;
-
-   } else {
+   /* If our width is still zero, then size based on children. */
+   if( 0 == mhtmr_node( tree, node_idx )->w ) {
       if(
          MCSS_DISPLAY_BLOCK == effect_style.DISPLAY &&
          0 <= mhtmr_node( tree, node_idx )->parent
@@ -623,44 +657,8 @@ MERROR_RETVAL mhtmr_tree_size(
       }
    }
 
-   /* Apply additional modifiers (padding, etc) after children have all been
-    * calculated.
-    */
-
-   /* Try specific left padding first, then try general padding. */
-   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_LEFT, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_LEFT;
-   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
-   }
-
-   /* Try specific right padding first, then try general padding. */
-   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_RIGHT, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_RIGHT;
-   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
-   }
-
-   /* Try specific top padding first, then try general padding. */
-   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_TOP, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_TOP;
-   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
-   }
-
-   /* Try specific bottom padding first, then try general padding. */
-   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_BOTTOM, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_BOTTOM;
-   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
-   }
-
-   /* height */
-
-   if( mcss_prop_is_active_NOT_flag( effect_style.HEIGHT, AUTO ) ) {
-      mhtmr_node( tree, node_idx )->h = effect_style.HEIGHT;
-
-   } else {
+   /* If our height is still zero, then size based on children. */
+   if( 0 == mhtmr_node( tree, node_idx )->h ) {
       /* Cycle through children and add heights. */
       child_iter_idx = mhtmr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
@@ -693,6 +691,38 @@ MERROR_RETVAL mhtmr_tree_size(
       /* Add the last line height the node height. */
       mhtmr_node( tree, node_idx )->h += this_line_h;
       this_line_h = 0;
+   }
+
+   /* Apply additional modifiers (padding, etc) after children have all been
+    * calculated.
+    */
+
+   /* Try specific left padding first, then try general padding. */
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_LEFT, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_LEFT;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
+   }
+
+   /* Try specific right padding first, then try general padding. */
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_RIGHT, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING_RIGHT;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
+   }
+
+   /* Try specific top padding first, then try general padding. */
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_TOP, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_TOP;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
+   }
+
+   /* Try specific bottom padding first, then try general padding. */
+   if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_BOTTOM, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING_BOTTOM;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
    }
 
 cleanup:
@@ -1059,6 +1089,7 @@ void mhtmr_tree_draw(
    char* tag_content = NULL;
    union MHTML_TAG* tag = NULL;
    struct MHTMR_RENDER_NODE* node = NULL;
+   struct RETROFONT* font = NULL;
 
    node = mhtmr_node( tree, node_idx );
 
@@ -1079,9 +1110,15 @@ void mhtmr_tree_draw(
             return;
          }
 
-         retroflat_string(
-            NULL, node->fg,
-            tag_content, 0, "", node->x, node->y, 0 );
+         maug_mlock( tree->font_h, font );
+
+         retrofont_string(
+            NULL, node->fg, tag_content, 0, font,
+            mhtmr_node_screen_x( tree, node_idx ),
+            mhtmr_node_screen_y( tree, node_idx ),
+            node->w, node->h, 0 );
+
+         maug_munlock( tree->font_h, font );
 
          maug_munlock( tag->TEXT.content, tag_content );
 
@@ -1177,6 +1214,12 @@ void mhtmr_tree_dump(
 void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
 
    debug_printf( MHTMR_TRACE_LVL, "freeing render nodes..." );
+
+   /* TODO: Free bitmaps from img! */
+
+   if( NULL != tree->font_h ) {
+      maug_mfree( tree->font_h );
+   }
 
    mhtmr_tree_unlock( tree );
 

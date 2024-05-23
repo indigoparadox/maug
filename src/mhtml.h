@@ -697,6 +697,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    case '\r':
    case '\n':
    case '\t':
+      break;
+
    case ' ':
       if( MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) ) {
          retval = mhtml_push_element_tag( parser );
