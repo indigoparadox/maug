@@ -514,8 +514,6 @@ cleanup:
 MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "%c", c );
-
    switch( c ) {
    case ':':
       if( 

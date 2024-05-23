@@ -787,6 +787,12 @@ static MERROR_RETVAL mhtmr_mark_edge_child_nodes(
          col_idx++;
 
       } else {
+         /* Block element will be on the next line, so take that into account
+          * when deciding the edge below.
+          */
+         row_idx++;
+         col_idx = 0;
+
          /* Block, or something else in a new row. */
          if( 0 == row_idx ) {
             mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_TOP;
@@ -794,9 +800,6 @@ static MERROR_RETVAL mhtmr_mark_edge_child_nodes(
 
          /* Assume block is always on a new line. */
          mhtmr_node( tree, node_sibling_idx )->edge |= MHTMR_EDGE_LEFT;
-
-         row_idx++;
-         col_idx = 0;
       }
 
       debug_printf( 1, "marking node " SIZE_T_FMT " (%s) edge: %u",
@@ -822,6 +825,7 @@ MERROR_RETVAL mhtmr_tree_pos(
    ssize_t child_iter_idx = -1;
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
+   ssize_t prev_sibling_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
@@ -832,6 +836,8 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    mhtmr_apply_styles(
       parser, tree, parent_style, &effect_style, tag_idx );
+
+   prev_sibling_idx = mhtmr_find_prev_sibling_in_box_model( tree, node_idx );
 
    /* x */
 
@@ -867,20 +873,13 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    } else if(
       MCSS_DISPLAY_INLINE == effect_style.DISPLAY &&
-      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY
+      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY &&
+      0 <= prev_sibling_idx
    ) {
-
-      child_iter_idx = mhtmr_find_prev_sibling_in_box_model( tree, node_idx );
-      if( 0 <= child_iter_idx ) {
-         /* Place to the right of the previous sibling. */
-         mhtmr_node( tree, node_idx )->x =
-            mhtmr_node( tree, child_iter_idx )->x +
-            mhtmr_node( tree, child_iter_idx )->w;
-      } else {
-         /* No previous siblings, so just put it inside its parent. */
-         mhtmr_node( tree, node_idx )->x =
-            mhtmr_node_parent( tree, node_idx )->x;
-      }
+      /* Place to the right of the previous sibling. */
+      mhtmr_node( tree, node_idx )->x =
+         mhtmr_node( tree, prev_sibling_idx )->x +
+         mhtmr_node( tree, prev_sibling_idx )->w;
 
    } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
       mhtmr_node( tree, node_idx )->x = mhtmr_node_parent( tree, node_idx )->x;
@@ -922,42 +921,27 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    } else if(
       MCSS_DISPLAY_INLINE == effect_style.DISPLAY &&
-      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY
+      MCSS_DISPLAY_INLINE == prev_sibling_style->DISPLAY &&
+      0 <= prev_sibling_idx
    ) {
-      child_iter_idx = mhtmr_find_prev_sibling_in_box_model( tree, node_idx );
-      if( 0 <= child_iter_idx ) {
-         /* Place to the right of the previous sibling. */
-         mhtmr_node( tree, node_idx )->y =
-            mhtmr_node( tree, child_iter_idx )->y;
-      } else {
-         /* No previous siblings, so just put it inside its parent. */
-         mhtmr_node( tree, node_idx )->y =
-            mhtmr_node_parent( tree, node_idx )->y;
-      }
+      /* Place to the right of the previous sibling. */
+      mhtmr_node( tree, node_idx )->y = mhtmr_node( tree, prev_sibling_idx )->y;
 
-   } else {
+   } else if( 0 <= prev_sibling_idx ) {
+      /* Place below the previous block sibling. */
+
+      /* TODO: We should probably use the tallest element on the prev sibling's
+       *       line, but that seems hard...
+       */
+
+      mhtmr_node( tree, node_idx )->y =
+         mhtmr_node( tree, prev_sibling_idx )->y +
+         mhtmr_node( tree, prev_sibling_idx )->h;
+
+   } else if( 0 <= mhtmr_node( tree, node_idx )->parent ) {
       /* Position relative to other nodes. */
 
-      child_iter_idx = mhtmr_node( tree, node_idx )->parent;
-      if( 0 <= child_iter_idx ) {
-         /* Add top offset of parent. */
-         mhtmr_node( tree, node_idx )->y +=
-            mhtmr_node( tree, child_iter_idx )->y;
-
-         child_iter_idx = mhtmr_node( tree, child_iter_idx )->first_child;
-      }
-      while( 0 <= child_iter_idx && node_idx != child_iter_idx ) {
-         if(
-            /* Don't add absolute positioned siblings to this offset! */
-            MCSS_POSITION_ABSOLUTE != mhtmr_node( tree, child_iter_idx )->pos
-         ) {
-            /* Add top offset of prior siblings. */
-            mhtmr_node( tree, node_idx )->y +=
-               mhtmr_node( tree, child_iter_idx )->h;
-         }
-
-         child_iter_idx = mhtmr_node( tree, child_iter_idx )->next_sibling;
-      }
+      mhtmr_node( tree, node_idx )->y = mhtmr_node_parent( tree, node_idx )->y;
    }
 
    /* margin-left, margin-right */
