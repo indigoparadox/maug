@@ -99,7 +99,8 @@
    f( 14, LEFT, ssize_t, mcss_style_size_t, 0 ) \
    f( 15, TOP, ssize_t, mcss_style_size_t, 0 ) \
    f( 16, RIGHT, ssize_t, mcss_style_size_t, 0 ) \
-   f( 17, BOTTOM, ssize_t, mcss_style_size_t, 0 )
+   f( 17, BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
+   f( 18, PADDING, ssize_t, mcss_style_size_t, 0 )
 
 #define mcss_prop_is_heritable( prop_id ) \
    (MCSS_PROP_COLOR == prop_id || \
