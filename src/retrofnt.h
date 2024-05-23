@@ -230,14 +230,14 @@ void retrofont_string(
          break;
       }
 
-      /* TODO: More dynamic way to determine space? */
+      /* TODO: More dynamic way to determine space character? */
       if( 32 != str[i] ) {
          retrofont_blit_glyph(
             target, color, str[i], font, x_iter, y_iter, flags );
       }
 
       x_iter += font->glyph_w;
-      if( 0 < max_w && (x + max_w) < x_iter ) {
+      if( 0 < max_w && (x + max_w) <= x_iter + font->glyph_w ) {
          x_iter = x;
          y_iter += font->glyph_h;
       }
@@ -267,7 +267,7 @@ void retrofont_string_sz(
       if( *out_w_p <= x_iter ) {
          *out_w_p = x_iter;
       }
-      if( 0 < max_w && max_w < x_iter ) {
+      if( 0 < max_w && max_w < x_iter + font->glyph_w ) {
          x_iter = 0;
          *out_h_p += font->glyph_h;
       }
