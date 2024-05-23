@@ -1127,8 +1127,8 @@ void mhtmr_tree_draw(
          if( RETROFLAT_COLOR_NULL != node->bg ) {
             retroflat_rect(
                NULL, node->bg,
-               mhtmr_node( tree, node_idx )->x,
-               mhtmr_node( tree, node_idx )->y,
+               mhtmr_node_screen_x( tree, node_idx ),
+               mhtmr_node_screen_y( tree, node_idx ),
                mhtmr_node( tree, node_idx )->w,
                mhtmr_node( tree, node_idx )->h,
                RETROFLAT_FLAGS_FILL );
@@ -1141,8 +1141,8 @@ void mhtmr_tree_draw(
             retroflat_blit_bitmap(
                NULL, &(mhtmr_node( tree, node_idx )->bitmap),
                0, 0,
-               mhtmr_node( tree, node_idx )->x,
-               mhtmr_node( tree, node_idx )->y,
+               mhtmr_node_screen_x( tree, node_idx ),
+               mhtmr_node_screen_y( tree, node_idx ),
                16, 16
                /* mhtmr_node( tree, node_idx )->w,
                mhtmr_node( tree, node_idx )->h */ );
@@ -1151,7 +1151,10 @@ void mhtmr_tree_draw(
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {
             retroflat_rect(
-               NULL, node->bg, node->x, node->y, node->w, node->h,
+               NULL, node->bg,
+               mhtmr_node_screen_x( tree, node_idx ),
+               mhtmr_node_screen_y( tree, node_idx ),
+               node->w, node->h,
                RETROFLAT_FLAGS_FILL );
          }
       }
