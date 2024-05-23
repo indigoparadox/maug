@@ -621,20 +621,32 @@ MERROR_RETVAL mhtmr_tree_size(
     * calculated.
     */
 
+   /* Try specific left padding first, then try general padding. */
    if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_LEFT, AUTO ) ) {
       mhtmr_node( tree, node_idx )->w += effect_style.PADDING_LEFT;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
    }
 
+   /* Try specific right padding first, then try general padding. */
    if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_RIGHT, AUTO ) ) {
       mhtmr_node( tree, node_idx )->w += effect_style.PADDING_RIGHT;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->w += effect_style.PADDING;
    }
 
+   /* Try specific top padding first, then try general padding. */
    if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_TOP, AUTO ) ) {
       mhtmr_node( tree, node_idx )->h += effect_style.PADDING_TOP;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
    }
 
+   /* Try specific bottom padding first, then try general padding. */
    if( mcss_prop_is_active_NOT_flag( effect_style.PADDING_BOTTOM, AUTO ) ) {
       mhtmr_node( tree, node_idx )->h += effect_style.PADDING_BOTTOM;
+   } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
+      mhtmr_node( tree, node_idx )->h += effect_style.PADDING;
    }
 
    /* height */
@@ -916,7 +928,6 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    if( 
       NULL != parent_style &&
-      mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) &&
       MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
       (
          /* Block elements should all be on new lines, so pad left. */
@@ -929,12 +940,16 @@ MERROR_RETVAL mhtmr_tree_pos(
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
    ) {
-      mhtmr_node( tree, node_idx )->x += parent_style->PADDING_LEFT;
+      /* Try specific left padding first, then try general padding. */
+      if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->x += parent_style->PADDING_LEFT;
+      } else if( mcss_prop_is_active_NOT_flag( parent_style->PADDING, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->x += parent_style->PADDING;
+      }
    }
 
    if( 
       NULL != parent_style &&
-      mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) &&
       MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
       (
          /* Inline elements should all be on the same line, so pad top. */
@@ -946,7 +961,12 @@ MERROR_RETVAL mhtmr_tree_pos(
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
    ) {
-      mhtmr_node( tree, node_idx )->y += parent_style->PADDING_TOP;
+      /* Try specific top padding first, then try general padding. */
+      if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->y += parent_style->PADDING_TOP;
+      } else if( mcss_prop_is_active_NOT_flag( parent_style->PADDING, AUTO ) ) {
+         mhtmr_node( tree, node_idx )->y += parent_style->PADDING;
+      }
    }
 
    /* color */
