@@ -466,6 +466,11 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       mcss_parser_flush( &(parser->styler) );
       mcss_parser_reset( &(parser->styler) );
    } else {
+      /* Eliminate trailing spaces. */
+      while( ' ' == parser->token[parser->token_sz - 1] ) {
+         parser->token_sz--;
+      }
+
       /* Copy token to tag text. */
       strncpy( tag_content, parser->token, parser->token_sz );
       tag_content[parser->token_sz] = '\0';
