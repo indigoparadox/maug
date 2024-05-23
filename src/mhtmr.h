@@ -1143,7 +1143,8 @@ void mhtmr_tree_draw(
                0, 0,
                mhtmr_node_screen_x( tree, node_idx ),
                mhtmr_node_screen_y( tree, node_idx ),
-               16, 16
+               retroflat_bitmap_w( &(mhtmr_node( tree, node_idx )->bitmap) ),
+               retroflat_bitmap_h( &(mhtmr_node( tree, node_idx )->bitmap) )
                /* mhtmr_node( tree, node_idx )->w,
                mhtmr_node( tree, node_idx )->h */ );
          }
