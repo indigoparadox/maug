@@ -953,10 +953,13 @@ MERROR_RETVAL mhtmr_tree_pos(
       MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
       (
          /* Inline elements should all be on the same line, so pad top. */
+
          /* This doesn't work, because padding is added into the X of the
-          * previous element... maybe padding should be separate until render?
+          * previous element... it pushes each successive element down further.
+          * Maybe padding should be separate until render?
           */
          /* MCSS_DISPLAY_INLINE == effect_style.DISPLAY || */
+
          /* Otherwise only pad the first element. */
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
