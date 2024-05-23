@@ -84,6 +84,7 @@
 #     define RETROISO_C
 #     define RETROGXC_C
 #     define RETROGUI_C
+#     define RETROFNT_C
 #  endif /* MAUG_C */
 #endif /* !MAUG_NO_RETRO */
 

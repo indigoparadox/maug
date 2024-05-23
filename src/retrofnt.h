@@ -27,12 +27,18 @@ MERROR_RETVAL retrofont_load(
 
 void retrofont_blit_glyph(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, int x, int y, uint8_t flags );
+   char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags );
 
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   struct RETROFONT* font, int x, int y, uint8_t flags );
+   struct RETROFONT* font, size_t x, size_t y,
+   size_t max_w, size_t max_h, uint8_t flags );
+
+void retrofont_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   struct RETROFONT* font, size_t max_w, size_t max_h,
+   size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
 /**
  * \brief Get a pointer to the glyph with the given index in the given font.
@@ -185,7 +191,7 @@ cleanup:
 
 void retrofont_blit_glyph(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, int x, int y, uint8_t flags
+   char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
    int16_t x_iter, y_iter;
@@ -205,10 +211,46 @@ void retrofont_blit_glyph(
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   struct RETROFONT* font, int x, int y, uint8_t flags
+   struct RETROFONT* font, size_t x, size_t y,
+   size_t max_w, size_t max_h, uint8_t flags
 ) {
    size_t i = 0;
-   int16_t x_iter = x;
+   size_t x_iter = x;
+   size_t y_iter = y;
+
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
+   debug_printf( 1, "max w: " SIZE_T_FMT, max_w );
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      /* Terminate prematurely at null. */
+      if( '\0' == str[i] ) {
+         break;
+      }
+
+      /* TODO: More dynamic way to determine space? */
+      if( 32 != str[i] ) {
+         retrofont_blit_glyph(
+            target, color, str[i], font, x_iter, y_iter, flags );
+      }
+
+      x_iter += font->glyph_w;
+      if( 0 < max_w && (x + max_w) < x_iter ) {
+         x_iter = x;
+         y_iter += font->glyph_h;
+      }
+   }
+}
+
+void retrofont_string_sz(
+   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   struct RETROFONT* font, size_t max_w, size_t max_h,
+   size_t* out_w_p, size_t* out_h_p, uint8_t flags
+) {
+   size_t x_iter = 0;
+   size_t i = 0;
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
@@ -220,12 +262,21 @@ void retrofont_string(
          break;
       }
 
-      retrofont_blit_glyph( target, color, str[i], font, x_iter, y, flags );
-
       x_iter += font->glyph_w;
-   }
-}
 
+      if( *out_w_p <= x_iter ) {
+         *out_w_p = x_iter;
+      }
+      if( 0 < max_w && max_w < x_iter ) {
+         x_iter = 0;
+         *out_h_p += font->glyph_h;
+      }
+   }
+
+   /* Add the height of the last line. */
+   *out_h_p += font->glyph_h;
+   *out_w_p += 1;
+}
 
 #endif /* RETROFNT_C */
 
