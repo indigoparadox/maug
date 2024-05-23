@@ -926,16 +926,20 @@ MERROR_RETVAL mhtmr_tree_pos(
 
    /* padding */
 
+   /* TODO: Padding is still broken. Needs more involved understanding of
+    *       where elements are in their container.
+    */
+
    if( 
       NULL != parent_style &&
       MCSS_POSITION_ABSOLUTE != effect_style.POSITION &&
       (
          /* Block elements should all be on new lines, so pad left. */
-         MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
+         /* MCSS_DISPLAY_BLOCK == effect_style.DISPLAY ||
          (
             NULL != prev_sibling_style &&
             MCSS_DISPLAY_BLOCK == prev_sibling_style->DISPLAY
-         ) ||
+         ) || */
          /* Otherwise only pad the first element. */
          node_idx == mhtmr_node_parent( tree, node_idx )->first_child
       )
