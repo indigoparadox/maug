@@ -29,6 +29,8 @@
 /*! \brief Indicates a text tag contains CSS information to be parsed. */
 #define MHTML_TAG_FLAG_STYLE  0x02
 
+#define MHTML_INPUT_TYPE_BUTTON  0x01
+
 #include <mparser.h>
 #include <mcss.h>
 
@@ -38,7 +40,9 @@
    f( CLASS, 2 ) \
    f( ID, 3 ) \
    f( NAME, 4 ) \
-   f( SRC, 5 )
+   f( SRC, 5 ) \
+   f( TYPE, 6 ) \
+   f( VALUE, 7 )
 
 #define MHTML_TAG_TABLE( f ) \
    f(  0, NONE, void* none;, NONE ) \
@@ -51,7 +55,8 @@
    f(  7, SPAN, void* none;, INLINE ) \
    f(  8, BR, void* none;, BLOCK ) \
    f(  9, STYLE, void* none;, NONE ) \
-   f( 10, IMG, char src[MHTML_SRC_HREF_SZ_MAX + 1]; size_t src_sz;, BLOCK )
+   f( 10, IMG, char src[MHTML_SRC_HREF_SZ_MAX + 1]; size_t src_sz;, BLOCK ) \
+   f( 11, INPUT, uint8_t input_type; char name[MCSS_ID_SZ_MAX + 1]; size_t name_sz; char value[MCSS_ID_SZ_MAX + 1]; size_t value_sz;, INLINE )
 
 #define MHTML_PARSER_PSTATE_TABLE( f ) \
    f( MHTML_PSTATE_NONE, 0 ) \
@@ -557,11 +562,36 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       parser->tags[parser->tag_iter].base.id_sz = parser->token_sz;
 
    } else if( MHTML_ATTRIB_KEY_SRC == parser->attrib_key ) {
+      /* TODO: Validate tag type. */
       strncpy(
          parser->tags[parser->tag_iter].IMG.src,
          parser->token,
          MHTML_SRC_HREF_SZ_MAX );
       parser->tags[parser->tag_iter].IMG.src_sz = parser->token_sz;
+
+   } else if( MHTML_ATTRIB_KEY_TYPE == parser->attrib_key ) {
+      /* TODO: Validate tag type. */
+
+      if( 0 == strncpy( parser->token, "button", 7 ) ) {
+         parser->tags[parser->tag_iter].INPUT.input_type =
+            MHTML_INPUT_TYPE_BUTTON;
+      }
+
+   } else if( MHTML_ATTRIB_KEY_NAME == parser->attrib_key ) {
+      /* TODO: Validate tag type. */
+      strncpy(
+         parser->tags[parser->tag_iter].INPUT.name,
+         parser->token,
+         MCSS_ID_SZ_MAX );
+      parser->tags[parser->tag_iter].INPUT.name_sz = parser->token_sz;
+
+   } else if( MHTML_ATTRIB_KEY_VALUE == parser->attrib_key ) {
+      /* TODO: Validate tag type. */
+      strncpy(
+         parser->tags[parser->tag_iter].INPUT.value,
+         parser->token,
+         MCSS_ID_SZ_MAX );
+      parser->tags[parser->tag_iter].INPUT.value_sz = parser->token_sz;
    }
 
 cleanup:
