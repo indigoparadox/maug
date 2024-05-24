@@ -950,8 +950,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
 #  else
-#     define retroflat_bitmap_w( bmp ) ((bmp)->w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->h)
+#     define retroflat_bitmap_w( bmp ) ((bmp)->b->w)
+#     define retroflat_bitmap_h( bmp ) ((bmp)->b->h)
 #  endif /* RETROFLAT_OPENGL */
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
@@ -1820,6 +1820,9 @@ typedef uint16_t retroflat_ms_t;
 /* #define RETROFLAT_DOS_TIMER_DIV 1103 */
 #     define RETROFLAT_DOS_TIMER_DIV 100
 #  endif /* !RETROFLAT_DOS_TIMER_DIV */
+
+#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
