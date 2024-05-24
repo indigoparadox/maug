@@ -50,6 +50,7 @@ struct MHTMR_RENDER_TREE {
    size_t nodes_sz_max;
    /* TODO: Make this per-node. */
    MAUG_MHANDLE font_h;
+   struct RETROGUI gui;
 };
 
 /* TODO: Function names should be verb_noun! */
@@ -412,6 +413,9 @@ MERROR_RETVAL mhtmr_tree_create(
 
    retval = retrofont_load( "unscii-8.hex", &(tree->font_h), 8, 33, 93 );
 
+   /* Create a GUI handler just for this tree. */
+   retval = retrogui_init( &(tree->gui) );
+
 cleanup:
 
    return retval;
@@ -562,10 +566,10 @@ MERROR_RETVAL mhtmr_tree_size(
       maug_mlock( tree->font_h, font );
       maug_cleanup_if_null_alloc( struct RETROFONT*, font );
 
-      /* TODO: Constrain node text size to parent size. */
       retrofont_string_sz(
          NULL, tag_content, mhtml_tag( parser, tag_idx )->TEXT.content_sz,
          font,
+         /* Constrain node text size to parent size. */
          mhtmr_node_parent( tree, node_idx )->w,
          mhtmr_node_parent( tree, node_idx )->h,
          &(mhtmr_node( tree, node_idx )->w),
@@ -577,6 +581,30 @@ MERROR_RETVAL mhtmr_tree_size(
          mhtmr_node( tree, node_idx )->w );
 
       maug_munlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
+
+   } else if(
+      0 <= tag_idx &&
+      MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type
+   ) {
+
+      maug_mlock( tree->font_h, font );
+      maug_cleanup_if_null_alloc( struct RETROFONT*, font );
+
+      retrofont_string_sz(
+         NULL,
+         mhtml_tag( parser, tag_idx )->INPUT.value,
+         mhtml_tag( parser, tag_idx )->INPUT.value_sz,
+         font,
+         mhtmr_node_parent( tree, node_idx )->w,
+         mhtmr_node_parent( tree, node_idx )->h,
+         &(mhtmr_node( tree, node_idx )->w),
+         &(mhtmr_node( tree, node_idx )->h), 0 );
+
+      /* Add space for borders and stuff. (TODO: Add to retrogui!) */
+      mhtmr_node( tree, node_idx )->w += 8;
+      mhtmr_node( tree, node_idx )->h += 8;
+
+      maug_munlock( tree->font_h, font );
 
    } else if(
       0 <= tag_idx &&
@@ -1090,6 +1118,8 @@ void mhtmr_tree_draw(
    union MHTML_TAG* tag = NULL;
    struct MHTMR_RENDER_NODE* node = NULL;
    struct RETROFONT* font = NULL;
+   union RETROGUI_CTL ctl;
+   MERROR_RETVAL retval = MERROR_OK;
 
    node = mhtmr_node( tree, node_idx );
 
@@ -1135,7 +1165,7 @@ void mhtmr_tree_draw(
          }
 
       } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
-         /* TODO: Load and blit the image. */
+         /* Blit the image. */
          
          if( retroflat_bitmap_ok( &(mhtmr_node( tree, node_idx )->bitmap) ) ) {
             retroflat_blit_bitmap(
@@ -1149,6 +1179,31 @@ void mhtmr_tree_draw(
                mhtmr_node( tree, node_idx )->h */ );
          }
 
+      } else if( MHTML_TAG_TYPE_INPUT == tag->base.type ) {
+         /* Push the control (for the client renderer to redraw later). */
+
+         /* TODO: This shouldn't be in the drawing callback! */
+
+         retrogui_lock( &(tree->gui) );
+
+         if(
+            /* Use the same ID for the node and control it creates. */
+            MERROR_OK != retrogui_init_ctl(
+               &ctl, RETROGUI_CTL_TYPE_BUTTON, node_idx )
+         ) {
+            retrogui_unlock( &(tree->gui) );
+            goto cleanup;
+         }
+         
+         ctl.base.x = mhtmr_node( tree, node_idx )->x;
+         ctl.base.y = mhtmr_node( tree, node_idx )->y;
+         ctl.base.w = mhtmr_node( tree, node_idx )->w;
+         ctl.base.h = mhtmr_node( tree, node_idx )->h;
+
+         retrogui_push_ctl( &(tree->gui), &ctl );
+
+         retrogui_unlock( &(tree->gui) );
+
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {
             retroflat_rect(
@@ -1161,21 +1216,21 @@ void mhtmr_tree_draw(
       }
    }
 
+cleanup:
+
+   if( retrogui_is_locked( &(tree->gui) ) ) {
+      retrogui_unlock( &(tree->gui) );
+   }
+
+   if( MERROR_OK != retval ) {
+      error_printf( "failed drawing node: " SIZE_T_FMT, node_idx );
+   }
+
+   /* Keep trying to render children, tho. */  
+
    mhtmr_tree_draw( parser, tree, node->first_child, d + 1 );
 
    mhtmr_tree_draw( parser, tree, node->next_sibling, d );
-
-#if 0
-   /* Perform the actual render. */
-
-
-   memcpy( &r, parent_r, sizeof( struct MHTML_RENDER ) );
-
-   /* Descend into children/siblings. */
-   r.y += effect_style.PADDING_TOP;
-   r.x += effect_style.PADDING_LEFT;
-
-   #endif
 }
 
 void mhtmr_tree_dump(
@@ -1220,6 +1275,8 @@ void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
    debug_printf( MHTMR_TRACE_LVL, "freeing render nodes..." );
 
    /* TODO: Free bitmaps from img! */
+
+   /* TODO: Free GUI! */
 
    if( NULL != tree->font_h ) {
       maug_mfree( tree->font_h );
