@@ -62,7 +62,7 @@ typedef size_t RETROGUI_IDC;
 #define RETROGUI_CTL_TABLE( f ) \
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
-   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; ) \
+   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX]; int16_t push_frames; ) \
    f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; )
 
 #if 0
@@ -463,6 +463,10 @@ static RETROGUI_IDC retrogui_click_BUTTON(
    /* Set the last button clicked. */
    idc_out = ctl->base.idc;
 
+   /* Set the frames to show the pushed-in view. */
+   /* TODO: Use a constant, here. */
+   ctl->BUTTON.push_frames = 3;
+
    return idc_out;
 }
 
@@ -488,7 +492,33 @@ static void retrogui_redraw_BUTTON(
    retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
-   /* TODO: Draw outlines for outset/inset depending on idc_prev. */
+   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+      ctl->base.x, ctl->base.y,
+      ctl->base.w, ctl->base.h, 0 );
+
+   if( 0 < ctl->BUTTON.push_frames ) {
+      retroflat_line(
+         gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
+         ctl->base.x + 1, ctl->base.y + 1,
+         ctl->base.x + ctl->base.w - 2, ctl->base.y + 1, 0 );
+      retroflat_line(
+         gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
+         ctl->base.x + 1, ctl->base.y + 2,
+         ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
+
+      gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for push animation. */
+      ctl->BUTTON.push_frames--;
+   } else {
+      /* Button is not pushed. */
+      retroflat_line(
+         gui->draw_bmp, RETROFLAT_COLOR_WHITE,
+         ctl->base.x + 1, ctl->base.y + 1,
+         ctl->base.x + ctl->base.w - 2, ctl->base.y + 1, 0 );
+      retroflat_line(
+         gui->draw_bmp, RETROFLAT_COLOR_WHITE,
+         ctl->base.x + 1, ctl->base.y + 2,
+         ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
+   }
       
    retroflat_string_sz( gui->draw_bmp, ctl->BUTTON.label, 0, NULL, &w, &h, 0 );
 
@@ -809,15 +839,15 @@ RETROGUI_IDC retrogui_poll_ctls(
 
    #define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
+         gui->flags |= RETROGUI_FLAGS_DIRTY; \
          idc_out = \
             retrogui_click_ ## c_name( \
-               gui, &(gui->ctls[i]), p_input, input_evt ); \
-         gui->flags |= RETROGUI_FLAGS_DIRTY;
+               gui, &(gui->ctls[i]), p_input, input_evt );
 
    #define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt ); \
-         gui->flags |= RETROGUI_FLAGS_DIRTY;
+         gui->flags |= RETROGUI_FLAGS_DIRTY; \
+         idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt );
 
    if( 0 == *p_input ) {
       goto reset_debounce;
@@ -910,8 +940,9 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
 
    #define RETROGUI_CTL_TABLE_REDRAW( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
-         retrogui_redraw_ ## c_name( gui, &(gui->ctls[i]) ); \
-         gui->flags &= ~RETROGUI_FLAGS_DIRTY;
+         /* Mark dirty first so redraw can unmark it for animation! */ \
+         gui->flags &= ~RETROGUI_FLAGS_DIRTY; \
+         retrogui_redraw_ ## c_name( gui, &(gui->ctls[i]) );
 
    for( i = 0 ; gui->ctls_sz > i ; i++ ) {
       if( 0 ) {
