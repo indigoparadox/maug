@@ -18,6 +18,17 @@
 #define RETROGXC_ASSET_TYPE_BITMAP  1
 #define RETROGXC_ASSET_TYPE_FONT    2
 
+#define retrogxc_load_bitmap( res_p, flags ) \
+   retrogxc_load_asset( res_p, retrogxc_loader_bitmap, flags )
+
+#define retrogxc_load_xpm( res_p, flags ) \
+   retrogxc_load_asset( res_p, retrogxc_loader_xpm, flags )
+
+typedef int8_t RETROGXC_ASSET_TYPE;
+
+typedef RETROGXC_ASSET_TYPE (*retrogxc_loader)(
+   retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, uint8_t flags );
+
 struct RETROFLAT_CACHE_ASSET {
    uint8_t type;
    MAUG_MHANDLE handle;
@@ -30,9 +41,14 @@ void retrogxc_clear_cache();
 
 void retrogxc_shutdown();
 
-int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags );
+RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
+   retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, uint8_t flags );
 
-int16_t retrogxc_load_xpm( retroflat_asset_path res_p, uint8_t flags );
+RETROGXC_ASSET_TYPE retrogxc_loader_xpm(
+   retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, uint8_t flags );
+
+int16_t retrogxc_load_asset(
+   retroflat_asset_path res_p, retrogxc_loader l, uint8_t flags );
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
@@ -122,84 +138,89 @@ void retrogxc_shutdown() {
 
 /* === */
 
-int16_t retrogxc_load_bitmap( retroflat_asset_path res_p, uint8_t flags ) {
-   int16_t idx = RETROGXC_ERROR_CACHE_MISS,
-      i = 0;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
+   retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_BITMAP* bitmap = NULL;
 
-   maug_mlock( gs_retrogxc_handle, assets );
+   assert( (MAUG_MHANDLE)NULL == *handle_p );
 
-   /* Try to find the bitmap already in the cache. */
-   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
-      if(
-         RETROGXC_ASSET_TYPE_BITMAP == assets[i].type &&
-         0 == retroflat_cmp_asset_path( assets[i].id, res_p )
-      ) {
-         idx = i;
-         goto cleanup;
-      }
-   }
+   *handle_p = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
 
-   /* Bitmap not found. */
-   debug_printf( RETROGXC_TRACE_LVL,
-      "bitmap %s not found in cache; loading...", res_p );
-   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
-      /* Find a new empty slot. */
-      if( RETROGXC_ASSET_TYPE_NONE != assets[i].type ) {
-         continue;
-      }
+   maug_mlock( *handle_p, bitmap );
+   maug_cleanup_if_null_alloc( struct RETROFLAT_BITMAP*, bitmap );
 
-      assert( (MAUG_MHANDLE)NULL == assets[i].handle );
-
-      assets[i].handle = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
-      if( (MAUG_MHANDLE)NULL == assets[i].handle ) {
-         error_printf( "cache allocation error" );
-         idx = -1;
-         goto cleanup;
-      }
-
-      maug_mlock( assets[i].handle, bitmap );
-      if( NULL == bitmap ) {
-         error_printf( "cache lock error" );
-         idx = -1;
-         goto cleanup;
-      }
-
-      /* Load requested bitmap into the cache. */
-      if( MERROR_OK == retroflat_load_bitmap( res_p, bitmap, flags ) ) {
-         idx = i;
-         assets[idx].type = RETROGXC_ASSET_TYPE_BITMAP;
-         debug_printf( RETROGXC_TRACE_LVL,
-            "bitmap %s assigned cache ID: %d", res_p, idx );
-      }
-
-      maug_munlock( assets[i].handle, bitmap );
-
-      goto cleanup;
-   }
-
-   /* Still not found! */
-   error_printf( "unable to load bitmap; cache full?" );
+   /* Load requested bitmap into the cache. */
+   retval = retroflat_load_bitmap( res_p, bitmap, flags );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
+   if( NULL != bitmap ) {
+      maug_munlock( *handle_p, bitmap );
    }
 
-   return idx;
+   if( MERROR_OK == retval ) {
+      return RETROGXC_ASSET_TYPE_BITMAP;
+   } else {
+      if( NULL != *handle_p ) {
+         maug_mfree( *handle_p );
+      }
+      return RETROGXC_ASSET_TYPE_NONE;
+   }
 }
 
 /* === */
 
 #ifdef RETROFLAT_XPM
 
-int16_t retrogxc_load_xpm( retroflat_asset_path res_p, uint8_t flags ) {
+RETROGXC_ASSET_TYPE retrogxc_loader_xpm(
+   retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFLAT_BITMAP* bitmap = NULL;
+
+   assert( (MAUG_MHANDLE)NULL == *handle_p );
+
+   *handle_p = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
+
+   maug_mlock( *handle_p, bitmap );
+   maug_cleanup_if_null_alloc( struct RETROFLAT_BITMAP*, bitmap );
+
+   /* Load requested bitmap into the cache. */
+   retval = retroflat_load_xpm( res_p, bitmap, flags );
+   maug_cleanup_if_not_ok();
+
+cleanup:
+
+   if( NULL != bitmap ) {
+      maug_munlock( *handle_p, bitmap );
+   }
+
+   if( MERROR_OK == retval ) {
+      return RETROGXC_ASSET_TYPE_BITMAP;
+   } else {
+      if( NULL != *handle_p ) {
+         maug_mfree( *handle_p );
+      }
+      return RETROGXC_ASSET_TYPE_NONE;
+   }
+}
+
+#endif /* RETROFLAT_XPM */
+
+/* === */
+
+int16_t retrogxc_load_asset(
+   retroflat_asset_path res_p, retrogxc_loader l, uint8_t flags
+) {
    int16_t idx = RETROGXC_ERROR_CACHE_MISS,
       i = 0;
    struct RETROFLAT_CACHE_ASSET* assets = NULL;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   RETROGXC_ASSET_TYPE asset_type = RETROGXC_ASSET_TYPE_NONE;
 
    maug_mlock( gs_retrogxc_handle, assets );
 
@@ -216,47 +237,32 @@ int16_t retrogxc_load_xpm( retroflat_asset_path res_p, uint8_t flags ) {
 
    /* Bitmap not found. */
    debug_printf( RETROGXC_TRACE_LVL,
-      "bitmap %s not found in cache; loading...", res_p );
+      "asset %s not found in cache; loading...", res_p );
    for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
       /* Find a new empty slot. */
       if( RETROGXC_ASSET_TYPE_NONE != assets[i].type ) {
          continue;
       }
 
+      debug_printf( RETROGXC_TRACE_LVL,
+         "found free cache slot: %d (%p)", i, &(assets[i]) );
+
+      /* Call the format-specific loader. */
       assert( (MAUG_MHANDLE)NULL == assets[i].handle );
-
-      assets[i].handle = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
-      if( (MAUG_MHANDLE)NULL == assets[i].handle ) {
-         error_printf( "cache allocation error" );
-         idx = -1;
-         goto cleanup;
-      }
-
-      maug_mlock( assets[i].handle, bitmap );
-      if( NULL == bitmap ) {
-         error_printf( "lock error" );
-         idx = -1;
-         goto cleanup;
-      }
-
-      /* Load requested bitmap into the cache. */
-      if(
-         MERROR_OK ==
-         retroflat_load_xpm( res_p, bitmap, flags )
-      ) {
+      asset_type = l( res_p, &(assets[i].handle), flags );
+      if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
+         assets[i].type = asset_type;
          idx = i;
-         assets[idx].type = RETROGXC_ASSET_TYPE_BITMAP;
          debug_printf( RETROGXC_TRACE_LVL,
-            "bitmap %s assigned cache ID: %d", res_p, idx );
+            "asset type %d, \"%s\" assigned cache ID: %d",
+            asset_type, res_p, idx );
       }
-
-      maug_munlock( assets[i].handle, bitmap );
 
       goto cleanup;
    }
 
    /* Still not found! */
-   error_printf( "unable to load bitmap; cache full?" );
+   error_printf( "unable to load asset; cache full?" );
 
 cleanup:
 
@@ -268,8 +274,6 @@ cleanup:
 }
 
 /* === */
-
-#endif /* RETROFLAT_XPM */
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
