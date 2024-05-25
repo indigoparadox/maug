@@ -4,6 +4,8 @@
 
 #include <maug.h>
 
+#define RETROGXC_PRESENT 1
+
 #ifndef RETROGXC_INITIAL_SZ
 #  define RETROGXC_INITIAL_SZ 16
 #endif /* !RETROGXC_INITIAL_SZ */
