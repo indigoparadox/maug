@@ -8,6 +8,10 @@
  * \file retrogui.h
  */
 
+#ifndef RETROFONT_PRESENT
+#  error "retrofont not present!"
+#endif /* !RETROFONT_PRESENT */
+
 /*! \brief RETROGUI::flags indicating controls should be redrawn. */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
@@ -123,6 +127,11 @@ struct RETROGUI {
    struct RETROFLAT_BITMAP* draw_bmp;
    retrogui_xy_cb draw_xy;
    void* draw_xy_data;
+#ifdef RETROGXC_PRESENT
+   ssize_t font_idx;
+#else
+   MAUG_MHANDLE font_h;
+#endif /* RETROGXC_PRESENT */
 };
 
 MERROR_RETVAL retrogui_push_listbox_item(
@@ -955,6 +964,17 @@ MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+#ifdef RETROGXC_PRESENT
+   if( 0 > gui->font_idx ) {
+#else
+   if( (MAUG_MHANDLE)NULL == gui->font_h ) {
+#endif /* RETROGXC_PRESENT */
+      retroflat_message(
+         RETROFLAT_MSG_FLAG_ERROR, "Error", "GUI font not loaded!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
 
    assert( NULL != gui->ctls );
 
