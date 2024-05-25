@@ -70,7 +70,6 @@
 #ifdef MAUG_C
 #  define MJSON_C
 #  define MHTML_C
-#  define MHTMR_C
 #  define MPARSER_C
 #endif /* MAUG_C */
 
@@ -85,6 +84,7 @@
 #     define RETROGXC_C
 #     define RETROGUI_C
 #     define RETROFNT_C
+#     define RETROHTR_C
 #  endif /* MAUG_C */
 #endif /* !MAUG_NO_RETRO */
 
