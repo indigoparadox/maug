@@ -2,6 +2,12 @@
 #ifndef RETROHTR_H
 #define RETROHTR_H
 
+/**
+ * \addtogroup retrohtr Retro HyperText Rendering API
+ * \{
+ * \file retrohtr.h
+ */
+
 #ifndef RETROHTR_RENDER_NODES_INIT_SZ
 #  define RETROHTR_RENDER_NODES_INIT_SZ 10
 #endif /* !RETROHTR_RENDER_NODES_INIT_SZ */

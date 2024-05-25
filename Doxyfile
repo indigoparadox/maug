@@ -803,6 +803,9 @@ INPUT                  = \
    src/mplug.h \
    src/mfile.h \
    src/mfmt.h \
+   src/mhtml.h \
+   src/retrohtr.h \
+   src/retrogxc.h \
    src/merror.h \
    src/uprintf.h \
    src/mmem.h \
