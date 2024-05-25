@@ -875,13 +875,25 @@ void mhtml_dump_tree(
       }
 
       if(
+         MHTML_TAG_TYPE_IMG == parser->tags[iter].base.type &&
          0 < parser->tags[iter].IMG.src_sz &&
-         strlen( dump_line ) + 13 /* (src/href: ) */
+         strlen( dump_line ) + 8 /* (src: ) */
             + strlen( parser->tags[iter].IMG.src ) < MHTML_DUMP_LINE_SZ
       ) {
          maug_snprintf( &(dump_line[strlen( dump_line )]),
             MHTML_DUMP_LINE_SZ - strlen( dump_line ),
-            " (src/href: %s)", parser->tags[iter].IMG.src );
+            " (src: %s)", parser->tags[iter].IMG.src );
+      }
+
+      if(
+         MHTML_TAG_TYPE_INPUT == parser->tags[iter].base.type &&
+         0 < parser->tags[iter].INPUT.value_sz &&
+         strlen( dump_line ) + 10 /* (value: ) */
+            + strlen( parser->tags[iter].INPUT.value ) < MHTML_DUMP_LINE_SZ
+      ) {
+         maug_snprintf( &(dump_line[strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+            " (value: %s)", parser->tags[iter].INPUT.value );
       }
 
    }
