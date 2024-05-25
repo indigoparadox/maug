@@ -38,12 +38,12 @@ void retrofont_blit_glyph(
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   struct RETROFONT* font, size_t x, size_t y,
+   MAUG_MHANDLE font_h, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags );
 
-void retrofont_string_sz(
+MERROR_RETVAL retrofont_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   struct RETROFONT* font, size_t max_w, size_t max_h,
+   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
 /**
@@ -217,15 +217,22 @@ void retrofont_blit_glyph(
 void retrofont_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   struct RETROFONT* font, size_t x, size_t y,
+   MAUG_MHANDLE font_h, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags
 ) {
    size_t i = 0;
    size_t x_iter = x;
    size_t y_iter = y;
+   struct RETROFONT* font = NULL;
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
+   }
+
+   maug_mlock( font_h, font );
+   if( NULL == font ) {
+      error_printf( "could not lock font!" );
+      goto cleanup;
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {
@@ -246,19 +253,30 @@ void retrofont_string(
          y_iter += font->glyph_h;
       }
    }
+
+cleanup:
+
+   if( NULL != font ) {
+      maug_munlock( font_h, font );
+   }
 }
 
-void retrofont_string_sz(
+MERROR_RETVAL retrofont_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   struct RETROFONT* font, size_t max_w, size_t max_h,
+   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags
 ) {
    size_t x_iter = 0;
    size_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFONT* font = NULL;
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
    }
+
+   maug_mlock( font_h, font );
+   maug_cleanup_if_null_alloc( struct RETROFONT*, font );
 
    for( i = 0 ; str_sz > i ; i++ ) {
       /* Terminate prematurely at null. */
@@ -274,12 +292,26 @@ void retrofont_string_sz(
       if( 0 < max_w && max_w < x_iter + font->glyph_w ) {
          x_iter = 0;
          *out_h_p += font->glyph_h;
+         if( 0 < max_h && *out_h_p + font->glyph_h >= max_h && i < str_sz ) {
+            error_printf( "string will not fit!" );
+
+            /* Do not quit; just make a note and keep going. */
+            retval = MERROR_GUI;
+         }
       }
    }
 
    /* Add the height of the last line. */
    *out_h_p += font->glyph_h;
    *out_w_p += 1;
+
+cleanup:
+
+   if( NULL != font ) {
+      maug_munlock( font_h, font );
+   }
+
+   return retval;
 }
 
 #endif /* RETROFNT_C */

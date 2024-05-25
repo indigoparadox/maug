@@ -3708,6 +3708,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
 
+   debug_printf( 1, "retroflat: size_t is (" SIZE_T_FMT " bytes)...",
+      sizeof( size_t ) );
+
+   debug_printf( 1, "retroflat: ssize_t is (" SIZE_T_FMT " bytes)...",
+      sizeof( ssize_t ) );
+
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,

@@ -425,7 +425,6 @@ MERROR_RETVAL retrogxc_string(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* assets = NULL;
-   struct RETROFONT* font = NULL;
 
    if( gs_retrogxc_sz <= font_idx ) {
       error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
@@ -448,16 +447,11 @@ MERROR_RETVAL retrogxc_string(
       goto cleanup;
    }
 
-   maug_mlock( assets[font_idx].handle, font );
-
    retrofont_string(
-      target, color, str, str_sz, font, x, y, max_w, max_h, flags );
+      target, color, str, str_sz, assets[font_idx].handle,
+      x, y, max_w, max_h, flags );
 
 cleanup:
-
-   if( NULL != font ) {
-      maug_munlock( assets[font_idx].handle, font );
-   }
 
    if( NULL != assets ) {
       maug_munlock( gs_retrogxc_handle, assets );
@@ -475,7 +469,6 @@ MERROR_RETVAL retrogxc_string_sz(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* assets = NULL;
-   struct RETROFONT* font = NULL;
 
    if( gs_retrogxc_sz <= font_idx ) {
       error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
@@ -498,16 +491,11 @@ MERROR_RETVAL retrogxc_string_sz(
       goto cleanup;
    }
 
-   maug_mlock( assets[font_idx].handle, font );
-
    retrofont_string_sz(
-      target, str, str_sz, font, max_w, max_h, out_w_p, out_h_p, flags );
+      target, str, str_sz, assets[font_idx].handle,
+      max_w, max_h, out_w_p, out_h_p, flags );
 
 cleanup:
-
-   if( NULL != font ) {
-      maug_munlock( assets[font_idx].handle, font );
-   }
 
    if( NULL != assets ) {
       maug_munlock( gs_retrogxc_handle, assets );
