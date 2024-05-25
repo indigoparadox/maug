@@ -1563,6 +1563,21 @@ cleanup:
 #endif /* RETROGLU_NO_TEXTURES */
 }
 
+MERROR_RETVAL retroglu_check_errors( const char* desc ) {
+   GLenum gl_retval;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   do {
+      gl_retval = glGetError();
+      if( GL_NO_ERROR != gl_retval ) {
+         error_printf( "GL error on %s: 0x%x", desc, gl_retval );
+         retval = MERROR_GUI;
+      }
+   } while( GL_NO_ERROR != gl_retval );
+
+   return retval;
+}
+
 #else
 
 #  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
