@@ -64,7 +64,7 @@ struct RETROHTR_RENDER_TREE {
 #define retrohtr_node( tree, idx ) (0 <= idx ? &((tree)->nodes[idx]) : NULL)
 
 #define retrohtr_node_parent( tree, idx ) \
-   (0 <= (tree)->nodes[idx].parent ? \
+   (0 <= idx && 0 <= (tree)->nodes[idx].parent ? \
       &((tree)->nodes[(tree)->nodes[idx].parent]) : NULL)
 
 #define retrohtr_tree_lock( tree ) \
@@ -637,7 +637,7 @@ MERROR_RETVAL retrohtr_tree_size(
          /* Use parent width. */
          /* TODO: Subtract parent padding! */
          retrohtr_node( tree, node_idx )->w =
-            retrohtr_node( tree, retrohtr_node( tree, node_idx )->parent )->w;
+            retrohtr_node_parent( tree, node_idx )->w;
       }
 
       /* Cycle through children and use greatest width. */
@@ -769,7 +769,7 @@ cleanup:
 
 static ssize_t retrohtr_find_prev_sibling_in_box_model(
    struct RETROHTR_RENDER_TREE* tree,
-   size_t node_idx
+   ssize_t node_idx
 ) {
    ssize_t sibling_iter_idx = -1;
    ssize_t sibling_found_idx = -1;
@@ -805,7 +805,7 @@ cleanup:
 
 static MERROR_RETVAL retrohtr_mark_edge_child_nodes(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
-   size_t node_parent_idx
+   ssize_t node_parent_idx
 ) {
    ssize_t node_sibling_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1005,8 +1005,8 @@ MERROR_RETVAL retrohtr_tree_pos(
    ) {
       /* Center */
       retrohtr_node( tree, node_idx )->x =
-         retrohtr_node( tree, retrohtr_node( tree, node_idx )->parent )->x +
-         (retrohtr_node( tree, retrohtr_node( tree, node_idx )->parent )->w / 2) -
+         retrohtr_node_parent( tree, node_idx )->x +
+         (retrohtr_node_parent( tree, node_idx )->w / 2) -
          (retrohtr_node( tree, node_idx )->w / 2);
 
    } else if( 
