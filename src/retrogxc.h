@@ -60,6 +60,10 @@ RETROGXC_ASSET_TYPE retrogxc_loader_font(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
+int16_t retrogxc_load_font(
+   const retroflat_asset_path font_name,
+   uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
+
 int16_t retrogxc_load_asset(
    const retroflat_asset_path res_p, retrogxc_loader l, void* data,
    uint8_t flags );
@@ -409,6 +413,8 @@ int16_t retrogxc_load_font(
    return idx;
 }
 
+/* === */
+
 MERROR_RETVAL retrogxc_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
@@ -457,6 +463,8 @@ cleanup:
 
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL retrogxc_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
