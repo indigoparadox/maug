@@ -244,8 +244,15 @@ static RETROGUI_IDC retrogui_click_LISTBOX(
 
    /* Figure out the item clicked. */
    while( i < ctl->LISTBOX.list_sz ) {
-      retroflat_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
+#ifdef RETROGXC_PRESENT
+      retrogxc_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_idx,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
+#else
+      retrofont_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_h,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
+#endif /* RETROGXC_PRESENT */
 
       if(
          (size_t)(input_evt->mouse_y) < 
@@ -305,8 +312,15 @@ static void retrogui_redraw_LISTBOX(
 
    /* Parse out variable-length strings. */
    while( i < ctl->LISTBOX.list_sz ) {
-      retroflat_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, NULL, &w, &h, 0 );
+#ifdef RETROGXC_PRESENT
+      retrogxc_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_idx,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
+#else
+      retrofont_string_sz(
+         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_h,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
+#endif /* RETROGXC_PRESENT */
       if( j == ctl->LISTBOX.sel_idx ) {
          /* TODO: Configurable selection colors. */
          retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
@@ -314,9 +328,10 @@ static void retrogui_redraw_LISTBOX(
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          
       }
-      retroflat_string(
-         gui->draw_bmp, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0, NULL,
-         ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)), 0 );
+      retrofont_string(
+         gui->draw_bmp, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0,
+         gui->font_h, ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         0, 0, 0 );
 
       /* Move to next variable-length string. */
       i += strlen( &(ctl->LISTBOX.list[i]) ) + 1;
@@ -469,12 +484,18 @@ static RETROGUI_IDC retrogui_click_BUTTON(
 ) {
    RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
 
+   if( 0 < ctl->BUTTON.push_frames ) {
+      goto cleanup;
+   }
+
    /* Set the last button clicked. */
    idc_out = ctl->base.idc;
 
    /* Set the frames to show the pushed-in view. */
    /* TODO: Use a constant, here. */
    ctl->BUTTON.push_frames = 3;
+
+cleanup:
 
    return idc_out;
 }
@@ -496,7 +517,8 @@ static void retrogui_redraw_BUTTON(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    size_t w = 0,
-      h = 0;
+      h = 0,
+      text_offset = 0;
 
    retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
@@ -517,6 +539,7 @@ static void retrogui_redraw_BUTTON(
 
       gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for push animation. */
       ctl->BUTTON.push_frames--;
+      text_offset = 1;
    } else {
       /* Button is not pushed. */
       retroflat_line(
@@ -529,12 +552,24 @@ static void retrogui_redraw_BUTTON(
          ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
    }
       
-   retroflat_string_sz( gui->draw_bmp, ctl->BUTTON.label, 0, NULL, &w, &h, 0 );
+#ifdef RETROGXC_PRESENT
+   retrofont_string_sz(
+      gui->draw_bmp, ctl->BUTTON.label, 0, gui->font_idx,
+      /* TODO: Pad max client area. */
+      ctl->base.w, ctl->base.h, &w, &h, 0 );
+#else
+   retrofont_string_sz(
+      gui->draw_bmp, ctl->BUTTON.label, 0, gui->font_h,
+      /* TODO: Pad max client area. */
+      ctl->base.w, ctl->base.h, &w, &h, 0 );
+#endif /* RETROGXC_PRESENT */
 
-   retroflat_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0, NULL,
-      ctl->base.x + ((ctl->base.w / 2) - (w / 2)),
-      ctl->base.y + ((ctl->base.h / 2) - (h / 2)), 0 );
+   retrofont_string(
+      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0, gui->font_h,
+      ctl->base.x + ((ctl->base.w / 2) - (w / 2)) + text_offset,
+      ctl->base.y + ((ctl->base.h / 2) - (h / 2)) + text_offset,
+      /* TODO: Pad max client area. */
+      ctl->base.w, ctl->base.h, 0 );
 }
 
 static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
@@ -703,10 +738,10 @@ static void retrogui_redraw_TEXTBOX(
       goto cleanup;
    }
 
-   retroflat_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, NULL,
+   retrofont_string(
+      gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_h,
       ctl->base.x + RETROGUI_PADDING,
-      ctl->base.y + RETROGUI_PADDING, 0 );
+      ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 
 cleanup:
 
