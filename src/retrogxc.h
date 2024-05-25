@@ -391,6 +391,8 @@ cleanup:
 
 /* === */
 
+#ifdef RETROFONT_PRESENT
+
 int16_t retrogxc_load_font(
    const retroflat_asset_path font_name,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count 
@@ -503,6 +505,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* RETROFONT_PRESENT */
 
 #endif /* RETROGXC_C */
 
