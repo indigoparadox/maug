@@ -49,7 +49,7 @@ struct MHTMR_RENDER_TREE {
    /*! \brief Current alloc'd number of nodes in MHTMR_RENDER_NODE::nodes_h. */
    size_t nodes_sz_max;
    /* TODO: Make this per-node. */
-   MAUG_MHANDLE font_h;
+   ssize_t font_idx;
    struct RETROGUI gui;
 };
 
@@ -411,8 +411,6 @@ MERROR_RETVAL mhtmr_tree_create(
       tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
    }
 
-   retval = retrofont_load( "unscii-8.hex", &(tree->font_h), 8, 33, 93 );
-
    /* Create a GUI handler just for this tree. */
    retval = retrogui_init( &(tree->gui) );
 
@@ -511,7 +509,6 @@ MERROR_RETVAL mhtmr_tree_size(
    size_t this_line_w = 0;
    size_t this_line_h = 0;
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFONT* font = NULL;
 
    if( NULL == mhtmr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -563,19 +560,14 @@ MERROR_RETVAL mhtmr_tree_size(
       maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
       maug_cleanup_if_null_alloc( char*, tag_content );
 
-      maug_mlock( tree->font_h, font );
-      maug_cleanup_if_null_alloc( struct RETROFONT*, font );
-
-      retrofont_string_sz(
+      retrogxc_string_sz(
          NULL, tag_content, mhtml_tag( parser, tag_idx )->TEXT.content_sz,
-         font,
+         tree->font_idx,
          /* Constrain node text size to parent size. */
          mhtmr_node_parent( tree, node_idx )->w,
          mhtmr_node_parent( tree, node_idx )->h,
          &(mhtmr_node( tree, node_idx )->w),
          &(mhtmr_node( tree, node_idx )->h), 0 );
-
-      maug_munlock( tree->font_h, font );
 
       debug_printf( MHTMR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          mhtmr_node( tree, node_idx )->w );
@@ -587,14 +579,11 @@ MERROR_RETVAL mhtmr_tree_size(
       MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type
    ) {
 
-      maug_mlock( tree->font_h, font );
-      maug_cleanup_if_null_alloc( struct RETROFONT*, font );
-
-      retrofont_string_sz(
+      retrogxc_string_sz(
          NULL,
          mhtml_tag( parser, tag_idx )->INPUT.value,
          mhtml_tag( parser, tag_idx )->INPUT.value_sz,
-         font,
+         tree->font_idx,
          mhtmr_node_parent( tree, node_idx )->w,
          mhtmr_node_parent( tree, node_idx )->h,
          &(mhtmr_node( tree, node_idx )->w),
@@ -603,8 +592,6 @@ MERROR_RETVAL mhtmr_tree_size(
       /* Add space for borders and stuff. (TODO: Add to retrogui!) */
       mhtmr_node( tree, node_idx )->w += 8;
       mhtmr_node( tree, node_idx )->h += 8;
-
-      maug_munlock( tree->font_h, font );
 
    } else if(
       0 <= tag_idx &&
@@ -1117,7 +1104,6 @@ void mhtmr_tree_draw(
    char* tag_content = NULL;
    union MHTML_TAG* tag = NULL;
    struct MHTMR_RENDER_NODE* node = NULL;
-   struct RETROFONT* font = NULL;
    union RETROGUI_CTL ctl;
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -1140,15 +1126,11 @@ void mhtmr_tree_draw(
             return;
          }
 
-         maug_mlock( tree->font_h, font );
-
-         retrofont_string(
-            NULL, node->fg, tag_content, 0, font,
+         retrogxc_string(
+            NULL, node->fg, tag_content, 0, tree->font_idx,
             mhtmr_node_screen_x( tree, node_idx ),
             mhtmr_node_screen_y( tree, node_idx ),
             node->w, node->h, 0 );
-
-         maug_munlock( tree->font_h, font );
 
          maug_munlock( tag->TEXT.content, tag_content );
 
@@ -1278,10 +1260,6 @@ void mhtmr_tree_free( struct MHTMR_RENDER_TREE* tree ) {
 
    /* TODO: Free GUI! */
 
-   if( NULL != tree->font_h ) {
-      maug_mfree( tree->font_h );
-   }
-
    mhtmr_tree_unlock( tree );
 
    if( NULL != tree->nodes_h ) {
@@ -1301,6 +1279,10 @@ MERROR_RETVAL mhtmr_tree_init( struct MHTMR_RENDER_TREE* tree ) {
    tree->nodes_h = maug_malloc(
       tree->nodes_sz_max, sizeof( struct MHTMR_RENDER_NODE ) );
    maug_cleanup_if_null_alloc( struct MHTMR_RENDER_NODE*, tree->nodes_h );
+
+   /* TODO: Dynamically load fonts. */
+   tree->font_idx = retrogxc_load_font( "unscii-8.hex", 8, 33, 93 );
+   assert( 0 <= tree->font_idx );
 
    /* XXX
    r.w_max = retroflat_screen_w();

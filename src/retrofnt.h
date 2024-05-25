@@ -8,13 +8,15 @@
  * \file retrofnt.h
  */
 
+#define RETROFONT_PRESENT 1
+
 #ifndef RETROFONT_LINE_SZ
 #  define RETROFONT_LINE_SZ 80
 #endif /* !RETROFONT_LINE_SZ */
 
-#ifndef RETROFNT_TRACE_LVL
-#  define RETROFNT_TRACE_LVL 0
-#endif /* !RETROFNT_TRACE_LVL */
+#ifndef RETROFONT_TRACE_LVL
+#  define RETROFONT_TRACE_LVL 0
+#endif /* !RETROFONT_TRACE_LVL */
 
 struct RETROFONT {
    uint16_t sz;
@@ -64,7 +66,7 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
          glyph_bin[x] = 1 << (w - x) == (glyph[y] & (1 << (w - x))) ? 'x' : '.';
       }
       
-      debug_printf( RETROFNT_TRACE_LVL, "%s", glyph_bin );
+      debug_printf( RETROFONT_TRACE_LVL, "%s", glyph_bin );
    }
 }
 
@@ -102,10 +104,10 @@ MERROR_RETVAL retrofont_load(
    retrofont_split_glyph_line( line, line_bytes );
    maug_cleanup_if_not_ok();
    glyph_w_bytes = (strlen( line_bytes ) / glyph_h) / 2; /* 2 hex per byte */
-   debug_printf( RETROFNT_TRACE_LVL, "glyph_w_bytes: %u", glyph_w_bytes );
+   debug_printf( RETROFONT_TRACE_LVL, "glyph_w_bytes: %u", glyph_w_bytes );
    glyph_w = glyph_w_bytes * 8;
 
-   debug_printf( RETROFNT_TRACE_LVL, "glyph_w: %u, glyph_sz: %u",
+   debug_printf( RETROFONT_TRACE_LVL, "glyph_w: %u, glyph_sz: %u",
       glyph_w, glyph_h * glyph_w_bytes );
 
    /* Alloc enough for each glyph, plus the size of the font header. */
@@ -114,7 +116,7 @@ MERROR_RETVAL retrofont_load(
       (glyph_h * glyph_w_bytes * (1 + glyphs_count)) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_font_h );
 
-   debug_printf( RETROFNT_TRACE_LVL, "allocated font %s: " SIZE_T_FMT " bytes",
+   debug_printf( RETROFONT_TRACE_LVL, "allocated font %s: " SIZE_T_FMT " bytes",
       font_name, (glyph_h * glyph_w_bytes * (1 + glyphs_count)) + 
          sizeof( struct RETROFONT ) );
 
@@ -177,7 +179,7 @@ MERROR_RETVAL retrofont_load(
 
       font->glyphs_count++;
 
-      debug_printf( RETROFNT_TRACE_LVL,
+      debug_printf( RETROFONT_TRACE_LVL,
          "%u %s (" SIZE_T_FMT " hbytes)", glyph_idx - first_glyph, line_bytes,
          strlen( line_bytes ) );
    }
