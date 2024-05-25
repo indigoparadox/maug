@@ -302,7 +302,12 @@ int16_t retrogxc_load_asset(
 
    /* Try to find the bitmap already in the cache. */
    for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+      debug_printf( RETROGXC_TRACE_LVL, "\"%s\" vs \"%s\"",
+         assets[i].id, res_p );
       if( 0 == retroflat_cmp_asset_path( assets[i].id, res_p ) ) {
+         debug_printf( RETROGXC_TRACE_LVL,
+            "found asset \"%s\" at index %d with type %d!",
+            res_p, i, assets[i].type );
          idx = i;
          goto cleanup;
       }
@@ -327,6 +332,7 @@ int16_t retrogxc_load_asset(
       if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
          assets[i].type = asset_type;
          idx = i;
+         strncpy( assets[i].id, res_p, RETROFLAT_ASSETS_PATH_MAX );
          debug_printf( RETROGXC_TRACE_LVL,
             "asset type %d, \"%s\" assigned cache ID: %d",
             asset_type, res_p, idx );

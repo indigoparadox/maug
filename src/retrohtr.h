@@ -417,9 +417,6 @@ MERROR_RETVAL retrohtr_tree_create(
       tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
    }
 
-   /* Create a GUI handler just for this tree. */
-   retval = retrogui_init( &(tree->gui) );
-
 cleanup:
 
    return retval;
@@ -1187,6 +1184,10 @@ void retrohtr_tree_draw(
          ctl.base.y = retrohtr_node( tree, node_idx )->y;
          ctl.base.w = retrohtr_node( tree, node_idx )->w;
          ctl.base.h = retrohtr_node( tree, node_idx )->h;
+         strncpy( ctl.BUTTON.label,
+            mhtml_tag( parser,
+               retrohtr_node( tree, node_idx )->tag )->INPUT.value,
+            RETROGUI_BTN_LBL_SZ_MAX );
 
          retrogui_push_ctl( &(tree->gui), &ctl );
 
