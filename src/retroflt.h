@@ -1032,6 +1032,10 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_KEY_COMMA    KEY_COMMA
 #  define RETROFLAT_KEY_EQUALS   KEY_EQUALS
 #  define RETROFLAT_KEY_DASH     KEY_MINUS
+#  define RETROFLAT_KEY_BRACKETL KEY_OPENBRACE
+#  define RETROFLAT_KEY_BRACKETR KEY_CLOSEBRACE
+#  define RETROFLAT_KEY_BACKSLASH   KEY_BACKSLASH
+#  define RETROFLAT_KEY_QUOTE    KEY_QUOTE
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -1149,6 +1153,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_DASH     SDLK_MINUS
 #  define RETROFLAT_KEY_BACKSLASH  SDLK_BACKSLASH
 #  define RETROFLAT_KEY_QUOTE      SDLK_QUOTE
+#  define RETROFLAT_KEY_BRACKETL   SDLK_LEFTBRACKET
+#  define RETROFLAT_KEY_BRACKETR   SDLK_RIGHTBRACKET
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -1924,7 +1930,8 @@ struct RETROFLAT_BITMAP {
 /* TODO: DOS Keycodes */
 
 #  define RETROFLAT_KEY_BKSP  0x08
-#  define RETROFLAT_KEY_GRAVE 0x60
+/* TODO */
+#  define RETROFLAT_KEY_GRAVE /* 0x60 */ '`'
 #  define RETROFLAT_KEY_DASH  '-'
 #  define RETROFLAT_KEY_SLASH '/'
 #  define RETROFLAT_KEY_PERIOD '.'
@@ -1966,10 +1973,21 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_7     0x37
 #  define RETROFLAT_KEY_8     0x38
 #  define RETROFLAT_KEY_9     0x39
+/* TODO */
 #  define RETROFLAT_KEY_TAB	0
 #  define RETROFLAT_KEY_SPACE	0x20
 #  define RETROFLAT_KEY_ESC	0x1b
 #  define RETROFLAT_KEY_ENTER	0x0d
+/* TODO */
+#  define RETROFLAT_KEY_BRACKETL '['
+/* TODO */
+#  define RETROFLAT_KEY_BRACKETR ']'
+/* TODO */
+#  define RETROFLAT_KEY_BACKSLASH   '\\'
+/* TODO */
+#  define RETROFLAT_KEY_QUOTE    '\''
+/* TODO */
+#  define RETROFLAT_KEY_EQUALS    '='
 
 /* Handle keys that send a double-code. */
 #  define RETROFLAT_KEY_UP	      -3
@@ -3256,7 +3274,10 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    case RETROFLAT_KEY_BACKSLASH: c = offset_lower ? '\\' : '|'; break;
    case RETROFLAT_KEY_BRACKETL: c = offset_lower ? '[' : '{'; break;
    case RETROFLAT_KEY_BRACKETR: c = offset_lower ? ']' : '}'; break;
+#ifndef RETROFLAT_API_PC_BIOS
+   /* TODO: FIXME in DOS! */
    case RETROFLAT_KEY_GRAVE: c = offset_lower ? '`' : '~'; break;
+#endif /* !RETROFLAT_API_PC_BIOS */
    }
 
    debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%02x", c );
