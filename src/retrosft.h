@@ -312,7 +312,7 @@ void retrosoft_ellipse(
 ) {
    int32_t i = 0,
       i_prev = 0;
-   int16_t px_x1 = 0,
+   uint16_t px_x1 = 0,
       px_y1 = 0,
       px_x2 = 0,
       px_y2 = 0;
@@ -332,7 +332,15 @@ void retrosoft_ellipse(
       px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
       px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
 
-      assert( 0 <= px_x1 );
+      if(
+         retroflat_bitmap_w( target ) <= px_x1 ||
+         retroflat_bitmap_h( target ) <= px_y1 ||
+         retroflat_bitmap_w( target ) <= px_x2 ||
+         retroflat_bitmap_h( target ) <= px_y2
+      ) {
+         continue;
+      }
+
       assert( 0 <= px_y1 );
 
       retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  

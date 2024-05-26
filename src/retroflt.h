@@ -950,8 +950,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
 #  else
-#     define retroflat_bitmap_w( bmp ) ((bmp)->b->w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->b->h)
+#     define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? SCREEN_W : (bmp)->b->w)
+#     define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? SCREEN_H : (bmp)->b->h)
 #  endif /* RETROFLAT_OPENGL */
 #  define retroflat_screen_w() SCREEN_W
 #  define retroflat_screen_h() SCREEN_H
@@ -1152,8 +1152,12 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
 #  else
-#     define retroflat_bitmap_w( bmp ) ((bmp)->surface->w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->surface->h)
+#     define retroflat_bitmap_w( bmp ) \
+         (NULL == (bmp) || NULL == (bmp)->surface ? \
+            g_retroflat_state->screen_v_w : (bmp)->surface->w)
+#     define retroflat_bitmap_h( bmp ) \
+         (NULL == (bmp) || NULL == (bmp)->surface ? \
+            g_retroflat_state->screen_v_h : (bmp)->surface->h)
 #  endif /* RETROFLAT_OPENGL */
 #  ifdef RETROFLAT_API_SDL1
 #     define retroflat_bitmap_locked( bmp ) \
