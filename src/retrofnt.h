@@ -85,6 +85,10 @@ MERROR_RETVAL retrofont_load(
    uint8_t glyph_w_bytes = 0;
    uint8_t glyph_w = 0;
 
+   /* TODO: Font loading seems to be very slow on a 486. This needs
+    *       investigation.
+    */
+
    /* Try to separate the string into index:glyph bytes.  */
    #define retrofont_split_glyph_line( line, line_bytes ) \
       line_bytes = strchr( line, ':' ); \
@@ -103,12 +107,14 @@ MERROR_RETVAL retrofont_load(
    maug_cleanup_if_not_ok();
    retrofont_split_glyph_line( line, line_bytes );
    maug_cleanup_if_not_ok();
-   glyph_w_bytes = (strlen( line_bytes ) / glyph_h) / 2; /* 2 hex per byte */
+   glyph_w_bytes = (strlen( line_bytes ) / glyph_h) >> 1; /* 2 hex per byte */
    debug_printf( RETROFONT_TRACE_LVL, "glyph_w_bytes: %u", glyph_w_bytes );
    glyph_w = glyph_w_bytes * 8;
 
+#if 0 < RETROFONT_TRACE_LVL
    debug_printf( RETROFONT_TRACE_LVL, "glyph_w: %u, glyph_sz: %u",
       glyph_w, glyph_h * glyph_w_bytes );
+#endif
 
    /* Alloc enough for each glyph, plus the size of the font header. */
    *p_font_h = maug_malloc( 1,
@@ -116,9 +122,11 @@ MERROR_RETVAL retrofont_load(
       (glyph_h * glyph_w_bytes * (1 + glyphs_count)) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_font_h );
 
+#if 0 < RETROFONT_TRACE_LVL
    debug_printf( RETROFONT_TRACE_LVL, "allocated font %s: " SIZE_T_FMT " bytes",
       font_name, (glyph_h * glyph_w_bytes * (1 + glyphs_count)) + 
          sizeof( struct RETROFONT ) );
+#endif
 
    maug_mlock( *p_font_h, font );
    maug_cleanup_if_null_alloc( struct RETROFONT*, font );
@@ -135,6 +143,9 @@ MERROR_RETVAL retrofont_load(
       
       retrofont_split_glyph_line( line, line_bytes );
       if( MERROR_PARSE == retval ) {
+         /* The line couldn't parse, so skip it, but don't give up entirely and
+          * keep going to the next line.
+          */
          retval = MERROR_OK;
          continue;
       }
@@ -154,8 +165,8 @@ MERROR_RETVAL retrofont_load(
          switch( font->glyph_w ) {
          case 8:
             p_glyph[i] = 0;
-            p_glyph[i] |= maug_hctoi( line_bytes[i * 2] ) << 4;
-            p_glyph[i] |= maug_hctoi( line_bytes[(i * 2) + 1] );
+            p_glyph[i] |= maug_hctoi( line_bytes[i << 1] ) << 4;
+            p_glyph[i] |= maug_hctoi( line_bytes[(i << 1) + 1] );
             break;
 
          case 16:
@@ -173,15 +184,21 @@ MERROR_RETVAL retrofont_load(
          }
       }
 
+#if 0 < RETROFONT_TRACE_LVL
+      /* Test dump to verify glyph integrity. */
       if( glyph_idx == 'B' ) {
          retrofont_dump_glyph( p_glyph, glyph_w, glyph_h );
       }
+#endif
 
       font->glyphs_count++;
 
+      /* If we're not tracing, try to omit printfs from the inner loop! */
+#if 0 < RETROFONT_TRACE_LVL
       debug_printf( RETROFONT_TRACE_LVL,
          "%u %s (" SIZE_T_FMT " hbytes)", glyph_idx - first_glyph, line_bytes,
          strlen( line_bytes ) );
+#endif
    }
 
 cleanup:
