@@ -3019,7 +3019,7 @@ int retroflat_loop(
 
    /* TODO: Work in frame_iter if provided. */
    emscripten_cancel_main_loop();
-   emscripten_set_main_loop_arg( frame_iter, data, 30, 0 );
+   emscripten_set_main_loop_arg( frame_iter, data, 0, 0 );
 
 #  elif defined( RETROFLAT_API_ALLEGRO ) || \
    defined( RETROFLAT_API_SDL1 ) || \
