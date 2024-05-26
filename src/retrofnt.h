@@ -225,6 +225,11 @@ void retrofont_string(
    size_t y_iter = y;
    struct RETROFONT* font = NULL;
 
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      error_printf( "NULL font specified!" );
+      goto cleanup;
+   }
+
    if( 0 == str_sz ) {
       str_sz = strlen( str );
    }
@@ -270,6 +275,12 @@ MERROR_RETVAL retrofont_string_sz(
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFONT* font = NULL;
+
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      error_printf( "NULL font specified!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
 
    if( 0 == str_sz ) {
       str_sz = strlen( str );
