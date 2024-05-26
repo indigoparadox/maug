@@ -12,9 +12,26 @@
  * \file mfile.h
  */
 
+/**
+ * \addtogroup maug_mfile_types RetroFile Types
+ * \brief Types of files/data stores that mfile can abstract from.
+ *
+ * This library is designed with the intention of including various archive
+ * and "weird hardware storage" formats.
+ * \{
+ */
+
+/**
+ * \brief A standard UNIX file opened for reading.
+ */
 #define MFILE_CADDY_TYPE_FILE_READ 0x01
 
+/**
+ * \brief An array of bytes in memory abstracted through this library.
+ */
 #define MFILE_CADDY_TYPE_MEM_BUFFER 0x80
+
+/*! \} */ /* maug_mfile_types */
 
 union MFILE_HANDLE {
    FILE* file;
@@ -22,15 +39,21 @@ union MFILE_HANDLE {
 };
 
 struct MFILE_CADDY {
+   /*! \brief The \ref maug_mfile_types flag describing this file. */
    uint8_t type;
+   /*! \brief The physical handle or pointer to access the file by. */
    union MFILE_HANDLE h;
    size_t sz;
    size_t last_read;
+   /*! \brief Current position if its type is ::MFILE_CADDY_TYPE_MEM_BUFFER. */
    size_t mem_cursor;
+   /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
 };
 
 typedef struct MFILE_CADDY mfile_t;
+
+#define mfile_check_lock( p_file ) (NULL != (p_file)->mem_buffer)
 
 #define mfile_default_case( p_file ) \
    default: \
