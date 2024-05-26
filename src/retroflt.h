@@ -264,6 +264,10 @@
 #  define RETROFLAT_BITMAP_TRACE_LVL 0
 #endif /* !RETROFLAT_BITMAP_TRACE_LVL */
 
+#ifndef RETROFLAT_KB_TRACE_LVL
+#  define RETROFLAT_KB_TRACE_LVL    0
+#endif /* !RETROFLAT_KB_TRACE_LVL */
+
 #include <stdarg.h>
 
 #include <marge.h>
@@ -1491,6 +1495,21 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #     define VK_OEM_3 0xc0
 #  endif /* !VK_OEM_3 */
 
+#  ifndef VK_OEM_MINUS
+/* TODO: This is broken in Win16. */
+#     define VK_OEM_MINUS '-'
+#  endif /* !VK_OEM_MINUS */
+
+#  ifndef VK_OEM_PERIOD
+/* TODO: This is broken in Win16. */
+#     define VK_OEM_PERIOD '.'
+#  endif /* !VK_OEM_PERIOD */
+
+#  ifndef VK_OEM_COMMA
+/* TODO: This is broken in Win16. */
+#     define VK_OEM_COMMA ','
+#  endif /* !VK_OEM_COMMA */
+
 #  define RETROFLAT_KEY_GRAVE VK_OEM_3
 #  define RETROFLAT_KEY_SLASH VK_OEM_2
 #  define RETROFLAT_KEY_UP	   VK_UP
@@ -1543,11 +1562,12 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define RETROFLAT_KEY_DELETE   VK_DELETE
 #  define RETROFLAT_KEY_PGUP     VK_PRIOR
 #  define RETROFLAT_KEY_PGDN     VK_NEXT
+/* TODO: This is broken. */
 #  define RETROFLAT_KEY_SEMICOLON   ';'
-#  define RETROFLAT_KEY_PERIOD   '.'
-#  define RETROFLAT_KEY_COMMA    ','
-#  define RETROFLAT_KEY_EQUALS   '='
-#  define RETROFLAT_KEY_DASH     '-'
+#  define RETROFLAT_KEY_PERIOD   VK_OEM_PERIOD
+#  define RETROFLAT_KEY_COMMA    VK_OEM_COMMA
+#  define RETROFLAT_KEY_EQUALS   VK_OEM_PLUS
+#  define RETROFLAT_KEY_DASH     VK_OEM_MINUS
 
 #  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
 #  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
@@ -2249,7 +2269,7 @@ defined( RETROVDP_C )
 #  ifdef RETROFLAT_OPENGL
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
-   uint8_t              last_key;
+   int16_t              last_key;
    uint8_t              vk_mods;
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
@@ -2796,7 +2816,8 @@ static LRESULT CALLBACK WndProc(
          /* TODO: Alt? */
 
          default:
-            g_retroflat_state->last_key = wParam;
+            debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
+            g_retroflat_state->last_key = wParam | ((lParam & 0x800000) >> 8);
             break;
          }
          break;
@@ -3205,6 +3226,8 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    case RETROFLAT_KEY_PERIOD: c = offset_lower ? '.' : '>'; break;
    case RETROFLAT_KEY_COMMA: c = offset_lower ? ',' : '<'; break;
    }
+
+   debug_printf( 1, "0x%02x", c );
 
    return c;
 }
@@ -7257,6 +7280,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       */
       key_out = g_retroflat_state->last_key;
       input->key_flags = g_retroflat_state->vk_mods;
+
+      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
 
       /* Reset pressed key. */
       g_retroflat_state->last_key = 0;
