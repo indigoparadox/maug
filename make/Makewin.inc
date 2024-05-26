@@ -4,7 +4,6 @@
 # Setup default CFLAGS/LDFLAGS for all Windows targets.
 ifeq ("$(CFLAGS_WATCOM_WIN)","")
 	CFLAGS_WATCOM_WIN := -DRETROFLAT_OS_WIN -DRETROSND_API_WINMM -DRETROSND_ARGS
-	CFLAGS_WATCOM_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_WATCOM_WIN)","")
 	LDFLAGS_WATCOM_WIN := libr mmsystem
@@ -12,7 +11,6 @@ endif
 
 ifeq ("$(CFLAGS_WATCOM386_WIN)","")
 	CFLAGS_WATCOM386_WIN := -DRETROFLAT_OS_WIN  -DRETROSND_API_WINMM -DRETROSND_ARGS
-	CFLAGS_WATCOM386_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_WATCOM386_WIN)","")
 	LDFLAGS_WATCOM386_WIN := libr winmm
@@ -20,7 +18,6 @@ endif
 
 ifeq ("$(CFLAGS_GCC_WIN)","")
 	CFLAGS_GCC_WIN := -march=i486 -DRETROFLAT_OS_WIN -DRETROSND_API_WINMM -DRETROSND_ARGS
-	CFLAGS_GCC_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_GCC_WIN)","")
 	LDFLAGS_GCC_WIN := -mwindows -lgdi32 -lwinmm
@@ -28,7 +25,6 @@ endif
 
 ifeq ("$(CFLAGS_GCC64_WIN)","")
 	CFLAGS_GCC64_WIN := -DRETROFLAT_OS_WIN  -DRETROSND_API_WINMM -DRETROSND_ARGS
-	CFLAGS_GCC64_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 ifeq ("$(LDFLAGS_GCC64_WIN)","")
 	LDFLAGS_GCC64_WIN := -mwindows -lgdi32 -lwinmm
@@ -57,6 +53,13 @@ ifeq ("$(LD_GCC_MINGW64)","")
 endif
 ifeq ("$(WINDRES_GCC64_MINGW)","")
 	WINDRES_GCC64_MINGW = x86_64-w64-mingw32-windres
+endif
+
+ifneq ("$(WIN_FORCE_CONSOLE_LOG)","1")
+	CFLAGS_WATCOM_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+	CFLAGS_WATCOM386_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+	CFLAGS_GCC_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+	CFLAGS_GCC64_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 endif
 
 # Common Variables
