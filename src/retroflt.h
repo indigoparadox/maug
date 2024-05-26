@@ -1147,6 +1147,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_COMMA    SDLK_COMMA
 #  define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
 #  define RETROFLAT_KEY_DASH     SDLK_MINUS
+#  define RETROFLAT_KEY_BACKSLASH  SDLK_BACKSLASH
+#  define RETROFLAT_KEY_QUOTE      SDLK_QUOTE
 
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
@@ -1487,6 +1489,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 #  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
 
+#  ifndef VK_OEM_1
+#     define VK_OEM_1 0xba
+#  endif /* !VK_OEM_1 */
+
 #  ifndef VK_OEM_2
 #     define VK_OEM_2 0xbf
 #  endif /* !VK_OEM_2 */
@@ -1495,19 +1501,36 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #     define VK_OEM_3 0xc0
 #  endif /* !VK_OEM_3 */
 
+#  ifndef VK_OEM_4
+#     define VK_OEM_4 0xdb
+#  endif /* !VK_OEM_4 */
+
+#  ifndef VK_OEM_5
+#     define VK_OEM_5 0xdc
+#  endif /* !VK_OEM_5 */
+
+#  ifndef VK_OEM_6
+#     define VK_OEM_6 0xdd
+#  endif /* !VK_OEM_6 */
+
+#  ifndef VK_OEM_7
+#     define VK_OEM_7 0xde
+#  endif /* !VK_OEM_7 */
+
 #  ifndef VK_OEM_MINUS
-/* TODO: This is broken in Win16. */
-#     define VK_OEM_MINUS '-'
+#     define VK_OEM_MINUS 0xbd
 #  endif /* !VK_OEM_MINUS */
 
+#  ifndef VK_OEM_PLUS
+#     define VK_OEM_PLUS 0xbb
+#  endif /* !VK_OEM_PLUS */
+
 #  ifndef VK_OEM_PERIOD
-/* TODO: This is broken in Win16. */
-#     define VK_OEM_PERIOD '.'
+#     define VK_OEM_PERIOD 0xbe
 #  endif /* !VK_OEM_PERIOD */
 
 #  ifndef VK_OEM_COMMA
-/* TODO: This is broken in Win16. */
-#     define VK_OEM_COMMA ','
+#     define VK_OEM_COMMA 0xbc
 #  endif /* !VK_OEM_COMMA */
 
 #  define RETROFLAT_KEY_GRAVE VK_OEM_3
@@ -1562,12 +1585,15 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define RETROFLAT_KEY_DELETE   VK_DELETE
 #  define RETROFLAT_KEY_PGUP     VK_PRIOR
 #  define RETROFLAT_KEY_PGDN     VK_NEXT
-/* TODO: This is broken. */
-#  define RETROFLAT_KEY_SEMICOLON   ';'
-#  define RETROFLAT_KEY_PERIOD   VK_OEM_PERIOD
-#  define RETROFLAT_KEY_COMMA    VK_OEM_COMMA
-#  define RETROFLAT_KEY_EQUALS   VK_OEM_PLUS
-#  define RETROFLAT_KEY_DASH     VK_OEM_MINUS
+#  define RETROFLAT_KEY_SEMICOLON   VK_OEM_1
+#  define RETROFLAT_KEY_PERIOD      VK_OEM_PERIOD
+#  define RETROFLAT_KEY_COMMA       VK_OEM_COMMA
+#  define RETROFLAT_KEY_EQUALS      VK_OEM_PLUS
+#  define RETROFLAT_KEY_DASH        VK_OEM_MINUS
+#  define RETROFLAT_KEY_BACKSLASH   VK_OEM_5
+#  define RETROFLAT_KEY_QUOTE      VK_OEM_7
+#  define RETROFLAT_KEY_BRACKETL    VK_OEM_4
+#  define RETROFLAT_KEY_BRACKETR    VK_OEM_6
 
 #  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
 #  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
@@ -3207,16 +3233,16 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    case RETROFLAT_KEY_X: c = 0x58 + offset_lower; break;
    case RETROFLAT_KEY_Y: c = 0x59 + offset_lower; break;
    case RETROFLAT_KEY_Z: c = 0x60 + offset_lower; break;
-   case RETROFLAT_KEY_0: c = 0x30 + offset_lower; break;
+   case RETROFLAT_KEY_0: c = offset_lower ? 0x30 : ')'; break;
    case RETROFLAT_KEY_1: c = offset_lower ? 0x31 : '!'; break;
-   case RETROFLAT_KEY_2: c = 0x32; break;
-   case RETROFLAT_KEY_3: c = 0x33; break;
-   case RETROFLAT_KEY_4: c = 0x34; break;
-   case RETROFLAT_KEY_5: c = 0x35; break;
-   case RETROFLAT_KEY_6: c = 0x36; break;
-   case RETROFLAT_KEY_7: c = 0x37; break;
-   case RETROFLAT_KEY_8: c = 0x38; break;
-   case RETROFLAT_KEY_9: c = 0x39; break;
+   case RETROFLAT_KEY_2: c = offset_lower ? 0x32 : '@'; break;
+   case RETROFLAT_KEY_3: c = offset_lower ? 0x33 : '#'; break;
+   case RETROFLAT_KEY_4: c = offset_lower ? 0x34 : '$'; break;
+   case RETROFLAT_KEY_5: c = offset_lower ? 0x35 : '%'; break;
+   case RETROFLAT_KEY_6: c = offset_lower ? 0x36 : '^'; break;
+   case RETROFLAT_KEY_7: c = offset_lower ? 0x37 : '&'; break;
+   case RETROFLAT_KEY_8: c = offset_lower ? 0x38 : '*'; break;
+   case RETROFLAT_KEY_9: c = offset_lower ? 0x39 : '('; break;
    case RETROFLAT_KEY_SPACE: c = ' '; break;
    case RETROFLAT_KEY_BKSP: c = 0x08; break;
    case RETROFLAT_KEY_ENTER: c = '\n'; break;
@@ -3225,9 +3251,15 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
    case RETROFLAT_KEY_SLASH: c = offset_lower ? '/' : '?'; break;
    case RETROFLAT_KEY_PERIOD: c = offset_lower ? '.' : '>'; break;
    case RETROFLAT_KEY_COMMA: c = offset_lower ? ',' : '<'; break;
+   case RETROFLAT_KEY_QUOTE: c = offset_lower ? '\'' : '"'; break;
+   case RETROFLAT_KEY_EQUALS: c = offset_lower ? '=' : '+'; break;
+   case RETROFLAT_KEY_BACKSLASH: c = offset_lower ? '\\' : '|'; break;
+   case RETROFLAT_KEY_BRACKETL: c = offset_lower ? '[' : '{'; break;
+   case RETROFLAT_KEY_BRACKETR: c = offset_lower ? ']' : '}'; break;
+   case RETROFLAT_KEY_GRAVE: c = offset_lower ? '`' : '~'; break;
    }
 
-   debug_printf( 1, "0x%02x", c );
+   debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%02x", c );
 
    return c;
 }
