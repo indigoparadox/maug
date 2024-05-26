@@ -35,6 +35,10 @@
 #  define RETROGUI_BTN_LBL_SZ_MAX 64
 #endif /* !RETROGUI_BTN_LBL_SZ_MAX */
 
+#ifndef RETROGUI_CTL_TEXT_BLINK_FRAMES
+#  define RETROGUI_CTL_TEXT_BLINK_FRAMES 15
+#endif /* !RETROGUI_CTL_TEXT_BLINK_FRAMES */
+
 #define retrogui_lock( gui ) \
    if( NULL == (gui)->ctls ) { \
       maug_mlock( (gui)->ctls_h, (gui)->ctls ); \
@@ -71,7 +75,7 @@ typedef size_t RETROGUI_IDC;
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX + 1]; int16_t push_frames; ) \
-   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; )
+   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
 
 #if 0
    f( 4, SCROLLBAR, size_t min; size_t max; size_t value; )
@@ -734,7 +738,6 @@ static void retrogui_redraw_TEXTBOX(
    retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
-
    /* Draw chiselled inset border. */
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
@@ -787,8 +790,14 @@ cleanup:
       8, 8,
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
-      gui->focus == ctl->base.idc && retroflat_get_ms() % 30 > 15
-         ? RETROFLAT_FLAGS_FILL : 0 );
+      gui->focus == ctl->base.idc &&
+         0 < ctl->TEXTBOX.blink_frames ? RETROFLAT_FLAGS_FILL : 0 );
+
+   if( (-1 * RETROGUI_CTL_TEXT_BLINK_FRAMES) > --(ctl->TEXTBOX.blink_frames) ) {
+      ctl->TEXTBOX.blink_frames = RETROGUI_CTL_TEXT_BLINK_FRAMES;
+   }
+   
+   gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for blink animation. */
 
 #  endif
 
