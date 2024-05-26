@@ -1046,7 +1046,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 #  include <SDL.h>
-#  ifdef RETROFLAT_API_SDL1
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
 #     include <SDL_getenv.h>
 #  endif /* RETROFLAT_API_SDL1 */
 
@@ -3019,7 +3019,7 @@ int retroflat_loop(
 
    /* TODO: Work in frame_iter if provided. */
    emscripten_cancel_main_loop();
-   emscripten_set_main_loop_arg( loop_iter, data, 0, 0 );
+   emscripten_set_main_loop_arg( frame_iter, data, 30, 0 );
 
 #  elif defined( RETROFLAT_API_ALLEGRO ) || \
    defined( RETROFLAT_API_SDL1 ) || \
@@ -3280,6 +3280,8 @@ void retroflat_message(
 
    va_end( vargs );
 }
+
+#  ifndef RETROFLAT_NO_CLI
 
 #  ifdef RETROSND_ARGS
 
@@ -3603,6 +3605,8 @@ static int retroflat_cli_u_def( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
+#endif /* !RETROFLAT_NO_CLI */
+
 /* === */
 
 #  ifdef RETROFLAT_API_ALLEGRO
@@ -3731,31 +3735,33 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
    maug_mzero( g_retroflat_state, sizeof( struct RETROFLAT_STATE ) );
 
+#  ifndef RETROFLAT_NO_CLI
+
    debug_printf( 1, "retroflat: parsing args..." );
 
    /* All platforms: add command-line args based on compile definitons. */
 
-#  ifdef RETROSND_ARGS
+#     ifdef RETROSND_ARGS
 	maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
       "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd,
          (maug_cli_cb)retrosnd_cli_rsd_def, args );
 	maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
       "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, NULL, args );
-#  endif /* RETROSND_ARGS */
+#     endif /* RETROSND_ARGS */
 
-#  ifdef RETROFLAT_SCREENSAVER
+#     ifdef RETROFLAT_SCREENSAVER
 	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
       "Preview screensaver", 0, (maug_cli_cb)retroflat_cli_p, NULL, args );
 	maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 2,
       "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, NULL, args );
-#  endif /* RETROFLAT_SCREENSAVER */
+#     endif /* RETROFLAT_SCREENSAVER */
 
-#  ifdef RETROFLAT_API_PC_BIOS
+#     ifdef RETROFLAT_API_PC_BIOS
    maug_add_arg( MAUG_CLI_SIGIL "rfm", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen mode.", 0,
       (maug_cli_cb)retroflat_cli_rfm,
       (maug_cli_cb)retroflat_cli_rfm_def, args );
-#  elif !defined( RETROFLAT_NO_CLI_SZ )
+#     elif !defined( RETROFLAT_NO_CLI_SZ )
    maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen X position.", 0,
       (maug_cli_cb)retroflat_cli_rfx,
@@ -3772,19 +3778,19 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "Set the screen height.", 0,
       (maug_cli_cb)retroflat_cli_rfh,
       (maug_cli_cb)retroflat_cli_rfh_def, args );
-#  endif /* !RETROFLAT_NO_CLI_SZ */
+#     endif /* !RETROFLAT_NO_CLI_SZ */
 
-#  ifdef RETROFLAT_VDP
+#     ifdef RETROFLAT_VDP
    maug_add_arg( MAUG_CLI_SIGIL "vdp", MAUG_CLI_SIGIL_SZ + 4,
       "Pass a string of args to the VDP.", 0,
       (maug_cli_cb)retroflat_cli_vdp, NULL, args );
-#  endif /* RETROFLAT_VDP */
+#     endif /* RETROFLAT_VDP */
 
-#  ifndef MAUG_NO_CONFIG
+#     ifndef MAUG_NO_CONFIG
    maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
       "Set the config path.", 0,
       (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
-#  endif /* !MAUG_NO_CONFIG */
+#     endif /* !MAUG_NO_CONFIG */
 
    maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
       "Unlock FPS.", 0,
@@ -3795,6 +3801,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    if( RETROFLAT_OK != retval ) {
       goto cleanup;
    }
+
+#  endif /* !RETROFLAT_NO_CLI */
 
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
