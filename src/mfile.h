@@ -37,6 +37,17 @@ typedef struct MFILE_CADDY mfile_t;
       error_printf( "unknown file type: %d", (p_file)->type ); \
       break;
 
+#define mfile_seek( p_file, idx ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      fseek( (p_file)->h.file, idx, SEEK_SET ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      (p_file)->mem_cursor = idx; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
+
 #define mfile_has_bytes( p_file ) \
    ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
       (size_t)ftell( (p_file)->h.file ) : \
@@ -112,6 +123,21 @@ typedef struct MFILE_CADDY mfile_t;
       ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[idx + 1]; \
       ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[idx + 2]; \
       ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[idx + 3]; \
+      (p_file)->mem_cursor += 4; \
+      break; \
+   mfile_default_case( p_file ); \
+   }
+
+#define mfile_u32read_lsbf( p_file, p_u32 ) \
+   switch( (p_file)->type ) { \
+   case MFILE_CADDY_TYPE_FILE_READ: \
+      (p_file)->last_read = fread( p_u32, 1, 4, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_u32))[3] = (p_file)->mem_buffer[(p_file)->mem_cursor]; \
+      ((uint8_t*)(p_u32))[2] = (p_file)->mem_buffer[(p_file)->mem_cursor + 1]; \
+      ((uint8_t*)(p_u32))[1] = (p_file)->mem_buffer[(p_file)->mem_cursor + 2]; \
+      ((uint8_t*)(p_u32))[0] = (p_file)->mem_buffer[(p_file)->mem_cursor + 3]; \
       (p_file)->mem_cursor += 4; \
       break; \
    mfile_default_case( p_file ); \

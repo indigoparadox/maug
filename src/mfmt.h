@@ -525,14 +525,14 @@ MERROR_RETVAL mfmt_read_bmp_palette(
 
    mfmt_bmp_check_header();
  
+   mfile_seek( p_file_in, file_offset );
    for( i = 0 ; header_bmp_info->palette_ncolors > i ; i++ ) {
       if( i * 4 > palette_sz ) {
          error_printf( "palette overflow!" );
          retval = MERROR_OVERFLOW;
          goto cleanup;
       }
-      mfile_u32read_lsbf_at( p_file_in, &(palette[i]),
-         file_offset + (i * 4) );
+      /* mfile_u32read_lsbf( p_file_in, &(palette[i]) ); */
       debug_printf( MFMT_TRACE_BMP_LVL,
          "set palette entry " SIZE_T_FMT " to " UPRINTF_X32_FMT,
          i, palette[i] );
@@ -624,6 +624,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    y = header_bmp_info->height - 1;
    byte_out_idx = mfmt_read_bmp_px_out_idx();
+   mfile_seek( p_file_bmp, file_offset );
    while( 0 <= y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
@@ -655,8 +656,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
          }
 
          /* Move on to a new byte. */
-         mfile_cread_at(
-            p_file_bmp, &(byte_buffer), file_offset + byte_in_idx );
+         mfile_cread(
+            p_file_bmp, &(byte_buffer) );
          byte_in_idx++;
 
          /* Start at 8 bits from the right (0 from the left). */
@@ -706,6 +707,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
          x = 0;
          while( byte_in_idx % 4 != 0 ) {
             byte_in_idx++;
+            mfile_seek( p_file_bmp, file_offset + byte_in_idx );
          }
 
          /* Move to the next row of the output. */
