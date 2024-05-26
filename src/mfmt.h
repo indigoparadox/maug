@@ -532,7 +532,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
          retval = MERROR_OVERFLOW;
          goto cleanup;
       }
-      /* mfile_u32read_lsbf( p_file_in, &(palette[i]) ); */
+      mfile_u32read_lsbf( p_file_in, &(palette[i]) );
       debug_printf( MFMT_TRACE_BMP_LVL,
          "set palette entry " SIZE_T_FMT " to " UPRINTF_X32_FMT,
          i, palette[i] );
