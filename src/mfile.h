@@ -180,29 +180,31 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
    size_t i = 0;
 
    if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
-
+      /* Trivial case; use a native function. Much faster! */
       fgets( buffer, p_f->sz, p_f->h.file );
+      goto cleanup;
+   }
 
-   } else {
-      while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
-         mfile_cread( p_f, &(buffer[i]) );
-         if( '\n' == buffer[i] ) {
-            /* Break on newline and overwrite it below. */
-            break;
-         }
-         i++;
+   while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
+      mfile_cread( p_f, &(buffer[i]) );
+      if( '\n' == buffer[i] ) {
+         /* Break on newline and overwrite it below. */
+         break;
       }
+      i++;
+   }
 
-      assert( i < buffer_sz ); /* while() above stops before buffer_sz! */
+   assert( i < buffer_sz ); /* while() above stops before buffer_sz! */
 
-      /* Append a null terminator. */
-      buffer[i] = '\0';
+   /* Append a null terminator. */
+   buffer[i] = '\0';
 
-      /* Check for potential overflow. */
-      if( i == buffer_sz - 1 ) {
-         error_printf( "overflow reading string from file!" );
-         retval = MERROR_OVERFLOW;
-      }
+cleanup:
+
+   /* Check for potential overflow. */
+   if( i == buffer_sz - 1 ) {
+      error_printf( "overflow reading string from file!" );
+      retval = MERROR_OVERFLOW;
    }
 
    return retval;
