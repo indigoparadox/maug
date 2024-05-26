@@ -181,7 +181,7 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
 
    if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
       /* Trivial case; use a native function. Much faster! */
-      fgets( buffer, p_f->sz, p_f->h.file );
+      fgets( buffer, buffer_sz - 1, p_f->h.file );
       goto cleanup;
    }
 
