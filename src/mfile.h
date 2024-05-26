@@ -186,6 +186,13 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
    }
 
    while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
+      /* Check for potential overflow. */
+      if( i + 1 >= buffer_sz ) {
+         error_printf( "overflow reading string from file!" );
+         retval = MERROR_OVERFLOW;
+         break;
+      }
+
       mfile_cread( p_f, &(buffer[i]) );
       if( '\n' == buffer[i] ) {
          /* Break on newline and overwrite it below. */
@@ -200,12 +207,6 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
    buffer[i] = '\0';
 
 cleanup:
-
-   /* Check for potential overflow. */
-   if( i == buffer_sz - 1 ) {
-      error_printf( "overflow reading string from file!" );
-      retval = MERROR_OVERFLOW;
-   }
 
    return retval;
 }
