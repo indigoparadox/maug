@@ -33,6 +33,10 @@ endif
 ifeq ("$(RELEASE)","RELEASE")
 	CFLAGS_GCC_WIN += -O2
 	CFLAGS_GCC64_WIN += -O2
+	CFLAGS_WATCOM386 += -ol+ -ok -oi -oh -or
+ifeq ("$(OPENGL)","1")
+	CFLAGS_WATCOM386 += -ob -on
+endif
 endif
 
 ifeq ("$(CC_GCC_MINGW)","")
@@ -103,8 +107,15 @@ OBJDIR_GCC64_WIN_WIN32=obj/gcc64-win-win32
 define TGT_WATCOM386_WIN_WIN32
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_WIN32)","")
+ifeq ("$$(OPENGL)","1")
+	# OpenGL stuff is pentium-optimized.
 	CFLAGS_WATCOM386_WIN_WIN32 := \
 		-mf -5r -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
+else
+	# Non-OpenGL can be on 386.
+	CFLAGS_WATCOM386_WIN_WIN32 := \
+		-mf -3r -fp3 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
+endif
 endif
 ifeq ("$$(LDFLAGS_WATCOM386_WIN_WIN32)","")
 	LDFLAGS_WATCOM386_WIN_WIN32 := system nt_win
@@ -141,7 +152,7 @@ TGTWINNT=$(TGT_WATCOM386_WIN_WIN32)
 define TGT_WATCOM386_WIN_GLUT
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_GLUT)","")
-	# GLUT requires stack calling (-5s).
+	# GLUT requires stack calling (-5s) and is always on Petium because OpenGL.
 	CFLAGS_WATCOM386_WIN_GLUT := \
 		-mf -5s -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
 endif
@@ -176,6 +187,7 @@ TGTWINGL=$(TGT_WATCOM386_WIN_GLUT)
 define TGT_WATCOM386_WIN_SDL
 
 ifeq ("$$(CFLAGS_WATCOM386_WIN_SDL)","")
+	# SDL is always on Pentium.
 	CFLAGS_WATCOM386_WIN_SDL := \
 		-mf -5s -ei -fp5 -dSDL_main=main -bt=nt \
 		-i$(WATCOM)/h/nt -i$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1
