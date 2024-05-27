@@ -55,11 +55,13 @@ ifeq ("$(WINDRES_GCC64_MINGW)","")
 	WINDRES_GCC64_MINGW = x86_64-w64-mingw32-windres
 endif
 
+ifneq ("$(RELEASE)","RELEASE")
 ifneq ("$(WIN_FORCE_CONSOLE_LOG)","1")
 	CFLAGS_WATCOM_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 	CFLAGS_WATCOM386_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 	CFLAGS_GCC_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 	CFLAGS_GCC64_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+endif
 endif
 
 # Common Variables
