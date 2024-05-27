@@ -234,6 +234,8 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
       goto cleanup;
    }
 
+   /* Assume we're reading a memory buffer. */
+
    while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
       /* Check for potential overflow. */
       if( i + 1 >= buffer_sz ) {
@@ -263,8 +265,7 @@ cleanup:
 MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE handle, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "locking handle %p as file %p...",
-      handle, p_file );
+   debug_printf( 1, "locking handle %p as file %p...", handle, p_file );
 
    maug_mzero( p_file, sizeof( mfile_t ) );
    maug_mlock( handle, p_file->mem_buffer );
