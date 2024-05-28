@@ -195,6 +195,8 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
+MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, size_t buf_sz );
+
 MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, size_t buffer_sz );
 
 /**
@@ -223,6 +225,36 @@ void mfile_close( mfile_t* p_file );
 #else
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
+
+MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, size_t buf_sz ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i_read = 0;
+
+   if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
+      i_read = fread( buf, 1, buf_sz, p_f->h.file );
+      if( i_read != buf_sz ) {
+         error_printf(
+            "block read size did not match size read! (" SIZE_T_FMT " vs "
+               SIZE_T_FMT ")", i_read, buf_sz );
+         retval = MERROR_FILE;
+      }
+      goto cleanup;
+   }
+
+   /* Assume we're reading a memory buffer. */
+   memcpy( buf, p_f->mem_buffer, buf_sz < p_f->sz ? buf_sz : p_f->sz );
+   if( p_f->sz <= buf_sz ) {
+      error_printf(
+         "block read size did not match size read! (" SIZE_T_FMT " vs "
+            SIZE_T_FMT ")", p_f->sz, buf_sz );
+      retval = MERROR_FILE;
+   }
+
+cleanup:
+
+   return retval;
+
+}
 
 MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
    MERROR_RETVAL retval = MERROR_OK;

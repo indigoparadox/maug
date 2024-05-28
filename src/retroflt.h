@@ -1493,8 +1493,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_root_win() (g_retroflat_state->window)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
-#  define retroflat_bmp_int( type, buf, offset ) *((type*)&(buf[offset]))
-
 #  ifndef VK_OEM_1
 #     define VK_OEM_1 0xba
 #  endif /* !VK_OEM_1 */
@@ -5370,7 +5368,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
 #     if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
-   FILE* bmp_file = NULL;
+   mfile_t bmp_file;
    long int i, x, y, w, h, colors, offset, sz, read;
 #     elif defined( RETROFLAT_API_WIN32 )
    BITMAP bm;
@@ -5635,20 +5633,22 @@ cleanup:
    /* == Win16 == */
 
    /* Load the bitmap file from disk. */
-   bmp_file = fopen( filename_path, "rb" );
-   maug_cleanup_if_null_file( bmp_file );
-   fseek( bmp_file, 0, SEEK_END );
-   sz = ftell( bmp_file );
-   fseek( bmp_file, 0, SEEK_SET );
+   retval = mfile_open_read( filename_path, &bmp_file );
+   maug_cleanup_if_not_ok();
 
-   buf = calloc( sz, 1 );
+   buf = calloc( mfile_get_sz( &bmp_file ), 1 );
    maug_cleanup_if_null_alloc( char*, buf );
 
+   /*
    read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
+   */
+   retval = mfile_read_block( &bmp_file, buf, mfile_get_sz( &bmp_file ) );
+   maug_cleanup_if_not_ok();
 
-   offset = retroflat_bmp_int( unsigned long, buf, 10 );
-   colors = retroflat_bmp_int( int, buf, 46 );
+   /* Read bitmap properties from header offsets. */
+   mfile_u32read_lsbf_at( &bmp_file, &offset, 10 );
+   mfile_u32read_lsbf_at( &bmp_file, &colors, 46 );
 
    /* Avoid a color overflow. */
    if(
@@ -5737,9 +5737,7 @@ cleanup:
       free( buf );
    }
 
-   if( NULL != bmp_file ) {
-      fclose( bmp_file );
-   }
+   mfile_close( &bmp_file );
 
 #     endif /* RETROFLAT_API_WIN16 */
 
@@ -7556,6 +7554,8 @@ size_t retroflat_config_read(
    size_t line_sz = 0;
    size_t sect_match = 1;
 #  endif /* RETROFLAT_API_WIN32 */
+
+   /* TODO: Adjust this to use mfile! */
 
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
 
