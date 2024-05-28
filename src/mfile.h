@@ -3,15 +3,7 @@
 #define MFILE_H
 
 #if !defined( MFILE_MMAP )
-#  if defined( MAUG_OS_WIN )
-#     ifdef RETROFLAT_API_WIN32
-#        define _SYS_TYPES_H_INCLUDED
-#     endif /* RETROFLAT_API_WIN32 */
-#     include <fcntl.h>
-#     include <io.h>
-#  elif defined( MAUG_OS_UNIX )
-#     include <sys/stat.h>
-#  endif /* MAUG_OS_UNIX */
+#  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 
 /**
@@ -55,10 +47,10 @@ struct MFILE_CADDY {
    uint8_t type;
    /*! \brief The physical handle or pointer to access the file by. */
    union MFILE_HANDLE h;
-   size_t sz;
-   size_t last_read;
+   off_t sz;
+   off_t last_read;
    /*! \brief Current position if its type is ::MFILE_CADDY_TYPE_MEM_BUFFER. */
-   size_t mem_cursor;
+   off_t mem_cursor;
    /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
 };
@@ -85,7 +77,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_has_bytes( p_file ) \
    ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
-      (size_t)ftell( (p_file)->h.file ) : \
+      (off_t)ftell( (p_file)->h.file ) : \
       (p_file)->mem_cursor) < (p_file)->sz)
 
 #define mfile_cread( p_file, p_c ) \
@@ -207,9 +199,9 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
-MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, size_t buf_sz );
+MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, off_t buf_sz );
 
-MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, size_t buffer_sz );
+MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, off_t buffer_sz );
 
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
@@ -238,9 +230,9 @@ void mfile_close( mfile_t* p_file );
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
-MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, size_t buf_sz ) {
+MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, off_t buf_sz ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i_read = 0;
+   off_t i_read = 0;
 
    if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
       i_read = fread( buf, 1, buf_sz, p_f->h.file );
@@ -268,9 +260,9 @@ cleanup:
 
 }
 
-MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, size_t buffer_sz ) {
+MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, off_t buffer_sz ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
+   off_t i = 0;
 
    if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
       /* Trivial case; use a native function. Much faster! */
@@ -325,14 +317,10 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    struct stat st;
    int in_file = 0;
 #  else
-#     ifdef MAUG_OS_WIN
-   int fd = 0;
-#     elif defined( MAUG_OS_UNIX )
    struct stat file_stat;
-#     endif /* MAUG_OS_* */
 #  endif /* MFILE_MMAP */
 
-   /* MAUG_MHANDLE* p_bytes_ptr_h, size_t* p_bytes_sz */
+   /* MAUG_MHANDLE* p_bytes_ptr_h, off_t* p_bytes_sz */
 
 #  ifdef MFILE_MMAP
 
@@ -358,19 +346,11 @@ cleanup:
 
 #  else
 
-/* Get the file size from the OS. */
-#ifdef MAUG_OS_WIN
-   /* Use io.h functions to get size (thanks Micia!). */
-   fd = open( filename, _O_RDONLY );
-   maug_cleanup_if_lt( fd, 0, "%d", MERROR_FILE );
-   p_file->sz = filelength( fd );
-   close( fd );
-#  define MFILE_GOT_FILE_SIZE 1
-#elif defined( MAUG_OS_UNIX )
+   /* Get the file size from the OS. */
    stat( filename, &file_stat );
    p_file->sz = file_stat.st_size;
+
 #  define MFILE_GOT_FILE_SIZE 1
-#endif /* MAUG_OS_* */
 
    /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, "rb" );
@@ -392,6 +372,8 @@ cleanup:
 
    debug_printf( 1, "opened file %s (" SIZE_T_FMT " bytes)...",
       filename, p_file->sz );
+   /* debug_printf( 3, "XXX %ld bytes", file_stat.st_size );
+   debug_printf( 3, "XXX size_t: %d, off_t: %d", sizeof( size_t ), sizeof( off_t ) ); */
 
    p_file->type = MFILE_CADDY_TYPE_FILE_READ;
 

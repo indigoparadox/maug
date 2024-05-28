@@ -97,13 +97,16 @@
 #  ifdef _WIN64 /* __SIZE_WIDTH__ == 64 */
 #     define SIZE_T_FMT "%I64u"
 #     define SSIZE_T_FMT "%I64d"
+#     define OFF_T_FMT  "%I64d"
 #  else
 #     define SIZE_T_FMT "%lu"
 #     define SSIZE_T_FMT "%ld"
+#     define OFF_T_FMT  "%lu"
 #  endif /* __LONG_WIDTH__ */
 #else
 #  define SIZE_T_FMT "%u"
 #  define SSIZE_T_FMT "%d"
+#  define OFF_T_FMT  "%lu"
 #endif /* __GNUC__ */
 
 #if !defined( DEBUG_THRESHOLD )
