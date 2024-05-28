@@ -3796,6 +3796,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: ssize_t is (" SIZE_T_FMT " bytes)...",
       sizeof( ssize_t ) );
 
+   debug_printf( 1, "retroflat: off_t is (" SIZE_T_FMT " bytes)...",
+      sizeof( off_t ) );
+
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -5325,6 +5328,7 @@ static MERROR_RETVAL retroflat_bitmap_dos_transparency(
       /* Create a transparency mask based on palette 0. */
       bmp_out->mask = _fcalloc( bmp_out->w, bmp_out->h );
       maug_cleanup_if_null_alloc( uint8_t*, bmp_out->mask );
+      /* XXX: Wrong sz field! */
       for( i = 0 ; bmp_out->sz > i ; i++ ) {
          if( RETROFLAT_TXP_PAL_IDX == bmp_out->px[i] ) {
             bmp_out->mask[i] = 0xff;
@@ -5356,7 +5360,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    uint32_t* bmp_palette = NULL;
    MAUG_MHANDLE bmp_px_h = (MAUG_MHANDLE)NULL;
    uint8_t* bmp_px = NULL;
-   size_t bmp_px_sz = 0;
+   off_t bmp_px_sz = 0;
    uint8_t bmp_r = 0,
       bmp_g = 0,
       bmp_b = 0,
@@ -5379,7 +5383,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
    uint32_t bmp_color = 0;
    uint8_t bmp_flags = 0;
-   size_t bmp_px_sz = 0;
+   off_t bmp_px_sz = 0;
    size_t i = 0;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -7535,6 +7539,7 @@ size_t retroflat_config_write(
 ) {
    size_t retval = 0;
 
+   /* TODO */
 
    return retval;
 }
