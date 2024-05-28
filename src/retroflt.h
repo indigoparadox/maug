@@ -5422,6 +5422,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
    maug_cleanup_if_not_ok();
 
+   assert( 0 < mfile_get_sz( &bmp_file ) );
+
    /* Setup bitmap options from header. */
    bmp_out->tex.w = header_bmp.info.width;
    bmp_out->tex.h = header_bmp.info.height;

@@ -123,62 +123,62 @@ struct MFMT_STRUCT_BMPFILE {
  * \param flags Additional flags for compression options.
  */
 typedef MERROR_RETVAL (*mfmt_decode)(
-   mfile_t* p_file_in, size_t file_offset, size_t file_sz, size_t line_w,
-   MAUG_MHANDLE buffer_out, size_t buffer_out_sz, uint8_t flags );
+   mfile_t* p_file_in, off_t file_offset, off_t file_sz, size_t line_w,
+   MAUG_MHANDLE buffer_out, off_t buffer_out_sz, uint8_t flags );
 
 /**
  * \brief Callback to read image header and get properties.
  */
 typedef MERROR_RETVAL (*mfmt_read_header_cb)(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz, uint8_t* p_flags );
+   uint32_t file_offset, off_t file_sz, uint8_t* p_flags );
 
 /**
  * \brief Callback to read image palette into 24-bit RGB values.
  */
 typedef MERROR_RETVAL (*mfmt_read_palette_cb)(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
 
 /**
  * \brief Callback to read image pixels into 8-bit values.
  */
 typedef MERROR_RETVAL (*mfmt_read_px_cb)(
-   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, off_t px_sz,
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
 
 MERROR_RETVAL mfmt_decode_rle(
-   mfile_t* p_file_in, size_t file_offset, size_t file_sz, size_t line_w,
-   MAUG_MHANDLE buffer_out, size_t buffer_out_sz, uint8_t flags );
+   mfile_t* p_file_in, off_t file_offset, off_t file_sz, size_t line_w,
+   MAUG_MHANDLE buffer_out, off_t buffer_out_sz, uint8_t flags );
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz, uint8_t* p_flags );
+   uint32_t file_offset, off_t file_sz, uint8_t* p_flags );
 
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
 
 /**
  * \brief Read \ref mfmt_bitmap pixels into an 8-bit memory bitmap.
  */
 MERROR_RETVAL mfmt_read_bmp_px(
-   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz,
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, off_t px_sz,
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
 
 #ifdef MFMT_C
 
 MERROR_RETVAL mfmt_decode_rle(
-   mfile_t* p_file_in, size_t file_offset, size_t file_sz, size_t line_w,
-   MAUG_MHANDLE buffer_out_h, size_t buffer_out_sz, uint8_t flags
+   mfile_t* p_file_in, off_t file_offset, off_t file_sz, size_t line_w,
+   MAUG_MHANDLE buffer_out_h, off_t buffer_out_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t* buffer_out = NULL;
-   size_t in_byte_cur = 0,
+   off_t in_byte_cur = 0,
       out_byte_cur = 0;
    uint8_t out_mask_cur = 0xf0,
       run_char = 0,
@@ -419,13 +419,13 @@ cleanup:
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, size_t file_sz, uint8_t* p_flags
+   uint32_t file_offset, off_t file_sz, uint8_t* p_flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    uint32_t file_hdr_sz = 0;
-   size_t header_offset = 0;
+   off_t header_offset = 0;
 
    mfmt_bmp_check_header();
 
@@ -516,12 +516,12 @@ cleanup:
 
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz, uint8_t flags
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
-   size_t i = 0;
+   off_t i = 0;
 
    mfmt_bmp_check_header();
  
@@ -544,8 +544,8 @@ cleanup:
 }
 
 MERROR_RETVAL mfmt_read_bmp_px(
-   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, size_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, size_t file_sz, uint8_t flags
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, off_t px_sz,
+   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
