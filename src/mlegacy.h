@@ -4,6 +4,8 @@
 
 #ifdef RETROFLAT_OS_WIN
 #  define MAUG_OS_WIN
+#elif defined( RETROFLAT_OS_UNIX )
+#  define MAUG_OS_UNIX
 #elif defined( RETROFLAT_OS_NDS )
 #  define MAUG_OS_NDS
 #elif defined( RETROFLAT_OS_DOS )

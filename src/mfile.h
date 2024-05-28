@@ -2,6 +2,18 @@
 #ifndef MFILE_H
 #define MFILE_H
 
+#if !defined( MFILE_MMAP )
+#  if defined( MAUG_OS_WIN )
+#     ifdef RETROFLAT_API_WIN32
+#        define _SYS_TYPES_H_INCLUDED
+#     endif /* RETROFLAT_API_WIN32 */
+#     include <fcntl.h>
+#     include <io.h>
+#  elif defined( MAUG_OS_UNIX )
+#     include <sys/stat.h>
+#  endif /* MAUG_OS_UNIX */
+#endif /* !MFILE_MMAP */
+
 /**
  * \addtogroup maug_mfile RetroFile API
  * \brief Abstraction layer for dealing with files on retro systems.
@@ -312,6 +324,12 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
+#  else
+#     ifdef MAUG_OS_WIN
+   int fd = 0;
+#     elif defined( MAUG_OS_UNIX )
+   struct stat file_stat;
+#     endif /* MAUG_OS_* */
 #  endif /* MFILE_MMAP */
 
    /* MAUG_MHANDLE* p_bytes_ptr_h, size_t* p_bytes_sz */
@@ -340,6 +358,21 @@ cleanup:
 
 #  else
 
+/* Get the file size from the OS. */
+#ifdef MAUG_OS_WIN
+   /* Use io.h functions to get size (thanks Micia!). */
+   fd = open( filename, _O_RDONLY );
+   maug_cleanup_if_lt( fd, 0, "%d", MERROR_FILE );
+   p_file->sz = filelength( fd );
+   close( fd );
+#  define MFILE_GOT_FILE_SIZE 1
+#elif defined( MAUG_OS_UNIX )
+   stat( filename, &file_stat );
+   p_file->sz = file_stat.st_size;
+#  define MFILE_GOT_FILE_SIZE 1
+#endif /* MAUG_OS_* */
+
+   /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, "rb" );
    if( NULL == p_file->h.file ) {
       error_printf( "could not open file: %s", filename );
@@ -347,9 +380,15 @@ cleanup:
       goto cleanup;
    }
 
+#ifndef MFILE_GOT_FILE_SIZE
+   /* The standard is not required to support SEEK_END, among other issues.
+    * This is probably the worst way to get file size.
+    */
+   debug_printf( 2, "falling back to seek file size..." );
    fseek( p_file->h.file, 0, SEEK_END );
    p_file->sz = ftell( p_file->h.file );
    fseek( p_file->h.file, 0, SEEK_SET );
+#endif /* MAUG_OS_* */
 
    debug_printf( 1, "opened file %s (" SIZE_T_FMT " bytes)...",
       filename, p_file->sz );
