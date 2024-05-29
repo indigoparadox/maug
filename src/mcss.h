@@ -2,6 +2,12 @@
 #ifndef MCSS_H
 #define MCSS_H
 
+/**
+ * \addtogroup mcss MCSS API
+ * \{
+ * \file mcss.h
+ */
+
 #ifndef MCSS_PARSER_STYLES_INIT_SZ
 #  define MCSS_PARSER_STYLES_INIT_SZ 10
 #endif /* !MCSS_PARSER_STYLES_INIT_SZ */
@@ -61,6 +67,19 @@
 #define mcss_parser_append_token( parser, c ) \
    mparser_append_token( mcss, parser, c, MHTML_PARSER_TOKEN_SZ_MAX )
 
+/**
+ * \addtogroup mcss_parser_locking MCSS Parser Locking
+ * \brief Self-locking mechanism for CSS parser styles tree.
+ *
+ * Because a single style may have to be passed through many layers of parsing
+ * and reading, it is more convenient to have the locked handle attached to   
+ * the parser directly and manipulated from there.
+ *
+ * \warning Please note that locking currently does NOT include the string
+ *          table, and this must be locked and unlocked separately.
+ * \{
+ */
+
 #define mcss_parser_lock( parser ) \
    if( NULL == (parser)->styles ) { \
       maug_mlock( (parser)->styles_h, (parser)->styles ); \
@@ -73,6 +92,8 @@
    }
 
 #define mcss_parser_is_locked( parser ) (NULL != (parser)->styles)
+
+/*! \} */
 
 /**
  * \brief Clear enough state to start parsing a new block from scratch.
@@ -155,6 +176,10 @@ struct MCSS_PARSER {
    size_t token_sz;
    size_t i;
    MAUG_MHANDLE styles_h;
+   /**
+    * \brief Locked handle for MCSS_PARSER::styles_h. Please see
+    *        \ref mcss_parser_locking for more information.
+    */
    struct MCSS_STYLE* styles;
    size_t styles_sz;
    size_t styles_sz_max;
@@ -773,6 +798,8 @@ MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
 extern MAUG_CONST char* gc_mcss_prop_names[];
 
 #endif /* MCSS_C */
+
+/*! \} */ /* mcss */
 
 #endif /* !MCSS_H */
 
