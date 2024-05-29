@@ -36,6 +36,7 @@ struct RETROHTR_RENDER_NODE {
    uint8_t edge;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
+   ssize_t font_idx;
    ssize_t tag;
    /*! \brief Index of container's render node in ::RETROHTR_RENDER_TREE. */
    ssize_t parent;
@@ -54,8 +55,6 @@ struct RETROHTR_RENDER_TREE {
    size_t nodes_sz;
    /*! \brief Current alloc'd number of nodes in RETROHTR_RENDER_NODE::nodes_h. */
    size_t nodes_sz_max;
-   /* TODO: Make this per-node. */
-   ssize_t font_idx;
    struct RETROGUI gui;
 };
 
@@ -310,6 +309,7 @@ ssize_t retrohtr_add_node_child(
       goto cleanup;
    }
 
+   retrohtr_node( tree, node_new_idx )->font_idx = -1;
    retrohtr_node( tree, node_new_idx )->parent = node_parent_idx;
    retrohtr_node( tree, node_new_idx )->first_child = -1;
    retrohtr_node( tree, node_new_idx )->next_sibling = -1;
@@ -497,6 +497,36 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL retrohtr_load_font(
+   struct MCSS_PARSER* styler, struct RETROHTR_RENDER_NODE* node,
+   struct MCSS_STYLE* effect_style
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* str_table = NULL;
+
+   assert( 0 > node->font_idx );
+
+   maug_mlock( styler->str_table_h, str_table );
+   maug_cleanup_if_null_alloc( char*, str_table );
+
+   if( 0 > effect_style->FONT_FAMILY ) {
+      error_printf( "style has no font associated!" );
+      /* TODO: Load fallback font? */
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Load the font into the cache. */
+   node->font_idx =
+      retrogxc_load_font( &(str_table[effect_style->FONT_FAMILY]), 8, 33, 93 );
+
+cleanup:
+
+   maug_munlock( styler->str_table_h, str_table );
+
+   return retval;
+}
+
 MERROR_RETVAL retrohtr_tree_size(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    struct MCSS_STYLE* prev_sibling_style,
@@ -560,12 +590,16 @@ MERROR_RETVAL retrohtr_tree_size(
    ) {
       /* Get text size to use in calculations below. */
 
+      retval = retrohtr_load_font(
+         &(parser->styler), retrohtr_node( tree, node_idx ), &effect_style );
+      maug_cleanup_if_not_ok();
+
       maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
       maug_cleanup_if_null_alloc( char*, tag_content );
 
       retrogxc_string_sz(
          NULL, tag_content, mhtml_tag( parser, tag_idx )->TEXT.content_sz,
-         tree->font_idx,
+         retrohtr_node( tree, node_idx )->font_idx,
          /* Constrain node text size to parent size. */
          retrohtr_node_parent( tree, node_idx )->w,
          retrohtr_node_parent( tree, node_idx )->h,
@@ -582,11 +616,15 @@ MERROR_RETVAL retrohtr_tree_size(
       MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type
    ) {
 
+      retval = retrohtr_load_font(
+         &(parser->styler), retrohtr_node( tree, node_idx ), &effect_style );
+      maug_cleanup_if_not_ok();
+
       retrogxc_string_sz(
          NULL,
          mhtml_tag( parser, tag_idx )->INPUT.value,
          mhtml_tag( parser, tag_idx )->INPUT.value_sz,
-         tree->font_idx,
+         retrohtr_node( tree, node_idx )->font_idx,
          retrohtr_node_parent( tree, node_idx )->w,
          retrohtr_node_parent( tree, node_idx )->h,
          &(retrohtr_node( tree, node_idx )->w),
@@ -1129,8 +1167,11 @@ void retrohtr_tree_draw(
             return;
          }
 
+         maug_cleanup_if_lt(
+            node->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI )
+
          retrogxc_string(
-            NULL, node->fg, tag_content, 0, tree->font_idx,
+            NULL, node->fg, tag_content, 0, node->font_idx,
             retrohtr_node_screen_x( tree, node_idx ),
             retrohtr_node_screen_y( tree, node_idx ),
             node->w, node->h, 0 );
@@ -1286,10 +1327,6 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree ) {
    tree->nodes_h = maug_malloc(
       tree->nodes_sz_max, sizeof( struct RETROHTR_RENDER_NODE ) );
    maug_cleanup_if_null_alloc( struct RETROHTR_RENDER_NODE*, tree->nodes_h );
-
-   /* TODO: Dynamically load fonts. */
-   tree->font_idx = retrogxc_load_font( "unscii-8.hex", 8, 33, 93 );
-   assert( 0 <= tree->font_idx );
 
    /* XXX
    r.w_max = retroflat_screen_w();
