@@ -1209,6 +1209,10 @@ void retrogui_free( struct RETROGUI* gui ) {
 
 cleanup:
 
+   if( NULL != gui->ctls ) {
+      maug_munlock( gui->ctls_h, gui->ctls );
+   }
+
    maug_mfree( gui->ctls_h );
 
 }
