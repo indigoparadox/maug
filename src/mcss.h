@@ -72,6 +72,8 @@
       maug_munlock( (parser)->styles_h, (parser)->styles ); \
    }
 
+#define mcss_parser_is_locked( parser ) (NULL != (parser)->styles)
+
 /**
  * \brief Clear enough state to start parsing a new block from scratch.
  */
@@ -364,9 +366,12 @@ MERROR_RETVAL mcss_style_str_t(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
-   char* str_table_p = NULL;
    size_t str_sz = 0;
    MAUG_MHANDLE str_table_h_new = (MAUG_MHANDLE)NULL;
+   char* str_table_p = NULL;
+   
+   /* str_idx_p is a pointer into the parser styles, so it should be locked! */
+   assert( mcss_parser_is_locked( parser ) );
 
    mparser_token_replace( parser, i, '!', '\0' ); /* !important */
 
@@ -708,6 +713,10 @@ void mcss_parser_free( struct MCSS_PARSER* parser ) {
 
    if( NULL != parser->styles_h ) {
       maug_mfree( parser->styles_h );
+   }
+
+   if( (MAUG_MHANDLE)NULL != parser->str_table_h ) {
+      maug_mfree( parser->str_table_h );
    }
 }
 
