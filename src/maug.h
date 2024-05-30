@@ -79,6 +79,7 @@
 #  endif /* MAUG_C */
 #  include <retroflt.h>
 #  ifdef MAUG_C
+#     define RETROCFG_C
 #     define RETROTIL_C
 #     define RETROISO_C
 #     define RETROGXC_C

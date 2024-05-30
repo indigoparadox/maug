@@ -444,51 +444,6 @@ typedef int8_t RETROFLAT_COLOR;
 /*! \} */ /* maug_retroflt_flags */
 
 /**
- * \addtogroup maug_retroflt_config
- * \{
- */
-
-/**
- * \addtogroup maug_retroflt_config_btypes RetroFlat Config Buffer Types
- * \{
- */
-
-#define RETROFLAT_BUFFER_INT 0x00
-
-#define RETROFLAT_BUFFER_STRING 0x01
-
-#define RETROFLAT_BUFFER_FLOAT 0x02
-
-#define RETROFLAT_BUFFER_BOOL 0x04
-
-/*! \} */ /* maug_retroflt_config_btypes */
-
-/**
- * \addtogroup maug_retroflt_config_flags RetroFlat Config Flags
- * \brief Flags for the flags parameter of retroflat_config_open().
- * \{
- */
-
-/**
- * \brief Flag indicating config object should be opened for WRITING only.
- *
- * If this is not specified, the buffer will only be opened for READING.
- *
- * These modes are mutually exclusive! A config object must be closed and
- * reopened to switch between READING and WRITING!
- */
-#define RETROFLAT_CONFIG_FLAG_W     0x01
-
-/**
- * \brief Flag indicating config object holds BINARY data.
- */
-#define RETROFLAT_CONFIG_FLAG_BIN   0x02
-
-/*! \} */ /* maug_retroflt_config_flags */
-
-/*! \} */ /* maug_retroflt_config */
-
-/**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
  * \brief These flags can be passed to retroflat_message() to indicate the
  *        type of message being conveyed.
@@ -789,14 +744,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define NDS_SPRITES_ACTIVE 24
 #endif /* !NDS_SPRITES_ACTIVE */
 
-#ifndef RETROFLAT_CONFIG_LN_SZ_MAX
-#  define RETROFLAT_CONFIG_LN_SZ_MAX 255
-#endif /* !RETROFLAT_CONFIG_LN_SZ_MAX */
-
-#ifndef RETROFLAT_CONFIG_EXT
-#  define RETROFLAT_CONFIG_EXT ".ini"
-#endif /* !RETROFLAT_CONFIG_EXT */
-
 #ifndef RETROFLAT_BMP_COLORS_SZ_MAX
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
 #endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
@@ -930,11 +877,6 @@ struct RETROFLAT_GLTEX {
 
 #include <time.h> /* For srand() */
 
-#  ifndef RETROFLAT_CONFIG_USE_FILE
-#     define RETROFLAT_CONFIG_USE_FILE
-#  endif /* !RETROFLAT_CONFIG_USE_FILE */
-
-typedef FILE* RETROFLAT_CONFIG;
 typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t retroflat_ms_t;
 
@@ -1049,10 +991,6 @@ typedef int RETROFLAT_COLOR_DEF;
 #     include <emscripten.h>
 #  endif /* RETROFLAT_OS_WASM */
 
-#  ifndef RETROFLAT_CONFIG_USE_FILE
-#     define RETROFLAT_CONFIG_USE_FILE
-#  endif /* !RETROFLAT_CONFIG_USE_FILE */
-
 #  include <SDL.h>
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
 #     include <SDL_getenv.h>
@@ -1067,7 +1005,6 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_SOFT_LINES
 #  endif /* !RETROFLAT_SOFT_LINES */
 
-typedef FILE* RETROFLAT_CONFIG;
 #ifdef RETROFLAT_API_SDL2
 typedef int32_t RETROFLAT_IN_KEY;
 #else
@@ -1223,6 +1160,10 @@ struct RETROFLAT_BITMAP {
 #     include <sdl_ico.h>
 #  endif /* RETROFLT_C && RETROFLAT_SDL_ICO */
 
+#  ifndef RETROFLAT_CONFIG_USE_FILE
+#     define RETROFLAT_CONFIG_USE_FILE
+#  endif /* !RETROFLAT_CONFIG_USE_FILE */
+
    /* SDL Colors */
 #  ifdef RETROFLAT_OPENGL
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
@@ -1290,12 +1231,6 @@ struct RETROFLAT_BMI {
    BITMAPINFOHEADER header;
    RGBQUAD colors[RETROFLAT_BMP_COLORS_SZ_MAX];
 };
-
-#  ifdef RETROFLAT_API_WIN32
-typedef HKEY RETROFLAT_CONFIG;
-#  else
-typedef int RETROFLAT_CONFIG;
-#  endif /* RETROFLAT_API_WIN32 */
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -1662,7 +1597,6 @@ extern HBRUSH gc_retroflat_win_brushes[];
 
 typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t retroflat_ms_t;
-typedef void* RETROFLAT_CONFIG;
 
 #define RETROFLAT_MS_FMT "%lu"
 
@@ -1738,8 +1672,6 @@ typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%lu"
-
-typedef FILE* RETROFLAT_CONFIG;
 
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
@@ -1899,8 +1831,6 @@ typedef uint16_t retroflat_ms_t;
 #     define RETROFLAT_CONFIG_USE_FILE
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
-typedef FILE* RETROFLAT_CONFIG;
-
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->px)
 
 #  define retroflat_quit( retval_in ) \
@@ -2005,21 +1935,6 @@ typedef void (__interrupt __far* retroflat_intfunc)( void );
 
 #else
 #  pragma message( "warning: not implemented" )
-
-/**
- * \addtogroup maug_retroflt_config
- * \{
- */
-
-/**
- * \brief A configuration object to use with the \ref maug_retroflt_config.
- *
- * This is a file by default, but may be different things (e.g. a registry key
- * or battery-backed SRAM block) on different platforms.
- */
-typedef FILE* RETROFLAT_CONFIG;
-
-/*! \} */ /* maug_retroflt_config */
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -2588,47 +2503,6 @@ void retroflat_resize_v();
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
-
-/**
- * \addtogroup maug_retroflt_config RetroFlat Config API
- * \brief Tools for loading and saving config data between sessions.
- * \{
- */
-
-/**
- * \brief Open a configuration file/registry/SRAM/etc handle.
- * \param flags \ref maug_retroflt_config_flags to open config with.
- */
-MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config, uint8_t flags );
-
-void retroflat_config_close( RETROFLAT_CONFIG* config );
-
-/**
- * \brief Write the contents of a buffer to a config object.
- * \warning The config object must have been opened with the
- *          ::RETROFLAT_CONFIG_FLAG_W flag enabled!
- * \param buffer_type \ref maug_retroflt_config_btypes of the buffer provided.
- * \param buffer_sz_max Size of the buffer provided in bytes.
- */
-size_t retroflat_config_write(
-   RETROFLAT_CONFIG* config,
-   const char* sect_name, const char* key_name, uint8_t buffer_type,
-   void* buffer, size_t buffer_sz_max );
-
-/**
- * \brief Write the contents of a buffer to a config object.
- * \warning The config object must have been opened with the
- *          ::RETROFLAT_CONFIG_FLAG_W flag disabled!
- * \param buffer_type \ref maug_retroflt_config_btypes of the buffer provided.
- * \param buffer_out_sz_max Size of the buffer provided in bytes.
- */
-size_t retroflat_config_read(
-   RETROFLAT_CONFIG* config,
-   const char* sect_name, const char* key_name, uint8_t buffer_type,
-   void* buffer_out, size_t buffer_out_sz_max,
-   const void* default_out, size_t default_out_sz );
-
-/*! \} */ /* maug_retroflt_config */
 
 #ifdef RETROFLT_C
 
@@ -3623,41 +3497,6 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
 
 #  endif /* RETROFLAT_API_PC_BIOS || !RETROFLAT_NO_CLI_SZ */
 
-#  ifndef MAUG_NO_CONFIG
-
-static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
-      /* The next arg must be the new var. */
-   } else {
-      debug_printf( 1, "setting config path to: %s", arg );
-      strncpy( g_retroflat_state->config_path, arg, RETROFLAT_PATH_MAX );
-   }
-   return RETROFLAT_OK;
-}
-
-static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   memset( g_retroflat_state->config_path, '\0', RETROFLAT_PATH_MAX + 1 );
-
-   if( NULL != args->config_path ) {
-      debug_printf( 1, "setting config path to: %s", args->config_path );
-      strncpy(
-         g_retroflat_state->config_path,
-         args->config_path, RETROFLAT_PATH_MAX );
-   } else {
-      debug_printf( 1, "setting config path to: %s%s",
-         args->title, RETROFLAT_CONFIG_EXT );
-      strncpy(
-         g_retroflat_state->config_path, args->title, RETROFLAT_PATH_MAX );
-      strncat(
-         g_retroflat_state->config_path,
-         RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
-   }
-
-   return RETROFLAT_OK;
-}
-
-#  endif /* !MAUG_CLI_SIGIL_SZ */
-
 #  ifdef RETROFLAT_VDP
 static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
@@ -3866,12 +3705,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "Pass a string of args to the VDP.", 0,
       (maug_cli_cb)retroflat_cli_vdp, NULL, args );
 #     endif /* RETROFLAT_VDP */
-
-#     ifndef MAUG_NO_CONFIG
-   maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
-      "Set the config path.", 0,
-      (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
-#     endif /* !MAUG_NO_CONFIG */
 
    maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
       "Unlock FPS.", 0,
@@ -7422,233 +7255,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 }
 
 /* === */
-
-MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config, uint8_t flags ) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-#  if defined( RETROFLAT_CONFIG_USE_FILE )
-   char flag_buffer[3] = { '\0', '\0', '\0' };
-
-   if( RETROFLAT_CONFIG_FLAG_W == (RETROFLAT_CONFIG_FLAG_W & flags) ) {
-      flag_buffer[0] = 'w';
-   } else {
-      flag_buffer[0] = 'r';
-   }
-
-   if( RETROFLAT_CONFIG_FLAG_BIN == (RETROFLAT_CONFIG_FLAG_BIN & flags) ) {
-      flag_buffer[1] = 'b';
-   }
-
-   debug_printf( 1, "opening config file %s with mode [%s]...",
-      g_retroflat_state->config_path, flag_buffer );
-
-   *config = fopen( g_retroflat_state->config_path, flag_buffer );
-   maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
-
-cleanup:
-#  elif defined( RETROFLAT_API_WIN16 )
-
-   /* == Win16 (.ini file) == */
-
-   /* TODO */
-
-#  elif defined( RETROFLAT_API_WIN32 )
-
-   /* == Win32 (Registry) == */
-
-   char key_path[RETROFLAT_PATH_MAX + 1] = "SOFTWARE\\";
-
-   /* TODO */
-   strncat( key_path, "RetroFlat", RETROFLAT_PATH_MAX );
-
-   /* TODO */
-   if( ERROR_SUCCESS != RegOpenKey(
-      HKEY_CURRENT_USER, 
-      key_path,
-      (HKEY*)config
-   ) ) {
-      retval = MERROR_FILE;
-   }
-
-#  else
-#     pragma message( "warning: config close not implemented" )
-#  endif
-
-   return retval;
-}
-
-/* === */
-
-void retroflat_config_close( RETROFLAT_CONFIG* config ) {
-
-#  if defined( RETROFLAT_CONFIG_USE_FILE )
-
-   debug_printf( 1, "closing config file..." );
-   fclose( *config );
-   *config = NULL;
-
-#  elif defined( RETROFLAT_API_WIN16 )
-
-   /* TODO */
-
-#  elif defined( RETROFLAT_API_WIN32 )
-
-   /* == Win32 (Registry) == */
-
-   /* TODO */
-
-#  else
-#     pragma message( "warning: config close not implemented" )
-#  endif
-
-}
-
-/* === */
-
-#ifdef RETROFLAT_CONFIG_USE_FILE
-
-/**
- * \param sect_match Pointer to size_t to hold strncmp() result.
- * \return Unmodified line if *any* section is found, with brackets stripped
- *         if sect_name is found.
- */
-static char* retroflat_config_tok_sect(
-   char* line, size_t line_sz, const char* sect_name, size_t* sect_match
-) {
-
-   /* Section check. */
-   if( '[' == line[0] ) {
-      *sect_match = strncmp( sect_name, &(line[1]), line_sz - 2 );
-      if( 0 == *sect_match ) {
-         /* TODO: Tokenize at closing bracket. */
-         line[line_sz - 1] = '\0';
-         debug_printf( 1, "found section: %s", &(line[1]) );
-      }
-      return line;
-   }
-
-   return NULL;
-}  
-
-#endif /* RETROFLAT_CONFIG_USE_FILE */
-
-/* === */
-
-size_t retroflat_config_write(
-   RETROFLAT_CONFIG* config,
-   const char* sect_name, const char* key_name, uint8_t buffer_type,
-   void* buffer, size_t buffer_sz_max
-) {
-   size_t retval = 0;
-
-   /* TODO */
-
-   return retval;
-}
-
-/* === */
-
-size_t retroflat_config_read(
-   RETROFLAT_CONFIG* config,
-   const char* sect_name, const char* key_name, uint8_t buffer_type,
-   void* buffer_out, size_t buffer_out_sz_max,
-   const void* default_out, size_t default_out_sz
-) {
-   size_t retval = 0;
-#  if defined( RETROFLAT_CONFIG_USE_FILE )
-   char line[RETROFLAT_CONFIG_LN_SZ_MAX + 1];
-   char* line_val = NULL;
-   size_t line_sz = 0;
-   size_t sect_match = 1;
-#  endif /* RETROFLAT_API_WIN32 */
-
-   /* TODO: Adjust this to use mfile! */
-
-#  if defined( RETROFLAT_CONFIG_USE_FILE )
-
-   /* == SDL / Allegro == */
-
-   while( fgets( line, RETROFLAT_CONFIG_LN_SZ_MAX, *config ) ) {
-      /* Size check. */
-      line_sz = strlen( line );
-      if( 1 >= line_sz || RETROFLAT_CONFIG_LN_SZ_MAX <= line_sz ) {
-         error_printf( "invalid line sz: " SIZE_T_FMT, line_sz );
-         continue;
-      }
-      
-      /* Strip off trailing newline. */
-      if( '\n' == line[line_sz - 1] || '\r' == line[line_sz - 1] ) {
-         debug_printf( 1, "stripping newline!" );
-         line_sz--;
-         line[line_sz] = '\0'; /* NULL goes after strlen() finishes! */
-      }
-
-      /* Section check. */
-      if(
-         retroflat_config_tok_sect( line, line_sz, sect_name, &sect_match )
-      ) {
-         continue;
-      }
-      
-      /* Split up key/value pair. */
-      line_val = strchr( line, '=' );
-      if( NULL == line_val || line_val == line ) {
-         error_printf( "invalid line: %s", line );
-         continue;
-      }
-
-      /* Terminate key. */
-      line_val[0] = '\0';
-      line_val++;
-
-      if( 0 == sect_match && 0 == strcmp( key_name, line ) ) {
-         debug_printf( 1, "found %s: %s", line, line_val );
-
-         switch( buffer_type ) {
-         case RETROFLAT_BUFFER_INT:
-            *((int*)buffer_out) = atoi( line_val );
-            goto cleanup;
-
-         case RETROFLAT_BUFFER_FLOAT:
-            *((float*)buffer_out) = atof( line_val );
-            goto cleanup;
-
-         case RETROFLAT_BUFFER_STRING:
-            strncpy( (char*)buffer_out, line_val, buffer_out_sz_max );
-            goto cleanup;
-
-         case RETROFLAT_BUFFER_BOOL:
-            /* TODO */
-            goto cleanup;
-         }
-      }
-   }
-
-cleanup:
-
-   fseek( *config, 0, SEEK_SET );
-
-#  elif defined( RETROFLAT_API_WIN16 )
-
-   /* == Win16 (.ini file) == */
-
-/* XXX
-   retval = GetPrivateProfileString(
-      sect_name, key_name, default_out, buffer_out, buffer_out_sz_max,
-      g_retroflat_state->config_path ); */
-
-#  elif defined( RETROFLAT_API_WIN32 )
-
-   /* == Win32 (Registry) == */
-
-   /* TODO */
-
-#  else
-#     pragma message( "warning: config read not implemented" )
-#  endif
-
-   return retval;
-}
 
 #elif !defined( RETROVDP_C ) /* End of RETROFLT_C */
 
