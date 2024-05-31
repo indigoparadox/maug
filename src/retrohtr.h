@@ -8,7 +8,9 @@
  * \file retrohtr.h
  */
 
-#define RETROHTR_FLAG_GUI_ACTIVE 1
+#define RETROHTR_TREE_FLAG_GUI_ACTIVE 1
+
+#define RETROHTR_NODE_FLAG_DIRTY 2
 
 #ifndef RETROHTR_RENDER_NODES_INIT_SZ
 #  define RETROHTR_RENDER_NODES_INIT_SZ 10
@@ -24,6 +26,7 @@
 #define RETROHTR_EDGE_INSIDE  4
 
 struct RETROHTR_RENDER_NODE {
+   uint8_t flags;
    /* TODO: Maybe get rid of these and replace them with MCSS_STYLE node? */
    ssize_t x;
    ssize_t y;
@@ -566,7 +569,8 @@ MERROR_RETVAL retrohtr_tree_gui(
 
    /* Create a GUI handler just for this tree. */
    if(
-      RETROHTR_FLAG_GUI_ACTIVE == (RETROHTR_FLAG_GUI_ACTIVE & tree->flags)
+      RETROHTR_TREE_FLAG_GUI_ACTIVE ==
+         (RETROHTR_TREE_FLAG_GUI_ACTIVE & tree->flags)
    ) {
       debug_printf( RETROHTR_TRACE_LVL, "tree GUI already active!" );
       goto cleanup;
@@ -588,7 +592,7 @@ MERROR_RETVAL retrohtr_tree_gui(
       effect_style );
    maug_cleanup_if_not_ok();
 
-   tree->flags |= RETROHTR_FLAG_GUI_ACTIVE;
+   tree->flags |= RETROHTR_TREE_FLAG_GUI_ACTIVE;
 
    debug_printf( RETROHTR_TRACE_LVL, "tree GUI initialized!" );
 
@@ -880,6 +884,10 @@ MERROR_RETVAL retrohtr_tree_size(
    } else if( mcss_prop_is_active_NOT_flag( effect_style.PADDING, AUTO ) ) {
       retrohtr_node( tree, node_idx )->h += effect_style.PADDING;
    }
+
+   debug_printf( RETROHTR_TRACE_LVL,
+      "setting node " SIZE_T_FMT " dirty...", node_idx );
+   retrohtr_node( tree, node_idx )->flags |= RETROHTR_NODE_FLAG_DIRTY;
 
 cleanup:
 
@@ -1239,6 +1247,10 @@ MERROR_RETVAL retrohtr_tree_pos(
          retrohtr_node( tree, node_idx )->h );
       retrogui_unlock( &(tree->gui) );
    }
+
+   debug_printf( RETROHTR_TRACE_LVL,
+      "setting node " SIZE_T_FMT " dirty...", node_idx );
+   retrohtr_node( tree, node_idx )->flags |= RETROHTR_NODE_FLAG_DIRTY;
  
 cleanup:
 
@@ -1271,79 +1283,109 @@ void retrohtr_tree_draw(
 
    /* TODO: Multi-pass, draw absolute pos afterwards. */
 
-   if( 0 <= node->tag ) {
-      /* Perform drawing. */
-      tag = mhtml_tag( parser, node->tag );
+   if( 0 > node->tag ) {
+      goto cleanup;
+   }
 
-      if( MHTML_TAG_TYPE_TEXT == tag->base.type ) {
-         maug_mlock( tag->TEXT.content, tag_content );
-         if( NULL == tag_content ) {
-            error_printf( "could not lock tag content!" );
-            return;
-         }
+   if( RETROHTR_NODE_FLAG_DIRTY != (RETROHTR_NODE_FLAG_DIRTY & node->flags) ) {
+      goto cleanup;
+   }
+
+   /* Perform drawing. */
+   tag = mhtml_tag( parser, node->tag );
+
+   if( MHTML_TAG_TYPE_TEXT == tag->base.type ) {
+      maug_mlock( tag->TEXT.content, tag_content );
+      if( NULL == tag_content ) {
+         error_printf( "could not lock tag content!" );
+         return;
+      }
 
 #ifdef RETROGXC_PRESENT
-         maug_cleanup_if_lt(
-            node->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
+      maug_cleanup_if_lt(
+         node->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
 
-         retrogxc_string(
-            NULL, node->fg, tag_content, 0, node->font_idx,
-            retrohtr_node_screen_x( tree, node_idx ),
-            retrohtr_node_screen_y( tree, node_idx ),
-            node->w, node->h, 0 );
+      retrogxc_string(
+         NULL, node->fg, tag_content, 0, node->font_idx,
+         retrohtr_node_screen_x( tree, node_idx ),
+         retrohtr_node_screen_y( tree, node_idx ),
+         node->w, node->h, 0 );
 #else
-         maug_cleanup_if_not_null( MAUG_MHANDLE, node->font_h, MERROR_GUI );
+      maug_cleanup_if_not_null( MAUG_MHANDLE, node->font_h, MERROR_GUI );
 
-         retrofont_string(
-            NULL, node->fg, tag_content, 0, node->font_h,
-            retrohtr_node_screen_x( tree, node_idx ),
-            retrohtr_node_screen_y( tree, node_idx ),
-            node->w, node->h, 0 );
+      retrofont_string(
+         NULL, node->fg, tag_content, 0, node->font_h,
+         retrohtr_node_screen_x( tree, node_idx ),
+         retrohtr_node_screen_y( tree, node_idx ),
+         node->w, node->h, 0 );
 #endif /* RETROGXC_PRESENT */
 
-         maug_munlock( tag->TEXT.content, tag_content );
+      maug_munlock( tag->TEXT.content, tag_content );
 
-      } else if( MHTML_TAG_TYPE_BODY == tag->base.type ) {
-         /* Draw body BG. */
-         if( RETROFLAT_COLOR_NULL != node->bg ) {
-            retroflat_rect(
-               NULL, node->bg,
-               retrohtr_node_screen_x( tree, node_idx ),
-               retrohtr_node_screen_y( tree, node_idx ),
-               retrohtr_node( tree, node_idx )->w,
-               retrohtr_node( tree, node_idx )->h,
-               RETROFLAT_FLAGS_FILL );
-         }
+   } else if( MHTML_TAG_TYPE_BODY == tag->base.type ) {
 
-      } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
-         /* Blit the image. */
-         
-         if( retroflat_bitmap_ok( &(retrohtr_node( tree, node_idx )->bitmap) ) ) {
-            retroflat_blit_bitmap(
-               NULL, &(retrohtr_node( tree, node_idx )->bitmap),
-               0, 0,
-               retrohtr_node_screen_x( tree, node_idx ),
-               retrohtr_node_screen_y( tree, node_idx ),
-               retroflat_bitmap_w( &(retrohtr_node( tree, node_idx )->bitmap) ),
-               retroflat_bitmap_h( &(retrohtr_node( tree, node_idx )->bitmap) )
-               /* retrohtr_node( tree, node_idx )->w,
-               retrohtr_node( tree, node_idx )->h */ );
-         }
+      debug_printf(
+         RETROHTR_TRACE_LVL, "drawing BODY node " SIZE_T_FMT "...", node_idx );
 
-      } else if( MHTML_TAG_TYPE_INPUT == tag->base.type ) {
-         /* TODO */
-
-      } else {
-         if( RETROFLAT_COLOR_NULL != node->bg ) {
-            retroflat_rect(
-               NULL, node->bg,
-               retrohtr_node_screen_x( tree, node_idx ),
-               retrohtr_node_screen_y( tree, node_idx ),
-               node->w, node->h,
-               RETROFLAT_FLAGS_FILL );
-         }
+      /* Draw body BG. */
+      if( RETROFLAT_COLOR_NULL != node->bg ) {
+         retroflat_rect(
+            NULL, node->bg,
+            retrohtr_node_screen_x( tree, node_idx ),
+            retrohtr_node_screen_y( tree, node_idx ),
+            retrohtr_node( tree, node_idx )->w,
+            retrohtr_node( tree, node_idx )->h,
+            RETROFLAT_FLAGS_FILL );
       }
+
+   } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
+      /* Blit the image. */
+      
+      if( !retroflat_bitmap_ok( &(retrohtr_node( tree, node_idx )->bitmap) ) ) {
+         goto cleanup;
+      }
+
+      debug_printf(
+         RETROHTR_TRACE_LVL, "drawing IMG node " SIZE_T_FMT "...", node_idx );
+
+      retroflat_blit_bitmap(
+         NULL, &(retrohtr_node( tree, node_idx )->bitmap),
+         0, 0,
+         retrohtr_node_screen_x( tree, node_idx ),
+         retrohtr_node_screen_y( tree, node_idx ),
+         retroflat_bitmap_w( &(retrohtr_node( tree, node_idx )->bitmap) ),
+         retroflat_bitmap_h( &(retrohtr_node( tree, node_idx )->bitmap) )
+         /* retrohtr_node( tree, node_idx )->w,
+         retrohtr_node( tree, node_idx )->h */ );
+
+   } else if( MHTML_TAG_TYPE_INPUT == tag->base.type ) {
+
+      debug_printf(
+         RETROHTR_TRACE_LVL, "setting tree GUI dirty..." );
+
+      tree->gui.flags |= RETROGUI_FLAGS_DIRTY;
+
+   } else {
+      if( RETROFLAT_COLOR_NULL == node->bg ) {
+         goto cleanup;
+      }
+
+      debug_printf(
+         RETROHTR_TRACE_LVL, "drawing %s node " SIZE_T_FMT "...",
+         gc_mhtml_tag_names[parser->tags[
+            retrohtr_node( tree, node_idx )->tag].base.type],
+         node_idx );
+
+      retroflat_rect(
+         NULL, node->bg,
+         retrohtr_node_screen_x( tree, node_idx ),
+         retrohtr_node_screen_y( tree, node_idx ),
+         node->w, node->h,
+         RETROFLAT_FLAGS_FILL );
    }
+
+
+   node->flags &= ~RETROHTR_NODE_FLAG_DIRTY;
 
 cleanup:
 
@@ -1360,6 +1402,58 @@ cleanup:
    retrohtr_tree_draw( parser, tree, node->first_child, d + 1 );
 
    retrohtr_tree_draw( parser, tree, node->next_sibling, d );
+
+   /* If this is the root redraw call, redraw GUI elements. */
+   if(
+      0  == d &&
+      RETROHTR_TREE_FLAG_GUI_ACTIVE ==
+         (tree->flags & RETROHTR_TREE_FLAG_GUI_ACTIVE)
+   ) {
+      retrogui_lock( &(tree->gui) );
+      retrogui_redraw_ctls( &(tree->gui) );
+      retrogui_unlock( &(tree->gui) );
+   }
+}
+
+RETROGUI_IDC retrohtr_tree_poll_ctls(
+   struct RETROHTR_RENDER_TREE* tree,
+   RETROFLAT_IN_KEY* input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   RETROGUI_IDC idc = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( retrohtr_tree_is_locked( tree ) );
+
+   if(
+      RETROHTR_TREE_FLAG_GUI_ACTIVE !=
+         (RETROHTR_TREE_FLAG_GUI_ACTIVE & tree->flags)
+   ) {
+      /* No GUI, so exit without even unlocking. */
+      return 0;
+   }
+
+   retrogui_lock( &(tree->gui) );
+
+   idc = retrogui_poll_ctls( &(tree->gui), input, input_evt );
+
+   if( 0 < idc ) {
+      debug_printf(
+         RETROHTR_TRACE_LVL, "setting node " SIZE_T_FMT " dirty...", idc );
+      retrohtr_node( tree, idc )->flags |= RETROHTR_NODE_FLAG_DIRTY;
+   }
+
+cleanup:
+
+   if( retrogui_is_locked( &(tree->gui) ) ) {
+      retrogui_unlock( &(tree->gui) );
+   }
+
+   if( MERROR_OK != retval ) {
+      idc = 0;
+   }
+
+   return idc;
 }
 
 void retrohtr_tree_dump(
@@ -1408,7 +1502,10 @@ void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
    /* TODO: Free node->font_h! */
 
    /* Free GUI if present. */
-   if( RETROHTR_FLAG_GUI_ACTIVE == (tree->flags & RETROHTR_FLAG_GUI_ACTIVE) ) {
+   if(
+      RETROHTR_TREE_FLAG_GUI_ACTIVE ==
+         (tree->flags & RETROHTR_TREE_FLAG_GUI_ACTIVE)
+   ) {
       retrogui_free( &(tree->gui) );
    }
 
