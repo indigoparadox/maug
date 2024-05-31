@@ -558,6 +558,44 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL retrohtr_tree_gui(
+   struct RETROHTR_RENDER_TREE* tree, struct MCSS_PARSER* styler,
+   struct MCSS_STYLE* effect_style
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Create a GUI handler just for this tree. */
+   if(
+      RETROHTR_FLAG_GUI_ACTIVE == (RETROHTR_FLAG_GUI_ACTIVE & tree->flags)
+   ) {
+      debug_printf( RETROHTR_TRACE_LVL, "tree GUI already active!" );
+      goto cleanup;
+   }
+
+   /* This means all GUI items will use the font from the first node
+      * loaded with a GUI item!
+      */
+   retval = retrogui_init( &(tree->gui) );
+   maug_cleanup_if_not_ok();
+
+   retval = retrohtr_load_font(
+      styler,
+#ifdef RETROGXC_PRESENT
+      &(tree->gui.font_idx),
+#else
+      &(tree->gui.font_h),
+#endif /* RETROGXC_PRESENT */
+      effect_style );
+   maug_cleanup_if_not_ok();
+
+   tree->flags |= RETROHTR_FLAG_GUI_ACTIVE;
+
+   debug_printf( RETROHTR_TRACE_LVL, "tree GUI initialized!" );
+
+cleanup:
+   return retval;
+}
+
 MERROR_RETVAL retrohtr_tree_size(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    struct MCSS_STYLE* prev_sibling_style,
@@ -573,6 +611,7 @@ MERROR_RETVAL retrohtr_tree_size(
    size_t this_line_w = 0;
    size_t this_line_h = 0;
    MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL ctl;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -660,61 +699,40 @@ MERROR_RETVAL retrohtr_tree_size(
       0 <= tag_idx &&
       MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type
    ) {
+      /* Push the control (for the client renderer to redraw later). */
 
-      /* Load the font for this node. */
-      retval = retrohtr_load_font(
-         &(parser->styler),
-#ifdef RETROGXC_PRESENT
-         &(retrohtr_node( tree, node_idx )->font_idx),
-#else
-         &(retrohtr_node( tree, node_idx )->font_h),
-#endif /* RETROGXC_PRESENT */
-         &effect_style );
-      maug_cleanup_if_not_ok();
+      retval = retrohtr_tree_gui( tree, &(parser->styler), &effect_style );
 
-      /* Create a GUI handler just for this tree. */
+      retrogui_lock( &(tree->gui) );
+
       if(
-         RETROHTR_FLAG_GUI_ACTIVE != (RETROHTR_FLAG_GUI_ACTIVE & tree->flags)
+         /* Use the same ID for the node and control it creates. */
+         MERROR_OK != retrogui_init_ctl(
+            &ctl, RETROGUI_CTL_TYPE_BUTTON, node_idx )
       ) {
-         /* This means all GUI items will use the font from the first node
-          * loaded with a GUI item!
-          */
-         retval = retrogui_init( &(tree->gui) );
-         maug_cleanup_if_not_ok();
-         retval = retrohtr_load_font(
-            &(parser->styler),
-#ifdef RETROGXC_PRESENT
-            &(tree->gui.font_idx),
-#else
-            &(tree->gui.font_h),
-#endif /* RETROGXC_PRESENT */
-            &effect_style );
-         maug_cleanup_if_not_ok();
-         tree->flags |= RETROHTR_FLAG_GUI_ACTIVE;
+         error_printf( "could not initialize control!" );
+         retrogui_unlock( &(tree->gui) );
+         goto cleanup;
       }
+      
+      ctl.base.x = retrohtr_node( tree, node_idx )->x;
+      ctl.base.y = retrohtr_node( tree, node_idx )->y;
+      ctl.base.w = 0;
+      ctl.base.h = 0;
+      strncpy( ctl.BUTTON.label,
+         mhtml_tag( parser,
+            retrohtr_node( tree, node_idx )->tag )->INPUT.value,
+         RETROGUI_BTN_LBL_SZ_MAX );
 
-      /* Get the size of the text-based GUI item. */
-#ifdef RETROGXC_PRESENT
-      retrogxc_string_sz(
-#else
-      retrofont_string_sz(
-#endif /* RETROGXC_PRESENT */
-         NULL,
-         mhtml_tag( parser, tag_idx )->INPUT.value,
-         mhtml_tag( parser, tag_idx )->INPUT.value_sz,
-#ifdef RETROGXC_PRESENT
-         tree->gui.font_idx,
-#else
-         tree->gui.font_h,
-#endif /* RETROGXC_PRESENT */
-         retrohtr_node_parent( tree, node_idx )->w,
-         retrohtr_node_parent( tree, node_idx )->h,
-         &(retrohtr_node( tree, node_idx )->w),
-         &(retrohtr_node( tree, node_idx )->h), 0 );
+      /* Grab determined size back from control. */
+      retrohtr_node( tree, node_idx )->w = ctl.base.w;
+      retrohtr_node( tree, node_idx )->h = ctl.base.h;
 
-      /* Add space for borders and stuff. (TODO: Add to retrogui!) */
-      retrohtr_node( tree, node_idx )->w += 8;
-      retrohtr_node( tree, node_idx )->h += 8;
+      debug_printf( RETROHTR_TRACE_LVL, "initialized control for INPUT..." );
+
+      retrogui_push_ctl( &(tree->gui), &ctl );
+
+      retrogui_unlock( &(tree->gui) );
 
    } else if(
       0 <= tag_idx &&
@@ -995,6 +1013,7 @@ MERROR_RETVAL retrohtr_tree_pos(
    ssize_t node_iter_idx = -1;
    ssize_t prev_sibling_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL* ctl = NULL;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -1123,8 +1142,8 @@ MERROR_RETVAL retrohtr_tree_pos(
       /* Center */
       retrohtr_node( tree, node_idx )->x =
          retrohtr_node_parent( tree, node_idx )->x +
-         (retrohtr_node_parent( tree, node_idx )->w / 2) -
-         (retrohtr_node( tree, node_idx )->w / 2);
+         (retrohtr_node_parent( tree, node_idx )->w >> 1) -
+         (retrohtr_node( tree, node_idx )->w >> 1);
 
    } else if( 
       0 <= retrohtr_node( tree, node_idx )->parent &&
@@ -1156,7 +1175,8 @@ MERROR_RETVAL retrohtr_tree_pos(
       RETROHTR_EDGE_UNKNOWN != retrohtr_node( tree, node_idx )->edge );
 
    if(
-      RETROHTR_EDGE_LEFT == (RETROHTR_EDGE_LEFT & retrohtr_node( tree, node_idx )->edge)
+      RETROHTR_EDGE_LEFT ==
+         (RETROHTR_EDGE_LEFT & retrohtr_node( tree, node_idx )->edge)
    ) {
       /* Try specific left padding first, then try general padding. */
       if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_LEFT, AUTO ) ) {
@@ -1167,9 +1187,11 @@ MERROR_RETVAL retrohtr_tree_pos(
    }
 
    if(
-      RETROHTR_EDGE_TOP == (RETROHTR_EDGE_TOP & retrohtr_node( tree, node_idx )->edge) &&
+      RETROHTR_EDGE_TOP ==
+         (RETROHTR_EDGE_TOP & retrohtr_node( tree, node_idx )->edge) &&
       /* Only apply padding to first node in line. The rest will pick it up. */
-      RETROHTR_EDGE_LEFT == (RETROHTR_EDGE_LEFT & retrohtr_node( tree, node_idx )->edge)
+      RETROHTR_EDGE_LEFT ==
+         (RETROHTR_EDGE_LEFT & retrohtr_node( tree, node_idx )->edge)
    ) {
       /* Try specific top padding first, then try general padding. */
       if( mcss_prop_is_active_NOT_flag( parent_style->PADDING_TOP, AUTO ) ) {
@@ -1205,6 +1227,18 @@ MERROR_RETVAL retrohtr_tree_pos(
 
       node_iter_idx = retrohtr_node( tree, node_iter_idx )->next_sibling;
    }
+
+   if( MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type ) {
+      /* Feed the position back to the GUI control created during tree_size. */
+      retrogui_lock( &(tree->gui) );
+      ctl = retrogui_get_ctl_by_idc( &(tree->gui), node_idx );
+      retrogui_pos_ctl( &(tree->gui), ctl,
+         retrohtr_node( tree, node_idx )->x,
+         retrohtr_node( tree, node_idx )->y,
+         retrohtr_node( tree, node_idx )->w,
+         retrohtr_node( tree, node_idx )->h );
+      retrogui_unlock( &(tree->gui) );
+   }
  
 cleanup:
 
@@ -1227,7 +1261,6 @@ void retrohtr_tree_draw(
    char* tag_content = NULL;
    union MHTML_TAG* tag = NULL;
    struct RETROHTR_RENDER_NODE* node = NULL;
-   union RETROGUI_CTL ctl;
    MERROR_RETVAL retval = MERROR_OK;
 
    node = retrohtr_node( tree, node_idx );
@@ -1298,33 +1331,7 @@ void retrohtr_tree_draw(
          }
 
       } else if( MHTML_TAG_TYPE_INPUT == tag->base.type ) {
-         /* Push the control (for the client renderer to redraw later). */
-
-         /* TODO: This shouldn't be in the drawing callback! */
-
-         retrogui_lock( &(tree->gui) );
-
-         if(
-            /* Use the same ID for the node and control it creates. */
-            MERROR_OK != retrogui_init_ctl(
-               &ctl, RETROGUI_CTL_TYPE_BUTTON, node_idx )
-         ) {
-            retrogui_unlock( &(tree->gui) );
-            goto cleanup;
-         }
-         
-         ctl.base.x = retrohtr_node( tree, node_idx )->x;
-         ctl.base.y = retrohtr_node( tree, node_idx )->y;
-         ctl.base.w = retrohtr_node( tree, node_idx )->w;
-         ctl.base.h = retrohtr_node( tree, node_idx )->h;
-         strncpy( ctl.BUTTON.label,
-            mhtml_tag( parser,
-               retrohtr_node( tree, node_idx )->tag )->INPUT.value,
-            RETROGUI_BTN_LBL_SZ_MAX );
-
-         retrogui_push_ctl( &(tree->gui), &ctl );
-
-         retrogui_unlock( &(tree->gui) );
+         /* TODO */
 
       } else {
          if( RETROFLAT_COLOR_NULL != node->bg ) {

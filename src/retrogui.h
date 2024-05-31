@@ -35,6 +35,14 @@
 #  define RETROGUI_BTN_LBL_SZ_MAX 64
 #endif /* !RETROGUI_BTN_LBL_SZ_MAX */
 
+#ifndef RETROGUI_BTN_LBL_PADDED_X
+#  define RETROGUI_BTN_LBL_PADDED_X 8
+#endif /* !RETROGUI_BTN_LBL_PADDED_X */
+
+#ifndef RETROGUI_BTN_LBL_PADDED_Y
+#  define RETROGUI_BTN_LBL_PADDED_Y 8
+#endif /* !RETROGUI_BTN_LBL_PADDED_Y */
+
 #ifndef RETROGUI_CTL_TEXT_BLINK_FRAMES
 #  define RETROGUI_CTL_TEXT_BLINK_FRAMES 15
 #endif /* !RETROGUI_CTL_TEXT_BLINK_FRAMES */
@@ -161,6 +169,14 @@ RETROGUI_IDC retrogui_poll_ctls(
 
 void retrogui_redraw_ctls( struct RETROGUI* gui );
 
+MERROR_RETVAL retrogui_sz_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h );
+
+MERROR_RETVAL retrogui_pos_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h );
+
 MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl );
 
@@ -219,6 +235,20 @@ static MERROR_RETVAL retrogui_push_NONE( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_GUI;
   
    return retval;
+}
+
+static MERROR_RETVAL retrogui_sz_NONE(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   return MERROR_OK;
+}
+
+static MERROR_RETVAL retrogui_pos_NONE(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   return MERROR_OK;
 }
 
 static void retrogui_free_NONE( union RETROGUI_CTL* ctl ) {
@@ -476,6 +506,24 @@ cleanup:
    return retval;
 }
 
+static MERROR_RETVAL retrogui_sz_LISTBOX(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_LISTBOX(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
 static void retrogui_free_LISTBOX( union RETROGUI_CTL* ctl ) {
    assert( NULL == ctl->LISTBOX.list );
    maug_mfree( ctl->LISTBOX.list_h );
@@ -570,32 +618,36 @@ static void retrogui_redraw_BUTTON(
          ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
    }
       
+   /* Grab the string size and use it to center the text in the control. */
 #ifdef RETROGXC_PRESENT
    retrogxc_string_sz(
-      gui->draw_bmp, ctl->BUTTON.label, 0, gui->font_idx,
-      /* TODO: Pad max client area. */
-      ctl->base.w, ctl->base.h, &w, &h, 0 );
-
-   retrogxc_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0, gui->font_idx,
-      ctl->base.x + ((ctl->base.w / 2) - (w / 2)) + text_offset,
-      ctl->base.y + ((ctl->base.h / 2) - (h / 2)) + text_offset,
-      /* TODO: Pad max client area. */
-      ctl->base.w, ctl->base.h, 0 );
 #else
    retrofont_string_sz(
-      gui->draw_bmp, ctl->BUTTON.label, 0, gui->font_h,
+#endif /* RETROGXC_PRESENT */
+      gui->draw_bmp, ctl->BUTTON.label, 0,
+#ifdef RETROGXC_PRESENT
+      gui->font_idx,
+#else
+      gui->font_h,
+#endif /* RETROGXC_PRESENT */
       /* TODO: Pad max client area. */
       ctl->base.w, ctl->base.h, &w, &h, 0 );
 
+#ifdef RETROGXC_PRESENT
+   retrogxc_string(
+#else
    retrofont_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0, gui->font_h,
-      ctl->base.x + ((ctl->base.w / 2) - (w / 2)) + text_offset,
-      ctl->base.y + ((ctl->base.h / 2) - (h / 2)) + text_offset,
+#endif /* RETROGXC_PRESENT */
+      gui->draw_bmp, ctl->base.fg_color, ctl->BUTTON.label, 0,
+#ifdef RETROGXC_PRESENT
+      gui->font_idx,
+#else
+      gui->font_h,
+#endif /* RETROGXC_PRESENT */
+      ctl->base.x + ((ctl->base.w >> 1) - (w >> 1)) + text_offset,
+      ctl->base.y + ((ctl->base.h >> 1) - (h >> 1)) + text_offset,
       /* TODO: Pad max client area. */
       ctl->base.w, ctl->base.h, 0 );
-#endif /* RETROGXC_PRESENT */
-
 
 }
 
@@ -620,6 +672,60 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
 cleanup:
 
 #  endif
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_sz_BUTTON(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Get the size of the text-based GUI item. */
+#ifdef RETROGXC_PRESENT
+   retrogxc_string_sz(
+#else
+   retrofont_string_sz(
+#endif /* RETROGXC_PRESENT */
+      NULL,
+      ctl->BUTTON.label,
+      0,
+#ifdef RETROGXC_PRESENT
+      gui->font_idx,
+#else
+      gui->font_h,
+#endif /* RETROGXC_PRESENT */
+      max_w - 8,
+      max_h - 8,
+      p_w,
+      p_h, 0 );
+
+   /* Add space for borders and stuff. */
+   *p_w += RETROGUI_BTN_LBL_PADDED_X;
+   *p_h += RETROGUI_BTN_LBL_PADDED_Y;
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_BUTTON(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROGUI_NATIVE_WIN )
+   /* TODO */
+#  else
+   ctl->base.x = x;
+   ctl->base.y = y;
+   if( 0 < w ) {
+      ctl->base.w = w;
+   }
+   if( 0 < h ) {
+      ctl->base.h = h;
+   }
+#  endif /* RETROGUI_NATIVE_WIN */
 
    return retval;
 }
@@ -844,6 +950,24 @@ cleanup:
    return retval;
 }
 
+static MERROR_RETVAL retrogui_sz_TEXTBOX(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_TEXTBOX(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
 static void retrogui_free_TEXTBOX( union RETROGUI_CTL* ctl ) {
    if( NULL != ctl->TEXTBOX.text_h ) {
       maug_mfree( ctl->TEXTBOX.text_h );
@@ -870,6 +994,11 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc(
    size_t i = 0;
    union RETROGUI_CTL* ctl = NULL;
 
+   if( !retrogui_is_locked( gui ) ) {
+      error_printf( "GUI is not locked!" );
+      goto cleanup;
+   }
+
    for( i = 0 ; gui->ctls_sz > i ; i++ ) {
       if( idc == gui->ctls[i].base.idc ) {
          ctl = &(gui->ctls[i]);
@@ -881,6 +1010,8 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc(
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
          "Could not find GUI item: " SIZE_T_FMT, idc );
    }
+
+cleanup:
 
    return ctl;
 }
@@ -1038,10 +1169,63 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
    }
 }
 
+MERROR_RETVAL retrogui_sz_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   #define RETROGUI_CTL_TABLE_SZ( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         /* Mark dirty first so redraw can unmark it for animation! */ \
+         retval = retrogui_sz_ ## c_name( gui, ctl, p_w, p_h, max_w, max_h ); \
+         maug_cleanup_if_not_ok();
+   
+   if( 0 ) {
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_SZ )
+   }
+
+   debug_printf( 1,
+      "sized control " SIZE_T_FMT " at " SIZE_T_FMT "x" SIZE_T_FMT "...",
+      ctl->base.idc, ctl->base.w, ctl->base.h );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL retrogui_pos_ctl(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   #define RETROGUI_CTL_TABLE_POS( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         /* Mark dirty first so redraw can unmark it for animation! */ \
+         retval = retrogui_pos_ ## c_name( gui, ctl, x, y, w, h ); \
+         maug_cleanup_if_not_ok();
+   
+   if( 0 ) {
+   RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_POS )
+   }
+
+   debug_printf( 1,
+      "moved control " SIZE_T_FMT " to " SIZE_T_FMT "x" SIZE_T_FMT "...",
+      ctl->base.idc, ctl->base.x, ctl->base.y );
+
+cleanup:
+
+   return retval;
+
+}
+
 MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   assert( 0 < ctl->base.idc );
 
 #ifdef RETROGXC_PRESENT
    if( 0 > gui->font_idx ) {
@@ -1063,7 +1247,7 @@ MERROR_RETVAL retrogui_push_ctl(
 
    if( RETROFLAT_COLOR_NULL == ctl->base.bg_color ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Invalid background color specified for control " SIZE_T_FMT "!",
+         "invalid background color specified for control " SIZE_T_FMT "!",
          ctl->base.idc );
       retval = MERROR_GUI;
       goto cleanup;
@@ -1072,11 +1256,24 @@ MERROR_RETVAL retrogui_push_ctl(
 
    if( RETROFLAT_COLOR_NULL == ctl->base.fg_color ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Invalid foreground color specified for control " SIZE_T_FMT "!",
+         "invalid foreground color specified for control " SIZE_T_FMT "!",
          ctl->base.idc );
       retval = MERROR_GUI;
       goto cleanup;
    }
+
+   /* Ensure physical size of control. */
+
+   if( 0 == ctl->base.w || 0 == ctl->base.h ) {
+      debug_printf( RETROGUI_TRACE_LVL,
+         "determining size for new %s control " SIZE_T_FMT "...",
+         gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc );
+      retval = retrogui_sz_ctl(
+         gui, ctl, &(ctl->base.w), &(ctl->base.h), 0, 0 );
+      maug_cleanup_if_not_ok();
+   }
+
+   /* Perform the actual push. */
 
    debug_printf( RETROGUI_TRACE_LVL,
       "pushing %s " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
