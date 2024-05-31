@@ -1241,8 +1241,8 @@ MERROR_RETVAL retrohtr_tree_pos(
       retrogui_lock( &(tree->gui) );
       ctl = retrogui_get_ctl_by_idc( &(tree->gui), node_idx );
       retrogui_pos_ctl( &(tree->gui), ctl,
-         retrohtr_node( tree, node_idx )->x,
-         retrohtr_node( tree, node_idx )->y,
+         retrohtr_node_screen_x( tree, node_idx ),
+         retrohtr_node_screen_y( tree, node_idx ),
          retrohtr_node( tree, node_idx )->w,
          retrohtr_node( tree, node_idx )->h );
       retrogui_unlock( &(tree->gui) );
@@ -1383,7 +1383,6 @@ void retrohtr_tree_draw(
          node->w, node->h,
          RETROFLAT_FLAGS_FILL );
    }
-
 
    node->flags &= ~RETROHTR_NODE_FLAG_DIRTY;
 
