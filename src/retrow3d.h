@@ -2,28 +2,42 @@
 #ifndef RETROW3D_H
 #define RETROW3D_H
 
+#ifndef RETROWIN3D_TRACE_LVL
+#  define RETROWIN3D_TRACE_LVL 0
+#endif /* !RETROWIN3D_TRACE_LVL */
+
 #define RETROWIN3D_FLAG_INIT_GUI          0x01
+
 #define RETROWIN3D_FLAG_INIT_BMP          0x02
 
 struct RETROWIN3D {
    uint8_t flags;
+   size_t idc;
    size_t w;
    size_t h;
    struct RETROGUI gui;
    struct RETROFLAT_BITMAP gui_bmp;
 };
 
-MERROR_RETVAL retro3dw_redraw( struct RETROWIN3D* win );
+MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win );
+
+MERROR_RETVAL retro3dw_redraw_win_stack(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz );
+
+RETROGUI_IDC retro3dw_poll_win( 
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, RETROGUI_IDC idc,
+   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
 void retro3dw_free( struct RETROWIN3D* win );
 
-MERROR_RETVAL retro3dw_init(
-   struct RETROWIN3D* win, const char* font_filename,
-   size_t x, size_t y, size_t w, size_t h );
+MERROR_RETVAL retro3dw_push_win(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz,
+   size_t idc, const char* font_filename,
+   size_t x, size_t y, size_t w, size_t h, uint8_t flags );
 
 #ifdef RETRO3DW_C
 
-MERROR_RETVAL retro3dw_redraw( struct RETROWIN3D* win ) {
+MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    float aspect_ratio = 0,
       screen_x = 0,
       screen_y = 0,
@@ -106,6 +120,73 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL retro3dw_redraw_win_stack(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   for( i = 0 ; win_stack_sz > i ; i++ ) {
+      if(
+         RETROWIN3D_FLAG_INIT_GUI !=
+            (RETROWIN3D_FLAG_INIT_GUI & win_stack[i].flags)
+      ) {
+         continue;
+      }
+
+      debug_printf( RETROWIN3D_TRACE_LVL, "redrawing window: " SIZE_T_FMT,
+         win_stack[i].idc );
+
+      retrogui_lock( &(win_stack[i].gui) );
+      retval = retro3dw_redraw_win( &(win_stack[i]) );
+      retrogui_unlock( &(win_stack[i].gui) );
+      maug_cleanup_if_not_ok();
+   }
+
+cleanup:
+
+   return retval;
+}
+
+RETROGUI_IDC retro3dw_poll_win( 
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, RETROGUI_IDC idc,
+   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
+) {
+   size_t i = 0;
+   RETROGUI_IDC idc_out = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   for( i = 0 ; win_stack_sz > i ; i++ ) {
+      if(
+         idc != win_stack[i].idc ||
+         RETROWIN3D_FLAG_INIT_GUI !=
+            (RETROWIN3D_FLAG_INIT_GUI & win_stack[i].flags)
+      ) {
+         continue;
+      }
+
+      debug_printf( RETROWIN3D_TRACE_LVL, "polling window: " SIZE_T_FMT,
+         win_stack[i].idc );
+
+      retrogui_lock( &(win_stack[i].gui) );
+
+      idc = retrogui_poll_ctls( &(win_stack[i].gui), p_input, input_evt );
+
+      retrogui_unlock( &(win_stack[i].gui) );
+
+      break;
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      error_printf( "error redrawing windows!" );
+      idc_out = 0;
+   }
+
+   return idc_out;
+}
+
 void retro3dw_free( struct RETROWIN3D* win ) {
 
 #ifndef RETROGXC_PRESENT
@@ -123,11 +204,13 @@ void retro3dw_free( struct RETROWIN3D* win ) {
    }
 }
 
-MERROR_RETVAL retro3dw_init(
-   struct RETROWIN3D* win, const char* font_filename,
-   size_t x, size_t y, size_t w, size_t h
+MERROR_RETVAL retro3dw_push_win(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz,
+   size_t idc, const char* font_filename,
+   size_t x, size_t y, size_t w, size_t h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   struct RETROWIN3D* win = &(win_stack[0]);
 
    /* TODO: Implement background image. */
 
@@ -151,6 +234,13 @@ MERROR_RETVAL retro3dw_init(
    win->h = h;
    win->gui.x = x;
    win->gui.y = y;
+   win->idc = idc;
+   win->flags |= flags;
+
+   debug_printf( RETROWIN3D_TRACE_LVL,
+      "pushed window: " SIZE_T_FMT ": " SIZE_T_FMT "x" SIZE_T_FMT
+      " @ " SIZE_T_FMT ", " SIZE_T_FMT,
+      win->idc, win->w, win->h, win->gui.x, win->gui.y );
 
    if( w != h ) {
       error_printf(
