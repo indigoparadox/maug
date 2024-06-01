@@ -70,6 +70,40 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
    }
 }
 
+static size_t retrofont_sz_from_filename( const char* font_name ) {
+   const char* p_c = NULL;
+   size_t glyph_h = 0;
+   size_t i = 0;
+   char glyph_h_buf[10];
+
+   maug_mzero( glyph_h_buf, 10 );
+
+   p_c = strrchr( font_name, '.' );
+   while( p_c - 1 > font_name ) {
+      /* Start at the char before the '.' and work backwords until a '-'. */
+      p_c--;
+      if( '-' == *p_c ) {
+         break;
+      }
+
+      /* TODO: Break if not a digit! */
+
+      /* Shift existing numbers up by one. */
+      for( i = 9 ; 0 < i ; i-- ) {
+         glyph_h_buf[i] = glyph_h_buf[i - 1];
+      }
+
+      /* Add the most recent number to the beginning. */
+      glyph_h_buf[0] = *p_c;
+   }
+
+   glyph_h = atoi( glyph_h_buf );
+
+   debug_printf( 1, "detected glyph height: " SIZE_T_FMT, glyph_h );
+
+   return glyph_h;
+}
+
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count
@@ -85,9 +119,20 @@ MERROR_RETVAL retrofont_load(
    uint8_t glyph_w_bytes = 0;
    uint8_t glyph_w = 0;
 
+   maug_mzero( &font_file, sizeof( mfile_t ) );
+
    /* TODO: Font loading seems to be very slow on a 486. This needs
     *       investigation.
     */
+
+   if( 0 == glyph_h ) {
+      glyph_h = retrofont_sz_from_filename( font_name );
+   }
+   if( 0 == glyph_h ) {
+      error_printf( "unable to determine font height!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
 
    /* Try to separate the string into index:glyph bytes.  */
    #define retrofont_split_glyph_line( line, line_bytes ) \

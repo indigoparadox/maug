@@ -546,10 +546,10 @@ static MERROR_RETVAL retrohtr_load_font(
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
    *font_idx_p =
-      retrogxc_load_font( &(str_table[effect_style->FONT_FAMILY]), 8, 33, 93 );
+      retrogxc_load_font( &(str_table[effect_style->FONT_FAMILY]), 0, 33, 93 );
 #else
    retval = retrofont_load(
-      &(str_table[effect_style->FONT_FAMILY]), font_h_p, 8, 33, 93 );
+      &(str_table[effect_style->FONT_FAMILY]), font_h_p, 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:

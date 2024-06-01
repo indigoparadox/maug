@@ -226,8 +226,8 @@ MERROR_RETVAL retro3dw_push_win(
 
    win->flags |= RETROWIN3D_FLAG_INIT_GUI;
 
-   /* TODO: Parse font properties from filename. */
-   retval = retrofont_load( font_filename, &(win->gui.font_h), 8, 33, 93 );
+   /* Parse font height from filename and only load printable glyphs. */
+   retval = retrofont_load( font_filename, &(win->gui.font_h), 0, 33, 93 );
    maug_cleanup_if_not_ok();
 
    win->w = w;
