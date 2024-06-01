@@ -134,6 +134,8 @@ typedef void (*retrogui_xy_cb)( size_t* x, size_t* y, void* data );
 
 struct RETROGUI {
    uint8_t flags;
+   size_t x;
+   size_t y;
    RETROGUI_IDC idc_prev;
    MAUG_MHANDLE ctls_h;
    union RETROGUI_CTL* ctls;
@@ -141,8 +143,6 @@ struct RETROGUI {
    size_t ctls_sz_max;
    RETROGUI_IDC focus;
    struct RETROFLAT_BITMAP* draw_bmp;
-   retrogui_xy_cb draw_xy;
-   void* draw_xy_data;
 #ifdef RETROGXC_PRESENT
    ssize_t font_idx;
 #else
@@ -1079,10 +1079,6 @@ RETROGUI_IDC retrogui_poll_ctls(
 
       mouse_x = input_evt->mouse_x;
       mouse_y = input_evt->mouse_y;
-
-      if( NULL != gui->draw_xy ) {
-         gui->draw_xy( &mouse_x, &mouse_y, gui->draw_xy_data );
-      }
 
       for( i = 0 ; gui->ctls_sz > i ; i++ ) {
          if(
