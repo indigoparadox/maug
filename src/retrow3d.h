@@ -13,50 +13,49 @@ struct RETROWIN3D {
    struct RETROFLAT_BITMAP gui_bmp;
 };
 
+MERROR_RETVAL retro3dw_redraw( struct RETROWIN3D* win );
+
+void retro3dw_free( struct RETROWIN3D* win );
+
+MERROR_RETVAL retro3dw_init(
+   struct RETROWIN3D* win, const char* font_filename,
+   size_t x, size_t y, size_t w, size_t h );
+
 #ifdef RETRO3DW_C
 
-void retro3dw_redraw( struct RETROWIN3D* win ) {
+MERROR_RETVAL retro3dw_redraw( struct RETROWIN3D* win ) {
    float aspect_ratio = 0,
       screen_x = 0,
       screen_y = 0,
       gui_w_f = 0,
       gui_h_f = 0;
-
-   /* TODO: Drawing everything onto one big texture seems to fail under win32,
-    *       leaving us with a big, opaque poly with no texture.
-    */
+   MERROR_RETVAL retval = MERROR_OK;
 
    assert( 0 < win->gui_bmp.tex.id );
 
+    /* Prepare projection to draw the overlay on the top of the screen.
+     * Do this before any possible failure, so that the retroglu_pop_overlay()
+     * in cleanup: is always needed!
+     */
+   retroglu_push_overlay(
+      win->gui.x, win->gui.y, screen_x, screen_y, aspect_ratio );
+   retval = retroglu_check_errors( "overlay push" );
+   maug_cleanup_if_not_ok();
+
+   retroglu_whf( win->w, win->h, gui_w_f, gui_h_f, aspect_ratio );
+
    retroflat_draw_lock( &(win->gui_bmp) );
+   maug_cleanup_if_null_lock( uint8_t*, win->gui_bmp.tex.bytes );
 
-   assert( NULL != win->gui_bmp.tex.bytes );
-
+   /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui.draw_bmp = &(win->gui_bmp);
    retrogui_redraw_ctls( &(win->gui) );
 
    /* Set a white background for the overlay poly. */
    glColor3fv( RETROGLU_COLOR_WHITE );
-   if( MERROR_OK != retroglu_check_errors( "overlay color" ) ) {
-      goto cleanup;
-   }
+   retval = retroglu_check_errors( "overlay color" );
+   maug_cleanup_if_not_ok();
 
-   /*
-   memset( win->gui_bmp.tex.bytes, 0xff, win->gui_bmp.w * win->gui_bmp.h * 4 );
-   memset( win->gui_bmp.tex.bytes, 0x00, win->gui_bmp.w * (win->gui_bmp.h / 2) * 4 );
-   */
-   /* retroflat_px( &(win->gui_bmp), RETROFLAT_COLOR_RED, 10, 10, 0 ); */
-
-   assert( NULL != win->gui_bmp.tex.bytes );
-
-   /* Prepare projection to draw the overlay on the top of the screen. */
-   retroglu_push_overlay( 0, 0, screen_x, screen_y, aspect_ratio );
-   if( MERROR_OK != retroglu_check_errors( "overlay push" ) ) {
-      goto cleanup;
-   }
-   retroglu_whf( win->w, win->h, gui_w_f, gui_h_f, aspect_ratio );
-
-/* #ifdef RETROGLU_NO_TEXTURES */
    /* debug_printf( 1, "overlay texture: %d x %d (%p)",
       win->gui_bmp.tex.w, win->gui_bmp.tex.h,
       win->gui_bmp.tex.bytes ); */
@@ -64,53 +63,47 @@ void retro3dw_redraw( struct RETROWIN3D* win ) {
       win->gui_bmp.tex.w, win->gui_bmp.tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE,
       win->gui_bmp.tex.bytes );
-/* #else
-   glBindTexture( GL_TEXTURE_2D, win->gui_bmp.tex.id );
-#endif */ /* RETROGLU_NO_TEXTURES */
 
-   if( MERROR_OK != retroglu_check_errors( "overlay texture" ) ) {
-      goto cleanup;
-   }
+   retval = retroglu_check_errors( "overlay texture" );
+   maug_cleanup_if_not_ok();
 
    /* Make the background transparency work. */
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
-   /* TODO: Break up overlay into multiple triangles with offset textures. */
+   /* Break up overlay into multiple triangles with offset textures. */
 
    glBegin( GL_TRIANGLES );
-   glTexCoord2f( 0, 0 );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   glTexCoord2f( 0, 1 );
-   glVertex3f( screen_x,            screen_y - gui_h_f, RETROFLAT_GL_Z );
-   glTexCoord2f( 1, 1 );
-   glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
 
-   glTexCoord2f( 1, 1 );
-   glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
-   glTexCoord2f( 1, 0 );
-   glVertex3f( screen_x + gui_w_f, screen_y,            RETROFLAT_GL_Z );
-   glTexCoord2f( 0, 0 );
-   glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glTexCoord2f( 0, 0 );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+      glTexCoord2f( 0, 1 );
+      glVertex3f( screen_x,            screen_y - gui_h_f, RETROFLAT_GL_Z );
+      glTexCoord2f( 1, 1 );
+      glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
+
+      glTexCoord2f( 1, 1 );
+      glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
+      glTexCoord2f( 1, 0 );
+      glVertex3f( screen_x + gui_w_f, screen_y,            RETROFLAT_GL_Z );
+      glTexCoord2f( 0, 0 );
+      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
+   
    glEnd();
 
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-      0, 0, 0,
+   /* Clear texture after drawing. */
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, NULL ); 
 
 cleanup:
 
+   /* This can be called even if not needed. */
    retroflat_draw_release( &(win->gui_bmp) );
 
-#if 0
-#ifndef RETROGLU_NO_TEXTURES
-   /* Reset texture so overlay isn't drawn on subsequent polys. */
-   glBindTexture( GL_TEXTURE_2D, 0 );
-#endif /* !RETROGLU_NO_TEXTURES */
-#endif
-
    retroglu_pop_overlay();
+
+   return retval;
 }
 
 void retro3dw_free( struct RETROWIN3D* win ) {
@@ -135,6 +128,8 @@ MERROR_RETVAL retro3dw_init(
    size_t x, size_t y, size_t w, size_t h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO: Implement background image. */
 
    maug_mzero( win, sizeof( struct RETROWIN3D ) );
 
