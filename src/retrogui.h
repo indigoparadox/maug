@@ -1077,8 +1077,8 @@ RETROGUI_IDC retrogui_poll_ctls(
       /* Remove all focus before testing if a new control has focus. */
       gui->focus = RETROGUI_IDC_NONE;
 
-      mouse_x = input_evt->mouse_x;
-      mouse_y = input_evt->mouse_y;
+      mouse_x = input_evt->mouse_x - gui->x;
+      mouse_y = input_evt->mouse_y - gui->y;
 
       for( i = 0 ; gui->ctls_sz > i ; i++ ) {
          if(
