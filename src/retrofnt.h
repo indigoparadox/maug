@@ -264,6 +264,8 @@ void retrofont_blit_glyph(
    uint8_t* glyph = retrofont_glyph_at( font, c );
    int16_t x_iter, y_iter;
 
+   debug_printf( RETROFONT_TRACE_LVL, "blit glyph: %c", c );
+
    for( y_iter = 0 ; font->glyph_h > y_iter ; y_iter++ ) {
       for( x_iter = 0 ; font->glyph_w > x_iter ; x_iter++ ) {
          if( 
@@ -302,14 +304,37 @@ void retrofont_string(
       goto cleanup;
    }
 
+   /* TODO: Stop at max_w/max_h */
+
    for( i = 0 ; str_sz > i ; i++ ) {
       /* Terminate prematurely at null. */
       if( '\0' == str[i] ) {
          break;
       }
 
+      /* Handle forced newline. */
+      if( '\r' == str[i] || '\n' == str[i] ) {
+         x_iter = x;
+         y_iter += font->glyph_h;
+         debug_printf(
+            RETROFONT_TRACE_LVL,
+            "newline: " SIZE_T_FMT ", " SIZE_T_FMT, x_iter, y_iter );
+         continue;
+      }
+
+      /* Filter out characters not present in this font. */
+      if(
+         ' ' != str[i] && (
+            str[i] < font->first_glyph ||
+            str[i] >= font->first_glyph + font->glyphs_count
+         )
+      ) {
+         error_printf( "invalid character: 0x%02x", str[i] );
+         continue;
+      }
+
       /* TODO: More dynamic way to determine space character? */
-      if( 32 != str[i] ) {
+      if( ' ' != str[i] ) {
          retrofont_blit_glyph(
             target, color, str[i], font, x_iter, y_iter, flags );
       }
@@ -355,6 +380,13 @@ MERROR_RETVAL retrofont_string_sz(
       /* Terminate prematurely at null. */
       if( '\0' == str[i] ) {
          break;
+      }
+
+      /* Handle forced newline. */
+      if( '\r' == str[i] || '\n' == str[i] ) {
+         x_iter = 0;
+         *out_h_p += font->glyph_h;
+         continue;
       }
 
       x_iter += font->glyph_w;
