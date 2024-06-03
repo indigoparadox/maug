@@ -1767,6 +1767,16 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_7		   '7'
 #  define RETROFLAT_KEY_8		   '8'
 #  define RETROFLAT_KEY_9		   '9'
+/* TODO */
+#  define RETROFLAT_KEY_BRACKETL '['
+/* TODO */
+#  define RETROFLAT_KEY_BRACKETR ']'
+/* TODO */
+#  define RETROFLAT_KEY_BACKSLASH   '\\'
+/* TODO */
+#  define RETROFLAT_KEY_QUOTE    '\''
+/* TODO */
+#  define RETROFLAT_KEY_EQUALS    '='
 
 #elif defined( RETROFLAT_API_PC_BIOS )
 
@@ -2900,6 +2910,9 @@ retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
    if( NULL != g_retroflat_state->loop_iter ) {
       g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+   }
+   if( NULL != g_retroflat_state->frame_iter ) {
+      g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
    }
 }
 
@@ -4293,6 +4306,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    glutIdleFunc( retroflat_glut_idle );
    glutDisplayFunc( retroflat_glut_display );
    glutKeyboardFunc( retroflat_glut_key );
+
+   /* TODO: Handle mouse input in GLUT. */
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
