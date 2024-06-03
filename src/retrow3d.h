@@ -170,7 +170,7 @@ RETROGUI_IDC retro3dw_poll_win(
 
       retrogui_lock( &(win_stack[i].gui) );
 
-      idc = retrogui_poll_ctls( &(win_stack[i].gui), p_input, input_evt );
+      idc_out = retrogui_poll_ctls( &(win_stack[i].gui), p_input, input_evt );
 
       retrogui_unlock( &(win_stack[i].gui) );
 
