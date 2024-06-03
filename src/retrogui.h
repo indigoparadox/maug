@@ -60,6 +60,28 @@
 
 #define retrogui_is_locked( gui ) (NULL != (gui)->ctls)
 
+#define retrogui_copy_label( ctl, ctl_type ) \
+   size_t label_sz = 0; \
+   char* label_tmp = NULL; \
+   \
+   /* Sanity checking. */ \
+   assert( NULL != ctl->ctl_type.label ); \
+   label_sz = strlen( ctl->ctl_type.label ); \
+   assert( 0 < label_sz ); \
+   assert( (MAUG_MHANDLE)NULL == ctl->ctl_type.label_h ); \
+   \
+   /* Allocate new label space. */ \
+   ctl->ctl_type.label_h = maug_malloc( label_sz + 1, 1 ); \
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->ctl_type.label_h ); \
+   maug_mlock( ctl->ctl_type.label_h, label_tmp ); \
+   maug_cleanup_if_null_alloc( char*, label_tmp ); \
+   \
+   /* Copy the label text over. */ \
+   maug_mzero( label_tmp, label_sz + 1 ); \
+   strncpy( label_tmp, ctl->ctl_type.label, label_sz ); \
+   maug_munlock( ctl->ctl_type.label_h, label_tmp ); \
+   ctl->ctl_type.label = NULL;
+
 /*! \brief Unique identifying constant number for controls. */
 typedef size_t RETROGUI_IDC;
 
@@ -82,11 +104,12 @@ typedef size_t RETROGUI_IDC;
 #define RETROGUI_CTL_TABLE( f ) \
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
-   f( 2, BUTTON, char label[RETROGUI_BTN_LBL_SZ_MAX + 1]; int16_t push_frames; ) \
-   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
+   f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; ) \
+   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; ) \
+   f( 4, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; )
 
 #if 0
-   f( 4, SCROLLBAR, size_t min; size_t max; size_t value; )
+   f( 5, SCROLLBAR, size_t min; size_t max; size_t value; )
 #endif
 
 /*! \brief Fields common to ALL ::RETROGUI_CTL types. */
@@ -617,6 +640,12 @@ static void retrogui_redraw_BUTTON(
          ctl->base.x + 1, ctl->base.y + 2,
          ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
    }
+
+   maug_mlock( ctl->BUTTON.label_h, ctl->BUTTON.label );
+   if( NULL == ctl->BUTTON.label ) {
+      error_printf( "could not lock BUTTON label!" );
+      goto cleanup;
+   }
       
    /* Grab the string size and use it to center the text in the control. */
 #ifdef RETROGXC_PRESENT
@@ -649,6 +678,11 @@ static void retrogui_redraw_BUTTON(
       /* TODO: Pad max client area. */
       ctl->base.w, ctl->base.h, 0 );
 
+   maug_munlock( ctl->BUTTON.label_h, ctl->BUTTON.label );
+
+cleanup:
+
+   return;
 }
 
 static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
@@ -669,9 +703,11 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
       goto cleanup;
    }
 
-cleanup:
-
+#  else
+   retrogui_copy_label( ctl, BUTTON );
 #  endif
+
+cleanup:
 
    return retval;
 }
@@ -731,6 +767,9 @@ static MERROR_RETVAL retrogui_pos_BUTTON(
 }
 
 static void retrogui_free_BUTTON( union RETROGUI_CTL* ctl ) {
+   if( NULL != ctl->BUTTON.label_h ) {
+      maug_mfree( ctl->BUTTON.label_h );
+   }
 }
 
 static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
@@ -975,6 +1014,118 @@ static void retrogui_free_TEXTBOX( union RETROGUI_CTL* ctl ) {
 }
 
 static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "initializing textbox " SIZE_T_FMT "...", ctl->base.idc );
+
+   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
+
+   return retval;
+}
+
+/* === Control: LABEL === */
+
+static RETROGUI_IDC retrogui_click_LABEL(
+   struct RETROGUI* gui,
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   return RETROGUI_IDC_NONE;
+}
+
+static RETROGUI_IDC retrogui_key_LABEL(
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   return RETROGUI_IDC_NONE;
+}
+
+static void retrogui_redraw_LABEL(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl
+) {
+
+#  if defined( RETROGUI_NATIVE_WIN )
+   /* Do nothing. */
+#  else
+
+   /* Draw text. */
+
+   assert( NULL == ctl->LABEL.label );
+   maug_mlock( ctl->LABEL.label_h, ctl->LABEL.label );
+   if( NULL == ctl->LABEL.label ) {
+      error_printf( "could not lock LABEL text!" );
+      goto cleanup;
+   }
+
+#ifdef RETROGXC_PRESENT
+   retrogxc_string(
+#else
+   retrofont_string(
+#endif /* RETROGXC_PRESENT */
+      gui->draw_bmp, ctl->base.fg_color, ctl->LABEL.label,
+      ctl->LABEL.label_sz,
+#ifdef RETROGXC_PRESENT
+      gui->font_idx,
+#else
+      gui->font_h,
+#endif /* RETROGXC_PRESENT */
+      ctl->base.x + RETROGUI_PADDING,
+      ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+
+cleanup:
+
+   if( NULL != ctl->LABEL.label ) {
+      maug_munlock( ctl->LABEL.label_h, ctl->LABEL.label );
+   }
+
+#  endif
+
+   return;
+}
+
+static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROGUI_NATIVE_WIN )
+
+   /* TODO */
+
+#  else
+   retrogui_copy_label( ctl, LABEL );
+#  endif
+
+cleanup:
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_sz_LABEL(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_LABEL(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   size_t x, size_t y, size_t w, size_t h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
+static void retrogui_free_LABEL( union RETROGUI_CTL* ctl ) {
+   if( NULL != ctl->LABEL.label_h ) {
+      maug_mfree( ctl->LABEL.label_h );
+   }
+}
+
+static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
