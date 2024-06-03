@@ -1052,6 +1052,12 @@ static void retrogui_redraw_LABEL(
 
    /* Draw text. */
 
+#ifdef RETROGXC_PRESENT
+   assert( 0 <= gui->font_idx );
+#else
+   assert( (MAUG_MHANDLE)NULL != gui->font_h );
+#endif /* RETROGXC_PRESENT */
+
    assert( NULL == ctl->LABEL.label );
    maug_mlock( ctl->LABEL.label_h, ctl->LABEL.label );
    if( NULL == ctl->LABEL.label ) {

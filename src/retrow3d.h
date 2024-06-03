@@ -10,6 +10,9 @@
 
 #define RETROWIN3D_FLAG_INIT_BMP          0x02
 
+#define retro3dw_win_is_active( win ) \
+   (RETROWIN3D_FLAG_INIT_GUI == (RETROWIN3D_FLAG_INIT_GUI & (win)->flags))
+
 struct RETROWIN3D {
    uint8_t flags;
    size_t idc;
@@ -28,7 +31,7 @@ RETROGUI_IDC retro3dw_poll_win(
    struct RETROWIN3D* win_stack, size_t win_stack_sz, RETROGUI_IDC idc,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
-void retro3dw_free( struct RETROWIN3D* win );
+void retro3dw_free_win( struct RETROWIN3D* win );
 
 MERROR_RETVAL retro3dw_push_win(
    struct RETROWIN3D* win_stack, size_t win_stack_sz,
@@ -127,10 +130,7 @@ MERROR_RETVAL retro3dw_redraw_win_stack(
    size_t i = 0;
 
    for( i = 0 ; win_stack_sz > i ; i++ ) {
-      if(
-         RETROWIN3D_FLAG_INIT_GUI !=
-            (RETROWIN3D_FLAG_INIT_GUI & win_stack[i].flags)
-      ) {
+      if( !retro3dw_win_is_active( &(win_stack[i]) ) ) {
          continue;
       }
 
@@ -158,9 +158,7 @@ RETROGUI_IDC retro3dw_poll_win(
 
    for( i = 0 ; win_stack_sz > i ; i++ ) {
       if(
-         idc != win_stack[i].idc ||
-         RETROWIN3D_FLAG_INIT_GUI !=
-            (RETROWIN3D_FLAG_INIT_GUI & win_stack[i].flags)
+         idc != win_stack[i].idc || !retro3dw_win_is_active( &(win_stack[i]) )
       ) {
          continue;
       }
@@ -187,7 +185,7 @@ cleanup:
    return idc_out;
 }
 
-void retro3dw_free( struct RETROWIN3D* win ) {
+void retro3dw_free_win( struct RETROWIN3D* win ) {
 
 #ifndef RETROGXC_PRESENT
    if( (MAUG_MHANDLE)NULL != win->gui.font_h ) {
@@ -202,6 +200,8 @@ void retro3dw_free( struct RETROWIN3D* win ) {
    if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
       retroflat_destroy_bitmap( &(win->gui_bmp) );
    }
+
+   maug_mzero( win, sizeof( struct RETROWIN3D ) );
 }
 
 MERROR_RETVAL retro3dw_push_win(
@@ -248,6 +248,30 @@ MERROR_RETVAL retro3dw_push_win(
    }
 
 cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL retro3dw_destroy_win(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, size_t idc
+) {
+   size_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   for( i = 0 ; win_stack_sz > i ; i++ ) {
+      if(
+         idc != win_stack[i].idc || !retro3dw_win_is_active( &(win_stack[i]) )
+      ) {
+         continue;
+      }
+
+      debug_printf( RETROWIN3D_TRACE_LVL, "freeing window: " SIZE_T_FMT,
+         win_stack[i].idc );
+
+      retro3dw_free_win( &(win_stack[i]) );
+
+      break;
+   }
 
    return retval;
 }
