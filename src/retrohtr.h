@@ -723,10 +723,8 @@ MERROR_RETVAL retrohtr_tree_size(
       ctl.base.y = retrohtr_node( tree, node_idx )->y;
       ctl.base.w = 0;
       ctl.base.h = 0;
-      strncpy( ctl.BUTTON.label,
-         mhtml_tag( parser,
-            retrohtr_node( tree, node_idx )->tag )->INPUT.value,
-         RETROGUI_BTN_LBL_SZ_MAX );
+      ctl.BUTTON.label = mhtml_tag( parser,
+            retrohtr_node( tree, node_idx )->tag )->INPUT.value;
 
       /* Grab determined size back from control. */
       retrohtr_node( tree, node_idx )->w = ctl.base.w;
