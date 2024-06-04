@@ -5501,8 +5501,17 @@ cleanup:
    maug_cleanup_if_not_ok();
 
    /* Read bitmap properties from header offsets. */
-   mfile_u32read_lsbf_at( &bmp_file, &offset, 10 );
-   mfile_u32read_lsbf_at( &bmp_file, &colors, 46 );
+   retval = bmp_file.seek( &bmp_file, 10 );
+   maug_cleanup_if_not_ok();
+   retval = bmp_file.read_int( &bmp_file,
+      (uint8_t*)&offset, 4, MFILE_READ_FLAG_LSBF );
+   maug_cleanup_if_not_ok();
+
+   retval = bmp_file.seek( &bmp_file, 46 );
+   maug_cleanup_if_not_ok();
+   retval = bmp_file.read_int( &bmp_file,
+      (uint8_t*)&colors, 4, MFILE_READ_FLAG_LSBF );
+   maug_cleanup_if_not_ok();
 
    /* Avoid a color overflow. */
    if(
