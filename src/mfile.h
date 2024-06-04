@@ -74,6 +74,13 @@ typedef struct MFILE_CADDY mfile_t;
       error_printf( "unknown file type: %d", (p_file)->type ); \
       break;
 
+#define mfile_has_bytes( p_file ) \
+   ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
+      (off_t)ftell( (p_file)->h.file ) : \
+      (p_file)->mem_cursor) < (p_file)->sz)
+
+#ifdef MFILE_LEGACY_MACROS
+
 #define mfile_seek( p_file, idx ) \
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
@@ -85,15 +92,13 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
-#define mfile_has_bytes( p_file ) \
-   ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
-      (off_t)ftell( (p_file)->h.file ) : \
-      (p_file)->mem_cursor) < (p_file)->sz)
-
 #define mfile_cread( p_file, p_c ) \
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE_READ: \
       (p_file)->last_read = fread( p_c, 1, 1, (p_file)->h.file ); \
+      break; \
+   case MFILE_CADDY_TYPE_MEM_BUFFER: \
+      ((uint8_t*)(p_c))[0] = (p_file)->mem_buffer[(p_file)->mem_cursor++]; \
       break; \
    mfile_default_case( p_file ); \
    }
@@ -196,6 +201,8 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
+#endif /* MFILE_LEGACY_MACROS */
+
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
 #define mfile_reset( p_file ) \
@@ -216,7 +223,7 @@ MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, off_t buffer_sz );
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
  */
-MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE, mfile_t* p_file );
+MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE, off_t, mfile_t* p_file );
 
 /**
  * \brief Open a file and read it into memory or memory-map it.
@@ -248,11 +255,12 @@ MERROR_RETVAL mfile_file_read_int(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t last_read = 0;
 
+   assert( MFILE_CADDY_TYPE_FILE_READ == p_file->type );
+
    if( MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags) ) {
       /* Shrink the buffer moving right and read into it. */
       while( 0 < buf_sz ) {
          last_read = fread( buf, 1, 1, p_file->h.file );
-         debug_printf( 1, "byte: 0x%02x", *(buf + (buf_sz - 1)) );
          if( 0 >= last_read ) {
             error_printf( "unable to read from file!" );
             retval = MERROR_FILE;
@@ -266,7 +274,6 @@ MERROR_RETVAL mfile_file_read_int(
       /* Move to the end of the output buffer and read backwards. */
       while( 0 < buf_sz ) {
          last_read = fread( (buf + (buf_sz - 1)), 1, 1, p_file->h.file );
-         debug_printf( 1, "byte: 0x%02x", *(buf + (buf_sz - 1)) );
          if( 0 >= last_read ) {
             error_printf( "unable to read from file!" );
             retval = MERROR_FILE;
@@ -286,10 +293,82 @@ cleanup:
 MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   assert( MFILE_CADDY_TYPE_FILE_READ == p_file->type );
+
    if( fseek( p_file->h.file, pos, SEEK_SET ) ) {
       error_printf( "unable to seek file!" );
       retval = MERROR_FILE;
    }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_mem_read_int(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_file->type );
+
+   if( MFILE_READ_FLAG_LSBF != (MFILE_READ_FLAG_LSBF & flags) ) {
+      /* Shrink the buffer moving right and read into it. */
+      while( 0 < buf_sz ) {
+         /* Check for EOF. */
+         if( p_file->mem_cursor >= p_file->sz ) {
+            retval = MERROR_FILE;
+            error_printf(
+               "cursor " OFF_T_FMT " beyond end of buffer " OFF_T_FMT "!",
+               p_file->mem_cursor, p_file->sz );
+            goto cleanup;
+         }
+
+         buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
+         debug_printf( 1, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
+            buf_sz - 1, p_file->mem_cursor );
+         buf_sz--;
+         p_file->mem_cursor++;
+      }
+   
+   } else {
+      /* Move to the end of the output buffer and read backwards. */
+      while( 0 < buf_sz ) {
+         /* Check for EOF. */
+         if( p_file->mem_cursor >= p_file->sz ) {
+            retval = MERROR_FILE;
+            error_printf(
+               "cursor " OFF_T_FMT " beyond end of buffer " OFF_T_FMT "!",
+               p_file->mem_cursor, p_file->sz );
+            goto cleanup;
+         }
+
+         buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
+         debug_printf( 1, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
+            buf_sz - 1, p_file->mem_cursor );
+         buf_sz--;
+         buf++;
+         p_file->mem_cursor++;
+      }
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_mem_seek( struct MFILE_CADDY* p_file, off_t pos ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_file->type );
+
+   p_file->mem_cursor = pos;
+
+   debug_printf( 1,
+      "seeking memory buffer to position " OFF_T_FMT " (" OFF_T_FMT ")",
+      pos, p_file->mem_cursor );
 
    return retval;
 }
@@ -346,7 +425,7 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, off_t buffer_sz ) {
          break;
       }
 
-      mfile_cread( p_f, &(buffer[i]) );
+      p_f->read_int( p_f, (uint8_t*)&(buffer[i]), 1, 0 );
       if( '\n' == buffer[i] ) {
          /* Break on newline and overwrite it below. */
          break;
@@ -364,14 +443,22 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE handle, mfile_t* p_file ) {
+MERROR_RETVAL mfile_lock_buffer(
+   MAUG_MHANDLE handle, off_t handle_sz,  mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1, "locking handle %p as file %p...", handle, p_file );
+   debug_printf( 1,
+      "locking handle %p as file %p (" OFF_T_FMT " bytes)...",
+      handle, p_file, handle_sz );
 
-   maug_mzero( p_file, sizeof( mfile_t ) );
+   maug_mzero( p_file, sizeof( struct MFILE_CADDY ) );
    maug_mlock( handle, p_file->mem_buffer );
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
+
+   p_file->read_int = mfile_mem_read_int;
+   p_file->seek = mfile_mem_seek;
+   p_file->sz = handle_sz;
 
    return retval;
 }
