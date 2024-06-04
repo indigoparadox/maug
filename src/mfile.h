@@ -44,6 +44,8 @@ struct MFILE_CADDY;
 typedef MERROR_RETVAL (*mfile_seek_t)( struct MFILE_CADDY* p_file, off_t pos );
 typedef MERROR_RETVAL (*mfile_read_int_t)(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
+typedef MERROR_RETVAL (*mfile_read_line_t)(
+   struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 
 union MFILE_HANDLE {
    FILE* file;
@@ -63,6 +65,7 @@ struct MFILE_CADDY {
    uint8_t* mem_buffer;
    mfile_seek_t seek;
    mfile_read_int_t read_int;
+   mfile_read_line_t read_line;
 };
 
 typedef struct MFILE_CADDY mfile_t;
@@ -216,8 +219,6 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
-MERROR_RETVAL mfile_read_line( mfile_t*, char* buffer, off_t buffer_sz );
-
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
  */
@@ -299,6 +300,24 @@ MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
 
 /* === */
 
+MERROR_RETVAL mfile_file_read_line(
+   struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_FILE_READ == p_f->type );
+
+   /* Trivial case; use a native function. Much faster! */
+   if( NULL == fgets( buffer, buffer_sz - 1, p_f->h.file ) ) {
+      error_printf( "error while reading line from file!" );
+      retval = MERROR_FILE;
+   }
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_mem_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
 ) {
@@ -369,23 +388,19 @@ MERROR_RETVAL mfile_mem_seek( struct MFILE_CADDY* p_file, off_t pos ) {
 
 /* === */
 
-MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, off_t buffer_sz ) {
+MERROR_RETVAL mfile_mem_read_line(
+   struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags
+) {
    MERROR_RETVAL retval = MERROR_OK;
    off_t i = 0;
 
-   if( MFILE_CADDY_TYPE_FILE_READ == p_f->type ) {
-      /* Trivial case; use a native function. Much faster! */
-      fgets( buffer, buffer_sz - 1, p_f->h.file );
-      goto cleanup;
-   }
-
-   /* Assume we're reading a memory buffer. */
+   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
 
    while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
       /* Check for potential overflow. */
       if( i + 1 >= buffer_sz ) {
          error_printf( "overflow reading string from file!" );
-         retval = MERROR_OVERFLOW;
+         retval = MERROR_FILE;
          break;
       }
 
@@ -402,10 +417,10 @@ MERROR_RETVAL mfile_read_line( mfile_t* p_f, char* buffer, off_t buffer_sz ) {
    /* Append a null terminator. */
    buffer[i] = '\0';
 
-cleanup:
-
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL mfile_lock_buffer(
    MAUG_MHANDLE handle, off_t handle_sz,  mfile_t* p_file
@@ -422,6 +437,8 @@ MERROR_RETVAL mfile_lock_buffer(
 
    p_file->read_int = mfile_mem_read_int;
    p_file->seek = mfile_mem_seek;
+   p_file->read_line = mfile_mem_read_line;
+
    p_file->sz = handle_sz;
 
    return retval;
@@ -496,6 +513,7 @@ cleanup:
 
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
+   p_file->read_line = mfile_file_read_line;
 
 /*
    *p_bytes_ptr_h = maug_malloc( 1, *p_bytes_sz );
