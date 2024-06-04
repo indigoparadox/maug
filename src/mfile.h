@@ -504,7 +504,7 @@ cleanup:
    fseek( p_file->h.file, 0, SEEK_SET );
 #endif /* MAUG_OS_* */
 
-   debug_printf( 1, "opened file %s (" SIZE_T_FMT " bytes)...",
+   debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
       filename, p_file->sz );
    /* debug_printf( 3, "XXX %ld bytes", file_stat.st_size );
    debug_printf( 3, "XXX size_t: %d, off_t: %d", sizeof( size_t ), sizeof( off_t ) ); */

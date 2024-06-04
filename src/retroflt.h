@@ -2735,7 +2735,10 @@ static LRESULT CALLBACK WndProc(
          /* TODO: Alt? */
 
          default:
+            /*
+            TODO: Fix in win64.
             debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
+            */
             g_retroflat_state->last_key = wParam | ((lParam & 0x800000) >> 8);
             break;
          }
@@ -5207,7 +5210,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_b = 0,
       bmp_color_idx = 0,
       bmp_flags = 0;
-   size_t i = 0;
+   off_t i = 0;
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
 #  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
@@ -5225,7 +5228,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    uint32_t bmp_color = 0;
    uint8_t bmp_flags = 0;
    off_t bmp_px_sz = 0;
-   size_t i = 0;
+   off_t i = 0;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -5312,7 +5315,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    for( i = 0 ; bmp_px_sz > i ; i++ ) {
       if( bmp_px_sz - i - 1 > bmp_px_sz ) {
          error_printf(
-            "pixel overflow! (" SIZE_T_FMT " of " SIZE_T_FMT " bytes!)",
+            "pixel overflow! (" OFF_T_FMT " of " OFF_T_FMT " bytes!)",
             bmp_px_sz - i - 1, bmp_px_sz );
          retval = MERROR_OVERFLOW;
          goto cleanup;
@@ -5322,7 +5325,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       bmp_color_idx = bmp_px[bmp_px_sz - i - 1]; /* Reverse image. */
       if( bmp_color_idx >= header_bmp.info.palette_ncolors ) {
          error_printf(
-            "invalid color at px " SIZE_T_FMT ": %02x",
+            "invalid color at px " OFF_T_FMT ": %02x",
             bmp_px_sz - i - 1, bmp_color_idx );
          continue;
       }

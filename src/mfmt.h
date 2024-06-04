@@ -218,7 +218,7 @@ MERROR_RETVAL mfmt_decode_rle(
          out_byte_cur++; \
          if( out_byte_cur > buffer_out_sz ) { \
             error_printf( \
-               "out byte " SIZE_T_FMT " outside of " SIZE_T_FMT \
+               "out byte " OFF_T_FMT " outside of " OFF_T_FMT \
                " pixel buffer!", out_byte_cur, buffer_out_sz ); \
             retval = MERROR_OVERFLOW; \
             goto cleanup; \
@@ -266,8 +266,8 @@ MERROR_RETVAL mfmt_decode_rle(
       mfile_cread_at(
          p_file_in, &(byte_buffer), file_offset + in_byte_cur++ );
       */
-      debug_printf( MFMT_TRACE_RLE_LVL, "in byte " SIZE_T_FMT
-         ": 0x%02x, out byte " SIZE_T_FMT ", line px: %u",
+      debug_printf( MFMT_TRACE_RLE_LVL, "in byte " OFF_T_FMT
+         ": 0x%02x, out byte " OFF_T_FMT ", line px: %u",
          in_byte_cur, byte_buffer, out_byte_cur, line_px_written );
       
       switch( byte_buffer ) {
@@ -412,7 +412,7 @@ MERROR_RETVAL mfmt_decode_rle(
    } while( in_byte_cur < file_sz );
 
    debug_printf(
-      MFMT_TRACE_RLE_LVL, "wrote " SIZE_T_FMT " bytes (%u lines)",
+      MFMT_TRACE_RLE_LVL, "wrote " OFF_T_FMT " bytes (%u lines)",
       out_byte_cur, lines_out );
 
 cleanup:
@@ -475,7 +475,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    if( 40 > file_sz - (file_offset + header_offset) ) {
       error_printf(
-         "bitmap header overflow! (only " SIZE_T_FMT " bytes remain!)",
+         "bitmap header overflow! (only " OFF_T_FMT " bytes remain!)",
          file_sz - (file_offset + header_offset) );
       retval = MERROR_OVERFLOW;
       goto cleanup;
@@ -585,7 +585,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
       maug_cleanup_if_not_ok();
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "set palette entry " SIZE_T_FMT " to " UPRINTF_X32_FMT,
+         "set palette entry " OFF_T_FMT " to " UPRINTF_X32_FMT,
          i, palette[i] );
    }
 
@@ -603,7 +603,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    int32_t x = 0,
       y = 0;
-   uint32_t i = 0,
+   off_t i = 0,
       byte_in_idx = 0,
       byte_out_idx = 0,
       bit_idx = 0;
@@ -683,15 +683,15 @@ MERROR_RETVAL mfmt_read_bmp_px(
       pixel_buffer = 0;
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "byte in: " UPRINTF_U32_FMT " (" SIZE_T_FMT 
-            "), bit " UPRINTF_U32_FMT ", y: " UPRINTF_U32_FMT
-            ", x: " UPRINTF_U32_FMT "), byte out: " UPRINTF_U32_FMT,
+         "byte in: " OFF_T_FMT " (" OFF_T_FMT 
+            "), bit " OFF_T_FMT ", y: " UPRINTF_U32_FMT
+            ", x: " UPRINTF_U32_FMT "), byte out: " OFF_T_FMT,
          byte_in_idx, file_sz, bit_idx, y, x, byte_out_idx );
 
       /* Buffer bounds check. */
       if( px_sz <= byte_out_idx ) {
          error_printf(
-            "byte " UPRINTF_U32_FMT " outside of " SIZE_T_FMT
+            "byte " OFF_T_FMT " outside of " OFF_T_FMT
             " pixel buffer!", byte_out_idx, px_sz );
          retval = MERROR_OVERFLOW;
          goto cleanup;
@@ -702,7 +702,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
          if( byte_in_idx >= file_sz ) {
             /* TODO: Figure out why ICO parser messes up size. */
             error_printf(
-               "input bitmap has insufficient size " SIZE_T_FMT " bytes)!",
+               "input bitmap has insufficient size " OFF_T_FMT " bytes)!",
                file_sz );
             /* retval = MERROR_OVERFLOW;
             goto cleanup; */
@@ -740,12 +740,14 @@ MERROR_RETVAL mfmt_read_bmp_px(
           */
          (bit_idx - header_bmp_info->bpp);
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "byte_mask: 0x%02x, bit_idx: " UPRINTF_U32_FMT
+         "byte_mask: 0x%02x, bit_idx: " OFF_T_FMT
             ", pixel_buffer: 0x%02x",
          byte_mask, bit_idx, pixel_buffer );
 
       /* Place the pixel buffer at the X/Y in the grid. */
-      debug_printf( MFMT_TRACE_BMP_LVL, "writing byte %u (x: %u, y: %u)",
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "writing byte " OFF_T_FMT " (x: " UPRINTF_S32_FMT
+         ", y: " UPRINTF_S32_FMT ")",
          byte_out_idx, x, y );
       px[byte_out_idx] = pixel_buffer;
       byte_out_idx++;
@@ -773,7 +775,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
          /* TODO Get past the padding. */
 
          debug_printf( MFMT_TRACE_BMP_LVL,
-            "new row starting at byte_out_idx: " UPRINTF_U32_FMT,
+            "new row starting at byte_out_idx: " OFF_T_FMT,
             byte_out_idx );
       }
    }
