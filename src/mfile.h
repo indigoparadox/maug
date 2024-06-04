@@ -37,6 +37,14 @@
 
 /*! \} */ /* maug_mfile_types */
 
+#define MFILE_READ_FLAG_LSBF     0x01
+
+struct MFILE_CADDY;
+
+typedef MERROR_RETVAL (*mfile_seek_t)( struct MFILE_CADDY* p_file, off_t pos );
+typedef MERROR_RETVAL (*mfile_read_int_t)(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
+
 union MFILE_HANDLE {
    FILE* file;
    MAUG_MHANDLE mem;
@@ -53,6 +61,8 @@ struct MFILE_CADDY {
    off_t mem_cursor;
    /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
+   mfile_seek_t seek;
+   mfile_read_int_t read_int;
 };
 
 typedef struct MFILE_CADDY mfile_t;
@@ -230,6 +240,62 @@ void mfile_close( mfile_t* p_file );
 #  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
+/* === */
+
+MERROR_RETVAL mfile_file_read_int(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t last_read = 0;
+
+   if( MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags) ) {
+      /* Shrink the buffer moving right and read into it. */
+      while( 0 < buf_sz ) {
+         last_read = fread( buf, 1, 1, p_file->h.file );
+         debug_printf( 1, "byte: 0x%02x", *(buf + (buf_sz - 1)) );
+         if( 0 >= last_read ) {
+            error_printf( "unable to read from file!" );
+            retval = MERROR_FILE;
+            goto cleanup;
+         }
+         buf_sz--;
+         buf++;
+      }
+   
+   } else {
+      /* Move to the end of the output buffer and read backwards. */
+      while( 0 < buf_sz ) {
+         last_read = fread( (buf + (buf_sz - 1)), 1, 1, p_file->h.file );
+         debug_printf( 1, "byte: 0x%02x", *(buf + (buf_sz - 1)) );
+         if( 0 >= last_read ) {
+            error_printf( "unable to read from file!" );
+            retval = MERROR_FILE;
+            goto cleanup;
+         }
+         buf_sz--;
+      }
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( fseek( p_file->h.file, pos, SEEK_SET ) ) {
+      error_printf( "unable to seek file!" );
+      retval = MERROR_FILE;
+   }
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_read_block( mfile_t* p_f, uint8_t* buf, off_t buf_sz ) {
    MERROR_RETVAL retval = MERROR_OK;
    off_t i_read = 0;
@@ -376,6 +442,9 @@ cleanup:
    debug_printf( 3, "XXX size_t: %d, off_t: %d", sizeof( size_t ), sizeof( off_t ) ); */
 
    p_file->type = MFILE_CADDY_TYPE_FILE_READ;
+
+   p_file->read_int = mfile_file_read_int;
+   p_file->seek = mfile_file_seek;
 
 /*
    *p_bytes_ptr_h = maug_malloc( 1, *p_bytes_sz );

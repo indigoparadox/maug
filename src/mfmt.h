@@ -433,10 +433,17 @@ MERROR_RETVAL mfmt_read_bmp_header(
       header_offset = 14; /* Size of info header. */
 
       /* Grab file header info. */
-      mfile_u32read_lsbf_at( p_file_in, &(header_bmp_file->file_sz), 
-         file_offset + 2 );
-      mfile_u32read_lsbf_at( p_file_in, &(header_bmp_file->px_offset),
-         file_offset + 10 );
+      p_file_in->seek( p_file_in, file_offset + 2 );
+      retval = p_file_in->read_int( p_file_in,
+         (uint8_t*)&(header_bmp_file->file_sz), 4, MFILE_READ_FLAG_LSBF );
+      maug_cleanup_if_not_ok();
+
+      retval = p_file_in->seek( p_file_in, file_offset + 10 );
+      maug_cleanup_if_not_ok();
+      retval = p_file_in->read_int( p_file_in,
+         (uint8_t*)&(header_bmp_file->px_offset), 4, MFILE_READ_FLAG_LSBF );
+      maug_cleanup_if_not_ok();
+      
       debug_printf( MFMT_TRACE_BMP_LVL,
          "bitmap file " UPRINTF_U32_FMT " bytes long, px at "
             UPRINTF_U32_FMT " bytes",
@@ -444,8 +451,11 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    /* Read the bitmap image header. */
-   mfile_u32read_lsbf_at( p_file_in, &(file_hdr_sz),
-      file_offset + header_offset );
+   retval = p_file_in->seek( p_file_in, file_offset + header_offset );
+   maug_cleanup_if_not_ok();
+   retval = p_file_in->read_int( p_file_in,
+      (uint8_t*)&file_hdr_sz, 4, MFILE_READ_FLAG_LSBF );
+   maug_cleanup_if_not_ok();
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
       error_printf( "invalid header size: " UPRINTF_U32_FMT, file_hdr_sz );
       retval = MERROR_FILE;
