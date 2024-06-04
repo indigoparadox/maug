@@ -345,13 +345,6 @@ typedef int8_t RETROFLAT_COLOR;
 
 /*! \} */ /* maug_retroflt_retval */
 
-#define retroflat_read_lsbf_32( bytes, offset ) \
-   ((bytes[offset]) | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) \
-   | (bytes[offset + 3] << 24))
-
-#define retroflat_read_lsbf_16( bytes, offset ) \
-   ((bytes[offset]) | (bytes[offset + 1] << 8))
-
 /**
  * \addtogroup maug_retroflt_drawing RetroFlat Drawing API
  * \brief Functions for drawing primitives on-screen.
