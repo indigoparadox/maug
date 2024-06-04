@@ -97,7 +97,7 @@
 #  ifdef _WIN64 /* __SIZE_WIDTH__ == 64 */
 #     define SIZE_T_FMT "%I64u"
 #     define SSIZE_T_FMT "%I64d"
-#     define OFF_T_FMT  "%I64d"
+#     define OFF_T_FMT  "%I32d"
 #  else
 #     define SIZE_T_FMT "%lu"
 #     define SSIZE_T_FMT "%ld"

@@ -368,6 +368,8 @@ static void retrotile_parser_match_token(
           */
          parser->mstate != gc_retrotile_mstate_parents[j]
       ) {
+         /*
+         TODO: These args don't match up on win64 compile?
          debug_printf(
             RETROTILE_TRACE_LVL,
             "found token \"%s\" but incorrect parent %s (%d) "
@@ -376,7 +378,7 @@ static void retrotile_parser_match_token(
             retrotile_mstate_name( parser->mstate ),
             parser->mstate,
             retrotile_mstate_name( gc_retrotile_mstate_parents[j] ),
-            gc_retrotile_mstate_parents[j] );
+            gc_retrotile_mstate_parents[j] ); */
          j++;
          continue;
 
