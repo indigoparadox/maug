@@ -148,7 +148,7 @@ MERROR_RETVAL retrofont_load(
    maug_cleanup_if_not_ok();
 
    /* Figure out font width from file and alloc just enough. */
-   retval = mfile_read_line( &font_file, line, RETROFONT_LINE_SZ );
+   retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
    maug_cleanup_if_not_ok();
    retrofont_split_glyph_line( line, line_bytes );
    maug_cleanup_if_not_ok();
@@ -184,7 +184,7 @@ MERROR_RETVAL retrofont_load(
    font->glyph_sz = glyph_h * glyph_w_bytes;
 
    while( mfile_has_bytes( &font_file ) ) {
-      retval = mfile_read_line( &font_file, line, RETROFONT_LINE_SZ );
+      retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
       
       retrofont_split_glyph_line( line, line_bytes );
       if( MERROR_PARSE == retval ) {
