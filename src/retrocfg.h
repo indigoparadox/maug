@@ -9,6 +9,8 @@
  * \file retrocfg.h
  */
 
+#include <mfile.h>
+
 #ifndef RETROFLAT_CONFIG_LN_SZ_MAX
 #  define RETROFLAT_CONFIG_LN_SZ_MAX 255
 #endif /* !RETROFLAT_CONFIG_LN_SZ_MAX */
@@ -18,7 +20,7 @@
 #endif /* !RETROFLAT_CONFIG_EXT */
 
 #  ifdef RETROFLAT_CONFIG_USE_FILE
-typedef FILE* RETROFLAT_CONFIG;
+typedef mfile_t RETROFLAT_CONFIG;
 #  elif defined( RETROFLAT_API_WIN32 )
 typedef HKEY RETROFLAT_CONFIG;
 #  else
@@ -157,23 +159,13 @@ MERROR_RETVAL retroflat_config_open( RETROFLAT_CONFIG* config, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
-   char flag_buffer[3] = { '\0', '\0', '\0' };
 
-   if( RETROFLAT_CONFIG_FLAG_W == (RETROFLAT_CONFIG_FLAG_W & flags) ) {
-      flag_buffer[0] = 'w';
-   } else {
-      flag_buffer[0] = 'r';
-   }
+   debug_printf( 1, "opening config file %s...",
+      g_retroflat_state->config_path );
 
-   if( RETROFLAT_CONFIG_FLAG_BIN == (RETROFLAT_CONFIG_FLAG_BIN & flags) ) {
-      flag_buffer[1] = 'b';
-   }
-
-   debug_printf( 1, "opening config file %s with mode [%s]...",
-      g_retroflat_state->config_path, flag_buffer );
-
-   *config = fopen( g_retroflat_state->config_path, flag_buffer );
-   maug_cleanup_if_null( RETROFLAT_CONFIG, *config, MERROR_FILE );
+   /* TODO: Open read/write when implemented. */
+   retval = mfile_open_read( g_retroflat_state->config_path, config );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 #  elif defined( RETROFLAT_API_WIN16 )
@@ -214,8 +206,7 @@ void retroflat_config_close( RETROFLAT_CONFIG* config ) {
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
 
    debug_printf( 1, "closing config file..." );
-   fclose( *config );
-   *config = NULL;
+   mfile_close( config );
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
@@ -292,13 +283,13 @@ size_t retroflat_config_read(
    size_t sect_match = 1;
 #  endif /* RETROFLAT_API_WIN32 */
 
-   /* TODO: Adjust this to use mfile! */
-
 #  if defined( RETROFLAT_CONFIG_USE_FILE )
 
    /* == SDL / Allegro == */
 
-   while( fgets( line, RETROFLAT_CONFIG_LN_SZ_MAX, *config ) ) {
+   while( MERROR_OK == config->read_line(
+      config, line, RETROFLAT_CONFIG_LN_SZ_MAX, 0 )
+   ) {
       /* Size check. */
       line_sz = strlen( line );
       if( 1 >= line_sz || RETROFLAT_CONFIG_LN_SZ_MAX <= line_sz ) {
@@ -356,7 +347,7 @@ size_t retroflat_config_read(
 
 cleanup:
 
-   fseek( *config, 0, SEEK_SET );
+   config->seek( config, 0 );
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
