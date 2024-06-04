@@ -52,7 +52,13 @@
 #  define MFMT_TRACE_RLE_LVL 0
 #endif /* !MFMT_TRACE_RLE_LVL */
 
-/*! \brief Generic image description struct. */
+/**
+ * \brief Generic image description struct.
+ *
+ * This should actually be an instance of ::MFMT_STRUCT_BMPINFO or a similar
+ * struct with overlapping MFMT_STRUCT::sz field which can be used to determine
+ * the actual type.
+ */
 struct MFMT_STRUCT {
    /*! \brief Size of this struct (use to tell apart). */
    uint32_t sz;
@@ -149,6 +155,9 @@ typedef MERROR_RETVAL (*mfmt_read_px_cb)(
    mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
 
+/**
+ * \brief Decode RLE-encoded data from an input file into a memory buffer.
+ */
 MERROR_RETVAL mfmt_decode_rle(
    mfile_t* p_file_in, off_t file_offset, off_t file_sz, size_t line_w,
    MAUG_MHANDLE buffer_out, off_t buffer_out_sz, uint8_t flags );
@@ -677,7 +686,12 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    y = header_bmp_info->height - 1;
    byte_out_idx = mfmt_read_bmp_px_out_idx();
-   p_file_bmp->seek( p_file_bmp, file_offset );
+   if( p_file_bmp == p_file_in ) {
+      /* Only seek to offset if we're using the original (not translated from
+       * RLE or something.
+       */
+      p_file_bmp->seek( p_file_bmp, file_offset );
+   }
    while( 0 <= y ) {
       /* Each iteration is a single, fresh pixel. */
       pixel_buffer = 0;
