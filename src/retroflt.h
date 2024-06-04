@@ -5490,7 +5490,7 @@ cleanup:
    read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
    */
-   retval = mfile_read_block( &bmp_file, buf, mfile_get_sz( &bmp_file ) );
+   retval = bmp_file.read_int( &bmp_file, buf, mfile_get_sz( &bmp_file ), 0 );
    maug_cleanup_if_not_ok();
 
    /* Read bitmap properties from header offsets. */
