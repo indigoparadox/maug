@@ -6,6 +6,10 @@
 #  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 
+/* TODO: async file_open() call that kicks off download to mem buffer that can
+ *       be checked with looped check function.
+ */
+
 /**
  * \addtogroup maug_mfile RetroFile API
  * \brief Abstraction layer for dealing with files on retro systems.
