@@ -5,6 +5,6 @@
 #  include <mfile.h>
 #  include <retroflt.h>
 #  define RETROCFG_C
-#  include <retrocon.h>
+#  include <retrocfg.h>
 #endif /* !RETROFLAT_NO_RETROCFG */
 
