@@ -3725,6 +3725,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
+#  else
+
+   args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
+   args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
+
 #  endif /* !RETROFLAT_NO_CLI */
 
    if(
