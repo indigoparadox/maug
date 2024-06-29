@@ -1,0 +1,14 @@
+<map id="RETROHTR_RENDER_TREE" name="RETROHTR_RENDER_TREE">
+<area shape="rect" id="Node000001" title=" " alt="" coords="90,271,282,297"/>
+<area shape="rect" id="Node000002" href="$structRETROHTR__RENDER__NODE.html" title=" " alt="" coords="5,183,202,208"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,218,177,269,173,273,124,222"/>
+<area shape="rect" id="Node000003" href="$structRETROFLAT__BITMAP.html" title="Platform&#45;specific bitmap structure. retroflat_bitmap_ok() can be used on a pointer to it to determine..." alt="" coords="29,94,184,120"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="108,135,107,182,101,182,103,135"/>
+<area shape="rect" id="Node000004" href="$structRETROGUI.html" title=" " alt="" coords="226,183,315,208"/>
+<area shape="poly" id="edge6_Node000004_Node000003" title=" " alt="" coords="144,125,203,156,248,180,246,184,201,161,141,130"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="250,222,200,273,196,269,246,218"/>
+<area shape="rect" id="Node000005" href="$unionRETROGUI__CTL.html" title=" " alt="" coords="210,94,331,120"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="273,135,273,182,268,182,268,135"/>
+<area shape="rect" id="Node000006" href="$structRETROGUI__CTL__BASE.html" title="Fields common to ALL RETROGUI_CTL types." alt="" coords="189,5,352,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="273,47,273,94,268,94,268,47"/>
+</map>
