@@ -1,8 +1,12 @@
 
 # vim: ft=make noexpandtab
 
-INCLUDES_GCC += -Imaug/src
-INCLUDES_WATCOM += -i=maug/src
+ifeq ($(MAUG_ROOT),)
+	MAUG_ROOT := maug
+endif
+
+INCLUDES_GCC += -I$(MAUG_ROOT)/src
+INCLUDES_WATCOM += -i=$(MAUG_ROOT)/src
 
 ifeq ("$(OPENGL)","1")
 	DEFINES_GCC += -DRETROFLAT_OPENGL

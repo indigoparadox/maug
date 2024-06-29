@@ -6,11 +6,11 @@ ifeq ("$(CFLAGS_WATCOM_OS2)","")
 endif
 
 CFLAGS_WATCOM386_OS2_GLUT := \
-	-mf -5r -fp5 -bt=os2 -i$(WATCOM)/h/os2 -DRETROFLAT_API_GLUT
+	-mf -5r -fp5 -bt=os2 -i$(WATCOM)/h/os2 -DRETROFLAT_API_GLUT -i$(MAUG_ROOT)/api/glut
 LDFLAGS_WATCOM386_OS2_GLUT := system os2v2_pm libr {opengl glut}
 
 CFLAGS_WATCOM386_OS2_SDL := \
-	-mf -5s -fp5 -bt=os2 -i$(WATCOM)/h/os2 -i$(WATCOM)/h/os2/SDL -DRETROFLAT_API_SDL1
+	-mf -5s -fp5 -bt=os2 -i$(WATCOM)/h/os2 -i$(WATCOM)/h/os2/SDL -DRETROFLAT_API_SDL1 -i$(MAUG_ROOT)/api/sdl
 LDFLAGS_WATCOM386_OS2_SDL := system os2v2_pm libr {sdl12}
 
 OBJDIR_WATCOM386_OS2_GLUT=obj/watcom-os232-glut

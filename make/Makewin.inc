@@ -106,20 +106,18 @@ OBJDIR_GCC64_WIN_WIN32=obj/gcc64-win-win32
 
 define TGT_WATCOM386_WIN_WIN32
 
-ifeq ("$$(CFLAGS_WATCOM386_WIN_WIN32)","")
+CFLAGS_WATCOM386_WIN_WIN32 += \
+	-mf -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 -i$(MAUG_ROOT)/api/win
+
 ifeq ("$$(OPENGL)","1")
 	# OpenGL stuff is pentium-optimized.
-	CFLAGS_WATCOM386_WIN_WIN32 := \
-		-mf -5r -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
+	CFLAGS_WATCOM386_WIN_WIN32 += -5r -fp5
 else
 	# Non-OpenGL can be on 386.
-	CFLAGS_WATCOM386_WIN_WIN32 := \
-		-mf -3r -fp3 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_WIN32
+	CFLAGS_WATCOM386_WIN_WIN32 += -3r -fp3
 endif
-endif
-ifeq ("$$(LDFLAGS_WATCOM386_WIN_WIN32)","")
-	LDFLAGS_WATCOM386_WIN_WIN32 := system nt_win
-endif
+
+LDFLAGS_WATCOM386_WIN_WIN32 += system nt_win
 
 ifeq ("$$(VDP)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
@@ -151,14 +149,11 @@ TGTWINNT=$(TGT_WATCOM386_WIN_WIN32)
 
 define TGT_WATCOM386_WIN_GLUT
 
-ifeq ("$$(CFLAGS_WATCOM386_WIN_GLUT)","")
-	# GLUT requires stack calling (-5s) and is always on Petium because OpenGL.
-	CFLAGS_WATCOM386_WIN_GLUT := \
-		-mf -5s -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT
-endif
-ifeq ("$$(LDFLAGS_WATCOM386_WIN_GLUT)","")
-	LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
-endif
+# GLUT requires stack calling (-5s) and is always on Petium because OpenGL.
+CFLAGS_WATCOM386_WIN_GLUT := \
+	-mf -5s -fp5 -bt=nt -i$(WATCOM)/h/nt -DRETROFLAT_API_GLUT -i$(MAUG_ROOT)/api/glut
+
+LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
 
 $(1)ntgl.exe: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_GLUT)/,$$(subst .c,.o,$$(C_FILES))) | \
@@ -186,15 +181,12 @@ TGTWINGL=$(TGT_WATCOM386_WIN_GLUT)
 
 define TGT_WATCOM386_WIN_SDL
 
-ifeq ("$$(CFLAGS_WATCOM386_WIN_SDL)","")
-	# SDL is always on Pentium.
-	CFLAGS_WATCOM386_WIN_SDL := \
-		-mf -5s -ei -fp5 -dSDL_main=main -bt=nt \
-		-i$(WATCOM)/h/nt -i$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1
-endif
-ifeq ("$$(LDFLAGS_WATCOM386_WIN_SDL)","")
-	LDFLAGS_WATCOM386_WIN_SDL := system nt_win libr {SDL SDLmain}
-endif
+# SDL is always on Pentium.
+CFLAGS_WATCOM386_WIN_SDL += \
+	-mf -5s -ei -fp5 -dSDL_main=main -bt=nt -i$(MAUG_ROOT)/api/sdl \
+	-i$(WATCOM)/h/nt -i$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1
+
+LDFLAGS_WATCOM386_WIN_SDL += system nt_win libr {SDL SDLmain}
 
 $(1)nts.exe: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_SDL)/,$$(subst .c,.o,$$(C_FILES))) | \
@@ -222,13 +214,11 @@ TGTWINSDL=$(TGT_WATCOM386_WIN_SDL)
 
 define TGT_WATCOM_WIN_WIN16
 
-ifeq ("$$(CFLAGS_WATCOM_WIN_WIN16)","")
-	CFLAGS_WATCOM_WIN_WIN16 := \
-		-ml -4 -bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16
-endif
-ifeq ("$$(LDFLAGS_WATCOM_WIN_WIN16)","")
-	LDFLAGS_WATCOM_WIN_WIN16 := system windows
-endif
+CFLAGS_WATCOM_WIN_WIN16 += \
+	-ml -4 -bt=windows -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
+	-i$(MAUG_ROOT)/api/win
+
+LDFLAGS_WATCOM_WIN_WIN16 += system windows
 
 $(1)w3.exe: \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) \
@@ -256,13 +246,11 @@ TGTWIN16=$(TGT_WATCOM_WIN_WIN16)
 
 define TGT_WATCOM386_WIN_WIN16
 
-ifeq ("$$(CFLAGS_WATCOM386_WIN_WIN16)","")
-	CFLAGS_WATCOM386_WIN_WIN16 := \
-		-bt=windows -4r -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16
-endif
-ifeq ("$$(LDFLAGS_WATCOM386_WIN_WIN16)","")
-	LDFLAGS_WATCOM386_WIN_WIN16 := system win386
-endif
+CFLAGS_WATCOM386_WIN_WIN16 += \
+	-bt=windows -4r -i$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
+	-i$(MAUG_ROOT)/api/win
+
+LDFLAGS_WATCOM386_WIN_WIN16 += system win386
 
 $(1)w.rex: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) | \
@@ -295,6 +283,8 @@ TGTWIN386=$(TGT_WATCOM386_WIN_WIN16)
 
 define TGT_GCC_WIN_WIN32
 
+CFLAGS_GCC_WIN_WIN32 += $(MAUG_ROOT)/api/win
+
 ifeq ("$$(VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
 endif
@@ -321,6 +311,8 @@ TGTWINNTGCC=$(TGT_GCC_WIN_WIN32)
 # ---
 
 define TGT_GCC64_WIN_WIN32
+
+CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/win
 
 ifeq ("$$(VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
