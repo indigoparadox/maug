@@ -866,408 +866,8 @@ struct RETROFLAT_GLTEX {
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-/* == Win16/Win32 == */
+/* See retapid.h for Win. */
 
-typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
-
-#  define RETROFLAT_MS_FMT "%lu"
-
-#  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
-#     error "opengl support not implemented for win16"
-#  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
-
-#  include <mmsystem.h>
-
-#  ifndef RETROFLAT_API_WINCE
-#     include <time.h> /* For srand() */
-#  endif /* !RETROFLAT_API_WINCE */
-
-#  ifdef RETROFLAT_WING
-
-#     if defined( RETROFLAT_API_WIN32 )
-#        define WINGAPI WINAPI
-#     else
-#        define WINGAPI WINAPI _loadds
-#     endif
-
-#     define RETROFLAT_WING_LLTABLE( f ) \
-   f( HDC, WinGCreateDC, 1001 ) \
-   f( BOOL, WinGRecommendDIBFormat, 1002 ) \
-   f( HBITMAP, WinGCreateBitmap, 1003 ) \
-   f( BOOL, WinGStretchBlt, 1009 )
-
-typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
-typedef uint32_t retroflat_ms_t;
-
-#     define RETROFLAT_MS_FMT "%lu"
-
-typedef HDC (WINGAPI *WinGCreateDC_t)();
-typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
-typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
-   HDC, BITMAPINFO const FAR*, void FAR* FAR* );
-typedef BOOL (WINGAPI *WinGStretchBlt_t)(
-   HDC, int, int, int, int, HDC, int, int, int, int );
-
-#     define RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS( retval, proc, ord ) \
-   proc ## _t proc;
-
-struct RETROFLAT_WING_MODULE {
-   HMODULE module;
-   uint8_t success;
-   RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_STRUCT_MEMBERS )
-};
-#  endif /* RETROFLAT_WING */
-
-struct RETROFLAT_BMI {
-   BITMAPINFOHEADER header;
-   RGBQUAD colors[RETROFLAT_BMP_COLORS_SZ_MAX];
-};
-
-struct RETROFLAT_BITMAP {
-   size_t sz;
-   uint8_t flags;
-   HBITMAP b;
-   HBITMAP mask;
-   HDC hdc_b;
-   HDC hdc_mask;
-   HBITMAP old_hbm_b;
-   HBITMAP old_hbm_mask;
-#  ifdef RETROFLAT_API_WIN16
-   uint8_t far* bits;
-#  else
-	uint8_t* bits;
-#  endif /* RETROFLAT_API_WIN16 */
-   ssize_t autolock_refs;
-#  ifdef RETROFLAT_OPENGL
-   struct RETROFLAT_GLTEX tex;
-#  endif /* RETROFLAT_OPENGL */
-   struct RETROFLAT_BMI bmi;
-};
-
-LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
-
-#  ifdef RETROFLAT_OPENGL
-
-typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
-
-#  else
-
-/* Use Windoes API and generate brushes/pens for GDI. */
-
-typedef COLORREF RETROFLAT_COLOR_DEF;
-
-/* === Setup Brush Cache === */
-
-/* This will be initialized in setup, so just preserve the number. */
-#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         (HBRUSH)NULL,
-
-#     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         gc_retroflat_win_brushes[idx] = CreateSolidBrush( RGB( r, g, b ) );
-
-#     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   if( (HBRUSH)NULL != gc_retroflat_win_brushes[idx] ) { \
-      DeleteObject( gc_retroflat_win_brushes[idx] ); \
-      gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
-   }
-
-/* === End Setup Brush Cache === */
-
-/* === Setup Pen Cache === */
-
-#     define RETROFLAT_COLOR_TABLE_WIN_PENS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   (HPEN)NULL,
-
-#     define RETROFLAT_COLOR_TABLE_WIN_PNSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         gc_retroflat_win_pens[idx] = CreatePen( \
-            PS_SOLID, RETROFLAT_LINE_THICKNESS, RGB( r, g, b ) );
-
-#     define RETROFLAT_COLOR_TABLE_WIN_PENRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         if( (HPEN)NULL != gc_retroflat_win_pens[idx] ) { \
-            DeleteObject( gc_retroflat_win_pens[idx] ); \
-            gc_retroflat_win_pens[idx] = (HPEN)NULL; \
-         }
-
-/* === End Setup Pen Cache === */
-
-#     ifdef RETROFLT_C
-
-HBRUSH gc_retroflat_win_brushes[] = {
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRUSH )
-};
-
-static HPEN gc_retroflat_win_pens[] = {
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENS )
-};
-
-#     else
-
-extern HBRUSH gc_retroflat_win_brushes[];
-
-#     endif /* RETROFLT_C */
-
-/* Create a brush and set it to the target HDC. */
-#     define retroflat_win_setup_brush( old_brush, target, color, flags ) \
-         if( RETROFLAT_FLAGS_FILL != (RETROFLAT_FLAGS_FILL & flags) ) { \
-            old_brush = \
-               SelectObject( target->hdc_b, GetStockObject( NULL_BRUSH ) ); \
-         } else { \
-            old_brush = SelectObject( \
-               target->hdc_b, gc_retroflat_win_brushes[color] ); \
-         }
-
-/* Create a pen and set it to the target HDC. */
-#     define retroflat_win_setup_pen( old_pen, target, color, flags ) \
-         old_pen = \
-            SelectObject( target->hdc_b, gc_retroflat_win_pens[color] );
-
-#     define retroflat_win_cleanup_brush( old_brush, target ) \
-         if( (HBRUSH)NULL != old_brush ) { \
-            SelectObject( target->hdc_b, old_brush ); \
-         }
-
-#     define retroflat_win_cleanup_pen( old_pen, target ) \
-         if( (HPEN)NULL != old_pen ) { \
-            SelectObject( target->hdc_b, old_pen ); \
-         }
-
-#  endif /* RETROFLAT_OPENGL */
-
-/* TODO: This is a parallel bitmap system... maybe move OPENGL stuff into its
- *       own header that takes over graphics stuff in OPENGL mode? */
-#  ifdef RETROFLAT_OPENGL
-#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
-#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
-#  else
-#     define retroflat_bitmap_w( bmp ) ((bmp)->bmi.header.biWidth)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->bmi.header.biHeight)
-#     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
-#  endif /* RETROFLAT_OPENGL */
-/* TODO: Adapt this for the OPENGL test above? */
-#  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)
-
-#  ifdef RETROFLAT_VDP
-
-#     ifdef RETROFLAT_API_WIN16
-#        error "VDP not supported in Win16!"
-#     endif /* RETROFLAT_API_WIN16 */
-
-#     define retroflat_vdp_lock( bmp ) \
-   assert( NULL != (bmp)->hdc_b ); \
-   /* Confirm header info. */ \
-   (bmp)->autolock_refs++; \
-   if( \
-      1 == (bmp)->autolock_refs && \
-      RETROFLAT_FLAGS_SCREEN_BUFFER != \
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
-   ) { \
-      assert( NULL == (bmp)->bits ); \
-      assert( (bmp)->bmi.header.biBitCount == 32 ); \
-      assert( (bmp)->bmi.header.biWidth > 0 ); \
-      assert( (bmp)->bmi.header.biHeight > 0 ); \
-      assert( (bmp)->bmi.header.biSizeImage == \
-         (bmp)->bmi.header.biWidth * (bmp)->bmi.header.biHeight * 4 ); \
-      (bmp)->bits = VirtualAlloc( \
-         0, (bmp)->bmi.header.biSizeImage, \
-         MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ); \
-      /* TODO: Check alloc without assert! */ \
-      assert( NULL != (bmp)->bits ); \
-      /* Get bitmap bits from bitmap HDC into bitmap->bits so that the bitmap
-       * can be altered byte-by-byte.
-       */ \
-      GetDIBits( (bmp)->hdc_b, (bmp)->b, 0, (bmp)->bmi.header.biHeight, \
-         (bmp)->bits, (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ); \
-   }
-
-#     define retroflat_vdp_release( bmp ) \
-   assert( 0 < (bmp)->autolock_refs ); \
-   (bmp)->autolock_refs--; \
-   if( \
-      0 == (bmp)->autolock_refs && \
-      RETROFLAT_FLAGS_SCREEN_BUFFER != \
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
-   ) { \
-      /* TODO: Causes alpha blending in mdemos? */ \
-      if( \
-         /* Set bitmap bits from bitmap->bits into HDC. */ \
-         SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
-            (bmp)->bmi.header.biHeight, (bmp)->bits, \
-            (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < \
-               (bmp)->bmi.header.biHeight \
-      ) { \
-         error_printf( "SetDIBits failed!" ); \
-      } \
-      VirtualFree( (bmp)->bits, 0, MEM_RELEASE ); \
-      (bmp)->bits = NULL; \
-   }
-
-#     define retroflat_screen_buffer() \
-         (NULL == g_retroflat_state->vdp_buffer ? \
-         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
-
-#  else
-
-#     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
-
-#  endif /* RETROFLAT_VDP */
-
-#  define retroflat_px_lock( bmp )
-#  define retroflat_px_release( bmp )
-#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
-#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_root_win() (g_retroflat_state->window)
-#  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
-
-#  ifndef VK_OEM_1
-#     define VK_OEM_1 0xba
-#  endif /* !VK_OEM_1 */
-
-#  ifndef VK_OEM_2
-#     define VK_OEM_2 0xbf
-#  endif /* !VK_OEM_2 */
-
-#  ifndef VK_OEM_3
-#     define VK_OEM_3 0xc0
-#  endif /* !VK_OEM_3 */
-
-#  ifndef VK_OEM_4
-#     define VK_OEM_4 0xdb
-#  endif /* !VK_OEM_4 */
-
-#  ifndef VK_OEM_5
-#     define VK_OEM_5 0xdc
-#  endif /* !VK_OEM_5 */
-
-#  ifndef VK_OEM_6
-#     define VK_OEM_6 0xdd
-#  endif /* !VK_OEM_6 */
-
-#  ifndef VK_OEM_7
-#     define VK_OEM_7 0xde
-#  endif /* !VK_OEM_7 */
-
-#  ifndef VK_OEM_MINUS
-#     define VK_OEM_MINUS 0xbd
-#  endif /* !VK_OEM_MINUS */
-
-#  ifndef VK_OEM_PLUS
-#     define VK_OEM_PLUS 0xbb
-#  endif /* !VK_OEM_PLUS */
-
-#  ifndef VK_OEM_PERIOD
-#     define VK_OEM_PERIOD 0xbe
-#  endif /* !VK_OEM_PERIOD */
-
-#  ifndef VK_OEM_COMMA
-#     define VK_OEM_COMMA 0xbc
-#  endif /* !VK_OEM_COMMA */
-
-#  define RETROFLAT_KEY_GRAVE VK_OEM_3
-#  define RETROFLAT_KEY_SLASH VK_OEM_2
-#  define RETROFLAT_KEY_UP	   VK_UP
-#  define RETROFLAT_KEY_DOWN	VK_DOWN
-#  define RETROFLAT_KEY_RIGHT	VK_RIGHT
-#  define RETROFLAT_KEY_LEFT	VK_LEFT
-#  define RETROFLAT_KEY_BKSP  VK_BACK
-#  define RETROFLAT_KEY_A	   0x41
-#  define RETROFLAT_KEY_B	   0x42
-#  define RETROFLAT_KEY_C	   0x43
-#  define RETROFLAT_KEY_D	   0x44
-#  define RETROFLAT_KEY_E	   0x45
-#  define RETROFLAT_KEY_F	   0x46
-#  define RETROFLAT_KEY_G	   0x47
-#  define RETROFLAT_KEY_H	   0x48
-#  define RETROFLAT_KEY_I	   0x49
-#  define RETROFLAT_KEY_J	   0x4a
-#  define RETROFLAT_KEY_K	   0x4b
-#  define RETROFLAT_KEY_L	   0x4c
-#  define RETROFLAT_KEY_M	   0x4d
-#  define RETROFLAT_KEY_N	   0x4e
-#  define RETROFLAT_KEY_O	   0x4f
-#  define RETROFLAT_KEY_P	   0x50
-#  define RETROFLAT_KEY_Q	   0x51
-#  define RETROFLAT_KEY_R	   0x52
-#  define RETROFLAT_KEY_S	   0x53
-#  define RETROFLAT_KEY_T	   0x54
-#  define RETROFLAT_KEY_U	   0x55
-#  define RETROFLAT_KEY_V	   0x56
-#  define RETROFLAT_KEY_W	   0x57
-#  define RETROFLAT_KEY_X	   0x58
-#  define RETROFLAT_KEY_Y	   0x59
-#  define RETROFLAT_KEY_Z	   0x60
-#  define RETROFLAT_KEY_0     0x30
-#  define RETROFLAT_KEY_1     0x31
-#  define RETROFLAT_KEY_2     0x32
-#  define RETROFLAT_KEY_3     0x33
-#  define RETROFLAT_KEY_4     0x34
-#  define RETROFLAT_KEY_5     0x35
-#  define RETROFLAT_KEY_6     0x36
-#  define RETROFLAT_KEY_7     0x37
-#  define RETROFLAT_KEY_8     0x38
-#  define RETROFLAT_KEY_9     0x39
-#  define RETROFLAT_KEY_TAB	VK_TAB
-#  define RETROFLAT_KEY_SPACE	VK_SPACE
-#  define RETROFLAT_KEY_ESC	VK_ESCAPE
-#  define RETROFLAT_KEY_ENTER	VK_RETURN
-#  define RETROFLAT_KEY_HOME	VK_HOME
-#  define RETROFLAT_KEY_END	VK_END
-#  define RETROFLAT_KEY_DELETE   VK_DELETE
-#  define RETROFLAT_KEY_PGUP     VK_PRIOR
-#  define RETROFLAT_KEY_PGDN     VK_NEXT
-#  define RETROFLAT_KEY_SEMICOLON   VK_OEM_1
-#  define RETROFLAT_KEY_PERIOD      VK_OEM_PERIOD
-#  define RETROFLAT_KEY_COMMA       VK_OEM_COMMA
-#  define RETROFLAT_KEY_EQUALS      VK_OEM_PLUS
-#  define RETROFLAT_KEY_DASH        VK_OEM_MINUS
-#  define RETROFLAT_KEY_BACKSLASH   VK_OEM_5
-#  define RETROFLAT_KEY_QUOTE      VK_OEM_7
-#  define RETROFLAT_KEY_BRACKETL    VK_OEM_4
-#  define RETROFLAT_KEY_BRACKETR    VK_OEM_6
-
-#  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
-#  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
-
-/* Set the calling convention for WinMain, depending on Win16/Win32. */
-#  if defined( RETROFLAT_API_WIN16 )
-#     define WINXAPI PASCAL
-#  elif defined( RETROFLAT_API_WIN32 )
-#     define WINXAPI WINAPI
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-/* TODO: Verify this on multi-monitor Win32 systems. */
-#define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))
-#define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
-
-#define main( argc, argv ) retroflat_main( argc, argv )
-
-/* Improvise a rough WinMain to call main(). */
-#define END_OF_MAIN() \
-   int WINXAPI WinMain( \
-      HINSTANCE hInstance, HINSTANCE hPrevInstance, \
-      LPSTR lpCmdLine, int nCmdShow \
-   ) { \
-      LPSTR* rf_argv = NULL; \
-      int rf_argc = 0; \
-      int retval = 0; \
-      g_retroflat_instance = hInstance; \
-      g_retroflat_cmd_show = nCmdShow; \
-      rf_argv = retroflat_win_cli( lpCmdLine, &rf_argc ); \
-      retval = retroflat_main( rf_argc, rf_argv ); \
-      free( rf_argv ); \
-      return retval; \
-   }
-
-/* Convenience macro for auto-locking inside of draw functions. */
-/* TODO: Use maug_cleanup and assume retval. */
-#define retroflat_internal_autolock_bitmap( bmp, lock_auto ) \
-   if( !retroflat_bitmap_locked( bmp ) ) { \
-      retval = retroflat_draw_lock( bmp ); \
-      maug_cleanup_if_not_ok(); \
-      lock_auto = 1; \
-   }
 
 #elif defined( RETROFLAT_API_LIBNDS )
 
@@ -2760,52 +2360,17 @@ void retroflat_message(
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
 #  if defined( RETROFLAT_API_ALLEGRO )
-   allegro_message( "%s", msg_out );
+
 #  elif defined( RETROFLAT_API_SDL2 )
-   switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
-   case RETROFLAT_MSG_FLAG_ERROR:
-      sdl_msg_flags = SDL_MESSAGEBOX_ERROR;
-      break;
 
-   case RETROFLAT_MSG_FLAG_INFO:
-      sdl_msg_flags = SDL_MESSAGEBOX_INFORMATION;
-      break;
-
-   case RETROFLAT_MSG_FLAG_WARNING:
-      sdl_msg_flags = SDL_MESSAGEBOX_WARNING;
-      break;
-   }
-
-   SDL_ShowSimpleMessageBox(
-      sdl_msg_flags, title, msg_out, g_retroflat_state->window );
 #  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN )) || \
    (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_WIN )) || \
    defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
-   case RETROFLAT_MSG_FLAG_ERROR:
-      win_msg_flags |= MB_ICONSTOP;
-      break;
 
-   case RETROFLAT_MSG_FLAG_INFO:
-      win_msg_flags |= MB_ICONINFORMATION;
-      break;
-
-   case RETROFLAT_MSG_FLAG_WARNING:
-      win_msg_flags |= MB_ICONEXCLAMATION;
-      break;
-   }
-
-   MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
 #  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_UNIX )) || \
    (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_UNIX ))
 
-   /* TODO */
-   error_printf( "%s", msg_out );
-
 #  elif defined( RETROFLAT_API_PC_BIOS )
-
-   /* TODO: Display error somehow. */
-   error_printf( "%s", msg_out );
 
 #  else
 #     pragma message( "warning: not implemented" )
@@ -4262,7 +3827,7 @@ void retroflat_set_title( const char* format, ... ) {
 #elif defined( RETROFLAT_API_SDL2 )
 
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   SetWindowText( g_retroflat_state->window, title );
+
 #elif defined( RETROFLAT_API_LIBNDS )
    /* Do nothing. */
 #elif defined( RETROFLAT_API_GLUT )
@@ -4279,19 +3844,9 @@ void retroflat_set_title( const char* format, ... ) {
 retroflat_ms_t retroflat_get_ms() {
 #  if defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   return g_ms;
-
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    
-   /* == SDL == */
-
-   return SDL_GetTicks();
-
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   return timeGetTime();
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
@@ -4306,8 +3861,6 @@ retroflat_ms_t retroflat_get_ms() {
    return glutGet( GLUT_ELAPSED_TIME );
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
-
-   return /**((uint16_t far*)0x046c) >> 4;*/ g_ms;
 
 #  else
 #     pragma message( "warning: get_ms not implemented" )
@@ -4337,47 +3890,6 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   /* == Win16/Win32 == */
-
-   if( NULL == bmp ) {
-#     ifdef RETROFLAT_VDP
-      if( NULL != g_retroflat_state->vdp_buffer ) {
-         bmp = g_retroflat_state->vdp_buffer;
-      } else {
-#     endif
-
-      /* TODO: Reconcile with VDP! */
-      /* The HDC should be created already by WndProc. */
-      assert( (HDC)NULL != g_retroflat_state->buffer.hdc_b );
-      goto cleanup;
-
-#     ifdef RETROFLAT_VDP
-      }
-#     endif /* RETROFLAT_VDP */
-   }
-
-   /* Sanity check. */
-   assert( (HBITMAP)NULL != bmp->b );
-   assert( (HDC)NULL == bmp->hdc_b );
-
-   /* Create HDC for source bitmap compatible with the buffer. */
-   bmp->hdc_b = CreateCompatibleDC( (HDC)NULL );
-   maug_cleanup_if_null( HDC, bmp->hdc_b, RETROFLAT_ERROR_BITMAP );
-
-   if( (HBITMAP)NULL != bmp->mask ) {
-      /* Create HDC for source mask compatible with the buffer. */
-      bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
-      maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
-   }
-
-   /* Select bitmaps into their HDCs. */
-   bmp->old_hbm_b = SelectObject( bmp->hdc_b, bmp->b );
-   if( (HBITMAP)NULL != bmp->mask ) {
-      bmp->old_hbm_mask = SelectObject( bmp->hdc_mask, bmp->mask );
-   }
-
-cleanup:
-
 #  else
 #     pragma message( "warning: draw lock not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4392,6 +3904,8 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
+   retval = retroglu_draw_release( bmp );
+
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
 #  elif defined( RETROFLAT_API_SDL1 )
@@ -4399,46 +3913,6 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #  elif defined( RETROFLAT_API_SDL2 )
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   if( NULL == bmp ) {
-      /* Trigger a screen refresh if this was a screen lock. */
-      if( (HWND)NULL != g_retroflat_state->window ) {
-         InvalidateRect( g_retroflat_state->window, 0, TRUE );
-      }
-
-#     ifdef RETROFLAT_VDP
-      if( NULL != g_retroflat_state->vdp_buffer ) {
-         bmp = g_retroflat_state->vdp_buffer;
-      } else {
-#     endif
-
-      /* TODO: Reconcile with VDP! */
-      goto cleanup;
-
-#     ifdef RETROFLAT_VDP
-      }
-#     endif
-   }
-
-   /* Unlock the bitmap. */
-   if( (HDC)NULL != bmp->hdc_b ) {
-      SelectObject( bmp->hdc_b, bmp->old_hbm_b );
-      DeleteDC( bmp->hdc_b );
-      bmp->hdc_b = (HDC)NULL;
-      bmp->old_hbm_b = (HBITMAP)NULL;
-   }
-
-   /* Unlock the mask. */
-   if( (HDC)NULL != bmp->hdc_mask ) {
-      SelectObject( bmp->hdc_mask, bmp->old_hbm_mask );
-      DeleteDC( bmp->hdc_mask );
-      bmp->hdc_mask = (HDC)NULL;
-      bmp->old_hbm_mask = (HBITMAP)NULL;
-   }
-
-cleanup:
 
 #  else
 #     pragma message( "warning: draw release not implemented" )
@@ -4454,27 +3928,6 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_API_SDL1 )
-   SDL_Surface* tmp_surface = NULL;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined (RETROFLAT_API_WIN32 )
-#     if defined( RETROFLAT_API_WIN16 )
-   char* buf = NULL;
-   mfile_t bmp_file;
-   long int i, x, y, w, h, colors, offset, sz, read;
-#     elif defined( RETROFLAT_API_WIN32 )
-   BITMAP bm;
-#     endif /* RETROFLAT_API_WIN32 */
-#  elif defined( RETROFLAT_API_PC_BIOS )
-   mfile_t bmp_file;
-   struct MFMT_STRUCT_BMPFILE header_bmp;
-   MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
-   uint32_t bmp_color = 0;
-   uint8_t bmp_flags = 0;
-   off_t bmp_px_sz = 0;
-   off_t i = 0;
-
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -4494,132 +3947,6 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  elif defined( RETROFLAT_API_SDL2 )
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-#     if defined( RETROFLAT_API_WIN16 )
-
-   /* Win16 has a bunch of extra involved steps for getting a bitmap from
-    * disk. These cause a crash in Win32.
-    */
-
-   /* == Win16 == */
-
-   /* Load the bitmap file from disk. */
-   retval = mfile_open_read( filename_path, &bmp_file );
-   maug_cleanup_if_not_ok();
-
-   buf = calloc( mfile_get_sz( &bmp_file ), 1 );
-   maug_cleanup_if_null_alloc( char*, buf );
-
-   /*
-   read = fread( buf, 1, sz, bmp_file );
-   assert( read == sz );
-   */
-   retval = bmp_file.read_int( &bmp_file, buf, mfile_get_sz( &bmp_file ), 0 );
-   maug_cleanup_if_not_ok();
-
-   /* Read bitmap properties from header offsets. */
-   retval = bmp_file.seek( &bmp_file, 10 );
-   maug_cleanup_if_not_ok();
-   retval = bmp_file.read_int( &bmp_file,
-      (uint8_t*)&offset, 4, MFILE_READ_FLAG_LSBF );
-   maug_cleanup_if_not_ok();
-
-   retval = bmp_file.seek( &bmp_file, 46 );
-   maug_cleanup_if_not_ok();
-   retval = bmp_file.read_int( &bmp_file,
-      (uint8_t*)&colors, 4, MFILE_READ_FLAG_LSBF );
-   maug_cleanup_if_not_ok();
-
-   /* Avoid a color overflow. */
-   if(
-      sizeof( BITMAPFILEHEADER ) +
-      sizeof( BITMAPINFOHEADER ) +
-      (colors * sizeof( RGBQUAD )) > sz
-   ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error",
-         "Attempted to load bitmap with too many colors!" );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   memcpy( &(bmp_out->bmi),
-      &(buf[sizeof( BITMAPFILEHEADER )]),
-      /* SetDIBits needs the color palette! */
-      /* TODO: Sync with state palette? */
-      sizeof( BITMAPINFOHEADER ) + (colors * sizeof( RGBQUAD )) );
-
-   /* This never gets the height right? */
-   debug_printf( 1, "bitmap w: %08x, h: %08x, colors: %d",
-      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight, colors );
-
-   assert( 0 < bmp_out->bmi.header.biWidth );
-   assert( 0 < bmp_out->bmi.header.biHeight );
-   assert( 0 == bmp_out->bmi.header.biWidth % 8 );
-   assert( 0 == bmp_out->bmi.header.biHeight % 8 );
-
-   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
-      bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
-   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
-
-   /* Turn the bits into a bitmap. */
-   SetDIBits( g_retroflat_state->hdc_win, bmp_out->b, 0,
-      bmp_out->bmi.header.biHeight, &(buf[offset]),
-      (BITMAPINFO*)&(bmp_out->bmi),
-      DIB_RGB_COLORS );
-
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      retval = retroflat_bitmap_win_transparency( bmp_out,
-         bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
-   }
-
-#     else
-
-   /* Win32 greatly simplifies the loading portion. */
-
-   /* == Win32 == */
-
-#        ifdef RETROFLAT_API_WINCE
-   bmp_out->b = SHLoadDIBitmap( filename_path );
-#        else
-   bmp_out->b = LoadImage(
-      NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
-#        endif /* RETROFLAT_API_WINCE */
-   maug_cleanup_if_null_msg(
-      HBITMAP, bmp_out->b, MERROR_FILE, "failed to open FILE!" )
-
-   GetObject( bmp_out->b, sizeof( BITMAP ), &bm );
-
-   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
-   bmp_out->bmi.header.biCompression = BI_RGB;
-   bmp_out->bmi.header.biWidth = bm.bmWidth;
-   bmp_out->bmi.header.biHeight = bm.bmHeight;
-   bmp_out->bmi.header.biPlanes = bm.bmPlanes;
-   bmp_out->bmi.header.biBitCount = bm.bmBitsPixel;
-   bmp_out->bmi.header.biSizeImage =
-      bmp_out->bmi.header.biWidth *
-      bmp_out->bmi.header.biHeight *
-      (bm.bmBitsPixel / sizeof( uint8_t ));
-
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      retval = retroflat_bitmap_win_transparency(
-         bmp_out, bm.bmWidth, bm.bmHeight );
-   }
-
-#     endif /* RETROFLAT_API_WIN16 */
-
-   /* The transparency portion is the same for Win32 and Win16. */
-
-cleanup:
-
-#     ifdef RETROFLAT_API_WIN16
-   if( NULL != buf ) {
-      free( buf );
-   }
-
-   mfile_close( &bmp_file );
-
-#     endif /* RETROFLAT_API_WIN16 */
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
@@ -4657,93 +3984,6 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-   /* == Win16 / Win32 == */
-
-   /* TODO: Handle opaque flag. */
-   bmp_out->mask = (HBITMAP)NULL;
-
-#     ifdef RETROFLAT_WING
-   /* Put this first because WinGRecommendDIBFormat sets some header props. */
-   if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == 
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) &&
-      (WinGCreateDC_t)NULL != g_w.WinGCreateDC &&
-      (WinGRecommendDIBFormat_t)NULL != g_w.WinGRecommendDIBFormat
-   ) {
-      bmp_out->hdc_b = g_w.WinGCreateDC();
-
-      if(
-         !g_w.WinGRecommendDIBFormat( (BITMAPINFO far*)&(bmp_out->bmi) )
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "Could not determine recommended format!" );
-         retval = RETROFLAT_ERROR_GRAPHICS;
-         goto cleanup;
-      }
-   }
-#     endif /* RETROFLAT_WING */
-
-   debug_printf( 0, "creating bitmap..." );
-
-   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
-   bmp_out->bmi.header.biPlanes = 1;
-   bmp_out->bmi.header.biCompression = BI_RGB;
-   bmp_out->bmi.header.biWidth = w;
-#     ifdef RETROFLAT_WING
-   bmp_out->bmi.header.biHeight *= h;
-#     else
-   bmp_out->bmi.header.biHeight = h;
-#     endif /* RETROFLAT_WING */
-   bmp_out->bmi.header.biBitCount = 32;
-   bmp_out->bmi.header.biSizeImage = w * h * 4;
-
-   GetSystemPaletteEntries(
-      g_retroflat_state->hdc_win, 0, RETROFLAT_BMP_COLORS_SZ_MAX, palette );
-   for( i = 0 ; RETROFLAT_BMP_COLORS_SZ_MAX > i ; i++ ) {
-      bmp_out->bmi.colors[i].rgbRed = palette[i].peRed;
-      bmp_out->bmi.colors[i].rgbGreen = palette[i].peGreen;
-      bmp_out->bmi.colors[i].rgbBlue = palette[i].peBlue;
-      bmp_out->bmi.colors[i].rgbReserved = 0;
-   }
-
-#     ifdef RETROFLAT_WING
-   /* Now try to create the WinG bitmap using the header we've built. */
-   if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == 
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) &&
-      (WinGCreateBitmap_t)NULL != g_w.WinGCreateBitmap
-   ) {
-      /* Setup an optimal WinG hardware screen buffer bitmap. */
-      debug_printf( 1, "creating WinG-backed bitmap..." );
-
-      bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
-      bmp_out->b = g_w.WinGCreateBitmap(
-         bmp_out->hdc_b,
-         (BITMAPINFO far*)(&bmp_out->bmi),
-         (void far*)&(bmp_out->bits) );
-
-      debug_printf( 1, "WinG bitmap bits: %p", bmp_out->bits );
-
-   } else {
-#     endif /* RETROFLAT_WING */
-
-   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
-   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
-
-   if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
-   ) {
-      debug_printf( 1, "creating screen device context..." );
-      bmp_out->hdc_b = CreateCompatibleDC( g_retroflat_state->hdc_win );
-      bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
-   }
-
-#     ifdef RETROFLAT_WING
-   }
-#     endif /* RETROFLAT_WING */
-
-cleanup:
-
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
 #  else
@@ -4766,24 +4006,6 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16 == */
-
-   if( NULL != bmp->old_hbm_b ) {
-      SelectObject( bmp->hdc_b, bmp->old_hbm_b );
-      bmp->old_hbm_b = (HBITMAP)NULL;
-      bmp->old_hbm_b = (HBITMAP)NULL;
-   }
-
-   if( (HBITMAP)NULL != bmp->b ) {
-      DeleteObject( bmp->b );
-      bmp->b = (HBITMAP)NULL;
-   }
-
-   if( (HBITMAP)NULL != bmp->mask ) {
-      DeleteObject( bmp->mask );
-      bmp->mask = (HBITMAP)NULL;
-   }
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
@@ -4820,34 +4042,6 @@ void retroflat_blit_bitmap(
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-   assert( (HBITMAP)NULL != src->b );
-
-   retroflat_internal_autolock_bitmap( src, locked_src_internal );
-   assert( retroflat_bitmap_locked( target ) );
-
-   if( (HBITMAP)NULL != src->mask ) {
-      /* Use mask to blit transparency. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
-
-      /* Do actual blit. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
-   } else {
-      /* Just overwrite entire rect. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCCOPY );
-   }
-
-cleanup:
-
-   if( locked_src_internal ) {
-      retroflat_draw_release( src );
-   }
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
