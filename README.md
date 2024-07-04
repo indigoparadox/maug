@@ -90,3 +90,9 @@ uprintf's behavior can be modified by defining the following before inclusion:
 | DEBUG\_LOG        | If defined, debug will be output to LOG\_FILE\_NAME.    |
 | ANCIENT\_C        | Use static functions where vararg macros unsupported.   |
 
+## Troubleshooting
+
+### size of segment x exceeds 64k by y bytes
+
+RetroFlat can be quite bulky for 16-bit DOS. Please try adding RETROFLAT\_DOS\_MEM\_LARGE=1 to your Makefile before Makefile.inc is included to enable a large code model.
+
