@@ -2083,6 +2083,34 @@ struct RETROFLAT_WING_MODULE g_w;
 
 /* === Function Definitions === */
 
+MERROR_RETVAL retroflat_build_filename_path(
+   const char* filename_in,
+   char* buffer_out, size_t buffer_out_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( 1 < buffer_out_sz );
+
+   /* Build the path to the bitmap. */
+   memset( buffer_out, '\0', buffer_out_sz );
+   if(
+      RETROFLAT_FLAGS_LITERAL_PATH ==
+      (RETROFLAT_FLAGS_LITERAL_PATH & flags)
+   ) {
+      /* TODO: Error checking. */
+      maug_snprintf( buffer_out, buffer_out_sz - 1, "%s", filename_in );
+   } else {
+      /* TODO: Error checking. */
+      maug_snprintf( buffer_out, buffer_out_sz - 1, "%s%c%s.%s",
+         g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
+         filename_in, RETROFLAT_BITMAP_EXT );
+   }
+
+   return retval;
+}
+
+/* === */
+
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )) \
    && !defined( MAUG_NO_AUTO_C )
 #     define RETROFP_C
@@ -4419,91 +4447,13 @@ cleanup:
    return retval;
 }
 
-#endif /* !RETROPLAT_PRESENT */
-
 /* === */
-
-#  if (defined( RETROFLAT_API_WIN16 ) || \
-   defined (RETROFLAT_API_WIN32 )) && \
-   !defined( RETROFLAT_OPENGL )
-
-static int retroflat_bitmap_win_transparency(
-   struct RETROFLAT_BITMAP* bmp_out, int16_t w, int16_t h  
-) {
-   int retval = RETROFLAT_OK;
-   unsigned long txp_color = 0;
-
-   /* Setup bitmap transparency mask. */
-   bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
-   maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
-
-   retval = retroflat_draw_lock( bmp_out );
-   maug_cleanup_if_not_ok();
-
-   /* Convert the color key into bitmap format. */
-   txp_color |= (RETROFLAT_TXP_B & 0xff);
-   txp_color <<= 8;
-   txp_color |= (RETROFLAT_TXP_G & 0xff);
-   txp_color <<= 8;
-   txp_color |= (RETROFLAT_TXP_R & 0xff);
-   SetBkColor( bmp_out->hdc_b, txp_color );
-
-   /* Create the mask from the color key. */
-   BitBlt(
-      bmp_out->hdc_mask, 0, 0, w, h, bmp_out->hdc_b, 0, 0, SRCCOPY );
-   BitBlt(
-      bmp_out->hdc_b, 0, 0, w, h, bmp_out->hdc_mask, 0, 0, SRCINVERT );
-
-cleanup:
-
-   if( RETROFLAT_OK == retval ) {
-      retroflat_draw_release( bmp_out );
-   }
-
-   return retval;
-}
-
-#  elif defined( RETROFLAT_API_PC_BIOS )
-
-static MERROR_RETVAL retroflat_bitmap_dos_transparency(
-   struct RETROFLAT_BITMAP* bmp_out
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
-
-   switch( g_retroflat_state->screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_VGA:
-
-      debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-         "creating transparency mask for bitmap..." );
-
-      /* Create a transparency mask based on palette 0. */
-      bmp_out->mask = _fcalloc( bmp_out->w, bmp_out->h );
-      maug_cleanup_if_null_alloc( uint8_t*, bmp_out->mask );
-      /* XXX: Wrong sz field! */
-      for( i = 0 ; bmp_out->sz > i ; i++ ) {
-         if( RETROFLAT_TXP_PAL_IDX == bmp_out->px[i] ) {
-            bmp_out->mask[i] = 0xff;
-         } else {
-            bmp_out->mask[i] = 0x00;
-         }
-      }
-      break;
-   }
-
-cleanup:
-   return retval;
-}
-
-#  endif /* RETROFLAT_API_WIN16 || 
-            RETROFLAT_API_WIN32 ||
-            RETROFLAT_API_PC_BIOS */
 
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
-   int retval = MERROR_OK;
+   MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_OPENGL )
 #  elif defined( RETROFLAT_API_SDL1 )
    SDL_Surface* tmp_surface = NULL;
@@ -4527,22 +4477,10 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    assert( NULL != bmp_out );
-
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
-
-   /* Build the path to the bitmap. */
-   memset( filename_path, '\0', RETROFLAT_PATH_MAX + 1 );
-   if(
-      RETROFLAT_FLAGS_LITERAL_PATH ==
-      (RETROFLAT_FLAGS_LITERAL_PATH & flags)
-   ) {
-      maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s", filename );
-   } else {
-      maug_snprintf( filename_path, RETROFLAT_PATH_MAX, "%s%c%s.%s",
-         g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
-         filename, RETROFLAT_BITMAP_EXT );
-   }
-
+   retval = retroflat_build_filename_path(
+      filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
+   maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
 #  ifdef RETROFLAT_OPENGL
@@ -4551,93 +4489,9 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   bmp_out->b = load_bitmap( filename_path, NULL );
-   if( NULL == bmp_out->b ) {
-      allegro_message( "unable to load %s", filename_path );
-      retval = RETROFLAT_ERROR_BITMAP;
-   }
-
 #  elif defined( RETROFLAT_API_SDL1 )
 
-   /* == SDL1 == */
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "loading bitmap: %s", filename_path );
-
-   tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
-   if( NULL == tmp_surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = 0;
-      goto cleanup;
-   }
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "loaded bitmap: %d x %d", tmp_surface->w, tmp_surface->h );
-
-   bmp_out->surface = SDL_DisplayFormat( tmp_surface );
-   if( NULL == bmp_out->surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL, "converted bitmap: %d x %d",
-      bmp_out->surface->w, bmp_out->surface->h );
-
-   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-      SDL_MapRGB( bmp_out->surface->format,
-         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-
-cleanup:
-
-   if( NULL != tmp_surface ) {
-      SDL_FreeSurface( tmp_surface );
-   }
-
 #  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "loading bitmap: %s", filename_path );
-
-   bmp_out->renderer = NULL;
-   
-   bmp_out->surface = SDL_LoadBMP( filename_path );
-   if( NULL == bmp_out->surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
-      goto cleanup;
-   }
-
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-         SDL_MapRGB( bmp_out->surface->format,
-            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-   }
-
-   bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->buffer.renderer, bmp_out->surface );
-   if( NULL == bmp_out->texture ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to create texture: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
-      if( NULL != bmp_out->surface ) {
-         SDL_FreeSurface( bmp_out->surface );
-         bmp_out->surface = NULL;
-      }
-      goto cleanup;
-   }
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "successfully loaded bitmap: %s", filename_path );
-
-cleanup:
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -4769,58 +4623,6 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   /* TODO: Rework for CGA bitmaps. */
-
-   assert( NULL == bmp_out->px );
-
-   retval = mfile_open_read( filename_path, &bmp_file );
-   maug_cleanup_if_not_ok();
-
-   /* TODO: mfmt file detection system. */
-   header_bmp.magic[0] = 'B';
-   header_bmp.magic[1] = 'M';
-   header_bmp.info.sz = 40;
-
-   retval = mfmt_read_bmp_header(
-      (struct MFMT_STRUCT*)&header_bmp,
-      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
-   maug_cleanup_if_not_ok();
-
-   /* Setup bitmap options from header. */
-   bmp_out->w = header_bmp.info.width;
-   bmp_out->h = header_bmp.info.height;
-
-#if 0
-   retval = mfmt_read_bmp_palette( 
-      (struct MFMT_STRUCT*)&header_bmp,
-      bmp_palette, 4 * header_bmp.info.palette_ncolors,
-      &bmp_file, 54 /* TODO */, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
-   maug_cleanup_if_not_ok();
-#endif
-
-   bmp_out->flags = flags;
-
-   /* Allocate a space for the bitmap pixels. */
-   bmp_out->sz = header_bmp.info.width * header_bmp.info.height;
-   /* We're on PC BIOS... we don't need to lock pointers in this
-    * platform-specific code!
-    */
-   bmp_out->px = _fcalloc( header_bmp.info.height, header_bmp.info.width );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
-
-   retval = mfmt_read_bmp_px( 
-      (struct MFMT_STRUCT*)&header_bmp,
-      bmp_out->px, bmp_out->sz,
-      &bmp_file, header_bmp.px_offset,
-      mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
-   maug_cleanup_if_not_ok();
-
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      retval = retroflat_bitmap_dos_transparency( bmp_out );
-   }
-
-cleanup:
-
 #  else
 #     pragma message( "warning: load bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -4849,51 +4651,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
    
-   /* == Allegro == */
-
-   bmp_out->b = create_bitmap( w, h );
-   maug_cleanup_if_null( BITMAP*, bmp_out->b, RETROFLAT_ERROR_BITMAP );
-   clear_bitmap( bmp_out->b );
-
-cleanup:
 #  elif defined( RETROFLAT_API_SDL1 )
 
-   /* == SDL1 == */
-
-   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
-      32, 0, 0, 0, 0 );
-   maug_cleanup_if_null(
-      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-         SDL_MapRGB( bmp_out->surface->format,
-            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-   }
-
-cleanup:
 #  elif defined( RETROFLAT_API_SDL2 )
 
-   /* == SDL2 == */
-
-   /* Create surface. */
-   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
-      /* TODO: Are these masks right? */
-      32, 0, 0, 0, 0 );
-   maug_cleanup_if_null(
-      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-         SDL_MapRGB( bmp_out->surface->format,
-            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-   }
-
-   /* Convert new surface to texture. */
-   bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->buffer.renderer, bmp_out->surface );
-   maug_cleanup_if_null(
-      SDL_Texture*, bmp_out->texture, RETROFLAT_ERROR_BITMAP );
-      
-cleanup:
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
    /* == Win16 / Win32 == */
@@ -4985,21 +4746,6 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   assert( NULL == bmp_out->px );
-
-   bmp_out->w = w;
-   bmp_out->h = h;
-   bmp_out->flags = flags;
-
-   /* Allocate a space for the bitmap pixels. */
-   bmp_out->sz = w * h;
-   /* We're on PC BIOS... we don't need to lock pointers in this
-    * platform-specific code!
-    */
-   bmp_out->px = _fcalloc( w, h );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
-
-cleanup:
 #  else
 #     pragma message( "warning: create bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -5017,29 +4763,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   if( NULL == bmp->b ) {
-      return;
-   }
-
-   destroy_bitmap( bmp->b );
-   bmp->b = NULL;
-
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-
-   assert( NULL != bmp );
-   assert( NULL != bmp->surface );
-
-#     ifndef RETROFLAT_API_SDL1
-   assert( NULL != bmp->texture );
-
-   SDL_DestroyTexture( bmp->texture );
-   bmp->texture = NULL;
-#     endif /* !RETROFLAT_API_SDL1 */
-
-   SDL_FreeSurface( bmp->surface );
-   bmp->surface = NULL;
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -5063,20 +4787,12 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   if( NULL != bmp->px ) {
-      _ffree( bmp->px );
-      bmp->px = NULL;
-   }
-
-   if( NULL != bmp->mask ) {
-      _ffree( bmp->mask );
-      bmp->mask = NULL;
-   }
-
 #  else
 #     pragma message( "warning: destroy bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
+
+#endif /* !RETROPLAT_PRESENT */
 
 /* === */
 

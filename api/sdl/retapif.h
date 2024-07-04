@@ -267,6 +267,196 @@ cleanup:
    return retval;
 }
 
+/* === */
+
+MERROR_RETVAL retroflat_load_bitmap(
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+) {
+   char filename_path[RETROFLAT_PATH_MAX + 1];
+   MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_API_SDL1 )
+   SDL_Surface* tmp_surface = NULL;
+#  endif
+
+   assert( NULL != bmp_out );
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+   retval = retroflat_build_filename_path(
+      filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
+   maug_cleanup_if_not_ok();
+   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
+
+#  ifdef RETROFLAT_OPENGL
+
+   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loading bitmap: %s", filename_path );
+
+   tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
+   if( NULL == tmp_surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = 0;
+      goto cleanup;
+   }
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loaded bitmap: %d x %d", tmp_surface->w, tmp_surface->h );
+
+   bmp_out->surface = SDL_DisplayFormat( tmp_surface );
+   if( NULL == bmp_out->surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL, "converted bitmap: %d x %d",
+      bmp_out->surface->w, bmp_out->surface->h );
+
+   SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+      SDL_MapRGB( bmp_out->surface->format,
+         RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+
+cleanup:
+
+   if( NULL != tmp_surface ) {
+      SDL_FreeSurface( tmp_surface );
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "loading bitmap: %s", filename_path );
+
+   bmp_out->renderer = NULL;
+   
+   bmp_out->surface = SDL_LoadBMP( filename_path );
+   if( NULL == bmp_out->surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
+
+   bmp_out->texture = SDL_CreateTextureFromSurface(
+      g_retroflat_state->buffer.renderer, bmp_out->surface );
+   if( NULL == bmp_out->texture ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "SDL unable to create texture: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      if( NULL != bmp_out->surface ) {
+         SDL_FreeSurface( bmp_out->surface );
+         bmp_out->surface = NULL;
+      }
+      goto cleanup;
+   }
+
+   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
+      "successfully loaded bitmap: %s", filename_path );
+
+cleanup:
+#  endif
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_create_bitmap(
+   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      32, 0, 0, 0, 0 );
+   maug_cleanup_if_null(
+      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
+
+cleanup:
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   /* Create surface. */
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      /* TODO: Are these masks right? */
+      32, 0, 0, 0, 0 );
+   maug_cleanup_if_null(
+      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
+         SDL_MapRGB( bmp_out->surface->format,
+            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
+   }
+
+   /* Convert new surface to texture. */
+   bmp_out->texture = SDL_CreateTextureFromSurface(
+      g_retroflat_state->buffer.renderer, bmp_out->surface );
+   maug_cleanup_if_null(
+      SDL_Texture*, bmp_out->texture, RETROFLAT_ERROR_BITMAP );
+      
+cleanup:
+#  endif
+
+   return retval;
+}
+
+/* === */
+
+void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retroglu_destroy_bitmap( bmp );
+
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+
+   assert( NULL != bmp );
+   assert( NULL != bmp->surface );
+
+#     ifndef RETROFLAT_API_SDL1
+   assert( NULL != bmp->texture );
+
+   SDL_DestroyTexture( bmp->texture );
+   bmp->texture = NULL;
+#     endif /* !RETROFLAT_API_SDL1 */
+
+   SDL_FreeSurface( bmp->surface );
+   bmp->surface = NULL;
+
+#  endif
+
+}
 
 #endif /* !RETPLTF_H */
 

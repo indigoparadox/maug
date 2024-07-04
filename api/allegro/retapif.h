@@ -133,5 +133,53 @@ cleanup:
    return retval;
 }
 
+/* === */
+
+MERROR_RETVAL retroflat_load_bitmap(
+   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   bmp_out->b = load_bitmap( filename_path, NULL );
+   if( NULL == bmp_out->b ) {
+      allegro_message( "unable to load %s", filename_path );
+      retval = RETROFLAT_ERROR_BITMAP;
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_create_bitmap(
+   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+
+   bmp_out->b = create_bitmap( w, h );
+   maug_cleanup_if_null( BITMAP*, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+   clear_bitmap( bmp_out->b );
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
+
+   if( NULL == bmp->b ) {
+      return;
+   }
+
+   destroy_bitmap( bmp->b );
+   bmp->b = NULL;
+}
+
 #endif /* !RETPLTF_H */
 

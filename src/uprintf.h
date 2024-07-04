@@ -440,6 +440,7 @@ int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
 
 /* === */
 
+/* TODO: Error checking. */
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs
 ) {
@@ -605,6 +606,7 @@ cleanup:
 
 /* === */
 
+/* TODO: Error checking. */
 void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... ) {
    va_list vargs;
 
