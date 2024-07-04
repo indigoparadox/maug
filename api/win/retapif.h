@@ -526,6 +526,7 @@ void retroflat_blit_bitmap(
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
 #  ifndef RETROFLAT_OPENGL
+   int retval = 0;
    int locked_src_internal = 0;
 
    if( NULL == target ) {
