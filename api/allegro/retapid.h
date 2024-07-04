@@ -8,6 +8,10 @@
 #     error "opengl support not implemented for allegro"
 #  endif /* RETROFLAT_OPENGL */
 
+#  ifdef RETROFLAT_VDP
+#     error "VDP support not implemented for allegro"
+#  endif /* RETROFLAT_VDP */
+
 /* == Allegro == */
 
 #  include <allegro.h>
