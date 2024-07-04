@@ -2079,9 +2079,6 @@ struct RETROFLAT_WING_MODULE g_w;
 #  include <stdlib.h>
 #  include <string.h>
 
-/* TODO: Migrate all platform-specific parts below to retapid.h. */
-#include <retapif.h>
-
 /* Callback table is down below, after the statically-defined callbacks. */
 
 /* === Function Definitions === */
@@ -2102,6 +2099,9 @@ struct RETROFLAT_WING_MODULE g_w;
 #     define RETROSFT_C
 #     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
+
+/* TODO: Migrate all platform-specific parts below to retapid.h. */
+#include <retapif.h>
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>

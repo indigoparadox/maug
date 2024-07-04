@@ -450,6 +450,10 @@ void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
    const char* str, size_t str_sz, const char* font_str, uint8_t flags );
 
+/* int retroglu_draw_lock( struct RETROFLAT_BITMAP* bmp ); */
+
+int retroglu_draw_release( struct RETROFLAT_BITMAP* bmp );
+
 #ifdef RETROGLU_C
 
 #  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -1574,6 +1578,63 @@ MERROR_RETVAL retroglu_check_errors( const char* desc ) {
          retval = MERROR_GUI;
       }
    } while( GL_NO_ERROR != gl_retval );
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroglu_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = RETROFLAT_OK;
+
+   /* TODO: Move this to a common OpenGL header. */
+
+   if(
+      NULL != bmp &&
+      &(g_retroflat_state->buffer) != bmp &&
+      (MAUG_MHANDLE)NULL != bmp->tex.bytes_h
+   ) {
+      bmp->flags |= RETROFLAT_FLAGS_LOCK;
+      maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroglu_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO: Move this to a common OpenGL header. */
+
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      /* Flush GL buffer and swap screen buffers. */
+      glFlush();
+
+#     if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+      SwapBuffers( g_retroflat_state->hdc_win );
+#     elif defined( RETROFLAT_API_GLUT )
+      glutSwapBuffers();
+#     endif
+   } else if( retroflat_bitmap_locked( bmp ) ) {
+      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+#ifndef RETROGLU_NO_TEXTURES
+      assert( 0 < bmp->tex.id );
+      assert( NULL != bmp->tex.bytes );
+
+      /* Update stored texture if it exists. */
+      glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      glBindTexture( GL_TEXTURE_2D, 0 );
+#endif /* !RETROGLU_NO_TEXTURES */
+
+      /* Unlock texture bitmap. */
+      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
 
    return retval;
 }
