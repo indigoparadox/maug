@@ -458,5 +458,69 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 }
 
+/* === */
+
+void retroflat_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+) {
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+   MERROR_RETVAL retval = MERROR_OK;
+   SDL_Rect src_rect;
+   SDL_Rect dest_rect;
+#  elif defined( RETROFLAT_API_SDL2 )
+   MERROR_RETVAL retval = MERROR_OK;
+   SDL_Rect src_rect = { s_x, s_y, w, h };
+   SDL_Rect dest_rect = { d_x, d_y, w, h };
+#  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
+
+#  ifndef RETROFLAT_OPENGL
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+#  endif /* RETROFLAT_OPENGL */
+
+   assert( NULL != src );
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+
+#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL == */
+
+   src_rect.x = s_x;
+   src_rect.y = s_y;
+   src_rect.w = w;
+   src_rect.h = h;
+   dest_rect.x = d_x;
+   dest_rect.y = d_y;
+   dest_rect.w = w;
+   dest_rect.h = h;
+
+#     ifdef RETROFLAT_API_SDL1
+   assert( 0 == src->autolock_refs );
+   assert( 0 == target->autolock_refs );
+   retval = 
+      SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
+   if( 0 != retval ) {
+      error_printf( "could not blit surface: %s", SDL_GetError() );
+   }
+#     else
+
+   assert( retroflat_bitmap_locked( target ) );
+   retval = SDL_RenderCopy(
+      target->renderer, src->texture, &src_rect, &dest_rect );
+   if( 0 != retval ) {
+      error_printf( "could not blit surface: %s", SDL_GetError() );
+   }
+
+#     endif /* !RETROFLAT_API_SDL1 */
+
+#  endif
+
+}
+
 #endif /* !RETPLTF_H */
 

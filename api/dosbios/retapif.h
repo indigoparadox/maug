@@ -236,5 +236,62 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 }
 
+/* === */
+
+void retroflat_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+) {
+   int16_t y_iter = 0,
+      x_iter = 0;
+   uint16_t target_line_offset = 0;
+   int16_t src_line_offset = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( NULL != src );
+
+   if( NULL == target ) {
+      target = &(g_retroflat_state->buffer);
+   }
+
+   switch( g_retroflat_state->screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+      for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
+         target_line_offset = ((d_y + y_iter) * (target->w)) + d_x;
+         src_line_offset = ((s_y + y_iter) * src->w) + s_x;
+         if( target->sz <= target_line_offset + w ) {
+            continue;
+         }
+         /* Blit the line. */
+         if(
+            RETROFLAT_FLAGS_OPAQUE ==
+            (RETROFLAT_FLAGS_OPAQUE & src->flags)
+         ) {
+            /* Copy line-by-line for speed. */
+            _fmemcpy(
+               &(target->px[target_line_offset]),
+               &(src->px[src_line_offset]), w );
+         } else {
+            for( x_iter = 0 ; w > x_iter ; x_iter++ ) {
+               /* AND with mask for transparency cutout. */
+               target->px[target_line_offset + x_iter] &=
+                  src->mask[src_line_offset + x_iter];
+               /* Draw into cutout with OR. */
+               target->px[target_line_offset + x_iter] |=
+                  src->px[src_line_offset + x_iter];
+            }
+         }
+      }
+      break;
+
+   default:
+      error_printf( "bitmap blit unsupported in video mode: %d",
+         g_retroflat_state->screen_mode );
+      break;
+   }
+
+}
+
+
 #endif /* !RETPLTF_H */
 

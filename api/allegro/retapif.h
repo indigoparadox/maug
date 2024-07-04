@@ -191,5 +191,32 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    bmp->b = NULL;
 }
 
+/* === */
+
+void retroflat_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+) {
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( NULL != src );
+   assert( NULL != target->b );
+   assert( NULL != src->b );
+
+   if(
+      0 == s_x && 0 == s_y &&
+      ((-1 == w && -1 == h ) || (src->b->w == w && src->b->h == h))
+   ) {
+      draw_sprite( target->b, src->b, d_x, d_y );
+   } else {
+      /* Handle partial blit. */
+      blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
+   }
+
+}
+
 #endif /* !RETPLTF_H */
 

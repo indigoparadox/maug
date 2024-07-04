@@ -4256,11 +4256,11 @@ void retroflat_set_title( const char* format, ... ) {
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
 #if defined( RETROFLAT_API_ALLEGRO )
-   set_window_title( title );
+
 #elif defined( RETROFLAT_API_SDL1 )
-   SDL_WM_SetCaption( title, NULL );
+
 #elif defined( RETROFLAT_API_SDL2 )
-   SDL_SetWindowTitle( g_retroflat_state->window, title );
+
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    SetWindowText( g_retroflat_state->window, title );
 #elif defined( RETROFLAT_API_LIBNDS )
@@ -4792,31 +4792,15 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
-#endif /* !RETROPLAT_PRESENT */
-
 /* === */
 
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
-   MERROR_RETVAL retval = MERROR_OK;
-   SDL_Rect src_rect;
-   SDL_Rect dest_rect;
-#  elif defined( RETROFLAT_API_SDL2 )
-   MERROR_RETVAL retval = MERROR_OK;
-   SDL_Rect src_rect = { s_x, s_y, w, h };
-   SDL_Rect dest_rect = { d_x, d_y, w, h };
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    MERROR_RETVAL retval = MERROR_OK;
    int locked_src_internal = 0;
-#  elif defined( RETROFLAT_API_PC_BIOS )
-   int16_t y_iter = 0,
-      x_iter = 0;
-   uint16_t target_line_offset = 0;
-   int16_t src_line_offset = 0;
-   MERROR_RETVAL retval = MERROR_OK;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 #  ifndef RETROFLAT_OPENGL
@@ -4833,52 +4817,7 @@ void retroflat_blit_bitmap(
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   assert( NULL != target->b );
-   assert( NULL != src->b );
-
-   if(
-      0 == s_x && 0 == s_y &&
-      ((-1 == w && -1 == h ) || (src->b->w == w && src->b->h == h))
-   ) {
-      draw_sprite( target->b, src->b, d_x, d_y );
-   } else {
-      /* Handle partial blit. */
-      blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
-   }
-
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL == */
-
-   src_rect.x = s_x;
-   src_rect.y = s_y;
-   src_rect.w = w;
-   src_rect.h = h;
-   dest_rect.x = d_x;
-   dest_rect.y = d_y;
-   dest_rect.w = w;
-   dest_rect.h = h;
-
-#     ifdef RETROFLAT_API_SDL1
-   assert( 0 == src->autolock_refs );
-   assert( 0 == target->autolock_refs );
-   retval = 
-      SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
-   if( 0 != retval ) {
-      error_printf( "could not blit surface: %s", SDL_GetError() );
-   }
-#     else
-
-   assert( retroflat_bitmap_locked( target ) );
-   retval = SDL_RenderCopy(
-      target->renderer, src->texture, &src_rect, &dest_rect );
-   if( 0 != retval ) {
-      error_printf( "could not blit surface: %s", SDL_GetError() );
-   }
-
-#     endif /* !RETROFLAT_API_SDL1 */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -4912,51 +4851,13 @@ cleanup:
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
-   }
-
-   switch( g_retroflat_state->screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_VGA:
-      for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
-         target_line_offset = ((d_y + y_iter) * (target->w)) + d_x;
-         src_line_offset = ((s_y + y_iter) * src->w) + s_x;
-         if( target->sz <= target_line_offset + w ) {
-            continue;
-         }
-         /* Blit the line. */
-         if(
-            RETROFLAT_FLAGS_OPAQUE ==
-            (RETROFLAT_FLAGS_OPAQUE & src->flags)
-         ) {
-            /* Copy line-by-line for speed. */
-            _fmemcpy(
-               &(target->px[target_line_offset]),
-               &(src->px[src_line_offset]), w );
-         } else {
-            for( x_iter = 0 ; w > x_iter ; x_iter++ ) {
-               /* AND with mask for transparency cutout. */
-               target->px[target_line_offset + x_iter] &=
-                  src->mask[src_line_offset + x_iter];
-               /* Draw into cutout with OR. */
-               target->px[target_line_offset + x_iter] |=
-                  src->px[src_line_offset + x_iter];
-            }
-         }
-      }
-      break;
-
-   default:
-      error_printf( "bitmap blit unsupported in video mode: %d",
-         g_retroflat_state->screen_mode );
-      break;
-   }
-
 #  else
 #     pragma message( "warning: blit bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
    return;
 }
+
+#endif /* !RETROPLAT_PRESENT */
 
 /* === */
 
