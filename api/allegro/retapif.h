@@ -138,13 +138,23 @@ cleanup:
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
+   char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
+
+   assert( NULL != bmp_out );
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
+   retval = retroflat_build_filename_path(
+      filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
+   maug_cleanup_if_not_ok();
+   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
    bmp_out->b = load_bitmap( filename_path, NULL );
    if( NULL == bmp_out->b ) {
       allegro_message( "unable to load %s", filename_path );
       retval = RETROFLAT_ERROR_BITMAP;
    }
+
+cleanup:
 
    return retval;
 }
