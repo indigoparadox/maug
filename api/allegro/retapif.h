@@ -4,6 +4,22 @@
 
 static volatile retroflat_ms_t g_ms = 0;
 
+int retroflat_allegro_screen_w() {
+   return SCREEN_W;
+}
+
+int retroflat_allegro_screen_h() {
+   return SCREEN_H;
+}
+
+int retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp ) {
+   return bmp->b->w;
+}
+
+int retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp ) {
+   return bmp->b->w;
+}
+
 /* Allegro-specific callbacks for init, below. */
 
 void retroflat_on_ms_tick() {

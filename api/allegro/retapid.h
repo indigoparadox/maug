@@ -14,7 +14,11 @@
 
 /* == Allegro == */
 
-#  include <allegro.h>
+#  ifdef MAUG_C
+#     include <allegro.h>
+#  else
+#     include <allegro/keyboard.h>
+#  endif /* MAUG_C */
 
 #  ifdef RETROFLAT_OS_DOS
 #     include <dos.h>
@@ -27,6 +31,10 @@ typedef int16_t RETROFLAT_IN_KEY;
 typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%u"
+
+struct BITMAP;
+
+typedef struct BITMAP BITMAP;
 
 struct RETROFLAT_BITMAP {
    size_t sz;
@@ -42,11 +50,12 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
 #     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
 #  else
-#     define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? SCREEN_W : (bmp)->b->w)
-#     define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? SCREEN_H : (bmp)->b->h)
+#     define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? \
+         retroflat_screen_w() : retroflat_allegro_bmp_w( bmp ))
+#     define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? retroflat_bitmap_h() : (bmp)->b->h)
 #  endif /* RETROFLAT_OPENGL */
-#  define retroflat_screen_w() SCREEN_W
-#  define retroflat_screen_h() SCREEN_H
+#  define retroflat_screen_w() (retroflat_allegro_screen_w())
+#  define retroflat_screen_h() (retroflat_allegro_screen_h())
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 #  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_px_lock( bmp )
@@ -124,6 +133,16 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_KEY_BRACKETR KEY_CLOSEBRACE
 #  define RETROFLAT_KEY_BACKSLASH   KEY_BACKSLASH
 #  define RETROFLAT_KEY_QUOTE    KEY_QUOTE
+
+/* These helper functions keep references to allergo global variables and
+ * struct internals in MAIN_C, as the allegro headers on DJGPP don't seem
+ * so good and will cause multiple defs otherwise...
+ */
+
+int retroflat_allegro_screen_w();
+int retroflat_allegro_screen_h();
+int retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp );
+int retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp );
 
 #endif /* !RETPLTD_H */
 
