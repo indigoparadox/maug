@@ -3954,6 +3954,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 #     pragma message( "warning: load bitmap not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO */
 
+cleanup:
+
    return retval;
 }
 

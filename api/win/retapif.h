@@ -230,7 +230,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    char* buf = NULL;
    mfile_t bmp_file;
    long int i, x, y, w, h, colors, offset, sz, read;
-#  elif defined( RETROFLAT_API_WIN32 )
+#  elif defined( RETROFLAT_API_WIN32 ) && !defined( RETROFLAT_OPENGL )
    BITMAP bm;
 #  endif /* RETROFLAT_API_WIN32 */
 
@@ -380,8 +380,10 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#  ifndef RETROFLAT_OPENGL
    int i = 0;
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
+#  endif /* !RETROFLAT_OPENGL */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
@@ -523,10 +525,9 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
-   MERROR_RETVAL retval = MERROR_OK;
+#  ifndef RETROFLAT_OPENGL
    int locked_src_internal = 0;
 
-#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }

@@ -274,7 +274,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_SDL1 )
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    SDL_Surface* tmp_surface = NULL;
 #  endif
 
@@ -322,8 +322,6 @@ MERROR_RETVAL retroflat_load_bitmap(
       SDL_MapRGB( bmp_out->surface->format,
          RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
 
-cleanup:
-
    if( NULL != tmp_surface ) {
       SDL_FreeSurface( tmp_surface );
    }
@@ -367,8 +365,9 @@ cleanup:
    debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
       "successfully loaded bitmap: %s", filename_path );
 
-cleanup:
 #  endif
+
+cleanup:
 
    return retval;
 }
