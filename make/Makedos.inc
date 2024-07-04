@@ -15,6 +15,15 @@ endif
 ifeq ("$(LDFLAGS_WATCOM_DOS)","")
 	LDFLAGS_WATCOM_DOS :=
 endif
+CFLAGS_DJGPP_DOS := -DRETROFLAT_OS_DOS -DRETROSND_API_PC_BIOS
+
+ifeq ($(CC_DJGPP),)
+	CC_DJGPP := i586-pc-msdosdjgpp-gcc
+endif
+ifeq ($(LD_DJGPP),)
+	LD_DJGPP := i586-pc-msdosdjgpp-gcc
+endif
+CFLAGS_DJGPP += $(GLOBAL_DEFINES) $(INCLUDES_GCC)
 
 C_MAUG_STUBS := $(wildcard maug/dosstubs/*.c)
 
@@ -28,12 +37,12 @@ CFLAGS_WATCOM386_DOS_ALLEGRO += \
 LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
 
-$(1)d.exe: $$(addprefix obj/dos/,$$(subst .c,.o,$$(C_FILES)))
+$(1)d.exe: $$(addprefix obj/doswa/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_DOS) \
 		$$(LDFLAGS_WATCOM386_DOS_ALLEGRO) fil {$$^}
 
-obj/dos/%.o: %.c | $(MAUG_DEPS)
+obj/doswa/%.o: %.c | $(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_DOS) \
@@ -41,6 +50,30 @@ obj/dos/%.o: %.c | $(MAUG_DEPS)
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)d.exe
+
+endef
+
+# ---
+
+define TGTDOSGAL
+
+CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/allegro
+
+LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
+
+$(1)dg.exe: $$(addprefix obj/dosdg/,$$(subst .c,.o,$$(C_FILES)))
+	$$(LD_DJGPP) -o $$@ $$^ \
+		$$(LDFLAGS_DJGPP) $$(LDFLAGS_DJGPP_DOS) \
+		$$(LDFLAGS_DJGPP_DOS_ALLEGRO)
+
+obj/dosdg/%.o: %.c | $(MAUG_DEPS)
+	$$(MD) $$(dir $$@)
+	$$(CC_DJGPP) \
+		$$(CFLAGS_DJGPP) $$(CFLAGS_DJGPP_DOS) \
+		$$(CFLAGS_DJGPP_DOS_ALLEGRO) \
+		-o $$@ -c $$<
+
+CLEAN_TARGETS += $(1)dg.exe
 
 endef
 
