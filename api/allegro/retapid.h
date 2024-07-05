@@ -46,14 +46,10 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
-#  ifdef RETROFLAT_OPENGL
-#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
-#  else
-#     define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? \
-         retroflat_screen_w() : retroflat_allegro_bmp_w( bmp ))
-#     define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? retroflat_bitmap_h() : (bmp)->b->h)
-#  endif /* RETROFLAT_OPENGL */
+#  define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? \
+      retroflat_screen_w() : retroflat_allegro_bmp_w( bmp ))
+#  define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? \
+      retroflat_screen_h() : retroflat_allegro_bmp_h( bmp ))
 #  define retroflat_screen_w() (retroflat_allegro_screen_w())
 #  define retroflat_screen_h() (retroflat_allegro_screen_h())
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
