@@ -104,6 +104,14 @@ MERROR_RETVAL retroflat_init_platform(
    return retval;
 }
 
+/* === */
+
+void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
+
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

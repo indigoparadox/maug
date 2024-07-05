@@ -2,7 +2,9 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-MERROR_RETVAL retroflat_init_platform( struct RETROFLAT_ARGS* args ) {
+MERROR_RETVAL retroflat_init_platform(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
    MERROR_RETVAL retval = MERROR_OK;
    int i = 0;
 

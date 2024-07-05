@@ -103,7 +103,7 @@ int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 /* === */
 
 static MERROR_RETVAL retroflat_init_platform(
-   struct RETROFLAT_ARGS* args
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union REGS r;
@@ -232,6 +232,44 @@ cleanup:
 
    return retval;
 }
+
+/* === */
+
+void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
+   union REGS r;
+   struct SREGS s;
+
+   if( 0 != g_retroflat_state->platform.old_video_mode ) {
+      /* Restore old video mode. */
+      debug_printf( 3, "restoring video mode 0x%02x...",
+         g_retroflat_state->platform.old_video_mode );
+
+      memset( &r, 0, sizeof( r ) );
+      r.x.ax = g_retroflat_state->platform.old_video_mode;
+      int86( 0x10, &r, &r ); /* Call video interrupt. */
+   }
+
+   if( NULL != g_retroflat_state->platform.old_timer_interrupt ) {
+      /* Re-install original interrupt handler. */
+      debug_printf( 3, "restoring timer interrupt..." );
+      _disable();
+      segread( &s );
+      r.h.al = 0x08;
+      r.h.ah = 0x25;
+      s.ds = FP_SEG( g_retroflat_state->platform.old_timer_interrupt );
+      r.x.dx = FP_OFF( g_retroflat_state->platform.old_timer_interrupt );
+      int86x( 0x21, &r, &r, &s );
+   }
+
+   /* Reset timer chip resolution to 18.2...ms. */
+   outp( 0x43, 0x36 );
+   outp( 0x40, 0x00 );
+   outp( 0x40, 0x00 );
+
+   _enable();
+}
+
+/* === */
 
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...

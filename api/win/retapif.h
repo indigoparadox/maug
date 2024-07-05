@@ -409,6 +409,243 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL retroflat_init_platform(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   WNDCLASS wc;
+   RECT wr = { 0, 0, 0, 0 };
+   DWORD window_style = RETROFLAT_WIN_STYLE;
+   DWORD window_style_ex = 0;
+   int ww = 0,
+      wh = 0;
+
+   /* == Win16/Win32 == */
+
+#     ifdef RETROFLAT_API_WINCE
+   srand( GetTickCount() );
+#     else
+   srand( time( NULL ) );
+#     endif /* RETROFLAT_API_WINCE */
+
+   /* Setup color palettes. */
+   /* TODO: For WinG, try to make the indexes match system palette? */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+            g_retroflat_state->palette[idx] = RGB( r, g, b );
+#     endif /* RETROFLAT_OPENGL */
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
+
+#     ifdef RETROFLAT_WING
+   debug_printf( 3, "attempting to link WinG..." );
+   /* Dynamically load the WinG procedures. */
+#        ifdef RETROFLAT_API_WIN32
+   g_w.module = LoadLibrary( "wing32.dll" );
+   if( (HMODULE)NULL == g_w.module ) {
+#        elif defined( RETROFLAT_API_WIN16 )
+   g_w.module = LoadLibrary( "wing.dll" );
+   if( HINSTANCE_ERROR == g_w.module ) {
+#        endif
+      g_w.success = 0;
+   } else {
+      g_w.success = 1;
+
+#        ifdef RETROFLAT_API_WIN32
+#           define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, ord ) \
+               g_w.proc = (proc ## _t)GetProcAddress( g_w.module, #proc ); \
+               if( (proc ## _t)NULL == g_w.proc ) { \
+                  g_w.success = 0; \
+               }
+#        elif defined( RETROFLAT_API_WIN16 )
+#           define RETROFLAT_WING_LLTABLE_LOAD_PROC( retval, proc, ord ) \
+               g_w.proc = (proc ## _t)GetProcAddress( \
+                  g_w.module, MAKEINTRESOURCE( ord ) ); \
+               if( (proc ## _t)NULL == g_w.proc ) { \
+                  retroflat_message( \
+                     RETROFLAT_MSG_FLAG_ERROR, "Error", \
+                     "Unable to link WinG proc: %s", #proc ); \
+                  g_w.success = 0; \
+               }
+#        endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+      RETROFLAT_WING_LLTABLE( RETROFLAT_WING_LLTABLE_LOAD_PROC )
+
+   }
+
+   if( !g_w.success ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Unable to link WinG!" );
+   }
+#     endif /* RETROFLAT_WING */
+
+   /* Get the *real* size of the window, including titlebar. */
+   wr.right = g_retroflat_state->screen_w;
+   wr.bottom = g_retroflat_state->screen_h;
+#     ifndef RETROFLAT_API_WINCE
+   AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
+#     endif /* !RETROFLAT_API_WINCE */
+
+   memset(
+      &(g_retroflat_state->buffer), '\0', sizeof( struct RETROFLAT_BITMAP ) );
+
+   debug_printf( 1, "retroflat: creating window class..." );
+
+   memset( &wc, '\0', sizeof( WNDCLASS ) );
+
+   wc.lpfnWndProc   = (WNDPROC)&WndProc;
+   wc.hInstance     = g_retroflat_instance;
+#     ifdef RETROFLAT_ICO_RES_ID
+   wc.hIcon         = LoadIcon(
+      g_retroflat_instance, MAKEINTRESOURCE( RETROFLAT_ICO_RES_ID ) );
+#     endif /* RETROFLAT_ICO_RES_ID */
+   wc.hCursor       = LoadCursor( 0, IDC_ARROW );
+   wc.hbrBackground = (HBRUSH)( COLOR_BTNFACE + 1 );
+   /* wc.lpszMenuName  = MAKEINTRESOURCE( IDR_MAINMENU ); */
+   wc.lpszClassName = RETROFLAT_WINDOW_CLASS;
+
+   if( !RegisterClass( &wc ) ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not register window class!" );
+      goto cleanup;
+   }
+
+   debug_printf( 1, "retroflat: creating window..." );
+   
+#     ifdef RETROFLAT_SCREENSAVER
+   if( (HWND)0 != g_retroflat_state->platform.parent ) {
+      /* Shrink the child window into the parent. */
+      debug_printf( 1, "retroflat: using window parent: %p",
+         g_retroflat_state->platform.parent );
+      window_style = WS_CHILD;
+      GetClientRect( g_retroflat_state->platform.parent, &wr );
+   } else if(
+      RETROFLAT_FLAGS_SCREENSAVER ==
+      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags)
+   ) {
+      /* Make window fullscreen and on top. */
+      window_style_ex = WS_EX_TOPMOST;
+      window_style = WS_POPUP | WS_VISIBLE;
+      /* X/Y are hardcoded to zero below, so just get desired window size. */
+      wr.left = 0;
+      wr.top = 0;
+      wr.right = GetSystemMetrics( SM_CXSCREEN );
+      wr.bottom = GetSystemMetrics( SM_CYSCREEN );
+   } else {
+#     endif /* RETROFLAT_SCREENSAVER */
+#     ifndef RETROFLAT_API_WINCE
+   /* Open in a centered window. */
+   ww = wr.right - wr.left;
+   wh = wr.bottom - wr.top;
+   if( 0 == args->screen_x ) {
+      args->screen_x = (GetSystemMetrics( SM_CXSCREEN ) / 2) - (ww / 2);
+   }
+   if( 0 == args->screen_y ) {
+      args->screen_y = (GetSystemMetrics( SM_CYSCREEN ) / 2) - (wh / 2);
+   }
+#     endif /* !RETROFLAT_API_WINCE */
+#     ifdef RETROFLAT_SCREENSAVER
+   }
+#     endif /* RETROFLAT_SCREENSAVER */
+
+   g_retroflat_state->platform.window = CreateWindowEx(
+      window_style_ex, RETROFLAT_WINDOW_CLASS, args->title,
+      window_style,
+#     ifdef RETROFLAT_API_WINCE
+      0, 0, CW_USEDEFAULT, CW_USEDEFAULT,
+#     else
+      args->screen_x, args->screen_y, ww, wh,
+#     endif /* RETROFLAT_API_WINCE */
+#     ifdef RETROFLAT_SCREENSAVER
+      g_retroflat_state->platform.parent
+#     else
+      0
+#     endif /* RETROFLAT_SCREENSAVER */
+      , 0, g_retroflat_instance, 0
+   );
+
+#     ifdef RETROFLAT_API_WINCE
+   /* Force screen size. */
+   GetClientRect( g_retroflat_state->platform.window, &wr );
+   g_retroflat_state->screen_w = wr.right - wr.left;
+   g_retroflat_state->screen_h = wr.bottom - wr.top;
+#     endif /* RETROFLAT_API_WINCE */
+
+   if( !g_retroflat_state->platform.window ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Could not create window!" );
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+
+   maug_cleanup_if_null_alloc( HWND, g_retroflat_state->platform.window );
+
+#ifndef RETROFLAT_OPENGL
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRSET )
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PNSET )
+#endif /* !RETROFLAT_OPENGL */
+
+   ShowWindow( g_retroflat_state->platform.window, g_retroflat_cmd_show );
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
+
+   /* TODO: Windows shutdown? */
+
+   /* Stop frame timer if available. */
+   if( NULL != g_retroflat_state->platform.frame_iter ) {
+      KillTimer(
+         g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID );
+   }
+
+   /* Stop loop timer if available. */
+   if( NULL != g_retroflat_state->platform.loop_iter ) {
+      KillTimer(
+         g_retroflat_state->platform.window, RETROFLAT_WIN_LOOP_TIMER_ID );
+   }
+
+   if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
+      /* Return the default object into the HDC. */
+      SelectObject(
+         g_retroflat_state->buffer.hdc_b,
+         g_retroflat_state->buffer.old_hbm_b );
+      DeleteDC( g_retroflat_state->buffer.hdc_b );
+      g_retroflat_state->buffer.hdc_b = (HDC)NULL;
+
+      /* Destroy buffer bitmap! */
+      retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+   }
+
+#     ifndef RETROFLAT_OPENGL
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRRM )
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENRM )
+#     endif /* !RETROFLAT_OPENGL */
+
+#     ifdef RETROFLAT_WING
+   if( (HMODULE)NULL != g_w.module ) {
+      FreeLibrary( g_w.module );
+   }
+#     endif /* RETROFLAT_WING */
+
+   if( (HDC)NULL != g_retroflat_state->platform.hdc_win ) {
+      ReleaseDC(
+         g_retroflat_state->platform.window,
+         g_retroflat_state->platform.hdc_win );
+   }
+
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

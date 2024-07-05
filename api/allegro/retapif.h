@@ -37,6 +37,105 @@ END_OF_FUNCTION( retroflat_on_close_button )
 
 /* === */
 
+MERROR_RETVAL retroflat_init_platform(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+#     if 0
+   union REGS regs;
+   struct SREGS sregs;
+#     endif
+
+   /* == Allegro == */
+
+   srand( time( NULL ) );
+
+   if( allegro_init() ) {
+      allegro_message( "could not setup allegro!" );
+      retval = RETROFLAT_ERROR_ENGINE;
+      goto cleanup;
+   }
+
+   install_keyboard();
+#     if !defined( RETROFLAT_OS_DOS ) || !defined( __WATCOMC__ )
+   /* XXX: Broken in DOS on watcom. */
+   install_timer();
+   install_int( retroflat_on_ms_tick, 1 );
+#     endif /* RETROFLAT_OS_DOS */
+
+#     ifdef RETROFLAT_OS_DOS
+   /* Don't try windowed mode in DOS. */
+   if(
+      set_gfx_mode( GFX_AUTODETECT, args->screen_w, args->screen_h, 0, 0 )
+   ) {
+#     else
+   if( 
+      /* TODO: Set window position. */
+      set_gfx_mode(
+         GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 )
+   ) {
+#     endif /* RETROFLAT_OS_DOS */
+
+      allegro_message( "could not setup graphics!" );
+      retval = RETROFLAT_ERROR_GRAPHICS;
+      goto cleanup;
+   }
+
+#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b, cgac, cgad ) \
+         g_retroflat_state->palette[i] = makecol( r, g, b );
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
+
+   LOCK_FUNCTION( retroflat_on_close_button );
+   set_close_button_callback( retroflat_on_close_button );
+
+#     ifndef RETROFLAT_OS_DOS
+   if( NULL != args->title ) {
+      retroflat_set_title( args->title );
+   }
+
+   /* XXX: Broken in DOS. */
+   if( 0 > install_mouse() ) {
+      allegro_message( "could not setup mouse!" );
+      retval = RETROFLAT_ERROR_MOUSE;
+      goto cleanup;
+   }
+#     endif /* !RETROFLAT_OS_DOS */
+
+#     ifdef RETROFLAT_OS_DOS
+#        if 0
+   regs.w.ax = 0x9;
+   regs.w.bx = 0x0;
+   regs.w.cx = 0x0;
+   regs.x.edx = FP_OFF( g_retroflat_state->mouse_cursor );
+   sregs.es = FP_SEG( g_retroflat_state->mouse_cursor );
+   int386x( 0x33, &regs, &regs, &sregs );
+#        endif
+#     endif /* RETROFLAT_OS_DOS */
+
+   g_retroflat_state->buffer.b = 
+      create_bitmap( args->screen_w, args->screen_h );
+   maug_cleanup_if_null(
+      BITMAP*, g_retroflat_state->buffer.b, RETROFLAT_ERROR_GRAPHICS );
+
+cleanup:
+
+   return retval;
+
+}
+
+/* === */
+
+void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
+   if( RETROFLAT_ERROR_ENGINE != retval ) {
+      clear_keybuf();
+   }
+
+   retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

@@ -2,6 +2,226 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+MERROR_RETVAL retroflat_init_platform(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_SDL_ICO )
+   SDL_Surface* icon = NULL;
+#  endif /* RETROFLAT_SDL_ICO */
+#  if defined( RETROFLAT_API_SDL1 )
+   const SDL_VideoInfo* info = NULL;
+   char sdl_video_parms[256] = "";
+#     if defined( RETROFLAT_OPENGL )
+   int gl_retval = 0,
+      gl_depth = 16;
+#     endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_API_SDL1 */
+
+#  if defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
+   /* Random seed. */
+   srand( time( NULL ) );
+
+   /* Startup SDL. */
+   if( SDL_Init( SDL_INIT_VIDEO ) ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Error initializing SDL: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_ENGINE;
+      goto cleanup;
+   }
+
+   /* Get info on best available video mode. */
+   info = SDL_GetVideoInfo();
+   maug_cleanup_if_null_alloc( SDL_VideoInfo*, info );
+
+   debug_printf( 3, "maximum window size: %ux%u",
+      info->current_w, info->current_h );
+
+#     ifndef RETROFLAT_OS_WIN
+
+   /* TODO: Maximum screen size detection returns bogus values in Windows! */
+
+   /* Setup default screen position. */
+   if( 0 == args->screen_x ) {
+      /* Get screen width so we can center! */
+      args->screen_x = (info->current_w / 2) -
+         (g_retroflat_state->screen_w / 2);
+   }
+
+   if( 0 == args->screen_y ) {
+      /* Get screen height so we can center! */
+      args->screen_y = (info->current_h / 2) -
+         (g_retroflat_state->screen_h / 2);
+   }
+
+   maug_snprintf( sdl_video_parms, 255, "SDL_VIDEO_WINDOW_POS=%d,%d",
+       args->screen_x, args->screen_y );
+   putenv( sdl_video_parms );
+
+#     endif /* !RETROFLAT_OS_WIN */
+
+   /* Setup color palettes. */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+            g_retroflat_state->palette[idx].r = rd; \
+            g_retroflat_state->palette[idx].g = gd; \
+            g_retroflat_state->palette[idx].b = bd;
+#     endif /* RETROFLAT_OPENGL */
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
+#     ifdef RETROFLAT_OPENGL
+   
+#        ifndef RETROFLAT_OS_WASM
+   /* (This doesn't compile in emcc.) */
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+   ) {
+      SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
+   }
+#        endif /* !RETROFLAT_OS_WASM */
+
+   SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
+   SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
+   do {
+      /* Retry with smaller depth buffers if this fails. */
+      gl_retval = SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, gl_depth );
+      if( gl_retval ) {
+         error_printf( "unable to set depth buffer to %d!", gl_depth );
+         gl_depth -= 4;
+      }
+   } while( gl_retval );
+   SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+#     endif /* RETROFLAT_OPENGL */
+
+   if( NULL != args->title ) {
+      retroflat_set_title( args->title );
+   }
+
+#     ifdef RETROFLAT_SDL_ICO
+   debug_printf( 1, "setting SDL window icon..." );
+   icon = SDL_LoadBMP_RW(
+      SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
+      obj_ico_sdl_ico_bmp_len ), 1 );
+   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
+   SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
+#     endif /* RETROFLAT_SDL_ICO */
+
+   g_retroflat_state->buffer.surface = SDL_SetVideoMode(
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      info->vfmt->BitsPerPixel,
+      SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
+#     ifdef RETROFLAT_OPENGL
+      | SDL_OPENGL
+#     endif /* RETROFLAT_OPENGL */
+   );
+   maug_cleanup_if_null(
+      SDL_Surface*, g_retroflat_state->buffer.surface,
+      RETROFLAT_ERROR_GRAPHICS );
+
+   /* Setup key repeat. */
+   if(
+      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
+   ) {
+      if( 0 != SDL_EnableKeyRepeat(
+         1, SDL_DEFAULT_REPEAT_INTERVAL
+      ) ) {
+         error_printf( "could not enable key repeat!" );
+      } else {
+         debug_printf( 3, "key repeat enabled" );
+      }
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   srand( time( NULL ) );
+
+   if( SDL_Init( SDL_INIT_VIDEO ) ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Error initializing SDL: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_ENGINE;
+      goto cleanup;
+   }
+
+   /* Setup color palettes. */
+#     ifdef RETROFLAT_OPENGL
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+#     else
+#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+            g_retroflat_state->palette[idx].r = rd; \
+            g_retroflat_state->palette[idx].g = gd; \
+            g_retroflat_state->palette[idx].b = bd;
+#     endif /* RETROFLAT_OPENGL */
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
+   /* Create the main window. */
+   g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
+      SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
+   maug_cleanup_if_null(
+      SDL_Window*, g_retroflat_state->platform.window,
+      RETROFLAT_ERROR_GRAPHICS );
+
+   /* Create the main renderer. */
+   g_retroflat_state->buffer.renderer = SDL_CreateRenderer(
+      g_retroflat_state->platform.window, -1,
+      SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
+   maug_cleanup_if_null(
+      SDL_Renderer*, g_retroflat_state->buffer.renderer,
+      RETROFLAT_ERROR_GRAPHICS );
+
+   /* Create the buffer texture. */
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+   /* TODO: This doesn't seem to do anything. */
+   if(
+      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
+   ) {
+      debug_printf( 1, "setting SDL window scale to 2x..." );
+      SDL_RenderSetScale( g_retroflat_state->buffer.renderer, 2.0f, 2.0f );
+   }
+
+#     ifdef RETROFLAT_SDL_ICO
+   debug_printf( 1, "setting SDL window icon..." );
+   icon = SDL_LoadBMP_RW(
+      SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
+      obj_ico_sdl_ico_bmp_len ), 1 );
+   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
+   SDL_SetWindowIcon( g_retroflat_state->platform.window, icon );
+#     endif /* RETROFLAT_SDL_ICO */
+
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
+
+#     ifndef RETROFLAT_API_SDL1
+   SDL_DestroyWindow( g_retroflat_state->platform.window );
+#     endif /* !RETROFLAT_API_SDL1 */
+
+   SDL_Quit();
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {
