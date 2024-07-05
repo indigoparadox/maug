@@ -31,7 +31,7 @@ void retroflat_on_ms_tick() {
 }
 
 void retroflat_on_close_button() {
-   g_retroflat_state->close_button = 1;
+   g_retroflat_state->platform.close_button = 1;
 }
 END_OF_FUNCTION( retroflat_on_close_button )
 
@@ -231,7 +231,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-   if( g_retroflat_state->close_button ) {
+   if( g_retroflat_state->platform.close_button ) {
       retroflat_quit( 0 );
       return 0;
    }
@@ -245,20 +245,20 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    if(
       1 == outregs.x.ebx && /* Left button clicked. */
-      outregs.w.cx != g_retroflat_state->last_mouse_x &&
-      outregs.w.dx != g_retroflat_state->last_mouse_y
+      outregs.w.cx != g_retroflat_state->platform.last_mouse_x &&
+      outregs.w.dx != g_retroflat_state->platform.last_mouse_y
    ) { 
       input->mouse_x = outregs.w.cx;
       input->mouse_y = outregs.w.dx;
 
       /* Prevent repeated clicks. */
-      g_retroflat_state->last_mouse_x = input->mouse_x;
-      g_retroflat_state->last_mouse_y = input->mouse_y;
+      g_retroflat_state->platform.last_mouse_x = input->mouse_x;
+      g_retroflat_state->platform.last_mouse_y = input->mouse_y;
 
       return RETROFLAT_MOUSE_B_LEFT;
    } else {
-      g_retroflat_state->last_mouse_x = outregs.w.cx;
-      g_retroflat_state->last_mouse_y = outregs.w.dx;
+      g_retroflat_state->platform.last_mouse_x = outregs.w.cx;
+      g_retroflat_state->platform.last_mouse_y = outregs.w.dx;
    }
 
 #     else

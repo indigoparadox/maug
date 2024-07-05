@@ -175,5 +175,13 @@ struct RETROFLAT_BITMAP {
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
+struct RETROFLAT_PLATFORM {
+   retroflat_intfunc old_timer_interrupt;
+   uint8_t old_video_mode;
+   uint8_t cga_color_table[16];
+   uint8_t cga_dither_table[16];
+   uint8_t screen_mode;
+};
+
 #endif /* !RETPLTD_H */
 

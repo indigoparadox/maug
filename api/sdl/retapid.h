@@ -194,5 +194,12 @@ typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */
 
+struct RETROFLAT_PLATFORM {
+#  ifndef RETROFLAT_API_SDL1
+   SDL_Window*          window;
+#  endif /* !RETROFLAT_API_SDL1 */
+   int                  mouse_state;
+};
+
 #endif /* !RETPLTD_H */
 

@@ -144,5 +144,14 @@ int retroflat_allegro_screen_h();
 int retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp );
 int retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp );
 
+struct RETROFLAT_PLATFORM {
+#  ifdef RETROFLAT_OS_DOS
+   unsigned int         last_mouse;
+   unsigned int         last_mouse_x;
+   unsigned int         last_mouse_y;
+#  endif /* RETROFLAT_OS_DOS */
+   unsigned int         close_button;
+};
+
 #endif /* !RETPLTD_H */
 

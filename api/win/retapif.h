@@ -2,7 +2,370 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-/* TODO */
+#  ifdef RETROFLAT_SCREENSAVER
+
+/* Windows screensaver (.scr) command-line arguments. */
+
+static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
+#ifdef __WIN64__
+   /* 64-bit Windows has 64-bit pointers! */
+   intptr_t hwnd_long = 0;
+#else
+   long hwnd_long = 0;
+#endif /* __GNUC__ */
+   if( 0 == strncmp( MAUG_CLI_SIGIL "p", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+#ifdef __WIN64__
+      hwnd_long = atoll( arg );
+#else
+      hwnd_long = atol( arg );
+#endif /* __GNUC__ */
+      g_retroflat_state->platform.parent = (HWND)hwnd_long;
+   }
+   return RETROFLAT_OK;
+}
+
+static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
+   debug_printf( 3, "using screensaver mode..." );
+   args->flags |= RETROFLAT_FLAGS_SCREENSAVER;
+   return RETROFLAT_OK;
+}
+
+#  endif /* RETROFLAT_SCREENSAVER */
+
+/* === */
+
+LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
+   LPSTR* argv_out = NULL;
+   int i = 0,
+      arg_iter = 0,
+      arg_start = 0,
+      arg_idx = 0,
+      arg_longest = 10; /* Program name. */
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* This uses calloc() to simplify things, since this works on Windows, the
+    * only platform where this routine is used, anyway. */
+
+   debug_printf( 1, "retroflat: win cli: %s", cmd_line );
+
+   /* Get the number of args. */
+   *argc_out = 1; /* Program name. */
+   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
+      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
+         arg_iter++;
+      } else if( 0 < i ) {
+         (*argc_out)++;
+         if( arg_iter > arg_longest ) {
+            /* This is the new longest arg. */
+            arg_longest = arg_iter;
+         }
+         arg_iter = 0;
+      }
+   }
+
+   argv_out = calloc( *argc_out, sizeof( char* ) );
+   maug_cleanup_if_null_alloc( char**, argv_out );
+
+   /* NULL program name. */
+   argv_out[0] = calloc( 1, sizeof( char ) );
+   maug_cleanup_if_null_alloc( char*, argv_out[0] );
+
+   /* Copy args into array. */
+   arg_idx = 1;
+   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
+      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
+         /* If this isn't a WS char, it's an arg. */
+         if( 0 < i && ' ' == cmd_line[i - 1] ) {
+            /* If this is first non-WS char, it's start of a new arg. */
+            arg_start = i;
+            arg_iter = 0;
+         }
+         arg_iter++;
+         continue;
+      }
+
+      if( 0 < i && ' ' != cmd_line[i - 1] ) {
+         /* If this is first WS char, it's the end of an arg. */
+         assert( NULL == argv_out[arg_idx] );
+         argv_out[arg_idx] = calloc( arg_iter + 1, sizeof( char ) );
+         maug_cleanup_if_null_alloc( char*, argv_out[arg_idx] );
+         strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
+         arg_idx++; /* Start next arg. */
+         arg_iter = 0; /* New arg is 0 long. */
+         arg_start = i; /* New arg starts here (maybe). */
+      }
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval && NULL != argv_out ) {
+      for( i = 0 ; *argc_out > i ; i++ ) {
+         free( argv_out[i] );
+         argv_out[i] = NULL;
+      }
+      free( argv_out );
+      argv_out = NULL;
+   }
+
+   return argv_out;
+}
+
+/* === */
+
+static LRESULT CALLBACK WndProc(
+   HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
+) {
+#     ifndef RETROFLAT_OPENGL
+   PAINTSTRUCT ps;
+   HDC hdc_paint = (HDC)NULL;
+#     endif /* !RETROFLAT_OPENGL */
+#     if defined( RETROFLAT_OPENGL )
+   int pixel_fmt_int = 0;
+   static PIXELFORMATDESCRIPTOR pixel_fmt = {
+      sizeof( PIXELFORMATDESCRIPTOR ),
+      1,
+      PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+      PFD_TYPE_RGBA,
+      RETROFLAT_OPENGL_BPP,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      16,
+      0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
+   };
+#     endif /* RETROFLAT_OPENGL */
+
+   switch( message ) {
+      case WM_CREATE:
+
+         g_retroflat_state->platform.hdc_win = GetDC( hWnd );
+
+#     if defined( RETROFLAT_OPENGL )
+         
+         pixel_fmt_int =
+            ChoosePixelFormat( g_retroflat_state->hdc_win, &pixel_fmt );
+         SetPixelFormat(
+            g_retroflat_state->hdc_win, pixel_fmt_int, &pixel_fmt );
+
+         debug_printf( 1, "setting up OpenGL context..." );
+
+         g_retroflat_state->hrc_win =
+            wglCreateContext( g_retroflat_state->hdc_win );
+         if(
+            FALSE == wglMakeCurrent( g_retroflat_state->hdc_win,
+               g_retroflat_state->hrc_win )
+         ) {
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+               "Error", "Error creating OpenGL context: %d",
+               GetLastError() );
+         }
+
+#     else
+
+         /* Setup the screen buffer. */
+         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            debug_printf( 1, "retroflat: creating window buffer (%d x %d)...",
+               g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+            /* Do this in its own function so a one-time setup isn't using stack
+            * in our WndProc!
+            */
+            retroflat_create_bitmap(
+               g_retroflat_state->screen_v_w,
+               g_retroflat_state->screen_v_h,
+               &(g_retroflat_state->buffer),
+               RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
+            if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
+               retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+                  "Error", "Could not determine buffer device context!" );
+               g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+               retroflat_quit( g_retroflat_state->retval );
+               break;
+            }
+
+         }
+         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+               "Error", "Could not create screen buffer!" );
+            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+            retroflat_quit( g_retroflat_state->retval );
+            break;
+         }
+
+#     endif /* RETROFLAT_OPENGL */
+         break;
+
+      case WM_CLOSE:
+#     if defined( RETROFLAT_OPENGL )
+         wglMakeCurrent( g_retroflat_state->hdc_win, NULL );
+         wglDeleteContext( g_retroflat_state->hrc_win );
+#     endif /* RETROFLAT_OPENGL */
+
+         /* Quit on window close. */
+         retroflat_quit( 0 );
+         break;
+
+#     if !defined( RETROFLAT_OPENGL )
+      case WM_PAINT:
+
+         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            error_printf( "screen buffer not ready!" );
+            break;
+         }
+
+         /* Create HDC for window to blit to. */
+         /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
+         hdc_paint = BeginPaint( hWnd, &ps );
+         if( (HDC)NULL == hdc_paint ) {
+            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+               "Error", "Could not determine window device context!" );
+            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+            retroflat_quit( g_retroflat_state->retval );
+            break;
+         }
+
+#        if defined( RETROFLAT_VDP )
+         retroflat_vdp_call( "retroflat_vdp_flip" );
+#        endif /* RETROFLAT_VDP */
+
+#        ifdef RETROFLAT_WING
+         if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
+            g_w.WinGStretchBlt(
+               hdc_paint,
+               0, 0,
+               g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+               g_retroflat_state->buffer.hdc_b,
+               0, 0,
+               g_retroflat_state->screen_w,
+               g_retroflat_state->screen_h
+            );
+#           ifdef RETROFLAT_API_WIN32
+            GdiFlush();
+#           endif /* RETROFLAT_API_WIN32 */
+         } else {
+#        endif /* RETROFLAT_WING */
+         StretchBlt(
+            hdc_paint,
+            0, 0,
+            g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+            g_retroflat_state->buffer.hdc_b,
+            0, 0,
+            g_retroflat_state->screen_v_w,
+            g_retroflat_state->screen_v_h,
+            SRCCOPY
+         );
+#        ifdef RETROFLAT_WING
+         }
+#        endif /* RETROFLAT_WING */
+
+         DeleteDC( hdc_paint );
+         EndPaint( hWnd, &ps );
+         break;
+
+#     endif /* !RETROFLAT_OPENGL */
+
+      case WM_ERASEBKGND:
+         return 1;
+
+      case WM_KEYDOWN:
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         default:
+            /*
+            TODO: Fix in win64.
+            debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
+            */
+            g_retroflat_state->platform.last_key = wParam | ((lParam & 0x800000) >> 8);
+            break;
+         }
+         break;
+
+      case WM_KEYUP:
+         switch( wParam ) {
+         case VK_SHIFT:
+            g_retroflat_state->platform.vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
+            break;
+
+         case VK_CONTROL:
+            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            break;
+
+         /* TODO: Alt? */
+
+         }
+         break;
+
+      case WM_LBUTTONDOWN:
+      case WM_RBUTTONDOWN:
+         g_retroflat_state->platform.last_mouse = wParam;
+         g_retroflat_state->platform.last_mouse_x = GET_X_LPARAM( lParam );
+         g_retroflat_state->platform.last_mouse_y = GET_Y_LPARAM( lParam );
+         break;
+
+      /* TODO: Handle resize message. */
+
+      case WM_DESTROY:
+         if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+            DeleteObject( g_retroflat_state->buffer.b );
+         }
+         PostQuitMessage( 0 );
+         break;
+
+      case WM_SIZE:
+         retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
+         if( NULL != g_retroflat_state->on_resize ) {
+            g_retroflat_state->on_resize(
+               LOWORD( lParam ), HIWORD( lParam ),
+               g_retroflat_state->on_resize_data );
+         }
+         break;
+
+      case WM_TIMER:
+         if(
+#     ifdef RETROFLAT_OPENGL
+            (HGLRC)NULL == g_retroflat_state->hrc_win ||
+#     else
+            !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
+#     endif /* !RETROFLAT_OPENGL */
+            hWnd != g_retroflat_state->platform.window
+         ) {
+            /* Timer message was called prematurely. */
+            break;
+         }
+
+         if( RETROFLAT_WIN_FRAME_TIMER_ID == wParam ) {
+            /* Frame timer has expired. */
+            assert( NULL != g_retroflat_state->platform.frame_iter );
+            g_retroflat_state->platform.frame_iter(
+               g_retroflat_state->loop_data );
+         } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
+            /* Loop/tick timer has expired. */
+            assert( NULL != g_retroflat_state->platform.loop_iter );
+            g_retroflat_state->platform.loop_iter(
+               g_retroflat_state->loop_data );
+         }
+         break;
+
+      case WM_COMMAND:
+         g_retroflat_state->platform.last_idc = LOWORD( wParam );
+         break;
+
+      default:
+         return DefWindowProc( hWnd, message, wParam, lParam );
+   }
+
+   return 0;
+}
+
+/* === */
 
 #ifndef RETROFLAT_OPENGL
 
@@ -43,6 +406,8 @@ cleanup:
 }
 
 #endif /* !RETROFLAT_OPENGL */
+
+/* === */
 
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
@@ -89,7 +454,7 @@ void retroflat_set_title( const char* format, ... ) {
    memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
-   SetWindowText( g_retroflat_state->window, title );
+   SetWindowText( g_retroflat_state->platform.window, title );
 
    va_end( vargs );
 }
@@ -178,8 +543,8 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL == bmp ) {
       /* Trigger a screen refresh if this was a screen lock. */
-      if( (HWND)NULL != g_retroflat_state->window ) {
-         InvalidateRect( g_retroflat_state->window, 0, TRUE );
+      if( (HWND)NULL != g_retroflat_state->platform.window ) {
+         InvalidateRect( g_retroflat_state->platform.window, 0, TRUE );
       }
 
 #     ifdef RETROFLAT_VDP
@@ -308,12 +673,12 @@ MERROR_RETVAL retroflat_load_bitmap(
    assert( 0 == bmp_out->bmi.header.biWidth % 8 );
    assert( 0 == bmp_out->bmi.header.biHeight % 8 );
 
-   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win,
+   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->platform.hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
    /* Turn the bits into a bitmap. */
-   SetDIBits( g_retroflat_state->hdc_win, bmp_out->b, 0,
+   SetDIBits( g_retroflat_state->platform.hdc_win, bmp_out->b, 0,
       bmp_out->bmi.header.biHeight, &(buf[offset]),
       (BITMAPINFO*)&(bmp_out->bmi),
       DIB_RGB_COLORS );
@@ -436,7 +801,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->bmi.header.biSizeImage = w * h * 4;
 
    GetSystemPaletteEntries(
-      g_retroflat_state->hdc_win, 0, RETROFLAT_BMP_COLORS_SZ_MAX, palette );
+      g_retroflat_state->platform.hdc_win, 0,
+      RETROFLAT_BMP_COLORS_SZ_MAX, palette );
    for( i = 0 ; RETROFLAT_BMP_COLORS_SZ_MAX > i ; i++ ) {
       bmp_out->bmi.colors[i].rgbRed = palette[i].peRed;
       bmp_out->bmi.colors[i].rgbGreen = palette[i].peGreen;
@@ -465,14 +831,16 @@ MERROR_RETVAL retroflat_create_bitmap(
    } else {
 #     endif /* RETROFLAT_WING */
 
-   bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->hdc_win, w, h );
+   bmp_out->b = CreateCompatibleBitmap(
+      g_retroflat_state->platform.hdc_win, w, h );
    maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
 
    if(
       RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
    ) {
       debug_printf( 1, "creating screen device context..." );
-      bmp_out->hdc_b = CreateCompatibleDC( g_retroflat_state->hdc_win );
+      bmp_out->hdc_b = CreateCompatibleDC(
+         g_retroflat_state->platform.hdc_win );
       bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
    }
 
@@ -582,31 +950,35 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-   if( g_retroflat_state->last_key ) {
-      /* Return g_retroflat_state->last_key, which is set in WndProc when a keypress msg is
-      * received.
-      */
-      key_out = g_retroflat_state->last_key;
-      input->key_flags = g_retroflat_state->vk_mods;
+   if( g_retroflat_state->platform.last_key ) {
+      /* Return g_retroflat_state->last_key, which is set in WndProc when a
+       * keypress msg is received.
+       */
+      key_out = g_retroflat_state->platform.last_key;
+      input->key_flags = g_retroflat_state->platform.vk_mods;
 
       debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
 
       /* Reset pressed key. */
-      g_retroflat_state->last_key = 0;
+      g_retroflat_state->platform.last_key = 0;
 
-   } else if( g_retroflat_state->last_mouse ) {
-      if( MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->last_mouse) ) {
-         input->mouse_x = g_retroflat_state->last_mouse_x;
-         input->mouse_y = g_retroflat_state->last_mouse_y;
+   } else if( g_retroflat_state->platform.last_mouse ) {
+      if(
+         MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->platform.last_mouse)
+      ) {
+         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
+         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
          key_out = RETROFLAT_MOUSE_B_LEFT;
-      } else if( MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->last_mouse) ) {
-         input->mouse_x = g_retroflat_state->last_mouse_x;
-         input->mouse_y = g_retroflat_state->last_mouse_y;
+      } else if(
+         MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->platform.last_mouse)
+      ) {
+         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
+         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
          key_out = RETROFLAT_MOUSE_B_RIGHT;
       }
-      g_retroflat_state->last_mouse = 0;
-      g_retroflat_state->last_mouse_x = 0;
-      g_retroflat_state->last_mouse_y = 0;
+      g_retroflat_state->platform.last_mouse = 0;
+      g_retroflat_state->platform.last_mouse_x = 0;
+      g_retroflat_state->platform.last_mouse_y = 0;
    }
 
 #     ifdef RETROFLAT_SCREENSAVER
@@ -621,7 +993,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    return key_out;
 }
-
 
 #endif /* !RETPLTF_H */
 

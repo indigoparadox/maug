@@ -6,6 +6,30 @@ static volatile retroflat_ms_t g_ms = 0;
 
 /* === */
 
+static
+int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == strncmp( MAUG_CLI_SIGIL "rfm", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->screen_mode = atoi( arg );
+      debug_printf( 3, "choosing screen mode: %u", args->screen_mode );
+   }
+   return RETROFLAT_OK;
+}
+
+/* === */
+
+static
+int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+   if( 0 == args->screen_mode ) {
+      /* TODO: Autodetect best available? */
+      args->screen_mode = RETROFLAT_SCREEN_MODE_VGA;
+   }
+   return RETROFLAT_OK;
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {
@@ -32,7 +56,7 @@ void __interrupt __far retroflat_timer_handler() {
    if( 65536 <= count ) {
       /* Call the original handler. */
       count -= 65536;
-      _chain_intr( g_retroflat_state->old_timer_interrupt );
+      _chain_intr( g_retroflat_state->platform.old_timer_interrupt );
    } else {
       /* Acknowledge interrupt */
       outp( 0x20, 0x20 );
@@ -86,7 +110,7 @@ static MERROR_RETVAL retroflat_bitmap_dos_transparency(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
 
       debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
@@ -254,7 +278,7 @@ void retroflat_blit_bitmap(
       target = &(g_retroflat_state->buffer);
    }
 
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
       for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
          target_line_offset = ((d_y + y_iter) * (target->w)) + d_x;
@@ -286,7 +310,7 @@ void retroflat_blit_bitmap(
 
    default:
       error_printf( "bitmap blit unsupported in video mode: %d",
-         g_retroflat_state->screen_mode );
+         g_retroflat_state->platform.screen_mode );
       break;
    }
 

@@ -129,5 +129,12 @@ struct RETROFLAT_BITMAP {
 /* TODO */
 #  define RETROFLAT_KEY_EQUALS    '='
 
+struct RETROFLAT_PLATFORM {
+   size_t               retroflat_next;
+   retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
+   int16_t              retroflat_last_key;
+};
+
 #endif /* !RETPLTD_H */
 

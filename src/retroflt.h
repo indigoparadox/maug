@@ -1218,40 +1218,13 @@ defined( RETROVDP_C )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
 
-#if defined( RETROFLAT_API_ALLEGRO )
+   struct RETROFLAT_PLATFORM platform;
 
-#  ifdef RETROFLAT_OS_DOS
-   unsigned int         last_mouse;
-   unsigned int         last_mouse_x;
-   unsigned int         last_mouse_y;
-#  endif /* RETROFLAT_OS_DOS */
-   unsigned int         close_button;
+#if defined( RETROFLAT_API_ALLEGRO )
 
 #elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
-#  ifndef RETROFLAT_API_SDL1
-   SDL_Window*          window;
-#  endif /* !RETROFLAT_API_SDL1 */
-   int                  mouse_state;
-
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   HWND                 window;
-   int16_t              last_idc; /* Last clicked button. */
-#  ifdef RETROFLAT_SCREENSAVER
-   HWND                 parent;
-#  endif /* RETROFLAT_SCREENSAVER */
-   HDC                  hdc_win;
-#  ifdef RETROFLAT_OPENGL
-   HGLRC                hrc_win;
-#  endif /* RETROFLAT_OPENGL */
-   int16_t              last_key;
-   uint8_t              vk_mods;
-   unsigned int         last_mouse;
-   unsigned int         last_mouse_x;
-   unsigned int         last_mouse_y;
-   retroflat_loop_iter  loop_iter;
-   retroflat_loop_iter  frame_iter;
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
@@ -1266,18 +1239,7 @@ defined( RETROVDP_C )
 
 #  elif defined( RETROFLAT_API_GLUT )
 
-   size_t               retroflat_next;
-   retroflat_loop_iter  loop_iter;
-   retroflat_loop_iter  frame_iter;
-   int16_t              retroflat_last_key;
-
 #  elif defined( RETROFLAT_API_PC_BIOS )
-
-   retroflat_intfunc old_timer_interrupt;
-   uint8_t old_video_mode;
-   uint8_t cga_color_table[16];
-   uint8_t cga_dither_table[16];
-   uint8_t screen_mode;
 
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
@@ -1614,390 +1576,6 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
-static LRESULT CALLBACK WndProc(
-   HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
-) {
-#     ifndef RETROFLAT_OPENGL
-   PAINTSTRUCT ps;
-   HDC hdc_paint = (HDC)NULL;
-#     endif /* !RETROFLAT_OPENGL */
-#     if defined( RETROFLAT_OPENGL )
-   int pixel_fmt_int = 0;
-   static PIXELFORMATDESCRIPTOR pixel_fmt = {
-      sizeof( PIXELFORMATDESCRIPTOR ),
-      1,
-      PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-      PFD_TYPE_RGBA,
-      RETROFLAT_OPENGL_BPP,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      16,
-      0, 0, PFD_MAIN_PLANE, 0, 0, 0, 0
-   };
-#     endif /* RETROFLAT_OPENGL */
-
-   switch( message ) {
-      case WM_CREATE:
-
-         g_retroflat_state->hdc_win = GetDC( hWnd );
-
-#     if defined( RETROFLAT_OPENGL )
-         
-         pixel_fmt_int =
-            ChoosePixelFormat( g_retroflat_state->hdc_win, &pixel_fmt );
-         SetPixelFormat(
-            g_retroflat_state->hdc_win, pixel_fmt_int, &pixel_fmt );
-
-         debug_printf( 1, "setting up OpenGL context..." );
-
-         g_retroflat_state->hrc_win =
-            wglCreateContext( g_retroflat_state->hdc_win );
-         if(
-            FALSE == wglMakeCurrent( g_retroflat_state->hdc_win,
-               g_retroflat_state->hrc_win )
-         ) {
-            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-               "Error", "Error creating OpenGL context: %d",
-               GetLastError() );
-         }
-
-#     else
-
-         /* Setup the screen buffer. */
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            debug_printf( 1, "retroflat: creating window buffer (%d x %d)...",
-               g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-            /* Do this in its own function so a one-time setup isn't using stack
-            * in our WndProc!
-            */
-            retroflat_create_bitmap(
-               g_retroflat_state->screen_v_w,
-               g_retroflat_state->screen_v_h,
-               &(g_retroflat_state->buffer),
-               RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
-            if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
-               retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-                  "Error", "Could not determine buffer device context!" );
-               g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
-               retroflat_quit( g_retroflat_state->retval );
-               break;
-            }
-
-         }
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-               "Error", "Could not create screen buffer!" );
-            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
-            retroflat_quit( g_retroflat_state->retval );
-            break;
-         }
-
-#     endif /* RETROFLAT_OPENGL */
-         break;
-
-      case WM_CLOSE:
-#     if defined( RETROFLAT_OPENGL )
-         wglMakeCurrent( g_retroflat_state->hdc_win, NULL );
-         wglDeleteContext( g_retroflat_state->hrc_win );
-#     endif /* RETROFLAT_OPENGL */
-
-         /* Quit on window close. */
-         retroflat_quit( 0 );
-         break;
-
-#     if !defined( RETROFLAT_OPENGL )
-      case WM_PAINT:
-
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            error_printf( "screen buffer not ready!" );
-            break;
-         }
-
-         /* Create HDC for window to blit to. */
-         /* maug_mzero( &ps, sizeof( PAINTSTRUCT ) ); */
-         hdc_paint = BeginPaint( hWnd, &ps );
-         if( (HDC)NULL == hdc_paint ) {
-            retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-               "Error", "Could not determine window device context!" );
-            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
-            retroflat_quit( g_retroflat_state->retval );
-            break;
-         }
-
-#        if defined( RETROFLAT_VDP )
-         retroflat_vdp_call( "retroflat_vdp_flip" );
-#        endif /* RETROFLAT_VDP */
-
-#        ifdef RETROFLAT_WING
-         if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
-            g_w.WinGStretchBlt(
-               hdc_paint,
-               0, 0,
-               g_retroflat_state->screen_w, g_retroflat_state->screen_h,
-               g_retroflat_state->buffer.hdc_b,
-               0, 0,
-               g_retroflat_state->screen_w,
-               g_retroflat_state->screen_h
-            );
-#           ifdef RETROFLAT_API_WIN32
-            GdiFlush();
-#           endif /* RETROFLAT_API_WIN32 */
-         } else {
-#        endif /* RETROFLAT_WING */
-         StretchBlt(
-            hdc_paint,
-            0, 0,
-            g_retroflat_state->screen_w, g_retroflat_state->screen_h,
-            g_retroflat_state->buffer.hdc_b,
-            0, 0,
-            g_retroflat_state->screen_v_w,
-            g_retroflat_state->screen_v_h,
-            SRCCOPY
-         );
-#        ifdef RETROFLAT_WING
-         }
-#        endif /* RETROFLAT_WING */
-
-         DeleteDC( hdc_paint );
-         EndPaint( hWnd, &ps );
-         break;
-
-#     endif /* !RETROFLAT_OPENGL */
-
-      case WM_ERASEBKGND:
-         return 1;
-
-      case WM_KEYDOWN:
-         switch( wParam ) {
-         case VK_SHIFT:
-            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
-            break;
-
-         case VK_CONTROL:
-            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
-            break;
-
-         /* TODO: Alt? */
-
-         default:
-            /*
-            TODO: Fix in win64.
-            debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
-            */
-            g_retroflat_state->last_key = wParam | ((lParam & 0x800000) >> 8);
-            break;
-         }
-         break;
-
-      case WM_KEYUP:
-         switch( wParam ) {
-         case VK_SHIFT:
-            g_retroflat_state->vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
-            break;
-
-         case VK_CONTROL:
-            g_retroflat_state->vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
-            break;
-
-         /* TODO: Alt? */
-
-         }
-         break;
-
-      case WM_LBUTTONDOWN:
-      case WM_RBUTTONDOWN:
-         g_retroflat_state->last_mouse = wParam;
-         g_retroflat_state->last_mouse_x = GET_X_LPARAM( lParam );
-         g_retroflat_state->last_mouse_y = GET_Y_LPARAM( lParam );
-         break;
-
-      /* TODO: Handle resize message. */
-
-      case WM_DESTROY:
-         if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            DeleteObject( g_retroflat_state->buffer.b );
-         }
-         PostQuitMessage( 0 );
-         break;
-
-      case WM_SIZE:
-         retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
-         if( NULL != g_retroflat_state->on_resize ) {
-            g_retroflat_state->on_resize(
-               LOWORD( lParam ), HIWORD( lParam ),
-               g_retroflat_state->on_resize_data );
-         }
-         break;
-
-      case WM_TIMER:
-         if(
-#     ifdef RETROFLAT_OPENGL
-            (HGLRC)NULL == g_retroflat_state->hrc_win ||
-#     else
-            !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
-#     endif /* !RETROFLAT_OPENGL */
-            hWnd != g_retroflat_state->window
-         ) {
-            /* Timer message was called prematurely. */
-            break;
-         }
-
-         if( RETROFLAT_WIN_FRAME_TIMER_ID == wParam ) {
-            /* Frame timer has expired. */
-            assert( NULL != g_retroflat_state->frame_iter );
-            g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
-         } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
-            /* Loop/tick timer has expired. */
-            assert( NULL != g_retroflat_state->loop_iter );
-            g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
-         }
-         break;
-
-      case WM_COMMAND:
-         g_retroflat_state->last_idc = LOWORD( wParam );
-         break;
-
-      default:
-         return DefWindowProc( hWnd, message, wParam, lParam );
-   }
-
-   return 0;
-}
-
-LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
-   LPSTR* argv_out = NULL;
-   int i = 0,
-      arg_iter = 0,
-      arg_start = 0,
-      arg_idx = 0,
-      arg_longest = 10; /* Program name. */
-   MERROR_RETVAL retval = MERROR_OK;
-
-   /* This uses calloc() to simplify things, since this works on Windows, the
-    * only platform where this routine is used, anyway. */
-
-   debug_printf( 1, "retroflat: win cli: %s", cmd_line );
-
-   /* Get the number of args. */
-   *argc_out = 1; /* Program name. */
-   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
-      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
-         arg_iter++;
-      } else if( 0 < i ) {
-         (*argc_out)++;
-         if( arg_iter > arg_longest ) {
-            /* This is the new longest arg. */
-            arg_longest = arg_iter;
-         }
-         arg_iter = 0;
-      }
-   }
-
-   argv_out = calloc( *argc_out, sizeof( char* ) );
-   maug_cleanup_if_null_alloc( char**, argv_out );
-
-   /* NULL program name. */
-   argv_out[0] = calloc( 1, sizeof( char ) );
-   maug_cleanup_if_null_alloc( char*, argv_out[0] );
-
-   /* Copy args into array. */
-   arg_idx = 1;
-   for( i = 0 ; '\0' != cmd_line[i - 1] ; i++ ) {
-      if( ' ' != cmd_line[i] && '\0' != cmd_line[i] ) {
-         /* If this isn't a WS char, it's an arg. */
-         if( 0 < i && ' ' == cmd_line[i - 1] ) {
-            /* If this is first non-WS char, it's start of a new arg. */
-            arg_start = i;
-            arg_iter = 0;
-         }
-         arg_iter++;
-         continue;
-      }
-
-      if( 0 < i && ' ' != cmd_line[i - 1] ) {
-         /* If this is first WS char, it's the end of an arg. */
-         assert( NULL == argv_out[arg_idx] );
-         argv_out[arg_idx] = calloc( arg_iter + 1, sizeof( char ) );
-         maug_cleanup_if_null_alloc( char*, argv_out[arg_idx] );
-         strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
-         arg_idx++; /* Start next arg. */
-         arg_iter = 0; /* New arg is 0 long. */
-         arg_start = i; /* New arg starts here (maybe). */
-      }
-   }
-
-cleanup:
-
-   if( MERROR_OK != retval && NULL != argv_out ) {
-      for( i = 0 ; *argc_out > i ; i++ ) {
-         free( argv_out[i] );
-         argv_out[i] = NULL;
-      }
-      free( argv_out );
-      argv_out = NULL;
-   }
-
-   return argv_out;
-}
-
-#  elif defined( RETROFLAT_API_GLUT )
-
-#ifdef RETROFLAT_OS_OS2
-void APIENTRY
-#else
-void
-#endif /* RETROFLAT_OS_OS2 */
-retroflat_glut_display( void ) {
-   /* TODO: Work in frame_iter if provided. */
-   if( NULL != g_retroflat_state->loop_iter ) {
-      g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
-   }
-   if( NULL != g_retroflat_state->frame_iter ) {
-      g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
-   }
-}
-
-#ifdef RETROFLAT_OS_OS2
-void APIENTRY
-#else
-void
-#endif /* RETROFLAT_OS_OS2 */
-retroflat_glut_idle( void ) {
-   uint32_t now = 0;
-
-   now = retroflat_get_ms();
-   if(
-      RETROFLAT_FLAGS_UNLOCK_FPS !=
-      (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
-      now < g_retroflat_state->retroflat_next
-   ) {
-      return;
-   }
-   
-   glutPostRedisplay();
-
-   if( now + retroflat_fps_next() > now ) {
-      g_retroflat_state->retroflat_next = now + retroflat_fps_next();
-   } else {
-      /* Rollover protection. */
-      g_retroflat_state->retroflat_next = 0;
-   }
-}
-
-#     ifdef RETROFLAT_OS_OS2
-void APIENTRY
-#     elif defined( RETROFLAT_OS_WIN )
-void 
-#     else
-void
-#     endif /* RETROFLAT_OS_OS2 */
-retroflat_glut_key( unsigned char key, int x, int y ) {
-#     ifdef RETROFLAT_OS_WIN
-      /* key -= 109; */
-#     endif /* RETROFLAT_OS_WIN */
-   debug_printf( 0, "key: %c (0x%02x)", key, key );
-   g_retroflat_state->retroflat_last_key = key;
-}
-
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* Still inside RETROFLT_C! */
@@ -2067,15 +1645,15 @@ int retroflat_loop(
    MSG msg;
 
    /* Set these to be called from WndProc later. */
-   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
 
    if( NULL != frame_iter ) {
       debug_printf( 3, "setting up frame timer %u every %d ms...",
          RETROFLAT_WIN_FRAME_TIMER_ID, (int)(1000 / RETROFLAT_FPS) );
       if( !SetTimer(
-         g_retroflat_state->window, RETROFLAT_WIN_FRAME_TIMER_ID,
+         g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID,
          (int)(1000 / RETROFLAT_FPS), NULL )
       ) {
          retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -2089,7 +1667,8 @@ int retroflat_loop(
       debug_printf( 3, "setting up loop timer %u every 1 ms...",
          RETROFLAT_WIN_LOOP_TIMER_ID );
       if( !SetTimer(
-         g_retroflat_state->window, RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
+         g_retroflat_state->platform.window,
+         RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
       ) {
          retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
             "Error", "Could not create loop timer!" );
@@ -2114,9 +1693,9 @@ int retroflat_loop(
 cleanup:
 #  elif defined( RETROFLAT_API_GLUT )
 
-   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
    glutMainLoop();
    retval = g_retroflat_state->retval;
 
@@ -2383,57 +1962,7 @@ cleanup:
 
 #  endif /* RETROSND_ARGS */
 
-#  ifdef RETROFLAT_SCREENSAVER
-
-/* Windows screensaver (.scr) command-line arguments. */
-
-static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
-#ifdef __WIN64__
-   /* 64-bit Windows has 64-bit pointers! */
-   intptr_t hwnd_long = 0;
-#else
-   long hwnd_long = 0;
-#endif /* __GNUC__ */
-   if( 0 == strncmp( MAUG_CLI_SIGIL "p", arg, MAUG_CLI_SIGIL_SZ + 2 ) ) {
-      /* The next arg must be the new var. */
-   } else {
-#ifdef __WIN64__
-      hwnd_long = atoll( arg );
-#else
-      hwnd_long = atol( arg );
-#endif /* __GNUC__ */
-      g_retroflat_state->parent = (HWND)hwnd_long;
-   }
-   return RETROFLAT_OK;
-}
-
-static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
-   debug_printf( 3, "using screensaver mode..." );
-   args->flags |= RETROFLAT_FLAGS_SCREENSAVER;
-   return RETROFLAT_OK;
-}
-
-#  endif /* RETROFLAT_SCREENSAVER */
-
 #  ifdef RETROFLAT_API_PC_BIOS
-
-static int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "rfm", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
-      /* The next arg must be the new var. */
-   } else {
-      args->screen_mode = atoi( arg );
-      debug_printf( 3, "choosing screen mode: %u", args->screen_mode );
-   }
-   return RETROFLAT_OK;
-}
-
-static int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == args->screen_mode ) {
-      /* TODO: Autodetect best available? */
-      args->screen_mode = RETROFLAT_SCREEN_MODE_VGA;
-   }
-   return RETROFLAT_OK;
-}
 
 #  elif !defined( RETROFLAT_NO_CLI_SZ )
 
@@ -2971,14 +2500,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
 
    /* Create the main window. */
-   g_retroflat_state->window = SDL_CreateWindow( args->title,
+   g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
       args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
-   maug_cleanup_if_null( SDL_Window*, g_retroflat_state->window, RETROFLAT_ERROR_GRAPHICS );
+   maug_cleanup_if_null(
+      SDL_Window*, g_retroflat_state->platform.window,
+      RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the main renderer. */
    g_retroflat_state->buffer.renderer = SDL_CreateRenderer(
-      g_retroflat_state->window, -1,
+      g_retroflat_state->platform.window, -1,
       SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
    maug_cleanup_if_null(
       SDL_Renderer*, g_retroflat_state->buffer.renderer,
@@ -3004,7 +2535,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
    maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
-   SDL_SetWindowIcon( g_retroflat_state->window, icon );
+   SDL_SetWindowIcon( g_retroflat_state->platform.window, icon );
 #     endif /* RETROFLAT_SDL_ICO */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -3105,12 +2636,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: creating window..." );
    
 #     ifdef RETROFLAT_SCREENSAVER
-   if( (HWND)0 != g_retroflat_state->parent ) {
+   if( (HWND)0 != g_retroflat_state->platform.parent ) {
       /* Shrink the child window into the parent. */
       debug_printf( 1, "retroflat: using window parent: %p",
-         g_retroflat_state->parent );
+         g_retroflat_state->platform.parent );
       window_style = WS_CHILD;
-      GetClientRect( g_retroflat_state->parent, &wr );
+      GetClientRect( g_retroflat_state->platform.parent, &wr );
    } else if(
       RETROFLAT_FLAGS_SCREENSAVER ==
       (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags)
@@ -3140,7 +2671,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #     endif /* RETROFLAT_SCREENSAVER */
 
-   g_retroflat_state->window = CreateWindowEx(
+   g_retroflat_state->platform.window = CreateWindowEx(
       window_style_ex, RETROFLAT_WINDOW_CLASS, args->title,
       window_style,
 #     ifdef RETROFLAT_API_WINCE
@@ -3149,7 +2680,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       args->screen_x, args->screen_y, ww, wh,
 #     endif /* RETROFLAT_API_WINCE */
 #     ifdef RETROFLAT_SCREENSAVER
-      g_retroflat_state->parent
+      g_retroflat_state->platform.parent
 #     else
       0
 #     endif /* RETROFLAT_SCREENSAVER */
@@ -3158,26 +2689,26 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #     ifdef RETROFLAT_API_WINCE
    /* Force screen size. */
-   GetClientRect( g_retroflat_state->window, &wr );
+   GetClientRect( g_retroflat_state->platform.window, &wr );
    g_retroflat_state->screen_w = wr.right - wr.left;
    g_retroflat_state->screen_h = wr.bottom - wr.top;
 #     endif /* RETROFLAT_API_WINCE */
 
-   if( !g_retroflat_state->window ) {
+   if( !g_retroflat_state->platform.window ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not create window!" );
       retval = RETROFLAT_ERROR_GRAPHICS;
       goto cleanup;
    }
 
-   maug_cleanup_if_null_alloc( HWND, g_retroflat_state->window );
+   maug_cleanup_if_null_alloc( HWND, g_retroflat_state->platform.window );
 
 #ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRSET )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PNSET )
 #endif /* !RETROFLAT_OPENGL */
 
-   ShowWindow( g_retroflat_state->window, g_retroflat_cmd_show );
+   ShowWindow( g_retroflat_state->platform.window, g_retroflat_cmd_show );
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
@@ -3308,7 +2839,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    r.h.al = 0x08;
    r.h.ah = 0x35;
    int86x( 0x21, &r, &r, &s );
-   g_retroflat_state->old_timer_interrupt =
+   g_retroflat_state->platform.old_timer_interrupt =
       (retroflat_intfunc)MK_FP( s.es, r.x.bx );
 
    /* Install new interrupt handler. */
@@ -3333,12 +2864,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    memset( &r, 0, sizeof( r ) );
    r.x.ax = 0x0f00; /* Service: Get video mode. */
 	int86( 0x10, &r, &r ); /* Call video interrupt. */
-   g_retroflat_state->old_video_mode = r.h.al;
+   g_retroflat_state->platform.old_video_mode = r.h.al;
    debug_printf( 2, "saved old video mode: 0x%02x",
-      g_retroflat_state->old_video_mode );
+      g_retroflat_state->platform.old_video_mode );
 
    /* TODO: Put all screen mode dimensions in a LUT. */
-   g_retroflat_state->screen_mode = args->screen_mode;
+   g_retroflat_state->platform.screen_mode = args->screen_mode;
    switch( args->screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       debug_printf( 3, "using CGA 320x200x4 colors" );
@@ -3378,12 +2909,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* Initialize color table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
+      g_retroflat_state->platform.cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT )
 
    /* Initialize dither table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
+      g_retroflat_state->platform.cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
 
 #  else
@@ -3540,13 +3071,15 @@ defined( RETROFLAT_OPENGL )
    /* TODO: Windows shutdown? */
 
    /* Stop frame timer if available. */
-   if( NULL != g_retroflat_state->frame_iter ) {
-      KillTimer( g_retroflat_state->window, RETROFLAT_WIN_FRAME_TIMER_ID );
+   if( NULL != g_retroflat_state->platform.frame_iter ) {
+      KillTimer(
+         g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID );
    }
 
    /* Stop loop timer if available. */
-   if( NULL != g_retroflat_state->loop_iter ) {
-      KillTimer( g_retroflat_state->window, RETROFLAT_WIN_LOOP_TIMER_ID );
+   if( NULL != g_retroflat_state->platform.loop_iter ) {
+      KillTimer(
+         g_retroflat_state->platform.window, RETROFLAT_WIN_LOOP_TIMER_ID );
    }
 
    if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
@@ -3572,8 +3105,10 @@ defined( RETROFLAT_OPENGL )
    }
 #     endif /* RETROFLAT_WING */
 
-   if( (HDC)NULL != g_retroflat_state->hdc_win ) {
-      ReleaseDC( g_retroflat_state->window, g_retroflat_state->hdc_win );
+   if( (HDC)NULL != g_retroflat_state->platform.hdc_win ) {
+      ReleaseDC(
+         g_retroflat_state->platform.window,
+         g_retroflat_state->platform.hdc_win );
    }
 
 #  elif defined( RETROFLAT_API_GLUT )
@@ -3582,25 +3117,25 @@ defined( RETROFLAT_OPENGL )
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   if( 0 != g_retroflat_state->old_video_mode ) {
+   if( 0 != g_retroflat_state->platform.old_video_mode ) {
       /* Restore old video mode. */
       debug_printf( 3, "restoring video mode 0x%02x...",
-         g_retroflat_state->old_video_mode );
+         g_retroflat_state->platform.old_video_mode );
 
       memset( &r, 0, sizeof( r ) );
-      r.x.ax = g_retroflat_state->old_video_mode;
+      r.x.ax = g_retroflat_state->platform.old_video_mode;
       int86( 0x10, &r, &r ); /* Call video interrupt. */
    }
 
-   if( NULL != g_retroflat_state->old_timer_interrupt ) {
+   if( NULL != g_retroflat_state->platform.old_timer_interrupt ) {
       /* Re-install original interrupt handler. */
       debug_printf( 3, "restoring timer interrupt..." );
       _disable();
       segread( &s );
       r.h.al = 0x08;
       r.h.ah = 0x25;
-      s.ds = FP_SEG( g_retroflat_state->old_timer_interrupt );
-      r.x.dx = FP_OFF( g_retroflat_state->old_timer_interrupt );
+      s.ds = FP_SEG( g_retroflat_state->platform.old_timer_interrupt );
+      r.x.dx = FP_OFF( g_retroflat_state->platform.old_timer_interrupt );
       int86x( 0x21, &r, &r, &s );
    }
 
@@ -4084,7 +3619,7 @@ void retroflat_px(
       target = &(g_retroflat_state->buffer);
    }
 
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
       /* Divide result by 4 since it's 2 bits per pixel. */
@@ -4095,9 +3630,9 @@ void retroflat_px(
 
       /* Dither colors on odd/even squares. */
       if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
-         color = g_retroflat_state->cga_color_table[color_idx];
+         color = g_retroflat_state->platform.cga_color_table[color_idx];
       } else {
-         color = g_retroflat_state->cga_dither_table[color_idx];
+         color = g_retroflat_state->platform.cga_dither_table[color_idx];
       }
 
       if( target != &(g_retroflat_state->buffer) ) {
@@ -4130,7 +3665,7 @@ void retroflat_px(
 
    default:
       error_printf( "pixel blit unsupported in video mode: %d",
-         g_retroflat_state->screen_mode );
+         g_retroflat_state->platform.screen_mode );
       break;
    }
 
@@ -4338,7 +3873,7 @@ void retroflat_line(
 
    /* == DOS PC_BIOS == */
 
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
       /* TODO: Try accelerated 2D. */
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
@@ -4678,7 +4213,7 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* Set VGA mask register. */
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
       outp( 0x3c6, 0xff );
       outp( 0x3c7, idx );
@@ -4690,7 +4225,7 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
    default:
       error_printf( "could not set palette index %d in screen mode %d!",
-         idx, g_retroflat_state->screen_mode );
+         idx, g_retroflat_state->platform.screen_mode );
       break;
    }
 
@@ -4727,7 +4262,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
    /* Set VGA mask register. */
-   switch( g_retroflat_state->screen_mode ) {
+   switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
       /* TODO: This doesn't seem to be working in DOSBox? */
       outp( 0x3c6, 0xff );
@@ -4748,7 +4283,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
    default:
       error_printf( "could not set palette index %d in screen mode %d!",
-         idx, g_retroflat_state->screen_mode );
+         idx, g_retroflat_state->platform.screen_mode );
       break;
    }
 

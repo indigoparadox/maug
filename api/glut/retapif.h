@@ -2,7 +2,63 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-/* TODO */
+#ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#else
+void
+#endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_display( void ) {
+   /* TODO: Work in frame_iter if provided. */
+   if( NULL != g_retroflat_state->loop_iter ) {
+      g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+   }
+   if( NULL != g_retroflat_state->frame_iter ) {
+      g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
+   }
+}
+
+#ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#else
+void
+#endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_idle( void ) {
+   uint32_t now = 0;
+
+   now = retroflat_get_ms();
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS !=
+      (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
+      now < g_retroflat_state->retroflat_next
+   ) {
+      return;
+   }
+   
+   glutPostRedisplay();
+
+   if( now + retroflat_fps_next() > now ) {
+      g_retroflat_state->retroflat_next = now + retroflat_fps_next();
+   } else {
+      /* Rollover protection. */
+      g_retroflat_state->retroflat_next = 0;
+   }
+}
+
+#     ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#     elif defined( RETROFLAT_OS_WIN )
+void 
+#     else
+void
+#     endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_key( unsigned char key, int x, int y ) {
+#     ifdef RETROFLAT_OS_WIN
+      /* key -= 109; */
+#     endif /* RETROFLAT_OS_WIN */
+   debug_printf( 0, "key: %c (0x%02x)", key, key );
+   g_retroflat_state->retroflat_last_key = key;
+}
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

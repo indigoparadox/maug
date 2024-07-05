@@ -231,7 +231,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
       /* TODO: Causes alpha blending in mdemos? */ \
       if( \
          /* Set bitmap bits from bitmap->bits into HDC. */ \
-         SetDIBits( g_retroflat_state->hdc_win, (bmp)->b, 0, \
+         SetDIBits( g_retroflat_state->platform.hdc_win, (bmp)->b, 0, \
             (bmp)->bmi.header.biHeight, (bmp)->bits, \
             (BITMAPINFO*)&((bmp)->bmi), DIB_RGB_COLORS ) < \
                (bmp)->bmi.header.biHeight \
@@ -256,7 +256,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 #  define retroflat_px_release( bmp )
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_root_win() (g_retroflat_state->window)
+#  define retroflat_root_win() (g_retroflat_state->platform.window)
 #  define retroflat_quit( retval_in ) PostQuitMessage( retval_in );
 
 #  ifndef VK_OEM_1
@@ -406,6 +406,25 @@ extern HBRUSH gc_retroflat_win_brushes[];
       maug_cleanup_if_not_ok(); \
       lock_auto = 1; \
    }
+
+struct RETROFLAT_PLATFORM {
+   HWND                 window;
+   int16_t              last_idc; /* Last clicked button. */
+#  ifdef RETROFLAT_SCREENSAVER
+   HWND                 parent;
+#  endif /* RETROFLAT_SCREENSAVER */
+   HDC                  hdc_win;
+#  ifdef RETROFLAT_OPENGL
+   HGLRC                hrc_win;
+#  endif /* RETROFLAT_OPENGL */
+   int16_t              last_key;
+   uint8_t              vk_mods;
+   unsigned int         last_mouse;
+   unsigned int         last_mouse_x;
+   unsigned int         last_mouse_y;
+   retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
+};
 
 #endif /* !RETPLTD_H */
 
