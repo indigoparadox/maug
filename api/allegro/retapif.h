@@ -231,10 +231,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-#  if defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
    if( g_retroflat_state->close_button ) {
       retroflat_quit( 0 );
       return 0;
@@ -298,7 +294,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    return key_out;
 }
-
 
 #endif /* !RETPLTF_H */
 
