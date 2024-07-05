@@ -18,13 +18,13 @@ Maug has the following design goals and constraints:
 
 ## Roadmap
 
-- Rename Retroflat functions with maug\_ to create a coherent namespace.
-
 - Clearly enumerate which headers rely on which to create modular hierarchy.
 
 - Solidify API.
 
 - Setup Makefile to compile .solib/.dll/.ovl dynamic libs.
+
+- Use mfile to simplify loading compiled-in resources likes fonts or bitmaps.
 
 ## Modules
 
