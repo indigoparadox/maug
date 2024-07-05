@@ -3061,7 +3061,7 @@ defined( RETROFLAT_OPENGL )
    /* == SDL == */
 
 #     ifndef RETROFLAT_API_SDL1
-   SDL_DestroyWindow( g_retroflat_state->window );
+   SDL_DestroyWindow( g_retroflat_state->platform.window );
 #     endif /* !RETROFLAT_API_SDL1 */
 
    SDL_Quit();
