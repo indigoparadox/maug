@@ -2030,8 +2030,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int gl_retval = 0,
       gl_depth = 16;
 #     endif /* RETROFLAT_OPENGL */
-#  elif defined( RETROFLAT_API_GLUT )
-   unsigned int glut_init_flags = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* = Begin Init Procedure = */
@@ -2638,36 +2636,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  elif defined( RETROFLAT_API_GLUT )
 
-   /* == GLUT == */
-
-#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
-
-   glutInit( &argc, argv );
-   glut_init_flags = GLUT_DEPTH | GLUT_RGBA;
-   if(
-      RETROFLAT_FLAGS_UNLOCK_FPS != (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
-   ) {
-      glut_init_flags |= GLUT_DOUBLE;
-   }
-   glutInitDisplayMode( glut_init_flags );
-   if( 0 < args->screen_x || 0 < args->screen_y ) {
-      glutInitWindowPosition( args->screen_x, args->screen_y );
-   }
-   /* TODO: Handle screen scaling? */
-   glutInitWindowSize(
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-   glutCreateWindow( args->title );
-   glutIdleFunc( retroflat_glut_idle );
-   glutDisplayFunc( retroflat_glut_display );
-   glutKeyboardFunc( retroflat_glut_key );
-
-   /* TODO: Handle mouse input in GLUT. */
+   retval = retroflat_init_platform( argc, argv, args );
+   maug_cleanup_if_not_ok();
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   retroflat_init_platform( args );
+   retval = retroflat_init_platform( args );
+   maug_cleanup_if_not_ok();
 
 #  else
 #     pragma message( "warning: init not implemented" )

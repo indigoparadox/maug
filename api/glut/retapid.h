@@ -37,9 +37,10 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) \
       (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
-/* TODO */
-#  define retroflat_bitmap_w( bmp ) (0)
-#  define retroflat_bitmap_h( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) \
+      (NULL == (bmp) ? g_retroflat_state->screen_v_w : ((bmp)->tex.w))
+#  define retroflat_bitmap_h( bmp ) \
+      (NULL == (bmp) ? g_retroflat_state->screen_v_h : ((bmp)->tex.h))
 
 /*! \brief Special lock used before per-pixel operations because of SDL1. */
 #  define retroflat_px_lock( bmp )

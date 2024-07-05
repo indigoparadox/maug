@@ -17,6 +17,8 @@ retroflat_glut_display( void ) {
    }
 }
 
+/* === */
+
 #ifdef RETROFLAT_OS_OS2
 void APIENTRY
 #else
@@ -44,6 +46,8 @@ retroflat_glut_idle( void ) {
    }
 }
 
+/* === */
+
 #     ifdef RETROFLAT_OS_OS2
 void APIENTRY
 #     elif defined( RETROFLAT_OS_WIN )
@@ -57,6 +61,47 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
 #     endif /* RETROFLAT_OS_WIN */
    debug_printf( 0, "key: %c (0x%02x)", key, key );
    g_retroflat_state->platform.retroflat_last_key = key;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_init_platform(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   unsigned int glut_init_flags = 0;
+
+   /* == GLUT == */
+
+#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
+
+   g_retroflat_state->screen_v_w = args->screen_w;
+   g_retroflat_state->screen_v_h = args->screen_h;
+
+   glutInit( &argc, argv );
+   glut_init_flags = GLUT_DEPTH | GLUT_RGBA;
+   if(
+      RETROFLAT_FLAGS_UNLOCK_FPS != (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+   ) {
+      glut_init_flags |= GLUT_DOUBLE;
+   }
+   glutInitDisplayMode( glut_init_flags );
+   if( 0 < args->screen_x || 0 < args->screen_y ) {
+      glutInitWindowPosition( args->screen_x, args->screen_y );
+   }
+   /* TODO: Handle screen scaling? */
+   glutInitWindowSize(
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+   glutCreateWindow( args->title );
+   glutIdleFunc( retroflat_glut_idle );
+   glutDisplayFunc( retroflat_glut_display );
+   glutKeyboardFunc( retroflat_glut_key );
+
+   /* TODO: Handle mouse input in GLUT. */
+
+   return retval;
 }
 
 void retroflat_message(

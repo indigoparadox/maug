@@ -121,8 +121,12 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #  ifdef RETROFLAT_OPENGL
-#     define retroflat_bitmap_w( bmp ) ((bmp)->tex.w)
-#     define retroflat_bitmap_h( bmp ) ((bmp)->tex.h)
+#     define retroflat_bitmap_w( bmp ) \
+         (NULL == (bmp) || NULL == (bmp)->surface ? \
+            g_retroflat_state->screen_v_w : ((bmp)->tex.w))
+#     define retroflat_bitmap_h( bmp ) \
+         (NULL == (bmp) || NULL == (bmp)->surface ? \
+            g_retroflat_state->screen_v_h : ((bmp)->tex.h))
 #  else
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
