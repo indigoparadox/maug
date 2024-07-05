@@ -2166,7 +2166,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "./" RETROFLAT_VDP_LIB_NAME ".so", RTLD_LAZY );
 #     elif defined( RETROFLAT_OS_WIN )
    g_retroflat_state->vdp_exe = LoadLibrary(
-      "./" RETROFLAT_VDP_LIB_NAME ".dll", RTLD_LAZY );
+      "./" RETROFLAT_VDP_LIB_NAME ".dll" );
 #     else
 #        error "dlopen undefined!"
 #     endif /* RETROFLAT_OS_UNIX */
