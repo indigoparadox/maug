@@ -868,81 +868,9 @@ struct RETROFLAT_GLTEX {
 
 /* See retapid.h for Win. */
 
-
 #elif defined( RETROFLAT_API_LIBNDS )
 
-/* == Nintendo DS == */
-
-#  include <nds.h>
-
-/* NDS doesn't have primitives. */
-#  ifndef RETROFLAT_SOFT_SHAPES
-#     define RETROFLAT_SOFT_SHAPES
-#  endif /* !RETROFLAT_SOFT_SHAPES */
-
-#  ifndef RETROFLAT_SOFT_LINES
-#     define RETROFLAT_SOFT_LINES
-#  endif /* !RETROFLAT_SOFT_LINES */
-
-#  define BG_TILE_W_PX 8
-#  define BG_TILE_H_PX 8
-#  define BG_W_TILES 32
-
-typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
-
-#define RETROFLAT_MS_FMT "%lu"
-
-struct RETROFLAT_BITMAP {
-   size_t sz;
-   uint8_t flags;
-   uint16_t* b;
-#  ifdef RETROFLAT_OPENGL
-   struct RETROFLAT_GLTEX tex;
-   ssize_t w;
-   ssize_t h;
-#  endif /* RETROFLAT_OPENGL */
-};
-
-typedef int RETROFLAT_COLOR_DEF;
-
-#  ifdef RETROFLAT_NDS_WASD
-#     define RETROFLAT_KEY_A           KEY_LEFT
-#     define RETROFLAT_KEY_D           KEY_RIGHT
-#     define RETROFLAT_KEY_W           KEY_UP
-#     define RETROFLAT_KEY_S           KEY_DOWN
-#  endif /* RETROFLAT_NDS_WASD */
-#  define RETROFLAT_KEY_LEFT        KEY_LEFT
-#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#  define RETROFLAT_KEY_UP          KEY_UP
-#  define RETROFLAT_KEY_DOWN        KEY_DOWN
-#  define RETROFLAT_KEY_ENTER       KEY_START
-#  define RETROFLAT_KEY_SPACE       KEY_A
-#  define RETROFLAT_KEY_ESC         KEY_B
-#  define RETROFLAT_MOUSE_B_LEFT    (-1)
-#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
-
-/* TODO */
-#  define retroflat_bitmap_locked( bmp ) (0)
-#  define retroflat_px_lock( bmp )
-#  define retroflat_px_release( bmp )
-#  ifdef RETROFLAT_VDP
-#     define retroflat_vdp_lock( bmp )
-#     define retroflat_vdp_release( bmp )
-#  endif /* RETROFLAT_VDP */
-
-#  define retroflat_screen_w() (256)
-#  define retroflat_screen_h() (192)
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
-#  define retroflat_root_win() (NULL) /* TODO */
-
-#  define END_OF_MAIN()
-
-/* TODO? */
-#  define retroflat_quit( retval_in )
-#  define retroflat_bitmap_w( bmp ) (0)
-#  define retroflat_bitmap_h( bmp ) (0)
-#  define retroflat_bitmap_ok( bitmap ) (0)
+/* See retapid.h for NDS. */
 
 #elif defined( RETROFLAT_API_GLUT )
 
@@ -1227,15 +1155,6 @@ defined( RETROVDP_C )
 #elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
 #  elif defined( RETROFLAT_API_LIBNDS )
-
-   uint16_t*            sprite_frames[NDS_SPRITES_ACTIVE];
-   int                  bg_id;
-   uint8_t              bg_bmp_changed;
-   uint8_t              window_bmp_changed;
-   int                  window_id;
-   int                  px_id;
-   uint16_t             bg_tiles[1024];
-   uint16_t             window_tiles[1024];
 
 #  elif defined( RETROFLAT_API_GLUT )
 
@@ -2106,8 +2025,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int gl_retval = 0,
       gl_depth = 16;
 #     endif /* RETROFLAT_OPENGL */
-#  elif defined( RETROFLAT_API_LIBNDS )
-   int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
@@ -2711,79 +2628,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
-   /* == Nintendo DS == */
-
-   /* Setup color constants. */
-#  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
-
-   /* Force screen size. */
-   args->screen_w = 256;
-   args->screen_h = 192;
-
-   powerOn( POWER_ALL );
-
-#     ifdef RETROFLAT_OPENGL
-
-   debug_printf( 3, "setting up GL subsystem..." );
-
-   videoSetMode( MODE_0_3D );
-
-   vramSetBankA( VRAM_A_TEXTURE );
-
-   glInit();
-   
-   /* TODO: Setup NDS 3D engine! */
-
-#     else
-   videoSetMode( MODE_5_2D );
-	videoSetModeSub( MODE_0_2D );
-
-   /* Setup the upper screen for background and sprites. */
-	vramSetBankA( VRAM_A_MAIN_BG );
-	vramSetBankB( VRAM_B_MAIN_SPRITE );
-
-   /* Setup the lower screen for background and sprites. */
-	vramSetBankC( VRAM_C_MAIN_BG );
-	vramSetBankD( VRAM_D_SUB_SPRITE );
-
-   bgExtPaletteEnable();
-
-   /* Setup the background engine. */
-
-   /* Put map at base 2, but stow tiles up after the bitmap BG at base 7. */
-   g_retroflat_state->bg_id =
-      bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
-   dmaFillWords( 0, g_retroflat_state->bg_tiles,
-      sizeof( g_retroflat_state->bg_tiles ) );
-   bgSetPriority( g_retroflat_state->bg_id, 2 );
-
-   /* Put map at base 3, and tiles at base 0. */
-   g_retroflat_state->window_id =
-      bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
-   dmaFillWords( 0, g_retroflat_state->window_tiles,
-      sizeof( g_retroflat_state->window_tiles ) );
-   bgSetPriority( g_retroflat_state->window_id, 1 );
-
-   /* Put bitmap BG at base 1, leaving map-addressable space at base 0. */
-   g_retroflat_state->px_id = bgInit( 2, BgType_Bmp16, BgSize_B16_256x256, 1, 0 );
-   bgSetPriority( g_retroflat_state->px_id, 0 );
-
-   /* Setup the sprite engines. */
-	oamInit( NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
-
-   /* Allocate sprite frame memory. */
-   for( i = 0 ; NDS_SPRITES_ACTIVE > i ; i++ ) {
-      g_retroflat_state->sprite_frames[i] = oamAllocateGfx(
-         NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
-   }
-
-#     endif /* RETROFLAT_OPENGL */
-
-   /* Setup the timer. */
-   TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
-   TIMER1_CR = TIMER_ENABLE | TIMER_CASCADE;
+   retval = retroflat_init_platform( args );
+   maug_cleanup_if_not_ok();
 
 #  elif defined( RETROFLAT_API_GLUT )
 
@@ -3163,10 +3009,6 @@ retroflat_ms_t retroflat_get_ms() {
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
-   /* == libNDS == */
-
-   return ((TIMER1_DATA * (1 << 16)) + TIMER0_DATA) / 32;
-
 #  elif defined( RETROFLAT_API_GLUT )
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
@@ -3274,10 +3116,6 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int i = 0;
-   PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
@@ -3331,11 +3169,6 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
 ) {
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   MERROR_RETVAL retval = MERROR_OK;
-   int locked_src_internal = 0;
-#  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -3508,7 +3341,7 @@ void retroflat_px(
 
    uint16_t* px_ptr = NULL;
 
-   px_ptr = bgGetGfxPtr( g_retroflat_state->px_id );
+   px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
@@ -4248,8 +4081,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  else
 #     pragma message( "warning: poll input not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   /* TODO: Handle NDS input! */
 
    return key_out;
 }
