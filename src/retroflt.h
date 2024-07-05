@@ -2178,7 +2178,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    /* Create intermediary screen buffer. */
-   debug_printf( 1, "creating VDP buffer, %d x %d",
+   debug_printf( 1, "creating VDP buffer, " SIZE_T_FMT " x " SIZE_T_FMT,
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
    g_retroflat_state->vdp_buffer =
       calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
