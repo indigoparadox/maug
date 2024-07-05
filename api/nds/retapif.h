@@ -160,6 +160,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
    retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( 0 < retroflat_bitmap_w( bmp_out ) );
+   assert( 0 < retroflat_bitmap_h( bmp_out ) );
 #  else
 
    /* TODO */
@@ -182,6 +184,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
    retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+   assert( 0 < retroflat_bitmap_w( bmp_out ) );
+   assert( 0 < retroflat_bitmap_h( bmp_out ) );
 #  else
 
    /* TODO */
@@ -224,6 +228,39 @@ void retroflat_blit_bitmap(
 #  else
 
    /* TODO */
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retroglu_px( target, color_idx, x, y, flags );
+
+#  else
+
+   /* == Nintendo DS == */
+
+   uint16_t* px_ptr = NULL;
+
+   px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
+   px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
 
 #  endif /* RETROFLAT_OPENGL */
 }

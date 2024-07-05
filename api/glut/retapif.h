@@ -195,6 +195,25 @@ void retroflat_blit_bitmap(
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+   retroglu_px( target, color_idx, x, y, flags );
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
 

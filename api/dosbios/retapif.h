@@ -512,6 +512,79 @@ void retroflat_blit_bitmap(
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+   uint16_t screen_byte_offset = 0,
+      screen_bit_offset = 0;
+   uint8_t color = 0;
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+   /* == DOS PC_BIOS == */
+
+   switch( g_retroflat_state->platform.screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_CGA:
+      /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
+      /* Divide result by 4 since it's 2 bits per pixel. */
+      screen_byte_offset = (((y >> 1) * target->w) + x) >> 2;
+      /* Shift the bits over by the remainder. */
+      /* TODO: Factor out this modulo to shift/and. */
+      screen_bit_offset = 6 - (((((y >> 1) * target->w) + x) % 4) << 1);
+
+      /* Dither colors on odd/even squares. */
+      if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
+         color = g_retroflat_state->platform.cga_color_table[color_idx];
+      } else {
+         color = g_retroflat_state->platform.cga_dither_table[color_idx];
+      }
+
+      if( target != &(g_retroflat_state->buffer) ) {
+         /* TODO: Memory bitmap. */
+
+      } else if( y & 0x01 ) {
+         /* 0x2000 = difference between even/odd CGA planes. */
+         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] &=
+            /* 0x03 = 2-bit pixel mask. */
+            ~(0x03 << screen_bit_offset);
+         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] |= 
+            ((color & 0x03) << screen_bit_offset);
+      } else {
+         /* 0x03 = 2-bit pixel mask. */
+         g_retroflat_state->buffer.px[screen_byte_offset] &= 
+            ~(0x03 << screen_bit_offset);
+         g_retroflat_state->buffer.px[screen_byte_offset] |=
+            /* 0x03 = 2-bit pixel mask. */
+            ((color & 0x03) << screen_bit_offset);
+      }
+      break;
+
+   case RETROFLAT_SCREEN_MODE_VGA:
+      screen_byte_offset = ((y * target->w) + x);
+      if( target->sz <= screen_byte_offset ) {
+         break;
+      }
+      target->px[screen_byte_offset] = color_idx;
+      break;
+
+   default:
+      error_printf( "pixel blit unsupported in video mode: %d",
+         g_retroflat_state->platform.screen_mode );
+      break;
+   }
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    union REGS inregs;
    union REGS outregs;

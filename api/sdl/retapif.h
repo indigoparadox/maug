@@ -523,6 +523,84 @@ void retroflat_blit_bitmap(
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+#  if defined( RETROFLAT_OPENGL )
+#  elif defined( RETROFLAT_API_SDL1 )
+   int offset = 0;
+   uint8_t* px_1 = NULL;
+   uint16_t* px_2 = NULL;
+   uint32_t* px_4 = NULL;
+   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#  elif defined( RETROFLAT_API_SDL2 )
+   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
+#  endif /* RETROFLAT_API_SDL1 */
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retroglu_px( target, color_idx, x, y, flags );
+
+#  elif defined( RETROFLAT_API_SDL1 )
+
+   /* == SDL1 == */
+
+   retroflat_px_lock( target );
+
+   assert( 0 < target->autolock_refs );
+
+   offset = (y * target->surface->pitch) +
+      (x * target->surface->format->BytesPerPixel);
+
+   switch( target->surface->format->BytesPerPixel ) {
+   case 4:
+      px_4 = (uint32_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_4 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+
+   case 2:
+      px_2 = (uint16_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_2 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+
+   case 1:
+      px_1 = (uint8_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
+      *px_1 =
+         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
+      break;
+   }
+
+   retroflat_px_release( target );
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   assert( retroflat_bitmap_locked( target ) );
+
+   SDL_SetRenderDrawColor(
+      target->renderer,  color->r, color->g, color->b, 255 );
+   SDL_RenderDrawPoint( target->renderer, x, y );
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;

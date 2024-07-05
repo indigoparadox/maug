@@ -1118,18 +1118,18 @@ defined( RETROVDP_C )
     * This is the scale of the buffer, which the platform-specific code
     * should then scale to match screen_v_h on blit.
     */
-   int                  screen_v_w;
+   size_t               screen_v_w;
    /**
     * \brief The screen height as seen by our program, before scaling.
     *
     * This is the scale of the buffer, which the platform-specific code
     * should then scale to match screen_v_w on blit.
     */
-   int                  screen_v_h;
+   size_t               screen_v_h;
    /*! \brief The screen width as seen by the system, after scaling. */
-   int                  screen_w;
+   size_t               screen_w;
    /*! \brief The screen height as seen by the system, after scaling. */
-   int                  screen_h;
+   size_t               screen_h;
 
    /* WARNING: The VDP requires the state specifier to be the same size
     *          as the one it was compiled for! Do not modify above here!
@@ -1271,6 +1271,11 @@ void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h );
 
+#define retroflat_constrain_px( x, y, bmp, retact ) \
+   if( \
+      x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) \
+   ) { retact; }
+
 /*! \} */ /* maug_retroflt_bitmap */
 
 /**
@@ -1293,7 +1298,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int16_t x, int16_t y, uint8_t flags );
+   size_t x, size_t y, uint8_t flags );
 
 /**
  * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
@@ -3195,29 +3200,12 @@ void retroflat_blit_bitmap(
    return;
 }
 
-#endif /* !RETROPLAT_PRESENT */
-
 /* === */
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, uint8_t flags
+   size_t x, size_t y, uint8_t flags
 ) {
-#  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_API_SDL1 )
-   int offset = 0;
-   uint8_t* px_1 = NULL;
-   uint16_t* px_2 = NULL;
-   uint32_t* px_4 = NULL;
-   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
-#  elif defined( RETROFLAT_API_SDL2 )
-   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
-#  elif defined( RETROFLAT_API_PC_BIOS )
-   uint16_t screen_byte_offset = 0,
-      screen_bit_offset = 0;
-   uint8_t color = 0;
-#  endif /* RETROFLAT_API_SDL1 */
-
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -3226,188 +3214,31 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      x < 0 || x >= retroflat_screen_w() ||
-      y < 0 || y >= retroflat_screen_h()
-   ) {
-      return;
-   }
+   retroflat_constrain_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   assert( NULL != target->tex.bytes );
-   assert( retroflat_bitmap_locked( target ) );
-
-#     if !defined( RETROFLAT_NO_BOUNDSC )
-   if( (size_t)x >= target->tex.w ) {
-      return;
-   }
-
-   if( (size_t)y >= target->tex.h ) {
-      return;
-   }
-#     endif /* !RETROFLAT_NO_BOUNDSC */
-
-   /* Draw pixel colors from texture palette. */
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
-      g_retroflat_state->tex_palette[color_idx][0];
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
-      g_retroflat_state->tex_palette[color_idx][1];
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
-      g_retroflat_state->tex_palette[color_idx][2];
-
-   /* Set pixel as opaque. */
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
+   retroglu_px( target, color_idx, x, y, flags );
 
 #  elif defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
-
 #  elif defined( RETROFLAT_API_SDL1 )
-
-   /* == SDL1 == */
-
-   retroflat_px_lock( target );
-
-   assert( 0 < target->autolock_refs );
-
-   offset = (y * target->surface->pitch) +
-      (x * target->surface->format->BytesPerPixel);
-
-   switch( target->surface->format->BytesPerPixel ) {
-   case 4:
-      px_4 = (uint32_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_4 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
-
-   case 2:
-      px_2 = (uint16_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_2 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
-
-   case 1:
-      px_1 = (uint8_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_1 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
-   }
-
-   retroflat_px_release( target );
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
-   /* == SDL2 == */
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   SDL_SetRenderDrawColor(
-      target->renderer,  color->r, color->g, color->b, 255 );
-   SDL_RenderDrawPoint( target->renderer, x, y );
-
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( retroflat_bitmap_locked( target ) );
-
-#  ifdef RETROFLAT_WING
-   if( NULL != target->bits ) {
-      /* Modify target bits directly (faster) if available! */
-      /* WinG bitmaps are 8-bit palettized, so use the index directly. */
-      if( 0 > target->h ) {
-         target->bits[((target->h - 1 - y) * target->tex.w) + x] =
-            color_idx;
-      } else {
-         target->bits[(y * target->tex.w) + x] =
-            color_idx;
-      }
-   } else {
-      /* Use slow Windows GDI. */
-      SetPixel( target->hdc_b, x, y,
-         g_retroflat_state->palette[color_idx] );
-   }
-#  else
-   SetPixel( target->hdc_b, x, y,
-      g_retroflat_state->palette[color_idx] );
-#  endif /* RETROFLAT_WING */
 
 #  elif defined( RETROFLAT_API_LIBNDS )
 
-   /* == Nintendo DS == */
-
-   uint16_t* px_ptr = NULL;
-
-   px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
-   px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
-
 #  elif defined( RETROFLAT_API_PC_BIOS )
-
-   /* == DOS PC_BIOS == */
-
-   /* TODO: Determine if we're drawing on-screen or on a bitmap. */
-   if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
-   }
-
-   switch( g_retroflat_state->platform.screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_CGA:
-      /* Divide y by 2 since both planes are SCREEN_H / 2 high. */
-      /* Divide result by 4 since it's 2 bits per pixel. */
-      screen_byte_offset = (((y >> 1) * target->w) + x) >> 2;
-      /* Shift the bits over by the remainder. */
-      /* TODO: Factor out this modulo to shift/and. */
-      screen_bit_offset = 6 - (((((y >> 1) * target->w) + x) % 4) << 1);
-
-      /* Dither colors on odd/even squares. */
-      if( (x & 0x01 && y & 0x01) || (!(x & 0x01) && !(y & 0x01)) ) {
-         color = g_retroflat_state->platform.cga_color_table[color_idx];
-      } else {
-         color = g_retroflat_state->platform.cga_dither_table[color_idx];
-      }
-
-      if( target != &(g_retroflat_state->buffer) ) {
-         /* TODO: Memory bitmap. */
-
-      } else if( y & 0x01 ) {
-         /* 0x2000 = difference between even/odd CGA planes. */
-         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] &=
-            /* 0x03 = 2-bit pixel mask. */
-            ~(0x03 << screen_bit_offset);
-         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] |= 
-            ((color & 0x03) << screen_bit_offset);
-      } else {
-         /* 0x03 = 2-bit pixel mask. */
-         g_retroflat_state->buffer.px[screen_byte_offset] &= 
-            ~(0x03 << screen_bit_offset);
-         g_retroflat_state->buffer.px[screen_byte_offset] |=
-            /* 0x03 = 2-bit pixel mask. */
-            ((color & 0x03) << screen_bit_offset);
-      }
-      break;
-
-   case RETROFLAT_SCREEN_MODE_VGA:
-      screen_byte_offset = ((y * target->w) + x);
-      if( target->sz <= screen_byte_offset ) {
-         break;
-      }
-      target->px[screen_byte_offset] = color_idx;
-      break;
-
-   default:
-      error_printf( "pixel blit unsupported in video mode: %d",
-         g_retroflat_state->platform.screen_mode );
-      break;
-   }
 
 #  else
 #     pragma message( "warning: px not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 }
+
+#endif /* !RETROPLAT_PRESENT */
 
 /* === */
 

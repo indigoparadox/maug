@@ -1900,6 +1900,27 @@ void retroglu_blit_bitmap(
    }
 }
 
+/* === */
+
+void retroglu_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+   assert( NULL != target->tex.bytes );
+   assert( retroflat_bitmap_locked( target ) );
+
+   /* Draw pixel colors from texture palette. */
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
+      g_retroflat_state->tex_palette[color_idx][0];
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
+      g_retroflat_state->tex_palette[color_idx][1];
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
+      g_retroflat_state->tex_palette[color_idx][2];
+
+   /* Set pixel as opaque. */
+   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
+}
+
 #else
 
 #  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \

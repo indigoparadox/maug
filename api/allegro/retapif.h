@@ -220,6 +220,28 @@ void retroflat_blit_bitmap(
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+   /* == Allegro == */
+
+   putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;

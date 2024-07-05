@@ -943,6 +943,56 @@ cleanup:
 
 /* === */
 
+void retroflat_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags
+) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   retroflat_constrain_px( x, y, target, return );
+
+#  if defined( RETROFLAT_OPENGL )
+
+   retroglu_px( target, color_idx, x, y, flags );
+
+#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+
+   /* == Win16/Win32 == */
+
+   assert( retroflat_bitmap_locked( target ) );
+
+#  ifdef RETROFLAT_WING
+   if( NULL != target->bits ) {
+      /* Modify target bits directly (faster) if available! */
+      /* WinG bitmaps are 8-bit palettized, so use the index directly. */
+      if( 0 > target->h ) {
+         target->bits[((target->h - 1 - y) * target->tex.w) + x] =
+            color_idx;
+      } else {
+         target->bits[(y * target->tex.w) + x] =
+            color_idx;
+      }
+   } else {
+      /* Use slow Windows GDI. */
+      SetPixel( target->hdc_b, x, y,
+         g_retroflat_state->palette[color_idx] );
+   }
+#  else
+   SetPixel( target->hdc_b, x, y,
+      g_retroflat_state->palette[color_idx] );
+#  endif /* RETROFLAT_WING */
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
 
