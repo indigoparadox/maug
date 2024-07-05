@@ -70,7 +70,8 @@ struct RETROHTR_RENDER_TREE {
 
 /* TODO: Function names should be verb_noun! */
 
-#define retrohtr_node( tree, idx ) (0 <= idx ? &((tree)->nodes[idx]) : NULL)
+#define retrohtr_node( tree, idx ) \
+   (0 <= (ssize_t)idx ? &((tree)->nodes[idx]) : NULL)
 
 #define retrohtr_node_parent( tree, idx ) \
    (0 <= idx && 0 <= (tree)->nodes[idx].parent ? \
@@ -131,6 +132,11 @@ MERROR_RETVAL retrohtr_tree_pos(
 void retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d );
+
+RETROGUI_IDC retrohtr_tree_poll_ctls(
+   struct RETROHTR_RENDER_TREE* tree,
+   RETROFLAT_IN_KEY* input,
+   struct RETROFLAT_INPUT* input_evt );
 
 void retrohtr_tree_dump(
    struct RETROHTR_RENDER_TREE* tree, struct MHTML_PARSER* parser,

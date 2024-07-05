@@ -341,8 +341,6 @@ void retrosoft_ellipse(
          continue;
       }
 
-      assert( 0 <= px_y1 );
-
       retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
    }
 
