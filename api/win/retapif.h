@@ -142,18 +142,18 @@ static LRESULT CALLBACK WndProc(
 
 #     if defined( RETROFLAT_OPENGL )
          
-         pixel_fmt_int =
-            ChoosePixelFormat( g_retroflat_state->hdc_win, &pixel_fmt );
+         pixel_fmt_int = ChoosePixelFormat(
+            g_retroflat_state->platform.hdc_win, &pixel_fmt );
          SetPixelFormat(
-            g_retroflat_state->hdc_win, pixel_fmt_int, &pixel_fmt );
+            g_retroflat_state->platform.hdc_win, pixel_fmt_int, &pixel_fmt );
 
          debug_printf( 1, "setting up OpenGL context..." );
 
-         g_retroflat_state->hrc_win =
-            wglCreateContext( g_retroflat_state->hdc_win );
+         g_retroflat_state->platform.hrc_win =
+            wglCreateContext( g_retroflat_state->platform.hdc_win );
          if(
-            FALSE == wglMakeCurrent( g_retroflat_state->hdc_win,
-               g_retroflat_state->hrc_win )
+            FALSE == wglMakeCurrent( g_retroflat_state->platform.hdc_win,
+               g_retroflat_state->platform.hrc_win )
          ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Error creating OpenGL context: %d",
@@ -196,8 +196,8 @@ static LRESULT CALLBACK WndProc(
 
       case WM_CLOSE:
 #     if defined( RETROFLAT_OPENGL )
-         wglMakeCurrent( g_retroflat_state->hdc_win, NULL );
-         wglDeleteContext( g_retroflat_state->hrc_win );
+         wglMakeCurrent( g_retroflat_state->platform.hdc_win, NULL );
+         wglDeleteContext( g_retroflat_state->platform.hrc_win );
 #     endif /* RETROFLAT_OPENGL */
 
          /* Quit on window close. */
@@ -331,7 +331,7 @@ static LRESULT CALLBACK WndProc(
       case WM_TIMER:
          if(
 #     ifdef RETROFLAT_OPENGL
-            (HGLRC)NULL == g_retroflat_state->hrc_win ||
+            (HGLRC)NULL == g_retroflat_state->platform.hrc_win ||
 #     else
             !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
 #     endif /* !RETROFLAT_OPENGL */

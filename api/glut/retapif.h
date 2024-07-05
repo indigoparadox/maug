@@ -9,11 +9,11 @@ void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
-   if( NULL != g_retroflat_state->loop_iter ) {
-      g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+   if( NULL != g_retroflat_state->platform.loop_iter ) {
+      g_retroflat_state->platform.loop_iter( g_retroflat_state->loop_data );
    }
-   if( NULL != g_retroflat_state->frame_iter ) {
-      g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
+   if( NULL != g_retroflat_state->platform.frame_iter ) {
+      g_retroflat_state->platform.frame_iter( g_retroflat_state->loop_data );
    }
 }
 
@@ -29,7 +29,7 @@ retroflat_glut_idle( void ) {
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS !=
       (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
-      now < g_retroflat_state->retroflat_next
+      now < g_retroflat_state->platform.retroflat_next
    ) {
       return;
    }
@@ -37,10 +37,10 @@ retroflat_glut_idle( void ) {
    glutPostRedisplay();
 
    if( now + retroflat_fps_next() > now ) {
-      g_retroflat_state->retroflat_next = now + retroflat_fps_next();
+      g_retroflat_state->platform.retroflat_next = now + retroflat_fps_next();
    } else {
       /* Rollover protection. */
-      g_retroflat_state->retroflat_next = 0;
+      g_retroflat_state->platform.retroflat_next = 0;
    }
 }
 
@@ -56,7 +56,7 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
       /* key -= 109; */
 #     endif /* RETROFLAT_OS_WIN */
    debug_printf( 0, "key: %c (0x%02x)", key, key );
-   g_retroflat_state->retroflat_last_key = key;
+   g_retroflat_state->platform.retroflat_last_key = key;
 }
 
 void retroflat_message(
@@ -204,8 +204,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* TODO: Implement RETROFLAT_MOD_SHIFT. */
 
-   key_out = g_retroflat_state->retroflat_last_key;
-   g_retroflat_state->retroflat_last_key = 0;
+   key_out = g_retroflat_state->platform.retroflat_last_key;
+   g_retroflat_state->platform.retroflat_last_key = 0;
 
    /* TODO: Handle mouse. */
 

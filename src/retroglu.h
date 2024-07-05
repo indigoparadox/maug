@@ -1615,7 +1615,7 @@ MERROR_RETVAL retroglu_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
       SDL_GL_SwapBuffers();
 #     elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-      SwapBuffers( g_retroflat_state->hdc_win );
+      SwapBuffers( g_retroflat_state->platform.hdc_win );
 #     elif defined( RETROFLAT_API_GLUT )
       glutSwapBuffers();
 #     endif
