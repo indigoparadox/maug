@@ -28,6 +28,14 @@
 #     define RETROFLAT_SOFT_LINES
 #  endif /* !RETROFLAT_SOFT_LINES */
 
+#  ifdef RETROFLAT_API_SDL1
+#     define RETROFLAT_VDP_LIB_NAME "rvdpsdl1",
+#  elif defined( RETROFLAT_API_SDL2 )
+#     define RETROFLAT_VDP_LIB_NAME "rvdpsdl2",
+#  else
+#     error "rvdp .so undefined!"
+#  endif
+
 #ifdef RETROFLAT_API_SDL2
 typedef int32_t RETROFLAT_IN_KEY;
 #else

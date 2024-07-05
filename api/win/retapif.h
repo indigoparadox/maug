@@ -2,6 +2,18 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+/* For now, these are set by WinMain(), so they need to be outside of the
+ * state that's zeroed on init()!
+ */
+HINSTANCE            g_retroflat_instance;
+int                  g_retroflat_cmd_show;
+
+#     ifdef RETROFLAT_WING
+struct RETROFLAT_WING_MODULE g_w;
+#     endif /* RETROFLAT_WING */
+
+/* === */
+
 #  ifdef RETROFLAT_SCREENSAVER
 
 /* Windows screensaver (.scr) command-line arguments. */
@@ -25,6 +37,8 @@ static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
    }
    return RETROFLAT_OK;
 }
+
+/* === */
 
 static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
    debug_printf( 3, "using screensaver mode..." );

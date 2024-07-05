@@ -15,6 +15,8 @@ typedef uint32_t retroflat_ms_t;
 #     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
+#  define RETROFLAT_VDP_LIB_NAME "rvdpnt"
+
 #  include <mmsystem.h>
 
 #  ifndef RETROFLAT_API_WINCE

@@ -1147,21 +1147,6 @@ defined( RETROVDP_C )
 #  endif /* RETROFLAT_OPENGL */
 
    struct RETROFLAT_PLATFORM platform;
-
-#if defined( RETROFLAT_API_ALLEGRO )
-
-#elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-
-#elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-#  elif defined( RETROFLAT_API_LIBNDS )
-
-#  elif defined( RETROFLAT_API_GLUT )
-
-#  elif defined( RETROFLAT_API_PC_BIOS )
-
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
 };
 
 /* === Translation Module === */
@@ -1433,18 +1418,6 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
 };
 
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-/* For now, these are set by WinMain(), so they need to be outside of the
- * state that's zeroed on init()!
- */
-HINSTANCE            g_retroflat_instance;
-int                  g_retroflat_cmd_show;
-
-#     ifdef RETROFLAT_WING
-struct RETROFLAT_WING_MODULE g_w;
-#     endif /* RETROFLAT_WING */
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <string.h>
@@ -1498,16 +1471,12 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
 
-/* TODO: Migrate all platform-specific parts below to retapid.h. */
+/* TODO: Migrate all platform-specific parts below to retapif.h. */
 #include <retapif.h>
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
 #  endif
-
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
 /* Still inside RETROFLT_C! */
 
@@ -1734,13 +1703,6 @@ void retroflat_message(
 ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
-#  ifdef RETROFLAT_API_SDL2
-   uint32_t sdl_msg_flags = 0;
-#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN )) || \
-   (defined( RETROFLAT_API_GLUT) && defined( RETROFLAT_OS_WIN )) || \
-   defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   uint32_t win_msg_flags = 0;
-#  endif
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
@@ -1893,9 +1855,7 @@ cleanup:
 
 #  endif /* RETROSND_ARGS */
 
-#  ifdef RETROFLAT_API_PC_BIOS
-
-#  elif !defined( RETROFLAT_NO_CLI_SZ )
+#  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
 
 static int retroflat_cli_rfx( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
@@ -1980,7 +1940,7 @@ static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args )
    return RETROFLAT_OK;
 }
 
-#  endif /* RETROFLAT_API_PC_BIOS || !RETROFLAT_NO_CLI_SZ */
+#  endif /* !RETROFLAT_API_PC_BIOS && !RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_VDP
 static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
@@ -2203,26 +2163,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )
    g_retroflat_state->vdp_exe = dlopen(
-#        ifdef RETROFLAT_API_SDL1
-      "./rvdpsdl1.so",
-#        elif defined( RETROFLAT_API_SDL2 )
-      "./rvdpsdl2.so",
-#        else
-#           error "rvdp .so undefined!"
-#        endif
-      RTLD_LAZY );
+      "./" RETROFLAT_VDP_LIB_NAME ".so", RTLD_LAZY );
 #     elif defined( RETROFLAT_OS_WIN )
    g_retroflat_state->vdp_exe = LoadLibrary(
-#        ifdef RETROFLAT_API_SDL1
-      "./rvdpsdl1.dll"
-#        elif defined( RETROFLAT_API_SDL2 )
-      "./rvdpsdl2.dll"
-#        elif defined( RETROFLAT_API_WIN32 )
-      "./rvdpnt.dll"
-#        else
-#           error "rvdp .so undefined!"
-#        endif
-      );
+      "./" RETROFLAT_VDP_LIB_NAME ".dll", RTLD_LAZY );
 #     else
 #        error "dlopen undefined!"
 #     endif /* RETROFLAT_OS_UNIX */
