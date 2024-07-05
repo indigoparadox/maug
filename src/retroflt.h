@@ -2110,9 +2110,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    int i = 0;
 #  elif defined( RETROFLAT_API_GLUT )
    unsigned int glut_init_flags = 0;
-#  elif defined( RETROFLAT_API_PC_BIOS )
-   union REGS r;
-   struct SREGS s;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    /* = Begin Init Procedure = */
@@ -2284,6 +2281,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
          g_retroflat_state->tex_palette[idx][2] = b;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
 #  endif /* RETROFLAT_OPENGL */
+
+   /* == Platform-Specific Init == */
 
 #  ifdef RETROFLAT_API_ALLEGRO
 
@@ -2817,105 +2816,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  elif defined( RETROFLAT_API_PC_BIOS )
 
-   /* == DOS PC_BIOS == */
-
-   srand( time( NULL ) );
-
-   debug_printf( 3, "memory available before growth: %u", _memavl() );
-#     ifdef MAUG_DOS_MEM_L
-   /* TODO: Should this check/init be in mmem.h instead? */
-   _fheapgrow();
-#  else
-   _nheapgrow();
-#  endif /* MAUG_DOS_MEM_L */
-   debug_printf( 3, "memory available after growth: %u", _memavl() );
-
-   /* Setup timer handler. */
-
-   _disable();
-
-   /* Backup original handler for later. */
-   segread( &s );
-   r.h.al = 0x08;
-   r.h.ah = 0x35;
-   int86x( 0x21, &r, &r, &s );
-   g_retroflat_state->platform.old_timer_interrupt =
-      (retroflat_intfunc)MK_FP( s.es, r.x.bx );
-
-   /* Install new interrupt handler. */
-   g_ms = 0;
-   r.h.al = 0x08;
-   r.h.ah = 0x25;
-   s.ds = FP_SEG( retroflat_timer_handler );
-   r.x.dx = FP_OFF( retroflat_timer_handler );
-   int86x( 0x21, &r, &r, &s );
-
-   /* Set resolution of timer chip to 1ms. */
-   outp( 0x43, 0x36 );
-   outp( 0x40, (uint8_t)(RETROFLAT_DOS_TIMER_DIV & 0xff) );
-   outp( 0x40, (uint8_t)((RETROFLAT_DOS_TIMER_DIV >> 8) & 0xff) );
-
-   _enable();
-
-   debug_printf( 3, "timers initialized..." );
-
-   /* Setup graphics. */
-
-   memset( &r, 0, sizeof( r ) );
-   r.x.ax = 0x0f00; /* Service: Get video mode. */
-	int86( 0x10, &r, &r ); /* Call video interrupt. */
-   g_retroflat_state->platform.old_video_mode = r.h.al;
-   debug_printf( 2, "saved old video mode: 0x%02x",
-      g_retroflat_state->platform.old_video_mode );
-
-   /* TODO: Put all screen mode dimensions in a LUT. */
-   g_retroflat_state->platform.screen_mode = args->screen_mode;
-   switch( args->screen_mode ) {
-   case RETROFLAT_SCREEN_MODE_CGA:
-      debug_printf( 3, "using CGA 320x200x4 colors" );
-      g_retroflat_state->screen_v_w = 320;
-      g_retroflat_state->screen_v_h = 200;
-      g_retroflat_state->screen_w = 320;
-      g_retroflat_state->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xB8000000L;
-      g_retroflat_state->buffer.w = 320;
-      g_retroflat_state->buffer.h = 200;
-      break;
-
-   case RETROFLAT_SCREEN_MODE_VGA:
-      debug_printf( 3, "using VGA 320x200x16 colors" );
-      g_retroflat_state->screen_v_w = 320;
-      g_retroflat_state->screen_v_h = 200;
-      g_retroflat_state->screen_w = 320;
-      g_retroflat_state->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xA0000000L;
-      g_retroflat_state->buffer.w = 320;
-      g_retroflat_state->buffer.h = 200;
-      g_retroflat_state->buffer.sz = 320 * 200;
-      break;
-
-   default:
-      error_printf( "unsupported video mode: %d", args->screen_mode );
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
-   memset( &r, 0, sizeof( r ) );
-   r.h.al = args->screen_mode;
-   int86( 0x10, &r, &r ); /* Call video interrupt. */
-
-   debug_printf(
-      3, "graphics initialized (mode 0x%02x)...", args->screen_mode );
-
-   /* Initialize color table. */
-#     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->platform.cga_color_table[idx] = RETROFLAT_CGA_COLOR_ ## cgac;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT )
-
-   /* Initialize dither table. */
-#     define RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->platform.cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
+   retroflat_init_platform( args );
 
 #  else
 #     pragma message( "warning: init not implemented" )
