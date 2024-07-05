@@ -218,5 +218,87 @@ void retroflat_blit_bitmap(
 
 }
 
+/* === */
+
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+#  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
+   union REGS inregs;
+   union REGS outregs;
+#  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
+   RETROFLAT_IN_KEY key_out = 0;
+
+   assert( NULL != input );
+
+   input->key_flags = 0;
+
+#  if defined( RETROFLAT_API_ALLEGRO )
+
+   /* == Allegro == */
+
+   if( g_retroflat_state->close_button ) {
+      retroflat_quit( 0 );
+      return 0;
+   }
+
+#     if defined( __WATCOMC__ ) && defined( RETROFLAT_OS_DOS )
+   /* Allegro mouse is broken under watcom in DOS. */
+
+   /* Poll the mouse. */
+   inregs.w.ax = 3;
+   int386( 0x33, &inregs, &outregs );
+
+   if(
+      1 == outregs.x.ebx && /* Left button clicked. */
+      outregs.w.cx != g_retroflat_state->last_mouse_x &&
+      outregs.w.dx != g_retroflat_state->last_mouse_y
+   ) { 
+      input->mouse_x = outregs.w.cx;
+      input->mouse_y = outregs.w.dx;
+
+      /* Prevent repeated clicks. */
+      g_retroflat_state->last_mouse_x = input->mouse_x;
+      g_retroflat_state->last_mouse_y = input->mouse_y;
+
+      return RETROFLAT_MOUSE_B_LEFT;
+   } else {
+      g_retroflat_state->last_mouse_x = outregs.w.cx;
+      g_retroflat_state->last_mouse_y = outregs.w.dx;
+   }
+
+#     else
+   poll_mouse();
+   if( mouse_b & 0x01 ) {
+      input->mouse_x = mouse_x;
+      input->mouse_y = mouse_y;
+      return RETROFLAT_MOUSE_B_LEFT;
+   } else if( mouse_b & 0x02 ) {
+      input->mouse_x = mouse_x;
+      input->mouse_y = mouse_y;
+      return RETROFLAT_MOUSE_B_RIGHT;
+   }
+#     endif /* RETROFLAT_OS_DOS */
+
+   poll_keyboard();
+   if( keypressed() ) {
+      /* TODO: ??? */
+      if( KB_SHIFT_FLAG == (KB_SHIFT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
+      }
+
+      if( KB_CTRL_FLAG == (KB_CTRL_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
+      }
+
+      if( KB_ALT_FLAG == (KB_ALT_FLAG & key_shifts) ) {
+         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
+      }
+
+      return (readkey() >> 8);
+   }
+
+   return key_out;
+}
+
+
 #endif /* !RETPLTF_H */
 

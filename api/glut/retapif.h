@@ -10,7 +10,7 @@ void retroflat_message(
    va_list vargs;
 #  ifdef RETROFLAT_API_SDL2
    uint32_t sdl_msg_flags = 0;
-#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN ))
+#  elif defined( RETROFLAT_OS_WIN )
    uint32_t win_msg_flags = 0;
 #  endif
 
@@ -19,6 +19,7 @@ void retroflat_message(
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
 #  if defined( RETROFLAT_OS_WIN )
+
    switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
    case RETROFLAT_MSG_FLAG_ERROR:
       win_msg_flags |= MB_ICONSTOP;
@@ -135,6 +136,26 @@ void retroflat_blit_bitmap(
 
    retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
 }
+
+/* === */
+
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+   RETROFLAT_IN_KEY key_out = 0;
+
+   assert( NULL != input );
+
+   input->key_flags = 0;
+
+   /* TODO: Implement RETROFLAT_MOD_SHIFT. */
+
+   key_out = g_retroflat_state->retroflat_last_key;
+   g_retroflat_state->retroflat_last_key = 0;
+
+   /* TODO: Handle mouse. */
+
+   return key_out;
+}
+
 
 #endif /* !RETPLTF_H */
 

@@ -573,5 +573,55 @@ cleanup:
 #  endif /* RETROFLAT_OPENGL */
 }
 
+/* === */
+
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+   RETROFLAT_IN_KEY key_out = 0;
+
+   assert( NULL != input );
+
+   input->key_flags = 0;
+
+   if( g_retroflat_state->last_key ) {
+      /* Return g_retroflat_state->last_key, which is set in WndProc when a keypress msg is
+      * received.
+      */
+      key_out = g_retroflat_state->last_key;
+      input->key_flags = g_retroflat_state->vk_mods;
+
+      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
+
+      /* Reset pressed key. */
+      g_retroflat_state->last_key = 0;
+
+   } else if( g_retroflat_state->last_mouse ) {
+      if( MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->last_mouse) ) {
+         input->mouse_x = g_retroflat_state->last_mouse_x;
+         input->mouse_y = g_retroflat_state->last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_LEFT;
+      } else if( MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->last_mouse) ) {
+         input->mouse_x = g_retroflat_state->last_mouse_x;
+         input->mouse_y = g_retroflat_state->last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_RIGHT;
+      }
+      g_retroflat_state->last_mouse = 0;
+      g_retroflat_state->last_mouse_x = 0;
+      g_retroflat_state->last_mouse_y = 0;
+   }
+
+#     ifdef RETROFLAT_SCREENSAVER
+   if( 
+      (RETROFLAT_FLAGS_SCREENSAVER ==
+      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags))
+      && 0 != key_out
+   ) {
+      /* retroflat_quit( 0 ); */
+   }
+#     endif /* RETROFLAT_SCREENSAVER */
+
+   return key_out;
+}
+
+
 #endif /* !RETPLTF_H */
 

@@ -4446,6 +4446,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 
 /* === */
 
+#ifndef RETROFLAT_NO_STRING
+
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
 #     define retroflat_win_create_font( flags, font_str ) \
@@ -4653,6 +4655,8 @@ cleanup:
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
 
+#endif /* !RETROFLAT_NO_STRING */
+
 /* === */
 
 void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
@@ -4786,14 +4790,9 @@ void retroflat_resize_v() {
 
 /* === */
 
+#ifndef RETROPLAT_PRESENT
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
-#  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
-   union REGS inregs;
-   union REGS outregs;
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-   int eres = 0;
-   SDL_Event event;
-#  endif /* RETROFLAT_API_ALLEGRO && RETROFLAT_OS_DOS */
    RETROFLAT_IN_KEY key_out = 0;
 
    assert( NULL != input );
@@ -4802,242 +4801,13 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #  if defined( RETROFLAT_API_ALLEGRO )
 
-   /* == Allegro == */
-
-   if( g_retroflat_state->close_button ) {
-      retroflat_quit( 0 );
-      return 0;
-   }
-
-#     if defined( __WATCOMC__ ) && defined( RETROFLAT_OS_DOS )
-   /* Allegro mouse is broken under watcom in DOS. */
-
-   /* Poll the mouse. */
-   inregs.w.ax = 3;
-   int386( 0x33, &inregs, &outregs );
-
-   if(
-      1 == outregs.x.ebx && /* Left button clicked. */
-      outregs.w.cx != g_retroflat_state->last_mouse_x &&
-      outregs.w.dx != g_retroflat_state->last_mouse_y
-   ) { 
-      input->mouse_x = outregs.w.cx;
-      input->mouse_y = outregs.w.dx;
-
-      /* Prevent repeated clicks. */
-      g_retroflat_state->last_mouse_x = input->mouse_x;
-      g_retroflat_state->last_mouse_y = input->mouse_y;
-
-      return RETROFLAT_MOUSE_B_LEFT;
-   } else {
-      g_retroflat_state->last_mouse_x = outregs.w.cx;
-      g_retroflat_state->last_mouse_y = outregs.w.dx;
-   }
-
-#     else
-   poll_mouse();
-   if( mouse_b & 0x01 ) {
-      input->mouse_x = mouse_x;
-      input->mouse_y = mouse_y;
-      return RETROFLAT_MOUSE_B_LEFT;
-   } else if( mouse_b & 0x02 ) {
-      input->mouse_x = mouse_x;
-      input->mouse_y = mouse_y;
-      return RETROFLAT_MOUSE_B_RIGHT;
-   }
-#     endif /* RETROFLAT_OS_DOS */
-
-   poll_keyboard();
-   if( keypressed() ) {
-      /* TODO: ??? */
-      if( KB_SHIFT_FLAG == (KB_SHIFT_FLAG & key_shifts) ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
-      }
-
-      if( KB_CTRL_FLAG == (KB_CTRL_FLAG & key_shifts) ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
-      }
-
-      if( KB_ALT_FLAG == (KB_ALT_FLAG & key_shifts) ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
-      }
-
-      return (readkey() >> 8);
-   }
-
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL == */
-
-   SDL_PollEvent( &event );
-
-   switch( event.type ) {
-   case SDL_QUIT:
-      /* Handle SDL window close. */
-      retroflat_quit( 0 );
-      break;
-
-   case SDL_KEYDOWN:
-      key_out = event.key.keysym.sym;
-
-      if(
-         KMOD_RSHIFT == (KMOD_RSHIFT & event.key.keysym.mod) ||
-         KMOD_LSHIFT == (KMOD_LSHIFT & event.key.keysym.mod) 
-      ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_SHIFT;
-      }
-
-      if( KMOD_CTRL == (KMOD_CTRL & event.key.keysym.mod) ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_CTRL;
-      }
-
-      if( KMOD_ALT == (KMOD_ALT & event.key.keysym.mod) ) {
-         input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
-      }
-
-      /* Flush key buffer to improve responsiveness. */
-      if(
-         RETROFLAT_FLAGS_KEY_REPEAT !=
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
-      ) {
-         while( (eres = SDL_PollEvent( &event )) );
-      }
-      break;
-
-   case SDL_MOUSEBUTTONUP:
-      /* Stop dragging. */
-      g_retroflat_state->mouse_state = 0;
-      break;
-
-   case SDL_MOUSEBUTTONDOWN:
-
-      /* Begin dragging. */
-
-      input->mouse_x = event.button.x;  
-      input->mouse_y = event.button.y;  
-
-      /* Differentiate which button was clicked. */
-      if( SDL_BUTTON_LEFT == event.button.button ) {
-         key_out = RETROFLAT_MOUSE_B_LEFT;
-         g_retroflat_state->mouse_state = RETROFLAT_MOUSE_B_LEFT;
-      } else if( SDL_BUTTON_RIGHT == event.button.button ) {
-         key_out = RETROFLAT_MOUSE_B_RIGHT;
-         g_retroflat_state->mouse_state = RETROFLAT_MOUSE_B_RIGHT;
-      }
-
-      /* Flush key buffer to improve responsiveness. */
-      /*while( (eres = SDL_PollEvent( &event )) );*/
-      break;
-
-#  if !defined( RETROFLAT_API_SDL1 )
-   case SDL_WINDOWEVENT:
-      switch( event.window.event ) {
-      case SDL_WINDOWEVENT_RESIZED:
-         retroflat_on_resize( event.window.data1, event.window.data2 );
-         if( NULL != g_retroflat_state->on_resize ) {
-            g_retroflat_state->on_resize(
-               event.window.data1, event.window.data2,
-               g_retroflat_state->on_resize_data );
-         }
-         break;
-      }
-      break;
-#  endif /* !RETROFLAT_API_SDL1 */
-
-   default:
-      /* Check for mouse dragging if mouse was previously held down. */
-      if( 0 != g_retroflat_state->mouse_state ) {
-         /* Update coordinates and keep dragging. */
-         SDL_GetMouseState( &(input->mouse_x), &(input->mouse_y) );
-         key_out = g_retroflat_state->mouse_state;
-      }
-      break;
-   }
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    
-   /* == Win16/Win32 == */
-
-   if( g_retroflat_state->last_key ) {
-      /* Return g_retroflat_state->last_key, which is set in WndProc when a keypress msg is
-      * received.
-      */
-      key_out = g_retroflat_state->last_key;
-      input->key_flags = g_retroflat_state->vk_mods;
-
-      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
-
-      /* Reset pressed key. */
-      g_retroflat_state->last_key = 0;
-
-   } else if( g_retroflat_state->last_mouse ) {
-      if( MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->last_mouse) ) {
-         input->mouse_x = g_retroflat_state->last_mouse_x;
-         input->mouse_y = g_retroflat_state->last_mouse_y;
-         key_out = RETROFLAT_MOUSE_B_LEFT;
-      } else if( MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->last_mouse) ) {
-         input->mouse_x = g_retroflat_state->last_mouse_x;
-         input->mouse_y = g_retroflat_state->last_mouse_y;
-         key_out = RETROFLAT_MOUSE_B_RIGHT;
-      }
-      g_retroflat_state->last_mouse = 0;
-      g_retroflat_state->last_mouse_x = 0;
-      g_retroflat_state->last_mouse_y = 0;
-   }
-
-#     ifdef RETROFLAT_SCREENSAVER
-   if( 
-      (RETROFLAT_FLAGS_SCREENSAVER ==
-      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags))
-      && 0 != key_out
-   ) {
-      /* retroflat_quit( 0 ); */
-   }
-#     endif /* RETROFLAT_SCREENSAVER */
-
 #  elif defined( RETROFLAT_API_GLUT )
 
-   /* TODO: Implement RETROFLAT_MOD_SHIFT. */
-
-   key_out = g_retroflat_state->retroflat_last_key;
-   g_retroflat_state->retroflat_last_key = 0;
-
-   /* TODO: Handle mouse. */
-
 #  elif defined( RETROFLAT_API_PC_BIOS )
-
-   /* TODO: Poll the mouse. */
-
-   /* TODO: Implement RETROFLAT_MOD_SHIFT. */
-
-   if( kbhit() ) {
-      /* Poll the keyboard. */
-      key_out = getch();
-      debug_printf( 2, "key: 0x%02x", key_out );
-      if( 0 == key_out ) {
-         /* Special key was pressed that returns two scan codes. */
-         key_out = getch();
-         switch( key_out ) {
-         case 0x48: key_out = RETROFLAT_KEY_UP; break;
-         case 0x4b: key_out = RETROFLAT_KEY_LEFT; break;
-         case 0x4d: key_out = RETROFLAT_KEY_RIGHT; break;
-         case 0x50: key_out = RETROFLAT_KEY_DOWN; break;
-         case 0x4f: key_out = RETROFLAT_KEY_HOME; break;
-         case 0x47: key_out = RETROFLAT_KEY_END; break;
-         case 0x51: key_out = RETROFLAT_KEY_PGDN; break;
-         case 0x49: key_out = RETROFLAT_KEY_PGUP; break;
-         case 0x53: key_out = RETROFLAT_KEY_DELETE; break;
-         }
-      }
-      if(
-         RETROFLAT_FLAGS_KEY_REPEAT !=
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
-      ) {
-         while( kbhit() ) {
-            getch();
-         }
-      }
-   }
 
 #  else
 #     pragma message( "warning: poll input not implemented" )
@@ -5047,6 +4817,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    return key_out;
 }
+
+#endif /* !RETROPLAT_PRESENT */
 
 /* === */
 
