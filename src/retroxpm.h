@@ -10,6 +10,13 @@
 MERROR_RETVAL retroflat_load_xpm(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
+#ifdef RETROFLAT_XPM
+#  ifdef RETROFLT_C
+#     define XPMASSET_C
+#  endif /* RETROFLT_C */
+#include "xpmasset.h"
+#endif /* RETROFLAT_XPM */
+
 #ifdef RETROFLT_C
 
 extern MAUG_CONST char* SEG_MCONST gc_xpm_filenames[];

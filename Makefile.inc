@@ -21,6 +21,14 @@ ifeq ($(FORCE_MVFS),1)
 	MAUG_DEPS += obj/mvfs/mvfs.h
 endif
 
+ifeq ($(FORCE_RETROXPM),1)
+	DEFINES_GCC += -DRETROFLAT_XPM
+	DEFINES_WATCOM += -DRETROFLAT_XPM
+	INCLUDES_GCC += -Iobj/retroxpm
+	INCLUDES_WATCOM += -i=obj/retroxpm
+	MAUG_DEPS += obj/retroxpm/xpmasset.h
+endif
+
 GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell cd maug && git rev-parse HEAD && cd ..)\""
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
