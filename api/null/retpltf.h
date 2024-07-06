@@ -234,5 +234,11 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
+/* === */
+
+void retroflat_resize_v() {
+   /* Platform does not support resizing. */
+}
+
 #endif /* !RETPLTF_H */
 

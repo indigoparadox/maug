@@ -302,6 +302,11 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
+/* === */
+
+void retroflat_resize_v() {
+   /* TODO */
+}
 
 #endif /* !RETPLTF_H */
 

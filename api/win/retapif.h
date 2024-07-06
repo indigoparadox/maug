@@ -1504,5 +1504,11 @@ void retroflat_ellipse(
 #  endif /* RETROFLAT_OPENGL */
 }
 
+/* === */
+
+void retroflat_resize_v() {
+   /* Platform does not support resizing. */
+}
+
 #endif /* !RETPLTF_H */
 

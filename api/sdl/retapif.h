@@ -1059,6 +1059,25 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
+/* === */
+
+void retroflat_resize_v() {
+#  if defined( RETROFLAT_API_SDL2 )
+
+   g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
+   g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
+
+   assert( NULL != g_retroflat_state->buffer.texture );
+   SDL_DestroyTexture( g_retroflat_state->buffer.texture );
+
+   /* Create the buffer texture. */
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+#  endif /* RETROFLAT_API_SDL2 */
+}
 
 #endif /* !RETPLTF_H */
 
