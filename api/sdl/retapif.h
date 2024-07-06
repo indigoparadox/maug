@@ -844,6 +844,120 @@ void retroflat_px(
 #  endif /* RETROFLAT_OPENGL */
 }
 
+/* === */
+
+#  ifndef RETROFLAT_SOFT_SHAPES
+
+void retroflat_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+#  if defined( RETROFLAT_OPENGL )
+   float aspect_ratio = 0,
+      screen_x = 0,
+      screen_y = 0,
+      screen_w = 0,
+      screen_h = 0;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   /* Draw the rect onto the given 2D texture. */
+   retrosoft_rect( target, color_idx, x, y, w, h, flags );
+
+#  else
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( retroflat_bitmap_locked( target ) );
+
+   area.x = x;
+   area.y = y;
+   area.w = w;
+   area.h = h;
+
+   SDL_SetRenderDrawColor(
+      target->renderer, color->r, color->g, color->b, 255 );
+
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      SDL_RenderFillRect( target->renderer, &area );
+   } else {
+      SDL_RenderDrawRect( target->renderer, &area );
+   }
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
+/* === */
+
+#  ifndef RETROFLAT_SOFT_LINES
+
+void retroflat_line(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+) {
+#  if !defined( RETROFLAT_OPENGL )
+   MERROR_RETVAL retval = MERROR_OK;
+   RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
+#  endif /* !RETROFLAT_OPENGL */
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   if( NULL == target || retroflat_screen_buffer() == target ) {
+      /* TODO: Draw line in ortho. */
+   } else {
+      retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   /* == SDL2 == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( retroflat_bitmap_locked( target ) );
+
+   SDL_SetRenderDrawColor(
+      target->renderer, color->r, color->g, color->b, 255 );
+   SDL_RenderDrawLine( target->renderer, x1, y1, x2, y2 );
+ 
+#  endif /* RETROFLAT_OPENGL */
+}
+
+#  endif /* !RETROFLAT_SOFT_LINES */
+
+/* === */
+
+#  ifndef RETROFLAT_SOFT_SHAPES
+
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
+   retrosoft_ellipse( target, color, x, y, w, h, flags );
+}
+
+#  endif /* !RETROFLAT_SOFT_SHAPES */
 
 /* === */
 

@@ -103,6 +103,8 @@ MERROR_RETVAL retrosoft_init() {
       j = 0;
    RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
 
+#  ifndef RETROFLAT_NO_STRING
+
 #ifdef RETROSOFT_PRELOAD_COLORS
    for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
       debug_printf( RETROSOFT_TRACE_LVL,
@@ -119,6 +121,8 @@ MERROR_RETVAL retrosoft_init() {
 #ifdef RETROSOFT_PRELOAD_COLORS
    }
 #endif /* RETROSOFT_PRELOAD_COLORS */
+
+#  endif /* !RETROFLAT_NO_STRING */
 
 cleanup:
 
@@ -230,6 +234,10 @@ void retrosoft_line(
 
    /* TODO: Handle thickness. */
 
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
    retroflat_px_lock( target );
 
    retrosoft_line_strategy(
@@ -273,6 +281,10 @@ void retrosoft_rect(
 ) {
    int x_iter = 0,
       y_iter = 0;
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
 
    retroflat_px_lock( target );
 
@@ -321,6 +333,10 @@ void retrosoft_ellipse(
 
    /* TODO: Filled ellipse. */
 
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
    retroflat_px_lock( target );
 
    /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
@@ -346,6 +362,8 @@ void retrosoft_ellipse(
 
    retroflat_px_release( target );
 }
+
+#  ifndef RETROFLAT_NO_STRING
 
 /* === */
 
@@ -415,6 +433,8 @@ void retrosoft_string(
       x += 8;
    }
 }
+
+#  endif /* !RETROFLAT_NO_STRING */
 
 #else
 

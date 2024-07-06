@@ -1120,6 +1120,13 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    size_t x, size_t y, uint8_t flags );
 
+#ifdef RETROFLAT_SOFT_SHAPES
+#  define retroflat_rect( t, c, x, y, w, h, f ) \
+   retrosoft_rect( t, c, x, y, w, h, f )
+#  define retroflat_ellipse( t, c, x, y, w, h, f ) \
+   retrosoft_ellipse( t, c, x, y, w, h, f )
+#else
+
 /**
  * \brief Draw a rectangle onto the target ::RETROFLAT_BITMAP.
  * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
@@ -1148,6 +1155,13 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
 
+#endif /* RETROFLAT_SOFT_SHAPES */
+
+#ifdef RETROFLAT_SOFT_LINES
+#  define retroflat_line( t, c, x1, y1, x2, y2, f ) \
+   retrosoft_line( t, c, x1, y1, x2, y2, f )
+#else
+
 /**
  * \brief Draw a straight line onto the target ::RETROFLAT_BITMAP.
  * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
@@ -1162,6 +1176,8 @@ void retroflat_ellipse(
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags );
+
+#endif /* RETROFLAT_SOFT_LINES */
 
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
 
@@ -2040,6 +2056,8 @@ cleanup:
 
 #  endif /* RETROFLAT_VDP */
 
+#if 0
+
 /* === */
 
 void retroflat_rect(
@@ -2052,11 +2070,6 @@ void retroflat_rect(
       screen_y = 0,
       screen_w = 0,
       screen_h = 0;
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-#  elif defined( RETROFLAT_API_SDL2 )
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   HBRUSH old_brush = (HBRUSH)NULL;
-   HPEN old_pen = (HPEN)NULL;
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -2071,46 +2084,14 @@ void retroflat_rect(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL == target || retroflat_screen_buffer() == target ) {
+   assert( NULL != target );
 
-      /* Push new overlay projection parms before we create a new overlay. */
-      retroglu_push_overlay( x, y, screen_x, screen_y, aspect_ratio );
-      retroglu_whf( w, h, screen_w, screen_h, aspect_ratio );
-
-      /* Create the overlay poly with a solid color. */
-      glBegin( GL_TRIANGLES );
-      glColor3fv( g_retroflat_state->palette[color_idx] );
-      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-      glVertex3f( screen_x,            screen_y - screen_h, RETROFLAT_GL_Z );
-      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
-
-      glVertex3f( screen_x + screen_w, screen_y - screen_h, RETROFLAT_GL_Z );
-      glVertex3f( screen_x + screen_w, screen_y,            RETROFLAT_GL_Z );
-      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-      glEnd();
-      
-      retroglu_pop_overlay();
-   } else {
-      /* Draw the rect onto the given 2D texture. */
-      retrosoft_rect( target, color_idx, x, y, w, h, flags );
-   }
+   /* Draw the rect onto the given 2D texture. */
+   retrosoft_rect( target, color_idx, x, y, w, h, flags );
 
 #  elif defined( RETROFLAT_SOFT_SHAPES )
 
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
-
-#  elif defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
-   assert( NULL != target->b );
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      rectfill( target->b, x, y, x + w, y + h,
-         g_retroflat_state->palette[color_idx] );
-   } else {
-      rect( target->b, x, y, x + w, y + h,
-         g_retroflat_state->palette[color_idx] );
-   }
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
@@ -2129,24 +2110,6 @@ void retroflat_rect(
    } else {
       SDL_RenderDrawRect( target->renderer, &area );
    }
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   retroflat_win_setup_brush( old_brush, target, color_idx, flags );
-   retroflat_win_setup_pen( old_pen, target, color_idx, flags );
-
-   Rectangle( target->hdc_b, x, y, x + w, y + h );
-
-/* cleanup: */
-
-   retroflat_win_cleanup_brush( old_brush, target )
-   retroflat_win_cleanup_pen( old_pen, target )
 
 #  else
 #     pragma message( "warning: rect not implemented" )
@@ -2325,6 +2288,8 @@ void retroflat_ellipse(
 #     pragma message( "warning: ellipse not implemented" )
 #  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 }
+
+#endif
 
 /* === */
 

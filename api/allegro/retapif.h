@@ -341,6 +341,84 @@ void retroflat_px(
 
 /* === */
 
+void retroflat_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* == Allegro == */
+
+   assert( NULL != target->b );
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      rectfill( target->b, x, y, x + w, y + h,
+         g_retroflat_state->palette[color_idx] );
+   } else {
+      rect( target->b, x, y, x + w, y + h,
+         g_retroflat_state->palette[color_idx] );
+   }
+}
+
+/* === */
+
+void retroflat_line(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* == Allegro == */
+
+   assert( NULL != target->b );
+   line( target->b, x1, y1, x2, y2, color_idx );
+
+}
+
+/* === */
+
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* == Allegro == */
+
+   assert( NULL != target->b );
+
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      /* >> 1 performs better than / 2 on lousy old DOS compilers. */
+      ellipsefill(
+         target->b, x + (w >> 1), y + (h >> 1), w >> 1, h >> 1, color );
+   } else {
+      /* >> 1 performs better than / 2 on lousy old DOS compilers. */
+      ellipse( target->b, x + (w >> 1), y + (h >> 1), w >> 1, h >> 1, color );
+   }
+
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;

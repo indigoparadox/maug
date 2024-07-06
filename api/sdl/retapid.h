@@ -19,11 +19,11 @@
 #     include <SDL_getenv.h>
 #  endif /* RETROFLAT_API_SDL1 */
 
-#  if !defined( RETROFLAT_SOFT_SHAPES ) && !defined( RETROFLAT_OPENGL )
+#  if !defined( RETROFLAT_SOFT_SHAPES )
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
-#  if !defined( RETROFLAT_SOFT_LINES ) && !defined( RETROFLAT_OPENGL )
+#  if !defined( RETROFLAT_SOFT_LINES )
 /* TODO: Do we need soft lines for this? */
 #     define RETROFLAT_SOFT_LINES
 #  endif /* !RETROFLAT_SOFT_LINES */

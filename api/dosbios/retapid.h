@@ -48,6 +48,10 @@ typedef uint16_t retroflat_ms_t;
 #     define RETROFLAT_SOFT_SHAPES
 #  endif /* !RETROFLAT_SOFT_SHAPES */
 
+#  ifndef RETROFLAT_SOFT_LINES
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
+
 #  ifndef RETROFLAT_DOS_TIMER_DIV
 /* #define RETROFLAT_DOS_TIMER_DIV 1103 */
 #     define RETROFLAT_DOS_TIMER_DIV 100

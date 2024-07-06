@@ -1356,5 +1356,158 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
+/* === */
+
+void retroflat_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+#  if defined( RETROFLAT_OPENGL )
+   float aspect_ratio = 0,
+      screen_x = 0,
+      screen_y = 0,
+      screen_w = 0,
+      screen_h = 0;
+#  else
+   HBRUSH old_brush = (HBRUSH)NULL;
+   HPEN old_pen = (HPEN)NULL;
+#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   /* Draw the rect onto the given 2D texture. */
+   retrosoft_rect( target, color_idx, x, y, w, h, flags );
+
+#  else
+
+   /* == Win16/Win32 == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( (HBITMAP)NULL != target->b );
+
+   assert( retroflat_bitmap_locked( target ) );
+
+   retroflat_win_setup_brush( old_brush, target, color_idx, flags );
+   retroflat_win_setup_pen( old_pen, target, color_idx, flags );
+
+   Rectangle( target->hdc_b, x, y, x + w, y + h );
+
+/* cleanup: */
+
+   retroflat_win_cleanup_brush( old_brush, target )
+   retroflat_win_cleanup_pen( old_pen, target )
+
+#  endif /* RETROFLAT_OPENGL */
+
+}
+
+/* === */
+
+void retroflat_line(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+) {
+#  if !defined( RETROFLAT_OPENGL )
+   HPEN pen = (HPEN)NULL;
+   HPEN old_pen = (HPEN)NULL;
+   POINT points[2];
+#  endif /* !RETROFLAT_OPENGL */
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+
+#  else
+
+   /* == Win16/Win32 == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( NULL != target->b );
+
+   assert( retroflat_bitmap_locked( target ) );
+
+   retroflat_win_setup_pen( old_pen, target, color_idx, flags );
+
+   /* Create the line points. */
+   points[0].x = x1;
+   points[0].y = y1;
+   points[1].x = x2;
+   points[1].y = y2;
+
+   Polyline( target->hdc_b, points, 2 );
+
+/* cleanup: */
+
+   if( (HPEN)NULL != pen ) {
+      SelectObject( target->hdc_b, old_pen );
+      DeleteObject( pen );
+   }
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+#  if !defined( RETROFLAT_OPENGL )
+   HPEN old_pen = (HPEN)NULL;
+   HBRUSH old_brush = (HBRUSH)NULL;
+#  endif /* !RETROFLAT_OPENGL */
+
+   if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   retrosoft_ellipse( target, color, x, y, w, h, flags );
+
+#  else
+
+   /* == Win16/Win32 == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   assert( NULL != target->b );
+   assert( retroflat_bitmap_locked( target ) );
+
+   retroflat_win_setup_brush( old_brush, target, color, flags );
+   retroflat_win_setup_pen( old_pen, target, color, flags );
+
+   Ellipse( target->hdc_b, x, y, x + w, y + h );
+
+/* cleanup: */
+
+   retroflat_win_cleanup_brush( old_brush, target )
+   retroflat_win_cleanup_pen( old_pen, target )
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
 #endif /* !RETPLTF_H */
 
