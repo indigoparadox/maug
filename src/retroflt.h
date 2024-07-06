@@ -903,6 +903,7 @@ struct RETROFLAT_STATE {
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+   /* TODO: Make indirect palette optional per-platform. */
    /*! \brief Index of available colors, initialized on platform init. */
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
