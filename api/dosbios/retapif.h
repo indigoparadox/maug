@@ -624,6 +624,67 @@ void retroflat_px(
 
 /* === */
 
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+   /* Set VGA mask register. */
+   switch( g_retroflat_state->platform.screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+      outp( 0x3c6, 0xff );
+      outp( 0x3c7, idx );
+      *p_rgb = 0;
+      *p_rgb |= ((uint32_t)(inp( 0x3c9 ) & 0xff) << 16);
+      *p_rgb |= ((uint32_t)(inp( 0x3c9 ) & 0xff) << 8);
+      *p_rgb |= (inp( 0x3c9 ) & 0xff);
+      break;
+
+   default:
+      error_printf( "could not set palette index %d in screen mode %d!",
+         idx, g_retroflat_state->platform.screen_mode );
+      break;
+   }
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t byte_buffer = 0;
+
+   debug_printf( 1,
+      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+      idx, rgb );
+
+   /* Set VGA mask register. */
+   switch( g_retroflat_state->platform.screen_mode ) {
+   case RETROFLAT_SCREEN_MODE_VGA:
+      /* TODO: This doesn't seem to be working in DOSBox? */
+      outp( 0x3c6, 0xff );
+      outp( 0x3c8, idx );
+
+      byte_buffer = (rgb >> 16) & 0x3f;
+      debug_printf( 1, "r: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+
+      byte_buffer = (rgb >> 8) & 0x3f;
+      debug_printf( 1, "g: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+
+      byte_buffer = rgb & 0x3f;
+      debug_printf( 1, "b: %u", byte_buffer );
+      outp( 0x3c9, byte_buffer );
+      break;
+
+   default:
+      error_printf( "could not set palette index %d in screen mode %d!",
+         idx, g_retroflat_state->platform.screen_mode );
+      break;
+   }
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    union REGS inregs;
    union REGS outregs;

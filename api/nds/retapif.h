@@ -280,6 +280,55 @@ void retroflat_px(
 
 /* === */
 
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+#  ifdef RETROFLAT_OPENGL
+
+   *p_rgb = 0;
+   *p_rgb |= g_retroflat_state->tex_palette[idx][0] & 0xff;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][1] & 0xff) << 8;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][2] & 0xff) << 16;
+
+#  else
+
+   *p_rgb = g_retroflat_state->palette[idx];
+
+#  endif /* RETROFLAT_OPENGL */
+
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint32_t r = 0;
+   uint32_t g = 0;
+   uint32_t b = 0;
+
+   debug_printf( 1,
+      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+      idx, rgb );
+
+#  ifdef RETROFLAT_OPENGL
+
+   g_retroflat_state->tex_palette[idx][0] = rgb & 0xff;
+   g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
+   g_retroflat_state->tex_palette[idx][2] = (rgb & 0xff0000) >> 16;
+
+#  else
+
+   b = rgb & 0xff;
+   g = (rgb & 0xff00) >> 8;
+   r = (rgb & 0xff0000) >> 16;
+   g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
+
+#  endif /* RETROFLAT_OPENGL */
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
 

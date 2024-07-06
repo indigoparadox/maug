@@ -420,6 +420,26 @@ void retroflat_ellipse(
 
 /* === */
 
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+   /* TODO */
+#  pragma message( "warning: get palette not implemented" )
+
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO */
+#  pragma message( "warning: set palette not implemented" )
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;

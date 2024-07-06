@@ -178,7 +178,8 @@ static LRESULT CALLBACK WndProc(
 
          /* Setup the screen buffer. */
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            debug_printf( 1, "retroflat: creating window buffer (%d x %d)...",
+            debug_printf( 1, "retroflat: creating window buffer ("
+               SIZE_T_FMT " x " SIZE_T_FMT ")...",
                g_retroflat_state->screen_w, g_retroflat_state->screen_h );
             /* Do this in its own function so a one-time setup isn't using stack
             * in our WndProc!
@@ -1306,59 +1307,6 @@ void retroflat_px(
 
 /* === */
 
-RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
-   RETROFLAT_IN_KEY key_out = 0;
-
-   assert( NULL != input );
-
-   input->key_flags = 0;
-
-   if( g_retroflat_state->platform.last_key ) {
-      /* Return g_retroflat_state->last_key, which is set in WndProc when a
-       * keypress msg is received.
-       */
-      key_out = g_retroflat_state->platform.last_key;
-      input->key_flags = g_retroflat_state->platform.vk_mods;
-
-      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
-
-      /* Reset pressed key. */
-      g_retroflat_state->platform.last_key = 0;
-
-   } else if( g_retroflat_state->platform.last_mouse ) {
-      if(
-         MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->platform.last_mouse)
-      ) {
-         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
-         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
-         key_out = RETROFLAT_MOUSE_B_LEFT;
-      } else if(
-         MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->platform.last_mouse)
-      ) {
-         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
-         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
-         key_out = RETROFLAT_MOUSE_B_RIGHT;
-      }
-      g_retroflat_state->platform.last_mouse = 0;
-      g_retroflat_state->platform.last_mouse_x = 0;
-      g_retroflat_state->platform.last_mouse_y = 0;
-   }
-
-#     ifdef RETROFLAT_SCREENSAVER
-   if( 
-      (RETROFLAT_FLAGS_SCREENSAVER ==
-      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags))
-      && 0 != key_out
-   ) {
-      /* retroflat_quit( 0 ); */
-   }
-#     endif /* RETROFLAT_SCREENSAVER */
-
-   return key_out;
-}
-
-/* === */
-
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
@@ -1502,6 +1450,79 @@ void retroflat_ellipse(
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+   /* TODO */
+#  pragma message( "warning: get palette not implemented" )
+
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO */
+#  pragma message( "warning: set palette not implemented" )
+
+   return retval;
+}
+
+/* === */
+
+RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
+   RETROFLAT_IN_KEY key_out = 0;
+
+   assert( NULL != input );
+
+   input->key_flags = 0;
+
+   if( g_retroflat_state->platform.last_key ) {
+      /* Return g_retroflat_state->last_key, which is set in WndProc when a
+       * keypress msg is received.
+       */
+      key_out = g_retroflat_state->platform.last_key;
+      input->key_flags = g_retroflat_state->platform.vk_mods;
+
+      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
+
+      /* Reset pressed key. */
+      g_retroflat_state->platform.last_key = 0;
+
+   } else if( g_retroflat_state->platform.last_mouse ) {
+      if(
+         MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->platform.last_mouse)
+      ) {
+         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
+         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_LEFT;
+      } else if(
+         MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->platform.last_mouse)
+      ) {
+         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
+         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
+         key_out = RETROFLAT_MOUSE_B_RIGHT;
+      }
+      g_retroflat_state->platform.last_mouse = 0;
+      g_retroflat_state->platform.last_mouse_x = 0;
+      g_retroflat_state->platform.last_mouse_y = 0;
+   }
+
+#     ifdef RETROFLAT_SCREENSAVER
+   if( 
+      (RETROFLAT_FLAGS_SCREENSAVER ==
+      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags))
+      && 0 != key_out
+   ) {
+      /* retroflat_quit( 0 ); */
+   }
+#     endif /* RETROFLAT_SCREENSAVER */
+
+   return key_out;
 }
 
 /* === */

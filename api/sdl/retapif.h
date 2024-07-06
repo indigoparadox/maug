@@ -960,6 +960,58 @@ void retroflat_ellipse(
 
 /* === */
 
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+#  ifdef RETROFLAT_OPENGL
+
+   *p_rgb = 0;
+   *p_rgb |= g_retroflat_state->tex_palette[idx][0] & 0xff;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][1] & 0xff) << 8;
+   *p_rgb |= (g_retroflat_state->tex_palette[idx][2] & 0xff) << 16;
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   *p_rgb = 0;
+   *p_rgb |= g_retroflat_state->palette[idx].b & 0xff;
+   *p_rgb |= ((g_retroflat_state->palette[idx].g & 0xff) << 8);
+   *p_rgb |= ((g_retroflat_state->palette[idx].r & 0xff) << 16);
+
+#  else
+#     pragma message( "warning: get palette not implemented" )
+#  endif
+
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 3,
+      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+      idx, rgb );
+
+#  ifdef RETROFLAT_OPENGL
+
+   g_retroflat_state->tex_palette[idx][0] = rgb & 0xff;
+   g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
+   g_retroflat_state->tex_palette[idx][2] = (rgb & 0xff0000) >> 16;
+
+#  elif defined( RETROFLAT_API_SDL2 )
+
+   g_retroflat_state->palette[idx].b = rgb & 0xff;
+   g_retroflat_state->palette[idx].g = (rgb & 0xff00) >> 8;
+   g_retroflat_state->palette[idx].r = (rgb & 0xff0000) >> 16;
+
+#  else
+#     pragma message( "warning: set palette not implemented" )
+#  endif
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;
