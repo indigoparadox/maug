@@ -4,6 +4,8 @@
 
 #define RETROPLAT_PRESENT 1
 
+#define RETROFLAT_NO_GENERIC_LOOP 1
+
 #ifdef RETROFLAT_API_WINCE
 /* WinCE is very similar to Win32, so we'll mostly use that with some exceptions below. */
 #	define RETROFLAT_API_WIN32

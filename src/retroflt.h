@@ -1293,9 +1293,6 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */
 
-/* TODO: Migrate all platform-specific parts below to retapif.h. */
-#include <retapif.h>
-
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
 #  endif
@@ -1304,26 +1301,12 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 /* === */
 
-int retroflat_loop(
+#ifndef RETROFLAT_NO_GENERIC_LOOP
+
+static MERROR_RETVAL retroflat_loop_generic(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
-   int retval = 0;
-
-#  if defined( RETROFLAT_OS_WASM )
-
-   /* TODO: Work in frame_iter if provided. */
-   emscripten_cancel_main_loop();
-   emscripten_set_main_loop_arg( frame_iter, data, 0, 0 );
-
-   /* TODO: Replace this with standard loop that retapif.h can define a
-    *       an optional replacement for.
-    */
-#  elif defined( RETROFLAT_API_ALLEGRO ) || \
-   defined( RETROFLAT_API_SDL1 ) || \
-   defined( RETROFLAT_API_SDL2 ) || \
-   defined( RETROFLAT_API_LIBNDS ) || \
-   defined( RETROFLAT_API_PC_BIOS )
-
+   MERROR_RETVAL retval = MERROR_OK;
    retroflat_ms_t next = 0,
       now = 0;
 
@@ -1335,8 +1318,8 @@ int retroflat_loop(
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
-#     ifdef RETROFLAT_API_LIBNDS
-         swiWaitForVBlank();
+#     ifdef retroflat_wait_for_vblank
+         retroflat_wait_for_vblank();
 #     endif /* RETROFLAT_API_LIBNDS */
          if( NULL != loop_iter ) {
             /* Run the loop iter as many times as possible. */
@@ -1362,72 +1345,11 @@ int retroflat_loop(
    );
    retval = g_retroflat_state->retval;
 
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   int msg_retval = 0;
-   MSG msg;
-
-   /* Set these to be called from WndProc later. */
-   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
-   g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
-
-   if( NULL != frame_iter ) {
-      debug_printf( 3, "setting up frame timer %u every %d ms...",
-         RETROFLAT_WIN_FRAME_TIMER_ID, (int)(1000 / RETROFLAT_FPS) );
-      if( !SetTimer(
-         g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID,
-         (int)(1000 / RETROFLAT_FPS), NULL )
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "Could not create frame timer!" );
-         retval = RETROFLAT_ERROR_TIMER;
-         goto cleanup;
-      }
-   }
-
-   if( NULL != loop_iter ) {
-      debug_printf( 3, "setting up loop timer %u every 1 ms...",
-         RETROFLAT_WIN_LOOP_TIMER_ID );
-      if( !SetTimer(
-         g_retroflat_state->platform.window,
-         RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "Could not create loop timer!" );
-         retval = RETROFLAT_ERROR_TIMER;
-         goto cleanup;
-      }
-   }
-
-   /* TODO: loop_iter is artificially slow on Windows! */
-
-   /* Handle Windows messages until quit. */
-   do {
-      msg_retval = GetMessage( &msg, 0, 0, 0 );
-      TranslateMessage( &msg );
-      DispatchMessage( &msg );
-      if( WM_QUIT == msg.message ) {
-         /* Get retval from PostQuitMessage(). */
-         retval = msg.wParam;
-      }
-   } while( WM_QUIT != msg.message && 0 < msg_retval );
-
-cleanup:
-#  elif defined( RETROFLAT_API_GLUT )
-
-   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
-   g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
-   glutMainLoop();
-   retval = g_retroflat_state->retval;
-
-#  else
-#     pragma message( "warning: loop not implemented" )
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
    /* This should be set by retroflat_quit(). */
    return retval;
 }
+
+#endif /* !RETROFLAT_NO_GENERIC_LOOP */
 
 /* === */
 
@@ -1515,6 +1437,11 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 }
 
 #endif /* !RETROFLAT_NO_KEYBOARD */
+
+/* === */
+
+/* TODO: Migrate all platform-specific parts below to retapif.h. */
+#include <retapif.h>
 
 /* === */
 

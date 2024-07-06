@@ -660,6 +660,67 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
 /* === */
 
+MERROR_RETVAL retroflat_loop(
+   retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int msg_retval = 0;
+   MSG msg;
+
+   /* Set these to be called from WndProc later. */
+   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
+
+   if( NULL != frame_iter ) {
+      debug_printf( 3, "setting up frame timer %u every %d ms...",
+         RETROFLAT_WIN_FRAME_TIMER_ID, (int)(1000 / RETROFLAT_FPS) );
+      if( !SetTimer(
+         g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID,
+         (int)(1000 / RETROFLAT_FPS), NULL )
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "Could not create frame timer!" );
+         retval = RETROFLAT_ERROR_TIMER;
+         goto cleanup;
+      }
+   }
+
+   if( NULL != loop_iter ) {
+      debug_printf( 3, "setting up loop timer %u every 1 ms...",
+         RETROFLAT_WIN_LOOP_TIMER_ID );
+      if( !SetTimer(
+         g_retroflat_state->platform.window,
+         RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "Could not create loop timer!" );
+         retval = RETROFLAT_ERROR_TIMER;
+         goto cleanup;
+      }
+   }
+
+   /* TODO: loop_iter is artificially slow on Windows! */
+
+   /* Handle Windows messages until quit. */
+   do {
+      msg_retval = GetMessage( &msg, 0, 0, 0 );
+      TranslateMessage( &msg );
+      DispatchMessage( &msg );
+      if( WM_QUIT == msg.message ) {
+         /* Get retval from PostQuitMessage(). */
+         retval = msg.wParam;
+      }
+   } while( WM_QUIT != msg.message && 0 < msg_retval );
+
+cleanup:
+
+   /* This should be set by retroflat_quit(). */
+   return retval;
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

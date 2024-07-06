@@ -112,6 +112,23 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
 /* === */
 
+MERROR_RETVAL retroflat_loop(
+   retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
+   glutMainLoop();
+   retval = g_retroflat_state->retval;
+
+   /* This should be set by retroflat_quit(). */
+   return retval;
+}
+
+/* === */
+
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {
