@@ -130,6 +130,8 @@ union MAUG_FMT_SPEC {
 
 #if defined( MAUG_OS_NDS )
 
+#  include <nds.h>
+
 /* TODO: Figure out a way to get the calling line number for a function. */
 
 static void debug_printf( int level, const char* fmt, ... ) {
@@ -156,6 +158,8 @@ static void error_printf( const char* fmt, ... ) {
    nocashMessage( buffer );
    nocashMessage( "\n" );
 }
+
+#  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is " SIZE_T_FMT " bytes", (sz) );
 
 /* ! */
 #elif defined( UPRINTF_ANCIENT_C )

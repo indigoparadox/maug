@@ -101,12 +101,18 @@ typedef size_t RETROGUI_IDC;
  * called internally from retrogui_redraw_ctls(), retrogui_poll_ctls(),
  * retrogui_init_ctl(), and retrogui_push_ctl(), respectively.
  */
-#define RETROGUI_CTL_TABLE( f ) \
+#define RETROGUI_CTL_TABLE_BASE( f ) \
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; ) \
-   f( 3, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; ) \
-   f( 4, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; )
+   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; )
+
+#ifdef RETROGUI_NO_TEXTBOX
+#  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f )
+#else
+#  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f ) \
+   f( 4, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
+#endif /* RETROGUI_NO_TEXTBOX */
 
 #if 0
    f( 5, SCROLLBAR, size_t min; size_t max; size_t value; )
@@ -784,6 +790,8 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
    return retval;
 }
 
+#ifndef RETROGUI_NO_TEXTBOX
+
 /* === Control: TEXTBOX === */
 
 static RETROGUI_IDC retrogui_click_TEXTBOX(
@@ -1025,6 +1033,8 @@ static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
    return retval;
 }
 
+#endif /* RETROGUI_NO_TEXTBOX */
+
 /* === Control: LABEL === */
 
 static RETROGUI_IDC retrogui_click_LABEL(
@@ -1199,6 +1209,7 @@ RETROGUI_IDC retrogui_poll_ctls(
          "invalid IDC: " SIZE_T_FMT, gui->focus );
    }
 
+#  ifndef  RETROGUI_NO_TEXTBOX
    if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
       if( SendMessage( ctl->base.hwnd, EM_GETMODIFY, 0, 0 ) ) {
          SendMessage( ctl->base.hwnd, EM_SETMODIFY, 0, 0 );
@@ -1206,6 +1217,7 @@ RETROGUI_IDC retrogui_poll_ctls(
             SendMessage( ctl->base.hwnd, EM_GETMODIFY, 0, 0 ) );
       }
    }
+#  endif /* !RETROGUI_NO_TEXTBOX */
 
 #  else
 
@@ -1454,6 +1466,8 @@ cleanup:
    return retval;
 }
 
+#ifndef RETROGUI_NO_TEXTBOX
+
 MERROR_RETVAL retrogui_get_ctl_text(
    struct RETROGUI* gui, RETROGUI_IDC idc, char* buffer, size_t buffer_sz
 ) {
@@ -1486,6 +1500,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* !RETROGUI_NO_TEXTBOX */
 
 size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, RETROGUI_IDC idc ) {
    size_t idx = -1;
