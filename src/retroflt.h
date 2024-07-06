@@ -547,6 +547,13 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
 
 /**
+ * \relates retroflat_blit_bitmap
+ * \brief Pass to retroflat_blit_bitmap() instance arg if this is not a sprite
+ *        (i.e. if it is a background tile).
+ */
+#define RETROFLAT_INSTANCE_NULL (-1)
+
+/**
  * \brief The filename suffix to be appended with a "." to filenames passed to
  *        retroflat_load_bitmap(). Is a \ref maug_retroflt_cdefs_page.
  */
@@ -1082,7 +1089,8 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
  */
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h );
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   int16_t instance );
 
 /**
  * \brief Ensure x and y (which must be unsigned!) are inside image boundaries.
@@ -2305,6 +2313,8 @@ void retroflat_ellipse(
 
 /* === */
 
+#if 0
+
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 #if 0
    char mouse_str[11] = "";
@@ -2320,6 +2330,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
       g_retroflat_state->last_mouse_x - 5, g_retroflat_state->last_mouse_y - 5, 10, 10, 0 );
 #endif
 }
+
+#endif
 
 /* === */
 
@@ -2638,6 +2650,8 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 /* === */
 
+#if 0
+
 void retroflat_set_proc_resize(
    retroflat_proc_resize_t on_resize_in, void* data_in
 ) {
@@ -2664,6 +2678,8 @@ void retroflat_resize_v() {
 
 #  endif /* RETROFLAT_API_SDL2 */
 }
+
+#endif
 
 /* === */
 

@@ -454,6 +454,11 @@ void retroglu_string(
 
 int retroglu_draw_release( struct RETROFLAT_BITMAP* bmp );
 
+void retroglu_blit_bitmap(
+   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   int16_t instance );
+
 #ifdef RETROGLU_C
 
 #  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -1873,7 +1878,8 @@ void retroglu_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 void retroglu_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   int16_t instance
 ) {
    int y_iter = 0;
 

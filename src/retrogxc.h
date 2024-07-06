@@ -72,8 +72,8 @@ int16_t retrogxc_load_asset(
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
-   uint16_t s_x, uint16_t s_y, uint16_t d_x, uint16_t d_y,
-   uint16_t w, uint16_t h );
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y,
+   size_t w, size_t h, int16_t instance );
 
 MERROR_RETVAL retrogxc_string(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
@@ -356,8 +356,8 @@ cleanup:
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
-   uint16_t s_x, uint16_t s_y, uint16_t d_x, uint16_t d_y,
-   uint16_t w, uint16_t h
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y,
+   size_t w, size_t h, int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* assets = NULL;
@@ -386,7 +386,7 @@ MERROR_RETVAL retrogxc_blit_bitmap(
 
    maug_mlock( assets[bitmap_idx].handle, bitmap );
 
-   retroflat_blit_bitmap( target, bitmap, s_x, s_y, d_x, d_y, w, h );
+   retroflat_blit_bitmap( target, bitmap, s_x, s_y, d_x, d_y, w, h, instance );
 
 cleanup:
 

@@ -256,11 +256,12 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   int16_t instance
 ) {
    assert( NULL != src );
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 }
 
 /* === */

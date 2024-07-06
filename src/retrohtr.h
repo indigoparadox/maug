@@ -1358,7 +1358,8 @@ void retrohtr_tree_draw(
          retrohtr_node_screen_x( tree, node_idx ),
          retrohtr_node_screen_y( tree, node_idx ),
          retroflat_bitmap_w( &(retrohtr_node( tree, node_idx )->bitmap) ),
-         retroflat_bitmap_h( &(retrohtr_node( tree, node_idx )->bitmap) )
+         retroflat_bitmap_h( &(retrohtr_node( tree, node_idx )->bitmap) ),
+         RETROFLAT_INSTANCE_NULL
          /* retrohtr_node( tree, node_idx )->w,
          retrohtr_node( tree, node_idx )->h */ );
 

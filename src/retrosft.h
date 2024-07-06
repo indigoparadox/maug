@@ -432,7 +432,7 @@ void retrosoft_string(
          RETROFLAT_COLOR_WHITE
 #endif /* !RETROSOFT_PRELOAD_COLORS */
          ][0][glyph_idx]), 0, 0, x, y_orig,
-         RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ );
+         RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, RETROFLAT_INSTANCE_NULL );
 
       x += 8;
    }

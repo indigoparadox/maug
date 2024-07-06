@@ -1203,7 +1203,8 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   int s_x, int s_y, int d_x, int d_y, int16_t w, int16_t h
+   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   int16_t instance
 ) {
 #  ifndef RETROFLAT_OPENGL
    int retval = 0;
