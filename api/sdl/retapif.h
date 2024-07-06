@@ -720,21 +720,19 @@ void retroflat_blit_bitmap(
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
 
-#  ifndef RETROFLAT_OPENGL
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* RETROFLAT_OPENGL */
-
    assert( NULL != src );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
 
    src_rect.x = s_x;
    src_rect.y = s_y;
@@ -1059,6 +1057,25 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    return key_out;
 }
 
+/* === */
+
+void retroflat_resize_v() {
+#  if defined( RETROFLAT_API_SDL2 )
+
+   g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
+   g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
+
+   assert( NULL != g_retroflat_state->buffer.texture );
+   SDL_DestroyTexture( g_retroflat_state->buffer.texture );
+
+   /* Create the buffer texture. */
+   g_retroflat_state->buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+
+#  endif /* RETROFLAT_API_SDL2 */
+}
 
 #endif /* !RETPLTF_H */
 

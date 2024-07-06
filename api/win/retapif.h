@@ -1209,21 +1209,21 @@ void retroflat_blit_bitmap(
 #  ifndef RETROFLAT_OPENGL
    int retval = 0;
    int locked_src_internal = 0;
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
 #  endif /* RETROFLAT_OPENGL */
 
    assert( NULL != src );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  else
 
    /* == Win16/Win32 == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
 
    assert( (HBITMAP)NULL != target->b );
    assert( (HBITMAP)NULL != src->b );
@@ -1502,6 +1502,12 @@ void retroflat_ellipse(
    retroflat_win_cleanup_pen( old_pen, target )
 
 #  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_resize_v() {
+   /* Platform does not support resizing. */
 }
 
 #endif /* !RETPLTF_H */

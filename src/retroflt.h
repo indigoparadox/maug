@@ -1246,9 +1246,22 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
+/**
+ * \brief Set the procedure to call when the window is resized (on platforms
+ *        that support resizing).
+ * \param on_resize_in Procedure to call when window is resized.
+ * \param data_in Data to pass to on_resize_in.
+ *
+ * If this is not set, no procedure is called. Some platforms may stretch the
+ * "virtual" screen to fill the physical window.
+ */
 void retroflat_set_proc_resize(
    retroflat_proc_resize_t on_resize_in, void* data_in );
 
+/**
+ * \brief Platform-specific function to resize virtual screen to match
+ *        physical window size.
+ */
 void retroflat_resize_v();
 
 /**
@@ -2650,7 +2663,6 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 /* === */
 
-#if 0
 
 void retroflat_set_proc_resize(
    retroflat_proc_resize_t on_resize_in, void* data_in
@@ -2660,26 +2672,6 @@ void retroflat_set_proc_resize(
 }
 
 /* === */
-
-void retroflat_resize_v() {
-#  if defined( RETROFLAT_API_SDL2 )
-
-   g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
-   g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
-
-   assert( NULL != g_retroflat_state->buffer.texture );
-   SDL_DestroyTexture( g_retroflat_state->buffer.texture );
-
-   /* Create the buffer texture. */
-   g_retroflat_state->buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
-      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-
-#  endif /* RETROFLAT_API_SDL2 */
-}
-
-#endif
 
 /* === */
 
