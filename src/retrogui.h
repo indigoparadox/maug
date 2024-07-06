@@ -368,7 +368,7 @@ static void retrogui_redraw_LISTBOX(
       goto cleanup;
    }
    
-   retroflat_rect( NULL, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    /* Parse out variable-length strings. */

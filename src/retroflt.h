@@ -1121,10 +1121,22 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags );
 
 #ifdef RETROFLAT_SOFT_SHAPES
-#  define retroflat_rect( t, c, x, y, w, h, f ) \
-   retrosoft_rect( t, c, x, y, w, h, f )
-#  define retroflat_ellipse( t, c, x, y, w, h, f ) \
-   retrosoft_ellipse( t, c, x, y, w, h, f )
+#  ifdef RETROFLAT_OPENGL
+/* Make sure we're not passing NULL to openGL texture drawers... they can't
+ * handle that!
+ */
+#     define retroflat_rect( t, c, x, y, w, h, f ) \
+      assert( NULL != t ); \
+      retrosoft_rect( t, c, x, y, w, h, f );
+#     define retroflat_ellipse( t, c, x, y, w, h, f ) \
+      assert( NULL != t ); \
+      retrosoft_ellipse( t, c, x, y, w, h, f )
+#  else
+#     define retroflat_rect( t, c, x, y, w, h, f ) \
+      retrosoft_rect( t, c, x, y, w, h, f )
+#     define retroflat_ellipse( t, c, x, y, w, h, f ) \
+      retrosoft_ellipse( t, c, x, y, w, h, f )
+#  endif /* RETROFLAT_OPENGL */
 #else
 
 /**
@@ -1933,7 +1945,7 @@ skip_vdp:
 
 #  endif /* RETROFLAT_VDP */
 
-#  ifndef RETROFLAT_NO_BLANK_INIT
+#  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_OPENGL )
    retroflat_draw_lock( NULL );
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, 0, 0,

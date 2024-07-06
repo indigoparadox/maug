@@ -36,6 +36,15 @@ struct RETROFLAT_BITMAP {
    ssize_t h;
 };
 
+#  if !defined( RETROFLAT_SOFT_SHAPES )
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
+#  if !defined( RETROFLAT_SOFT_LINES )
+/* TODO: Do we need soft lines for this? */
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
+
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) \
       (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))

@@ -1362,16 +1362,10 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-#  if defined( RETROFLAT_OPENGL )
-   float aspect_ratio = 0,
-      screen_x = 0,
-      screen_y = 0,
-      screen_w = 0,
-      screen_h = 0;
-#  else
+#  if !defined( RETROFLAT_OPENGL )
    HBRUSH old_brush = (HBRUSH)NULL;
    HPEN old_pen = (HPEN)NULL;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+#  endif /* RETROFLAT_OPENGL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;

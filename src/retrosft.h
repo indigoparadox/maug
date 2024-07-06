@@ -52,6 +52,8 @@ gc_font_bmps[RETROFLAT_COLORS_SZ][RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
 
 /* === */
 
+#  ifndef RETROFLAT_NO_STRING
+
 MERROR_RETVAL retrosoft_load_glyph(
    RETROFLAT_COLOR color,
    size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp
@@ -95,6 +97,8 @@ cleanup:
    return retval;
 }
 
+#  endif /* !RETROFLAT_NO_STRING */
+
 /* === */
 
 MERROR_RETVAL retrosoft_init() {
@@ -105,11 +109,11 @@ MERROR_RETVAL retrosoft_init() {
 
 #  ifndef RETROFLAT_NO_STRING
 
-#ifdef RETROSOFT_PRELOAD_COLORS
+#     ifdef RETROSOFT_PRELOAD_COLORS
    for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
       debug_printf( RETROSOFT_TRACE_LVL,
          "loading glyphs in %s...", gc_retroflat_color_names[h] );
-#endif /* RETROSOFT_PRELOAD_COLORS */
+#     endif /* RETROSOFT_PRELOAD_COLORS */
    for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
          for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
             debug_printf( RETROSOFT_TRACE_LVL,
@@ -118,9 +122,9 @@ MERROR_RETVAL retrosoft_init() {
             maug_cleanup_if_not_ok();
          }
       }
-#ifdef RETROSOFT_PRELOAD_COLORS
+#     ifdef RETROSOFT_PRELOAD_COLORS
    }
-#endif /* RETROSOFT_PRELOAD_COLORS */
+#     endif /* RETROSOFT_PRELOAD_COLORS */
 
 #  endif /* !RETROFLAT_NO_STRING */
 
