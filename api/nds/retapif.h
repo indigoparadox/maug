@@ -92,20 +92,6 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
 /* === */
 
-MERROR_RETVAL retroflat_loop(
-   retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   /* Just skip to the generic loop. */
-   retval = retroflat_loop_generic( frame_iter, loop_iter, data );
-
-   /* This should be set by retroflat_quit(). */
-   return retval;
-}
-
-/* === */
-
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {

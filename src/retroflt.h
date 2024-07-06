@@ -976,6 +976,10 @@ defined( RETROVDP_C )
 
 /* Declare the prototypes so that internal functions can call each other. */
 
+#  ifdef retroflat_loop
+MERROR_RETVAL retroflat_loop_generic(
+   retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data );
+#  else
 /**
  * \brief This should be called once in the main body of the program in order
  *        to enter the main loop. The main loop will continuously call
@@ -983,6 +987,7 @@ defined( RETROVDP_C )
  */
 MERROR_RETVAL retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data );
+#  endif /* retroflat_loop */
 
 /**
  * \brief Display a message in a dialog box and/or on stderr.
@@ -1304,7 +1309,7 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 #ifndef RETROFLAT_NO_GENERIC_LOOP
 
-static MERROR_RETVAL retroflat_loop_generic(
+MERROR_RETVAL retroflat_loop_generic(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
    MERROR_RETVAL retval = MERROR_OK;

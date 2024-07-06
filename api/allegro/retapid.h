@@ -32,6 +32,10 @@ typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%u"
 
+/* Inline pass to generic loop. */
+#define retroflat_loop( frame_iter, loop_iter, data ) \
+   retroflat_loop_generic( frame_iter, loop_iter, data )
+
 struct BITMAP;
 
 typedef struct BITMAP BITMAP;

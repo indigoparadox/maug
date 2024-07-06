@@ -27,6 +27,10 @@ typedef uint16_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%u"
 
+/* Inline pass to generic loop. */
+#define retroflat_loop( frame_iter, loop_iter, data ) \
+   retroflat_loop_generic( frame_iter, loop_iter, data )
+
 /* Explicity screen sizes aren't supported, only screen modes handled in
  * special cases during init.
  */
