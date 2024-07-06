@@ -30,9 +30,9 @@
  */
 
 /**
- * \brief A standard UNIX file opened for reading.
+ * \brief A standard UNIX file.
  */
-#define MFILE_CADDY_TYPE_FILE_READ 0x01
+#define MFILE_CADDY_TYPE_FILE 0x01
 
 /**
  * \brief An array of bytes in memory abstracted through this library.
@@ -41,7 +41,13 @@
 
 /*! \} */ /* maug_mfile_types */
 
+#define MFILE_FLAG_READ_ONLY     0x01
+
 #define MFILE_READ_FLAG_LSBF     0x01
+
+#ifndef MFILE_TRACE_LVL
+#  define MFILE_TRACE_LVL 0
+#endif /* !MFILE_TRACE_LVL */
 
 struct MFILE_CADDY;
 
@@ -67,6 +73,7 @@ struct MFILE_CADDY {
    off_t mem_cursor;
    /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
+   uint8_t flags;
    mfile_seek_t seek;
    mfile_read_int_t read_int;
    mfile_read_line_t read_line;
@@ -82,7 +89,7 @@ typedef struct MFILE_CADDY mfile_t;
       break;
 
 #define mfile_has_bytes( p_file ) \
-   ((MFILE_CADDY_TYPE_FILE_READ == ((p_file)->type) ? \
+   ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
       (off_t)ftell( (p_file)->h.file ) : \
       (p_file)->mem_cursor) < (p_file)->sz)
 
@@ -90,7 +97,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_seek( p_file, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
@@ -101,7 +108,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_cread( p_file, p_c ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       (p_file)->last_read = fread( p_c, 1, 1, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
@@ -112,7 +119,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_cread_at( p_file, p_c, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       (p_file)->last_read = fread( p_c, 1, 1, (p_file)->h.file ); \
       break; \
@@ -125,7 +132,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u16read_at( p_file, p_u16, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       (p_file)->last_read = \
          fread( (((uint8_t*)p_u16) + 1), 1, 1, (p_file)->h.file ); \
@@ -142,7 +149,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u16read_lsbf_at( p_file, p_u16, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       (p_file)->last_read = fread( p_u16, 1, 2, (p_file)->h.file ); \
       break; \
@@ -156,7 +163,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u32read_at( p_file, p_u32, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       (p_file)->last_read = \
          fread( (((uint8_t*)p_u32) + 3), 1, 1, (p_file)->h.file ); \
@@ -179,7 +186,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u32read_lsbf( p_file, p_u32 ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       (p_file)->last_read = fread( p_u32, 1, 4, (p_file)->h.file ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
@@ -194,7 +201,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_u32read_lsbf_at( p_file, p_u32, idx ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, idx, SEEK_SET ); \
       (p_file)->last_read = fread( p_u32, 1, 4, (p_file)->h.file ); \
       break; \
@@ -214,7 +221,7 @@ typedef struct MFILE_CADDY mfile_t;
 
 #define mfile_reset( p_file ) \
    switch( (p_file)->type ) { \
-   case MFILE_CADDY_TYPE_FILE_READ: \
+   case MFILE_CADDY_TYPE_FILE: \
       fseek( (p_file)->h.file, 0, SEEK_SET ); \
       break; \
    case MFILE_CADDY_TYPE_MEM_BUFFER: \
@@ -241,6 +248,10 @@ void mfile_close( mfile_t* p_file );
 
 #ifdef MFILE_C
 
+#ifdef MVFS_ENABLED
+#  include <mvfs.h>
+#endif /* MVFS_ENABLED */
+
 #ifdef MFILE_MMAP
 #  include <sys/mman.h> /* mmap() */
 #  include <unistd.h> /* close() */
@@ -258,7 +269,7 @@ MERROR_RETVAL mfile_file_read_int(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t last_read = 0;
 
-   assert( MFILE_CADDY_TYPE_FILE_READ == p_file->type );
+   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
    if( MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags) ) {
       /* Shrink the buffer moving right and read into it. */
@@ -292,7 +303,7 @@ cleanup:
 MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   assert( MFILE_CADDY_TYPE_FILE_READ == p_file->type );
+   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
    if( fseek( p_file->h.file, pos, SEEK_SET ) ) {
       error_printf( "unable to seek file!" );
@@ -309,7 +320,7 @@ MERROR_RETVAL mfile_file_read_line(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   assert( MFILE_CADDY_TYPE_FILE_READ == p_f->type );
+   assert( MFILE_CADDY_TYPE_FILE == p_f->type );
 
    /* Trivial case; use a native function. Much faster! */
    if( NULL == fgets( buffer, buffer_sz - 1, p_f->h.file ) ) {
@@ -342,7 +353,7 @@ MERROR_RETVAL mfile_mem_read_int(
          }
 
          buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
-         debug_printf( 1, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
+         debug_printf( MFILE_TRACE_LVL, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
             buf_sz - 1, p_file->mem_cursor );
          buf_sz--;
          p_file->mem_cursor++;
@@ -361,7 +372,7 @@ MERROR_RETVAL mfile_mem_read_int(
          }
 
          buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
-         debug_printf( 1, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
+         debug_printf( MFILE_TRACE_LVL, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
             buf_sz - 1, p_file->mem_cursor );
          buf_sz--;
          buf++;
@@ -450,7 +461,9 @@ MERROR_RETVAL mfile_lock_buffer(
 
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  ifdef MFILE_MMAP
+#  if defined( MVFS_ENABLED )
+   size_t i = 0;
+#  elif defined( MFILE_MMAP )
    uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
@@ -460,7 +473,36 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
 
    /* MAUG_MHANDLE* p_bytes_ptr_h, off_t* p_bytes_sz */
 
-#  ifdef MFILE_MMAP
+#  if defined( MVFS_ENABLED )
+
+   while( NULL != gc_mvfs_data[i] ) {
+      if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
+         debug_printf( 1, "found file \"%s\" at VFS index: " SIZE_T_FMT
+         " (size: %u bytes)",
+            filename, i, *(gc_mvfs_sizes[i]) );
+         break;
+      }
+      i++;
+   }
+
+   if( NULL == gc_mvfs_data[i] ) {
+      retval = MERROR_FILE;
+      error_printf( "file \"%s\" not found in VFS!", filename );
+      goto cleanup;
+   }
+
+   p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
+   p_file->read_int = mfile_mem_read_int;
+   p_file->seek = mfile_mem_seek;
+   p_file->read_line = mfile_mem_read_line;
+   p_file->flags = MFILE_FLAG_READ_ONLY;
+   p_file->mem_buffer = gc_mvfs_data[i];
+   p_file->sz = *(gc_mvfs_sizes[i]);
+   p_file->mem_cursor = 0;
+
+cleanup:
+
+#  elif defined( MFILE_MMAP )
 
    in_file = open( filename, O_RDONLY );
    if( 0 >= in_file ) {
@@ -513,11 +555,12 @@ cleanup:
    /* debug_printf( 3, "XXX %ld bytes", file_stat.st_size );
    debug_printf( 3, "XXX size_t: %d, off_t: %d", sizeof( size_t ), sizeof( off_t ) ); */
 
-   p_file->type = MFILE_CADDY_TYPE_FILE_READ;
+   p_file->type = MFILE_CADDY_TYPE_FILE;
 
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;
+   p_file->flags = MFILE_FLAG_READ_ONLY;
 
 /*
    *p_bytes_ptr_h = maug_malloc( 1, *p_bytes_sz );
@@ -562,7 +605,7 @@ void mfile_close( mfile_t* p_file ) {
       /* Do nothing silently. */
       break;
 
-   case MFILE_CADDY_TYPE_FILE_READ:
+   case MFILE_CADDY_TYPE_FILE:
       fclose( p_file->h.file );
       p_file->type = 0;
       break;

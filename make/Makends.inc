@@ -11,8 +11,8 @@ endif
 
 # Setup CFLAGS_GCC_NDS
 
-DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD
-INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
+DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DMVFS_ENABLED
+INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
 
 CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math -mlittle-endian
 
@@ -43,7 +43,7 @@ obj/nds-libnds/$(1).elf: $(addprefix obj/nds-libnds/,$(subst .c,.o,$(C_FILES)))
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
-obj/nds-libnds/%.o: %.c | $(MAUG_DEPS)
+obj/nds-libnds/%.o: %.c | $(MAUG_DEPS) obj/mvfs/mvfs.h
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		$$(INCLUDES_GCC) $$(DEFINES_GCC) \

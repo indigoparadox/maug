@@ -1,6 +1,8 @@
 
 # vim: ft=make noexpandtab
 
+# Convert a directory of bitmaps to Wii TPL textures.
+
 define DIRTOTPLS
 
 $(1)_BITMAPS := $(wildcard $(1)/*)

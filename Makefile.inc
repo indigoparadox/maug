@@ -13,6 +13,14 @@ ifeq ("$(OPENGL)","1")
 	DEFINES_WATCOM += -DRETROFLAT_OPENGL
 endif
 
+ifeq ($(FORCE_MVFS),1)
+	DEFINES_GCC += -DMVFS_ENABLED
+	DEFINES_WATCOM += -DMVFS_ENABLED
+	INCLUDES_GCC += -Iobj/mvfs
+	INCLUDES_WATCOM += -i=obj/mvfs
+	MAUG_DEPS += obj/mvfs/mvfs.h
+endif
+
 GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell cd maug && git rev-parse HEAD && cd ..)\""
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
@@ -91,6 +99,7 @@ MD := mkdir -p
 
 include maug/make/Makeico.inc
 include maug/make/Maketpl.inc
+include maug/make/Makevfs.inc
 include maug/make/Makexpm.inc
 include maug/make/Makeunix.inc
 include maug/make/Makewin.inc
