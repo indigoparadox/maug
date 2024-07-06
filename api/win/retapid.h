@@ -4,6 +4,11 @@
 
 #define RETROPLAT_PRESENT 1
 
+#ifdef RETROFLAT_API_WINCE
+/* WinCE is very similar to Win32, so we'll mostly use that with some exceptions below. */
+#	define RETROFLAT_API_WIN32
+#endif /* RETROFLAT_API_WINCE */
+
 /* == Win16/Win32 == */
 
 typedef int16_t RETROFLAT_IN_KEY;

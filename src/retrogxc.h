@@ -301,7 +301,7 @@ int16_t retrogxc_load_asset(
    maug_mlock( gs_retrogxc_handle, assets );
 
    /* Try to find the bitmap already in the cache. */
-   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+   for( i = 0 ; gs_retrogxc_sz > (size_t)i ; i++ ) {
       debug_printf( RETROGXC_TRACE_LVL, "\"%s\" vs \"%s\"",
          assets[i].id, res_p );
       if( 0 == retroflat_cmp_asset_path( assets[i].id, res_p ) ) {
@@ -316,7 +316,7 @@ int16_t retrogxc_load_asset(
    /* Bitmap not found. */
    debug_printf( RETROGXC_TRACE_LVL,
       "asset %s not found in cache; loading...", res_p );
-   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+   for( i = 0 ; gs_retrogxc_sz > (size_t)i ; i++ ) {
       /* Find a new empty slot. */
       debug_printf( RETROGXC_TRACE_LVL, "trying cache slot: %d", i );
       if( RETROGXC_ASSET_TYPE_NONE != assets[i].type ) {
