@@ -179,7 +179,7 @@
  * | RETROFLAT_API_SDL2    | SDL 2              | No              |
  * | RETROFLAT_API_WIN16   | Windows 3.1x API   | No              |
  * | RETROFLAT_API_WIN32   | Win32/NT API       | Yes             |
- * | RETROFLAT_API_NDS     | Nintendo DS        | Yes (Limited)   |
+ * | RETROFLAT_API_LIBNDS  | Nintendo DS        | Yes (Limited)   |
  * | RETROFLAT_API_PC_BIOS | MS-DOS w/ PC BIOS  | No              |
  * | RETROFLAT_API_GLUT    | GLUT (OpenGL-Only) | Yes             |
  *
@@ -2596,6 +2596,10 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
       break;
    }
 
+#  elif defined( RETROFLAT_API_LIBNDS )
+
+   *p_rgb = g_retroflat_state->palette[idx];
+
 #  else
 #     pragma message( "warning: get palette not implemented" )
 #  endif
@@ -2608,6 +2612,10 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_PC_BIOS )
    uint8_t byte_buffer = 0;
+#  elif defined( RETROFLAT_API_LIBNDS )
+   uint32_t r = 0;
+   uint32_t g = 0;
+   uint32_t b = 0;
 #  endif /* RETROFLAT_API_PC_BIOS */
 
    debug_printf( 3,
@@ -2653,6 +2661,13 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
          idx, g_retroflat_state->platform.screen_mode );
       break;
    }
+
+#  elif defined( RETROFLAT_API_LIBNDS )
+
+   b = rgb & 0xff;
+   g = (rgb & 0xff00) >> 8;
+   r = (rgb & 0xff0000) >> 16;
+   g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
 
 #  else
 #     pragma message( "warning: set palette not implemented" )

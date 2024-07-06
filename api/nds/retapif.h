@@ -19,7 +19,7 @@ MERROR_RETVAL retroflat_init_platform(
 
    powerOn( POWER_ALL );
 
-#     ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_OPENGL
 
    debug_printf( 3, "setting up GL subsystem..." );
 
@@ -31,7 +31,10 @@ MERROR_RETVAL retroflat_init_platform(
    
    /* TODO: Setup NDS 3D engine! */
 
-#     else
+#  else
+
+   debug_printf( 3, "setting up NDS sprite engine..." );
+
    videoSetMode( MODE_5_2D );
 	videoSetModeSub( MODE_0_2D );
 
@@ -75,7 +78,7 @@ MERROR_RETVAL retroflat_init_platform(
          NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
    }
 
-#     endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_OPENGL */
 
    /* Setup the timer. */
    TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
@@ -247,6 +250,9 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
+#  if !defined( RETROFLAT_OPENGL )
+   uint16_t* px_ptr = NULL;
+#  endif /* !RETROFLAT_OPENGL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -265,8 +271,6 @@ void retroflat_px(
 #  else
 
    /* == Nintendo DS == */
-
-   uint16_t* px_ptr = NULL;
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
    px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];

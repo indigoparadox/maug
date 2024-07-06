@@ -134,18 +134,29 @@ union MAUG_FMT_SPEC {
 
 /* TODO: Figure out a way to get the calling line number for a function. */
 
-static void debug_printf( int level, const char* fmt, ... ) {
+static void _internal_debug_printf(
+   const char* src_file, int line, int level, const char* fmt, ...
+) {
    va_list argp;
    char buffer[UPRINTF_BUFFER_SZ_MAX + 1];
+   char line_buffer[11] = { 0 };
 
    if( level >= DEBUG_THRESHOLD ) {
       va_start( argp, fmt );
       vsnprintf( buffer, UPRINTF_BUFFER_SZ_MAX, fmt, argp );
       va_end( argp );
+      snprintf( line_buffer, 10, "%d", line );
+      nocashMessage( src_file );
+      nocashMessage( " (" );
+      nocashMessage( line_buffer );
+      nocashMessage( "): " );
       nocashMessage( buffer );
       nocashMessage( "\n" );
    }
 }
+
+#define debug_printf( lvl, ... ) \
+   _internal_debug_printf( __FILE__, __LINE__, lvl, __VA_ARGS__ )
 
 static void error_printf( const char* fmt, ... ) {
    va_list argp;
