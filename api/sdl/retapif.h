@@ -720,21 +720,19 @@ void retroflat_blit_bitmap(
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
 
-#  ifndef RETROFLAT_OPENGL
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* RETROFLAT_OPENGL */
-
    assert( NULL != src );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
    /* == SDL == */
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
 
    src_rect.x = s_x;
    src_rect.y = s_y;
