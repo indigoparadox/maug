@@ -26,6 +26,8 @@ Maug has the following design goals and constraints:
 
 - Use mfile to simplify loading compiled-in resources likes fonts or bitmaps.
 
+- Square-tile-based isometric engine.
+
 ## Modules
 
 ### Makefiles
