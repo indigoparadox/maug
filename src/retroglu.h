@@ -1398,6 +1398,8 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
 
 /* === */
 
+#ifndef RETROFLAT_NO_STRING
+
 #  include "mfont8x8.h"
 
 static
@@ -1571,6 +1573,10 @@ cleanup:
    return;
 #endif /* RETROGLU_NO_TEXTURES */
 }
+
+#endif /* !RETROFLAT_NO_STRING */
+
+/* === */
 
 MERROR_RETVAL retroglu_check_errors( const char* desc ) {
    GLenum gl_retval;
@@ -1856,11 +1862,13 @@ cleanup:
 
 void retroglu_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
+   debug_printf( 1, "destroying bitmap..." );
+
+   if( NULL != bmp->tex.bytes ) {
+      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   }
+   
    if( NULL != bmp->tex.bytes_h ) {
-      if( NULL != bmp->tex.bytes ) {
-         maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
-      }
-      
       maug_mfree( bmp->tex.bytes_h );
    }
 

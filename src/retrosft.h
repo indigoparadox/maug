@@ -103,11 +103,10 @@ cleanup:
 
 MERROR_RETVAL retrosoft_init() {
    MERROR_RETVAL retval = MERROR_OK;
+#  ifndef RETROFLAT_NO_STRING
    size_t i = 0,
       j = 0;
    RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
-
-#  ifndef RETROFLAT_NO_STRING
 
 #     ifdef RETROSOFT_PRELOAD_COLORS
    for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
@@ -126,9 +125,9 @@ MERROR_RETVAL retrosoft_init() {
    }
 #     endif /* RETROSOFT_PRELOAD_COLORS */
 
-#  endif /* !RETROFLAT_NO_STRING */
-
 cleanup:
+
+#  endif /* !RETROFLAT_NO_STRING */
 
    /* TODO: Unload loaded bitmaps if retval not OK. */
 

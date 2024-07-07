@@ -1926,8 +1926,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  if defined( RETROFLAT_OPENGL )
    retval = retrosoft_init();
    maug_cleanup_if_not_ok();
+#     ifndef RETROFLAT_NO_STRING
    retval = retroglu_init_glyph_tex();
    maug_cleanup_if_not_ok();
+#     endif /* !RETROFLAT_NO_STRING */
 #  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_VDP
@@ -2011,7 +2013,7 @@ defined( RETROFLAT_OPENGL )
    retrosoft_shutdown();
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
-#  ifdef RETROFLAT_OPENGL
+#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_NO_STRING )
    debug_printf( 1, "destroying GL glyphs..." );
    retroglu_destroy_glyph_tex();
 #  endif /* RETROFLAT_OPENGL */
