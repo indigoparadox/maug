@@ -216,6 +216,91 @@ void retroflat_px(
 #  else
 
    /* TODO */
+#  pragma message( "warning: px not implemented" )
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_rect(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   /* Draw the rect onto the given 2D texture. */
+   retrosoft_rect( target, color_idx, x, y, w, h, flags );
+
+#  else
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* TODO */
+#  pragma message( "warning: rect not implemented" )
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_line(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+) {
+
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+
+#  else
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* TODO */
+#  pragma message( "warning: line not implemented" )
+
+#  endif /* RETROFLAT_OPENGL */
+}
+
+/* === */
+
+void retroflat_ellipse(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+) {
+
+#  if defined( RETROFLAT_OPENGL )
+
+   assert( NULL != target );
+
+   retrosoft_ellipse( target, color, x, y, w, h, flags );
+
+#  elif defined( RETROFLAT_SOFT_SHAPES )
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   /* TODO */
+#  pragma message( "warning: ellipse not implemented" )
 
 #  endif /* RETROFLAT_OPENGL */
 }
