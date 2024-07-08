@@ -2,6 +2,8 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+#include <ndsasset.h>
+
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
