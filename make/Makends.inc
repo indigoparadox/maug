@@ -68,6 +68,15 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 	echo "\n#ifndef NDSASSET_H\n#define NDSASSET_H" > \
 		$$(NDSASSET_H_DIR)/ndsasset.h
 
+	echo "\n#ifdef NDSASSET_C\n#define extern\n#endif" >> \
+		$$(NDSASSET_H_DIR)/ndsasset.h
+
+	echo "\n#include <stddef.h>\n" >> \
+		$$(NDSASSET_H_DIR)/ndsasset.h
+
+	echo "\n#define NDSASSET_C\n#include \"ndsasset.h\"" > \
+		$$(NDSASSET_H_DIR)/ndsasset.c
+
 	for f in $$^; do \
 		grit $$$$f -gB8 -Mh2 -Mw2 -gTff55ff -ftc -fa -o \
 			$$(NDSASSET_H_DIR)/ndsasset.h; \
@@ -103,6 +112,16 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 		$$(NDSASSET_H_DIR)/ndsasset.c;
 		
 	for f in $$(notdir $$(basename $$^)); do \
+		echo "   $$$${f}TilesLen," >> \
+			$$(NDSASSET_H_DIR)/ndsasset.c; \
+	done
+
+	echo "};\n" >> $$(NDSASSET_H_DIR)/ndsasset.c;
+
+	echo "const size_t gc_ndsassets_pals_lens[] = {" >> \
+		$$(NDSASSET_H_DIR)/ndsasset.c;
+		
+	for f in $$(notdir $$(basename $$^)); do \
 		echo "   $$$${f}PalLen," >> \
 			$$(NDSASSET_H_DIR)/ndsasset.c; \
 	done
@@ -118,6 +137,10 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 	echo "\nextern const unsigned int* gc_ndsassets_tiles[];" >> \
 		$$(NDSASSET_H_DIR)/ndsasset.h
 	echo "extern const unsigned short* gc_ndsassets_pals[];" >> \
+		$$(NDSASSET_H_DIR)/ndsasset.h
+	echo "extern const size_t gc_ndsassets_tiles_lens[];" >> \
+		$$(NDSASSET_H_DIR)/ndsasset.h
+	echo "extern const size_t gc_ndsassets_pals_lens[];" >> \
 		$$(NDSASSET_H_DIR)/ndsasset.h
 
 	echo "\n#endif /* NDSASSET_H */\n" >> \
