@@ -150,7 +150,7 @@ struct MHTML_PARSER {
    size_t pstate_sz;
    mparser_wait_cb_t wait_cb;
    void* wait_data;
-   retroflat_ms_t wait_last;
+   retroflat_ms_t wait_next;
    uint16_t attrib_key;
    char token[MHTML_PARSER_TOKEN_SZ_MAX];
    size_t token_sz;
@@ -770,6 +770,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    }
 
    parser->i++;
+
+   mparser_wait( parser );
 
 cleanup:
 
