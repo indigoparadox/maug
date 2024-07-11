@@ -147,13 +147,17 @@ struct RETROTILE_DATA_BORDER {
 
 typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
    const char* filename, MAUG_MHANDLE* p_tm_h,
-   MAUG_MHANDLE* p_td_h, size_t* p_td_c );
+   MAUG_MHANDLE* p_td_h, size_t* p_td_c,
+   mparser_wait_cb_t wait_cb, void* wait_data );
 
 struct RETROTILE_PARSER {
    uint8_t mstate;
    /* TODO: Use flags and combine these. */
    uint8_t pass;
    uint8_t mode;
+   mparser_wait_cb_t wait_cb;
+   void* wait_data;
+   retroflat_ms_t wait_last;
    size_t layer_tile_iter;
    size_t pass_layer_iter;
    /**
@@ -195,7 +199,8 @@ retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
 
 MERROR_RETVAL retrotile_parse_json_file(
    const char* filename, MAUG_MHANDLE* p_tilemap_h,
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count );
+   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count,
+   mparser_wait_cb_t wait_cb, void* wait_data );
 
 /*! \} */ /* retrotile_parser */
 
@@ -595,7 +600,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
             debug_printf( RETROTILE_TRACE_LVL, "parsing %s...", token );
             parser->tj_parse_cb(
                token, NULL, parser->p_tile_defs_h,
-               parser->p_tile_defs_count );
+               parser->p_tile_defs_count,
+               parser->wait_cb, parser->wait_data );
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
 
@@ -704,7 +710,8 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 
 MERROR_RETVAL retrotile_parse_json_file(
    const char* filename, MAUG_MHANDLE* p_tilemap_h,
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count
+   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count,
+   mparser_wait_cb_t wait_cb, void* wait_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
@@ -747,6 +754,9 @@ MERROR_RETVAL retrotile_parse_json_file(
 
       /* Reset JSON parser. */
       maug_mzero( &(parser->jparser), sizeof( struct MJSON_PARSER ) );
+
+      parser->jparser.wait_cb = wait_cb;
+      parser->jparser.wait_data = wait_data;
 
       /* Figure out if we're parsing a .tmj or .tsj. */
       if( 's' == strrchr( filename, '.' )[2] ) {

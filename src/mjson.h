@@ -26,6 +26,9 @@ struct MJSON_PARSER {
    uint8_t pstate[MPARSER_STACK_SZ_MAX];
    uint8_t pstate_popped;
    size_t pstate_sz;
+   mparser_wait_cb_t wait_cb;
+   void* wait_data;
+   retroflat_ms_t wait_next;
    char token[MJSON_TOKEN_SZ_MAX];
    size_t token_sz;
    mjson_parse_token_cb token_parser;
@@ -238,6 +241,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       mjson_parser_append_token( parser, c );
       break;
    }
+
+   mparser_wait( parser );
 
 cleanup:
 

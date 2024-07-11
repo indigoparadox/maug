@@ -33,6 +33,9 @@ endif /* MPARSER_TRACE_NAMES */
 
 typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
+typedef MERROR_RETVAL (*mparser_wait_cb_t)(
+   MERROR_RETVAL retval_in, void* parser, void* data );
+
 /**
  * \brief Given a pstate table, generate numeric constants.
  */
@@ -110,6 +113,15 @@ typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
     * needed. */ \
    maug_cleanup_if_ge_overflow( \
       parser->token_sz + 1, (size_t)token_sz_max );
+
+#define mparser_wait( parser ) \
+   if( \
+      NULL != (parser)->wait_cb && \
+      retroflat_get_ms() >= (parser)->wait_next \
+   ) { \
+      (parser)->wait_next = retroflat_get_ms() + 1000; \
+      retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
+   }
 
 #ifdef MPARSER_C
 

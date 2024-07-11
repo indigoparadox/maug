@@ -148,6 +148,9 @@ union MHTML_TAG {
 struct MHTML_PARSER {
    uint16_t pstate[MPARSER_STACK_SZ_MAX];
    size_t pstate_sz;
+   mparser_wait_cb_t wait_cb;
+   void* wait_data;
+   retroflat_ms_t wait_last;
    uint16_t attrib_key;
    char token[MHTML_PARSER_TOKEN_SZ_MAX];
    size_t token_sz;
