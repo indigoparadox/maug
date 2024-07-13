@@ -358,13 +358,13 @@ static LRESULT CALLBACK WndProc(
 
          if( RETROFLAT_WIN_FRAME_TIMER_ID == wParam ) {
             /* Frame timer has expired. */
-            assert( NULL != g_retroflat_state->platform.frame_iter );
-            g_retroflat_state->platform.frame_iter(
+            assert( NULL != g_retroflat_state->frame_iter );
+            g_retroflat_state->frame_iter(
                g_retroflat_state->loop_data );
          } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
             /* Loop/tick timer has expired. */
-            assert( NULL != g_retroflat_state->platform.loop_iter );
-            g_retroflat_state->platform.loop_iter(
+            assert( NULL != g_retroflat_state->loop_iter );
+            g_retroflat_state->loop_iter(
                g_retroflat_state->loop_data );
          }
          break;
@@ -617,13 +617,13 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* TODO: Windows shutdown? */
 
    /* Stop frame timer if available. */
-   if( NULL != g_retroflat_state->platform.frame_iter ) {
+   if( NULL != g_retroflat_state->frame_iter ) {
       KillTimer(
          g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID );
    }
 
    /* Stop loop timer if available. */
-   if( NULL != g_retroflat_state->platform.loop_iter ) {
+   if( NULL != g_retroflat_state->loop_iter ) {
       KillTimer(
          g_retroflat_state->platform.window, RETROFLAT_WIN_LOOP_TIMER_ID );
    }
@@ -669,9 +669,20 @@ MERROR_RETVAL retroflat_loop(
    MSG msg;
 
    /* Set these to be called from WndProc later. */
-   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+
+   if(
+      RETROFLAT_FLAGS_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+   ) {
+      /* Main loop is already running, so we're just changing the iter call
+       * and leaving!
+       */
+      debug_printf( 1, "main loop already running!" );
+      goto cleanup;
+   }
 
    if( NULL != frame_iter ) {
       debug_printf( 3, "setting up frame timer %u every %d ms...",
@@ -701,6 +712,8 @@ MERROR_RETVAL retroflat_loop(
       }
    }
 
+   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+
    /* TODO: loop_iter is artificially slow on Windows! */
 
    /* Handle Windows messages until quit. */
@@ -711,6 +724,7 @@ MERROR_RETVAL retroflat_loop(
       if( WM_QUIT == msg.message ) {
          /* Get retval from PostQuitMessage(). */
          retval = msg.wParam;
+         debug_printf( 1, "WM_QUIT received, retval: %d", retval );
       }
    } while( WM_QUIT != msg.message && 0 < msg_retval );
 

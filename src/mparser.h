@@ -20,6 +20,10 @@
 #  define MPARSER_STACK_SZ_MAX 256
 #endif /* !MPARSER_STACK_SZ_MAX */
 
+#ifndef MPARSER_WAIT_INC
+#  define MPARSER_WAIT_INC 100
+#endif /* !MPARSER_WAIT_INC */
+
 #if 0
 ifdef MPARSER_TRACE_NAMES
   define mparser_trace_printf( phase, ptype, parser ) \
@@ -119,7 +123,7 @@ typedef MERROR_RETVAL (*mparser_wait_cb_t)(
       NULL != (parser)->wait_cb && \
       retroflat_get_ms() >= (parser)->wait_next \
    ) { \
-      (parser)->wait_next = retroflat_get_ms() + 1000; \
+      (parser)->wait_next = retroflat_get_ms() + MPARSER_WAIT_INC; \
       retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
    }
 

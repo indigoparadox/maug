@@ -439,8 +439,6 @@ struct RETROFLAT_PLATFORM {
    unsigned int         last_mouse;
    unsigned int         last_mouse_x;
    unsigned int         last_mouse_y;
-   retroflat_loop_iter  loop_iter;
-   retroflat_loop_iter  frame_iter;
 };
 
 #endif /* !RETPLTD_H */

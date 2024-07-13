@@ -969,6 +969,9 @@ defined( RETROVDP_C )
     *       consistent state struct size for VDP?
     */
 
+   retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
+
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
@@ -1365,6 +1368,21 @@ MERROR_RETVAL retroflat_loop_generic(
    retroflat_ms_t next = 0,
       now = 0;
 
+   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+
+   if(
+      RETROFLAT_FLAGS_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+   ) {
+      /* Main loop is already running, so we're just changing the iter call
+       * and leaving!
+       */
+      debug_printf( 1, "main loop already running!" );
+      goto cleanup;
+   }
+
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
       if(
@@ -1376,15 +1394,15 @@ MERROR_RETVAL retroflat_loop_generic(
 #     ifdef retroflat_wait_for_vblank
          retroflat_wait_for_vblank();
 #     endif /* RETROFLAT_API_LIBNDS */
-         if( NULL != loop_iter ) {
+         if( NULL != g_retroflat_state->loop_iter ) {
             /* Run the loop iter as many times as possible. */
-            loop_iter( data );
+            g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
          }
          continue;
       }
-      if( NULL != frame_iter ) {
+      if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
-         frame_iter( data );
+         g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
       }
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
@@ -1399,6 +1417,8 @@ MERROR_RETVAL retroflat_loop_generic(
          (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
    );
    retval = g_retroflat_state->retval;
+
+cleanup:
 
    /* This should be set by retroflat_quit(). */
    return retval;

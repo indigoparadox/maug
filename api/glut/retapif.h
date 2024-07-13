@@ -9,11 +9,11 @@ void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
-   if( NULL != g_retroflat_state->platform.loop_iter ) {
-      g_retroflat_state->platform.loop_iter( g_retroflat_state->loop_data );
+   if( NULL != g_retroflat_state->loop_iter ) {
+      g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
    }
-   if( NULL != g_retroflat_state->platform.frame_iter ) {
-      g_retroflat_state->platform.frame_iter( g_retroflat_state->loop_data );
+   if( NULL != g_retroflat_state->frame_iter ) {
+      g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
    }
 }
 
@@ -117,11 +117,26 @@ MERROR_RETVAL retroflat_loop(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   g_retroflat_state->platform.loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
    g_retroflat_state->loop_data = (void*)data;
-   g_retroflat_state->platform.frame_iter = (retroflat_loop_iter)frame_iter;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+
+   if(
+      RETROFLAT_FLAGS_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+   ) {
+      /* Main loop is already running, so we're just changing the iter call
+       * and leaving!
+       */
+      goto cleanup;
+   }
+
+   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+
    glutMainLoop();
    retval = g_retroflat_state->retval;
+
+cleanup:
 
    /* This should be set by retroflat_quit(). */
    return retval;
