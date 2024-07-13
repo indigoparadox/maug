@@ -42,11 +42,11 @@ $(1)d.exe: $$(addprefix obj/doswa/,$$(subst .c,.o,$$(C_FILES)))
 		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_DOS) \
 		$$(LDFLAGS_WATCOM386_DOS_ALLEGRO) fil {$$^}
 
-obj/doswa/%.o: %.c | $(MAUG_DEPS)
+obj/doswa/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_DOS) \
-		$$(CFLAGS_WATCOM386_DOS_ALLEGRO) \
+		$$(CFLAGS_WATCOM386_DOS_ALLEGRO) $$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)d.exe
@@ -66,11 +66,11 @@ $(1)dg.exe: $$(addprefix obj/dosdg/,$$(subst .c,.o,$$(C_FILES)))
 		$$(LDFLAGS_DJGPP) $$(LDFLAGS_DJGPP_DOS) \
 		$$(LDFLAGS_DJGPP_DOS_ALLEGRO)
 
-obj/dosdg/%.o: %.c | $(MAUG_DEPS)
+obj/dosdg/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_DJGPP) \
 		$$(CFLAGS_DJGPP) $$(CFLAGS_DJGPP_DOS) \
-		$$(CFLAGS_DJGPP_DOS_ALLEGRO) \
+		$$(CFLAGS_DJGPP_DOS_ALLEGRO) $$(CFLAGS_OPT_GCC) \
 		-o $$@ -c $$<
 
 CLEAN_TARGETS += $(1)dg.exe
@@ -99,10 +99,11 @@ $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
 		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
 
-obj/dos_bios/%.o: %.c | $(MAUG_DEPS)
+obj/dos_bios/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) $$(CFLAGS_WATCOM_DOS_BIOS) \
+		$$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)b.exe

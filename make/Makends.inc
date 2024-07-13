@@ -11,7 +11,7 @@ endif
 
 # Setup CFLAGS_GCC_NDS
 
-DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DMVFS_ENABLED
+DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
 
 CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math -mlittle-endian
@@ -54,7 +54,7 @@ obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS) $$(NDSASSET_H_FILE)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		-I $$(NDSASSET_H_DIR) \
 		$$(INCLUDES_GCC) $$(DEFINES_GCC) \
-		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS)
+		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS) $$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).nds
 

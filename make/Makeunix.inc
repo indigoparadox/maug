@@ -74,10 +74,11 @@ $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_SDL)
 
-$$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
-		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL)
+		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL) \
+		$$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).sdl
 
@@ -103,10 +104,11 @@ $$(addprefix $$(OBJDIR_GCC_UNIX_ALLEGRO)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_ALLEGRO)
 
-$$(OBJDIR_GCC_UNIX_ALLEGRO)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_GCC_UNIX_ALLEGRO)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
-		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_ALLEGRO)
+		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_ALLEGRO) \
+		$$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).ale
 
@@ -130,10 +132,11 @@ $(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_GLUT)
 
-$$(OBJDIR_GCC_UNIX_GLUT)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_GCC_UNIX_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
-		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_GLUT)
+		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_GLUT) \
+		$$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).glut
 

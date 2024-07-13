@@ -1,6 +1,9 @@
 
 # vim: ft=make noexpandtab
 
+MVFS_H_DIR := obj/mvfs
+MVFS_DEFINE := MVFS_ENABLED
+
 define MVFS
 
 obj/mvfs/mvfs.h: $(1)
@@ -38,6 +41,10 @@ obj/mvfs/mvfs.h: $(1)
 
 	# Close include guard.
 	echo "\n#endif" >> $$@
+
+CFLAGS_OPT_GCC += -D$(MVFS_DEFINE) -I$(MVFS_H_DIR)
+CFLAGS_OPT_WATCOM += -D$(MVFS_DEFINE) -i=$(MVFS_H_DIR)
+MAUG_DEPS += $(MVFS_H_DIR)/mvfs.h
 
 endef
 

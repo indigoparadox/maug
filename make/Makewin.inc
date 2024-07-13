@@ -131,11 +131,11 @@ $$(RES_WATCOM386_WIN_WIN32_DEP)
 		$$(LDFLAGS_WATCOM386_WIN_WIN32) fil {$$^} \
 		$$(RES_WATCOM386_WIN_WIN32)
 
-$$(OBJDIR_WATCOM386_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_WATCOM386_WIN_WIN32)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_WIN) \
-		$$(CFLAGS_WATCOM386_WIN_WIN32) \
+		$$(CFLAGS_WATCOM386_WIN_WIN32) $$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)nt.exe
@@ -163,11 +163,11 @@ $$(RES_WATCOM386_WIN_GLUT_DEP)
 		$$(LDFLAGS_WATCOM386_WIN_GLUT) fil {$$^} \
 		$$(RES_WATCOM386_WIN_GLUT)
 
-$$(OBJDIR_WATCOM386_WIN_GLUT)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_WATCOM386_WIN_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_WIN) \
-		$$(CFLAGS_WATCOM386_WIN_GLUT) \
+		$$(CFLAGS_WATCOM386_WIN_GLUT) $$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)ntgl.exe
@@ -196,11 +196,11 @@ $$(RES_WATCOM386_WIN_SDL_DEP)
 		$$(LDFLAGS_WATCOM386_WIN_SDL) fil {$$^} \
 		$$(RES_WATCOM386_WIN_SDL)
 
-$$(OBJDIR_WATCOM386_WIN_SDL)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_WATCOM386_WIN_SDL)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_WIN) \
-		$$(CFLAGS_WATCOM386_WIN_SDL) \
+		$$(CFLAGS_WATCOM386_WIN_SDL) $$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)nts.exe
@@ -229,10 +229,11 @@ $$(RES_WATCOM_WIN_WIN16_DEP)
 		$$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^} \
 		$$(RES_WATCOM_WIN_WIN16)
 
-$$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN16) \
+		$$(CFLAGS_OPT_WATCOM) \
 		-fo="$$@" "$$(<:%.c=%)"
 
 CLEAN_TARGETS += $(1)w3.exe
@@ -264,12 +265,13 @@ $(1)w.exe: $(1)w.rex
 	wbind "$$<" -s "$$(WATCOM)/binw/win386.ext" -R \
 	$$(RES_WATCOM386_WIN_WIN16_DEP) "$$@"
 
-$$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) \
 		$$(CFLAGS_WATCOM386_WIN) \
 		$$(CFLAGS_WATCOM386_WIN_WIN16) \
+		$$(CFLAGS_OPT_WATCOM) \
 		-fo="$$@" "$$(<:%.c=%)"
 
 CLEAN_TARGETS += $(1)w.exe $(1)w.rex
@@ -294,11 +296,11 @@ $$(addprefix $$(OBJDIR_GCC_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
 $$(RES_GCC_WIN_WIN32_DEP)
 	$$(LD_GCC_MINGW) -o $$@ $$^ $$(LDFLAGS_GCC_WIN) $$(LDFLAGS_GCC_WIN_WIN32)
 
-$$(OBJDIR_GCC_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_GCC_WIN_WIN32)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW) \
 		$$(GLOBAL_DEFINES) $$(INCLUDES_GCC) $$(DEFINES_GCC) \
-		$$(CFLAGS_GCC_WIN) $$(CFLAGS_GCC_WIN_WIN32) \
+		$$(CFLAGS_GCC_WIN) $$(CFLAGS_GCC_WIN_WIN32) $$(CFLAGS_OPT_GCC) \
 		-o $$@ -c $$<
 
 CLEAN_TARGETS += $(1)ntg.exe
@@ -331,12 +333,13 @@ $$(RES_GCC64_WIN_WIN32_DEP)
 		$$(subst -pg,,$$(subst -g,,$$(LDFLAGS_GCC64))) \
 		$$(LDFLAGS_GCC64_WIN) $$(LDFLAGS_GCC64_WIN_WIN32)
 
-$$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $(MAUG_DEPS)
+$$(OBJDIR_GCC64_WIN_WIN32)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
 	$$(CC_GCC_MINGW64) -m64 \
 		$$(subst -pg,,$$(subst -g,,$$(CFLAGS_GCC64))) \
 		$$(CFLAGS_GCC64_WIN) \
 		$$(CFLAGS_GCC64_WIN_WIN32) \
+		$$(CFLAGS_OPT_GCC) \
 		-o $$@ -c $$<
 
 CLEAN_TARGETS += $(1)64.exe
