@@ -738,7 +738,6 @@ MERROR_RETVAL retrotile_parse_json_file(
 
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
 
-   /* TODO: fread chars one by one from disk using retrofil_cread. */
    retval = mfile_open_read( filename_path, &buffer );
    maug_cleanup_if_not_ok();
 
@@ -755,6 +754,8 @@ MERROR_RETVAL retrotile_parse_json_file(
       /* Reset JSON parser. */
       maug_mzero( &(parser->jparser), sizeof( struct MJSON_PARSER ) );
 
+      parser->wait_cb = wait_cb;
+      parser->wait_data = wait_data;
       parser->jparser.wait_cb = wait_cb;
       parser->jparser.wait_data = wait_data;
 
