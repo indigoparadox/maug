@@ -23,7 +23,6 @@
 #  endif /* __WATCOMC__ */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint16_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%u"
 

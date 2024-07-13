@@ -41,7 +41,6 @@ typedef int32_t RETROFLAT_IN_KEY;
 #else
 typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
-typedef uint32_t retroflat_ms_t;
 
 #define RETROFLAT_MS_FMT "%u"
 

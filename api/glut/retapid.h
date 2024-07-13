@@ -22,7 +22,6 @@
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%lu"
 

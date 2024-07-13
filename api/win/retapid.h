@@ -14,7 +14,6 @@
 /* == Win16/Win32 == */
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
 
 #  define RETROFLAT_MS_FMT "%lu"
 
@@ -45,8 +44,6 @@ typedef uint32_t retroflat_ms_t;
    f( BOOL, WinGStretchBlt, 1009 )
 
 typedef int16_t RETROFLAT_IN_KEY;
-typedef uint32_t retroflat_ms_t;
-typedef uint32_t retroflat_ms_t;
 
 #     define RETROFLAT_MS_FMT "%lu"
 

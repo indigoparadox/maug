@@ -856,6 +856,8 @@ struct RETROFLAT_GLTEX {
 /* TODO: Migrate all platform-specific parts below to retapid.h. */
 #include <retapid.h>
 
+typedef maug_ms_t retroflat_ms_t;
+
 /* OpenGL can be called from several different APIs. */
 #  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_API_LIBNDS )
 #     include <GL/gl.h>

@@ -28,7 +28,7 @@ struct MJSON_PARSER {
    size_t pstate_sz;
    mparser_wait_cb_t wait_cb;
    void* wait_data;
-   retroflat_ms_t wait_next;
+   maug_ms_t wait_next;
    char token[MJSON_TOKEN_SZ_MAX];
    size_t token_sz;
    mjson_parse_token_cb token_parser;

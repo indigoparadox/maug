@@ -22,6 +22,8 @@ typedef Int16 int16_t;
 typedef UInt32 uint32_t;
 typedef Int32 int32_t;
 
+typedef UInt32 maug_ms_t;
+
 #elif defined( MAUG_OS_WIN )
 
 typedef signed char int8_t;
@@ -31,9 +33,17 @@ typedef unsigned short uint16_t;
 typedef long int32_t;
 typedef unsigned long uint32_t;
 
+typedef unsigned long maug_ms_t;
+
 #else
 
-#include <stdint.h>
+#  include <stdint.h>
+
+#  if defined( MAUG_OS_DOS_REAL )
+typedef uint16_t maug_ms_t;
+#  else
+typedef uint32_t maug_ms_t;
+#  endif /* MAUG_OS_DOS_REAL */
 
 #endif /* MAUG_OS_* */
 
