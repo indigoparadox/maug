@@ -2,7 +2,14 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-#include <ndsasset.h>
+#  ifdef USE_NDSASSET
+#     include <ndsasset.h>
+#  endif /* USE_NDSASSET */
+
+#  if defined( RETROFLAT_OPENGL )
+#     include <GL/gl.h>
+#     include <GL/glu.h>
+#  endif /* RETROFLAT_OPENGL */
 
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args

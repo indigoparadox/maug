@@ -858,12 +858,6 @@ struct RETROFLAT_GLTEX {
 
 typedef maug_ms_t retroflat_ms_t;
 
-/* OpenGL can be called from several different APIs. */
-#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_API_LIBNDS )
-#     include <GL/gl.h>
-#     include <GL/glu.h>
-#  endif /* RETROFLAT_OPENGL */
-
 /* === Structures === */
 
 /*! \brief Struct containing configuration values for a RetroFlat program. */
@@ -1395,7 +1389,7 @@ MERROR_RETVAL retroflat_loop_generic(
          /* Sleep/low power for a bit. */
 #     ifdef retroflat_wait_for_vblank
          retroflat_wait_for_vblank();
-#     endif /* RETROFLAT_API_LIBNDS */
+#     endif /* retroflat_wait_for_vblank() */
          if( NULL != g_retroflat_state->loop_iter ) {
             /* Run the loop iter as many times as possible. */
             g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
