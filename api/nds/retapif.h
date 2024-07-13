@@ -271,7 +271,9 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   /*
    retroflat_constrain_px( x, y, target, return );
+   */
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -340,12 +342,23 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
+   int keys = 0;
 
    assert( NULL != input );
 
+   scanKeys();
+   keys = keysDown();
+
    input->key_flags = 0;
 
-   /* TODO */
+#  define retroflat_nds_buttons_poll( btn ) \
+   if( btn == (btn & keys) ) { \
+      return btn; \
+   }
+
+   retroflat_nds_buttons( retroflat_nds_buttons_poll )
+
+   /* TODO: Touch screen taps to mouse. */
 
    return key_out;
 }

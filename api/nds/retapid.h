@@ -62,6 +62,15 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_MOUSE_B_LEFT    (-1)
 #  define RETROFLAT_MOUSE_B_RIGHT   (-2)
 
+#define retroflat_nds_buttons( f ) \
+   f( RETROFLAT_KEY_LEFT ) \
+   f( RETROFLAT_KEY_RIGHT ) \
+   f( RETROFLAT_KEY_UP ) \
+   f( RETROFLAT_KEY_DOWN ) \
+   f( RETROFLAT_KEY_ENTER ) \
+   f( RETROFLAT_KEY_SPACE ) \
+   f( RETROFLAT_KEY_ESC )
+
 /* TODO */
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_px_lock( bmp )

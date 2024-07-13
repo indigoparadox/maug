@@ -253,14 +253,16 @@ void retrosoft_line(
       iter[for_axis]++
    ) {
 
+      /*
       if(
          (size_t)iter[RETROFLAT_LINE_X] < (size_t)retroflat_screen_w() &&
          (size_t)iter[RETROFLAT_LINE_Y] < (size_t)retroflat_screen_h()
       ) {
-         retroflat_px(
-            target, color,
-            iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
-      }
+      */
+      retroflat_px(
+         target, color,
+         iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
+      /* } */
 
       /* Increment off-axis based on for-axis. */
       if( 0 < delta ) {
@@ -351,6 +353,7 @@ void retrosoft_ellipse(
       px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
       px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
 
+      /*
       if(
          retroflat_bitmap_w( target ) <= px_x1 ||
          retroflat_bitmap_h( target ) <= px_y1 ||
@@ -359,6 +362,7 @@ void retrosoft_ellipse(
       ) {
          continue;
       }
+      */
 
       retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
    }
