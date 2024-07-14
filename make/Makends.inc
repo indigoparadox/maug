@@ -39,6 +39,10 @@ NDSASSET_H_FILE :=
 
 define TGTNDSLIBN
 
+# Remove XPM flags, as XPM mode is not supported on the DS.
+CFLAGS_OPT_GCC_NDS := \
+	$$(subst -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_GCC))
+
 $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 
@@ -49,12 +53,14 @@ $$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
-obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS) $$(NDSASSET_H_FILE)
+obj/nds-libnds/%.o: %.c | \
+$$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS)) $$(NDSASSET_H_FILE)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		-I $$(NDSASSET_H_DIR) \
 		$$(INCLUDES_GCC) $$(DEFINES_GCC) $$(GLOBAL_DEFINES) \
-		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS) $$(CFLAGS_OPT_GCC)
+		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS) \
+		$$(CFLAGS_OPT_GCC_NDS)
 
 CLEAN_TARGETS += $(1).nds
 

@@ -1,12 +1,13 @@
 
 # vim: ft=make noexpandtab
 
-define DIRTOXPMS
+RETROXPM_H_DIR := obj/retroxpm
+RETROXPM_DEFINE := RETROFLAT_XPM
 
-MAUG_XPM_H_DIR := obj/retroxpm
+define RETROXPM
 
-$$(MAUG_XPM_H_DIR)/xpmasset.h: $(1)
-	mkdir -p $$(MAUG_XPM_H_DIR)
+$$(RETROXPM_H_DIR)/xpmasset.h: $(1)
+	mkdir -p $$(RETROXPM_H_DIR)
 
 	# Add include guard.
 	echo "#ifndef XPMASSET_H\n#define XPMASSET_H\n" > $$@
@@ -45,8 +46,13 @@ $$(MAUG_XPM_H_DIR)/xpmasset.h: $(1)
 	# Close include guard.
 	echo "#endif\n" >> $$@
 
-GLOBAL_INCLUDES += $$(MAUG_XPM_H_DIR)
-CLEAN_TARGETS += $$(MAUG_XPM_H_DIR)/xpmasset.h
+#GLOBAL_INCLUDES += $$(RETROXPM_H_DIR)
+
+CFLAGS_OPT_GCC += -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR)
+CFLAGS_OPT_WATCOM += -DRETROFLAT_XPM -i=$$(RETROXPM_H_DIR)
+MAUG_DEPS += $$(RETROXPM_H_DIR)/xpmasset.h
+
+#CLEAN_TARGETS += $$(RETROXPM_H_DIR)/xpmasset.h
 
 endef
 

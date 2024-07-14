@@ -13,14 +13,6 @@ ifeq ("$(OPENGL)","1")
 	DEFINES_WATCOM += -DRETROFLAT_OPENGL
 endif
 
-ifeq ($(FORCE_RETROXPM),1)
-	DEFINES_GCC += -DRETROFLAT_XPM
-	DEFINES_WATCOM += -DRETROFLAT_XPM
-	INCLUDES_GCC += -Iobj/retroxpm
-	INCLUDES_WATCOM += -i=obj/retroxpm
-	MAUG_DEPS += obj/retroxpm/xpmasset.h
-endif
-
 GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell git -C $(MAUG_ROOT) rev-parse HEAD)\""
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
