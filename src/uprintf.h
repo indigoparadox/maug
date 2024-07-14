@@ -23,6 +23,9 @@
 
 /* == Autodetection == */
 
+#define UPRINTF_S16_FMT "%d"
+#define UPRINTF_U16_FMT "%u"
+
 #ifndef UPRINTF_S32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_S32_FMT "%d"
@@ -112,6 +115,12 @@
 #  define SSIZE_T_FMT "%d"
 #  define OFF_T_FMT  "%lu"
 #endif /* __GNUC__ */
+
+#ifdef MAUG_OS_DOS_REAL
+#  define UPRINTF_MS_FMT UPRINTF_U16_FMT
+#else
+#  define UPRINTF_MS_FMT UPRINTF_U32_FMT
+#endif /* MAUG_OS_DOS_REAL */
 
 #if !defined( DEBUG_THRESHOLD )
 #  define DEBUG_THRESHOLD 1

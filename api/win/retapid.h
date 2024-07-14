@@ -15,11 +15,14 @@
 
 typedef int16_t RETROFLAT_IN_KEY;
 
-#  define RETROFLAT_MS_FMT "%lu"
-
 #  if defined( RETROFLAT_API_WIN16 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for win16"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
+
+#  if defined( RETROFLAT_OPENGL )
+#     include <GL/gl.h>
+#     include <GL/glu.h>
+#  endif /* RETROFLAT_OPENGL */
 
 #  define RETROFLAT_VDP_LIB_NAME "rvdpnt"
 

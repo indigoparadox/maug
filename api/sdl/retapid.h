@@ -8,6 +8,11 @@
 #     error "opengl support not implemented for SDL 2"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */
 
+#  if defined( RETROFLAT_OPENGL )
+#     include <GL/gl.h>
+#     include <GL/glu.h>
+#  endif /* RETROFLAT_OPENGL */
+
 #  include <time.h> /* For srand() */
 
 #  if defined( RETROFLAT_OS_WASM )
@@ -41,8 +46,6 @@ typedef int32_t RETROFLAT_IN_KEY;
 #else
 typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
-
-#define RETROFLAT_MS_FMT "%u"
 
 struct RETROFLAT_BITMAP {
    size_t sz;

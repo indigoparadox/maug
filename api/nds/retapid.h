@@ -12,6 +12,8 @@
 
 #define retroflat_wait_for_vblank() swiWaitForVBlank();
 
+#  define RETROGLU_NO_TEXTURES
+
 /* NDS doesn't have primitives. */
 #  ifndef RETROFLAT_SOFT_SHAPES
 #     define RETROFLAT_SOFT_SHAPES

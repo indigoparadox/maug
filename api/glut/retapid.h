@@ -11,6 +11,11 @@
 #     define RETROFLAT_OPENGL
 #  endif /* !RETROFLAT_OPENGL */
 
+#  if defined( RETROFLAT_OPENGL )
+#     include <GL/gl.h>
+#     include <GL/glu.h>
+#  endif /* RETROFLAT_OPENGL */
+
 #  ifdef __WATCOMC__
 #     define GLUT_DISABLE_ATEXIT_HACK
 #  endif
