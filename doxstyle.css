@@ -68,3 +68,7 @@ tr {
    border: 1px solid cyan !important;
 }
 
+.fragment {
+   background: transparent !important;
+}
+

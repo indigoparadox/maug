@@ -140,6 +140,9 @@ struct RETROTILE_DATA_BORDER {
    ((retrotile_tile_t*)(((uint8_t*)(layer)) + \
    sizeof( struct RETROTILE_LAYER )))
 
+#define retrotile_dir8_reverse( dir ) \
+   ((dir + 4) % 8)
+
 /**
  * \addtogroup retrotile_parser RetroTile Parser
  * \{

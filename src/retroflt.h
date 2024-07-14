@@ -898,6 +898,13 @@ struct RETROFLAT_ARGS {
 #  endif /* RETROSND_API_WINMM */
 };
 
+/**
+ * \addtogroup maug_retroflt_viewport RetroFlat Viewport API
+ * \brief A flexible API to facilitate tile-based views using hardware
+ *        acceleration where available.
+ * \{
+ */
+
 struct RETROFLAT_VIEWPORT {
    /*! \brief X position of the viewport in real screen memory in pixels. */
    size_t screen_x;
@@ -909,13 +916,50 @@ struct RETROFLAT_VIEWPORT {
    size_t world_h;
 };
 
+/*! \brief Return the current viewport X position in the world in pixels. */
 #define retroflat_viewport_world_x() (g_retroflat_state->viewport.world_x)
 
+/*! \brief Return the current viewport Y position in the world in pixels. */
 #define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
 
+/**
+ * \brief Set the pixel width and height of the world so the viewport knows
+ *        how far it may scroll.
+ * \param w The width of the world in pixels (tile_width * map_tile_width).
+ * \param h The height of the world in pixels (tile_height * map_tile_height).
+ */
 #define retroflat_viewport_set_world( w, h ) \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
+
+#define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
+   if( \
+      n - retroflat_viewport_world_ ## xy() gl \
+      (retroflat_screen_ ## wh() >> 1) pm range \
+   ) { \
+      retroflat_viewport_move_ ## xy( \
+         gc_retrotile_offsets8_ ## xy[RETROTILE_DIR8_ ## dir] * speed ); \
+   }
+
+/**
+ * \brief Move the viewport in a direction or combination thereof so that
+ *        it's focusing the given x1/y1 within the given range.
+ * \param x1 The X coordinate to focus on.
+ * \param y1 The Y coordinate to focus on.
+ * \param range The number of pixels from the center of the screen to keep
+ *        the given X and Y inside.
+ * \param speed The increment by which to move the viewport if the given X and
+ *        Y are *not* in focus.
+ * \warning The speed parameter should always divide evenly into the tile size,
+ *          or problems may occur!
+ */
+#define retroflat_viewport_focus( x1, y1, range, speed ) \
+   _retroflat_viewport_focus_dir( x1, x, w, <, -, WEST, range, speed ) \
+   _retroflat_viewport_focus_dir( x1, x, w, >, +, EAST, range, speed ) \
+   _retroflat_viewport_focus_dir( y1, y, h, <, -, NORTH, range, speed ) \
+   _retroflat_viewport_focus_dir( y1, y, h, >, +, SOUTH, range, speed ) 
+
+/*! \} */
 
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
