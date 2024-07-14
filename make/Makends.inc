@@ -53,7 +53,7 @@ obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS) $$(NDSASSET_H_FILE)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		-I $$(NDSASSET_H_DIR) \
-		$$(INCLUDES_GCC) $$(DEFINES_GCC) \
+		$$(INCLUDES_GCC) $$(DEFINES_GCC) $$(GLOBAL_DEFINES) \
 		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS) $$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).nds

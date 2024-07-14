@@ -14,6 +14,8 @@
 
 #  define RETROGLU_NO_TEXTURES
 
+#  define RETROGLU_NO_FOG
+
 /* NDS doesn't have primitives. */
 #  ifndef RETROFLAT_SOFT_SHAPES
 #     define RETROFLAT_SOFT_SHAPES
