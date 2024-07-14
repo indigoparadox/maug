@@ -13,8 +13,24 @@
 #define retroflat_wait_for_vblank() swiWaitForVBlank();
 
 #  define RETROGLU_NO_TEXTURES
-
+#  define RETROGLU_NO_ERRORS
+#  define RETROGLU_NO_LISTS
+#  define RETROGLU_NO_LIGHTING
 #  define RETROGLU_NO_FOG
+
+typedef int GLint;
+#  define glPopMatrix() glPopMatrix( 1 )
+#  define glFlush() glFlush( 0 )
+#  define glPolygonMode( sides, mode )
+#  define glClear( bits )
+#  define glTexCoord2fv( arr )
+#  define glTexCoord2i( x, y )
+#  define glMaterialfv( side, light, rgb ) \
+      glMaterialf( light, RGB15( (int)rgb[0], (int)rgb[1], (int)rgb[2] ) )
+#  define glShininessf( side, light, f ) glMaterialf( light, f )
+#  define glColor3fv( rgb ) glColor3f( rgb[0], rgb[1], rgb[2] )
+#  define glVertex2fv( xy ) glVertex3f( xy[0], xy[1], 0 )
+#  define glNormal3i( x, y, z )
 
 /* NDS doesn't have primitives. */
 #  ifndef RETROFLAT_SOFT_SHAPES

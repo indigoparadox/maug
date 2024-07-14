@@ -30,20 +30,7 @@
 #  define RETROGLU_SPRITE_TEX_FRAMES_SZ 10
 #endif /* !RETROGLU_SPRITE_TEX_FRAMES_SZ */
 
-#ifdef MAUG_OS_NDS
-typedef int GLint;
-#  define RETROGLU_NO_TEXTURES
-#  define glPopMatrix() glPopMatrix( 1 )
-#  define glFlush() glFlush( 0 )
-#  define glPolygonMode( sides, mode )
-#  define glClear( bits )
-#  define glTexCoord2fv( arr )
-#  define glMaterialfv( side, light, rgb ) \
-      glMaterialf( light, RGB15( (int)rgb[0], (int)rgb[1], (int)rgb[2] ) )
-#  define glShininessf( side, light, f ) glMaterialf( light, f )
-#  define glColor3fv( rgb ) glColor3f( rgb[0], rgb[1], rgb[2] )
-#  define glVertex2fv( xy ) glVertex3f( xy[0], xy[1], 0 )
-#else
+#ifndef MAUG_OS_NDS
 #  define glShininessf( side, light, f ) glMaterialf( side, light, f )
 #endif /* MAUG_OS_NDS */
 
@@ -1286,27 +1273,26 @@ void retroglu_tsrot_sprite( struct RETROGLU_SPRITE* sprite ) {
 
 void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
    int i = 0;
-#ifdef RETROGLU_NO_TEXTURES
+#ifndef RETROGLU_NO_TEXTURES
+#  ifdef RETROGLU_NO_TEXTURE_LISTS
    MERROR_RETVAL retval = MERROR_OK;
-#endif /* RETROGLU_NO_TEXTURES */
+#  endif /* RETROGLU_NO_TEXTURES */
 
    glColor3fv( sprite->color );
    
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    glBindTexture( GL_TEXTURE_2D, sprite->texture.tex.id );
-#else
+#  else
    maug_mlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
    maug_cleanup_if_null_alloc( uint8_t*, sprite->texture.tex.bytes );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
       sprite->texture.tex.w, sprite->texture.tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE,
       sprite->texture.tex.bytes ); 
-#endif /* !RETROGLU_NO_TEXTURES */
-#ifndef MAUG_OS_NDS
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-#endif /* !MAUG_OS_NDS */
 
    glBegin( GL_TRIANGLES );
 
@@ -1322,13 +1308,14 @@ void retroglu_draw_sprite( struct RETROGLU_SPRITE* sprite ) {
 
    glEnd();
 
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    glBindTexture( GL_TEXTURE_2D, 0 );
-#else
+#  else
 cleanup:
    if( NULL != sprite->texture.tex.bytes ) {
       maug_munlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
    }
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
 #endif /* !RETROGLU_NO_TEXTURES */
 }
 
@@ -1381,6 +1368,7 @@ void retroglu_jitrender_sprite( struct RETROGLU_SPRITE* sprite, int list_idx ) {
 /* === */
 
 void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
+#ifndef RETROGLU_NO_TEXTURES
    if( NULL != sprite->texture.tex.bytes_h ) {
       if( NULL != sprite->texture.tex.bytes ) {
          maug_munlock( sprite->texture.tex.bytes_h, sprite->texture.tex.bytes );
@@ -1389,10 +1377,11 @@ void retroglu_free_sprite( struct RETROGLU_SPRITE* sprite ) {
       maug_mfree( sprite->texture.tex.bytes_h );
    }
 
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    if( 0 < sprite->texture.tex.id ) {
       glDeleteTextures( 1, (GLuint*)&(sprite->texture.tex.id) );
    }
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
 #endif /* !RETROGLU_NO_TEXTURES */
 }
 
@@ -1407,6 +1396,8 @@ uint32_t g_retroglu_font_tex[RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
 
 MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+#ifndef RETROGLU_NO_TEXTURES
 
    uint8_t* bmp_px = NULL;
    int16_t i = 0,
@@ -1434,12 +1425,12 @@ MERROR_RETVAL retroglu_load_glyph( size_t set_idx, size_t glyph_idx ) {
       }
    }
 
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    assert( 0 == g_retroglu_font_tex[set_idx][glyph_idx] );
    glGenTextures( 1, (GLuint*)&(g_retroglu_font_tex[set_idx][glyph_idx]) );
    assert( 0 < g_retroglu_font_tex[set_idx][glyph_idx] );
    glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[set_idx][glyph_idx] );
-#endif /* !RETROGLU_NO_TEXTURES */
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
    /* glPixelStorei( GL_UNPACK_ALIGNMENT, 4 ); */
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
       RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, 0,
@@ -1450,6 +1441,8 @@ cleanup:
    if( NULL != bmp_px ) {
       free( bmp_px );
    }
+
+#endif /* RETROGLU_NO_TEXTURES */
 
    return retval;
 }
@@ -1487,7 +1480,7 @@ cleanup:
 
 void retroglu_destroy_glyph_tex() {
 
-#ifndef RETROGLU_NO_TEXTURES
+#ifndef RETROGLU_NO_TEXTURE_LISTS
    size_t i = 0,
       j = 0;
 
@@ -1498,7 +1491,7 @@ void retroglu_destroy_glyph_tex() {
          glDeleteTextures( 1, (GLuint*)&(g_retroglu_font_tex[i][j]) );
       }
    }
-#endif /* !RETROGLU_NO_TEXTURES */
+#endif /* !RETROGLU_NO_TEXTURE_LISTS */
 
 }
 
@@ -1510,10 +1503,11 @@ void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
    const char* str, size_t str_sz, const char* font_str, uint8_t flags
 ) {
+#ifndef RETROGLU_NO_TEXTURES
    size_t i = 0;
-#ifdef RETROGLU_NO_TEXTURES
+#  ifdef RETROGLU_NO_TEXTURE_LISTS
    MERROR_RETVAL retval = MERROR_OK;
-#endif /* RETROGLU_NO_TEXTURES */
+#  endif /* RETROGLU_NO_TEXTURE_LISTS */
 
    if( str_sz == 0 ) {
       str_sz = strlen( str );
@@ -1527,12 +1521,12 @@ void retroglu_string(
 
       glColor3fv( color );
 
-#ifdef RETROGLU_NO_TEXTURES
+#ifdef RETROGLU_NO_TEXTURE_LISTS
       retval = retroglu_load_glyph( 0, str[i] - ' ' );
       maug_cleanup_if_not_ok();
 #else
       glBindTexture( GL_TEXTURE_2D, g_retroglu_font_tex[0][str[i] - ' '] );
-#endif /* RETROGLU_NO_TEXTURES */
+#endif /* RETROGLU_NO_TEXTURE_LISTS */
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1559,19 +1553,20 @@ void retroglu_string(
       
       glEnd();
 
-#ifdef RETROGLU_NO_TEXTURES
+#  ifdef RETROGLU_NO_TEXTURE_LISTS
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
          0, 0, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, NULL ); 
-#else
+#  else
       glBindTexture( GL_TEXTURE_2D, 0 );
-#endif /* !RETROGLU_NO_TEXTURES */
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
    }
 
-#ifdef RETROGLU_NO_TEXTURES
+#  ifdef RETROGLU_NO_TEXTURE_LISTS
 cleanup:
    return;
-#endif /* RETROGLU_NO_TEXTURES */
+#  endif /* RETROGLU_NO_TEXTURE_LISTS */
+#endif /* !RETROGLU_NO_TEXTURES */
 }
 
 #endif /* !RETROFLAT_NO_STRING */
@@ -1579,8 +1574,9 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroglu_check_errors( const char* desc ) {
-   GLenum gl_retval;
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROGLU_NO_ERRORS
+   GLenum gl_retval;
 
    do {
       gl_retval = glGetError();
@@ -1589,6 +1585,7 @@ MERROR_RETVAL retroglu_check_errors( const char* desc ) {
          retval = MERROR_GUI;
       }
    } while( GL_NO_ERROR != gl_retval );
+#endif /* !RETROGLU_NO_ERRORS */
 
    return retval;
 }
@@ -1631,8 +1628,9 @@ MERROR_RETVAL retroglu_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glutSwapBuffers();
 #     endif
    } else if( retroflat_bitmap_locked( bmp ) ) {
-      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
 #ifndef RETROGLU_NO_TEXTURES
+      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
       assert( 0 < bmp->tex.id );
       assert( NULL != bmp->tex.bytes );
 
@@ -1641,10 +1639,11 @@ MERROR_RETVAL retroglu_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
          GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
       glBindTexture( GL_TEXTURE_2D, 0 );
-#endif /* !RETROGLU_NO_TEXTURES */
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
 
       /* Unlock texture bitmap. */
       maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+#endif /* !RETROGLU_NO_TEXTURES */
    }
 
    return retval;
@@ -1656,6 +1655,7 @@ MERROR_RETVAL retroglu_load_bitmap(
    const char* filename_path, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROGLU_NO_TEXTURES
    mfile_t bmp_file;
    struct MFMT_STRUCT_BMPFILE header_bmp;
    MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
@@ -1768,13 +1768,13 @@ MERROR_RETVAL retroglu_load_bitmap(
       }
    }
 
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
    glBindTexture( GL_TEXTURE_2D, bmp_out->tex.id );
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp_out->tex.w, bmp_out->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp_out->tex.bytes ); 
    glBindTexture( GL_TEXTURE_2D, 0 );
-#endif /* !RETROGLU_NO_TEXTURES */
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
 
 cleanup:
 
@@ -1800,6 +1800,8 @@ cleanup:
 
    mfile_close( &bmp_file );
 
+#endif /* !RETROGLU_NO_TEXTURES */
+
    return retval;
 }
 
@@ -1809,9 +1811,8 @@ MERROR_RETVAL retroglu_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+
 #ifndef RETROGLU_NO_TEXTURES
-   GLenum error = GL_NO_ERROR;
-#endif /* !RETROGLU_NO_TEXTURES */
 
    if( w > 256 ) {
       error_printf( "warning! attempting to create texture with w > 256 ("
@@ -1840,20 +1841,20 @@ MERROR_RETVAL retroglu_create_bitmap(
       bmp_out->tex.bytes,
       bmp_out->tex.w * bmp_out->tex.h * sizeof( uint32_t ) );
 
-#     ifndef RETROGLU_NO_TEXTURES
+#     ifndef RETROGLU_NO_TEXTURE_LISTS
    glGenTextures( 1, (GLuint*)&(bmp_out->tex.id) );
    debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
       "assigned bitmap texture: " UPRINTF_U32_FMT, bmp_out->tex.id );
-   error = glGetError();
-   if( GL_NO_ERROR != error ) {
-      error_printf( "error generating texture: %u", error );
-   }
-#     endif /* !RETROGLU_NO_TEXTURES */
+   retval = retroglu_check_errors( "gentextures" );
+   maug_cleanup_if_not_ok();
+#     endif /* !RETROGLU_NO_TEXTURE_LISTS */
 
 cleanup:
    if( NULL != bmp_out->tex.bytes ) {
       maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
    }
+
+#endif /* !RETROGLU_NO_TEXTURES */
 
    return retval;
 }
@@ -1861,7 +1862,7 @@ cleanup:
 /* === */
 
 void retroglu_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-
+#ifndef RETROGLU_NO_TEXTURES
    debug_printf( 1, "destroying bitmap..." );
 
    if( NULL != bmp->tex.bytes ) {
@@ -1872,14 +1873,14 @@ void retroglu_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
       maug_mfree( bmp->tex.bytes_h );
    }
 
-#ifndef RETROGLU_NO_TEXTURES
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
    if( 0 < bmp->tex.id ) {
       debug_printf( 0, 
          "destroying bitmap texture: " UPRINTF_U32_FMT, bmp->tex.id );
       glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
    }
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
 #endif /* !RETROGLU_NO_TEXTURES */
-
 }
 
 /* === */

@@ -174,7 +174,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 
 #  ifdef RETROFLAT_OPENGL
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   retval = retroglu_load_bitmap( filename, bmp_out, flags );
    assert( 0 < retroflat_bitmap_w( bmp_out ) );
    assert( 0 < retroflat_bitmap_h( bmp_out ) );
 #  else
@@ -240,7 +240,7 @@ void retroflat_blit_bitmap(
    assert( NULL != src );
 
 #  if defined( RETROFLAT_OPENGL )
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 #  else
 
    /* TODO */
