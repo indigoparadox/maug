@@ -1088,7 +1088,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
  */
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance );
 
 /**
@@ -1122,6 +1122,10 @@ void retroflat_blit_bitmap(
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
+
+void retroflat_viewport_move_x( int16_t x );
+
+void retroflat_viewport_move_y( int16_t y );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,

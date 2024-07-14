@@ -1218,7 +1218,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
 #  ifndef RETROFLAT_OPENGL
@@ -1227,6 +1227,15 @@ void retroflat_blit_bitmap(
 #  endif /* RETROFLAT_OPENGL */
 
    assert( NULL != src );
+
+   /* Win API not setup for hardware scrolling. */
+   if(
+      0 > d_x || 0 > d_y ||
+      retroflat_bitmap_w( target ) + w <= d_x ||
+      retroflat_bitmap_h( target ) + h <= d_y
+   ) {
+      return;
+   }
 
 #  if defined( RETROFLAT_OPENGL )
 
