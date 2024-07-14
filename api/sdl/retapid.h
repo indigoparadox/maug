@@ -4,6 +4,8 @@
 
 #define RETROPLAT_PRESENT 1
 
+#define RETROFLAT_SOFT_VIEWPORT
+
 #  if defined( RETROFLAT_API_SDL2 ) && defined( RETROFLAT_OPENGL )
 #     error "opengl support not implemented for SDL 2"
 #  endif /* RETROFLAT_API_SDL2 && RETROFLAT_OPENGL */

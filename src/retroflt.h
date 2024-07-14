@@ -898,6 +898,25 @@ struct RETROFLAT_ARGS {
 #  endif /* RETROSND_API_WINMM */
 };
 
+struct RETROFLAT_VIEWPORT {
+   /*! \brief X position of the viewport in real screen memory in pixels. */
+   size_t screen_x;
+   /*! \brief Y position of the viewport in real screen memory in pixels. */
+   size_t screen_y;
+   size_t world_x;
+   size_t world_y;
+   size_t world_w;
+   size_t world_h;
+};
+
+#define retroflat_viewport_world_x() (g_retroflat_state->viewport.world_x)
+
+#define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
+
+#define retroflat_viewport_set_world( w, h ) \
+   (g_retroflat_state->viewport.world_w) = w; \
+   (g_retroflat_state->viewport.world_h) = h;
+
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
    void*                   loop_data;
@@ -937,6 +956,8 @@ defined( RETROVDP_C )
 #  endif /* RETROFLAT_VDP || DOCUMENTATION || RETROVDP_C */
 
    /* These are used by VDP so should be standardized/not put in plat-spec! */
+
+   struct RETROFLAT_VIEWPORT viewport;
 
    /**
     * \brief The screen width as seen by our program, before scaling.
@@ -2354,6 +2375,42 @@ void retroflat_set_proc_resize(
    g_retroflat_state->on_resize = on_resize_in;
    g_retroflat_state->on_resize_data = data_in;
 }
+
+/* === */
+
+#ifdef RETROFLAT_SOFT_VIEWPORT
+
+void retroflat_viewport_move_x( int16_t x ) {
+   int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
+
+   g_retroflat_state->viewport.screen_x += x;
+
+   /* Keep the viewport in the world arena. */
+   if(
+      0 < new_world_x &&
+      g_retroflat_state->viewport.world_w > new_world_x + retroflat_screen_w()
+   ) {
+      g_retroflat_state->viewport.world_x += x;
+   }
+}
+
+/* === */
+
+void retroflat_viewport_move_y( int16_t y ) {
+   int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
+
+   g_retroflat_state->viewport.screen_y += y;
+
+   /* Keep the viewport in the world arena. */
+   if(
+      0 < new_world_y &&
+      g_retroflat_state->viewport.world_h > new_world_y + retroflat_screen_h()
+   ) {
+      g_retroflat_state->viewport.world_y += y;
+   }
+}
+
+#endif /* RETROFLAT_SOFT_VIEWPORT */
 
 /* === */
 
