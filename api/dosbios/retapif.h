@@ -724,6 +724,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          case 0x47: key_out = RETROFLAT_KEY_END; break;
          case 0x51: key_out = RETROFLAT_KEY_PGDN; break;
          case 0x49: key_out = RETROFLAT_KEY_PGUP; break;
+         case 0x52: key_out = RETROFLAT_KEY_INSERT; break;
          case 0x53: key_out = RETROFLAT_KEY_DELETE; break;
          }
       }

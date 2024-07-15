@@ -922,6 +922,12 @@ struct RETROFLAT_VIEWPORT {
 /*! \brief Return the current viewport Y position in the world in pixels. */
 #define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
 
+/*! \brief Return the current width of the world in pixels. */
+#define retroflat_viewport_world_w() (g_retroflat_state->viewport.world_w)
+
+/*! \brief Return the current height of the world in pixels. */
+#define retroflat_viewport_world_h() (g_retroflat_state->viewport.world_h)
+
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.

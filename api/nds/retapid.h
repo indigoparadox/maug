@@ -71,11 +71,16 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_KEY_D           KEY_RIGHT
 #     define RETROFLAT_KEY_W           KEY_UP
 #     define RETROFLAT_KEY_S           KEY_DOWN
+#     define RETROFLAT_KEY_Q           KEY_L
+#     define RETROFLAT_KEY_E           KEY_R
+#  else
+#     define RETROFLAT_KEY_LEFT        KEY_LEFT
+#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
+#     define RETROFLAT_KEY_UP          KEY_UP
+#     define RETROFLAT_KEY_DOWN        KEY_DOWN
+#     define RETROFLAT_KEY_INSERT      KEY_L
+#     define RETROFLAT_KEY_DELETE      KEY_R
 #  endif /* RETROFLAT_NDS_WASD */
-#  define RETROFLAT_KEY_LEFT        KEY_LEFT
-#  define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#  define RETROFLAT_KEY_UP          KEY_UP
-#  define RETROFLAT_KEY_DOWN        KEY_DOWN
 #  define RETROFLAT_KEY_ENTER       KEY_START
 #  define RETROFLAT_KEY_SPACE       KEY_A
 #  define RETROFLAT_KEY_ESC         KEY_B

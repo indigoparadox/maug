@@ -4,6 +4,8 @@
 
 #define RETROPLAT_PRESENT 1
 
+#define RETROFLAT_SOFT_VIEWPORT
+
 #  ifdef RETROFLAT_OPENGL
 #     error "opengl support not implemented for allegro"
 #  endif /* RETROFLAT_OPENGL */
@@ -132,6 +134,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_KEY_BRACKETR KEY_CLOSEBRACE
 #  define RETROFLAT_KEY_BACKSLASH   KEY_BACKSLASH
 #  define RETROFLAT_KEY_QUOTE    KEY_QUOTE
+#  define RETROFLAT_KEY_INSERT   KEY_INSERT
 
 /* These helper functions keep references to allergo global variables and
  * struct internals in MAIN_C, as the allegro headers on DJGPP don't seem

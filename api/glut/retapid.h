@@ -144,6 +144,8 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_KEY_QUOTE    '\''
 /* TODO */
 #  define RETROFLAT_KEY_EQUALS    '='
+/* TODO */
+#  define RETROFLAT_KEY_INSERT
 
 struct RETROFLAT_PLATFORM {
    size_t               retroflat_next;
