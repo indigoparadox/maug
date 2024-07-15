@@ -6,11 +6,187 @@
 #     include <ndsasset.h>
 #  endif /* USE_NDSASSET */
 
+static void _retroflat_nds_change_bg() {
+   /* Setup bank E to receive extended palettes. */
+   vramSetBankE( VRAM_E_LCD );
+
+   /* Update background tiles. */
+   if(
+      _retroflat_nds_platform_flag( CHANGE_BG ) &&
+      NULL != g_retroflat_state->platform.bg_tiles &&
+      NULL != g_retroflat_state->platform.bg_bmp
+   ) {
+      debug_printf(
+         RETROFLAT_PLATFORM_TRACE_LVL,
+         "loading background tiles into VRAM..." );
+
+      dmaCopy(
+         g_retroflat_state->platform.bg_bmp->tiles,
+         bgGetGfxPtr( g_retroflat_state->platform.bg_id ),
+         g_retroflat_state->platform.bg_bmp->tiles_len );
+
+      /* Using extended palettes as a workaround for ImageMagick palette
+      * issues.
+      */
+      dmaCopy(
+         g_retroflat_state->platform.bg_bmp->pal,
+         &VRAM_E_EXT_PALETTE[0][0],
+         g_retroflat_state->platform.bg_bmp->pal_len );
+
+      g_retroflat_state->platform.flags &= ~RETROFLAT_NDS_FLAG_CHANGE_BG;
+   }
+
+#if 0
+   /* Update window tiles. */
+   if(
+      g_window_bmp_changed && NULL != g_window_tiles && NULL != g_window_bmp
+   ) {
+      dmaCopy( g_window_bmp->grit->tiles, bgGetGfxPtr( g_window_id ),
+         g_window_bmp->grit->tiles_sz );
+
+      /* Using extended palettes as a workaround for ImageMagick palette
+         * issues.
+         */
+      dmaCopy( g_window_bmp->grit->palette, &VRAM_E_EXT_PALETTE[1][0],
+         g_window_bmp->grit->palette_sz );
+
+      g_window_bmp_changed = 0;
+   }
+#endif
+
+   /* Tell bank E it can use the extended palettes, now. */
+   vramSetBankE( VRAM_E_BG_EXT_PALETTE );
+}
+
+/* === */
+
+static void _retroflat_nds_blit_sprite(
+   struct RETROFLAT_BITMAP* src,
+   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   int16_t instance
+) {
+   int tile_idx = 0,
+      tile_x = 0,
+      tile_y = 0;
+
+   /* Blitting a sprite. */
+
+   if(
+      g_retroflat_state->platform.oam_entries[instance] == src &&
+      s_x == g_retroflat_state->platform.oam_sx[instance] &&
+      s_y == g_retroflat_state->platform.oam_sy[instance]
+   ) {
+      /* Bitmap already loaded, so just move it and avoid a dmaCopy(). */
+      oamSetXY( RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y );
+      g_retroflat_state->platform.oam_dx[instance] = d_x;
+      g_retroflat_state->platform.oam_dy[instance] = d_y;
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.oam_entries[instance] = src;
+   g_retroflat_state->platform.oam_sx[instance] = s_x;
+   g_retroflat_state->platform.oam_sy[instance] = s_y;
+
+   debug_printf(
+      RETROFLAT_PLATFORM_TRACE_LVL, "loading bitmap palette into OAM..." );
+   dmaCopy( src->pal, SPRITE_PALETTE, src->pal_len );
+
+   assert( NULL != src->tiles );
+
+   /* 2 = spritesheet width of one row in sprites. */
+   if( 0 == s_x && 0 == s_y ) {
+      tile_idx = 0;
+   } else {
+      tile_idx = ((s_y / h) * 2) + (s_x / w);
+   }
+   debug_printf(
+      RETROFLAT_PLATFORM_TRACE_LVL, "loading bitmap tiles into OAM..." );
+   dmaCopy(
+      src->tiles +
+         (tile_idx * (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX)),
+      g_retroflat_state->platform.sprite_frames[instance], (w * h) );
+
+   oamSet(
+      RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y, 0, 0,
+      SpriteSize_16x16, SpriteColorFormat_256Color, 
+      g_retroflat_state->platform.sprite_frames[instance],
+      -1, false, false, false, false, false );
+
+cleanup:
+
+   return;
+}
+
+/* === */
+
+void _retroflat_nds_blit_tiles(
+   struct RETROFLAT_BITMAP* src,
+   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h
+) {
+   int tile_idx = 0,
+      tile_x = 0,
+      tile_y = 0;
+
+   /* The tile's physical location on the tilemap. */
+   /* Divide by 8 rather than 16 since DS tiles are 8x8. */
+   tile_y = d_y / RETROFLAT_NDS_BG_TILE_H_PX;
+   tile_x = d_x / RETROFLAT_NDS_BG_TILE_W_PX;
+
+   if( g_retroflat_state->platform.bg_bmp != src ) {
+      g_retroflat_state->platform.bg_bmp = src;
+      g_retroflat_state->platform.flags |= RETROFLAT_NDS_FLAG_CHANGE_BG;
+   }
+
+   /* Hide window tiles if a tilemap tile was drawn more recently. */
+   /*
+   g_window_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] = 0;
+   g_window_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] = 0;
+   g_window_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] = 0;
+   g_window_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] = 0;
+   */
+
+   /* TODO: Fill block with transparency on px layer in front. */
+   /* graphics_draw_block( d_x, d_y, TILE_W, TILE_H, 0 ); */
+   retroflat_rect(
+      NULL, RETROFLAT_COLOR_BLACK, d_x, d_y, w, h,
+      RETROFLAT_FLAGS_FILL );
+
+   /* DS tiles are 8x8, so each tile is split up into 4, so compensate! */
+   /* tile_idx = src->tile_offset * 4; */
+
+   tile_idx = (
+      ((s_y >> 4) * (retroflat_bitmap_w( src ) >> 4)) +
+      (s_x >> 4));
+
+   tile_idx *= 4;
+
+   /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
+
+   g_retroflat_state->platform.bg_tiles[
+      (tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+         tile_idx;
+   g_retroflat_state->platform.bg_tiles[
+      (tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+         tile_idx + 1;
+   g_retroflat_state->platform.bg_tiles[
+      ((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+         tile_idx + 2;
+   g_retroflat_state->platform.bg_tiles[
+      ((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+         tile_idx + 3;
+
+}
+
+/* === */
+
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int i = 0;
+
+   /* Random seed. */
+   srand( time( NULL ) );
 
    /* Setup color constants. */
 #  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -25,7 +201,7 @@ MERROR_RETVAL retroflat_init_platform(
 
 #  ifdef RETROFLAT_OPENGL
 
-   debug_printf( 3, "setting up GL subsystem..." );
+   debug_printf( RETROFLAT_PLATFORM_TRACE_LVL, "setting up GL subsystem..." );
 
    videoSetMode( MODE_0_3D );
 
@@ -37,7 +213,8 @@ MERROR_RETVAL retroflat_init_platform(
 
 #  else
 
-   debug_printf( 3, "setting up NDS sprite engine..." );
+   debug_printf(
+      RETROFLAT_PLATFORM_TRACE_LVL, "setting up NDS sprite engine..." );
 
    videoSetMode( MODE_5_2D );
 	videoSetModeSub( MODE_0_2D );
@@ -161,6 +338,16 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO */
 
+   _retroflat_nds_change_bg();
+
+   dmaCopy(
+      g_retroflat_state->platform.bg_tiles,
+      bgGetMapPtr( g_retroflat_state->platform.bg_id ),
+      sizeof( g_retroflat_state->platform.bg_tiles ) );
+
+   /* Update sprite engines. */
+   oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
+
 #  endif /* RETROFLAT_OPENGL */
 
    return retval;
@@ -182,14 +369,17 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   /* TODO */
    while( NULL != gc_ndsassets_names[i] ) {
       if( 0 == strcmp( filename, gc_ndsassets_names[i] ) ) {
          bmp_out->tiles = gc_ndsassets_tiles[i];
          bmp_out->pal = gc_ndsassets_pals[i];
          bmp_out->tiles_len = gc_ndsassets_tiles_lens[i];
          bmp_out->pal_len = gc_ndsassets_pals_lens[i];
-         debug_printf( 1, "found bitmap \"%s\" at index: " SIZE_T_FMT,
+         bmp_out->w = gc_ndsassets_tiles_widths[i];
+         bmp_out->h = gc_ndsassets_tiles_heights[i];
+         debug_printf(
+            RETROFLAT_PLATFORM_TRACE_LVL,
+            "found bitmap \"%s\" at index: " SIZE_T_FMT,
             filename, i );
          goto cleanup;
       }
@@ -246,58 +436,6 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-static void _retroflat_nds_blit_sprite(
-   struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
-   int16_t instance
-) {
-   int tile_idx = 0,
-      tile_x = 0,
-      tile_y = 0;
-   uint16_t* bg_tiles = NULL;
-
-   /* Blitting a sprite. */
-
-   if(
-      g_retroflat_state->platform.oam_entries[instance] == src &&
-      s_x == g_retroflat_state->platform.oam_sx[instance] &&
-      s_y == g_retroflat_state->platform.oam_sy[instance]
-   ) {
-      /* Bitmap already loaded, so just move it and avoid a dmaCopy(). */
-      oamSetXY( RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y );
-      g_retroflat_state->platform.oam_dx[instance] = d_x;
-      g_retroflat_state->platform.oam_dy[instance] = d_y;
-      goto cleanup;
-   }
-
-   debug_printf( 1, "loading bitmap palette into OAM..." );
-   dmaCopy( src->pal, SPRITE_PALETTE, src->pal_len );
-
-   /* 2 = spritesheet width of one row in sprites. */
-   if( 0 == s_x && 0 == s_y ) {
-      tile_idx = 0;
-   } else {
-      tile_idx = ((s_y / h) * 2) + (s_x / w);
-   }
-   debug_printf( 1, "loading bitmap tiles into OAM..." );
-   dmaCopy(
-      src->tiles +
-         (tile_idx * (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX)),
-      g_retroflat_state->platform.sprite_frames[instance], (w * h) );
-
-   oamSet(
-      RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y, 0, 0,
-      SpriteSize_16x16, SpriteColorFormat_256Color, 
-      g_retroflat_state->platform.sprite_frames[instance],
-      -1, false, false, false, false, false );
-
-cleanup:
-
-   return;
-}
-
-/* === */
-
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
@@ -318,6 +456,8 @@ void retroflat_blit_bitmap(
    /* TODO */
    if( 0 < instance ) {
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
+   } else {
+      _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
    }
 
 #  endif /* RETROFLAT_OPENGL */
@@ -354,7 +494,11 @@ void retroflat_px(
    /* == Nintendo DS == */
 
    px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
-   px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
+   if( RETROFLAT_COLOR_BLACK == color_idx ) {
+      px_ptr[(y * 256) + x] = ARGB16( 0, 0, 0, 0 );
+   } else {
+      px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
+   }
 
 #  endif /* RETROFLAT_OPENGL */
 }
@@ -386,7 +530,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    uint32_t g = 0;
    uint32_t b = 0;
 
-   debug_printf( 1,
+   debug_printf( RETROFLAT_PLATFORM_TRACE_LVL,
       "setting texture palette #%u to " UPRINTF_X32_FMT "...",
       idx, rgb );
 

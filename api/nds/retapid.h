@@ -6,6 +6,8 @@
 
 #define RETROFLAT_SOFT_VIEWPORT
 
+#define RETROFLAT_NDS_FLAG_CHANGE_BG   0x02
+
 /* == Nintendo DS == */
 
 #  include <nds.h>
@@ -23,6 +25,12 @@
 /*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
 #  define RETROFLAT_NDS_SPRITES_ACTIVE 24
 #endif /* !RETROFLAT_NDS_SPRITES_ACTIVE */
+
+#ifndef RETROFLAT_PLATFORM_TRACE_LVL
+#  define RETROFLAT_PLATFORM_TRACE_LVL 0
+#endif /* !RETROFLAT_PLATFORM_TRACE_LVL */
+
+#define RETROFLAT_NDS_BG_W_TILES 32
 
 #  define RETROGLU_NO_TEXTURES
 #  define RETROGLU_NO_ERRORS
@@ -73,10 +81,10 @@ struct RETROFLAT_BITMAP {
    const unsigned short* pal;
    size_t tiles_len;
    size_t pal_len;
+   size_t w;
+   size_t h;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
-   ssize_t w;
-   ssize_t h;
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -94,8 +102,8 @@ typedef int RETROFLAT_COLOR_DEF;
 #     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
 #     define RETROFLAT_KEY_UP          KEY_UP
 #     define RETROFLAT_KEY_DOWN        KEY_DOWN
-#     define RETROFLAT_KEY_INSERT      KEY_L
-#     define RETROFLAT_KEY_DELETE      KEY_R
+#     define RETROFLAT_KEY_INSERT      KEY_R
+#     define RETROFLAT_KEY_DELETE      KEY_L
 #  endif /* RETROFLAT_NDS_WASD */
 #  define RETROFLAT_KEY_ENTER       KEY_START
 #  define RETROFLAT_KEY_SPACE       KEY_A
@@ -104,13 +112,15 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define RETROFLAT_MOUSE_B_RIGHT   (-2)
 
 #define retroflat_nds_buttons( f ) \
-   f( RETROFLAT_KEY_LEFT ) \
-   f( RETROFLAT_KEY_RIGHT ) \
-   f( RETROFLAT_KEY_UP ) \
-   f( RETROFLAT_KEY_DOWN ) \
-   f( RETROFLAT_KEY_ENTER ) \
-   f( RETROFLAT_KEY_SPACE ) \
-   f( RETROFLAT_KEY_ESC )
+   f( KEY_LEFT ) \
+   f( KEY_RIGHT ) \
+   f( KEY_UP ) \
+   f( KEY_DOWN ) \
+   f( KEY_START ) \
+   f( KEY_A ) \
+   f( KEY_B ) \
+   f( KEY_L ) \
+   f( KEY_R )
 
 /* TODO */
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -130,20 +140,24 @@ typedef int RETROFLAT_COLOR_DEF;
 
 /* TODO? */
 #  define retroflat_quit( retval_in )
-#  define retroflat_bitmap_w( bmp ) (0)
-#  define retroflat_bitmap_h( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->tiles)
 
+#  define _retroflat_nds_platform_flag( flag ) \
+   (RETROFLAT_NDS_FLAG_ ## flag == \
+      (RETROFLAT_NDS_FLAG_ ## flag & g_retroflat_state->platform.flags))
+
 struct RETROFLAT_PLATFORM {
+   uint8_t              flags;
    uint16_t*            sprite_frames[RETROFLAT_NDS_SPRITES_ACTIVE];
    struct RETROFLAT_BITMAP* oam_entries[RETROFLAT_NDS_SPRITES_ACTIVE];
    int16_t              oam_dx[RETROFLAT_NDS_SPRITES_ACTIVE];
    int16_t              oam_dy[RETROFLAT_NDS_SPRITES_ACTIVE];
    int16_t              oam_sx[RETROFLAT_NDS_SPRITES_ACTIVE];
    int16_t              oam_sy[RETROFLAT_NDS_SPRITES_ACTIVE];
+   struct RETROFLAT_BITMAP* bg_bmp;
    int                  bg_id;
-   uint8_t              bg_bmp_changed;
-   uint8_t              window_bmp_changed;
    int                  window_id;
    int                  px_id;
    uint16_t             bg_tiles[1024];

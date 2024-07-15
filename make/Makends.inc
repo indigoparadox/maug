@@ -88,7 +88,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 		$$(NDSASSET_C_FILE)
 
 	for f in $$^; do \
-		grit $$$$f -gB8 -Mh2 -Mw2 -gTff55ff -ftc -fa -o $$(NDSASSET_H_FILE); \
+		grit $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa -o $$(NDSASSET_H_FILE); \
 	done
 
 	# === Index Names ===
@@ -143,9 +143,27 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 
 	echo "};\n" >> $$(NDSASSET_H_DIR)/ndsasset.c;
 
-	# === Index Names ===
+	# === Index Widths ===
 
-	# TODO
+	echo "const size_t gc_ndsassets_tiles_widths[] = {" >> $$(NDSASSET_C_FILE)
+
+	for f in $$^; do \
+		echo "	`identify -format "%w" "$$$$f"`," >> \
+			$$(NDSASSET_C_FILE); \
+	done
+
+	echo "};\n" >> $$(NDSASSET_H_DIR)/ndsasset.c;
+
+	# === Index Height ===
+
+	echo "const size_t gc_ndsassets_tiles_heights[] = {" >> $$(NDSASSET_C_FILE)
+
+	for f in $$^; do \
+		echo "	`identify -format "%h" "$$$$f"`," >> \
+			$$(NDSASSET_C_FILE); \
+	done
+
+	echo "};\n" >> $$(NDSASSET_H_DIR)/ndsasset.c;
 
 	# === Header ===
 
@@ -158,6 +176,10 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 	echo "extern const size_t gc_ndsassets_tiles_lens[];" >> \
 		$$(NDSASSET_H_FILE)
 	echo "extern const size_t gc_ndsassets_pals_lens[];" >> \
+		$$(NDSASSET_H_FILE)
+	echo "extern const size_t gc_ndsassets_tiles_widths[];" >> \
+		$$(NDSASSET_H_FILE)
+	echo "extern const size_t gc_ndsassets_tiles_heights[];" >> \
 		$$(NDSASSET_H_FILE)
 
 	echo "\n#endif /* NDSASSET_H */\n" >> $$(NDSASSET_H_FILE)
