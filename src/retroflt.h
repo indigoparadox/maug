@@ -888,6 +888,8 @@ struct RETROFLAT_ARGS {
 #  endif /* RETROSND_API_WINMM */
 };
 
+#if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
+
 /**
  * \addtogroup maug_retroflt_viewport RetroFlat Viewport API
  * \brief A flexible API to facilitate tile-based views using hardware
@@ -907,16 +909,16 @@ struct RETROFLAT_VIEWPORT {
 };
 
 /*! \brief Return the current viewport X position in the world in pixels. */
-#define retroflat_viewport_world_x() (g_retroflat_state->viewport.world_x)
+#  define retroflat_viewport_world_x() (g_retroflat_state->viewport.world_x)
 
 /*! \brief Return the current viewport Y position in the world in pixels. */
-#define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
+#  define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
 
 /*! \brief Return the current width of the world in pixels. */
-#define retroflat_viewport_world_w() (g_retroflat_state->viewport.world_w)
+#  define retroflat_viewport_world_w() (g_retroflat_state->viewport.world_w)
 
 /*! \brief Return the current height of the world in pixels. */
-#define retroflat_viewport_world_h() (g_retroflat_state->viewport.world_h)
+#  define retroflat_viewport_world_h() (g_retroflat_state->viewport.world_h)
 
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
@@ -924,11 +926,11 @@ struct RETROFLAT_VIEWPORT {
  * \param w The width of the world in pixels (tile_width * map_tile_width).
  * \param h The height of the world in pixels (tile_height * map_tile_height).
  */
-#define retroflat_viewport_set_world( w, h ) \
+#  define retroflat_viewport_set_world( w, h ) \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
-#define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
+#  define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
    if( \
       n - retroflat_viewport_world_ ## xy() gl \
       (retroflat_screen_ ## wh() >> 1) pm range \
@@ -949,13 +951,33 @@ struct RETROFLAT_VIEWPORT {
  * \warning The speed parameter should always divide evenly into the tile size,
  *          or problems may occur!
  */
-#define retroflat_viewport_focus( x1, y1, range, speed ) \
+#  define retroflat_viewport_focus( x1, y1, range, speed ) \
    _retroflat_viewport_focus_dir( x1, x, w, <, -, WEST, range, speed ) \
    _retroflat_viewport_focus_dir( x1, x, w, >, +, EAST, range, speed ) \
    _retroflat_viewport_focus_dir( y1, y, h, <, -, NORTH, range, speed ) \
    _retroflat_viewport_focus_dir( y1, y, h, >, +, SOUTH, range, speed ) 
 
+/* TODO: retroflat_viewport_screen_x/y logic to implement smooth viewport
+ *       scrolling.
+ */
+
+/**
+ * \brief Return the screenspace X coordinate at which something at the given
+ *        world coordinate should be drawn.
+ */
+#  define retroflat_viewport_screen_x( world_x ) \
+   ((world_x) - retroflat_viewport_world_x())
+
+/**
+ * \brief Return the screenspace Y coordinate at which something at the given
+ *        world coordinate should be drawn.
+ */
+#  define retroflat_viewport_screen_y( world_y ) \
+   ((world_y) - retroflat_viewport_world_y())
+
 /*! \} */
+
+#endif /* RETROFLAT_SOFT_VIEWPORT || DOCUMENTATION */
 
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {

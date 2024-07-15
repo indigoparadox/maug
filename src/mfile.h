@@ -478,7 +478,7 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    while( NULL != gc_mvfs_data[i] ) {
       if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
          debug_printf( 1, "found file \"%s\" at VFS index: " SIZE_T_FMT
-         " (size: %u bytes)",
+         " (size: " OFF_T_FMT " bytes)",
             filename, i, *(gc_mvfs_lens[i]) );
          break;
       }

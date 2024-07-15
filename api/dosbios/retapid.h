@@ -4,6 +4,7 @@
 
 #define RETROPLAT_PRESENT 1
 
+/* TODO: This may need to be disabled with EGA scrolling implemented. */
 #define RETROFLAT_SOFT_VIEWPORT
 
 #  ifdef RETROFLAT_OPENGL
