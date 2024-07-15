@@ -4,6 +4,8 @@
 
 #define RETROPLAT_PRESENT 1
 
+#define RETROFLAT_SOFT_VIEWPORT
+
 /* == Nintendo DS == */
 
 #  include <nds.h>
@@ -11,6 +13,16 @@
 #  define RETROCON_DISABLE 1
 
 #define retroflat_wait_for_vblank() swiWaitForVBlank();
+
+#ifndef RETROFLAT_NDS_OAM_ACTIVE
+/*! \brief Active sprite engine screen on Nintendo DS. */
+#  define RETROFLAT_NDS_OAM_ACTIVE &oamMain
+#endif /* !RETROFLAT_NDS_OAM_ACTIVE */
+
+#ifndef RETROFLAT_NDS_SPRITES_ACTIVE
+/*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
+#  define RETROFLAT_NDS_SPRITES_ACTIVE 24
+#endif /* !RETROFLAT_NDS_SPRITES_ACTIVE */
 
 #  define RETROGLU_NO_TEXTURES
 #  define RETROGLU_NO_ERRORS
@@ -41,9 +53,9 @@ typedef int GLint;
 #     define RETROFLAT_SOFT_LINES
 #  endif /* !RETROFLAT_SOFT_LINES */
 
-#  define BG_TILE_W_PX 8
-#  define BG_TILE_H_PX 8
-#  define BG_W_TILES 32
+#  define RETROFLAT_NDS_BG_TILE_W_PX 8
+#  define RETROFLAT_NDS_BG_TILE_H_PX 8
+#  define RETROFLAT_NDS_BG_W_TILES 32
 
 typedef int16_t RETROFLAT_IN_KEY;
 
@@ -57,6 +69,10 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
    uint16_t* b;
+   const unsigned int* tiles;
+   const unsigned short* pal;
+   size_t tiles_len;
+   size_t pal_len;
 #  ifdef RETROFLAT_OPENGL
    struct RETROFLAT_GLTEX tex;
    ssize_t w;
@@ -116,10 +132,15 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define retroflat_quit( retval_in )
 #  define retroflat_bitmap_w( bmp ) (0)
 #  define retroflat_bitmap_h( bmp ) (0)
-#  define retroflat_bitmap_ok( bitmap ) (0)
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->tiles)
 
 struct RETROFLAT_PLATFORM {
-   uint16_t*            sprite_frames[NDS_SPRITES_ACTIVE];
+   uint16_t*            sprite_frames[RETROFLAT_NDS_SPRITES_ACTIVE];
+   struct RETROFLAT_BITMAP* oam_entries[RETROFLAT_NDS_SPRITES_ACTIVE];
+   int16_t              oam_dx[RETROFLAT_NDS_SPRITES_ACTIVE];
+   int16_t              oam_dy[RETROFLAT_NDS_SPRITES_ACTIVE];
+   int16_t              oam_sx[RETROFLAT_NDS_SPRITES_ACTIVE];
+   int16_t              oam_sy[RETROFLAT_NDS_SPRITES_ACTIVE];
    int                  bg_id;
    uint8_t              bg_bmp_changed;
    uint8_t              window_bmp_changed;

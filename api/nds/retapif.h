@@ -74,12 +74,12 @@ MERROR_RETVAL retroflat_init_platform(
    bgSetPriority( g_retroflat_state->platform.px_id, 0 );
 
    /* Setup the sprite engines. */
-	oamInit( NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
+	oamInit( RETROFLAT_NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
 
    /* Allocate sprite frame memory. */
-   for( i = 0 ; NDS_SPRITES_ACTIVE > i ; i++ ) {
+   for( i = 0 ; RETROFLAT_NDS_SPRITES_ACTIVE > i ; i++ ) {
       g_retroflat_state->platform.sprite_frames[i] = oamAllocateGfx(
-         NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
+         RETROFLAT_NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
    }
 
 #  endif /* RETROFLAT_OPENGL */
@@ -172,6 +172,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
 
 #  ifdef RETROFLAT_OPENGL
    retval = retroglu_load_bitmap( filename, bmp_out, flags );
@@ -179,8 +180,27 @@ MERROR_RETVAL retroflat_load_bitmap(
    assert( 0 < retroflat_bitmap_h( bmp_out ) );
 #  else
 
-   /* TODO */
+   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
+   /* TODO */
+   while( NULL != gc_ndsassets_names[i] ) {
+      if( 0 == strcmp( filename, gc_ndsassets_names[i] ) ) {
+         bmp_out->tiles = gc_ndsassets_tiles[i];
+         bmp_out->pal = gc_ndsassets_pals[i];
+         bmp_out->tiles_len = gc_ndsassets_tiles_lens[i];
+         bmp_out->pal_len = gc_ndsassets_pals_lens[i];
+         debug_printf( 1, "found bitmap \"%s\" at index: " SIZE_T_FMT,
+            filename, i );
+         goto cleanup;
+      }
+
+      i++;
+   }
+
+   error_printf( "could not find bitmap: %s", filename );
+   retval = MERROR_FILE;
+
+cleanup:
 #  endif /* RETROFLAT_OPENGL */
 
    return retval;
@@ -226,6 +246,58 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
+static void _retroflat_nds_blit_sprite(
+   struct RETROFLAT_BITMAP* src,
+   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   int16_t instance
+) {
+   int tile_idx = 0,
+      tile_x = 0,
+      tile_y = 0;
+   uint16_t* bg_tiles = NULL;
+
+   /* Blitting a sprite. */
+
+   if(
+      g_retroflat_state->platform.oam_entries[instance] == src &&
+      s_x == g_retroflat_state->platform.oam_sx[instance] &&
+      s_y == g_retroflat_state->platform.oam_sy[instance]
+   ) {
+      /* Bitmap already loaded, so just move it and avoid a dmaCopy(). */
+      oamSetXY( RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y );
+      g_retroflat_state->platform.oam_dx[instance] = d_x;
+      g_retroflat_state->platform.oam_dy[instance] = d_y;
+      goto cleanup;
+   }
+
+   debug_printf( 1, "loading bitmap palette into OAM..." );
+   dmaCopy( src->pal, SPRITE_PALETTE, src->pal_len );
+
+   /* 2 = spritesheet width of one row in sprites. */
+   if( 0 == s_x && 0 == s_y ) {
+      tile_idx = 0;
+   } else {
+      tile_idx = ((s_y / h) * 2) + (s_x / w);
+   }
+   debug_printf( 1, "loading bitmap tiles into OAM..." );
+   dmaCopy(
+      src->tiles +
+         (tile_idx * (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX)),
+      g_retroflat_state->platform.sprite_frames[instance], (w * h) );
+
+   oamSet(
+      RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y, 0, 0,
+      SpriteSize_16x16, SpriteColorFormat_256Color, 
+      g_retroflat_state->platform.sprite_frames[instance],
+      -1, false, false, false, false, false );
+
+cleanup:
+
+   return;
+}
+
+/* === */
+
 void retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
@@ -244,6 +316,9 @@ void retroflat_blit_bitmap(
 #  else
 
    /* TODO */
+   if( 0 < instance ) {
+      _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
+   }
 
 #  endif /* RETROFLAT_OPENGL */
 }

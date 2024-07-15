@@ -34,8 +34,6 @@ LIBS_GCC_NDS_LIBNDS += -L$(DEVKITPRO)/libnds/lib -lnds9
 LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS)
 
 NDSASSET_H_DIR := obj/bmpnds
-NDSASSET_C_FILE :=
-NDSASSET_H_FILE :=
 
 define TGTNDSLIBN
 
@@ -43,12 +41,13 @@ define TGTNDSLIBN
 CFLAGS_OPT_GCC_NDS := \
 	$$(subst -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_GCC))
 
+C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)
+
 $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: \
-$$(NDS_ASSET_C_FILE) \
-$$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES)))
+$$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES_NDS)))
 	PATH="$(DEVKITPPRO)/tools/bin:$(DEVKITPRO)/devkitARM/bin:$(PATH)" \
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
@@ -92,9 +91,20 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 		grit $$$$f -gB8 -Mh2 -Mw2 -gTff55ff -ftc -fa -o $$(NDSASSET_H_FILE); \
 	done
 
+	# === Index Names ===
+
+	echo "\nconst char* gc_ndsassets_names[] = {" >> \
+		$$(NDSASSET_C_FILE)
+
+	for f in $$(notdir $$(basename $$^)); do \
+		echo "   \"$$$${f}\"," >> $$(NDSASSET_C_FILE); \
+	done
+
+	echo "	NULL\n};\n" >> $$(NDSASSET_C_FILE)
+
 	# === Index Tiles ===
 
-	echo "\nconst unsigned int* gc_ndsassets_tiles[] = {" >> \
+	echo "const unsigned int* gc_ndsassets_tiles[] = {" >> \
 		$$(NDSASSET_C_FILE)
 
 	for f in $$(notdir $$(basename $$^)); do \
@@ -139,6 +149,8 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 
 	# === Header ===
 
+	echo "\nextern const char* gc_ndsassets_names[];" >> \
+		$$(NDSASSET_H_FILE)
 	echo "\nextern const unsigned int* gc_ndsassets_tiles[];" >> \
 		$$(NDSASSET_H_FILE)
 	echo "extern const unsigned short* gc_ndsassets_pals[];" >> \

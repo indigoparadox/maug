@@ -729,16 +729,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 /*! \brief Maximum size of the assets path, to allow room for appending. */
 #define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX >> 1)
 
-#ifndef NDS_OAM_ACTIVE
-/*! \brief Active sprite engine screen on Nintendo DS. */
-#  define NDS_OAM_ACTIVE &oamMain
-#endif /* !NDS_OAM_ACTIVE */
-
-#ifndef NDS_SPRITES_ACTIVE
-/*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
-#  define NDS_SPRITES_ACTIVE 24
-#endif /* !NDS_SPRITES_ACTIVE */
-
 #ifndef RETROFLAT_BMP_COLORS_SZ_MAX
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
 #endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
