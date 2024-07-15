@@ -13,7 +13,7 @@ $$(MVFS_H_DIR)/mvfs.h: $(1)
 	echo "#ifndef MVFS_H\n#define MVFS_H\n" > $$@
 
 	for f in $$^; do \
-		xxd -i "$$$$f" >> $$@ ; \
+		xxd -i "$$$$f" | sed 's/unsigned int/off_t/g' >> $$@ ; \
 	done
 
 	# Add a directory of file contents.
@@ -24,8 +24,8 @@ $$(MVFS_H_DIR)/mvfs.h: $(1)
 	done
 	echo "   (void*)0\n};" >> $$@
 
-	# Add a directory of file sizes.
-	echo "\nstatic unsigned int* gc_mvfs_sizes[] = {" >> $$@
+	# Add a directory of file lens.
+	echo "\nstatic off_t* gc_mvfs_lens[] = {" >> $$@
 	for f in $$^; do \
 		b="`echo -n $$$$f | tr -c '[:alnum:]' '_'`" ; \
 		echo "   &$$$${b}_len," >> $$@ ; \

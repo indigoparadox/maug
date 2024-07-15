@@ -4,6 +4,8 @@
 
 #define RETROPLAT_PRESENT 1
 
+#define RETROFLAT_SOFT_VIEWPORT
+
 #  ifdef RETROFLAT_OPENGL
 #     error "opengl support not implemented for PC BIOS"
 #  endif /* RETROFLAT_OPENGL */

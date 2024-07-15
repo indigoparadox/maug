@@ -479,7 +479,7 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
       if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
          debug_printf( 1, "found file \"%s\" at VFS index: " SIZE_T_FMT
          " (size: %u bytes)",
-            filename, i, *(gc_mvfs_sizes[i]) );
+            filename, i, *(gc_mvfs_lens[i]) );
          break;
       }
       i++;
@@ -497,7 +497,7 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    p_file->read_line = mfile_mem_read_line;
    p_file->flags = MFILE_FLAG_READ_ONLY;
    p_file->mem_buffer = gc_mvfs_data[i];
-   p_file->sz = *(gc_mvfs_sizes[i]);
+   p_file->sz = *(gc_mvfs_lens[i]);
    p_file->mem_cursor = 0;
 
 cleanup:
