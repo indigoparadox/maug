@@ -399,7 +399,7 @@ void retrosoft_ellipse(
       }
       assert( 0 <= w );
       assert( 0 <= h );
-      debug_printf( 1, "ELLIPSE %d, %d", w, h );
+      /* debug_printf( 1, "ELLIPSE %d, %d", w, h ); */
    } while(
       (RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags)) &&
       (0 < w || 0 < h)

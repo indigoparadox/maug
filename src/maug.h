@@ -87,6 +87,7 @@
 #     define RETROCON_C
 #     define RETROFNT_C
 #     define RETROHTR_C
+#     define RETROANI_C
 #  endif /* MAUG_C */
 #endif /* !MAUG_NO_RETRO */
 
