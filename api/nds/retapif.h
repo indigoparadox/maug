@@ -6,6 +6,16 @@
 #     include <ndsasset.h>
 #  endif /* USE_NDSASSET */
 
+#  ifndef NDSASSET_H
+const char* gc_ndsassets_names[] = { NULL };
+const unsigned int* gc_ndsassets_tiles[] = {};
+const unsigned short* gc_ndsassets_pals[] = {};
+const size_t gc_ndsassets_tiles_lens[] = {};
+const size_t gc_ndsassets_pals_lens[] = {};
+const size_t gc_ndsassets_tiles_widths[] = {};
+const size_t gc_ndsassets_tiles_heights[] = {};
+#  endif /* !NDSASSET_H */
+
 const unsigned short gc_retroflat_nds_pal_default[256] __attribute__((aligned(4))) __attribute__((visibility("hidden")))=
 {
 	0x0000,0x5400,0x02A0,0x56A0,0x0015,0x5415,0x0155,0x56B5,
@@ -132,11 +142,11 @@ static void _retroflat_nds_blit_sprite(
 
    assert( NULL != src->tiles );
 
-   /* 2 = spritesheet width of one row in sprites. */
    if( 0 == s_x && 0 == s_y ) {
       tile_idx = 0;
    } else {
-      tile_idx = ((s_y / h) * 2) + (s_x / w);
+      /* Index = y * w + x, but with each step converted from px to tiles. */
+      tile_idx = ((s_y / h) * (src->w / w)) + (s_x / w);
    }
    debug_printf(
       RETROFLAT_PLATFORM_TRACE_LVL, "loading bitmap tiles into OAM..." );
@@ -452,9 +462,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* TODO: Is this correct? */
-   bmp_out->tiles = calloc( w * h, sizeof( unsigned int ) );
+   bmp_out->tiles = calloc( w, h );
    maug_cleanup_if_null_alloc( unsigned int*, bmp_out->tiles );
-   bmp_out->tiles_len = w * h * sizeof( unsigned int );
+   bmp_out->tiles_len = w * h;
    bmp_out->pal = (unsigned short*)gc_retroflat_nds_pal_default;
    bmp_out->pal_len = 512;
    bmp_out->w = w;
@@ -557,7 +567,7 @@ void retroflat_px(
       }
    } else {
       /* TODO: This doesn't seem to work... */
-      ((uint8_t*)(target->tiles))[(y * target->w) + x] = 1;
+      ((uint8_t*)(target->tiles))[(y * target->w) + x] = color_idx;
    }
 
 
