@@ -377,14 +377,32 @@ void retrosoft_ellipse(
       }
 
       /* Keep shrinking and filling if required. */
-      x++;
-      y++;
-      w--;
-      h--;
+      if( w > h ) {
+         x++;
+         w--;
+         if( 0 < h ) {
+            y++;
+            h--;
+         }
+      } else if( h > w ) {
+         y++;
+         h--;
+         if( 0 < w ) {
+            x++;
+            w--;
+         }
+      } else {
+         x++;
+         w--;
+         y++;
+         h--;
+      }
+      assert( 0 <= w );
+      assert( 0 <= h );
       debug_printf( 1, "ELLIPSE %d, %d", w, h );
    } while(
       (RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags)) &&
-      0 < w && 0 < h
+      (0 < w || 0 < h)
    );
 
    retroflat_px_release( target );

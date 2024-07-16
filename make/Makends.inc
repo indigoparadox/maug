@@ -38,7 +38,7 @@ NDSASSET_H_DIR := obj/bmpnds
 define TGTNDSLIBN
 
 # Remove XPM flags, as XPM mode is not supported on the DS.
-CFLAGS_OPT_GCC_NDS := \
+CFLAGS_OPT_GCC_NDS += \
 	$$(subst -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_GCC))
 
 C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)

@@ -23,7 +23,7 @@
 
 #ifndef RETROFLAT_NDS_SPRITES_ACTIVE
 /*! \brief Maximum number of sprites active on-screen on Nintendo DS. */
-#  define RETROFLAT_NDS_SPRITES_ACTIVE 24
+#  define RETROFLAT_NDS_SPRITES_ACTIVE 200
 #endif /* !RETROFLAT_NDS_SPRITES_ACTIVE */
 
 #ifndef RETROFLAT_PLATFORM_TRACE_LVL

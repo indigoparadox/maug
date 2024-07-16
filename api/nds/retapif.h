@@ -118,6 +118,8 @@ static void _retroflat_nds_blit_sprite(
       tile_x = 0,
       tile_y = 0;
 
+   assert( RETROFLAT_NDS_SPRITES_ACTIVE > instance );
+
    /* Blitting a sprite. */
 
    if(
@@ -622,8 +624,8 @@ void retroflat_px(
       /* Get the index of the pixel within the subtile... again, logical. */
       px_idx = ((px_y % 8) * 8) + (px_x % 8);
 
-      debug_printf( 1,
-         "px: meta_tile_idx: " SIZE_T_FMT ", px_x: " SIZE_T_FMT ", px_y: "
+      debug_printf( RETROFLAT_PLATFORM_TRACE_LVL,
+         "px: metatile_idx: " SIZE_T_FMT ", px_x: " SIZE_T_FMT ", px_y: "
          SIZE_T_FMT ", subtile: " SIZE_T_FMT,
          metatile_idx, px_x, px_y, subtile_idx );
 
