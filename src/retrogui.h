@@ -60,27 +60,26 @@
 
 #define retrogui_is_locked( gui ) (NULL != (gui)->ctls)
 
-#define retrogui_copy_label( ctl, ctl_type ) \
-   size_t label_sz = 0; \
-   char* label_tmp = NULL; \
-   \
+#define _retrogui_copy_label( src_str, dest_ctl, label_tmp, label_sz ) \
    /* Sanity checking. */ \
-   assert( NULL != ctl->ctl_type.label ); \
-   label_sz = strlen( ctl->ctl_type.label ); \
-   assert( 0 < label_sz ); \
-   assert( (MAUG_MHANDLE)NULL == ctl->ctl_type.label_h ); \
+   assert( NULL != src_str ); \
+   label_sz = strlen( src_str ); \
+   if( (MAUG_MHANDLE)NULL != dest_ctl.label_h ) { \
+      /* Free the existing label. */ \
+      maug_mfree( dest_ctl.label_h ); \
+   } \
    \
    /* Allocate new label space. */ \
-   ctl->ctl_type.label_h = maug_malloc( label_sz + 1, 1 ); \
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->ctl_type.label_h ); \
-   maug_mlock( ctl->ctl_type.label_h, label_tmp ); \
-   maug_cleanup_if_null_alloc( char*, label_tmp ); \
+   dest_ctl.label_h = maug_malloc( label_sz + 1, 1 ); \
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, dest_ctl.label_h ); \
+   maug_mlock( dest_ctl.label_h, label_tmp ); \
+   maug_cleanup_if_null_lock( char*, label_tmp ); \
    \
    /* Copy the label text over. */ \
+   assert( NULL != label_tmp ); \
    maug_mzero( label_tmp, label_sz + 1 ); \
-   strncpy( label_tmp, ctl->ctl_type.label, label_sz ); \
-   maug_munlock( ctl->ctl_type.label_h, label_tmp ); \
-   ctl->ctl_type.label = NULL;
+   strncpy( label_tmp, src_str, label_sz ); \
+   maug_munlock( dest_ctl.label_h, label_tmp );
 
 /*! \brief Unique identifying constant number for controls. */
 typedef size_t RETROGUI_IDC;
@@ -213,6 +212,9 @@ MERROR_RETVAL retrogui_get_ctl_text(
    struct RETROGUI* gui, RETROGUI_IDC idc, char* buffer, size_t buffer_sz );
 
 size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc );
+
+MERROR_RETVAL retrogui_set_ctl_label(
+   struct RETROGUI* gui, RETROGUI_IDC idc, size_t buffer_sz, char* fmt, ... );
 
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
@@ -710,7 +712,11 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
    }
 
 #  else
-   retrogui_copy_label( ctl, BUTTON );
+   size_t label_sz = 0;
+   char* label_tmp = NULL;
+
+   _retrogui_copy_label( ctl->BUTTON.label, ctl->BUTTON, label_tmp, label_sz );
+   ctl->BUTTON.label = NULL;
 #  endif
 
 cleanup:
@@ -1109,7 +1115,11 @@ static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
    /* TODO */
 
 #  else
-   retrogui_copy_label( ctl, LABEL );
+   size_t label_sz = 0;
+   char* label_tmp = NULL;
+
+   _retrogui_copy_label( ctl->LABEL.label, ctl->LABEL, label_tmp, label_sz );
+   ctl->LABEL.label = NULL;
 #  endif
 
 cleanup:
@@ -1523,6 +1533,63 @@ size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, RETROGUI_IDC idc ) {
 cleanup:
 
    return idx;
+}
+
+MERROR_RETVAL retrogui_set_ctl_label(
+   struct RETROGUI* gui, RETROGUI_IDC idc, size_t buffer_sz, char* fmt, ...
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t label_sz = 0;
+   char* label_tmp = NULL;
+   char* buffer = NULL;
+   union RETROGUI_CTL* ctl = NULL;
+   MAUG_MHANDLE buffer_h = (MAUG_MHANDLE)NULL;
+   va_list args;
+
+   /* Figure out the control to update. */
+   ctl = retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Perform the buffer substitutions. */
+   buffer_h = maug_malloc( 1, buffer_sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
+
+   maug_mlock( buffer_h, buffer );
+   maug_cleanup_if_null_lock( char*, buffer );
+
+   assert( NULL != fmt );
+   assert( NULL != buffer );
+
+   va_start( args, fmt );
+   maug_vsnprintf( buffer, buffer_sz, fmt, args );
+   va_end( args );
+
+   /* Perform the actual update. */
+   if( RETROGUI_CTL_TYPE_BUTTON == ctl->base.type ) {
+      assert( NULL == ctl->BUTTON.label );
+      _retrogui_copy_label( buffer, ctl->BUTTON, label_tmp, label_sz );
+   } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
+      assert( NULL == ctl->LABEL.label );
+      _retrogui_copy_label( buffer, ctl->LABEL, label_tmp, label_sz );
+   } else {
+      error_printf( "invalid control type! no label!" );
+      goto cleanup;
+   }
+
+cleanup:
+
+   if( NULL != buffer ) {
+      maug_munlock( buffer_h, buffer );
+   }
+
+   if( NULL != buffer_h ) {
+      maug_mfree( buffer_h );
+   }
+
+   return retval;
 }
 
 MERROR_RETVAL retrogui_init_ctl(
