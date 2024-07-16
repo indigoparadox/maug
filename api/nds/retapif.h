@@ -370,6 +370,11 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
+   if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
+      /* Regular bitmaps don't need locking. */
+      goto cleanup;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
    retval = retroglu_draw_lock( bmp );
 #  else
@@ -378,6 +383,8 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  endif /* RETROFLAT_OPENGL */
 
+cleanup:
+
    return retval;
 }
 
@@ -385,6 +392,11 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
+
+   if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
+      /* Regular bitmaps don't need locking. */
+      goto cleanup;
+   }
 
 #  if defined( RETROFLAT_OPENGL )
    retval = retroglu_draw_release( bmp );
@@ -403,6 +415,8 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
 
 #  endif /* RETROFLAT_OPENGL */
+
+cleanup:
 
    return retval;
 }
@@ -537,6 +551,12 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags
 ) {
    uint16_t* px_ptr = NULL;
+   size_t metatile_idx = 0,
+      subtile_idx = 0,
+      px_x = 0,
+      px_y = 0,
+      px_idx = 0;
+   uint8_t* tiles8 = (uint8_t*)(target->tiles);
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -566,8 +586,51 @@ void retroflat_px(
          px_ptr[(y * target->w) + x] = g_retroflat_state->palette[color_idx];
       }
    } else {
-      /* TODO: This doesn't seem to work... */
-      ((uint8_t*)(target->tiles))[(y * target->w) + x] = color_idx;
+      /* Get the tile index for the correct metatile. Straightforward, as
+       * metatiles are laid out logically like cells in a table.
+       */
+      metatile_idx = (
+         ((y >> 4) * (retroflat_bitmap_w( target ) >> 4)) +
+         (x >> 4));
+
+      /* Get the number of lines in the metatile that we have to go past.
+       * Remember, meta tiles are:
+       *
+       * - Visual -  - Memory -
+       * |---|---|     |---|
+       * | 0>| 1v|     | 0 |
+       * |---|---|  >  | 1 |
+       * | 2>| 3 |     | 2 |
+       * |---|---|     | 3 |
+       *               |---|
+       */
+
+      px_x = x % 16;
+      px_y = y % 16;
+
+      /* TODO: Figure out how to do this more simply with math? */
+      if( 8 <= px_x && 8 <= px_y ) {
+         subtile_idx = 3;
+      } else if( 8 <= px_y ) {
+         subtile_idx = 2;
+      } else if( 8 <= px_x ) {
+         subtile_idx = 1;
+      } else {
+         subtile_idx = 0;
+      }
+
+      /* Get the index of the pixel within the subtile... again, logical. */
+      px_idx = ((px_y % 8) * 8) + (px_x % 8);
+
+      debug_printf( 1,
+         "px: meta_tile_idx: " SIZE_T_FMT ", px_x: " SIZE_T_FMT ", px_y: "
+         SIZE_T_FMT ", subtile: " SIZE_T_FMT,
+         metatile_idx, px_x, px_y, subtile_idx );
+
+      tiles8[
+         (metatile_idx * 256 /* Pixels in a metatile */) +
+         (subtile_idx * 64 /* Pixels in a subtile. */) + px_idx] =
+            color_idx;
    }
 
 
