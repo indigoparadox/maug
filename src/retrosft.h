@@ -46,9 +46,11 @@ void retrosoft_string(
 
 #  include "mfont8x8.h"
 
+#  ifndef RETROFLAT_NO_STRING
 /* TODO: Create another depth for each color. */
 static struct RETROFLAT_BITMAP
 gc_font_bmps[RETROFLAT_COLORS_SZ][RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
+#  endif /* !RETROFLAT_NO_STRING */
 
 /* === */
 
@@ -137,11 +139,15 @@ cleanup:
 /* === */
 
 void retrosoft_shutdown() {
+#  ifndef RETROFLAT_NO_STRING
    size_t i = 0,
       j = 0;
    RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
+#  endif /* !RETROFLAT_NO_STRING */
 
    debug_printf( RETROSOFT_TRACE_LVL, "retrosoft shutdown called..." );
+
+#  ifndef RETROFLAT_NO_STRING
 
 #ifdef RETROSOFT_PRELOAD_COLORS
    for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
@@ -156,6 +162,8 @@ void retrosoft_shutdown() {
 #ifdef RETROSOFT_PRELOAD_COLORS
    }
 #endif /* RETROSOFT_PRELOAD_COLORS */
+
+#  endif /* !RETROFLAT_NO_STRING */
 }
 
 /* === */
@@ -344,28 +352,40 @@ void retrosoft_ellipse(
 
    retroflat_px_lock( target );
 
-   /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
-   for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
-      i_prev = i - 100;
+   do {
+      /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
+      for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
+         i_prev = i - 100;
 
-      px_x1 = x + (w / 2) + retrofp_cos( i_prev, w / 2 );
-      px_y1 = y + (h / 2) + retrofp_sin( i_prev, h / 2 );
-      px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
-      px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
+         px_x1 = x + (w / 2) + retrofp_cos( i_prev, w / 2 );
+         px_y1 = y + (h / 2) + retrofp_sin( i_prev, h / 2 );
+         px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
+         px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
 
-      /*
-      if(
-         retroflat_bitmap_w( target ) <= px_x1 ||
-         retroflat_bitmap_h( target ) <= px_y1 ||
-         retroflat_bitmap_w( target ) <= px_x2 ||
-         retroflat_bitmap_h( target ) <= px_y2
-      ) {
-         continue;
+         /*
+         if(
+            retroflat_bitmap_w( target ) <= px_x1 ||
+            retroflat_bitmap_h( target ) <= px_y1 ||
+            retroflat_bitmap_w( target ) <= px_x2 ||
+            retroflat_bitmap_h( target ) <= px_y2
+         ) {
+            continue;
+         }
+         */
+
+         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
       }
-      */
 
-      retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
-   }
+      /* Keep shrinking and filling if required. */
+      x++;
+      y++;
+      w--;
+      h--;
+      debug_printf( 1, "ELLIPSE %d, %d", w, h );
+   } while(
+      (RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags)) &&
+      0 < w && 0 < h
+   );
 
    retroflat_px_release( target );
 }
