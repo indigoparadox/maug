@@ -800,6 +800,12 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
@@ -885,6 +891,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    assert( retroflat_bitmap_locked( target ) );
 
    area.x = x;
@@ -939,6 +951,12 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    assert( retroflat_bitmap_locked( target ) );
 
    SDL_SetRenderDrawColor(
@@ -959,6 +977,13 @@ void retroflat_ellipse(
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
    if( RETROFLAT_COLOR_NULL == color ) {
+      return;
+   }
+
+   if(
+      NULL != target &&
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
       return;
    }
 

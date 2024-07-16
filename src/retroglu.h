@@ -1921,6 +1921,13 @@ void retroglu_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    assert( NULL != target->tex.bytes );
    assert( retroflat_bitmap_locked( target ) );
 

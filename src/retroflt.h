@@ -546,6 +546,8 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 
 #define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
 
+#define RETROFLAT_FLAGS_BITMAP_RO   0x04
+
 /**
  * \relates retroflat_blit_bitmap
  * \brief Pass to retroflat_blit_bitmap() instance arg if this is not a sprite

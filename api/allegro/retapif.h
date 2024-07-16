@@ -342,6 +342,12 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x, y, target, return );
 
    /* == Allegro == */
@@ -361,6 +367,12 @@ void retroflat_rect(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    /* == Allegro == */
@@ -390,6 +402,12 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    /* == Allegro == */
 
    assert( NULL != target->b );
@@ -410,6 +428,12 @@ void retroflat_ellipse(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    /* == Allegro == */

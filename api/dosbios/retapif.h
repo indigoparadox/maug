@@ -577,6 +577,12 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x, y, target, return );
 
    /* == DOS PC_BIOS == */

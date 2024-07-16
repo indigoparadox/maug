@@ -1292,6 +1292,12 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
@@ -1358,6 +1364,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    assert( (HBITMAP)NULL != target->b );
 
    assert( retroflat_bitmap_locked( target ) );
@@ -1404,6 +1416,12 @@ void retroflat_line(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    assert( NULL != target->b );
@@ -1457,6 +1475,12 @@ void retroflat_ellipse(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    assert( NULL != target->b );

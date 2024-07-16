@@ -6,6 +6,45 @@
 #     include <ndsasset.h>
 #  endif /* USE_NDSASSET */
 
+const unsigned short gc_retroflat_nds_pal_default[256] __attribute__((aligned(4))) __attribute__((visibility("hidden")))=
+{
+	0x0000,0x5400,0x02A0,0x56A0,0x0015,0x5415,0x0155,0x56B5,
+	0x294A,0x7D4A,0x2BEA,0x7FEA,0x295F,0x7D5F,0x2BFF,0x7FFF,
+	0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,
+	0x0C63,0x0C63,0x0C63,0x0C63,0x0C63,0x0C63,0x0C63,0x0C63,
+	0x1084,0x1084,0x1084,0x1084,0x1084,0x1084,0x1084,0x1084,
+	0x14A5,0x14A5,0x14A5,0x14A5,0x14A5,0x14A5,0x14A5,0x14A5,
+	0x18C6,0x18C6,0x18C6,0x18C6,0x18C6,0x18C6,0x18C6,0x18C6,
+	0x1CE7,0x1CE7,0x1CE7,0x1CE7,0x1CE7,0x1CE7,0x1CE7,0x1CE7,
+
+	0x2108,0x2108,0x2108,0x2108,0x2108,0x2108,0x2108,0x2108,
+	0x2529,0x2529,0x2529,0x2529,0x2529,0x2529,0x2529,0x2529,
+	0x294A,0x294A,0x294A,0x294A,0x294A,0x294A,0x294A,0x294A,
+	0x2D6B,0x2D6B,0x2D6B,0x2D6B,0x2D6B,0x2D6B,0x2D6B,0x2D6B,
+	0x318C,0x318C,0x318C,0x318C,0x318C,0x318C,0x318C,0x318C,
+	0x35AD,0x35AD,0x35AD,0x35AD,0x35AD,0x35AD,0x35AD,0x35AD,
+	0x39CE,0x39CE,0x39CE,0x39CE,0x39CE,0x39CE,0x39CE,0x39CE,
+	0x3DEF,0x3DEF,0x3DEF,0x3DEF,0x3DEF,0x3DEF,0x3DEF,0x3DEF,
+
+	0x4210,0x4210,0x4210,0x4210,0x4210,0x4210,0x4210,0x4210,
+	0x4631,0x4631,0x4631,0x4631,0x4631,0x4631,0x4631,0x4631,
+	0x4A52,0x4A52,0x4A52,0x4A52,0x4A52,0x4A52,0x4A52,0x4A52,
+	0x4E73,0x4E73,0x4E73,0x4E73,0x4E73,0x4E73,0x4E73,0x4E73,
+	0x5294,0x5294,0x5294,0x5294,0x5294,0x5294,0x5294,0x5294,
+	0x56B5,0x56B5,0x56B5,0x56B5,0x56B5,0x56B5,0x56B5,0x56B5,
+	0x5AD6,0x5AD6,0x5AD6,0x5AD6,0x5AD6,0x5AD6,0x5AD6,0x5AD6,
+	0x5EF7,0x5EF7,0x5EF7,0x5EF7,0x5EF7,0x5EF7,0x5EF7,0x5EF7,
+
+	0x6318,0x6318,0x6318,0x6318,0x6318,0x6318,0x6318,0x6318,
+	0x6739,0x6739,0x6739,0x6739,0x6739,0x6739,0x6739,0x6739,
+	0x6B5A,0x6B5A,0x6B5A,0x6B5A,0x6B5A,0x6B5A,0x6B5A,0x6B5A,
+	0x6F7B,0x6F7B,0x6F7B,0x6F7B,0x6F7B,0x6F7B,0x6F7B,0x6F7B,
+	0x739C,0x739C,0x739C,0x739C,0x739C,0x739C,0x739C,0x739C,
+	0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,
+	0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,
+	0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,
+};
+
 static void _retroflat_nds_change_bg() {
    /* Setup bank E to receive extended palettes. */
    vramSetBankE( VRAM_E_LCD );
@@ -106,6 +145,8 @@ static void _retroflat_nds_blit_sprite(
          (tile_idx * (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX)),
       g_retroflat_state->platform.sprite_frames[instance], (w * h) );
 
+   /* TODO: Clear pixel layer if it obscures sprite. */
+
    oamSet(
       RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y, 0, 0,
       SpriteSize_16x16, SpriteColorFormat_256Color, 
@@ -196,6 +237,9 @@ MERROR_RETVAL retroflat_init_platform(
    /* Force screen size. */
    args->screen_w = 256;
    args->screen_h = 192;
+
+   g_retroflat_state->buffer.w = 256;
+   g_retroflat_state->buffer.h = 192;
 
    powerOn( POWER_ALL );
 
@@ -361,22 +405,20 @@ MERROR_RETVAL retroflat_load_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-#  ifdef RETROFLAT_OPENGL
-   retval = retroglu_load_bitmap( filename, bmp_out, flags );
-   assert( 0 < retroflat_bitmap_w( bmp_out ) );
-   assert( 0 < retroflat_bitmap_h( bmp_out ) );
-#  else
+   /* TODO: Assert bitmap isn't already initialized. */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    while( NULL != gc_ndsassets_names[i] ) {
       if( 0 == strcmp( filename, gc_ndsassets_names[i] ) ) {
-         bmp_out->tiles = gc_ndsassets_tiles[i];
-         bmp_out->pal = gc_ndsassets_pals[i];
+         /* RO flag below will protect from write attempts, right? */
+         bmp_out->tiles = (unsigned int*)gc_ndsassets_tiles[i];
+         bmp_out->pal = (unsigned short*)gc_ndsassets_pals[i];
          bmp_out->tiles_len = gc_ndsassets_tiles_lens[i];
          bmp_out->pal_len = gc_ndsassets_pals_lens[i];
          bmp_out->w = gc_ndsassets_tiles_widths[i];
          bmp_out->h = gc_ndsassets_tiles_heights[i];
+         bmp_out->flags |= RETROFLAT_FLAGS_BITMAP_RO;
          debug_printf(
             RETROFLAT_PLATFORM_TRACE_LVL,
             "found bitmap \"%s\" at index: " SIZE_T_FMT,
@@ -391,7 +433,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    retval = MERROR_FILE;
 
 cleanup:
-#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -405,17 +446,33 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
+   assert( 0 == w % 8 );
+   assert( 0 == h % 8 );
+
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
-   assert( 0 < retroflat_bitmap_w( bmp_out ) );
-   assert( 0 < retroflat_bitmap_h( bmp_out ) );
-#  else
+   /* TODO: Is this correct? */
+   bmp_out->tiles = calloc( w * h, sizeof( unsigned int ) );
+   maug_cleanup_if_null_alloc( unsigned int*, bmp_out->tiles );
+   bmp_out->tiles_len = w * h * sizeof( unsigned int );
+   bmp_out->pal = (unsigned short*)gc_retroflat_nds_pal_default;
+   bmp_out->pal_len = 512;
+   bmp_out->w = w;
+   bmp_out->h = h;
 
-   /* TODO */
+   debug_printf( 1, "created %d x %d bitmap", w, h );
 
-#  endif /* RETROFLAT_OPENGL */
+cleanup:
+
+   if( NULL == bmp_out->tiles || NULL == bmp_out->pal ) {
+      /* Alloc failed for one! */
+      if( NULL != bmp_out->tiles ) {
+         free( bmp_out->tiles );
+      }
+      /* if( NULL != bmp_out->pal ) {
+         free( bmp_out->pal );
+      } */
+   }
 
    return retval;
 }
@@ -469,9 +526,7 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
-#  if !defined( RETROFLAT_OPENGL )
    uint16_t* px_ptr = NULL;
-#  endif /* !RETROFLAT_OPENGL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -481,26 +536,31 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    /*
    retroflat_constrain_px( x, y, target, return );
    */
 
-#  if defined( RETROFLAT_OPENGL )
-
-   retroglu_px( target, color_idx, x, y, flags );
-
-#  else
-
    /* == Nintendo DS == */
 
-   px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
-   if( RETROFLAT_COLOR_BLACK == color_idx ) {
-      px_ptr[(y * 256) + x] = ARGB16( 0, 0, 0, 0 );
+   if( retroflat_screen_buffer() == target ) {
+      px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
+      if( RETROFLAT_COLOR_BLACK == color_idx ) {
+         px_ptr[(y * target->w) + x] = ARGB16( 0, 0, 0, 0 );
+      } else {
+         px_ptr[(y * target->w) + x] = g_retroflat_state->palette[color_idx];
+      }
    } else {
-      px_ptr[(y * 256) + x] = g_retroflat_state->palette[color_idx];
+      /* TODO: This doesn't seem to work... */
+      ((uint8_t*)(target->tiles))[(y * target->w) + x] = 1;
    }
 
-#  endif /* RETROFLAT_OPENGL */
+
 }
 
 /* === */

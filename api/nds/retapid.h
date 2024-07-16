@@ -77,8 +77,8 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
    uint16_t* b;
-   const unsigned int* tiles;
-   const unsigned short* pal;
+   unsigned int* tiles;
+   unsigned short* pal;
    size_t tiles_len;
    size_t pal_len;
    size_t w;
