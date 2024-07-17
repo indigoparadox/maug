@@ -2,10 +2,6 @@
 #ifndef RETROCON_H
 #define RETROCON_H
 
-#ifdef RETROFLAT_OS_DOS_REAL
-#  define RETROCON_DISABLE
-#endif
-
 /* TODO: Use new retrofont API. */
 
 #define RETROCON_DEBOUNCE_WAIT 3
@@ -21,7 +17,7 @@ struct RETROCON {
    RETROFLAT_COLOR bg_color;
 };
 
-#  define retrocon_init( con ) (MERROR_OK)
+#  define retrocon_init( con, fn ) (MERROR_OK)
 
 #  define retrocon_add_command( con, cmd, cb, cb_data )
 
@@ -70,6 +66,19 @@ struct RETROCON {
 #  define RETROCON_WIN_H 110
 #endif /* !RETROCON_WIN_H */
 
+#define retrocon_display( con, gui_bmp ) \
+   (con)->gui.draw_bmp = (gui_bmp); \
+   (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
+   retrogui_redraw_ctls( &((con)->gui) );
+
+#define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
+   debug_printf( 1, "opening console..." ); \
+   (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
+   retval = retro3dw_push_win( \
+      &((con)->gui), win_stack, win_stack_ct, \
+      idc, NULL, (con)->gui.x, (con)->gui.y, (con)->gui.w, (con)->gui.h, 0 ); \
+   maug_cleanup_if_not_ok();
+
 struct RETROCON;
 
 typedef MERROR_RETVAL (*retrocon_cb)(
@@ -77,6 +86,7 @@ typedef MERROR_RETVAL (*retrocon_cb)(
 
 struct RETROCON {
    uint8_t flags;
+   struct RETROGUI gui;
    int input_prev;
    int debounce_wait;
    char sbuffer[RETROCON_SBUFFER_SZ_MAX + 1];
@@ -94,13 +104,12 @@ struct RETROCON {
    RETROFLAT_COLOR bg_color;
 };
 
-MERROR_RETVAL retrocon_init( struct RETROCON* con );
+MERROR_RETVAL retrocon_init(
+   struct RETROCON* con, const char* font_name,
+   size_t x, size_t y, size_t w, size_t h );
 
 MERROR_RETVAL retrocon_add_command(
    struct RETROCON* con, const char* cmd, retrocon_cb cb, void* cb_data );
-
-MERROR_RETVAL retrocon_display(
-   struct RETROCON* con, struct RETROFLAT_BITMAP* display );
 
 void retrocon_print_line( struct RETROCON* con, const char* line );
 
@@ -155,15 +164,34 @@ static MERROR_RETVAL retrocon_cmd_quit(
    return retval;
 }
 
-MERROR_RETVAL retrocon_init( struct RETROCON* con ) {
+MERROR_RETVAL retrocon_init(
+   struct RETROCON* con, const char* font_name,
+   size_t x, size_t y, size_t w, size_t h
+) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   retval = retrogui_init( &(con->gui) );
+   maug_cleanup_if_not_ok();
+
+   /* TODO: Parse font height from filename and only load printable glyphs. */
+   /* TODO: Use cache if available. */
+   retval = retrofont_load( font_name, &(con->gui.font_h), 0, 33, 93 );
+   maug_cleanup_if_not_ok();
 
    con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
    con->lbuffer_color = RETROFLAT_COLOR_BLACK;
-   con->bg_color = RETROFLAT_COLOR_WHITE;
+   con->gui.bg_color = RETROFLAT_COLOR_WHITE;
+   con->gui.x = x;
+   con->gui.y = y;
+   con->gui.w = w;
+   con->gui.h = h;
 
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
+   maug_cleanup_if_not_ok();
    retval = retrocon_add_command( con, "QUIT", retrocon_cmd_quit, NULL );
+   maug_cleanup_if_not_ok();
+
+cleanup:
 
    return retval;
 }
@@ -189,6 +217,7 @@ cleanup:
    return retval;
 }
 
+#if 0
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* display
 ) {
@@ -231,6 +260,7 @@ cleanup:
 
    return retval;
 }
+#endif
 
 void retrocon_print_line( struct RETROCON* con, const char* line ) {
    size_t line_sz = 0;
@@ -308,6 +338,8 @@ int retrocon_debounce( struct RETROCON* con, int c ) {
    return c;
 }
 
+#if 0
+
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
    struct RETROFLAT_INPUT* input_evt
@@ -380,6 +412,8 @@ cleanup:
 
    return retval;
 }
+
+#endif
 
 #endif /* RETROCON_C */
 

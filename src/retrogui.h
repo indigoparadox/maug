@@ -164,6 +164,9 @@ struct RETROGUI {
    uint8_t flags;
    size_t x;
    size_t y;
+   size_t w;
+   size_t h;
+   RETROFLAT_COLOR bg_color;
    RETROGUI_IDC idc_prev;
    MAUG_MHANDLE ctls_h;
    union RETROGUI_CTL* ctls;
@@ -1331,6 +1334,15 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
       return;
    }
 
+   if(
+      RETROFLAT_COLOR_BLACK != gui->bg_color &&
+      0 < gui->w && 0 < gui->h
+   ) {
+      debug_printf( 1, "bg color" );
+      retroflat_rect( gui->draw_bmp,
+         gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_FLAGS_FILL );
+   }
+
    #define RETROGUI_CTL_TABLE_REDRAW( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          /* Mark dirty first so redraw can unmark it for animation! */ \
@@ -1667,6 +1679,7 @@ MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
       RETROGUI_CTL_SZ_MAX_INIT, sizeof( struct RETROGUI ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, gui );
    gui->ctls_ct_max = RETROGUI_CTL_SZ_MAX_INIT;
+   gui->bg_color = RETROFLAT_COLOR_BLACK;
 
    debug_printf( RETROGUI_TRACE_LVL,
       "initialized GUI, ctls_ct: " SIZE_T_FMT ", ctls_ct_max: " SIZE_T_FMT,

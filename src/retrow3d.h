@@ -11,13 +11,13 @@
 #define RETROWIN3D_FLAG_INIT_BMP          0x02
 
 #define retro3dw_win_is_active( win ) \
-   (RETROWIN3D_FLAG_INIT_GUI == (RETROWIN3D_FLAG_INIT_GUI & (win)->flags))
+   (RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & (win)->flags))
 
 struct RETROWIN3D {
    uint8_t flags;
    size_t idc;
-   size_t w;
-   size_t h;
+   size_t x;
+   size_t y;
    struct RETROGUI* gui;
    struct RETROFLAT_BITMAP gui_bmp;
 };
@@ -70,14 +70,22 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    retval = retroglu_check_errors( "overlay push" );
    maug_cleanup_if_not_ok();
 
-   retroglu_whf( win->w, win->h, gui_w_f, gui_h_f, aspect_ratio );
+   retroglu_whf( win->gui->w, win->gui->h, gui_w_f, gui_h_f, aspect_ratio );
 
    retroflat_draw_lock( &(win->gui_bmp) );
    maug_cleanup_if_null_lock( uint8_t*, win->gui_bmp.tex.bytes );
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui->draw_bmp = &(win->gui_bmp);
+   /* This is a bit of a hack... Set X/Y to 0 so that we draw at the top
+    * of the bitmap that will be used as a texture. Reset it below so input
+    * detection works!
+    */
+   win->gui->x = 0;
+   win->gui->y = 0;
    retrogui_redraw_ctls( win->gui );
+   win->gui->x = win->x;
+   win->gui->y = win->y;
 
    /* Set a white background for the overlay poly. */
    glColor3fv( RETROGLU_COLOR_WHITE );
@@ -230,11 +238,6 @@ MERROR_RETVAL retro3dw_push_win(
 
    maug_mzero( win, sizeof( struct RETROWIN3D ) );
 
-   retval = retroflat_create_bitmap( w, h, &(win->gui_bmp), 0 );
-   maug_cleanup_if_not_ok();
-
-   win->flags |= RETROWIN3D_FLAG_INIT_BMP;
-
    if( NULL != gui ) {
       win->gui = gui;
    } else {
@@ -247,13 +250,24 @@ MERROR_RETVAL retro3dw_push_win(
 
       win->flags |= RETROWIN3D_FLAG_INIT_GUI;
 
-      /* Parse font height from filename and only load printable glyphs. */
+      /* TODO: Parse font height from filename and only load printable glyphs. */
+      /* TODO: Use cache if available. */
       retval = retrofont_load( font_filename, &(win->gui->font_h), 0, 33, 93 );
       maug_cleanup_if_not_ok();
    }
 
-   win->w = w;
-   win->h = h;
+   retval = retroflat_create_bitmap( w, h, &(win->gui_bmp), 0 );
+   maug_cleanup_if_not_ok();
+
+   win->flags |= RETROWIN3D_FLAG_INIT_BMP;
+
+   win->gui->w = w;
+   win->gui->h = h;
+   /* These might seem redundant, but check out retro3dw_redraw_win()
+    * to see how they're used.
+    */
+   win->x = x;
+   win->y = y;
    win->gui->x = x;
    win->gui->y = y;
    win->idc = idc;
@@ -262,7 +276,7 @@ MERROR_RETVAL retro3dw_push_win(
    debug_printf( RETROWIN3D_TRACE_LVL,
       "pushed window: " SIZE_T_FMT ": " SIZE_T_FMT "x" SIZE_T_FMT
       " @ " SIZE_T_FMT ", " SIZE_T_FMT,
-      win->idc, win->w, win->h, win->gui->x, win->gui->y );
+      win->idc, win->gui->w, win->gui->h, win->gui->x, win->gui->y );
 
    if( w != h ) {
       error_printf(
