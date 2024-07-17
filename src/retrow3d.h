@@ -18,7 +18,7 @@ struct RETROWIN3D {
    size_t idc;
    size_t w;
    size_t h;
-   struct RETROGUI gui;
+   struct RETROGUI* gui;
    struct RETROFLAT_BITMAP gui_bmp;
 };
 
@@ -33,7 +33,15 @@ RETROGUI_IDC retro3dw_poll_win(
 
 void retro3dw_free_win( struct RETROWIN3D* win );
 
+/**
+ * \brief Create a new window.
+ * \param gui Pointer to a preinitialized ::RETROGUI or NULL if the window
+ *            should create and manage its own.
+ * \param font_filename Font to load into the GUI. Only used if this window
+ *                      will manage its own GUI.
+ */
 MERROR_RETVAL retro3dw_push_win(
+   struct RETROGUI* gui,
    struct RETROWIN3D* win_stack, size_t win_stack_sz,
    size_t idc, const char* font_filename,
    size_t x, size_t y, size_t w, size_t h, uint8_t flags );
@@ -58,7 +66,7 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
      * in cleanup: is always needed!
      */
    retroglu_push_overlay(
-      win->gui.x, win->gui.y, screen_x, screen_y, aspect_ratio );
+      win->gui->x, win->gui->y, screen_x, screen_y, aspect_ratio );
    retval = retroglu_check_errors( "overlay push" );
    maug_cleanup_if_not_ok();
 
@@ -68,8 +76,8 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    maug_cleanup_if_null_lock( uint8_t*, win->gui_bmp.tex.bytes );
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
-   win->gui.draw_bmp = &(win->gui_bmp);
-   retrogui_redraw_ctls( &(win->gui) );
+   win->gui->draw_bmp = &(win->gui_bmp);
+   retrogui_redraw_ctls( win->gui );
 
    /* Set a white background for the overlay poly. */
    glColor3fv( RETROGLU_COLOR_WHITE );
@@ -140,9 +148,9 @@ MERROR_RETVAL retro3dw_redraw_win_stack(
       debug_printf( RETROWIN3D_TRACE_LVL, "redrawing window: " SIZE_T_FMT,
          win_stack[i].idc );
 
-      retrogui_lock( &(win_stack[i].gui) );
+      retrogui_lock( win_stack[i].gui );
       retval = retro3dw_redraw_win( &(win_stack[i]) );
-      retrogui_unlock( &(win_stack[i].gui) );
+      retrogui_unlock( win_stack[i].gui );
       maug_cleanup_if_not_ok();
    }
 
@@ -169,11 +177,11 @@ RETROGUI_IDC retro3dw_poll_win(
       debug_printf( RETROWIN3D_TRACE_LVL, "polling window: " SIZE_T_FMT,
          win_stack[i].idc );
 
-      retrogui_lock( &(win_stack[i].gui) );
+      retrogui_lock( win_stack[i].gui );
 
-      idc_out = retrogui_poll_ctls( &(win_stack[i].gui), p_input, input_evt );
+      idc_out = retrogui_poll_ctls( win_stack[i].gui, p_input, input_evt );
 
-      retrogui_unlock( &(win_stack[i].gui) );
+      retrogui_unlock( win_stack[i].gui );
 
       break;
    }
@@ -191,13 +199,15 @@ cleanup:
 void retro3dw_free_win( struct RETROWIN3D* win ) {
 
 #ifndef RETROGXC_PRESENT
-   if( (MAUG_MHANDLE)NULL != win->gui.font_h ) {
-      maug_mfree( win->gui.font_h );
+   if( (MAUG_MHANDLE)NULL != win->gui->font_h ) {
+      maug_mfree( win->gui->font_h );
    }
 #endif /* RETROGXC_PRESENT */
 
    if( RETROWIN3D_FLAG_INIT_GUI == (RETROWIN3D_FLAG_INIT_GUI & win->flags) ) {
-      retrogui_free( &(win->gui) );
+      /* This GUI was created by a NULL to push_win(). */
+      retrogui_free( win->gui );
+      free( win->gui );
    }
 
    if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
@@ -208,6 +218,7 @@ void retro3dw_free_win( struct RETROWIN3D* win ) {
 }
 
 MERROR_RETVAL retro3dw_push_win(
+   struct RETROGUI* gui,
    struct RETROWIN3D* win_stack, size_t win_stack_sz,
    size_t idc, const char* font_filename,
    size_t x, size_t y, size_t w, size_t h, uint8_t flags
@@ -224,26 +235,34 @@ MERROR_RETVAL retro3dw_push_win(
 
    win->flags |= RETROWIN3D_FLAG_INIT_BMP;
 
-   retval = retrogui_init( &(win->gui) );
-   maug_cleanup_if_not_ok();
+   if( NULL != gui ) {
+      win->gui = gui;
+   } else {
+      /* TODO: Use maug_malloc(). */
+      win->gui = calloc( 1, sizeof( struct RETROGUI ) );
+      maug_cleanup_if_null_alloc( struct RETROGUI*, win->gui );
 
-   win->flags |= RETROWIN3D_FLAG_INIT_GUI;
+      retval = retrogui_init( win->gui );
+      maug_cleanup_if_not_ok();
 
-   /* Parse font height from filename and only load printable glyphs. */
-   retval = retrofont_load( font_filename, &(win->gui.font_h), 0, 33, 93 );
-   maug_cleanup_if_not_ok();
+      win->flags |= RETROWIN3D_FLAG_INIT_GUI;
+
+      /* Parse font height from filename and only load printable glyphs. */
+      retval = retrofont_load( font_filename, &(win->gui->font_h), 0, 33, 93 );
+      maug_cleanup_if_not_ok();
+   }
 
    win->w = w;
    win->h = h;
-   win->gui.x = x;
-   win->gui.y = y;
+   win->gui->x = x;
+   win->gui->y = y;
    win->idc = idc;
    win->flags |= flags;
 
    debug_printf( RETROWIN3D_TRACE_LVL,
       "pushed window: " SIZE_T_FMT ": " SIZE_T_FMT "x" SIZE_T_FMT
       " @ " SIZE_T_FMT ", " SIZE_T_FMT,
-      win->idc, win->w, win->h, win->gui.x, win->gui.y );
+      win->idc, win->w, win->h, win->gui->x, win->gui->y );
 
    if( w != h ) {
       error_printf(
