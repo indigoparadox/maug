@@ -155,6 +155,8 @@ MERROR_RETVAL retrocon_input(
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp );
 
+void retrocon_shutdown( struct RETROCON* con );
+
 #ifdef RETROCON_C
 
 static MERROR_RETVAL retrocon_cmd_print(
@@ -467,6 +469,10 @@ MERROR_RETVAL retrocon_display(
 cleanup:
 
    return retval;
+}
+
+void retrocon_shutdown( struct RETROCON* con ) {
+   retrogui_free( &(con->gui) );
 }
 
 #endif /* RETROCON_C */
