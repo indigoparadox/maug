@@ -472,6 +472,7 @@ cleanup:
 }
 
 void retrocon_shutdown( struct RETROCON* con ) {
+   maug_mfree( con->gui.font_h );
    retrogui_free( &(con->gui) );
 }
 
