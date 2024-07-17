@@ -21,7 +21,7 @@ struct RETROCON {
    RETROFLAT_COLOR bg_color;
 };
 
-#  define retrocon_init( con, fn ) (MERROR_OK)
+#  define retrocon_init( con, fn, x, y, w, h ) (MERROR_OK)
 
 #  define retrocon_add_command( con, cmd, cb, cb_data )
 
@@ -74,23 +74,32 @@ struct RETROCON {
 #  define RETROCON_WIN_H 110
 #endif /* !RETROCON_WIN_H */
 
-#define retrocon_display( con, gui_bmp ) \
-   (con)->gui.draw_bmp = (gui_bmp); \
-   (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-   retrogui_redraw_ctls( &((con)->gui) );
+#ifdef RETROFLAT_OPENGL
 
-#define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
-   if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
-      debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
-      (con)->flags |= RETROCON_FLAG_ACTIVE; \
-      (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-      retval = retro3dw_push_win( \
-         &((con)->gui), win_stack, win_stack_ct, \
-         idc, NULL, (con)->gui.x, (con)->gui.y, \
-         (con)->gui.w, (con)->gui.h, 0 ); \
-      maug_cleanup_if_not_ok(); \
-      debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
-   }
+#  define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
+      if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
+         debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
+         (con)->flags |= RETROCON_FLAG_ACTIVE; \
+         (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
+         retval = retro3dw_push_win( \
+            &((con)->gui), win_stack, win_stack_ct, \
+            idc, NULL, (con)->gui.x, (con)->gui.y, \
+            (con)->gui.w, (con)->gui.h, 0 ); \
+         maug_cleanup_if_not_ok(); \
+         debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
+      }
+
+#else
+
+#  define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
+      if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
+         debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
+         (con)->flags |= RETROCON_FLAG_ACTIVE; \
+         (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
+         debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
+      }
+
+#endif /* RETROFLAT_OPENGL */
 
 struct RETROCON;
 
@@ -142,6 +151,9 @@ int retrocon_debounce( struct RETROCON* con, int c );
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
    struct RETROFLAT_INPUT* input_evt );
+
+MERROR_RETVAL retrocon_display(
+   struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp );
 
 #ifdef RETROCON_C
 
@@ -430,6 +442,27 @@ MERROR_RETVAL retrocon_input(
       break;
    }
 #endif
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL retrocon_display(
+   struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) {
+      goto cleanup;
+   }
+
+   (con)->gui.draw_bmp = (gui_bmp);
+   (con)->gui.flags |= RETROGUI_FLAGS_DIRTY;
+
+   retrogui_lock( &((con)->gui) );
+   retrogui_redraw_ctls( &((con)->gui) );
+   retrogui_unlock( &((con)->gui) );
 
 cleanup:
 

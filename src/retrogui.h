@@ -379,7 +379,8 @@ static void retrogui_redraw_LISTBOX(
       goto cleanup;
    }
    
-   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_rect( gui->draw_bmp, ctl->base.bg_color,
+      gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    /* Parse out variable-length strings. */
@@ -396,19 +397,24 @@ static void retrogui_redraw_LISTBOX(
       if( j == ctl->LISTBOX.sel_idx ) {
          /* TODO: Configurable selection colors. */
          retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
-            ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)),
+            gui->x + ctl->base.x,
+            gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          
       }
 #ifdef RETROGXC_PRESENT
       retrogxc_string(
          gui->draw_bmp, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0,
-         gui->font_idx, ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->font_idx,
+         gui->x + ctl->base.x,
+         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
          0, 0, 0 );
 #else
       retrofont_string(
          gui->draw_bmp, ctl->base.fg_color, &(ctl->LISTBOX.list[i]), 0,
-         gui->font_h, ctl->base.x, ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->font_h,
+         gui->x + ctl->base.x,
+         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
          0, 0, 0 );
 #endif /* RETROGXC_PRESENT */
 
@@ -518,7 +524,7 @@ static MERROR_RETVAL retrogui_push_LISTBOX( union RETROGUI_CTL* ctl ) {
 
    ctl->base.hwnd = CreateWindow(
       "LISTBOX", NULL, WS_CHILD | WS_VISIBLE | LBS_STANDARD,
-      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       g_retroflat_state->window, (HMENU)(ctl->base.idc),
       g_retroflat_instance, NULL );
    debug_printf( RETROGUI_TRACE_LVL,
@@ -624,18 +630,18 @@ static void retrogui_redraw_BUTTON(
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
-      ctl->base.x, ctl->base.y,
+      gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, 0 );
 
    if( 0 < ctl->BUTTON.push_frames ) {
       retroflat_line(
          gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
-         ctl->base.x + 1, ctl->base.y + 1,
-         ctl->base.x + ctl->base.w - 2, ctl->base.y + 1, 0 );
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 1,
+         gui->x + ctl->base.x + ctl->base.w - 2, gui->y + ctl->base.y + 1, 0 );
       retroflat_line(
          gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
-         ctl->base.x + 1, ctl->base.y + 2,
-         ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 2,
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + ctl->base.h - 3, 0 );
 
       gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for push animation. */
       ctl->BUTTON.push_frames--;
@@ -644,12 +650,12 @@ static void retrogui_redraw_BUTTON(
       /* Button is not pushed. */
       retroflat_line(
          gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-         ctl->base.x + 1, ctl->base.y + 1,
-         ctl->base.x + ctl->base.w - 2, ctl->base.y + 1, 0 );
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 1,
+         gui->x + ctl->base.x + ctl->base.w - 2, gui->y + ctl->base.y + 1, 0 );
       retroflat_line(
          gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-         ctl->base.x + 1, ctl->base.y + 2,
-         ctl->base.x + 1, ctl->base.y + ctl->base.h - 3, 0 );
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 2,
+         gui->x + ctl->base.x + 1, gui->y + ctl->base.y + ctl->base.h - 3, 0 );
    }
 
    maug_mlock( ctl->BUTTON.label_h, ctl->BUTTON.label );
@@ -684,8 +690,8 @@ static void retrogui_redraw_BUTTON(
 #else
       gui->font_h,
 #endif /* RETROGXC_PRESENT */
-      ctl->base.x + ((ctl->base.w >> 1) - (w >> 1)) + text_offset,
-      ctl->base.y + ((ctl->base.h >> 1) - (h >> 1)) + text_offset,
+      gui->x + ctl->base.x + ((ctl->base.w >> 1) - (w >> 1)) + text_offset,
+      gui->y + ctl->base.y + ((ctl->base.h >> 1) - (h >> 1)) + text_offset,
       /* TODO: Pad max client area. */
       ctl->base.w, ctl->base.h, 0 );
 
@@ -703,7 +709,7 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
 
    ctl->base.hwnd = CreateWindow(
       "BUTTON", ctl->BUTTON.label, WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       g_retroflat_state->window, (HMENU)(ctl->base.idc),
       g_retroflat_instance, NULL );
    if( (HWND)NULL == ctl->base.hwnd ) {
@@ -897,26 +903,31 @@ static void retrogui_redraw_TEXTBOX(
    /* Do nothing. */
 #  else
 
-   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_rect( gui->draw_bmp, ctl->base.bg_color,
+      gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    /* Draw chiselled inset border. */
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
-      ctl->base.x, ctl->base.y, ctl->base.w, 2,
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y, ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
-      ctl->base.x, ctl->base.y, 2, ctl->base.h,
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
-      ctl->base.x, ctl->base.y + ctl->base.h - 1,
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y + ctl->base.h - 1,
       ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
-      ctl->base.x + ctl->base.w - 1, ctl->base.y, 2, ctl->base.h,
+       gui->x + ctl->base.x + ctl->base.w - 1,
+       gui->y + ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
 
    /* Draw text. */
@@ -930,13 +941,13 @@ static void retrogui_redraw_TEXTBOX(
 #ifdef RETROGXC_PRESENT
    retrogxc_string(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_idx,
-      ctl->base.x + RETROGUI_PADDING,
-      ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 #else
    retrofont_string(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_h,
-      ctl->base.x + RETROGUI_PADDING,
-      ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
@@ -947,8 +958,8 @@ cleanup:
 
    /* TODO: Get cursor color from GUI. */
    retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
-      ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
-      ctl->base.y + RETROGUI_PADDING,
+      gui->x + ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
+      gui->y + ctl->base.y + RETROGUI_PADDING,
       8, 8,
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
@@ -973,7 +984,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
 
    ctl->base.hwnd = CreateWindow(
       "EDIT", 0, WS_CHILD | WS_VISIBLE | WS_BORDER,
-      ctl->base.x, ctl->base.y, ctl->base.w, ctl->base.h,
+      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       g_retroflat_state->window, (HMENU)(ctl->base.idc),
       g_retroflat_instance, NULL );
    if( (HWND)NULL == ctl->base.hwnd ) {
@@ -1096,8 +1107,8 @@ static void retrogui_redraw_LABEL(
 #else
       gui->font_h,
 #endif /* RETROGXC_PRESENT */
-      ctl->base.x + RETROGUI_PADDING,
-      ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 
 cleanup:
 
@@ -1398,7 +1409,7 @@ MERROR_RETVAL retrogui_pos_ctl(
 
    debug_printf( RETROGUI_TRACE_LVL,
       "moved control " SIZE_T_FMT " to " SIZE_T_FMT "x" SIZE_T_FMT "...",
-      ctl->base.idc, ctl->base.x, ctl->base.y );
+      ctl->base.idc, gui->x + ctl->base.x, gui->y + ctl->base.y );
 
 cleanup:
 
