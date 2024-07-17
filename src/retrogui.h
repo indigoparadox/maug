@@ -82,7 +82,7 @@
    maug_munlock( dest_ctl.label_h, label_tmp );
 
 /*! \brief Unique identifying constant number for controls. */
-typedef size_t RETROGUI_IDC;
+typedef size_t retrogui_idc_t;
 
 #define RETROGUI_IDC_NONE 0
 
@@ -120,7 +120,7 @@ typedef size_t RETROGUI_IDC;
 /*! \brief Fields common to ALL ::RETROGUI_CTL types. */
 struct RETROGUI_CTL_BASE {
    uint8_t type;
-   RETROGUI_IDC idc;
+   retrogui_idc_t idc;
    size_t x;
    size_t y;
    size_t w;
@@ -167,12 +167,12 @@ struct RETROGUI {
    size_t w;
    size_t h;
    RETROFLAT_COLOR bg_color;
-   RETROGUI_IDC idc_prev;
+   retrogui_idc_t idc_prev;
    MAUG_MHANDLE ctls_h;
    union RETROGUI_CTL* ctls;
    size_t ctls_ct;
    size_t ctls_ct_max;
-   RETROGUI_IDC focus;
+   retrogui_idc_t focus;
    struct RETROFLAT_BITMAP* draw_bmp;
 #ifdef RETROGXC_PRESENT
    ssize_t font_idx;
@@ -182,7 +182,7 @@ struct RETROGUI {
 };
 
 MERROR_RETVAL retrogui_push_listbox_item(
-   struct RETROGUI* gui, RETROGUI_IDC idc, const char* item, size_t item_sz );
+   struct RETROGUI* gui, retrogui_idc_t idc, const char* item, size_t item_sz );
 
 union RETROGUI_CTL* retrogui_get_ctl_by_idc( struct RETROGUI* gui, size_t idc );
 
@@ -194,7 +194,7 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc( struct RETROGUI* gui, size_t idc );
  * \return IDC of clicked control or ::RETROGUI_IDC_NONE if none clicked
  *         since last poll.
  */
-RETROGUI_IDC retrogui_poll_ctls(
+retrogui_idc_t retrogui_poll_ctls(
    struct RETROGUI* gui, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt );
 
@@ -212,12 +212,12 @@ MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl );
 
 MERROR_RETVAL retrogui_get_ctl_text(
-   struct RETROGUI* gui, RETROGUI_IDC idc, char* buffer, size_t buffer_sz );
+   struct RETROGUI* gui, retrogui_idc_t idc, char* buffer, size_t buffer_sz );
 
 size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc );
 
 MERROR_RETVAL retrogui_set_ctl_label(
-   struct RETROGUI* gui, RETROGUI_IDC idc, size_t buffer_sz, char* fmt, ... );
+   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz, char* fmt, ... );
 
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
@@ -243,21 +243,21 @@ MAUG_CONST char* gc_retrogui_ctl_names[] = {
 
 /* === Control: NONE === */
 
-static RETROGUI_IDC retrogui_click_NONE( 
+static retrogui_idc_t retrogui_click_NONE( 
    struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    return idc_out;
 }
 
-static RETROGUI_IDC retrogui_key_NONE( 
+static retrogui_idc_t retrogui_key_NONE( 
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    return idc_out;
 }
@@ -296,12 +296,12 @@ static MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
 
 /* === Control: LISTBOX === */
 
-static RETROGUI_IDC retrogui_click_LISTBOX( 
+static retrogui_idc_t retrogui_click_LISTBOX( 
    struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    size_t i = 0,
       j = 0,
       w = 0,
@@ -349,11 +349,11 @@ static RETROGUI_IDC retrogui_click_LISTBOX(
    return idc_out;
 }
 
-static RETROGUI_IDC retrogui_key_LISTBOX( 
+static retrogui_idc_t retrogui_key_LISTBOX( 
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    /* TODO: Move up or down to next/prev item. */
 
@@ -448,7 +448,7 @@ MERROR_RETVAL retrogui_select_listbox_item(
 }
 
 MERROR_RETVAL retrogui_push_listbox_item(
-   struct RETROGUI* gui, RETROGUI_IDC idc, const char* item, size_t item_sz
+   struct RETROGUI* gui, retrogui_idc_t idc, const char* item, size_t item_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
@@ -577,12 +577,12 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
 
 /* === Control: BUTTON === */
 
-static RETROGUI_IDC retrogui_click_BUTTON( 
+static retrogui_idc_t retrogui_click_BUTTON( 
    struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    if( 0 < ctl->BUTTON.push_frames ) {
       goto cleanup;
@@ -600,11 +600,11 @@ cleanup:
    return idc_out;
 }
 
-static RETROGUI_IDC retrogui_key_BUTTON( 
+static retrogui_idc_t retrogui_key_BUTTON( 
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    /* Set the last button clicked. */
    /* TODO: Only set out on ENTER/SPACE. */
@@ -803,21 +803,21 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
 
 /* === Control: TEXTBOX === */
 
-static RETROGUI_IDC retrogui_click_TEXTBOX(
+static retrogui_idc_t retrogui_click_TEXTBOX(
    struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    return idc_out;
 }
 
-static RETROGUI_IDC retrogui_key_TEXTBOX(
+static retrogui_idc_t retrogui_key_TEXTBOX(
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    char c = '\0';
 
 #  if defined( RETROGUI_NATIVE_WIN )
@@ -1046,7 +1046,7 @@ static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
 
 /* === Control: LABEL === */
 
-static RETROGUI_IDC retrogui_click_LABEL(
+static retrogui_idc_t retrogui_click_LABEL(
    struct RETROGUI* gui,
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
@@ -1054,7 +1054,7 @@ static RETROGUI_IDC retrogui_click_LABEL(
    return RETROGUI_IDC_NONE;
 }
 
-static RETROGUI_IDC retrogui_key_LABEL(
+static retrogui_idc_t retrogui_key_LABEL(
    union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
@@ -1196,14 +1196,14 @@ cleanup:
    return ctl;
 }
 
-RETROGUI_IDC retrogui_poll_ctls( 
+retrogui_idc_t retrogui_poll_ctls( 
    struct RETROGUI* gui, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    size_t i = 0,
       mouse_x = 0,
       mouse_y = 0;
-   RETROGUI_IDC idc_out = RETROGUI_IDC_NONE;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    union RETROGUI_CTL* ctl = NULL;
 
    assert( NULL != gui->ctls );
@@ -1338,7 +1338,6 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
       RETROFLAT_COLOR_BLACK != gui->bg_color &&
       0 < gui->w && 0 < gui->h
    ) {
-      debug_printf( 1, "bg color" );
       retroflat_rect( gui->draw_bmp,
          gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_FLAGS_FILL );
    }
@@ -1499,7 +1498,7 @@ cleanup:
 #ifndef RETROGUI_NO_TEXTBOX
 
 MERROR_RETVAL retrogui_get_ctl_text(
-   struct RETROGUI* gui, RETROGUI_IDC idc, char* buffer, size_t buffer_sz
+   struct RETROGUI* gui, retrogui_idc_t idc, char* buffer, size_t buffer_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
@@ -1533,7 +1532,7 @@ cleanup:
 
 #endif /* !RETROGUI_NO_TEXTBOX */
 
-size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, RETROGUI_IDC idc ) {
+size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
    size_t idx = -1;
    union RETROGUI_CTL* ctl = NULL;
 
@@ -1556,7 +1555,7 @@ cleanup:
 }
 
 MERROR_RETVAL retrogui_set_ctl_label(
-   struct RETROGUI* gui, RETROGUI_IDC idc, size_t buffer_sz, char* fmt, ...
+   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz, char* fmt, ...
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t label_sz = 0;

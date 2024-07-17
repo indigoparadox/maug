@@ -133,7 +133,7 @@ void retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d );
 
-RETROGUI_IDC retrohtr_tree_poll_ctls(
+retrogui_idc_t retrohtr_tree_poll_ctls(
    struct RETROHTR_RENDER_TREE* tree,
    RETROFLAT_IN_KEY* input,
    struct RETROFLAT_INPUT* input_evt );
@@ -1419,12 +1419,12 @@ cleanup:
    }
 }
 
-RETROGUI_IDC retrohtr_tree_poll_ctls(
+retrogui_idc_t retrohtr_tree_poll_ctls(
    struct RETROHTR_RENDER_TREE* tree,
    RETROFLAT_IN_KEY* input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   RETROGUI_IDC idc = 0;
+   retrogui_idc_t idc = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( retrohtr_tree_is_locked( tree ) );

@@ -27,8 +27,8 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win );
 MERROR_RETVAL retro3dw_redraw_win_stack(
    struct RETROWIN3D* win_stack, size_t win_stack_sz );
 
-RETROGUI_IDC retro3dw_poll_win( 
-   struct RETROWIN3D* win_stack, size_t win_stack_sz, RETROGUI_IDC idc,
+retrogui_idc_t retro3dw_poll_win( 
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, retrogui_idc_t idc,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
 void retro3dw_free_win( struct RETROWIN3D* win );
@@ -167,12 +167,12 @@ cleanup:
    return retval;
 }
 
-RETROGUI_IDC retro3dw_poll_win( 
-   struct RETROWIN3D* win_stack, size_t win_stack_sz, RETROGUI_IDC idc,
+retrogui_idc_t retro3dw_poll_win( 
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, retrogui_idc_t idc,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
    size_t i = 0;
-   RETROGUI_IDC idc_out = 0;
+   retrogui_idc_t idc_out = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
    for( i = 0 ; win_stack_sz > i ; i++ ) {

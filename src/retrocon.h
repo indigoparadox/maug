@@ -8,6 +8,10 @@
 
 #define RETROCON_FLAG_ACTIVE 0x01
 
+#define RETROCON_IDC_TEXTBOX  1
+
+#define RETROCON_IDC_CON_BASE 10
+
 #ifdef RETROCON_DISABLE
 
 struct RETROCON {
@@ -37,6 +41,10 @@ struct RETROCON {
  * \addtogroup maug_console In-Situ Console API
  * \{
  */
+
+#ifndef RETROCON_TRACE_LVL
+#  define RETROCON_TRACE_LVL 0
+#endif /* !RETROCON_TRACE_LVL */
 
 #ifndef RETROCON_SBUFFER_SZ_MAX
 #  define RETROCON_SBUFFER_SZ_MAX 4096
@@ -72,12 +80,17 @@ struct RETROCON {
    retrogui_redraw_ctls( &((con)->gui) );
 
 #define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
-   debug_printf( 1, "opening console..." ); \
-   (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-   retval = retro3dw_push_win( \
-      &((con)->gui), win_stack, win_stack_ct, \
-      idc, NULL, (con)->gui.x, (con)->gui.y, (con)->gui.w, (con)->gui.h, 0 ); \
-   maug_cleanup_if_not_ok();
+   if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
+      debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
+      (con)->flags |= RETROCON_FLAG_ACTIVE; \
+      (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
+      retval = retro3dw_push_win( \
+         &((con)->gui), win_stack, win_stack_ct, \
+         idc, NULL, (con)->gui.x, (con)->gui.y, \
+         (con)->gui.w, (con)->gui.h, 0 ); \
+      maug_cleanup_if_not_ok(); \
+      debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
+   }
 
 struct RETROCON;
 
@@ -169,6 +182,9 @@ MERROR_RETVAL retrocon_init(
    size_t x, size_t y, size_t w, size_t h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL ctl;
+
+   debug_printf( RETROCON_TRACE_LVL, "initializing console..." );
 
    retval = retrogui_init( &(con->gui) );
    maug_cleanup_if_not_ok();
@@ -186,6 +202,24 @@ MERROR_RETVAL retrocon_init(
    con->gui.w = w;
    con->gui.h = h;
 
+   retrogui_lock( &(con->gui) );
+
+      retrogui_init_ctl(
+         &ctl, RETROGUI_CTL_TYPE_TEXTBOX, RETROCON_IDC_TEXTBOX );
+
+      ctl.base.x = 5;
+      ctl.base.y = 5;
+      ctl.base.w = con->gui.w - 10;
+      ctl.base.h = 20; /* TODO: Dynamic height based on font. */
+      ctl.base.fg_color = RETROFLAT_COLOR_BLACK;
+
+      retval = retrogui_push_ctl( &(con->gui), &ctl );
+      maug_cleanup_if_not_ok();
+
+   retrogui_unlock( &(con->gui) );
+
+   con->gui.focus = RETROCON_IDC_TEXTBOX;
+
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
    maug_cleanup_if_not_ok();
    retval = retrocon_add_command( con, "QUIT", retrocon_cmd_quit, NULL );
@@ -200,6 +234,8 @@ MERROR_RETVAL retrocon_add_command(
    struct RETROCON* con, const char* cmd, retrocon_cb cb, void* cb_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( RETROCON_TRACE_LVL, "adding console command: %s", cmd );
 
    maug_cleanup_if_ge_overflow( con->callbacks_sz + 1, RETROCON_CB_SZ_MAX );
 
@@ -319,42 +355,28 @@ cleanup:
    return retval;
 }
 
-int retrocon_debounce( struct RETROCON* con, int c ) {
-   if( 0 == c ) {
-      return 0;
-   }
-
-   /* Debounce/disallow repeat even if it's allowed outside. */
-   if( con->input_prev == c && 0 < con->debounce_wait ) {
-      con->debounce_wait--;
-      debug_printf( 0, "dbwait (%d)", con->debounce_wait );
-      return 0;
-   } else {
-      con->input_prev = c;
-      con->debounce_wait = RETROCON_DEBOUNCE_WAIT;
-      debug_printf( 0, "new prev: %c", c );
-   }
-
-   return c;
-}
-
-#if 0
-
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
    struct RETROFLAT_INPUT* input_evt
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int c = 0;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
-   /* TODO: Use new retroflat_buffer_* macros! */
-
-   /* Put keycode on retrocon track. Clear pass-track if console active. */
-   c = *p_c;
-   if( RETROCON_FLAG_ACTIVE == (RETROCON_FLAG_ACTIVE & con->flags) ) {
-      *p_c = 0;
+   if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & con->flags) ) {
+      goto cleanup;
    }
 
+   debug_printf( RETROCON_TRACE_LVL, "processing console input..." );
+
+   retrogui_lock( &(con->gui) );
+
+      idc_out = retrogui_poll_ctls( &(con->gui), p_c, input_evt );
+
+   retrogui_unlock( &(con->gui) );
+
+   *p_c = 0; /* If we got this far then don't pass keystroke back. */
+
+#if 0
    /* Debounce retrocon track only! */
    if( !retrocon_debounce( con, c ) ) {
       goto cleanup;
@@ -407,13 +429,12 @@ MERROR_RETVAL retrocon_input(
       }
       break;
    }
+#endif
 
 cleanup:
 
    return retval;
 }
-
-#endif
 
 #endif /* RETROCON_C */
 
