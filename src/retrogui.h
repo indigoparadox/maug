@@ -48,15 +48,15 @@
 #endif /* !RETROGUI_CTL_TEXT_BLINK_FRAMES */
 
 #define retrogui_lock( gui ) \
-   if( NULL == (gui)->ctls ) { \
-      maug_mlock( (gui)->ctls_h, (gui)->ctls ); \
-      maug_cleanup_if_null_alloc( union RETROGUI_CTL*, (gui)->ctls ); \
-   }
+   assert( NULL == (gui)->ctls ); \
+   debug_printf( RETROGUI_TRACE_LVL, "locking GUI..." ); \
+   maug_mlock( (gui)->ctls_h, (gui)->ctls ); \
+   maug_cleanup_if_null_alloc( union RETROGUI_CTL*, (gui)->ctls ); \
 
 #define retrogui_unlock( gui ) \
-   if( NULL != (gui)->ctls ) { \
-      maug_munlock( (gui)->ctls_h, (gui)->ctls ); \
-   }
+   assert( NULL != (gui)->ctls ); \
+   debug_printf( RETROGUI_TRACE_LVL, "unlocking GUI..." ); \
+   maug_munlock( (gui)->ctls_h, (gui)->ctls ); \
 
 #define retrogui_is_locked( gui ) (NULL != (gui)->ctls)
 
@@ -167,8 +167,8 @@ struct RETROGUI {
    RETROGUI_IDC idc_prev;
    MAUG_MHANDLE ctls_h;
    union RETROGUI_CTL* ctls;
-   size_t ctls_sz;
-   size_t ctls_sz_max;
+   size_t ctls_ct;
+   size_t ctls_ct_max;
    RETROGUI_IDC focus;
    struct RETROFLAT_BITMAP* draw_bmp;
 #ifdef RETROGXC_PRESENT
@@ -1155,7 +1155,7 @@ static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing textbox " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing label " SIZE_T_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
@@ -1176,7 +1176,7 @@ union RETROGUI_CTL* retrogui_get_ctl_by_idc(
       goto cleanup;
    }
 
-   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+   for( i = 0 ; gui->ctls_ct > i ; i++ ) {
       if( idc == gui->ctls[i].base.idc ) {
          ctl = &(gui->ctls[i]);
          break;
@@ -1259,7 +1259,7 @@ RETROGUI_IDC retrogui_poll_ctls(
       mouse_x = input_evt->mouse_x - gui->x;
       mouse_y = input_evt->mouse_y - gui->y;
 
-      for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+      for( i = 0 ; gui->ctls_ct > i ; i++ ) {
          if(
             mouse_x < gui->ctls[i].base.x ||
             mouse_y < gui->ctls[i].base.y ||
@@ -1337,7 +1337,7 @@ void retrogui_redraw_ctls( struct RETROGUI* gui ) {
          gui->flags &= ~RETROGUI_FLAGS_DIRTY; \
          retrogui_redraw_ ## c_name( gui, &(gui->ctls[i]) );
 
-   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+   for( i = 0 ; gui->ctls_ct > i ; i++ ) {
       if( 0 ) {
       RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_REDRAW )
       }
@@ -1360,7 +1360,7 @@ MERROR_RETVAL retrogui_sz_ctl(
    RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_SZ )
    }
 
-   debug_printf( 1,
+   debug_printf( RETROGUI_TRACE_LVL,
       "sized control " SIZE_T_FMT " at " SIZE_T_FMT "x" SIZE_T_FMT "...",
       ctl->base.idc, ctl->base.w, ctl->base.h );
 
@@ -1385,7 +1385,7 @@ MERROR_RETVAL retrogui_pos_ctl(
    RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_POS )
    }
 
-   debug_printf( 1,
+   debug_printf( RETROGUI_TRACE_LVL,
       "moved control " SIZE_T_FMT " to " SIZE_T_FMT "x" SIZE_T_FMT "...",
       ctl->base.idc, ctl->base.x, ctl->base.y );
 
@@ -1417,8 +1417,12 @@ MERROR_RETVAL retrogui_push_ctl(
 
    /* TODO: Hunt for control IDC and fail if duplicate found! */
 
+   debug_printf( RETROGUI_TRACE_LVL,
+      "gui->ctls_ct: " SIZE_T_FMT ", gui->ctls_ct_max: " SIZE_T_FMT,
+      gui->ctls_ct, gui->ctls_ct_max );
+
    /* TODO: Grow controls if needed. */
-   assert( gui->ctls_sz + 1 < gui->ctls_sz_max );
+   assert( gui->ctls_ct + 1 < gui->ctls_ct_max );
 
    if( RETROFLAT_COLOR_NULL == ctl->base.bg_color ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
@@ -1452,19 +1456,23 @@ MERROR_RETVAL retrogui_push_ctl(
 
    debug_printf( RETROGUI_TRACE_LVL,
       "pushing %s " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
-      gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc, gui->ctls_sz );
+      gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc, gui->ctls_ct );
 
    memcpy(
-      &(gui->ctls[gui->ctls_sz]),
+      &(gui->ctls[gui->ctls_ct]),
       ctl,
       sizeof( union RETROGUI_CTL ) );
-   gui->ctls_sz++;
+   gui->ctls_ct++;
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "added control: ctls_ct: " SIZE_T_FMT ", ctls_ct_max: " SIZE_T_FMT,
+      gui->ctls_ct, gui->ctls_ct_max );
 
    gui->flags |= RETROGUI_FLAGS_DIRTY;
 
    #define RETROGUI_CTL_TABLE_PUSH( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         retval = retrogui_push_ ## c_name( &(gui->ctls[gui->ctls_sz - 1]) ); \
+         retval = retrogui_push_ ## c_name( &(gui->ctls[gui->ctls_ct - 1]) ); \
          maug_cleanup_if_not_ok();
 
    if( 0 ) {
@@ -1632,7 +1640,7 @@ void retrogui_free( struct RETROGUI* gui ) {
       } else if( RETROGUI_CTL_TYPE_ ## c_name == gui->ctls[i].base.type ) { \
          retrogui_free_ ## c_name( &(gui->ctls[i]) );
 
-   for( i = 0 ; gui->ctls_sz > i ; i++ ) {
+   for( i = 0 ; gui->ctls_ct > i ; i++ ) {
       if( 0 ) {
       RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_FREE )
       }
@@ -1658,7 +1666,11 @@ MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
    gui->ctls_h = maug_malloc(
       RETROGUI_CTL_SZ_MAX_INIT, sizeof( struct RETROGUI ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, gui );
-   gui->ctls_sz_max = RETROGUI_CTL_SZ_MAX_INIT;
+   gui->ctls_ct_max = RETROGUI_CTL_SZ_MAX_INIT;
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "initialized GUI, ctls_ct: " SIZE_T_FMT ", ctls_ct_max: " SIZE_T_FMT,
+      gui->ctls_ct, gui->ctls_ct_max );
 
 cleanup:
 
