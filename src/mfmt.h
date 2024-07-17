@@ -265,6 +265,8 @@ MERROR_RETVAL mfmt_decode_rle(
 
    maug_mlock( buffer_out_h, buffer_out );
 
+   maug_mzero( buffer_out, buffer_out_sz );
+
    do {
       retval = p_file_in->seek( p_file_in, file_offset + in_byte_cur++ );
       maug_cleanup_if_not_ok();
