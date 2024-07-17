@@ -10,6 +10,8 @@
 
 #define RETROCON_IDC_CON_BASE 10
 
+#define RETROCON_IDC_CLOSE 65535
+
 #ifndef RETROCON_TRACE_LVL
 #  define RETROCON_TRACE_LVL 0
 #endif /* !RETROCON_TRACE_LVL */
@@ -35,7 +37,7 @@ struct RETROCON {
 
 #  define retrocon_debounce( con, c )
 
-#  define retrocon_input( con, p_c, input_evt )
+#  define retrocon_input( con, p_c, input_evt, p_idc, win_stack, win_stack_sz )
 
 #else
 
@@ -83,10 +85,6 @@ struct RETROCON {
          debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
          (con)->flags |= RETROCON_FLAG_ACTIVE; \
          (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-         retval = retro3dw_push_win( \
-            &((con)->gui), win_stack, win_stack_ct, \
-            idc, NULL, (con)->gui.x, (con)->gui.y, \
-            (con)->gui.w, (con)->gui.h, 0 ); \
          maug_cleanup_if_not_ok(); \
          debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
       }
@@ -147,7 +145,8 @@ int retrocon_debounce( struct RETROCON* con, int c );
  */
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
-   struct RETROFLAT_INPUT* input_evt );
+   struct RETROFLAT_INPUT* input_evt,
+   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_sz );
 
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp );
@@ -398,33 +397,54 @@ cleanup:
 
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
-   struct RETROFLAT_INPUT* input_evt
+   struct RETROFLAT_INPUT* input_evt,
+   /* TODO: Right now only 3D win stack exists, but update this for 2D
+    *       when that's developed, as well.
+    */
+   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    char lbuffer[RETROCON_LBUFFER_SZ_MAX + 1] = { 0 };
 
-   if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & con->flags) ) {
-      goto cleanup;
-   }
+   *p_idc_out = RETROGUI_IDC_NONE;
 
-   debug_printf( RETROCON_TRACE_LVL, "processing console input..." );
+   if( *p_c == RETROCON_ACTIVE_KEY ) {
+      debug_printf( RETROCON_TRACE_LVL, "active key pressed" );
+      if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) {
+         debug_printf( RETROCON_TRACE_LVL, "opening console..." );
+         (con)->flags |= RETROCON_FLAG_ACTIVE;
+         (con)->gui.flags |= RETROGUI_FLAGS_DIRTY;
 
-   if( *p_c == RETROCON_ACTIVE_KEY || *p_c == RETROFLAT_KEY_ESC ) {
-      con->flags &= ~RETROCON_FLAG_ACTIVE;
+#  ifdef RETROFLAT_OPENGL
+         retval = retro3dw_push_win(
+            &((con)->gui), win_stack, win_stack_ct,
+            idc, NULL, (con)->gui.x, (con)->gui.y,
+            (con)->gui.w, (con)->gui.h, 0 );
+         maug_cleanup_if_not_ok();
+#  endif /* RETROFLAT_OPENGL */
+
+         debug_printf( RETROCON_TRACE_LVL, "console open!" );
+      } else {
+         con->flags &= ~RETROCON_FLAG_ACTIVE;
+         *p_idc_out = RETROCON_IDC_CLOSE;
+      }
       *p_c = 0;
       goto cleanup;
+   } else if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) {
+      goto cleanup;
    }
+
+   /* debug_printf( RETROCON_TRACE_LVL, "processing console input..." ); */
 
    retrogui_lock( &(con->gui) );
 
-      idc_out = retrogui_poll_ctls( &(con->gui), p_c, input_evt );
+      *p_idc_out = retrogui_poll_ctls( &(con->gui), p_c, input_evt );
 
    retrogui_unlock( &(con->gui) );
 
    *p_c = 0; /* If we got this far then don't pass keystroke back. */
 
-   if( RETROCON_IDC_TEXTBOX == idc_out ) {
+   if( RETROCON_IDC_TEXTBOX == *p_idc_out ) {
       retrogui_lock( &(con->gui) );
       retval = retrogui_get_ctl_text(
          &(con->gui), RETROCON_IDC_TEXTBOX, lbuffer, RETROCON_LBUFFER_SZ_MAX );
