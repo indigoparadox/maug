@@ -37,7 +37,7 @@ struct RETROCON {
 
 #  define retrocon_debounce( con, c )
 
-#  define retrocon_input( con, p_c, input_evt, p_idc, win_stack, win_stack_sz )
+#  define retrocon_input( con, p_c, input_evt, p_idc, win_stack, win_stack_ct )
 
 #else
 
@@ -77,29 +77,6 @@ struct RETROCON {
 #ifndef RETROCON_WIN_H
 #  define RETROCON_WIN_H 110
 #endif /* !RETROCON_WIN_H */
-
-#ifdef RETROFLAT_OPENGL
-
-#  define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
-      if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
-         debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
-         (con)->flags |= RETROCON_FLAG_ACTIVE; \
-         (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-         maug_cleanup_if_not_ok(); \
-         debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
-      }
-
-#else
-
-#  define retrocon_push_win( con, idc, win_stack, win_stack_ct ) \
-      if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & (con)->flags) ) { \
-         debug_printf( RETROCON_TRACE_LVL, "opening console..." ); \
-         (con)->flags |= RETROCON_FLAG_ACTIVE; \
-         (con)->gui.flags |= RETROGUI_FLAGS_DIRTY; \
-         debug_printf( RETROCON_TRACE_LVL, "console open!" ); \
-      }
-
-#endif /* RETROFLAT_OPENGL */
 
 struct RETROCON;
 
@@ -146,7 +123,7 @@ int retrocon_debounce( struct RETROCON* con, int c );
 MERROR_RETVAL retrocon_input(
    struct RETROCON* con, RETROFLAT_IN_KEY* p_c,
    struct RETROFLAT_INPUT* input_evt,
-   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_sz );
+   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_ct );
 
 MERROR_RETVAL retrocon_display(
    struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp );
@@ -401,7 +378,7 @@ MERROR_RETVAL retrocon_input(
    /* TODO: Right now only 3D win stack exists, but update this for 2D
     *       when that's developed, as well.
     */
-   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_sz
+   retrogui_idc_t* p_idc_out, void* win_stack, size_t win_stack_ct
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char lbuffer[RETROCON_LBUFFER_SZ_MAX + 1] = { 0 };
@@ -417,15 +394,25 @@ MERROR_RETVAL retrocon_input(
 
 #  ifdef RETROFLAT_OPENGL
          retval = retro3dw_push_win(
-            &((con)->gui), win_stack, win_stack_ct,
-            idc, NULL, (con)->gui.x, (con)->gui.y,
+            &((con)->gui), (struct RETROWIN3D*)win_stack, win_stack_ct,
+            *p_idc_out, NULL, (con)->gui.x, (con)->gui.y,
             (con)->gui.w, (con)->gui.h, 0 );
          maug_cleanup_if_not_ok();
 #  endif /* RETROFLAT_OPENGL */
 
          debug_printf( RETROCON_TRACE_LVL, "console open!" );
       } else {
+         debug_printf( RETROCON_TRACE_LVL, "closing console..." );
          con->flags &= ~RETROCON_FLAG_ACTIVE;
+
+#  ifdef RETROFLAT_OPENGL
+         
+         retro3dw_destroy_win(
+            (struct RETROWIN3D*)win_stack, win_stack_ct, *p_idc_out );
+#  endif /* RETROFLAT_OPENGL */
+         debug_printf( RETROCON_TRACE_LVL, "console closed!" );
+
+         /* Return, in case the caller needs to do something with this. */
          *p_idc_out = RETROCON_IDC_CLOSE;
       }
       *p_c = 0;

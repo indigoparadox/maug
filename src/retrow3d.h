@@ -206,20 +206,21 @@ cleanup:
 
 void retro3dw_free_win( struct RETROWIN3D* win ) {
 
-#ifndef RETROGXC_PRESENT
-   if( (MAUG_MHANDLE)NULL != win->gui->font_h ) {
-      maug_mfree( win->gui->font_h );
+   if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
+      retroflat_destroy_bitmap( &(win->gui_bmp) );
+      win->gui->draw_bmp = NULL;
    }
-#endif /* RETROGXC_PRESENT */
 
    if( RETROWIN3D_FLAG_INIT_GUI == (RETROWIN3D_FLAG_INIT_GUI & win->flags) ) {
+#ifndef RETROGXC_PRESENT
+      if( (MAUG_MHANDLE)NULL != win->gui->font_h ) {
+         maug_mfree( win->gui->font_h );
+      }
+#endif /* RETROGXC_PRESENT */
+
       /* This GUI was created by a NULL to push_win(). */
       retrogui_free( win->gui );
       free( win->gui );
-   }
-
-   if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
-      retroflat_destroy_bitmap( &(win->gui_bmp) );
    }
 
    maug_mzero( win, sizeof( struct RETROWIN3D ) );
@@ -237,6 +238,8 @@ MERROR_RETVAL retro3dw_push_win(
    /* TODO: Implement background image. */
 
    maug_mzero( win, sizeof( struct RETROWIN3D ) );
+
+   win->flags = 0;
 
    if( NULL != gui ) {
       win->gui = gui;
@@ -293,6 +296,9 @@ MERROR_RETVAL retro3dw_destroy_win(
 ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( RETROWIN3D_TRACE_LVL,
+      "attempting to destroy window: " SIZE_T_FMT, idc );
 
    for( i = 0 ; win_stack_sz > i ; i++ ) {
       if(
