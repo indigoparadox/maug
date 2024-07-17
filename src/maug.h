@@ -88,6 +88,11 @@
 #     define RETROFNT_C
 #     define RETROHTR_C
 #     define RETROANI_C
+#     define RETROW3D_C
+#     define RETROSND_C
+#     ifdef RETROFLAT_OPENGL
+#        define RETROGLU_C
+#     endif /* RETROFLAT_OPENGL */
 #  endif /* MAUG_C */
 #endif /* !MAUG_NO_RETRO */
 

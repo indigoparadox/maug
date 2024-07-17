@@ -38,7 +38,10 @@ MERROR_RETVAL retro3dw_push_win(
    size_t idc, const char* font_filename,
    size_t x, size_t y, size_t w, size_t h, uint8_t flags );
 
-#ifdef RETRO3DW_C
+MERROR_RETVAL retro3dw_destroy_win(
+   struct RETROWIN3D* win_stack, size_t win_stack_sz, size_t idc );
+
+#ifdef RETROW3D_C
 
 MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    float aspect_ratio = 0,
@@ -276,7 +279,7 @@ MERROR_RETVAL retro3dw_destroy_win(
    return retval;
 }
 
-#endif /* RETRO3DW_C */
+#endif /* RETROW3D_C */
 
 #endif /* !RETROW3D_H */
 
