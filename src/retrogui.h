@@ -60,26 +60,35 @@
 
 #define retrogui_is_locked( gui ) (NULL != (gui)->ctls)
 
-#define _retrogui_copy_label( src_str, dest_ctl, label_tmp, label_sz ) \
+#define _retrogui_copy_str( field, src_str, dest_ctl, str_tmp, str_sz ) \
    /* Sanity checking. */ \
    assert( NULL != src_str ); \
-   label_sz = strlen( src_str ); \
-   if( (MAUG_MHANDLE)NULL != dest_ctl.label_h ) { \
-      /* Free the existing label. */ \
-      maug_mfree( dest_ctl.label_h ); \
+   if( 0 >= str_sz ) { \
+      str_sz = strlen( src_str ); \
+      debug_printf( RETROGUI_TRACE_LVL, \
+         "determined str sz of \"%s\": " SIZE_T_FMT, src_str, str_sz ); \
+   } \
+   if( (MAUG_MHANDLE)NULL != dest_ctl. field ## _h ) { \
+      /* Free the existing string. */ \
+      maug_mfree( dest_ctl. field ## _h ); \
    } \
    \
-   /* Allocate new label space. */ \
-   dest_ctl.label_h = maug_malloc( label_sz + 1, 1 ); \
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, dest_ctl.label_h ); \
-   maug_mlock( dest_ctl.label_h, label_tmp ); \
-   maug_cleanup_if_null_lock( char*, label_tmp ); \
+   /* Allocate new string space. */ \
+   dest_ctl. field ## _h = maug_malloc( str_sz + 1, 1 ); \
+   debug_printf( RETROGUI_TRACE_LVL, \
+      "allocated str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, dest_ctl. field ## _h ); \
+   maug_mlock( dest_ctl. field ## _h, str_tmp ); \
+   maug_cleanup_if_null_lock( char*, str_tmp ); \
    \
-   /* Copy the label text over. */ \
-   assert( NULL != label_tmp ); \
-   maug_mzero( label_tmp, label_sz + 1 ); \
-   strncpy( label_tmp, src_str, label_sz ); \
-   maug_munlock( dest_ctl.label_h, label_tmp );
+   /* Copy the string over. */ \
+   assert( NULL != str_tmp ); \
+   maug_mzero( str_tmp, str_sz + 1 ); \
+   debug_printf( RETROGUI_TRACE_LVL, \
+      "zeroed str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
+   strncpy( str_tmp, src_str, str_sz ); \
+   debug_printf( RETROGUI_TRACE_LVL, "copied str as: \"%s\"", str_tmp ); \
+   maug_munlock( dest_ctl. field ## _h, str_tmp );
 
 /*! \brief Unique identifying constant number for controls. */
 typedef size_t retrogui_idc_t;
@@ -216,8 +225,19 @@ MERROR_RETVAL retrogui_get_ctl_text(
 
 size_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc );
 
-MERROR_RETVAL retrogui_set_ctl_label(
-   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz, char* fmt, ... );
+#ifndef RETROGUI_NO_TEXTBOX
+
+/*
+MERROR_RETVAL retrogui_set_ctl_text(
+   struct RETROGUI* gui, retrogui_idc_t idc,
+   const char* buffer, size_t buffer_sz );
+*/
+
+#endif /* !RETROGUI_NO_TEXTBOX */
+
+MERROR_RETVAL retrogui_set_ctl_text(
+   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
+   const char* fmt, ... );
 
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
@@ -724,7 +744,8 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
    size_t label_sz = 0;
    char* label_tmp = NULL;
 
-   _retrogui_copy_label( ctl->BUTTON.label, ctl->BUTTON, label_tmp, label_sz );
+   _retrogui_copy_str(
+      label, ctl->BUTTON.label, ctl->BUTTON, label_tmp, label_sz );
    ctl->BUTTON.label = NULL;
 #  endif
 
@@ -999,7 +1020,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "clearing textbox " SIZE_T_FMT " buffer...", ctl->base.idc );
    assert( NULL == ctl->TEXTBOX.text_h );
-   ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX, 1 );
+   ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
    ctl->TEXTBOX.text_sz_max = RETROGUI_CTL_TEXT_SZ_MAX;
 
@@ -1007,7 +1028,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
    maug_cleanup_if_null_alloc( char*, ctl->TEXTBOX.text );
    debug_printf( RETROGUI_TRACE_LVL,
       "clearing textbox " SIZE_T_FMT " buffer...", ctl->base.idc );
-   maug_mzero( ctl->TEXTBOX.text, RETROGUI_CTL_TEXT_SZ_MAX );
+   maug_mzero( ctl->TEXTBOX.text, RETROGUI_CTL_TEXT_SZ_MAX + 1 );
    maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
 
 #  endif
@@ -1132,7 +1153,8 @@ static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
    size_t label_sz = 0;
    char* label_tmp = NULL;
 
-   _retrogui_copy_label( ctl->LABEL.label, ctl->LABEL, label_tmp, label_sz );
+   _retrogui_copy_str(
+      label, ctl->LABEL.label, ctl->LABEL, label_tmp, label_sz );
    ctl->LABEL.label = NULL;
 #  endif
 
@@ -1524,10 +1546,20 @@ MERROR_RETVAL retrogui_get_ctl_text(
       /* TODO */
 #else
       maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
-      maug_cleanup_if_null_alloc( char*, ctl->TEXTBOX.text );
+      maug_cleanup_if_null_lock( char*, ctl->TEXTBOX.text );
 
       strncpy( buffer, ctl->TEXTBOX.text, buffer_sz );
 #  endif
+   } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
+#  if defined( RETROGUI_NATIVE_WIN )
+      /* TODO */
+#else
+      maug_mlock( ctl->LABEL.label_h, ctl->LABEL.label );
+      maug_cleanup_if_null_lock( char*, ctl->LABEL.label );
+
+      strncpy( buffer, ctl->LABEL.label, buffer_sz );
+#  endif
+
    }
 
 cleanup:
@@ -1535,6 +1567,11 @@ cleanup:
    if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
       if( NULL != ctl->TEXTBOX.text ) {
          maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+      }
+
+   } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
+      if( NULL != ctl->LABEL.label ) {
+         maug_munlock( ctl->LABEL.label_h, ctl->LABEL.label );
       }
    }
 
@@ -1565,8 +1602,9 @@ cleanup:
    return idx;
 }
 
-MERROR_RETVAL retrogui_set_ctl_label(
-   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz, char* fmt, ...
+MERROR_RETVAL retrogui_set_ctl_text(
+   struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
+   const char* fmt, ...
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t label_sz = 0;
@@ -1592,6 +1630,7 @@ MERROR_RETVAL retrogui_set_ctl_label(
 
    assert( NULL != fmt );
    assert( NULL != buffer );
+   assert( 0 < buffer_sz );
 
    va_start( args, fmt );
    maug_vsnprintf( buffer, buffer_sz, fmt, args );
@@ -1600,10 +1639,19 @@ MERROR_RETVAL retrogui_set_ctl_label(
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_BUTTON == ctl->base.type ) {
       assert( NULL == ctl->BUTTON.label );
-      _retrogui_copy_label( buffer, ctl->BUTTON, label_tmp, label_sz );
+      _retrogui_copy_str( label, buffer, ctl->BUTTON, label_tmp, label_sz );
    } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
       assert( NULL == ctl->LABEL.label );
-      _retrogui_copy_label( buffer, ctl->LABEL, label_tmp, label_sz );
+      _retrogui_copy_str( label, buffer, ctl->LABEL, label_tmp, label_sz );
+#ifndef RETROGUI_NO_TEXTBOX
+   } else if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
+      assert( NULL == ctl->TEXTBOX.text );
+      /* This must always be the same and an lvalue! */
+      label_sz = RETROGUI_CTL_TEXT_SZ_MAX;
+      _retrogui_copy_str(
+         text, buffer, ctl->TEXTBOX, label_tmp, label_sz );
+      ctl->TEXTBOX.text_cur = 0;
+#endif /* !RETROGUI_NO_TEXTBOX */
    } else {
       error_printf( "invalid control type! no label!" );
       goto cleanup;

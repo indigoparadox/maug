@@ -243,7 +243,10 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* Setup color constants. */
 #  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
+      g_retroflat_state->palette[idx] = ARGB16( 1, \
+         120 > r ? 0 : r, \
+         120 > g ? 0 : g, \
+         120 > b ? 0 : b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
 
    /* Force screen size. */
@@ -507,13 +510,7 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_destroy_bitmap( bmp );
-#  else
-
-   /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+   /* TODO: Deallocate tile. */
 
 }
 
@@ -524,17 +521,11 @@ void retroflat_blit_bitmap(
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
-#  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
-#  endif /* RETROFLAT_OPENGL */
 
    assert( NULL != src );
-
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
-#  else
 
    /* TODO */
    if( 0 < instance ) {
@@ -543,7 +534,6 @@ void retroflat_blit_bitmap(
       _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
    }
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */

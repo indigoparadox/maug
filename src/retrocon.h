@@ -2,8 +2,6 @@
 #ifndef RETROCON_H
 #define RETROCON_H
 
-/* TODO: Use new retrofont API. */
-
 #define RETROCON_DEBOUNCE_WAIT 3
 
 #define RETROCON_FLAG_ACTIVE 0x01
@@ -11,6 +9,10 @@
 #define RETROCON_IDC_TEXTBOX  1
 
 #define RETROCON_IDC_CON_BASE 10
+
+#ifndef RETROCON_TRACE_LVL
+#  define RETROCON_TRACE_LVL 0
+#endif /* !RETROCON_TRACE_LVL */
 
 #ifdef RETROCON_DISABLE
 
@@ -111,12 +113,6 @@ struct RETROCON {
    struct RETROGUI gui;
    int input_prev;
    int debounce_wait;
-   char sbuffer[RETROCON_SBUFFER_SZ_MAX + 1];
-   size_t sbuffer_sz;
-   size_t sbuffer_lines[RETROCON_SBUFFER_LINES_MAX];
-   size_t sbuffer_lines_sz;
-   char lbuffer[RETROCON_LBUFFER_SZ_MAX + 1];
-   size_t lbuffer_sz;
    void* callback_data[RETROCON_CB_SZ_MAX];
    char callback_names[RETROCON_CB_SZ_MAX][RETROCON_CB_NAME_SZ_MAX + 1];
    retrocon_cb callbacks[RETROCON_CB_SZ_MAX];
@@ -124,6 +120,7 @@ struct RETROCON {
    RETROFLAT_COLOR lbuffer_color;
    RETROFLAT_COLOR sbuffer_color;
    RETROFLAT_COLOR bg_color;
+   size_t sbuffer_lines;
 };
 
 MERROR_RETVAL retrocon_init(
@@ -133,7 +130,7 @@ MERROR_RETVAL retrocon_init(
 MERROR_RETVAL retrocon_add_command(
    struct RETROCON* con, const char* cmd, retrocon_cb cb, void* cb_data );
 
-void retrocon_print_line( struct RETROCON* con, const char* line );
+MERROR_RETVAL retrocon_print_line( struct RETROCON* con, const char* line );
 
 MERROR_RETVAL retrocon_exec_line(
    struct RETROCON* con, const char* line, size_t line_sz );
@@ -197,6 +194,7 @@ MERROR_RETVAL retrocon_init(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL ctl;
+   size_t ctl_y_iter = 0;
 
    debug_printf( RETROCON_TRACE_LVL, "initializing console..." );
 
@@ -204,8 +202,11 @@ MERROR_RETVAL retrocon_init(
    maug_cleanup_if_not_ok();
 
    /* TODO: Parse font height from filename and only load printable glyphs. */
-   /* TODO: Use cache if available. */
+#ifdef RETROGXC_PRESENT
+   con->gui.font_idx = retrogxc_load_font( font_name, 0, 33, 93 );
+#else
    retval = retrofont_load( font_name, &(con->gui.font_h), 0, 33, 93 );
+#endif /* RETROGXC_PRESENT */
    maug_cleanup_if_not_ok();
 
    con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
@@ -229,6 +230,26 @@ MERROR_RETVAL retrocon_init(
 
       retval = retrogui_push_ctl( &(con->gui), &ctl );
       maug_cleanup_if_not_ok();
+
+      ctl_y_iter = ctl.base.y + ctl.base.h + 1;
+      while( h - 5 > ctl_y_iter + 8 + 1 ) {
+         retrogui_init_ctl(
+            &ctl, RETROGUI_CTL_TYPE_LABEL,
+            RETROCON_IDC_CON_BASE + con->sbuffer_lines );
+
+         ctl.base.x = 5;
+         ctl.base.y = ctl_y_iter;
+         ctl.base.w = con->gui.w - 10;
+         ctl.base.h = 8; /* TODO: Dynamic height based on font. */
+         ctl.base.fg_color = RETROFLAT_COLOR_DARKGRAY;
+         ctl.LABEL.label = "xxxxxx";
+
+         retval = retrogui_push_ctl( &(con->gui), &ctl );
+         maug_cleanup_if_not_ok();
+
+         ctl_y_iter += ctl.base.h + 1;
+         con->sbuffer_lines++;
+      }
 
    retrogui_unlock( &(con->gui) );
 
@@ -312,35 +333,41 @@ cleanup:
 }
 #endif
 
-void retrocon_print_line( struct RETROCON* con, const char* line ) {
-   size_t line_sz = 0;
+MERROR_RETVAL retrocon_print_line( struct RETROCON* con, const char* line ) {
+   char sbuffer_shift[RETROCON_LBUFFER_SZ_MAX + 1] = { 0 };
    size_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
 
-   line_sz = strlen( line );
-   if( line_sz + con->sbuffer_sz >= RETROCON_SBUFFER_SZ_MAX ) {
-      /* TODO: Handle line overflow better? (i.e. scroll) */
-      con->sbuffer_sz = 0;
-      con->sbuffer[con->sbuffer_sz] = '\0';
-      con->sbuffer_lines_sz = 0;
+   /* TODO: Escape newlines in line. */
+
+   /* Shift existing screen buffer lines all down by one. */
+   for( i = con->sbuffer_lines - 1 ; 0 < i ; i-- ) {
+      debug_printf( RETROCON_TRACE_LVL,
+         "copying sbuffer line " SIZE_T_FMT " to " SIZE_T_FMT "...",
+         i - 1, i );
+      maug_mzero( sbuffer_shift, RETROCON_LBUFFER_SZ_MAX + 1 );
+      retrogui_lock( &(con->gui) );
+      retval = retrogui_get_ctl_text(
+         &(con->gui), RETROCON_IDC_CON_BASE + i - 1,
+         sbuffer_shift, RETROCON_LBUFFER_SZ_MAX );
+      retval = retrogui_set_ctl_text(
+         &(con->gui), RETROCON_IDC_CON_BASE + i,
+         RETROCON_LBUFFER_SZ_MAX, sbuffer_shift );
+      retrogui_unlock( &(con->gui) );
+      maug_cleanup_if_not_ok();
    }
 
-   assert( line_sz < RETROCON_SBUFFER_SZ_MAX );
+   /* Put line in first sbuffer line. */
+   retrogui_lock( &(con->gui) );
+   retval = retrogui_set_ctl_text(
+      &(con->gui), RETROCON_IDC_CON_BASE,
+      RETROCON_LBUFFER_SZ_MAX, line );
+   retrogui_unlock( &(con->gui) );
+   maug_cleanup_if_not_ok();
 
-   /* Create line pointer for display function. */
-   con->sbuffer_lines[con->sbuffer_lines_sz++] = con->sbuffer_sz;
+cleanup:
 
-   /* Copy line to buffer and terminate with newline. */
-   for( i = 0 ; line_sz > i ; i++ ) {
-      con->sbuffer[con->sbuffer_sz + i] = line[i];
-   }
-
-   con->sbuffer[con->sbuffer_sz + line_sz] = '\0';
-
-   debug_printf( 1, "println: %s (at " SIZE_T_FMT " chars)",
-      &(con->sbuffer[con->sbuffer_sz]),
-      con->sbuffer_lines[con->sbuffer_lines_sz - 1] );
-
-   con->sbuffer_sz += line_sz;
+   return retval;
 }
 
 MERROR_RETVAL retrocon_exec_line(
@@ -375,12 +402,19 @@ MERROR_RETVAL retrocon_input(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
+   char lbuffer[RETROCON_LBUFFER_SZ_MAX + 1] = { 0 };
 
    if( RETROCON_FLAG_ACTIVE != (RETROCON_FLAG_ACTIVE & con->flags) ) {
       goto cleanup;
    }
 
    debug_printf( RETROCON_TRACE_LVL, "processing console input..." );
+
+   if( *p_c == RETROCON_ACTIVE_KEY || *p_c == RETROFLAT_KEY_ESC ) {
+      con->flags &= ~RETROCON_FLAG_ACTIVE;
+      *p_c = 0;
+      goto cleanup;
+   }
 
    retrogui_lock( &(con->gui) );
 
@@ -389,6 +423,24 @@ MERROR_RETVAL retrocon_input(
    retrogui_unlock( &(con->gui) );
 
    *p_c = 0; /* If we got this far then don't pass keystroke back. */
+
+   if( RETROCON_IDC_TEXTBOX == idc_out ) {
+      retrogui_lock( &(con->gui) );
+      retval = retrogui_get_ctl_text(
+         &(con->gui), RETROCON_IDC_TEXTBOX, lbuffer, RETROCON_LBUFFER_SZ_MAX );
+      retval = retrogui_set_ctl_text(
+         &(con->gui), RETROCON_IDC_TEXTBOX, 1, "" );
+      retrogui_unlock( &(con->gui) );
+      maug_cleanup_if_not_ok();
+
+      if( 0 == strlen( lbuffer ) ) {
+         /* Do nothing if line is empty. */
+         goto cleanup;
+      }
+
+      /* Execute/reset line. */
+      retval = retrocon_exec_line( con, lbuffer, RETROCON_LBUFFER_SZ_MAX );
+   }
 
 #if 0
    /* Debounce retrocon track only! */
@@ -472,7 +524,9 @@ cleanup:
 }
 
 void retrocon_shutdown( struct RETROCON* con ) {
+#ifndef RETROGXC_PRESENT
    maug_mfree( con->gui.font_h );
+#endif /* !RETROGXC_PRESENT */
    retrogui_free( &(con->gui) );
 }
 

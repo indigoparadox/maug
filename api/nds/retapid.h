@@ -6,6 +6,8 @@
 
 #define RETROFLAT_SOFT_VIEWPORT
 
+#define RETROGUI_NO_TEXTBOX
+
 #define RETROFLAT_NDS_FLAG_CHANGE_BG   0x02
 
 /* == Nintendo DS == */
