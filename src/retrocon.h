@@ -39,6 +39,8 @@ struct RETROCON {
 
 #  define retrocon_input( con, p_c, input_evt, p_idc, win_stack, win_stack_ct )
 
+#  define retrocon_shutdown( con )
+
 #else
 
 /**
