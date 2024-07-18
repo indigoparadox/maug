@@ -63,7 +63,7 @@
 #define _retrogui_copy_str( field, src_str, dest_ctl, str_tmp, str_sz ) \
    /* Sanity checking. */ \
    assert( NULL != src_str ); \
-   if( 0 >= str_sz ) { \
+   if( 0 == str_sz ) { \
       str_sz = strlen( src_str ); \
       debug_printf( RETROGUI_TRACE_LVL, \
          "determined str sz of \"%s\": " SIZE_T_FMT, src_str, str_sz ); \
