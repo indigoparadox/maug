@@ -825,6 +825,31 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_input */
 
+/**
+ * \addtogroup maug_retroflt_dir RetroFlat Direction API
+ * \brief Macros and constants for definition cardinal directions in screen
+ *        and world space.
+ * \{
+ */
+
+#define RETROFLAT_DIR4_NORTH  0
+#define RETROFLAT_DIR4_EAST   1
+#define RETROFLAT_DIR4_SOUTH  2
+#define RETROFLAT_DIR4_WEST   3
+
+#define RETROFLAT_DIR8_NORTH  0
+#define RETROFLAT_DIR8_EAST   2
+#define RETROFLAT_DIR8_SOUTH  4
+#define RETROFLAT_DIR8_WEST   6
+
+#define retroflat_dir8_reverse( dir ) \
+   ((dir + 4) % 8)
+
+#define retroflat_dir8_bounce( dir ) \
+   ((dir + 2) % 8)
+
+/*! \} */ /* maug_retroflt_dir */
+
 #ifdef RETROFLAT_OPENGL
 struct RETROFLAT_GLTEX {
    MAUG_MHANDLE bytes_h;
@@ -932,14 +957,9 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
-#  define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
-   if( \
-      n - retroflat_viewport_world_ ## xy() gl \
-      (retroflat_screen_ ## wh() >> 1) pm range \
-   ) { \
-      retroflat_viewport_move_ ## xy( \
-         gc_retrotile_offsets8_ ## xy[RETROTILE_DIR8_ ## dir] * speed ); \
-   }
+uint8_t retroflat_viewport_move_x( int16_t x );
+
+uint8_t retroflat_viewport_move_y( int16_t y );
 
 /**
  * \brief Move the viewport in a direction or combination thereof so that
@@ -953,11 +973,8 @@ struct RETROFLAT_VIEWPORT {
  * \warning The speed parameter should always divide evenly into the tile size,
  *          or problems may occur!
  */
-#  define retroflat_viewport_focus( x1, y1, range, speed ) \
-   _retroflat_viewport_focus_dir( x1, x, w, <, -, WEST, range, speed ) \
-   _retroflat_viewport_focus_dir( x1, x, w, >, +, EAST, range, speed ) \
-   _retroflat_viewport_focus_dir( y1, y, h, <, -, NORTH, range, speed ) \
-   _retroflat_viewport_focus_dir( y1, y, h, >, +, SOUTH, range, speed ) 
+uint8_t retroflat_viewport_focus(
+   size_t x1, size_t y1, size_t range, size_t speed );
 
 /* TODO: retroflat_viewport_screen_x/y logic to implement smooth viewport
  *       scrolling.
@@ -1208,10 +1225,6 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp );
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
-void retroflat_viewport_move_x( int16_t x );
-
-void retroflat_viewport_move_y( int16_t y );
-
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
    size_t x, size_t y, uint8_t flags );
@@ -1367,6 +1380,16 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input );
 /*! \} */ /* maug_retroflt_input */
 
 #ifdef RETROFLT_C
+
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_x[8] =
+   {  0,  1, 1, 1, 0, -1, -1, -1 };
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_y[8] =
+   { -1, -1, 0, 1, 1,  1,  0, -1 };
+
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4] =
+   {  0, 1, 0, -1 };
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4] =
+   { -1, 0, 1,  0 };
 
 MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
 struct RETROFLAT_STATE* g_retroflat_state = NULL;
@@ -2444,7 +2467,7 @@ void retroflat_set_proc_resize(
 
 #ifdef RETROFLAT_SOFT_VIEWPORT
 
-void retroflat_viewport_move_x( int16_t x ) {
+uint8_t retroflat_viewport_move_x( int16_t x ) {
    int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
 
    g_retroflat_state->viewport.screen_x += x;
@@ -2455,12 +2478,15 @@ void retroflat_viewport_move_x( int16_t x ) {
       g_retroflat_state->viewport.world_w > new_world_x + retroflat_screen_w()
    ) {
       g_retroflat_state->viewport.world_x += x;
+      return 1;
    }
+
+   return 0;
 }
 
 /* === */
 
-void retroflat_viewport_move_y( int16_t y ) {
+uint8_t retroflat_viewport_move_y( int16_t y ) {
    int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
 
    g_retroflat_state->viewport.screen_y += y;
@@ -2471,7 +2497,37 @@ void retroflat_viewport_move_y( int16_t y ) {
       g_retroflat_state->viewport.world_h > new_world_y + retroflat_screen_h()
    ) {
       g_retroflat_state->viewport.world_y += y;
+      return 1;
    }
+
+   return 0;
+}
+
+/* === */
+
+uint8_t retroflat_viewport_focus(
+   size_t x1, size_t y1, size_t range, size_t speed
+) {
+   uint8_t moved = 0,
+      new_moved = 0;
+   int16_t new_pt = 0;
+
+#  define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
+      new_pt = n - retroflat_viewport_world_ ## xy(); \
+      if( new_pt gl (retroflat_screen_ ## wh() >> 1) pm range ) { \
+         new_moved = retroflat_viewport_move_ ## xy( \
+            gc_retroflat_offsets8_ ## xy[RETROFLAT_DIR8_ ## dir] * speed ); \
+         if( !moved && new_moved ) { \
+            moved = new_moved; \
+         } \
+      }
+
+   _retroflat_viewport_focus_dir( x1, x, w, <, -, WEST, range, speed );
+   _retroflat_viewport_focus_dir( x1, x, w, >, +, EAST, range, speed );
+   _retroflat_viewport_focus_dir( y1, y, h, <, -, NORTH, range, speed );
+   _retroflat_viewport_focus_dir( y1, y, h, >, +, SOUTH, range, speed );
+
+   return moved;
 }
 
 #endif /* RETROFLAT_SOFT_VIEWPORT */
@@ -2479,6 +2535,18 @@ void retroflat_viewport_move_y( int16_t y ) {
 /* === */
 
 #elif !defined( RETROVDP_C ) /* End of RETROFLT_C */
+
+/**
+ * \addtogroup maug_retroflt_dir
+ * \{
+ */
+
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_x[8];
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_y[8];
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4];
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4];
+
+/*! \} */
 
 #define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;

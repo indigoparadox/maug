@@ -152,8 +152,8 @@ static MERROR_RETVAL retrotile_path_list_test_add_child(
    ) {
       debug_printf( RETROTILE_PATH_TRACE_LVL,
          ">> tile %d, %d blocked by mobile or terrain!",
-         closed[iter_closed_idx].x + gc_retrotile_offsets4_x[dir],
-         closed[iter_closed_idx].y + gc_retrotile_offsets4_y[dir] );
+         closed[iter_closed_idx].x + gc_retroflat_offsets4_x[dir],
+         closed[iter_closed_idx].y + gc_retroflat_offsets4_y[dir] );
       retval = RETROTILE_RETVAL_BLOCKED;
       goto cleanup;
    }
@@ -288,13 +288,13 @@ MERROR_RETVAL retrotile_path_start(
          /* Don't wander off the map! */
          if(
             (0 == closed[iter_idx].x &&
-               gc_retrotile_offsets4_x[i] == -1) ||
+               gc_retroflat_offsets4_x[i] == -1) ||
             (0 == closed[iter_idx].y &&
-               gc_retrotile_offsets4_y[i] == -1) ||
+               gc_retroflat_offsets4_y[i] == -1) ||
             (t->tiles_w - 1 == closed[iter_idx].x &&
-               gc_retrotile_offsets4_x[i] == 1) ||
+               gc_retroflat_offsets4_x[i] == 1) ||
             (t->tiles_h - 1 == closed[iter_idx].y &&
-               gc_retrotile_offsets4_y[i] == 1)
+               gc_retroflat_offsets4_y[i] == 1)
          ) {
             debug_printf( RETROTILE_PATH_TRACE_LVL,
                "> skipping overflow tile!" );
@@ -304,8 +304,8 @@ MERROR_RETVAL retrotile_path_start(
          /* Setup tentative adjacent tile physical properties. */
          /* Scores will be calculated in
           * retrotile_path_list_test_add_child(). */
-         adjacent.x = closed[iter_idx].x + gc_retrotile_offsets4_x[i];
-         adjacent.y = closed[iter_idx].y + gc_retrotile_offsets4_y[i];
+         adjacent.x = closed[iter_idx].x + gc_retroflat_offsets4_x[i];
+         adjacent.y = closed[iter_idx].y + gc_retroflat_offsets4_y[i];
          adjacent.dir = i;
          retval = retrotile_path_list_test_add_child(
             &adjacent, i, iter_idx, tgt_x, tgt_y, open, &open_sz,

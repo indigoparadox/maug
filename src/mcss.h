@@ -211,33 +211,33 @@ MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_CONSTS )
 #define MCSS_POSITION_TABLE_NAMES( pos_id, pos_name ) \
    #pos_name,
 
-MAUG_CONST char* gc_mcss_position_names[] = {
+MAUG_CONST char* SEG_MCONST gc_mcss_position_names[] = {
    MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_NAMES )
    ""
 };
 
 #define MCSS_DISPLAY_TABLE_CONSTS( dis_id, dis_name ) \
-   MAUG_CONST uint16_t MCSS_DISPLAY_ ## dis_name = dis_id;
+   MAUG_CONST uint16_t SEG_MCONST MCSS_DISPLAY_ ## dis_name = dis_id;
 
 MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_CONSTS )
 
 #define MCSS_DISPLAY_TABLE_NAMES( dis_id, dis_name ) \
    #dis_name,
 
-MAUG_CONST char* gc_mcss_display_names[] = {
+MAUG_CONST char* SEG_MCONST gc_mcss_display_names[] = {
    MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_NAMES )
    ""
 };
 
 #define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, def ) \
-   MAUG_CONST uint16_t MCSS_PROP_ ## prop_n = prop_id;
+   MAUG_CONST uint16_t SEG_MCONST MCSS_PROP_ ## prop_n = prop_id;
 
 MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
 
 #define MCSS_PROP_TABLE_NAMES( prop_id, prop_n, prop_t, prop_prse, def ) \
    #prop_n,
 
-MAUG_CONST char* gc_mcss_prop_names[] = {
+MAUG_CONST char* SEG_MCONST gc_mcss_prop_names[] = {
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_NAMES )
    ""
 };
@@ -249,7 +249,7 @@ MPARSER_PSTATE_NAMES( MCSS_PARSER_PSTATE_TABLE, mcss );
 #define MCSS_COLOR_TABLE_NAMES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
    #name_u,
 
-static MAUG_CONST char* gc_mcss_color_names[] = {
+static MAUG_CONST char* SEG_MCONST gc_mcss_color_names[] = {
    RETROFLAT_COLOR_TABLE( MCSS_COLOR_TABLE_NAMES )
    ""
 };
@@ -778,24 +778,24 @@ cleanup:
 #else
 
 #define MCSS_POSITION_TABLE_CONSTS( pos_id, pos_name ) \
-   extern MAUG_CONST uint16_t MCSS_POSITION_ ## pos_name;
+   extern MAUG_CONST uint16_t SEG_MCONST MCSS_POSITION_ ## pos_name;
 
 MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_CONSTS )
 
 #define MCSS_DISPLAY_TABLE_CONSTS( dis_id, dis_name ) \
-   extern MAUG_CONST uint16_t MCSS_DISPLAY_ ## dis_name;
+   extern MAUG_CONST uint16_t SEG_MCONST MCSS_DISPLAY_ ## dis_name;
 
 MCSS_DISPLAY_TABLE( MCSS_DISPLAY_TABLE_CONSTS )
 
-extern MAUG_CONST char* gc_mcss_position_names[];
-extern MAUG_CONST char* gc_mcss_display_names[];
+extern MAUG_CONST char* SEG_MCONST gc_mcss_position_names[];
+extern MAUG_CONST char* SEG_MCONST gc_mcss_display_names[];
 
 #define MCSS_PROP_TABLE_CONSTS( prop_id, prop_n, prop_t, prop_prse, def ) \
-   extern MAUG_CONST uint16_t MCSS_PROP_ ## prop_n;
+   extern MAUG_CONST uint16_t SEG_MCONST MCSS_PROP_ ## prop_n;
 
 MCSS_PROP_TABLE( MCSS_PROP_TABLE_CONSTS )
 
-extern MAUG_CONST char* gc_mcss_prop_names[];
+extern MAUG_CONST char* SEG_MCONST gc_mcss_prop_names[];
 
 #endif /* MCSS_C */
 

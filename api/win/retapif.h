@@ -390,12 +390,34 @@ static int retroflat_bitmap_win_transparency(
    int retval = RETROFLAT_OK;
    unsigned long txp_color = 0;
 
+   assert( retroflat_bitmap_locked( bmp_out ) );
+
+   /* Unlock the mask if one exists. */
+   if( (HDC)NULL != bmp_out->hdc_mask ) {
+      debug_printf( 1, "unlocking old transparency mask..." );
+      SelectObject( bmp_out->hdc_mask, bmp_out->old_hbm_mask );
+      DeleteDC( bmp_out->hdc_mask );
+      bmp_out->hdc_mask = (HDC)NULL;
+      bmp_out->old_hbm_mask = (HBITMAP)NULL;
+   }
+
+   if( (HBITMAP)NULL != bmp_out->mask ) {
+      debug_printf( 1, "deleting old transparency mask..." );
+      DeleteObject( bmp_out->mask );
+      bmp_out->mask = (HBITMAP)NULL;
+   }
+
    /* Setup bitmap transparency mask. */
+   debug_printf( 1, "creating new transparency mask..." );
    bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
    maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
 
-   retval = retroflat_draw_lock( bmp_out );
-   maug_cleanup_if_not_ok();
+   assert( (HBITMAP)NULL != bmp_out->mask );
+   assert( (HBITMAP)NULL == bmp_out->hdc_mask );
+
+   /* Create HDC for source mask compatible with the buffer. */
+   bmp_out->hdc_mask = CreateCompatibleDC( (HDC)NULL );
+   maug_cleanup_if_null( HDC, bmp_out->hdc_mask, RETROFLAT_ERROR_BITMAP );
 
    /* Convert the color key into bitmap format. */
    txp_color |= (RETROFLAT_TXP_B & 0xff);
@@ -411,10 +433,12 @@ static int retroflat_bitmap_win_transparency(
    BitBlt(
       bmp_out->hdc_b, 0, 0, w, h, bmp_out->hdc_mask, 0, 0, SRCINVERT );
 
+   debug_printf( 1, "created new transparency mask!" );
+
 cleanup:
 
    if( RETROFLAT_OK == retval ) {
-      retroflat_draw_release( bmp_out );
+      /* retroflat_draw_release( bmp_out ); */
    }
 
    return retval;
@@ -868,7 +892,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* == Win16/Win32 == */
 
-   if( NULL == bmp ) {
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_retroflat_state->platform.window ) {
          InvalidateRect( g_retroflat_state->platform.window, 0, TRUE );
@@ -886,6 +910,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     ifdef RETROFLAT_VDP
       }
 #     endif
+   } else {
+      assert( retroflat_bitmap_locked( bmp ) );
+      retval = retroflat_bitmap_win_transparency( bmp,
+         bmp->bmi.header.biWidth, bmp->bmi.header.biHeight );
+      maug_cleanup_if_not_ok();
    }
 
    /* Unlock the bitmap. */
@@ -1005,8 +1034,13 @@ MERROR_RETVAL retroflat_load_bitmap(
       DIB_RGB_COLORS );
 
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retval = retroflat_draw_lock( bmp_out );
+      maug_cleanup_if_not_ok();
       retval = retroflat_bitmap_win_transparency( bmp_out,
          bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
+      maug_cleanup_if_not_ok();
+      retval = retroflat_draw_release( bmp_out );
+      maug_cleanup_if_not_ok();
    }
 
 #  else
@@ -1038,8 +1072,13 @@ MERROR_RETVAL retroflat_load_bitmap(
       (bm.bmBitsPixel / sizeof( uint8_t ));
 
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      retval = retroflat_draw_lock( bmp_out );
+      maug_cleanup_if_not_ok();
       retval = retroflat_bitmap_win_transparency(
          bmp_out, bm.bmWidth, bm.bmHeight );
+      maug_cleanup_if_not_ok();
+      retval = retroflat_draw_release( bmp_out );
+      maug_cleanup_if_not_ok();
    }
 
 #  endif /* RETROFLAT_API_WIN16 */
@@ -1186,7 +1225,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  else
 
-   /* == Win16 == */
+   /* == Win16/Win32 == */
 
    if( NULL != bmp->old_hbm_b ) {
       SelectObject( bmp->hdc_b, bmp->old_hbm_b );

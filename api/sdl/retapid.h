@@ -190,6 +190,7 @@ struct RETROFLAT_BITMAP {
 #  endif
 
 #  define retroflat_quit( retval_in ) \
+      debug_printf( 1, "quit called, retval: %d", retval_in ); \
       g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
       g_retroflat_state->retval = retval_in;
 
