@@ -209,10 +209,10 @@ static MAUG_CONST char* SEG_MCONST gc_mhtml_attrib_names[] = {
    ""
 };
 
-#define MHTML_ATTRIB_TABLE_NAME( attrib_name, attrib_id ) \
+#define MHTML_ATTRIB_TABLE_NAME_CONST( attrib_name, attrib_id ) \
    MAUG_CONST uint16_t SEG_MCONST MHTML_ATTRIB_KEY_ ## attrib_name = attrib_id;
 
-MHTML_ATTRIB_TABLE( MHTML_ATTRIB_TABLE_NAME )
+MHTML_ATTRIB_TABLE( MHTML_ATTRIB_TABLE_NAME_CONST )
 
 ssize_t mhtml_get_next_free_tag( struct MHTML_PARSER* parser ) {
    uint8_t auto_unlocked = 0;

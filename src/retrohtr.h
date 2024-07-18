@@ -148,113 +148,6 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree );
 
 #ifdef RETROHTR_C
 
-static void mhtml_merge_styles(
-   struct MCSS_STYLE* effect_style,
-   struct MCSS_STYLE* parent_style,
-   struct MCSS_STYLE* tag_style,
-   size_t tag_type
-) {
-
-   if(
-      MCSS_STYLE_FLAG_ACTIVE !=
-      (MCSS_STYLE_FLAG_ACTIVE & effect_style->flags)
-   ) {
-      mcss_style_init( effect_style );
-   }
-
-   /* Perform inheritence of special cases. */
-
-   #define MCSS_PROP_TABLE_MERGE( p_id, prop_n, prop_t, prop_p, def ) \
-      if( \
-         ( \
-            /* Only do inheritence for some special cases.
-             * e.g. We don't want to inherit width/height/X/etc! */ \
-            mcss_prop_is_heritable( p_id ) \
-         ) && (NULL != parent_style && ( \
-            ( \
-               NULL != tag_style && \
-               /* Parent is important and new property isn't. */ \
-               mcss_prop_is_active_flag( parent_style->prop_n, IMPORTANT ) && \
-               /* TODO: Is not active OR important? */ \
-               !mcss_prop_is_important( tag_style->prop_n ) && \
-               !mcss_prop_is_important( effect_style->prop_n ) \
-            ) || ( \
-               NULL != tag_style && \
-               /* New property is not active. */ \
-               !mcss_prop_is_active( tag_style->prop_n ) && \
-               !mcss_prop_is_active( effect_style->prop_n ) \
-            ) || (\
-               /* No competition. */ \
-               NULL == tag_style && \
-               !mcss_prop_is_active( effect_style->prop_n ) \
-            ) \
-         )) \
-      ) { \
-         /* Inherit parent property. */ \
-         if( MCSS_PROP_BACKGROUND_COLOR == p_id ) { \
-            debug_printf( RETROHTR_TRACE_LVL, "background color was %s", \
-               0 <= effect_style->prop_n ? \
-               gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
-         } else if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( RETROHTR_TRACE_LVL, "color was %s", \
-               0 <= effect_style->prop_n ? \
-               gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
-         } \
-         debug_printf( RETROHTR_TRACE_LVL, "%s using parent %s", \
-            gc_mhtml_tag_names[tag_type], #prop_n ); \
-         effect_style->prop_n = parent_style->prop_n; \
-         effect_style->prop_n ## _flags = parent_style->prop_n ## _flags; \
-         if( MCSS_PROP_BACKGROUND_COLOR == p_id ) { \
-            debug_printf( RETROHTR_TRACE_LVL, "background color %s", \
-               0 <= effect_style->prop_n ? \
-               gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
-         } else if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( RETROHTR_TRACE_LVL, "color %s", \
-               0 <= effect_style->prop_n ? \
-               gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
-         } \
-      } else if( \
-         NULL != tag_style && \
-         mcss_prop_is_active( tag_style->prop_n ) \
-      ) { \
-         /* Use new property. */ \
-         debug_printf( RETROHTR_TRACE_LVL, "%s using style %s", \
-            gc_mhtml_tag_names[tag_type], #prop_n ); \
-         if( MCSS_PROP_COLOR == p_id ) { \
-            debug_printf( RETROHTR_TRACE_LVL, "color %s", \
-               0 <= effect_style->prop_n ? \
-               gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
-         } \
-         effect_style->prop_n = tag_style->prop_n; \
-         effect_style->prop_n ## _flags = tag_style->prop_n ## _flags; \
-      }
-
-   MCSS_PROP_TABLE( MCSS_PROP_TABLE_MERGE )
-
-   /* Apply defaults for display. */
-
-   if(
-      MCSS_PROP_FLAG_ACTIVE !=
-      (MCSS_PROP_FLAG_ACTIVE & effect_style->DISPLAY_flags)
-   ) {
-      /* Set the display property based on the tag's default. */
-
-      #define MHTML_TAG_TABLE_DISP( tag_id, tag_name, fields, disp ) \
-         } else if( tag_id == tag_type ) { \
-            effect_style->DISPLAY = MCSS_DISPLAY_ ## disp; \
-            debug_printf( RETROHTR_TRACE_LVL, "%s defaulting to %s DISPLAY", \
-               gc_mhtml_tag_names[tag_type], \
-               gc_mcss_display_names[effect_style->DISPLAY] );
-
-      if( 0 ) {
-      MHTML_TAG_TABLE( MHTML_TAG_TABLE_DISP )
-      }
-
-   }
-
-   return;
-}
-
 ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
    uint8_t auto_unlocked = 0;
    ssize_t retidx = -1;
@@ -471,7 +364,7 @@ MERROR_RETVAL retrohtr_apply_styles(
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag class: %s",
                parser->styler.styles[i].class );
 
-            mhtml_merge_styles(
+            mcssmerge_styles(
                effect_style,
                parent_style,
                &(parser->styler.styles[i]),
@@ -491,7 +384,7 @@ MERROR_RETVAL retrohtr_apply_styles(
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag ID: %s",
                parser->styler.styles[i].id );
 
-            mhtml_merge_styles(
+            mcssmerge_styles(
                effect_style,
                parent_style,
                &(parser->styler.styles[i]),
@@ -506,7 +399,7 @@ MERROR_RETVAL retrohtr_apply_styles(
 cleanup:
 
    /* Make sure we have a root style. */
-   mhtml_merge_styles(
+   mcssmerge_styles(
       effect_style,
       parent_style,
       0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
