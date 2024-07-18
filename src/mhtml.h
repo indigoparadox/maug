@@ -201,11 +201,11 @@ MAUG_CONST char* SEG_MCONST gc_mhtml_tag_names[] = {
    ""
 };
 
-#define MHTML_PSTATE_TABLE_NAME( name, idx ) \
+#define MHTML_ATTRIB_TABLE_NAME( name, idx ) \
    #name,
 
 static MAUG_CONST char* SEG_MCONST gc_mhtml_attrib_names[] = {
-   MHTML_ATTRIB_TABLE( MHTML_PSTATE_TABLE_NAME )
+   MHTML_ATTRIB_TABLE( MHTML_ATTRIB_TABLE_NAME )
    ""
 };
 
