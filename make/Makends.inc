@@ -43,6 +43,8 @@ CFLAGS_OPT_GCC_NDS += \
 
 C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)
 
+MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
+
 $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 
@@ -52,8 +54,7 @@ $$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES_NDS)))
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
-obj/nds-libnds/%.o: %.c | \
-$$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS)) $$(NDSASSET_H_FILE)
+obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS_NDS) $$(NDSASSET_H_FILE)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
 		-I $$(NDSASSET_H_DIR) \

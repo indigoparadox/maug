@@ -220,6 +220,16 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 
 LDFLAGS_WATCOM_WIN_WIN16 += system windows
 
+# Strip out options to bake-in resources, as they make the exe too big!
+
+CFLAGS_OPT_WATCOM_WIN16 := \
+	$$(subst -DRETROFLAT_XPM -i=$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_WATCOM))
+
+CFLAGS_OPT_WATCOM_WIN16 := \
+	$$(subst -DMVFS_ENABLED -i=$$(MVFS_H_DIR),,$$(CFLAGS_OPT_WATCOM_WIN16))
+
+MAUG_DEPS_WIN16 := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
+
 $(1)w3.exe: \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_MPLUG_OVLS))) | \
@@ -229,11 +239,11 @@ $$(RES_WATCOM_WIN_WIN16_DEP)
 		$$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^} \
 		$$(RES_WATCOM_WIN_WIN16)
 
-$$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS)
+$$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS_WIN16)
 	$$(MD) "$$(dir $$@)"
 	$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_WIN) $$(CFLAGS_WATCOM_WIN_WIN16) \
-		$$(CFLAGS_OPT_WATCOM) \
+		$$(CFLAGS_OPT_WATCOM_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
 CLEAN_TARGETS += $(1)w3.exe

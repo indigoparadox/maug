@@ -920,7 +920,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
-   mfile_t bmp_file;
+   FILE* bmp_file = NULL;
    long int i, x, y, w, h, colors, offset, sz, read;
 #  elif defined( RETROFLAT_API_WIN32 ) && !defined( RETROFLAT_OPENGL )
    BITMAP bm;
@@ -946,31 +946,25 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* == Win16 == */
 
    /* Load the bitmap file from disk. */
-   retval = mfile_open_read( filename_path, &bmp_file );
-   maug_cleanup_if_not_ok();
 
-   buf = calloc( mfile_get_sz( &bmp_file ), 1 );
+   /* This uses the native API because mfile is still wonky when reading large
+    * buffers and this will only ever be called from win16 on x86, right?
+    */
+
+   bmp_file = fopen( filename_path, "rb" );
+   maug_cleanup_if_null_file( bmp_file );
+   fseek( bmp_file, 0, SEEK_END );
+   sz = ftell( bmp_file );
+   fseek( bmp_file, 0, SEEK_SET );
+
+   buf = calloc( sz, 1 );
    maug_cleanup_if_null_alloc( char*, buf );
 
-   /*
    read = fread( buf, 1, sz, bmp_file );
    assert( read == sz );
-   */
-   retval = bmp_file.read_int( &bmp_file, buf, mfile_get_sz( &bmp_file ), 0 );
-   maug_cleanup_if_not_ok();
 
-   /* Read bitmap properties from header offsets. */
-   retval = bmp_file.seek( &bmp_file, 10 );
-   maug_cleanup_if_not_ok();
-   retval = bmp_file.read_int( &bmp_file,
-      (uint8_t*)&offset, 4, MFILE_READ_FLAG_LSBF );
-   maug_cleanup_if_not_ok();
-
-   retval = bmp_file.seek( &bmp_file, 46 );
-   maug_cleanup_if_not_ok();
-   retval = bmp_file.read_int( &bmp_file,
-      (uint8_t*)&colors, 4, MFILE_READ_FLAG_LSBF );
-   maug_cleanup_if_not_ok();
+   offset = *((unsigned long*)&(buf[10]));
+   colors = *((int*)&(buf[46]));
 
    /* Avoid a color overflow. */
    if(
@@ -1059,7 +1053,7 @@ cleanup:
       free( buf );
    }
 
-   mfile_close( &bmp_file );
+   fclose( bmp_file );
 
 #  endif /* RETROFLAT_API_WIN16 */
 

@@ -83,6 +83,16 @@ define TGTDOSBIOS
 
 CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/dosbios
 
+# Strip out options to bake-in resources, as they make the exe too big!
+
+CFLAGS_OPT_WATCOM_BIOS := \
+	$$(subst -DRETROFLAT_XPM -i=$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_WATCOM))
+
+CFLAGS_OPT_WATCOM_BIOS := \
+	$$(subst -DMVFS_ENABLED -i=$$(MVFS_H_DIR),,$$(CFLAGS_OPT_WATCOM_BIOS))
+
+MAUG_DEPS_BIOS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
+
 ifeq ("$$(RETROFLAT_DOS_MEM_LARGE)", "1")
 	CFLAGS_WATCOM_DOS_BIOS += -ml -DMAUG_DOS_MEM_L
 else
@@ -99,11 +109,11 @@ $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_DOS) \
 		$$(LDFLAGS_WATCOM_DOS_BIOS) fil {$$^}
 
-obj/dos_bios/%.o: %.c | $$(MAUG_DEPS)
+obj/dos_bios/%.o: %.c | $$(MAUG_DEPS_BIOS)
 	$$(MD) $$(dir $$@)
 	$$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) $$(CFLAGS_WATCOM_DOS_BIOS) \
-		$$(CFLAGS_OPT_WATCOM) \
+		$$(CFLAGS_OPT_WATCOM_BIOS) \
 		-fo=$$@ $$(<:%.c=%)
 
 CLEAN_TARGETS += $(1)b.exe
