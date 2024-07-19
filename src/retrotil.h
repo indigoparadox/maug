@@ -130,6 +130,10 @@ struct RETROTILE_DATA_BORDER {
    ((retrotile_tile_t*)(((uint8_t*)(layer)) + \
    sizeof( struct RETROTILE_LAYER )))
 
+#define retrotile_clear_tiles( t, layer ) \
+   memset( retrotile_get_tiles_p( layer ), -1, \
+      t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) )
+
 /**
  * \addtogroup retrotile_parser RetroTile Parser
  * \{

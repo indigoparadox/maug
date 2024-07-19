@@ -957,6 +957,10 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
+#  define retroflat_viewport_set_world_pos( x, y ) \
+   (g_retroflat_state->viewport.world_x) = x; \
+   (g_retroflat_state->viewport.world_y) = y;
+
 uint8_t retroflat_viewport_move_x( int16_t x );
 
 uint8_t retroflat_viewport_move_y( int16_t y );
