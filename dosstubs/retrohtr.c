@@ -4,7 +4,9 @@
 #  include <maug.h>
 #  include <retroflt.h>
 #  include <retrofnt.h>
-#  include <retrogxc.h>
+#  ifndef RETROFLAT_NO_RETROGXC
+#     include <retrogxc.h>
+#  endif
 #  include <retrogui.h>
 #  include <mhtml.h>
 #  include <mcssmerg.h>
