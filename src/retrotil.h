@@ -67,8 +67,6 @@
 
 /*! \} */ /* retrotile_defs_types */
 
-typedef int16_t retrotile_tile_t;
-
 #define RETROTILE_IDX_FMT "%u"
 
 struct RETROTILE_TILE_DEF {
@@ -114,10 +112,10 @@ struct RETROTILE_DATA_DS {
 
 struct RETROTILE_DATA_BORDER {
    int16_t tiles_changed;
-   retrotile_tile_t center;
-   retrotile_tile_t outside;
+   retroflat_tile_t center;
+   retroflat_tile_t outside;
    /*! \brief If the center and outside match, use this mod-to. */
-   retrotile_tile_t mod_to[8];
+   retroflat_tile_t mod_to[8];
 };
 
 #define retrotile_get_tile( tilemap, layer, x, y ) \
@@ -127,12 +125,12 @@ struct RETROTILE_DATA_BORDER {
    (retrotile_get_tiles_p( layer )[((y) * (tilemap)->tiles_w) + (x)])
 
 #define retrotile_get_tiles_p( layer ) \
-   ((retrotile_tile_t*)(((uint8_t*)(layer)) + \
+   ((retroflat_tile_t*)(((uint8_t*)(layer)) + \
    sizeof( struct RETROTILE_LAYER )))
 
 #define retrotile_clear_tiles( t, layer ) \
    memset( retrotile_get_tiles_p( layer ), -1, \
-      t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) )
+      t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) )
 
 /**
  * \addtogroup retrotile_parser RetroTile Parser
@@ -208,7 +206,7 @@ typedef MERROR_RETVAL (*retrotile_ani_cb)(
    void* animation_cb_data, int16_t iter );
 
 typedef MERROR_RETVAL (*retrotile_gen_cb)(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
@@ -222,7 +220,7 @@ typedef MERROR_RETVAL (*retrotile_gen_cb)(
  * \warning This will generate a complete new tilemap!
  */
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
@@ -237,7 +235,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
  * \warning This will generate a complete new tilemap!
  */
 MERROR_RETVAL retrotile_gen_voronoi_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
@@ -249,7 +247,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
  * as Z values rather than indexes in a table of tile definitions.
  */
 MERROR_RETVAL retrotile_gen_smooth_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
@@ -260,7 +258,7 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
  *        border between the two!
  */
 MERROR_RETVAL retrotile_gen_borders_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
@@ -510,7 +508,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
    struct RETROTILE_TILE_DEF* tile_defs = NULL;
    struct RETROTILE_LAYER* tiles_layer = NULL;
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parser_arg;
-   retrotile_tile_t* tiles = NULL;
+   retroflat_tile_t* tiles = NULL;
 
    if( 0 < *(parser->p_tile_defs_count) ) {
       maug_mlock( *(parser->p_tile_defs_h), tile_defs );
@@ -837,11 +835,11 @@ cleanup:
 
 /* === */
 
-static retrotile_tile_t retrotile_gen_diamond_square_rand(
-   retrotile_tile_t min_z, retrotile_tile_t max_z, uint32_t tuning,
-   retrotile_tile_t top_left_z
+static retroflat_tile_t retrotile_gen_diamond_square_rand(
+   retroflat_tile_t min_z, retroflat_tile_t max_z, uint32_t tuning,
+   retroflat_tile_t top_left_z
 ) {
-   retrotile_tile_t avg = top_left_z;
+   retroflat_tile_t avg = top_left_z;
 
    if( 8 > rand() % 10 ) {
       /* avg = min_z + (rand() % (max_z - min_z)); */
@@ -867,14 +865,14 @@ static retrotile_tile_t retrotile_gen_diamond_square_rand(
 
 static void retrotile_gen_diamond_square_corners(
    int16_t corners_x[2][2], int16_t corners_y[2][2],
-   retrotile_tile_t min_z, retrotile_tile_t max_z,
+   retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, struct RETROTILE_DATA_DS* data_ds,
    struct RETROTILE_LAYER* layer, struct RETROTILE* t
 ) {
    int16_t iter_x = 0,
       iter_y = 0;
-   retrotile_tile_t* tile_iter = NULL;
-   retrotile_tile_t top_left_z = 0;
+   retroflat_tile_t* tile_iter = NULL;
+   retroflat_tile_t top_left_z = 0;
 
    /* Generate missing corner data. Loop through X/Y coords stored in
     * corners_x/corners_y convenience arrays.
@@ -953,14 +951,14 @@ static void retrotile_gen_diamond_square_corners(
 
 /* === */
 
-static retrotile_tile_t retrotile_gen_diamond_square_avg(
+static retroflat_tile_t retrotile_gen_diamond_square_avg(
    int16_t corners_x[2][2], int16_t corners_y[2][2],
    struct RETROTILE* t, struct RETROTILE_LAYER* layer
 ) {
-   retrotile_tile_t* tile_iter = NULL;
+   retroflat_tile_t* tile_iter = NULL;
    int16_t iter_x = 0,
       iter_y = 0;
-   retrotile_tile_t avg = 0;
+   retroflat_tile_t avg = 0;
 
    /* Average corner data. */
    for( iter_y = 0 ; 2 > iter_y ; iter_y++ ) {
@@ -989,7 +987,7 @@ static retrotile_tile_t retrotile_gen_diamond_square_avg(
 /* === */
  
 MERROR_RETVAL retrotile_gen_diamond_square_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
@@ -1003,10 +1001,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    struct RETROTILE_DATA_DS data_ds_sub;
    MAUG_MHANDLE data_ds_h = NULL;
    struct RETROTILE_DATA_DS* data_ds = NULL;
-   /* retrotile_tile_t* tiles = NULL; */
+   /* retroflat_tile_t* tiles = NULL; */
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROTILE_LAYER* layer = NULL;
-   retrotile_tile_t* tile_iter = NULL;
+   retroflat_tile_t* tile_iter = NULL;
    uint8_t free_ds_data = 0;
 
    /*
@@ -1025,7 +1023,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       maug_mzero( data_ds, sizeof( struct RETROTILE_DATA_DS ) );
 
       memset( retrotile_get_tiles_p( layer ), -1,
-         t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) );
+         t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) );
 
       data_ds->sect_w = t->tiles_w;
       data_ds->sect_h = t->tiles_h;
@@ -1145,7 +1143,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrotile_gen_voronoi_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
@@ -1159,8 +1157,8 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    int16_t spb = RETROTILE_VORONOI_DEFAULT_SPB;
    int16_t drift = RETROTILE_VORONOI_DEFAULT_DRIFT;
    MAUG_MHANDLE temp_grid_h = (MAUG_MHANDLE)NULL;
-   retrotile_tile_t* temp_grid = NULL;
-   retrotile_tile_t* tiles = NULL;
+   retroflat_tile_t* temp_grid = NULL;
+   retroflat_tile_t* tiles = NULL;
    /* Only use 4 cardinal directions. */
    int8_t side_iter = 0;
 
@@ -1170,7 +1168,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
 
    /* Initialize grid to empty. */
    memset( tiles, -1,
-      t->tiles_w * t->tiles_h * sizeof( retrotile_tile_t ) );
+      t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) );
 
    /* Generate the initial sector starting points. */
    for( y = 0 ; t->tiles_w > y ; y += spb ) {
@@ -1198,11 +1196,11 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    }
 
    temp_grid_h = maug_malloc(
-      sizeof( retrotile_tile_t ), t->tiles_w * t->tiles_h );
+      sizeof( retroflat_tile_t ), t->tiles_w * t->tiles_h );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, temp_grid_h );
 
    maug_mlock( temp_grid_h, temp_grid );
-   maug_cleanup_if_null_alloc( retrotile_tile_t*, temp_grid );
+   maug_cleanup_if_null_alloc( retroflat_tile_t*, temp_grid );
 
    /* Grow the sector starting points. */
    while( !finished ) {
@@ -1216,7 +1214,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
        */
       memcpy(
          temp_grid, tiles,
-         sizeof( retrotile_tile_t ) * t->tiles_w * t->tiles_h );
+         sizeof( retroflat_tile_t ) * t->tiles_w * t->tiles_h );
 
       /* Starting another pass, assume finished until proven otherwise. */
       finished = 1;
@@ -1282,7 +1280,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrotile_gen_smooth_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
@@ -1349,7 +1347,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrotile_gen_borders_iter(
-   struct RETROTILE* t, retrotile_tile_t min_z, retrotile_tile_t max_z,
+   struct RETROTILE* t, retroflat_tile_t min_z, retroflat_tile_t max_z,
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
@@ -1578,7 +1576,7 @@ MERROR_RETVAL retrotile_alloc(
 
    tilemap_sz = sizeof( struct RETROTILE ) +
       (layers_count * sizeof( struct RETROTILE_LAYER )) +
-      (layers_count * (w * h * sizeof( retrotile_tile_t ) ));
+      (layers_count * (w * h * sizeof( retroflat_tile_t ) ));
 
    debug_printf( 1, "allocating new tilemap " SIZE_T_FMT "x" SIZE_T_FMT
       " tiles, " SIZE_T_FMT " layers (" SIZE_T_FMT " bytes)...",
@@ -1601,7 +1599,7 @@ MERROR_RETVAL retrotile_alloc(
       layer_iter = retrotile_get_layer_p( tilemap, i );
       assert( NULL != layer_iter );
       layer_iter->sz = sizeof( struct RETROTILE_LAYER ) +
-         (w * h * sizeof( retrotile_tile_t ));
+         (w * h * sizeof( retroflat_tile_t ));
       maug_cleanup_if_not_ok();
    }
 

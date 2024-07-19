@@ -391,6 +391,12 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
 
+/**
+ * \brief Flag for args->flags, indicating that a viewport tile refresh grid
+ *        should be allocated and used.
+ */
+#define RETROFLAT_FLAGS_VIEWPORT_REFRESH  0x20
+
 /*! \} */ /* maug_retroflt_drawing */
 
 /**
@@ -553,7 +559,10 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
  * \brief Pass to retroflat_blit_bitmap() instance arg if this is not a sprite
  *        (i.e. if it is a background tile).
  */
-#define RETROFLAT_INSTANCE_NULL (-1)
+#define RETROFLAT_INSTANCE_NULL (0)
+
+#define retroflat_instance_tile( instance ) \
+  (instance * -1)
 
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
@@ -566,6 +575,14 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #ifndef RETROFLAT_OPENGL_BPP
 #  define RETROFLAT_OPENGL_BPP 32
 #endif /* !RETROFLAT_OPENGL_BPP */
+
+#ifndef RETROFLAT_TILE_W
+#  define RETROFLAT_TILE_W 16
+#endif /* !RETROFLAT_TILE_W */
+
+#ifndef RETROFLAT_TILE_H
+#  define RETROFLAT_TILE_H 16
+#endif /* !RETROFLAT_TILE_H */
 
 /* Transparency background color: black by default, to match Allegro. */
 #ifndef RETROFLAT_TXP_R
@@ -924,15 +941,21 @@ struct RETROFLAT_ARGS {
  * \{
  */
 
+typedef int16_t retroflat_tile_t;
+
 struct RETROFLAT_VIEWPORT {
    /*! \brief X position of the viewport in real screen memory in pixels. */
-   size_t screen_x;
+   int16_t screen_x;
    /*! \brief Y position of the viewport in real screen memory in pixels. */
-   size_t screen_y;
-   size_t world_x;
-   size_t world_y;
-   size_t world_w;
-   size_t world_h;
+   int16_t screen_y;
+   int16_t world_x;
+   int16_t world_y;
+   int16_t world_w;
+   int16_t world_h;
+   int16_t screen_tile_w;
+   int16_t screen_tile_h;
+   MAUG_MHANDLE refresh_grid_h;
+   retroflat_tile_t* refresh_grid;
 };
 
 /*! \brief Return the current viewport X position in the world in pixels. */
@@ -947,6 +970,12 @@ struct RETROFLAT_VIEWPORT {
 /*! \brief Return the current height of the world in pixels. */
 #  define retroflat_viewport_world_h() (g_retroflat_state->viewport.world_h)
 
+#  define retroflat_viewport_screen_tile_w() \
+   (g_retroflat_state->viewport.screen_tile_w)
+
+#  define retroflat_viewport_screen_tile_h() \
+   (g_retroflat_state->viewport.screen_tile_h)
+
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.
@@ -960,6 +989,34 @@ struct RETROFLAT_VIEWPORT {
 #  define retroflat_viewport_set_world_pos( x, y ) \
    (g_retroflat_state->viewport.world_x) = x; \
    (g_retroflat_state->viewport.world_y) = y;
+
+#  define retroflat_viewport_lock_refresh() \
+   if( NULL == g_retroflat_state->viewport.refresh_grid ) { \
+      maug_mlock( \
+         g_retroflat_state->viewport.refresh_grid_h, \
+         g_retroflat_state->viewport.refresh_grid ); \
+      maug_cleanup_if_null_lock( retroflat_tile_t*, \
+         g_retroflat_state->viewport.refresh_grid ); \
+   }
+
+#  define retroflat_viewport_unlock_refresh() \
+   if( NULL != g_retroflat_state->viewport.refresh_grid ) { \
+      maug_munlock( \
+         g_retroflat_state->viewport.refresh_grid_h, \
+         g_retroflat_state->viewport.refresh_grid ); \
+   }
+
+#  define retroflat_viewport_set_refresh( x, y, tid ) \
+   assert( NULL != g_retroflat_state->viewport.refresh_grid ); \
+   if( \
+      -1 <= x && -1 <= y && \
+      g_retroflat_state->viewport.screen_tile_w > x && \
+      g_retroflat_state->viewport.screen_tile_h > y \
+   ) { \
+      g_retroflat_state->viewport.refresh_grid[ \
+         (y * g_retroflat_state->viewport.screen_tile_w) + x] = \
+            tid; \
+   }
 
 uint8_t retroflat_viewport_move_x( int16_t x );
 
@@ -2019,6 +2076,29 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
+   if(
+      RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
+      (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)
+   ) {
+      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_VIEWPORT_REFRESH;
+
+      g_retroflat_state->viewport.screen_tile_w = 
+         /* Allocate 1 extra tile on each side for smooth scrolling. */
+         ((retroflat_screen_w() / RETROFLAT_TILE_W) + 2);
+      g_retroflat_state->viewport.screen_tile_h = 
+         ((retroflat_screen_h() / RETROFLAT_TILE_H) + 2);
+
+      debug_printf( 1, "allocating refresh grid (%d tiles...)",
+         g_retroflat_state->viewport.screen_tile_w *
+         g_retroflat_state->viewport.screen_tile_h );
+      g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
+         g_retroflat_state->viewport.screen_tile_w *
+         g_retroflat_state->viewport.screen_tile_h,
+         sizeof( retroflat_tile_t ) );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE,
+         g_retroflat_state->viewport.refresh_grid_h );
+   }
+
 #  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Setup intended screen size. */
    /* TODO: Handle window resizing someday! */
@@ -2119,6 +2199,11 @@ cleanup:
 void retroflat_shutdown( int retval ) {
 
    debug_printf( 1, "retroflat shutdown called..." );
+
+   if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h ) {
+      maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
+   }
+
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
