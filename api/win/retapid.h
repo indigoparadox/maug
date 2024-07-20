@@ -4,8 +4,15 @@
 
 #define RETROPLAT_PRESENT 1
 
+/* Windows doesn't have hardware scrolling and on older systems GDI can be
+ * slow, so minimize blitting!
+ */
 #define RETROFLAT_SOFT_VIEWPORT
+#ifdef RETROFLAT_API_WIN16
+#  define RETROFLAT_VIEWPORT_ADAPT
+#endif
 
+/* Windows uses its own message loop. */
 #define RETROFLAT_NO_GENERIC_LOOP 1
 
 #ifdef RETROFLAT_API_WINCE

@@ -1262,6 +1262,7 @@ void retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+#if 0
    /* Win API not setup for hardware scrolling. */
    if(
       0 > d_x || 0 > d_y ||
@@ -1270,6 +1271,7 @@ void retroflat_blit_bitmap(
    ) {
       return;
    }
+#endif
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -1281,6 +1283,17 @@ void retroflat_blit_bitmap(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+
+#     ifdef RETROFLAT_VIEWPORT_ADAPT
+      if( 0 > instance ) {
+         /* Check tile refresh buffer. */
+         retroflat_viewport_lock_refresh();
+         if( !retroflat_viewport_tile_is_stale( d_x, d_y, instance * -1 ) ) {
+            goto cleanup;
+         }
+         retroflat_viewport_unlock_refresh();
+      }
+#     endif /* RETROFLAT_VIEWPORT_ADAPT */
    }
 
    assert( (HBITMAP)NULL != target->b );

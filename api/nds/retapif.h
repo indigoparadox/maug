@@ -526,9 +526,7 @@ void retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int16_t x_refresh = 0,
-      y_refresh = 0,
-      tile_id = 0;
+   int16_t tile_id = 0;
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -540,16 +538,8 @@ void retroflat_blit_bitmap(
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
    } else if( 0 > instance ) {
       tile_id = instance * -1;
-      x_refresh = d_x >> 4;
-      y_refresh = d_y >> 4;
       retroflat_viewport_lock_refresh();
-      if(
-         tile_id !=
-         g_retroflat_state->viewport.refresh_grid[
-            (y_refresh * g_retroflat_state->viewport.screen_tile_w)
-            + x_refresh
-         ]
-      ) {
+      if( retroflat_viewport_tile_is_stale( d_x, d_y, tile_id ) ) {
          _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
          g_retroflat_state->viewport.refresh_grid[
             (y_refresh * g_retroflat_state->viewport.screen_tile_w)

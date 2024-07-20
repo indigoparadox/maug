@@ -582,9 +582,17 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_TILE_W 16
 #endif /* !RETROFLAT_TILE_W */
 
+#ifndef RETROFLAT_TILE_W_BITS
+#  define RETROFLAT_TILE_W_BITS 4
+#endif /* !RETROFLAT_TILE_W_BITS */
+
 #ifndef RETROFLAT_TILE_H
 #  define RETROFLAT_TILE_H 16
 #endif /* !RETROFLAT_TILE_H */
+
+#ifndef RETROFLAT_TILE_H_BITS
+#  define RETROFLAT_TILE_H_BITS 4
+#endif /* !RETROFLAT_TILE_H_BITS */
 
 /* Transparency background color: black by default, to match Allegro. */
 #ifndef RETROFLAT_TXP_R
@@ -1014,6 +1022,13 @@ struct RETROFLAT_VIEWPORT {
             tid; \
    }
 
+#  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
+      ((tile_id) != \
+      g_retroflat_state->viewport.refresh_grid[ \
+         (((y_px) >> RETROFLAT_TILE_H_BITS) * \
+            g_retroflat_state->viewport.screen_tile_w) \
+               + ((x_px) >> RETROFLAT_TILE_W_BITS)])
+
 uint8_t retroflat_viewport_move_x_generic( int16_t x );
 
 uint8_t retroflat_viewport_move_y_generic( int16_t y );
@@ -1031,13 +1046,23 @@ uint8_t retroflat_viewport_focus_generic(
 
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
 
+#  ifdef RETROFLAT_VIEWPORT_ADAPT
+      /* Clamp world coordinates to tile borders to allow refresh grid to
+       * function properly.
+       */
+#     define retroflat_viewport_world_x() \
+         ((retroflat_viewport_world_x_generic() \
+            >> RETROFLAT_TILE_W_BITS) << RETROFLAT_TILE_W_BITS)
+#     define retroflat_viewport_world_y() \
+         ((retroflat_viewport_world_y_generic() \
+            >> RETROFLAT_TILE_H_BITS) << RETROFLAT_TILE_H_BITS)
+#  else
 /*! \brief Return the current viewport X position in the world in pixels. */
-#  define retroflat_viewport_world_x() \
-   retroflat_viewport_world_x_generic()
+#     define retroflat_viewport_world_x() retroflat_viewport_world_x_generic()
 
 /*! \brief Return the current viewport Y position in the world in pixels. */
-#  define retroflat_viewport_world_y() \
-   retroflat_viewport_world_y_generic()
+#     define retroflat_viewport_world_y() retroflat_viewport_world_y_generic()
+#endif /* RETROFLAT_VIEWPORT_ADAPT */
 
 /*! \brief Return the current width of the world in pixels. */
 #  define retroflat_viewport_world_w() \
@@ -2008,6 +2033,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 == sizeof( uint8_t ) );
    assert( 1 == sizeof( int8_t ) );
    assert( NULL != args );
+   assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
+   assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
 
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
