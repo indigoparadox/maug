@@ -375,6 +375,7 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_LITERAL_PATH   0x02
 
+#ifndef RETROFLAT_NO_STRING
 /**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
  *        text as outline-only.
@@ -382,6 +383,7 @@ typedef int8_t RETROFLAT_COLOR;
  *       compatibility.
  */
 #define RETROFLAT_FLAGS_OUTLINE  0x04
+#endif /* !RETROFLAT_NO_STRING */
 
 /**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.

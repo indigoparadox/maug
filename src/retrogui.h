@@ -112,8 +112,8 @@ typedef size_t retrogui_idc_t;
 #define RETROGUI_CTL_TABLE_BASE( f ) \
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
-   f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; ) \
-   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; )
+   f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
+   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; )
 
 #ifdef RETROGUI_NO_TEXTBOX
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f )
@@ -697,7 +697,7 @@ static void retrogui_redraw_BUTTON(
       gui->font_h,
 #endif /* RETROGXC_PRESENT */
       /* TODO: Pad max client area. */
-      ctl->base.w, ctl->base.h, &w, &h, 0 );
+      ctl->base.w, ctl->base.h, &w, &h, ctl->BUTTON.font_flags );
 
 #ifdef RETROGXC_PRESENT
    retrogxc_string(
@@ -713,7 +713,7 @@ static void retrogui_redraw_BUTTON(
       gui->x + ctl->base.x + ((ctl->base.w >> 1) - (w >> 1)) + text_offset,
       gui->y + ctl->base.y + ((ctl->base.h >> 1) - (h >> 1)) + text_offset,
       /* TODO: Pad max client area. */
-      ctl->base.w, ctl->base.h, 0 );
+      ctl->base.w, ctl->base.h, ctl->BUTTON.font_flags );
 
    maug_munlock( ctl->BUTTON.label_h, ctl->BUTTON.label );
 
@@ -777,7 +777,7 @@ static MERROR_RETVAL retrogui_sz_BUTTON(
       max_w - 8,
       max_h - 8,
       p_w,
-      p_h, 0 );
+      p_h, ctl->BUTTON.font_flags );
 
    /* Add space for borders and stuff. */
    *p_w += RETROGUI_BTN_LBL_PADDED_X;
@@ -1129,7 +1129,8 @@ static void retrogui_redraw_LABEL(
       gui->font_h,
 #endif /* RETROGXC_PRESENT */
       gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h,
+      ctl->LABEL.font_flags );
 
 cleanup:
 

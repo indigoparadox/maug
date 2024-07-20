@@ -18,6 +18,14 @@
 #  define RETROFONT_TRACE_LVL 0
 #endif /* !RETROFONT_TRACE_LVL */
 
+/**
+ * \brief Flag for retroflat_string() and retroflat_string_sz() to print
+ *        text as outline-only.
+ * \todo This has not yet been implemented and is present for backward
+ *       compatibility.
+ */
+#define RETROFONT_FLAG_OUTLINE  0x04
+
 struct RETROFONT {
    uint16_t sz;
    uint16_t first_glyph;
@@ -66,7 +74,7 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
          glyph_bin[x] = 1 << (w - x) == (glyph[y] & (1 << (w - x))) ? 'x' : '.';
       }
       
-      debug_printf( RETROFONT_TRACE_LVL, "%s", glyph_bin );
+      debug_printf( 1, "%s", glyph_bin );
    }
 }
 
@@ -229,12 +237,12 @@ MERROR_RETVAL retrofont_load(
          }
       }
 
-#if 0 < RETROFONT_TRACE_LVL
+/* #if 0 < RETROFONT_TRACE_LVL */
       /* Test dump to verify glyph integrity. */
-      if( glyph_idx == 'B' ) {
+      if( glyph_idx == '0' ) {
          retrofont_dump_glyph( p_glyph, glyph_w, glyph_h );
       }
-#endif
+/* #endif */
 
       font->glyphs_count++;
 
@@ -262,17 +270,48 @@ void retrofont_blit_glyph(
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
-   int16_t x_iter, y_iter;
+   int16_t x_iter, y_iter, y_start, y_end, x_end;
+   uint8_t prev_px_was_clear = 0;
 
    debug_printf( RETROFONT_TRACE_LVL, "blit glyph: %c", c );
 
-   for( y_iter = 0 ; font->glyph_h > y_iter ; y_iter++ ) {
-      for( x_iter = 0 ; font->glyph_w > x_iter ; x_iter++ ) {
-         if( 
-            1 << (font->glyph_w - x_iter) ==
-            (glyph[y_iter] & (1 << (font->glyph_w - x_iter)))
-         ) {
+   y_start = RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) ?
+      -1 : 0;
+   y_end = RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) ?
+      font->glyph_h + 1 : font->glyph_h;
+   x_end = RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) ?
+      font->glyph_w + 1 : font->glyph_w;
+
+   #define _retrofont_px_is_clear( x_iter, y_iter ) \
+      (0 > (x_iter) || font->glyph_w <= (x_iter) || \
+      0 > (y_iter) || font->glyph_h <= (y_iter) || \
+         (1 << (font->glyph_w - (x_iter)) != \
+            (glyph[(y_iter)] & (1 << (font->glyph_w - (x_iter))))))
+
+   for( y_iter = y_start ; y_end > y_iter ; y_iter++ ) {
+      prev_px_was_clear = 1;
+      for( x_iter = 0 ; x_end > x_iter ; x_iter++ ) {
+         if( _retrofont_px_is_clear( x_iter, y_iter ) ) {
+            if(
+               !prev_px_was_clear ||
+               !_retrofont_px_is_clear( x_iter + 1, y_iter ) ||
+               !_retrofont_px_is_clear( x_iter, y_iter + 1 ) ||
+               !_retrofont_px_is_clear( x_iter, y_iter - 1 )
+            ) {
+               /* Draw outline pixel. */
+               retroflat_px( 
+                  target, RETROFLAT_COLOR_DARKBLUE,
+                  x + x_iter, y + y_iter, 0 );
+            }
+
+            /* Save a little time on the next clear pixel check. */
+            prev_px_was_clear = 1;
+
+         } else {
+            /* Draw normal color pixel. */
             retroflat_px( target, color, x + x_iter, y + y_iter, 0 );
+
+            prev_px_was_clear = 0;
          }
       }
    }
