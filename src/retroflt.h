@@ -1010,6 +1010,12 @@ struct RETROFLAT_VIEWPORT {
          g_retroflat_state->viewport.refresh_grid ); \
    }
 
+#  define _retroflat_viewport_refresh_tile_x( x_px ) \
+   (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS)
+
+#  define _retroflat_viewport_refresh_tile_y( y_px ) \
+   (((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS)
+
 #  define retroflat_viewport_set_refresh_generic( x_px, y_px, tid ) \
    assert( NULL != g_retroflat_state->viewport.refresh_grid ); \
    if( \
@@ -1019,20 +1025,21 @@ struct RETROFLAT_VIEWPORT {
       retroflat_screen_h() > y_px \
    ) { \
       assert( 0 < g_retroflat_state->viewport.screen_tile_w ); \
+      assert( 0 <= (((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS) ); \
+      assert( 0 <= (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS) ); \
       g_retroflat_state->viewport.refresh_grid[ \
          /* Add +1 tile to make off-screen "-1" tile positive. */ \
-         ((((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS) * \
+         (_retroflat_viewport_refresh_tile_y( y_px ) * \
             g_retroflat_state->viewport.screen_tile_w) + \
-               (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS)] = \
-                  tid; \
+               _retroflat_viewport_refresh_tile_x( x_px )] = tid; \
    }
 
 #  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
       ((tile_id) != \
       g_retroflat_state->viewport.refresh_grid[ \
-         (((y_px) >> RETROFLAT_TILE_H_BITS) * \
-            g_retroflat_state->viewport.screen_tile_w) \
-               + ((x_px) >> RETROFLAT_TILE_W_BITS)])
+         (_retroflat_viewport_refresh_tile_y( y_px ) * \
+            g_retroflat_state->viewport.screen_tile_w) + \
+               _retroflat_viewport_refresh_tile_x( x_px )])
 
 uint8_t retroflat_viewport_move_x_generic( int16_t x );
 

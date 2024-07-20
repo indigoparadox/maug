@@ -181,6 +181,7 @@ void _retroflat_nds_blit_tiles(
    int tile_idx = 0,
       tile_x = 0,
       tile_y = 0;
+   uint16_t row[2];
 
    /* The tile's physical location on the tilemap. */
    /* Divide by 8 rather than 16 since DS tiles are 8x8. */
@@ -219,21 +220,21 @@ void _retroflat_nds_blit_tiles(
    /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
 
 #ifdef RETROFLAT_NDS_DOUBLE_BUFFER
+   /* Draw to the in-memory tilemap that will be copied on refresh. */
    bg_map = g_retroflat_state->platform.bg_map;
 #else
    bg_map = bgGetMapPtr( g_retroflat_state->platform.bg_id );
    /* bg_map = (uint16_t*)0x06001000; */
 #endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
-   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
-      tile_idx;
-   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
-      tile_idx + 1;
-   bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
-      tile_idx + 2;
    bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
       tile_idx + 3;
-
+   bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+      tile_idx + 2;
+   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+      tile_idx + 1;
+   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+      tile_idx;
 }
 
 /* === */
@@ -318,6 +319,10 @@ MERROR_RETVAL retroflat_init_platform(
       2, BgType_Bmp16, BgSize_B16_256x256,
       RETROFLAT_NDS_BG2_MAP, RETROFLAT_NDS_BG2_TILE );
    bgSetPriority( g_retroflat_state->platform.px_id, 0 );
+
+#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
+   bgWrapOff( 0 );
+#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
    /* Setup the sprite engines. */
 	oamInit( RETROFLAT_NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
@@ -560,6 +565,14 @@ void retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   /* Clip off-screen drawing. */
+   if(
+      retroflat_screen_w() <= d_x || 0 > d_x ||
+      retroflat_screen_h() <= d_y || 0 > d_y
+   ) {
+      return;
+   }
+
    if( 0 < instance ) {
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
    } else if( 0 > instance ) {
@@ -760,19 +773,27 @@ void retroflat_resize_v() {
 uint8_t retroflat_viewport_move_x( int16_t x ) {
    uint8_t retval;
    retval = retroflat_viewport_move_x_generic( x );
-   /*
+#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
    bgSetScroll(
       g_retroflat_state->platform.bg_id,
       g_retroflat_state->viewport.screen_x,
       g_retroflat_state->viewport.screen_y );
-   */
+#endif /* !RETROFLAT_NDS_DOUBLE_BUFFER */
    return retval;
 }
 
 /* === */
 
 uint8_t retroflat_viewport_move_y( int16_t y ) {
-   return retroflat_viewport_move_y_generic( y );
+   uint8_t retval;
+   retval = retroflat_viewport_move_y_generic( y );
+#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
+   bgSetScroll(
+      g_retroflat_state->platform.bg_id,
+      g_retroflat_state->viewport.screen_x,
+      g_retroflat_state->viewport.screen_y );
+#endif /* !RETROFLAT_NDS_DOUBLE_BUFFER */
+   return retval;
 }
 
 /* === */
