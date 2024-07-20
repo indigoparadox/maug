@@ -460,9 +460,9 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 
          if( 1 == parser->pass ) {
             if( 0 == strncmp(
-               parser->jparser.token,
+               parser->jparser.base.token,
                "rotate_x",
-               parser->jparser.token_sz
+               parser->jparser.base.token_sz
             ) ) {
                /* Found flag: rotate X! */
                /* TODO: Read boolean value. */
@@ -734,12 +734,12 @@ MERROR_RETVAL retrotile_parse_json_file(
       parser->mstate = 0;
 
       /* Reset JSON parser. */
-      maug_mzero( &(parser->jparser), sizeof( struct MJSON_PARSER ) );
+      maug_mzero( &(parser->jparser.base), sizeof( struct MJSON_PARSER ) );
 
       parser->wait_cb = wait_cb;
       parser->wait_data = wait_data;
-      parser->jparser.wait_cb = wait_cb;
-      parser->jparser.wait_data = wait_data;
+      parser->jparser.base.wait_cb = wait_cb;
+      parser->jparser.base.wait_data = wait_data;
 
       /* Figure out if we're parsing a .tmj or .tsj. */
       if( 's' == strrchr( filename, '.' )[2] ) {
@@ -752,8 +752,8 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->jparser.close_obj = retrotile_json_close_obj;
          parser->jparser.close_obj_arg = parser;
          /*
-         parser->jparser.close_val = retrotile_json_close_val;
-         parser->jparser.close_val_arg = parser;
+         parser->jparser.base.close_val = retrotile_json_close_val;
+         parser->jparser.base.close_val_arg = parser;
          */
          parser->p_tile_defs_h = p_tile_defs_h;
          parser->p_tile_defs_count = p_tile_defs_count;

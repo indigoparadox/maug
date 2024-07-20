@@ -84,22 +84,22 @@
       (&((parser)->tags[(parser)->tags[idx].next_sibling]])) : NULL)
 
 #define mhtml_parser_pstate( parser ) \
-   mparser_pstate( parser )
+   mparser_pstate( &((parser)->base) )
 
 #define mhtml_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mhtml, parser, new_pstate )
+   mparser_pstate_push( mhtml, &((parser)->base), new_pstate )
 
 #define mhtml_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( mhtml, parser )
+   mparser_pstate_pop( "mhtml", &((parser)->base) )
 
 #define mhtml_parser_invalid_c( parser, c, retval ) \
-   mparser_invalid_c( mhtml, parser, c, retval )
+   mparser_invalid_c( mhtml, &((parser)->base), c, retval )
 
 #define mhtml_parser_reset_token( parser ) \
-   mparser_reset_token( mhtml, parser )
+   mparser_reset_token( mhtml, &((parser)->base) )
 
 #define mhtml_parser_append_token( parser, c ) \
-   mparser_append_token( mhtml, parser, c, MHTML_PARSER_TOKEN_SZ_MAX )
+   mparser_append_token( mhtml, &((parser)->base), c, MHTML_PARSER_TOKEN_SZ_MAX )
 
 #define mhtml_parser_lock( parser ) \
    if( NULL == (parser)->tags ) { \
@@ -146,15 +146,8 @@ union MHTML_TAG {
 };
 
 struct MHTML_PARSER {
-   uint16_t pstate[MPARSER_STACK_SZ_MAX];
-   size_t pstate_sz;
-   mparser_wait_cb_t wait_cb;
-   void* wait_data;
-   retroflat_ms_t wait_next;
+   struct MPARSER base;
    uint16_t attrib_key;
-   char token[MHTML_PARSER_TOKEN_SZ_MAX];
-   size_t token_sz;
-   size_t i;
    MAUG_MHANDLE tags_h;
    union MHTML_TAG* tags;
    size_t tags_sz;
@@ -387,9 +380,9 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
+   mparser_token_upper( &((parser)->base), i );
 
-   if( 0 == strncmp( "STYLE", parser->token, 6 ) ) {
+   if( 0 == strncmp( "STYLE", parser->base.token, 6 ) ) {
       /* Special case: style tag. Don't push a new tag here, but set a flag for
        * the text tag next created by mhtml_push_tag() so the contents are
        * directly attached to the style tag.
@@ -405,9 +398,9 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mhtml_tag_names[i][0] ) {
       if(
-         parser->token_sz == strlen( gc_mhtml_tag_names[i] ) &&
+         parser->base.token_sz == strlen( gc_mhtml_tag_names[i] ) &&
          0 == strncmp(
-            gc_mhtml_tag_names[i], parser->token, parser->token_sz )
+            gc_mhtml_tag_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MHTML_TRACE_LVL,
             "new tag (" SSIZE_T_FMT ") type: %s",
@@ -457,7 +450,7 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
 
    /* Allocate text memory. */
    parser->tags[parser->tag_iter].TEXT.content =
-      maug_malloc( parser->token_sz + 1, 1 );
+      maug_malloc( parser->base.token_sz + 1, 1 );
    maug_cleanup_if_null_alloc(
       MAUG_MHANDLE, parser->tags[parser->tag_iter].TEXT.content );
    maug_mlock( parser->tags[parser->tag_iter].TEXT.content, tag_content );
@@ -466,8 +459,8 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    if( MHTML_TAG_TYPE_STYLE == parser->tags[parser->tag_iter].base.type ) {
       /* TODO: If it's the last character and there's still a token, process it! */
       debug_printf( MHTML_TRACE_LVL, "parsing STYLE tag..." );
-      for( ; parser->token_sz > i ; i++ ) {
-         retval = mcss_parse_c( &(parser->styler), parser->token[i] );
+      for( ; parser->base.token_sz > i ; i++ ) {
+         retval = mcss_parse_c( &(parser->styler), parser->base.token[i] );
          maug_cleanup_if_not_ok();
       }
       debug_printf( 1, "out of style characters..." );
@@ -475,14 +468,14 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       mcss_parser_reset( &(parser->styler) );
    } else {
       /* Eliminate trailing spaces. */
-      while( ' ' == parser->token[parser->token_sz - 1] ) {
-         parser->token_sz--;
+      while( ' ' == parser->base.token[parser->base.token_sz - 1] ) {
+         parser->base.token_sz--;
       }
 
       /* Copy token to tag text. */
-      strncpy( tag_content, parser->token, parser->token_sz );
-      tag_content[parser->token_sz] = '\0';
-      parser->tags[parser->tag_iter].TEXT.content_sz = parser->token_sz;
+      strncpy( tag_content, parser->base.token, parser->base.token_sz );
+      tag_content[parser->base.token_sz] = '\0';
+      parser->tags[parser->tag_iter].TEXT.content_sz = parser->base.token_sz;
    }
 
    debug_printf( 1, "done processing tag contents..." );
@@ -498,17 +491,17 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   debug_printf( MHTML_TRACE_LVL, "attrib: %s", parser->token );
+   debug_printf( MHTML_TRACE_LVL, "attrib: %s", parser->base.token );
 
-   mparser_token_upper( parser, i );
+   mparser_token_upper( &((parser)->base), i );
 
    /* Figure out attrib type. */
    i = 0;
    while( '\0' != gc_mhtml_attrib_names[i][0] ) {
       if(
-         parser->token_sz == strlen( gc_mhtml_attrib_names[i] ) &&
+         parser->base.token_sz == strlen( gc_mhtml_attrib_names[i] ) &&
          0 == strncmp(
-            gc_mhtml_attrib_names[i], parser->token, parser->token_sz )
+            gc_mhtml_attrib_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MHTML_TRACE_LVL, "new attrib type: %s", gc_mhtml_attrib_names[i] );
          parser->attrib_key = i;
@@ -517,7 +510,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
       i++;
    }
 
-   error_printf( "unknown attrib: %s", parser->token );
+   error_printf( "unknown attrib: %s", parser->base.token );
 
 cleanup:
 
@@ -532,7 +525,7 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    mhtml_parser_lock( parser );
 
    if( MHTML_ATTRIB_KEY_STYLE == parser->attrib_key ) {
-      debug_printf( MHTML_TRACE_LVL, "style: %s", parser->token );
+      debug_printf( MHTML_TRACE_LVL, "style: %s", parser->base.token );
       /* TODO: Parse and attach style. */
 
       retval = mcss_push_style( &(parser->styler) );
@@ -541,8 +534,8 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       /* Set the new style as this tag's explicit style. */
       parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
 
-      for( ; parser->token_sz > i ; i++ ) {
-         retval = mcss_parse_c( &(parser->styler), parser->token[i] );
+      for( ; parser->base.token_sz > i ; i++ ) {
+         retval = mcss_parse_c( &(parser->styler), parser->base.token[i] );
          maug_cleanup_if_not_ok();
       }
       debug_printf( 1, "out of style characters..." );
@@ -553,29 +546,29 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    } else if( MHTML_ATTRIB_KEY_CLASS == parser->attrib_key ) {
       strncpy(
          parser->tags[parser->tag_iter].base.classes,
-         parser->token,
+         parser->base.token,
          MCSS_CLASS_SZ_MAX );
-      parser->tags[parser->tag_iter].base.classes_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].base.classes_sz = parser->base.token_sz;
 
    } else if( MHTML_ATTRIB_KEY_ID == parser->attrib_key ) {
       strncpy(
          parser->tags[parser->tag_iter].base.id,
-         parser->token,
+         parser->base.token,
          MCSS_ID_SZ_MAX );
-      parser->tags[parser->tag_iter].base.id_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].base.id_sz = parser->base.token_sz;
 
    } else if( MHTML_ATTRIB_KEY_SRC == parser->attrib_key ) {
       /* TODO: Validate tag type. */
       strncpy(
          parser->tags[parser->tag_iter].IMG.src,
-         parser->token,
+         parser->base.token,
          MHTML_SRC_HREF_SZ_MAX );
-      parser->tags[parser->tag_iter].IMG.src_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].IMG.src_sz = parser->base.token_sz;
 
    } else if( MHTML_ATTRIB_KEY_TYPE == parser->attrib_key ) {
       /* TODO: Validate tag type. */
 
-      if( 0 == strncpy( parser->token, "button", 7 ) ) {
+      if( 0 == strncpy( parser->base.token, "button", 7 ) ) {
          parser->tags[parser->tag_iter].INPUT.input_type =
             MHTML_INPUT_TYPE_BUTTON;
       }
@@ -584,17 +577,17 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       /* TODO: Validate tag type. */
       strncpy(
          parser->tags[parser->tag_iter].INPUT.name,
-         parser->token,
+         parser->base.token,
          MCSS_ID_SZ_MAX );
-      parser->tags[parser->tag_iter].INPUT.name_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].INPUT.name_sz = parser->base.token_sz;
 
    } else if( MHTML_ATTRIB_KEY_VALUE == parser->attrib_key ) {
       /* TODO: Validate tag type. */
       strncpy(
          parser->tags[parser->tag_iter].INPUT.value,
-         parser->token,
+         parser->base.token,
          MCSS_ID_SZ_MAX );
-      parser->tags[parser->tag_iter].INPUT.value_sz = parser->token_sz;
+      parser->tags[parser->tag_iter].INPUT.value_sz = parser->base.token_sz;
    }
 
 cleanup:
@@ -608,7 +601,7 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    switch( c ) {
    case '<':
       if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
-         if( 0 < parser->token_sz ) {
+         if( 0 < parser->base.token_sz ) {
             retval = mhtml_push_text_tag( parser );
             maug_cleanup_if_not_ok();
 
@@ -673,7 +666,7 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    case '/':
       if(
          MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) &&
-         0 == parser->token_sz
+         0 == parser->base.token_sz
       ) {
          /* Start of a close tag. */
          mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
@@ -753,8 +746,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
          /* Avoid a token that's only whitespace. */
          if(
-            0 < parser->token_sz &&
-            ' ' != parser->token[parser->token_sz - 1]
+            0 < parser->base.token_sz &&
+            ' ' != parser->base.token[parser->base.token_sz - 1]
          ) {
             mhtml_parser_append_token( parser, ' ' );
          }
@@ -769,9 +762,9 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       break;
    }
 
-   parser->i++;
+   parser->base.i++;
 
-   mparser_wait( parser );
+   mparser_wait( &((parser)->base) );
 
 cleanup:
 

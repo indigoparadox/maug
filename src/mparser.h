@@ -20,6 +20,11 @@
 #  define MPARSER_STACK_SZ_MAX 256
 #endif /* !MPARSER_STACK_SZ_MAX */
 
+#ifndef MPARSER_TOKEN_SZ_MAX
+/* TODO: Use a dynamically allocated block and enlarge as needed. */
+#  define MPARSER_TOKEN_SZ_MAX 4096
+#endif /* !MPARSER_TOKEN_SZ_MAX */
+
 #ifndef MPARSER_WAIT_INC
 #  define MPARSER_WAIT_INC 100
 #endif /* !MPARSER_WAIT_INC */
@@ -35,10 +40,23 @@ endif /* MPARSER_TRACE_NAMES */
 #endif
 #  define mparser_trace_printf( phase, ptype, parser )
 
+typedef uint8_t mparser_pstate_t;
+
 typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 
 typedef MERROR_RETVAL (*mparser_wait_cb_t)(
    MERROR_RETVAL retval_in, void* parser, void* data );
+
+struct MPARSER {
+   mparser_pstate_t pstate[MPARSER_STACK_SZ_MAX];
+   size_t pstate_sz;
+   mparser_wait_cb_t wait_cb;
+   void* wait_data;
+   maug_ms_t wait_next;
+   char token[MPARSER_TOKEN_SZ_MAX];
+   size_t token_sz;
+   size_t i;
+};
 
 /**
  * \brief Given a pstate table, generate numeric constants.
@@ -92,17 +110,12 @@ typedef MERROR_RETVAL (*mparser_wait_cb_t)(
    mparser_trace_printf( "PREPUSH", #ptype, parser ); \
    /* TODO: Use retval check. */ \
    assert( (parser)->pstate_sz < MPARSER_STACK_SZ_MAX ); \
-   (parser)->pstate[parser->pstate_sz++] = new_pstate; \
+   (parser)->pstate[(parser)->pstate_sz++] = new_pstate; \
    mparser_trace_printf( "POSTPUSH", #ptype, parser );
-
-#define mparser_pstate_pop( ptype, parser ) \
-   assert( (parser)->pstate_sz > 0 ); \
-   (parser)->pstate_sz--; \
-   mparser_trace_printf( "POP", #ptype, parser );
 
 #define mparser_invalid_c( ptype, parser, c, retval ) \
    error_printf( #ptype " parser invalid %c detected at char: " \
-      SIZE_T_FMT ", state: %u", c, parser->i, mparser_pstate( parser ) ); \
+      SIZE_T_FMT ", state: %u", c, (parser)->i, mparser_pstate( parser ) ); \
    retval = MERROR_PARSE;
 
 #define mparser_reset_token( ptype, parser ) \
@@ -111,12 +124,12 @@ typedef MERROR_RETVAL (*mparser_wait_cb_t)(
    debug_printf( MPARSER_TRACE_LVL, #ptype " parser reset token" );
 
 #define mparser_append_token( ptype, parser, c, token_sz_max ) \
-   parser->token[parser->token_sz++] = c; \
-   parser->token[parser->token_sz] = '\0'; \
+   (parser)->token[(parser)->token_sz++] = c; \
+   (parser)->token[(parser)->token_sz] = '\0'; \
    /* If size greater than max, return error indicating more buffer space
     * needed. */ \
    maug_cleanup_if_ge_overflow( \
-      parser->token_sz + 1, (size_t)token_sz_max );
+      (parser)->token_sz + 1, (size_t)token_sz_max );
 
 #define mparser_wait( parser ) \
    if( \
@@ -127,9 +140,25 @@ typedef MERROR_RETVAL (*mparser_wait_cb_t)(
       retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
    }
 
-#ifdef MPARSER_C
+mparser_pstate_t
+mparser_pstate_pop( const char* ptype, struct MPARSER* parser );
 
 /* \} */ /* maug_parser */
+
+#ifdef MPARSER_C
+
+mparser_pstate_t
+mparser_pstate_pop( const char* ptype, struct MPARSER* parser ) {
+   mparser_pstate_t pstate_popped;
+   
+   assert( (parser)->pstate_sz > 0 );
+
+   pstate_popped = (parser)->pstate_sz - 1;
+   (parser)->pstate_sz--;
+   mparser_trace_printf( "POP", ptype, parser );
+
+   return pstate_popped;
+}
 
 #endif /* MPARSER_C */
 

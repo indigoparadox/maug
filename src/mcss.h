@@ -46,26 +46,26 @@
    (0 <= style_idx ? &((styler)->styles[style_idx]) : NULL)
 
 #define mcss_tag_style( parser, tag_idx ) \
-   (0 <= tag_idx && 0 <= (parser)->tags[tag_idx].base.style ? \
-      &((parser)->styler.styles[(parser)->tags[tag_idx].base.style]) : NULL)
+   (0 <= tag_idx && 0 <= (&((parser)->base))->tags[tag_idx].base.style ? \
+      &((&((parser)->base))->styler.styles[(&((parser)->base))->tags[tag_idx].base.style]) : NULL)
 
 #define mcss_parser_pstate( parser ) \
-   mparser_pstate( parser )
+   mparser_pstate( &((parser)->base) )
 
 #define mcss_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mcss, parser, new_pstate )
+   mparser_pstate_push( mcss, &((parser)->base), new_pstate )
 
 #define mcss_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( mcss, parser )
+   mparser_pstate_pop( "mcss", &((parser)->base) )
 
 #define mcss_parser_invalid_c( parser, c, retval ) \
-   mparser_invalid_c( mcss, parser, c, retval )
+   mparser_invalid_c( mcss, &((parser)->base), c, retval )
 
 #define mcss_parser_reset_token( parser ) \
-   mparser_reset_token( mcss, parser )
+   mparser_reset_token( mcss, &((parser)->base) )
 
 #define mcss_parser_append_token( parser, c ) \
-   mparser_append_token( mcss, parser, c, MHTML_PARSER_TOKEN_SZ_MAX )
+   mparser_append_token( mcss, &((parser)->base), c, MHTML_PARSER_TOKEN_SZ_MAX )
 
 /**
  * \addtogroup mcss_parser_locking MCSS Parser Locking
@@ -167,14 +167,10 @@ struct MCSS_STYLE {
 };
 
 struct MCSS_PARSER {
-   uint16_t pstate[MPARSER_STACK_SZ_MAX];
-   size_t pstate_sz;
+   struct MPARSER base;
    int16_t prop_key;
    /*! \brief Flags to push with next pushed prop val. */
    uint8_t prop_flags;
-   char token[MHTML_PARSER_TOKEN_SZ_MAX];
-   size_t token_sz;
-   size_t i;
    MAUG_MHANDLE styles_h;
    /**
     * \brief Locked handle for MCSS_PARSER::styles_h. Please see
@@ -258,16 +254,16 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
-   mparser_token_replace( parser, i, '-', '_' );
+   mparser_token_upper( &((parser)->base), i );
+   mparser_token_replace( &((parser)->base), i, '-', '_' );
 
    /* Figure out style property type. */
    i = 0;
    while( '\0' != gc_mcss_prop_names[i][0] ) {
       if(
-         parser->token_sz == strlen( gc_mcss_prop_names[i] ) &&
+         parser->base.token_sz == strlen( gc_mcss_prop_names[i] ) &&
          0 == strncmp(
-            gc_mcss_prop_names[i], parser->token, parser->token_sz )
+            gc_mcss_prop_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MCSS_TRACE_LVL,
             "selected style (" SSIZE_T_FMT ") property: %s",
@@ -278,7 +274,7 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
       i++;
    }
 
-   error_printf( "could not find property: %s", parser->token );
+   error_printf( "could not find property: %s", parser->base.token );
    parser->prop_key = -1;
 
 cleanup:
@@ -293,8 +289,8 @@ MERROR_RETVAL mcss_style_position(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
-   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+   mparser_token_upper( &((parser)->base), i );
+   mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
    i = 0;
    while( '\0' != gc_mcss_position_names[i][0] ) {
@@ -302,7 +298,7 @@ MERROR_RETVAL mcss_style_position(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_position_names[i], parser->token, parser->token_sz )
+            gc_mcss_position_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_position_names[i] );
@@ -312,7 +308,7 @@ MERROR_RETVAL mcss_style_position(
       i++;
    }
 
-   error_printf( "invalid %s: %s", prop_name, parser->token );
+   error_printf( "invalid %s: %s", prop_name, parser->base.token );
 
 cleanup:
 
@@ -326,8 +322,8 @@ MERROR_RETVAL mcss_style_display(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
-   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+   mparser_token_upper( &((parser)->base), i );
+   mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
    i = 0;
    while( '\0' != gc_mcss_display_names[i][0] ) {
@@ -335,7 +331,7 @@ MERROR_RETVAL mcss_style_display(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_display_names[i], parser->token, parser->token_sz )
+            gc_mcss_display_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_display_names[i] );
@@ -345,7 +341,7 @@ MERROR_RETVAL mcss_style_display(
       i++;
    }
 
-   error_printf( "invalid %s: %s", prop_name, parser->token );
+   error_printf( "invalid %s: %s", prop_name, parser->base.token );
 
 cleanup:
 
@@ -359,8 +355,8 @@ MERROR_RETVAL mcss_style_color(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
-   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+   mparser_token_upper( &((parser)->base), i );
+   mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
    i = 0;
    while( '\0' != gc_mcss_color_names[i][0] ) {
@@ -368,7 +364,7 @@ MERROR_RETVAL mcss_style_color(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_color_names[i], parser->token, parser->token_sz )
+            gc_mcss_color_names[i], parser->base.token, parser->base.token_sz )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_color_names[i] );
@@ -378,7 +374,7 @@ MERROR_RETVAL mcss_style_color(
       i++;
    }
 
-   error_printf( "invalid %s: %s", prop_name, parser->token );
+   error_printf( "invalid %s: %s", prop_name, parser->base.token );
 
 cleanup:
 
@@ -398,11 +394,11 @@ MERROR_RETVAL mcss_style_str_t(
    /* str_idx_p is a pointer into the parser styles, so it should be locked! */
    assert( mcss_parser_is_locked( parser ) );
 
-   mparser_token_replace( parser, i, '!', '\0' ); /* !important */
+   mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
-   str_sz = strlen( parser->token );
+   str_sz = strlen( parser->base.token );
 
-   if( 0 == strlen( parser->token ) ) {
+   if( 0 == strlen( parser->base.token ) ) {
       debug_printf( MCSS_TRACE_LVL, "nothing to copy!" );
       goto cleanup;
    }
@@ -430,7 +426,7 @@ MERROR_RETVAL mcss_style_str_t(
    maug_cleanup_if_null_alloc( char*, str_table_p );
 
    /* Add this string at the end of the parser string table. */
-   strncpy( &(str_table_p[parser->str_table_sz]), parser->token, str_sz );
+   strncpy( &(str_table_p[parser->str_table_sz]), parser->base.token, str_sz );
    str_table_p[parser->str_table_sz + str_sz] = '\0';
 
    *str_idx_p = parser->str_table_sz;
@@ -458,13 +454,13 @@ MERROR_RETVAL mcss_style_size_t(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   mparser_token_upper( parser, i );
+   mparser_token_upper( &((parser)->base), i );
 
-   if( 0 == strncmp( "AUTO", parser->token, 5 ) ) {
+   if( 0 == strncmp( "AUTO", parser->base.token, 5 ) ) {
       parser->prop_flags |= MCSS_PROP_FLAG_AUTO;
    }
 
-   *num_out = atoi( parser->token );
+   *num_out = atoi( parser->base.token );
 
    if( MCSS_PROP_FLAG_AUTO == (MCSS_PROP_FLAG_AUTO & parser->prop_flags) ) {
       debug_printf( MCSS_TRACE_LVL, "set %s: AUTO", prop_name );
@@ -576,7 +572,7 @@ MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
-      debug_printf( 1, "processing value: %s", parser->token );
+      debug_printf( 1, "processing value: %s", parser->base.token );
       retval = mcss_push_prop_val( parser );
       maug_cleanup_if_not_ok();
       mcss_parser_pstate_pop( parser );
@@ -585,8 +581,8 @@ MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser ) {
    } else if( MCSS_PSTATE_RULE == mcss_parser_pstate( parser ) ) {
       if(
          /* TODO: Break this out to make it more resilient. */
-         NULL != strchr( parser->token, '!' ) &&
-         0 == strncmp( "!important", strchr( parser->token, '!' ), 10 )
+         NULL != strchr( parser->base.token, '!' ) &&
+         0 == strncmp( "!important", strchr( parser->base.token, '!' ), 10 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
          parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
@@ -676,7 +672,7 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
          MCSS_PSTATE_BLOCK == mcss_parser_pstate( parser )
       ) {
          /* Avoid a token that's only whitespace. */
-         if( 0 < parser->token_sz ) {
+         if( 0 < parser->base.token_sz ) {
             mcss_parser_append_token( parser, ' ' );
          }
       }
@@ -684,12 +680,12 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    case '{':
       if( MCSS_PSTATE_CLASS == mcss_parser_pstate( parser ) ) {
-         mcss_push_style_class( parser, parser->token, parser->token_sz );
+         mcss_push_style_class( parser, parser->base.token, parser->base.token_sz );
          mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
          mcss_parser_reset_token( parser );
 
       } else if( MCSS_PSTATE_ID == mcss_parser_pstate( parser ) ) {
-         mcss_push_style_id( parser, parser->token, parser->token_sz );
+         mcss_push_style_id( parser, parser->base.token, parser->base.token_sz );
          mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
          mcss_parser_reset_token( parser );
       }
@@ -708,7 +704,7 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       break;
    }
 
-   parser->i++;
+   parser->base.i++;
 
 cleanup:
 

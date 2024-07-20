@@ -23,14 +23,7 @@ typedef MERROR_RETVAL (*mjson_parse_close_cb)( void* arg );
 typedef MERROR_RETVAL (*mjson_parse_c_cb)( void* arg );
 
 struct MJSON_PARSER {
-   uint8_t pstate[MPARSER_STACK_SZ_MAX];
-   uint8_t pstate_popped;
-   size_t pstate_sz;
-   mparser_wait_cb_t wait_cb;
-   void* wait_data;
-   maug_ms_t wait_next;
-   char token[MJSON_TOKEN_SZ_MAX];
-   size_t token_sz;
+   struct MPARSER base;
    mjson_parse_token_cb token_parser;
    void* token_parser_arg;
    mjson_parse_close_cb close_list;
@@ -41,33 +34,31 @@ struct MJSON_PARSER {
    void* close_obj_arg;
    mjson_parse_close_cb close_val;
    void* close_val_arg;
-   size_t i;
    char last_c;
 };
 
 #define mjson_parser_pstate( parser ) \
-   ((parser)->pstate_sz > 0 ? \
-      (parser)->pstate[(parser)->pstate_sz - 1] : MJSON_PSTATE_NONE)
+   ((&((parser)->base))->pstate_sz > 0 ? \
+      (&((parser)->base))->pstate[(&((parser)->base))->pstate_sz - 1] : MJSON_PSTATE_NONE)
 
 #define mjson_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mjson, parser, new_pstate )
+   mparser_pstate_push( mjson, &((parser)->base), new_pstate )
 
 #define mjson_parser_pstate_pop( parser ) \
-   (parser)->pstate_popped = (parser)->pstate_sz - 1; \
-   mparser_pstate_pop( mjson, parser )
+   mparser_pstate_pop( "mjson", &(parser->base) )
 
 #define mjson_parser_invalid_c( parser, c, retval ) \
-   mparser_invalid_c( mjson, parser, c, retval )
+   mparser_invalid_c( mjson, &((parser)->base), c, retval )
 
 #define mjson_parser_reset_token( parser ) \
-   mparser_reset_token( mjson, parser )
+   mparser_reset_token( mjson, &((parser)->base) )
 
 #define mjson_parser_append_token( parser, c ) \
-   mparser_append_token( mjson, parser, c, MJSON_TOKEN_SZ_MAX )
+   mparser_append_token( mjson, &((parser)->base), c, MJSON_TOKEN_SZ_MAX )
 
 #define mjson_parser_parse_token( parser ) \
    parser->token_parser( \
-      (parser)->token, (parser)->token_sz, (parser)->token_parser_arg )
+      (&((parser)->base))->token, (&((parser)->base))->token_sz, (parser)->token_parser_arg )
 
 MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c );
 
@@ -242,7 +233,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
    }
 
-   mparser_wait( parser );
+   mparser_wait( &(parser->base) );
 
 cleanup:
 
