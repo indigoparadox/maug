@@ -56,8 +56,6 @@ const unsigned short gc_retroflat_nds_pal_default[256] __attribute__((aligned(4)
 };
 
 static void _retroflat_nds_change_bg() {
-   /* Setup bank E to receive extended palettes. */
-   vramSetBankE( VRAM_E_LCD );
 
    /* Update background tiles. */
    if(
@@ -65,6 +63,9 @@ static void _retroflat_nds_change_bg() {
       NULL != g_retroflat_state->platform.bg_tiles &&
       NULL != g_retroflat_state->platform.bg_bmp
    ) {
+      /* Setup bank E to receive extended palettes. */
+      vramSetBankE( VRAM_E_LCD );
+
       debug_printf(
          RETROFLAT_PLATFORM_TRACE_LVL,
          "loading background tiles into VRAM..." );
@@ -83,6 +84,9 @@ static void _retroflat_nds_change_bg() {
          g_retroflat_state->platform.bg_bmp->pal_len );
 
       g_retroflat_state->platform.flags &= ~RETROFLAT_NDS_FLAG_CHANGE_BG;
+
+      /* Tell bank E it can use the extended palettes, now. */
+      vramSetBankE( VRAM_E_BG_EXT_PALETTE );
    }
 
 #if 0
@@ -102,9 +106,6 @@ static void _retroflat_nds_change_bg() {
       g_window_bmp_changed = 0;
    }
 #endif
-
-   /* Tell bank E it can use the extended palettes, now. */
-   vramSetBankE( VRAM_E_BG_EXT_PALETTE );
 }
 
 /* === */
@@ -176,6 +177,7 @@ void _retroflat_nds_blit_tiles(
    struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h
 ) {
+   uint16_t* bg_tiles = NULL;
    int tile_idx = 0,
       tile_x = 0,
       tile_y = 0;
@@ -200,9 +202,10 @@ void _retroflat_nds_blit_tiles(
 
    /* TODO: Fill block with transparency on px layer in front. */
    /* graphics_draw_block( d_x, d_y, TILE_W, TILE_H, 0 ); */
+   /*
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, d_x, d_y, w, h,
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_FLAGS_FILL ); */
 
    /* DS tiles are 8x8, so each tile is split up into 4, so compensate! */
    /* tile_idx = src->tile_offset * 4; */
@@ -215,18 +218,17 @@ void _retroflat_nds_blit_tiles(
 
    /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
 
-   g_retroflat_state->platform.bg_tiles[
-      (tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
-         tile_idx;
-   g_retroflat_state->platform.bg_tiles[
-      (tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
-         tile_idx + 1;
-   g_retroflat_state->platform.bg_tiles[
-      ((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
-         tile_idx + 2;
-   g_retroflat_state->platform.bg_tiles[
-      ((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
-         tile_idx + 3;
+   /* bg_tiles = g_retroflat_state->platform.bg_tiles */
+   bg_tiles = bgGetMapPtr( g_retroflat_state->platform.bg_id );
+
+   bg_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+      tile_idx;
+   bg_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+      tile_idx + 1;
+   bg_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+      tile_idx + 2;
+   bg_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+      tile_idx + 3;
 
 }
 
@@ -411,10 +413,12 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    _retroflat_nds_change_bg();
 
+   /*
    dmaCopy(
       g_retroflat_state->platform.bg_tiles,
       bgGetMapPtr( g_retroflat_state->platform.bg_id ),
       sizeof( g_retroflat_state->platform.bg_tiles ) );
+   */
 
    /* Update sprite engines. */
    oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
@@ -521,19 +525,45 @@ void retroflat_blit_bitmap(
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int16_t x_refresh = 0,
+      y_refresh = 0,
+      tile_id = 0;
+
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
 
    assert( NULL != src );
 
-   /* TODO */
    if( 0 < instance ) {
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
+   } else if( 0 > instance ) {
+      tile_id = instance * -1;
+      x_refresh = d_x >> 4;
+      y_refresh = d_y >> 4;
+      retroflat_viewport_lock_refresh();
+      if(
+         tile_id !=
+         g_retroflat_state->viewport.refresh_grid[
+            (y_refresh * g_retroflat_state->viewport.screen_tile_w)
+            + x_refresh
+         ]
+      ) {
+         _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
+         g_retroflat_state->viewport.refresh_grid[
+            (y_refresh * g_retroflat_state->viewport.screen_tile_w)
+            + x_refresh
+         ] = tile_id;
+      }
+      retroflat_viewport_unlock_refresh();
    } else {
-      _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
+      /* TODO */
    }
 
+cleanup:
+
+   return;
 }
 
 /* === */
@@ -706,6 +736,26 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 void retroflat_resize_v() {
    /* Platform does not support resizing. */
+}
+
+/* === */
+
+uint8_t retroflat_viewport_move_x( int16_t x ) {
+   return retroflat_viewport_move_x_generic( x );
+}
+
+/* === */
+
+uint8_t retroflat_viewport_move_y( int16_t y ) {
+   return retroflat_viewport_move_y_generic( y );
+}
+
+/* === */
+
+uint8_t retroflat_viewport_focus(
+   size_t x1, size_t y1, size_t range, size_t speed
+) {
+   return retroflat_viewport_focus_generic( x1, y1, range, speed );
 }
 
 #endif /* !RETPLTF_H */

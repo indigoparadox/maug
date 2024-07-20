@@ -4,8 +4,6 @@
 
 #define RETROPLAT_PRESENT 1
 
-#define RETROFLAT_SOFT_VIEWPORT
-
 #define RETROGUI_NO_TEXTBOX
 
 #define RETROFLAT_NDS_FLAG_CHANGE_BG   0x02
@@ -165,6 +163,82 @@ struct RETROFLAT_PLATFORM {
    uint16_t             bg_tiles[1024];
    uint16_t             window_tiles[1024];
 };
+
+/*! \brief Return the current viewport X position in the world in pixels. */
+#  define retroflat_viewport_world_x() \
+   retroflat_viewport_world_x_generic()
+
+/*! \brief Return the current viewport Y position in the world in pixels. */
+#  define retroflat_viewport_world_y() \
+   retroflat_viewport_world_y_generic()
+
+/*! \brief Return the current width of the world in pixels. */
+#  define retroflat_viewport_world_w() \
+   retroflat_viewport_world_w_generic()
+
+/*! \brief Return the current height of the world in pixels. */
+#  define retroflat_viewport_world_h() \
+   retroflat_viewport_world_h_generic()
+
+#  define retroflat_viewport_screen_tile_w() \
+   retroflat_viewport_screen_tile_w_generic()
+
+#  define retroflat_viewport_screen_tile_h() \
+   retroflat_viewport_screen_tile_h_generic()
+
+/**
+ * \brief Set the pixel width and height of the world so the viewport knows
+ *        how far it may scroll.
+ * \param w The width of the world in pixels (tile_width * map_tile_width).
+ * \param h The height of the world in pixels (tile_height * map_tile_height).
+ */
+#  define retroflat_viewport_set_world( w, h ) \
+   retroflat_viewport_set_world_generic( w, h )
+
+#  define retroflat_viewport_set_world_pos( x, y ) \
+   retroflat_viewport_set_world_pos_generic( x, y )
+
+#  define retroflat_viewport_lock_refresh() \
+   retroflat_viewport_lock_refresh_generic()
+
+#  define retroflat_viewport_unlock_refresh() \
+   retroflat_viewport_unlock_refresh_generic()
+
+#  define retroflat_viewport_set_refresh( x, y, tid ) \
+   retroflat_viewport_set_refresh_generic( x, y, tid )
+
+uint8_t retroflat_viewport_move_x( int16_t x );
+
+uint8_t retroflat_viewport_move_y( int16_t y );
+
+/**
+ * \brief Move the viewport in a direction or combination thereof so that
+ *        it's focusing the given x1/y1 within the given range.
+ * \param x1 The X coordinate to focus on.
+ * \param y1 The Y coordinate to focus on.
+ * \param range The number of pixels from the center of the screen to keep
+ *        the given X and Y inside.
+ * \param speed The increment by which to move the viewport if the given X and
+ *        Y are *not* in focus.
+ * \warning The speed parameter should always divide evenly into the tile size,
+ *          or problems may occur!
+ */
+uint8_t retroflat_viewport_focus(
+   size_t x1, size_t y1, size_t range, size_t speed );
+
+/**
+ * \brief Return the screenspace X coordinate at which something at the given
+ *        world coordinate should be drawn.
+ */
+#  define retroflat_viewport_screen_x( world_x ) \
+   retroflat_viewport_screen_x_generic( world_x )
+
+/**
+ * \brief Return the screenspace Y coordinate at which something at the given
+ *        world coordinate should be drawn.
+ */
+#  define retroflat_viewport_screen_y( world_y ) \
+   retroflat_viewport_screen_y_generic( world_y )
 
 #endif /* !RETPLTD_H */
 

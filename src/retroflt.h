@@ -932,8 +932,6 @@ struct RETROFLAT_ARGS {
 #  endif /* RETROSND_API_WINMM */
 };
 
-#if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
-
 /**
  * \addtogroup maug_retroflt_viewport RetroFlat Viewport API
  * \brief A flexible API to facilitate tile-based views using hardware
@@ -958,39 +956,35 @@ struct RETROFLAT_VIEWPORT {
    retroflat_tile_t* refresh_grid;
 };
 
-/*! \brief Return the current viewport X position in the world in pixels. */
-#  define retroflat_viewport_world_x() (g_retroflat_state->viewport.world_x)
+#ifndef DOCUMENTATION
 
-/*! \brief Return the current viewport Y position in the world in pixels. */
-#  define retroflat_viewport_world_y() (g_retroflat_state->viewport.world_y)
+#  define retroflat_viewport_world_x_generic() \
+   (g_retroflat_state->viewport.world_x)
 
-/*! \brief Return the current width of the world in pixels. */
-#  define retroflat_viewport_world_w() (g_retroflat_state->viewport.world_w)
+#  define retroflat_viewport_world_y_generic() \
+   (g_retroflat_state->viewport.world_y)
 
-/*! \brief Return the current height of the world in pixels. */
-#  define retroflat_viewport_world_h() (g_retroflat_state->viewport.world_h)
+#  define retroflat_viewport_world_w_generic() \
+   (g_retroflat_state->viewport.world_w)
 
-#  define retroflat_viewport_screen_tile_w() \
+#  define retroflat_viewport_world_h_generic() \
+   (g_retroflat_state->viewport.world_h)
+
+#  define retroflat_viewport_screen_tile_w_generic() \
    (g_retroflat_state->viewport.screen_tile_w)
 
-#  define retroflat_viewport_screen_tile_h() \
+#  define retroflat_viewport_screen_tile_h_generic() \
    (g_retroflat_state->viewport.screen_tile_h)
 
-/**
- * \brief Set the pixel width and height of the world so the viewport knows
- *        how far it may scroll.
- * \param w The width of the world in pixels (tile_width * map_tile_width).
- * \param h The height of the world in pixels (tile_height * map_tile_height).
- */
-#  define retroflat_viewport_set_world( w, h ) \
+#  define retroflat_viewport_set_world_generic( w, h ) \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
-#  define retroflat_viewport_set_world_pos( x, y ) \
+#  define retroflat_viewport_set_world_pos_generic( x, y ) \
    (g_retroflat_state->viewport.world_x) = x; \
    (g_retroflat_state->viewport.world_y) = y;
 
-#  define retroflat_viewport_lock_refresh() \
+#  define retroflat_viewport_lock_refresh_generic() \
    if( NULL == g_retroflat_state->viewport.refresh_grid ) { \
       maug_mlock( \
          g_retroflat_state->viewport.refresh_grid_h, \
@@ -999,14 +993,14 @@ struct RETROFLAT_VIEWPORT {
          g_retroflat_state->viewport.refresh_grid ); \
    }
 
-#  define retroflat_viewport_unlock_refresh() \
+#  define retroflat_viewport_unlock_refresh_generic() \
    if( NULL != g_retroflat_state->viewport.refresh_grid ) { \
       maug_munlock( \
          g_retroflat_state->viewport.refresh_grid_h, \
          g_retroflat_state->viewport.refresh_grid ); \
    }
 
-#  define retroflat_viewport_set_refresh( x, y, tid ) \
+#  define retroflat_viewport_set_refresh_generic( x, y, tid ) \
    assert( NULL != g_retroflat_state->viewport.refresh_grid ); \
    if( \
       -1 <= x && -1 <= y && \
@@ -1018,9 +1012,65 @@ struct RETROFLAT_VIEWPORT {
             tid; \
    }
 
-uint8_t retroflat_viewport_move_x( int16_t x );
+uint8_t retroflat_viewport_move_x_generic( int16_t x );
 
-uint8_t retroflat_viewport_move_y( int16_t y );
+uint8_t retroflat_viewport_move_y_generic( int16_t y );
+
+uint8_t retroflat_viewport_focus_generic(
+   size_t x1, size_t y1, size_t range, size_t speed );
+
+#  define retroflat_viewport_screen_x_generic( world_x ) \
+   ((world_x) - retroflat_viewport_world_x())
+
+#  define retroflat_viewport_screen_y_generic( world_y ) \
+   ((world_y) - retroflat_viewport_world_y())
+
+#endif /* !DOCUMENTATION */
+
+#if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
+
+/*! \brief Return the current viewport X position in the world in pixels. */
+#  define retroflat_viewport_world_x() \
+   retroflat_viewport_world_x_generic()
+
+/*! \brief Return the current viewport Y position in the world in pixels. */
+#  define retroflat_viewport_world_y() \
+   retroflat_viewport_world_y_generic()
+
+/*! \brief Return the current width of the world in pixels. */
+#  define retroflat_viewport_world_w() \
+   retroflat_viewport_world_w_generic()
+
+/*! \brief Return the current height of the world in pixels. */
+#  define retroflat_viewport_world_h() \
+   retroflat_viewport_world_h_generic()
+
+#  define retroflat_viewport_screen_tile_w() \
+   retroflat_viewport_screen_tile_w_generic()
+
+#  define retroflat_viewport_screen_tile_h() \
+   retroflat_viewport_screen_tile_h_generic()
+
+/**
+ * \brief Set the pixel width and height of the world so the viewport knows
+ *        how far it may scroll.
+ * \param w The width of the world in pixels (tile_width * map_tile_width).
+ * \param h The height of the world in pixels (tile_height * map_tile_height).
+ */
+#  define retroflat_viewport_set_world( w, h ) \
+   retroflat_viewport_set_world_generic( w, h )
+
+#  define retroflat_viewport_set_world_pos( x, y ) \
+   retroflat_viewport_set_world_pos_generic( x, y )
+
+#  define retroflat_viewport_lock_refresh() \
+   retroflat_viewport_lock_refresh_generic()
+
+#  define retroflat_viewport_unlock_refresh() \
+   retroflat_viewport_unlock_refresh_generic()
+
+#  define retroflat_viewport_set_refresh( x, y, tid ) \
+   retroflat_viewport_set_refresh_generic( x, y, tid )
 
 /**
  * \brief Move the viewport in a direction or combination thereof so that
@@ -1034,30 +1084,32 @@ uint8_t retroflat_viewport_move_y( int16_t y );
  * \warning The speed parameter should always divide evenly into the tile size,
  *          or problems may occur!
  */
-uint8_t retroflat_viewport_focus(
-   size_t x1, size_t y1, size_t range, size_t speed );
-
-/* TODO: retroflat_viewport_screen_x/y logic to implement smooth viewport
- *       scrolling.
- */
+#  define retroflat_viewport_focus( x1, y1, range, speed ) \
+   retroflat_viewport_focus_generic( x1, y1, range, speed )
 
 /**
  * \brief Return the screenspace X coordinate at which something at the given
  *        world coordinate should be drawn.
  */
 #  define retroflat_viewport_screen_x( world_x ) \
-   ((world_x) - retroflat_viewport_world_x())
+   retroflat_viewport_screen_x_generic( world_x )
 
 /**
  * \brief Return the screenspace Y coordinate at which something at the given
  *        world coordinate should be drawn.
  */
 #  define retroflat_viewport_screen_y( world_y ) \
-   ((world_y) - retroflat_viewport_world_y())
+   retroflat_viewport_screen_y_generic( world_y )
 
-/*! \} */
+#  define retroflat_viewport_move_x( x ) \
+   retroflat_viewport_move_x_generic( x )
+
+#  define retroflat_viewport_move_y( y ) \
+   retroflat_viewport_move_y_generic( y )
 
 #endif /* RETROFLAT_SOFT_VIEWPORT || DOCUMENTATION */
+
+/*! \} */
 
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
@@ -2554,9 +2606,7 @@ void retroflat_set_proc_resize(
 
 /* === */
 
-#ifdef RETROFLAT_SOFT_VIEWPORT
-
-uint8_t retroflat_viewport_move_x( int16_t x ) {
+uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
    int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
 
    g_retroflat_state->viewport.screen_x += x;
@@ -2575,7 +2625,7 @@ uint8_t retroflat_viewport_move_x( int16_t x ) {
 
 /* === */
 
-uint8_t retroflat_viewport_move_y( int16_t y ) {
+uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
    int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
 
    g_retroflat_state->viewport.screen_y += y;
@@ -2594,7 +2644,7 @@ uint8_t retroflat_viewport_move_y( int16_t y ) {
 
 /* === */
 
-uint8_t retroflat_viewport_focus(
+uint8_t retroflat_viewport_focus_generic(
    size_t x1, size_t y1, size_t range, size_t speed
 ) {
    uint8_t moved = 0,
@@ -2618,8 +2668,6 @@ uint8_t retroflat_viewport_focus(
 
    return moved;
 }
-
-#endif /* RETROFLAT_SOFT_VIEWPORT */
 
 /* === */
 
