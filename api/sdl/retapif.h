@@ -722,6 +722,7 @@ void retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+#if 0
    /* SDL not setup for hardware scrolling. */
    if(
       0 > d_x || 0 > d_y ||
@@ -730,6 +731,7 @@ void retroflat_blit_bitmap(
    ) {
       return;
    }
+#endif
 
 #  if defined( RETROFLAT_OPENGL )
 
