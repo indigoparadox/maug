@@ -74,7 +74,7 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
          glyph_bin[x] = 1 << (w - x) == (glyph[y] & (1 << (w - x))) ? 'x' : '.';
       }
       
-      debug_printf( 1, "%s", glyph_bin );
+      debug_printf( RETROFONT_TRACE_LVL, "%s", glyph_bin );
    }
 }
 
@@ -237,12 +237,12 @@ MERROR_RETVAL retrofont_load(
          }
       }
 
-/* #if 0 < RETROFONT_TRACE_LVL */
+#if 0 < RETROFONT_TRACE_LVL
       /* Test dump to verify glyph integrity. */
       if( glyph_idx == '0' ) {
          retrofont_dump_glyph( p_glyph, glyph_w, glyph_h );
       }
-/* #endif */
+#endif
 
       font->glyphs_count++;
 
@@ -293,10 +293,11 @@ void retrofont_blit_glyph(
       for( x_iter = 0 ; x_end > x_iter ; x_iter++ ) {
          if( _retrofont_px_is_clear( x_iter, y_iter ) ) {
             if(
-               !prev_px_was_clear ||
+               RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) &&
+               (!prev_px_was_clear ||
                !_retrofont_px_is_clear( x_iter + 1, y_iter ) ||
                !_retrofont_px_is_clear( x_iter, y_iter + 1 ) ||
-               !_retrofont_px_is_clear( x_iter, y_iter - 1 )
+               !_retrofont_px_is_clear( x_iter, y_iter - 1 ))
             ) {
                /* Draw outline pixel. */
                retroflat_px( 
