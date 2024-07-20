@@ -98,3 +98,7 @@ uprintf's behavior can be modified by defining the following before inclusion:
 
 RetroFlat can be quite bulky for 16-bit DOS. Please try adding RETROFLAT\_DOS\_MEM\_LARGE=1 to your Makefile before Makefile.inc is included to enable a large code model.
 
+### Cache loading errors which retrogxc.h is never included
+
+For 16-bit builds, `GLOBAL\_DEFINES += -DRETROFLAT\_NO\_RETROGXC` must be specified in the Makefile explicitly, or the cache will be enabled in the DOS stubs.
+
