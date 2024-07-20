@@ -106,30 +106,10 @@ struct MPARSER {
    ((parser)->pstate_sz > 0 ? \
       (parser)->pstate[(parser)->pstate_sz - 1] : 0)
 
-#define mparser_pstate_push( ptype, parser, new_pstate ) \
-   mparser_trace_printf( "PREPUSH", #ptype, parser ); \
-   /* TODO: Use retval check. */ \
-   assert( (parser)->pstate_sz < MPARSER_STACK_SZ_MAX ); \
-   (parser)->pstate[(parser)->pstate_sz++] = new_pstate; \
-   mparser_trace_printf( "POSTPUSH", #ptype, parser );
-
 #define mparser_invalid_c( ptype, parser, c, retval ) \
-   error_printf( #ptype " parser invalid %c detected at char: " \
+   error_printf( "parser invalid %c detected at char: " \
       SIZE_T_FMT ", state: %u", c, (parser)->i, mparser_pstate( parser ) ); \
    retval = MERROR_PARSE;
-
-#define mparser_reset_token( ptype, parser ) \
-   (parser)->token_sz = 0; \
-   (parser)->token[(parser)->token_sz] = '\0'; \
-   debug_printf( MPARSER_TRACE_LVL, #ptype " parser reset token" );
-
-#define mparser_append_token( ptype, parser, c, token_sz_max ) \
-   (parser)->token[(parser)->token_sz++] = c; \
-   (parser)->token[(parser)->token_sz] = '\0'; \
-   /* If size greater than max, return error indicating more buffer space
-    * needed. */ \
-   maug_cleanup_if_ge_overflow( \
-      (parser)->token_sz + 1, (size_t)token_sz_max );
 
 #define mparser_wait( parser ) \
    if( \
@@ -158,6 +138,51 @@ mparser_pstate_pop( const char* ptype, struct MPARSER* parser ) {
    mparser_trace_printf( "POP", ptype, parser );
 
    return pstate_popped;
+}
+
+MERROR_RETVAL mparser_pstate_push(
+   const char* ptype, struct MPARSER* parser, mparser_pstate_t new_pstate
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   mparser_trace_printf( "PREPUSH", ptype, parser );
+
+   if( (parser)->pstate_sz + 1 >= MPARSER_STACK_SZ_MAX ) {
+      error_printf( "%s parser overflow!", ptype );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   (parser)->pstate[(parser)->pstate_sz++] = new_pstate;
+   mparser_trace_printf( "POSTPUSH", ptype, parser );
+
+cleanup:
+
+   return retval;
+}
+
+MERROR_RETVAL mparser_append_token(
+   const char* ptype, struct MPARSER* parser, char c
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   (parser)->token[(parser)->token_sz++] = c;
+   (parser)->token[(parser)->token_sz] = '\0';
+
+   /* If size greater than max, return error indicating more buffer space
+    * needed. */
+   /* TODO: Expand token allocation. */
+   maug_cleanup_if_ge_overflow( (parser)->token_sz + 1, MPARSER_TOKEN_SZ_MAX );
+
+cleanup:
+
+   return retval;
+}
+
+void mparser_reset_token( const char* ptype, struct MPARSER* parser ) {
+   (parser)->token_sz = 0;
+   (parser)->token[(parser)->token_sz] = '\0';
+   debug_printf( MPARSER_TRACE_LVL, "%s parser reset token", ptype );
 }
 
 #endif /* MPARSER_C */

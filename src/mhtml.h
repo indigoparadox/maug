@@ -2,10 +2,6 @@
 #ifndef MHTML_H
 #define MHTML_H
 
-#ifndef MHTML_PARSER_TOKEN_SZ_MAX
-#  define MHTML_PARSER_TOKEN_SZ_MAX 1024
-#endif /* !MHTML_PARSER_TOKEN_SZ_MAX */
-
 #ifndef MHTML_PARSER_TAGS_INIT_SZ
 #  define MHTML_PARSER_TAGS_INIT_SZ 10
 #endif /* !MHTML_PARSER_TAGS_INIT_SZ */
@@ -87,7 +83,7 @@
    mparser_pstate( &((parser)->base) )
 
 #define mhtml_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mhtml, &((parser)->base), new_pstate )
+   mparser_pstate_push( "mhtml", &((parser)->base), new_pstate )
 
 #define mhtml_parser_pstate_pop( parser ) \
    mparser_pstate_pop( "mhtml", &((parser)->base) )
@@ -96,10 +92,10 @@
    mparser_invalid_c( mhtml, &((parser)->base), c, retval )
 
 #define mhtml_parser_reset_token( parser ) \
-   mparser_reset_token( mhtml, &((parser)->base) )
+   mparser_reset_token( "mhtml", &((parser)->base) )
 
 #define mhtml_parser_append_token( parser, c ) \
-   mparser_append_token( mhtml, &((parser)->base), c, MHTML_PARSER_TOKEN_SZ_MAX )
+   mparser_append_token( "mhtml", &((parser)->base), c )
 
 #define mhtml_parser_lock( parser ) \
    if( NULL == (parser)->tags ) { \

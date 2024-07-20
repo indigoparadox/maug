@@ -53,7 +53,7 @@
    mparser_pstate( &((parser)->base) )
 
 #define mcss_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mcss, &((parser)->base), new_pstate )
+   mparser_pstate_push( "mcss", &((parser)->base), new_pstate )
 
 #define mcss_parser_pstate_pop( parser ) \
    mparser_pstate_pop( "mcss", &((parser)->base) )
@@ -62,10 +62,10 @@
    mparser_invalid_c( mcss, &((parser)->base), c, retval )
 
 #define mcss_parser_reset_token( parser ) \
-   mparser_reset_token( mcss, &((parser)->base) )
+   mparser_reset_token( "mcss", &((parser)->base) )
 
 #define mcss_parser_append_token( parser, c ) \
-   mparser_append_token( mcss, &((parser)->base), c, MHTML_PARSER_TOKEN_SZ_MAX )
+   mparser_append_token( "mcss", &((parser)->base), c )
 
 /**
  * \addtogroup mcss_parser_locking MCSS Parser Locking
@@ -633,7 +633,8 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
          mcss_parser_pstate_push( parser, MCSS_PSTATE_RULE );
          /* Append the ! here so the pusher can make it a \0 later. */
-         mcss_parser_append_token( parser, c );
+         retval = mcss_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mcss_parser_invalid_c( parser, c, retval );
@@ -646,7 +647,8 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
          mcss_parser_reset_token( parser );
 
       } else if( MCSS_PSTATE_VALUE == mcss_parser_pstate( parser ) ) {
-         mcss_parser_append_token( parser, c );
+         retval = mcss_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mcss_parser_invalid_c( parser, c, retval );
@@ -673,7 +675,8 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       ) {
          /* Avoid a token that's only whitespace. */
          if( 0 < parser->base.token_sz ) {
-            mcss_parser_append_token( parser, ' ' );
+            retval = mcss_parser_append_token( parser, ' ' );
+            maug_cleanup_if_not_ok();
          }
       }
       break;
@@ -700,7 +703,8 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
       }
 
    default:
-      mcss_parser_append_token( parser, c );
+      retval = mcss_parser_append_token( parser, c );
+      maug_cleanup_if_not_ok();
       break;
    }
 

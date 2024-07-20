@@ -4,10 +4,6 @@
 
 #include <mparser.h>
 
-#ifndef MJSON_TOKEN_SZ_MAX
-#  define MJSON_TOKEN_SZ_MAX 4096
-#endif /* !MJSON_TOKEN_SZ_MAX */
-
 #define MJSON_PARSER_PSTATE_TABLE( f ) \
    f( MJSON_PSTATE_NONE, 0 ) \
    f( MJSON_PSTATE_OBJECT_KEY, 1 ) \
@@ -42,7 +38,7 @@ struct MJSON_PARSER {
       (&((parser)->base))->pstate[(&((parser)->base))->pstate_sz - 1] : MJSON_PSTATE_NONE)
 
 #define mjson_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( mjson, &((parser)->base), new_pstate )
+   mparser_pstate_push( "mjson", &((parser)->base), new_pstate )
 
 #define mjson_parser_pstate_pop( parser ) \
    mparser_pstate_pop( "mjson", &(parser->base) )
@@ -51,10 +47,10 @@ struct MJSON_PARSER {
    mparser_invalid_c( mjson, &((parser)->base), c, retval )
 
 #define mjson_parser_reset_token( parser ) \
-   mparser_reset_token( mjson, &((parser)->base) )
+   mparser_reset_token( "mjson", &((parser)->base) )
 
 #define mjson_parser_append_token( parser, c ) \
-   mparser_append_token( mjson, &((parser)->base), c, MJSON_TOKEN_SZ_MAX )
+   mparser_append_token( "mjson", &((parser)->base), c )
 
 #define mjson_parser_parse_token( parser ) \
    parser->token_parser( \
@@ -77,7 +73,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
    case '\t':
    case ' ':
       if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
       }
       break;
 
@@ -90,7 +87,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          /* Starting to read a new object... it's gonna start with a key
           * for its first child!
           */
-         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
+         maug_cleanup_if_not_ok();
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->open_obj ) {
@@ -98,7 +96,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          }
 
       } else if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -120,7 +119,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       } else if(
          MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -133,13 +133,15 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
          MJSON_PSTATE_LIST == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_pstate_push( parser, MJSON_PSTATE_LIST );
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_LIST );
+         maug_cleanup_if_not_ok();
          mjson_parser_reset_token( parser );
 
       } else if(
          MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -160,7 +162,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       } else if(
          MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -173,7 +176,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          MJSON_PSTATE_OBJECT_VAL == mjson_parser_pstate( parser ) ||
          MJSON_PSTATE_LIST == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_pstate_push( parser, MJSON_PSTATE_STRING );
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_STRING );
+         maug_cleanup_if_not_ok();
 
       } else if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
          mjson_parser_pstate_pop( parser );
@@ -189,7 +193,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          maug_cleanup_if_not_ok();
          mjson_parser_pstate_pop( parser );
          mjson_parser_pstate_pop( parser ); /* Pop key */
-         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_KEY );
+         maug_cleanup_if_not_ok();
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->close_val ) {
@@ -204,7 +209,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       } else if(
          MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -215,13 +221,15 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
-         mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_VAL );
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_VAL );
+         maug_cleanup_if_not_ok();
          mjson_parser_reset_token( parser );
 
       } else if(
          MJSON_PSTATE_STRING == mjson_parser_pstate( parser )
       ) {
-         mjson_parser_append_token( parser, c );
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mjson_parser_invalid_c( parser, c, retval );
@@ -229,7 +237,8 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       break;
 
    default:
-      mjson_parser_append_token( parser, c );
+      retval = mjson_parser_append_token( parser, c );
+      maug_cleanup_if_not_ok();
       break;
    }
 
