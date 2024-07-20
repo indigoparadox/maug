@@ -188,6 +188,10 @@ void _retroflat_nds_blit_tiles(
    tile_y = d_y / RETROFLAT_NDS_BG_TILE_H_PX;
    tile_x = d_x / RETROFLAT_NDS_BG_TILE_W_PX;
 
+   assert( tile_y >= 0 );
+   assert( tile_x >= 0 );
+   assert( tile_x < RETROFLAT_NDS_BG_W_TILES );
+
    if( g_retroflat_state->platform.bg_bmp != src ) {
       g_retroflat_state->platform.bg_bmp = src;
       g_retroflat_state->platform.flags |= RETROFLAT_NDS_FLAG_CHANGE_BG;
@@ -219,13 +223,7 @@ void _retroflat_nds_blit_tiles(
 
    /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
 
-#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
-   /* Draw to the in-memory tilemap that will be copied on refresh. */
-   bg_map = g_retroflat_state->platform.bg_map;
-#else
    bg_map = bgGetMapPtr( g_retroflat_state->platform.bg_id );
-   /* bg_map = (uint16_t*)0x06001000; */
-#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
    bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
       tile_idx + 3;
@@ -320,9 +318,7 @@ MERROR_RETVAL retroflat_init_platform(
       RETROFLAT_NDS_BG2_MAP, RETROFLAT_NDS_BG2_TILE );
    bgSetPriority( g_retroflat_state->platform.px_id, 0 );
 
-#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
    bgWrapOff( 0 );
-#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
    /* Setup the sprite engines. */
 	oamInit( RETROFLAT_NDS_OAM_ACTIVE, SpriteMapping_1D_128, 0 );
@@ -427,29 +423,6 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    /* TODO */
 
    _retroflat_nds_change_bg();
-
-#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
-   /* Grab the address for the *inactive* map base for the background layer. */
-   if( RETROFLAT_NDS_BG0_MAP == g_retroflat_state->platform.bg0_map_base ) {
-      bg_map_inactive = RETROFLAT_NDS_BG0_MAP_BASE_ALT;
-   } else {
-      bg_map_inactive = RETROFLAT_NDS_BG0_MAP_BASE;
-   }
-   
-   /* Copy the tile array to the inactive map base. */
-   dmaCopy(
-      g_retroflat_state->platform.bg_map,
-      bg_map_inactive,
-      sizeof( g_retroflat_state->platform.bg_map ) );
-
-   /* Flip to the other map base. */
-   if( RETROFLAT_NDS_BG0_MAP == g_retroflat_state->platform.bg0_map_base ) {
-      g_retroflat_state->platform.bg0_map_base = RETROFLAT_NDS_BG0_MAP_ALT;
-   } else {
-      g_retroflat_state->platform.bg0_map_base = RETROFLAT_NDS_BG0_MAP;
-   }
-   bgSetMapBase( 0, g_retroflat_state->platform.bg0_map_base );
-#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
    /* Update sprite engines. */
    oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
@@ -564,7 +537,7 @@ void retroflat_blit_bitmap(
    }
 
    assert( NULL != src );
-
+   
    /* Clip off-screen drawing. */
    if(
       retroflat_screen_w() <= d_x || 0 > d_x ||
@@ -577,16 +550,7 @@ void retroflat_blit_bitmap(
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
    } else if( 0 > instance ) {
       tile_id = instance * -1;
-#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
-      retroflat_viewport_lock_refresh();
-      if( retroflat_viewport_tile_is_stale( d_x, d_y, tile_id ) ) {
-#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
          _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
-#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
-         retroflat_viewport_set_refresh( d_x, d_y, tile_id );
-      }
-      retroflat_viewport_unlock_refresh();
-#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
    } else {
       /* TODO */
    }
@@ -773,12 +737,6 @@ void retroflat_resize_v() {
 uint8_t retroflat_viewport_move_x( int16_t x ) {
    uint8_t retval;
    retval = retroflat_viewport_move_x_generic( x );
-#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
-   bgSetScroll(
-      g_retroflat_state->platform.bg_id,
-      g_retroflat_state->viewport.screen_x,
-      g_retroflat_state->viewport.screen_y );
-#endif /* !RETROFLAT_NDS_DOUBLE_BUFFER */
    return retval;
 }
 
@@ -787,12 +745,6 @@ uint8_t retroflat_viewport_move_x( int16_t x ) {
 uint8_t retroflat_viewport_move_y( int16_t y ) {
    uint8_t retval;
    retval = retroflat_viewport_move_y_generic( y );
-#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
-   bgSetScroll(
-      g_retroflat_state->platform.bg_id,
-      g_retroflat_state->viewport.screen_x,
-      g_retroflat_state->viewport.screen_y );
-#endif /* !RETROFLAT_NDS_DOUBLE_BUFFER */
    return retval;
 }
 
