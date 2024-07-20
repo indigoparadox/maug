@@ -14,7 +14,7 @@
 
 #  define RETROCON_DISABLE 1
 
-#define retroflat_wait_for_vblank() swiWaitForVBlank();
+#define retroflat_wait_for_vblank() /* swiWaitForVBlank(); */
 
 #ifndef RETROFLAT_NDS_OAM_ACTIVE
 /*! \brief Active sprite engine screen on Nintendo DS. */
@@ -31,6 +31,22 @@
 #endif /* !RETROFLAT_PLATFORM_TRACE_LVL */
 
 #define RETROFLAT_NDS_BG_W_TILES 32
+
+/* Determined by configurator:
+ * https://mtheall.com/vram.html#T0=1&NT0=256&MB0=2&TB0=1&S0=0&T1=1&NT1=64&MB1=4&TB1=0&S1=0&T2=6&MB2=2&S2=2
+ *
+ * Should support <= 256 tiles on BG0 and <=64 tiles on BG1.
+ */
+
+#define RETROFLAT_NDS_BG0_MAP          2
+#define RETROFLAT_NDS_BG0_MAP_BASE     (uint16_t*)0x06001000;
+#define RETROFLAT_NDS_BG0_MAP_ALT      3
+#define RETROFLAT_NDS_BG0_MAP_BASE_ALT (uint16_t*)0x06001800;
+#define RETROFLAT_NDS_BG0_TILE         2
+#define RETROFLAT_NDS_BG1_MAP          4
+#define RETROFLAT_NDS_BG1_TILE         0
+#define RETROFLAT_NDS_BG2_MAP          3
+#define RETROFLAT_NDS_BG2_TILE         0
 
 #  define RETROGLU_NO_TEXTURES
 #  define RETROGLU_NO_ERRORS
@@ -158,9 +174,10 @@ struct RETROFLAT_PLATFORM {
    int16_t              oam_sy[RETROFLAT_NDS_SPRITES_ACTIVE];
    struct RETROFLAT_BITMAP* bg_bmp;
    int                  bg_id;
+   int                  bg0_map_base;
    int                  window_id;
    int                  px_id;
-   uint16_t             bg_tiles[1024];
+   uint16_t             bg_map[1024];
    uint16_t             window_tiles[1024];
 };
 

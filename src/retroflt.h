@@ -1010,16 +1010,21 @@ struct RETROFLAT_VIEWPORT {
          g_retroflat_state->viewport.refresh_grid ); \
    }
 
-#  define retroflat_viewport_set_refresh_generic( x, y, tid ) \
+#  define retroflat_viewport_set_refresh_generic( x_px, y_px, tid ) \
    assert( NULL != g_retroflat_state->viewport.refresh_grid ); \
    if( \
-      -1 <= x && -1 <= y && \
-      g_retroflat_state->viewport.screen_tile_w > x && \
-      g_retroflat_state->viewport.screen_tile_h > y \
+      /* Expand the range by -1 to account for just off-screen tile. */ \
+      -(RETROFLAT_TILE_W) <= x_px && -(RETROFLAT_TILE_H) <= y_px && \
+      retroflat_screen_w() > x_px && \
+      retroflat_screen_h() > y_px \
    ) { \
+      assert( 0 < g_retroflat_state->viewport.screen_tile_w ); \
       g_retroflat_state->viewport.refresh_grid[ \
-         (y * g_retroflat_state->viewport.screen_tile_w) + x] = \
-            tid; \
+         /* Add +1 tile to make off-screen "-1" tile positive. */ \
+         ((((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS) * \
+            g_retroflat_state->viewport.screen_tile_w) + \
+               (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS)] = \
+                  tid; \
    }
 
 #  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
@@ -2157,29 +2162,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
-   if(
-      RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
-      (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)
-   ) {
-      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_VIEWPORT_REFRESH;
-
-      g_retroflat_state->viewport.screen_tile_w = 
-         /* Allocate 1 extra tile on each side for smooth scrolling. */
-         ((retroflat_screen_w() / RETROFLAT_TILE_W) + 2);
-      g_retroflat_state->viewport.screen_tile_h = 
-         ((retroflat_screen_h() / RETROFLAT_TILE_H) + 2);
-
-      debug_printf( 1, "allocating refresh grid (%d tiles...)",
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h );
-      g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h,
-         sizeof( retroflat_tile_t ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE,
-         g_retroflat_state->viewport.refresh_grid_h );
-   }
-
 #  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Setup intended screen size. */
    /* TODO: Handle window resizing someday! */
@@ -2210,6 +2192,34 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
+
+   /* Setup the refresh grid, if requested, only after screen space has been
+    * determined by the platform!
+    */
+   assert( 0 < retroflat_screen_w() );
+   assert( 0 < retroflat_screen_h() );
+   if(
+      RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
+      (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)
+   ) {
+      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_VIEWPORT_REFRESH;
+
+      g_retroflat_state->viewport.screen_tile_w = 
+         /* Allocate 1 extra tile on each side for smooth scrolling. */
+         ((retroflat_screen_w() / RETROFLAT_TILE_W) + 2);
+      g_retroflat_state->viewport.screen_tile_h = 
+         ((retroflat_screen_h() / RETROFLAT_TILE_H) + 2);
+
+      debug_printf( 1, "allocating refresh grid (%d tiles...)",
+         g_retroflat_state->viewport.screen_tile_w *
+         g_retroflat_state->viewport.screen_tile_h );
+      g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
+         g_retroflat_state->viewport.screen_tile_w *
+         g_retroflat_state->viewport.screen_tile_h,
+         sizeof( retroflat_tile_t ) );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE,
+         g_retroflat_state->viewport.refresh_grid_h );
+   }
 
 #  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )
    retval = retrosoft_init();

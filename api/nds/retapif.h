@@ -60,7 +60,7 @@ static void _retroflat_nds_change_bg() {
    /* Update background tiles. */
    if(
       _retroflat_nds_platform_flag( CHANGE_BG ) &&
-      NULL != g_retroflat_state->platform.bg_tiles &&
+      NULL != g_retroflat_state->platform.bg_map &&
       NULL != g_retroflat_state->platform.bg_bmp
    ) {
       /* Setup bank E to receive extended palettes. */
@@ -177,7 +177,7 @@ void _retroflat_nds_blit_tiles(
    struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h
 ) {
-   uint16_t* bg_tiles = NULL;
+   uint16_t* bg_map = NULL;
    int tile_idx = 0,
       tile_x = 0,
       tile_y = 0;
@@ -218,16 +218,20 @@ void _retroflat_nds_blit_tiles(
 
    /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
 
-   /* bg_tiles = g_retroflat_state->platform.bg_tiles */
-   bg_tiles = bgGetMapPtr( g_retroflat_state->platform.bg_id );
+#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
+   bg_map = g_retroflat_state->platform.bg_map;
+#else
+   bg_map = bgGetMapPtr( g_retroflat_state->platform.bg_id );
+   /* bg_map = (uint16_t*)0x06001000; */
+#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
-   bg_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
       tile_idx;
-   bg_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+   bg_map[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
       tile_idx + 1;
-   bg_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
+   bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] =
       tile_idx + 2;
-   bg_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
+   bg_map[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] =
       tile_idx + 3;
 
 }
@@ -293,22 +297,26 @@ MERROR_RETVAL retroflat_init_platform(
    /* Setup the background engine. */
 
    /* Put map at base 2, but stow tiles up after the bitmap BG at base 7. */
-   g_retroflat_state->platform.bg_id =
-      bgInit( 0, BgType_Text8bpp, BgSize_T_256x256, 2, 7 );
-   dmaFillWords( 0, g_retroflat_state->platform.bg_tiles,
-      sizeof( g_retroflat_state->platform.bg_tiles ) );
+   g_retroflat_state->platform.bg_id = bgInit(
+      0, BgType_Text8bpp, BgSize_T_256x256,
+      RETROFLAT_NDS_BG0_MAP, RETROFLAT_NDS_BG0_TILE );
+   g_retroflat_state->platform.bg0_map_base = RETROFLAT_NDS_BG0_MAP;
+   dmaFillWords( 0, g_retroflat_state->platform.bg_map,
+      sizeof( g_retroflat_state->platform.bg_map ) );
    bgSetPriority( g_retroflat_state->platform.bg_id, 2 );
 
    /* Put map at base 3, and tiles at base 0. */
-   g_retroflat_state->platform.window_id =
-      bgInit( 1, BgType_Text8bpp, BgSize_T_256x256, 3, 0 );
+   g_retroflat_state->platform.window_id = bgInit(
+      1, BgType_Text8bpp, BgSize_T_256x256,
+      RETROFLAT_NDS_BG1_MAP, RETROFLAT_NDS_BG1_TILE );
    dmaFillWords( 0, g_retroflat_state->platform.window_tiles,
       sizeof( g_retroflat_state->platform.window_tiles ) );
    bgSetPriority( g_retroflat_state->platform.window_id, 1 );
 
    /* Put bitmap BG at base 1, leaving map-addressable space at base 0. */
-   g_retroflat_state->platform.px_id =
-      bgInit( 2, BgType_Bmp16, BgSize_B16_256x256, 1, 0 );
+   g_retroflat_state->platform.px_id = bgInit(
+      2, BgType_Bmp16, BgSize_B16_256x256,
+      RETROFLAT_NDS_BG2_MAP, RETROFLAT_NDS_BG2_TILE );
    bgSetPriority( g_retroflat_state->platform.px_id, 0 );
 
    /* Setup the sprite engines. */
@@ -387,6 +395,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 #  else
 
    /* TODO */
+   swiWaitForVBlank();
 
 #  endif /* RETROFLAT_OPENGL */
 
@@ -399,6 +408,7 @@ cleanup:
 
 int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
+   uint16_t* bg_map_inactive;
 
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
       /* Regular bitmaps don't need locking. */
@@ -413,12 +423,28 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    _retroflat_nds_change_bg();
 
-   /*
+#ifdef RETROFLAT_NDS_DOUBLE_BUFFER
+   /* Grab the address for the *inactive* map base for the background layer. */
+   if( RETROFLAT_NDS_BG0_MAP == g_retroflat_state->platform.bg0_map_base ) {
+      bg_map_inactive = RETROFLAT_NDS_BG0_MAP_BASE_ALT;
+   } else {
+      bg_map_inactive = RETROFLAT_NDS_BG0_MAP_BASE;
+   }
+   
+   /* Copy the tile array to the inactive map base. */
    dmaCopy(
-      g_retroflat_state->platform.bg_tiles,
-      bgGetMapPtr( g_retroflat_state->platform.bg_id ),
-      sizeof( g_retroflat_state->platform.bg_tiles ) );
-   */
+      g_retroflat_state->platform.bg_map,
+      bg_map_inactive,
+      sizeof( g_retroflat_state->platform.bg_map ) );
+
+   /* Flip to the other map base. */
+   if( RETROFLAT_NDS_BG0_MAP == g_retroflat_state->platform.bg0_map_base ) {
+      g_retroflat_state->platform.bg0_map_base = RETROFLAT_NDS_BG0_MAP_ALT;
+   } else {
+      g_retroflat_state->platform.bg0_map_base = RETROFLAT_NDS_BG0_MAP;
+   }
+   bgSetMapBase( 0, g_retroflat_state->platform.bg0_map_base );
+#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
 
    /* Update sprite engines. */
    oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
@@ -538,15 +564,16 @@ void retroflat_blit_bitmap(
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
    } else if( 0 > instance ) {
       tile_id = instance * -1;
+#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
       retroflat_viewport_lock_refresh();
       if( retroflat_viewport_tile_is_stale( d_x, d_y, tile_id ) ) {
+#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
          _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
-         g_retroflat_state->viewport.refresh_grid[
-            (y_refresh * g_retroflat_state->viewport.screen_tile_w)
-            + x_refresh
-         ] = tile_id;
+#ifndef RETROFLAT_NDS_DOUBLE_BUFFER
+         retroflat_viewport_set_refresh( d_x, d_y, tile_id );
       }
       retroflat_viewport_unlock_refresh();
+#endif /* RETROFLAT_NDS_DOUBLE_BUFFER */
    } else {
       /* TODO */
    }
@@ -731,7 +758,15 @@ void retroflat_resize_v() {
 /* === */
 
 uint8_t retroflat_viewport_move_x( int16_t x ) {
-   return retroflat_viewport_move_x_generic( x );
+   uint8_t retval;
+   retval = retroflat_viewport_move_x_generic( x );
+   /*
+   bgSetScroll(
+      g_retroflat_state->platform.bg_id,
+      g_retroflat_state->viewport.screen_x,
+      g_retroflat_state->viewport.screen_y );
+   */
+   return retval;
 }
 
 /* === */
