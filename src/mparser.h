@@ -110,11 +110,19 @@ struct MPARSER {
       retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
    }
 
-mparser_pstate_t
-mparser_pstate_pop( const char* ptype, struct MPARSER* parser );
+mparser_pstate_t mparser_pstate_pop(
+   const char* ptype, struct MPARSER* parser
+#ifdef MPARSER_TRACE_NAMES
+   , const char** state_names
+#endif /* MPARSER_TRACE_NAMES */
+);
 
 MERROR_RETVAL mparser_pstate_push(
-   const char* ptype, struct MPARSER* parser, mparser_pstate_t new_pstate );
+   const char* ptype, struct MPARSER* parser, mparser_pstate_t new_pstate
+#ifdef MPARSER_TRACE_NAMES
+   , const char** state_names
+#endif /* MPARSER_TRACE_NAMES */
+);
 
 MERROR_RETVAL mparser_append_token(
    const char* ptype, struct MPARSER* parser, char c );
@@ -125,8 +133,12 @@ void mparser_reset_token( const char* ptype, struct MPARSER* parser );
 
 #ifdef MPARSER_C
 
-mparser_pstate_t
-mparser_pstate_pop( const char* ptype, struct MPARSER* parser ) {
+mparser_pstate_t mparser_pstate_pop(
+   const char* ptype, struct MPARSER* parser
+#ifdef MPARSER_TRACE_NAMES
+   , const char** state_names
+#endif /* MPARSER_TRACE_NAMES */
+) {
    mparser_pstate_t pstate_popped;
 
    assert( (parser)->pstate_sz > 0 );
@@ -134,27 +146,46 @@ mparser_pstate_pop( const char* ptype, struct MPARSER* parser ) {
    pstate_popped = (parser)->pstate_sz - 1;
    (parser)->pstate_sz--;
 
+#ifdef MPARSER_TRACE_NAMES
+   debug_printf( MPARSER_TRACE_LVL, "popping pstate: %s (%d)",
+      state_names[pstate_popped], pstate_popped );
+#else
    debug_printf( MPARSER_TRACE_LVL, "popping pstate: (%d)", pstate_popped );
+#endif /* MPARSER_TRACE_NAMES */
  
    return pstate_popped;
 }
 
 MERROR_RETVAL mparser_pstate_push(
    const char* ptype, struct MPARSER* parser, mparser_pstate_t new_pstate
+#ifdef MPARSER_TRACE_NAMES
+   , const char** state_names
+#endif /* MPARSER_TRACE_NAMES */
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+#ifdef MPARSER_TRACE_NAMES
+   debug_printf( MPARSER_TRACE_LVL,
+      "pushing pstate: %s (%d) (currently: %s (%d))",
+      state_names[new_pstate],
+      new_pstate,
+      state_names[
+         0 < parser->pstate_sz ? parser->pstate[parser->pstate_sz - 1] : 0],
+      0 < parser->pstate_sz ? parser->pstate[parser->pstate_sz - 1] : 0 );
+#else
    debug_printf( MPARSER_TRACE_LVL, "pushing pstate: %d (currently: %d)",
       new_pstate,
       0 < parser->pstate_sz ? parser->pstate[parser->pstate_sz - 1] : 0 );
- 
+#endif /* MPARSER_TRACE_NAMES */
+
    if( (parser)->pstate_sz + 1 >= MPARSER_STACK_SZ_MAX ) {
       error_printf( "%s parser overflow!", ptype );
       retval = MERROR_OVERFLOW;
       goto cleanup;
    }
 
-   (parser)->pstate[(parser)->pstate_sz++] = new_pstate;
+   (parser)->pstate[(parser)->pstate_sz] = new_pstate;
+   (parser)->pstate_sz++;
 
 cleanup:
 

@@ -82,11 +82,21 @@
 #define mhtml_parser_pstate( parser ) \
    mparser_pstate( &((parser)->base) )
 
-#define mhtml_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( "mhtml", &((parser)->base), new_pstate )
+#ifdef MPARSER_TRACE_NAMES
+#  define mhtml_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( \
+         "mhtml", &((parser)->base), new_pstate, gc_mhtml_pstate_names )
 
-#define mhtml_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( "mhtml", &((parser)->base) )
+#  define mhtml_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( \
+         "mhtml", &((parser)->base), gc_mhtml_pstate_names )
+#else
+#  define mhtml_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( "mhtml", &((parser)->base), new_pstate )
+
+#  define mhtml_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( "mhtml", &((parser)->base) )
+#endif /* MPARSER_TRACE_NAMES */
 
 #define mhtml_parser_invalid_c( parser, c, retval ) \
    mparser_invalid_c( mhtml, &((parser)->base), c, retval )

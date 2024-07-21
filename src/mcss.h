@@ -52,11 +52,20 @@
 #define mcss_parser_pstate( parser ) \
    mparser_pstate( &((parser)->base) )
 
-#define mcss_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( "mcss", &((parser)->base), new_pstate )
+#ifdef MPARSER_TRACE_NAMES
+#  define mcss_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( \
+         "mcss", &((parser)->base), new_pstate, gc_mcss_pstate_names )
 
-#define mcss_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( "mcss", &((parser)->base) )
+#  define mcss_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( "mcss", &((parser)->base), gc_mcss_pstate_names )
+#else
+#  define mcss_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( "mcss", &((parser)->base), new_pstate )
+
+#  define mcss_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( "mcss", &((parser)->base) )
+#endif /* MPARSER_TRACE_NAMES */
 
 #define mcss_parser_invalid_c( parser, c, retval ) \
    mparser_invalid_c( mcss, &((parser)->base), c, retval )
