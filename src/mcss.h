@@ -179,9 +179,7 @@ struct MCSS_PARSER {
    struct MCSS_STYLE* styles;
    size_t styles_sz;
    size_t styles_sz_max;
-   MAUG_MHANDLE str_table_h;
-   size_t str_table_sz;
-   size_t str_table_sz_max;
+   struct MDATA_STRTABLE str_table;
    RETROFLAT_COLOR colors[16];
 };
 
@@ -387,62 +385,21 @@ MERROR_RETVAL mcss_style_str_t(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
-   size_t str_sz = 0;
-   MAUG_MHANDLE str_table_h_new = (MAUG_MHANDLE)NULL;
-   char* str_table_p = NULL;
    
    /* str_idx_p is a pointer into the parser styles, so it should be locked! */
    assert( mcss_parser_is_locked( parser ) );
 
    mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
-   str_sz = strlen( parser->base.token );
-
-   if( 0 == strlen( parser->base.token ) ) {
+   if( 0 == parser->base.token_sz ) {
       debug_printf( MCSS_TRACE_LVL, "nothing to copy!" );
       goto cleanup;
    }
 
-   if( (MAUG_MHANDLE)NULL == parser->str_table_h ) {
-      debug_printf(
-         MCSS_TRACE_LVL, "creating string table of " SIZE_T_FMT " chars...",
-         str_sz + 1 );
-      parser->str_table_h = maug_malloc( str_sz + 1, 1 );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser->str_table_h );
-      parser->str_table_sz_max = str_sz + 1;
-   } else {
-      while( parser->str_table_sz_max <= parser->str_table_sz + str_sz + 1 ) {
-         debug_printf(
-            MCSS_TRACE_LVL, "enlarging string table to " SIZE_T_FMT "...",
-            parser->str_table_sz_max * 2 );
-         maug_mrealloc_test(
-            str_table_h_new, parser->str_table_h, parser->str_table_sz_max * 2,
-            sizeof( char ) );
-         parser->str_table_sz_max *= 2;
-      }
-   }
-
-   maug_mlock( parser->str_table_h, str_table_p );
-   maug_cleanup_if_null_alloc( char*, str_table_p );
-
-   /* Add this string at the end of the parser string table. */
-   strncpy( &(str_table_p[parser->str_table_sz]), parser->base.token, str_sz );
-   str_table_p[parser->str_table_sz + str_sz] = '\0';
-
-   *str_idx_p = parser->str_table_sz;
-
-   debug_printf(
-      MCSS_TRACE_LVL, "set %s: str_table_idx: " SIZE_T_FMT ": \"%s\"",
-      prop_name, parser->str_table_sz, &(str_table_p[parser->str_table_sz]) );
-
-   /* Set the string table cursor to the next available spot. */
-   parser->str_table_sz += str_sz + 1; /* +1 for terminating NULL. */
+   *str_idx_p = mdata_strtable_append(
+      &(parser->str_table), parser->base.token, parser->base.token_sz );
 
 cleanup:
-
-   if( NULL != str_table_p ) {
-      maug_munlock( parser->str_table_h, str_table_p );
-   }
 
    return retval;
 }
@@ -742,9 +699,7 @@ void mcss_parser_free( struct MCSS_PARSER* parser ) {
       maug_mfree( parser->styles_h );
    }
 
-   if( (MAUG_MHANDLE)NULL != parser->str_table_h ) {
-      maug_mfree( parser->str_table_h );
-   }
+   mdata_strtable_free( &(parser->str_table ) );
 }
 
 MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {

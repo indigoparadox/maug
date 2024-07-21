@@ -432,8 +432,7 @@ static MERROR_RETVAL retrohtr_load_font(
       goto cleanup;
    }
 
-   maug_mlock( styler->str_table_h, str_table );
-   maug_cleanup_if_null_alloc( char*, str_table );
+   mdata_strtable_lock( &(styler->str_table), str_table );
 
    if( 0 > effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
@@ -453,9 +452,7 @@ static MERROR_RETVAL retrohtr_load_font(
 
 cleanup:
 
-   if( NULL != str_table ) {
-      maug_munlock( styler->str_table_h, str_table );
-   }
+   mdata_strtable_unlock( &(styler->str_table), str_table );
 
    return retval;
 }
