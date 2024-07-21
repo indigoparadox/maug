@@ -56,6 +56,7 @@ struct MPARSER {
    char token[MPARSER_TOKEN_SZ_MAX];
    size_t token_sz;
    size_t i;
+   char last_c;
 };
 
 /**
@@ -122,6 +123,14 @@ struct MPARSER {
 
 mparser_pstate_t
 mparser_pstate_pop( const char* ptype, struct MPARSER* parser );
+
+MERROR_RETVAL mparser_pstate_push(
+   const char* ptype, struct MPARSER* parser, mparser_pstate_t new_pstate );
+
+MERROR_RETVAL mparser_append_token(
+   const char* ptype, struct MPARSER* parser, char c );
+
+void mparser_reset_token( const char* ptype, struct MPARSER* parser );
 
 /* \} */ /* maug_parser */
 

@@ -712,6 +712,8 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
 cleanup:
 
+   parser->base.last_c = c;
+
    return retval;
 }
 

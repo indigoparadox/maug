@@ -614,7 +614,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
                maug_cleanup_if_not_ok();
             }
          }
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_ELEMENT )
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_ELEMENT );
+         maug_cleanup_if_not_ok();
          mhtml_parser_reset_token( parser );
 
       } else {
@@ -649,10 +650,12 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          mhtml_parser_reset_token( parser );
 
       } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mhtml_parser_invalid_c( parser, c, retval );
@@ -665,17 +668,21 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          0 == parser->base.token_sz
       ) {
          /* Start of a close tag. */
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
          /* Close of a self-closing tag. */
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_END_ELEMENT );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mhtml_parser_invalid_c( parser, c, retval );
@@ -686,14 +693,17 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
          retval = mhtml_push_attrib_key( parser );
          maug_cleanup_if_not_ok();
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_ATTRIB_VAL );
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_ATTRIB_VAL );
+         maug_cleanup_if_not_ok();
          mhtml_parser_reset_token( parser );
 
       } else if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mhtml_parser_invalid_c( parser, '_', retval );
@@ -702,7 +712,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
 
    case '"':
       if( MHTML_PSTATE_ATTRIB_VAL == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_STRING );
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_STRING );
+         maug_cleanup_if_not_ok();
          mhtml_parser_reset_token( parser );
 
       } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
@@ -714,7 +725,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
          mhtml_parser_reset_token( parser );
 
       } else if( MHTML_PSTATE_NONE == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else {
          mhtml_parser_invalid_c( parser, '_', retval );
@@ -730,11 +742,13 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       if( MHTML_PSTATE_ELEMENT == mhtml_parser_pstate( parser ) ) {
          retval = mhtml_push_element_tag( parser );
          maug_cleanup_if_not_ok();
-         mhtml_parser_pstate_push( parser, MHTML_PSTATE_ATTRIB_KEY );
+         retval = mhtml_parser_pstate_push( parser, MHTML_PSTATE_ATTRIB_KEY );
+         maug_cleanup_if_not_ok();
          mhtml_parser_reset_token( parser );
 
       } else if( MHTML_PSTATE_STRING == mhtml_parser_pstate( parser ) ) {
-         mhtml_parser_append_token( parser, c );
+         retval = mhtml_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
 
       } else if( MHTML_PSTATE_ATTRIB_KEY == mhtml_parser_pstate( parser ) ) {
          /* Do nothing. */
@@ -745,7 +759,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
             0 < parser->base.token_sz &&
             ' ' != parser->base.token[parser->base.token_sz - 1]
          ) {
-            mhtml_parser_append_token( parser, ' ' );
+            retval = mhtml_parser_append_token( parser, ' ' );
+            maug_cleanup_if_not_ok();
          }
 
       } else {
@@ -754,7 +769,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
       break;
 
    default:
-      mhtml_parser_append_token( parser, c );
+      retval = mhtml_parser_append_token( parser, c );
+      maug_cleanup_if_not_ok();
       break;
    }
 
@@ -763,6 +779,8 @@ MERROR_RETVAL mhtml_parse_c( struct MHTML_PARSER* parser, char c ) {
    mparser_wait( &((parser)->base) );
 
 cleanup:
+
+   parser->base.last_c = c;
 
    mhtml_parser_unlock( parser );
 

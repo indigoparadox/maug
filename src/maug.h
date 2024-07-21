@@ -68,6 +68,11 @@
 #include <mplug.h>
 
 #ifdef MAUG_C
+#  define MPARSER_C
+#endif /* MAUG_C */
+#include <mparser.h>
+
+#ifdef MAUG_C
 #  define MJSON_C
 #  define MHTML_C
 #  define MPARSER_C

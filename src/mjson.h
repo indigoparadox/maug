@@ -30,7 +30,6 @@ struct MJSON_PARSER {
    void* close_obj_arg;
    mjson_parse_close_cb close_val;
    void* close_val_arg;
-   char last_c;
 };
 
 #define mjson_parser_pstate( parser ) \
@@ -246,7 +245,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
 
 cleanup:
 
-   parser->last_c = c;
+   parser->base.last_c = c;
 
    return retval;
 }
