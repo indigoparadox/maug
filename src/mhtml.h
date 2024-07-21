@@ -119,8 +119,10 @@ struct MHTML_TAG_BASE {
    ssize_t first_child;
    ssize_t next_sibling;
    ssize_t style;
+   /* TODO: Use str_stable for classes. */
    char classes[MCSS_CLASS_SZ_MAX + 1];
    size_t classes_sz;
+   /* TODO: Use str_stable for id. */
    char id[MCSS_ID_SZ_MAX + 1];
    size_t id_sz;
 };

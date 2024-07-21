@@ -159,8 +159,10 @@
 
 struct MCSS_STYLE {
    uint8_t flags;
+   /* TODO: Use str_stable for id. */
    char id[MCSS_ID_SZ_MAX];
    size_t id_sz;
+   /* TODO: Use str_stable for class. */
    char class[MCSS_CLASS_SZ_MAX];
    size_t class_sz;
    MCSS_PROP_TABLE( MCSS_PROP_TABLE_PROPS )
