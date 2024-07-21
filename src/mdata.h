@@ -12,7 +12,10 @@ struct MDATA_STRTABLE {
    size_t str_sz_max;
 };
 
-size_t mdata_strtable_append(
+ssize_t mdata_strtable_find(
+   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz );
+
+ssize_t mdata_strtable_append(
    struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz );
 
 void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
@@ -30,13 +33,62 @@ void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
 
 #include <string.h> /* strncpy() */
 
-size_t mdata_strtable_append(
+ssize_t mdata_strtable_find(
    struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz
 ) {
-   size_t idx_p_out = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t i = 0;
+   char* str_table_p = NULL;
+
+   if( NULL == str_table->str_h ) {
+      error_printf( "str_table not allocated!" );
+      i = -1;
+      goto cleanup;
+   }
+
+   maug_mlock( str_table->str_h, str_table_p );
+
+   for( i = 0 ; str_table->str_sz > i ; i++ ) {
+      if( 0 == strncmp( &(str_table_p[i]), str, str_sz + 1 ) ) {
+         /* String found. */
+         debug_printf(
+            MDATA_TRACE_LVL, "found str_table_idx: " SIZE_T_FMT ": \"%s\"",
+            i, &(str_table_p[i]) );
+         goto cleanup;
+      }
+   }
+
+   /* String not found. */
+   i = -1;
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      i = retval * -1;
+   }
+
+   if( NULL != str_table_p ) {
+      maug_munlock( str_table->str_h, str_table_p );
+   }
+
+   return i;
+}
+
+ssize_t mdata_strtable_append(
+   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz
+) {
+   ssize_t idx_p_out = 0;
    MAUG_MHANDLE str_h_new = (MAUG_MHANDLE)NULL;
    char* str_table_p = NULL;
    MERROR_RETVAL retval = MERROR_OK;
+
+   /* Search the str_stable for an identical string and return that index.
+    */
+   idx_p_out = mdata_strtable_find( str_table, str, str_sz );
+   if( -1 != idx_p_out ) {
+      /* Found, or error returned. */
+      goto cleanup;
+   }
 
    if( (MAUG_MHANDLE)NULL == str_table->str_h ) {
       debug_printf(
@@ -76,7 +128,7 @@ size_t mdata_strtable_append(
 cleanup:
 
    if( MERROR_OK != retval ) {
-      idx_p_out = 0;
+      idx_p_out = retval * -1;
    }
 
    if( NULL != str_table_p ) {

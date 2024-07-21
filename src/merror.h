@@ -20,13 +20,13 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_OK       0x0000
 
-#define MERROR_ALLOC    0x0001
+#define MERROR_USR      0x0001
 
 #define MERROR_OVERFLOW 0x0002
 
 #define MERROR_FILE     0x0004
 
-#define MERROR_USR      0x0008
+#define MERROR_ALLOC    0x0008
 
 #define MERROR_PARSE    0x0010
 

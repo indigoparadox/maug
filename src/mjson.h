@@ -2,8 +2,6 @@
 #ifndef MJSON_H
 #define MJSON_H
 
-#include <mparser.h>
-
 #define MJSON_PARSER_PSTATE_TABLE( f ) \
    f( MJSON_PSTATE_NONE, 0 ) \
    f( MJSON_PSTATE_OBJECT_KEY, 1 ) \
