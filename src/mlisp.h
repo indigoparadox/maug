@@ -58,10 +58,13 @@ struct MLISP_PARSER {
 #ifdef MPARSER_TRACE_NAMES
 #  define mlisp_parser_pstate_push( parser, new_pstate ) \
       mparser_pstate_push( \
-         "mlisp", &((parser)->base), new_pstate, gc_mlisp_pstate_names )
+         "mlisp", &((parser)->base), new_pstate, gc_mlisp_pstate_names ); \
+      debug_printf( MLISP_TRACE_LVL, "PUSHED" );
 
 #  define mlisp_parser_pstate_pop( parser ) \
-      mparser_pstate_pop( "mlisp", &((parser)->base), gc_mlisp_pstate_names )
+      mparser_pstate_pop( \
+         "mlisp", &((parser)->base), gc_mlisp_pstate_names ); \
+      debug_printf( MLISP_TRACE_LVL, "POPPED" );
 #else
 #  define mlisp_parser_pstate_push( parser, new_pstate ) \
       mparser_pstate_push( "mlisp", &((parser)->base), new_pstate )
@@ -96,8 +99,13 @@ MPARSER_PSTATE_NAMES( MLISP_PARSER_PSTATE_TABLE, mlisp )
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t str_idx = -1;
+   mparser_pstate_t prev_state = 0;
 
-   debug_printf( MLISP_TRACE_LVL, "%c", c );
+   debug_printf( MLISP_TRACE_LVL,
+      SIZE_T_FMT ": %c (%s (%d)) (sz: " SIZE_T_FMT ")",
+      parser->base.i, c, gc_mlisp_pstate_names[mlisp_parser_pstate( parser )],
+      mlisp_parser_pstate( parser ),
+      parser->base.pstate_sz );
 
    switch( c ) {
    case '\r':
@@ -112,16 +120,18 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
             break;
          }
 
-         debug_printf( MLISP_TRACE_LVL, "found symbol: %s",
-            parser->base.token );
+         debug_printf( MLISP_TRACE_LVL, "found symbol: %s (" SIZE_T_FMT ")",
+            parser->base.token, parser->base.token_sz );
 
          /* TODO: Create symbol expression. */
          str_idx = mdata_strtable_append( &(parser->str_table),
             parser->base.token, parser->base.token_sz );
 
-         mlisp_parser_pstate_pop( parser );
+         prev_state = mlisp_parser_pstate_pop( parser );
+         debug_printf( MLISP_TRACE_LVL, "prev state: %s",
+            gc_mlisp_pstate_names[prev_state] );
          retval = mlisp_parser_pstate_push( parser,
-            MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ?
+            MLISP_PSTATE_SYMBOL_OP == prev_state ?
             MLISP_PSTATE_SYMBOL_A : MLISP_PSTATE_SYMBOL_B );
          mlisp_parser_reset_token( parser );
 
@@ -129,11 +139,6 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          retval = mlisp_parser_append_token( parser, c );
          maug_cleanup_if_not_ok();
 
-      } else if(
-         MLISP_PSTATE_SYMBOL_B == mlisp_parser_pstate( parser ) &&
-         0 < parser->base.token_sz
-      ) {
-         mlisp_parser_invalid_c( parser, c, retval );
       }
       break;
 

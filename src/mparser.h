@@ -139,12 +139,13 @@ mparser_pstate_t mparser_pstate_pop(
    , const char** state_names
 #endif /* MPARSER_TRACE_NAMES */
 ) {
-   mparser_pstate_t pstate_popped;
+   mparser_pstate_t pstate_popped = 0;
 
    assert( (parser)->pstate_sz > 0 );
 
-   pstate_popped = (parser)->pstate_sz - 1;
-   (parser)->pstate_sz--;
+   pstate_popped = mparser_pstate( parser );
+   parser->pstate_sz--;
+   parser->pstate[parser->pstate_sz] = -1;
 
 #ifdef MPARSER_TRACE_NAMES
    debug_printf( MPARSER_TRACE_LVL, "popping pstate: %s (%d)",
@@ -213,9 +214,7 @@ cleanup:
 void mparser_reset_token( const char* ptype, struct MPARSER* parser ) {
    (parser)->token_sz = 0;
    (parser)->token[(parser)->token_sz] = '\0';
-   /*
    debug_printf( MPARSER_TRACE_LVL, "%s parser reset token", ptype );
-   */
 }
 
 #endif /* MPARSER_C */
