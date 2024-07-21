@@ -10,6 +10,12 @@
 #  define MLISP_TRACE_LVL 0
 #endif /* !MLISP_TRACE_LVL */
 
+#ifndef MLISP_AST_INIT_SZ
+#  define MLISP_AST_INIT_SZ 10
+#endif /* !MLISP_AST_INIT_SZ */
+
+#define MLISP_AST_FLAG_ACTIVE 0x01
+
 #define MLISP_PARSER_PSTATE_TABLE( f ) \
    f( MLISP_PSTATE_NONE, 0 ) \
    f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
@@ -35,6 +41,8 @@ struct MLISP_ENV {
 };
 
 struct MLISP_AST_NODE {
+   uint8_t flags;
+   ssize_t ast_idx_parent;
    ssize_t env_idx_op;
    ssize_t ast_idx_child_a;
    ssize_t ast_idx_child_b;
@@ -49,6 +57,7 @@ struct MLISP_PARSER {
    MAUG_MHANDLE ast_h;
    size_t ast_sz;
    size_t ast_sz_max;
+   ssize_t ast_node_iter;
 };
 
 #define mlisp_parser_pstate( parser ) \
@@ -96,6 +105,106 @@ MLISP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
 MPARSER_PSTATE_NAMES( MLISP_PARSER_PSTATE_TABLE, mlisp )
 
+static ssize_t _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_AST_NODE* ast_nodes = NULL;
+   MAUG_MHANDLE ast_h_new = NULL;
+   ssize_t child_idx_out = 0;
+   
+   /* Make sure there are free nodes. */
+   if( (MAUG_MHANDLE)NULL == parser->ast_h ) {
+      assert( 0 == parser->ast_sz_max );
+
+      parser->ast_sz_max = MLISP_AST_INIT_SZ;
+      debug_printf(
+         MDATA_TRACE_LVL, "creating AST of " SIZE_T_FMT " nodes...",
+         parser->ast_sz_max );
+      parser->ast_h = maug_malloc(
+         parser->ast_sz_max, sizeof( struct MLISP_AST_NODE ) );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser->ast_h );
+
+   } else {
+      debug_printf(
+         MDATA_TRACE_LVL, "enlarging string table to " SIZE_T_FMT "...",
+         parser->ast_sz_max * 2 );
+      maug_mrealloc_test(
+         ast_h_new, parser->ast_h, parser->ast_sz_max * 2,
+         sizeof( struct MLISP_AST_NODE ) );
+      parser->ast_sz_max *= 2;
+   }
+
+   maug_mlock( parser->ast_h, ast_nodes );
+   maug_cleanup_if_null_lock( struct MLISP_AST_NODE*, ast_nodes );
+
+   /* Find a free node. */
+   while(
+      MLISP_AST_FLAG_ACTIVE ==
+      (MLISP_AST_FLAG_ACTIVE & ast_nodes[child_idx_out].flags)
+   ) {
+      child_idx_out++;
+   }
+
+   assert( child_idx_out < parser->ast_sz_max );
+
+   debug_printf( MLISP_TRACE_LVL, "setting up node: " SSIZE_T_FMT,
+      child_idx_out );
+
+   if( 0 <= parser->ast_node_iter ) {
+      /* Add child node based on parser state. */
+      if( MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser ) ) {
+         debug_printf( MLISP_TRACE_LVL,
+            "adding child A node " SSIZE_T_FMT " under node: " SSIZE_T_FMT,
+            child_idx_out, parser->ast_node_iter );
+         ast_nodes[parser->ast_node_iter].ast_idx_child_a = child_idx_out;
+      } else if( MLISP_PSTATE_SYMBOL_B == mlisp_parser_pstate( parser ) ) {
+         debug_printf( MLISP_TRACE_LVL,
+            "adding child B node " SSIZE_T_FMT " under node: " SSIZE_T_FMT,
+            child_idx_out, parser->ast_node_iter );
+         ast_nodes[parser->ast_node_iter].ast_idx_child_b = child_idx_out;
+      }
+   }
+
+   ast_nodes[child_idx_out].flags |= MLISP_AST_FLAG_ACTIVE;
+   ast_nodes[child_idx_out].ast_idx_parent = parser->ast_node_iter;
+   parser->ast_node_iter = child_idx_out;
+
+cleanup:
+
+   if( NULL != ast_nodes ) {
+      maug_munlock( parser->ast_h, ast_nodes );
+   }
+
+   if( MERROR_OK != retval ) {
+      child_idx_out = -1 * retval;
+   }
+
+   return child_idx_out;
+}
+
+static
+MERROR_RETVAL _mlisp_ast_traverse_parent( struct MLISP_PARSER* parser ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_AST_NODE* ast_nodes = NULL;
+
+   maug_mlock( parser->ast_h, ast_nodes );
+   maug_cleanup_if_null_lock( struct MLISP_AST_NODE*, ast_nodes );
+
+   assert( 0 <= parser->ast_node_iter );
+
+   parser->ast_node_iter = ast_nodes[parser->ast_node_iter].ast_idx_parent;
+
+   debug_printf( MLISP_TRACE_LVL, "moved up to node: " SSIZE_T_FMT,
+      parser->ast_node_iter );
+
+cleanup:
+
+   if( NULL != ast_nodes ) {
+      maug_munlock( parser->ast_h, ast_nodes );
+   }
+
+   return retval;
+}
+
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t str_idx = -1;
@@ -113,20 +222,28 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    case '\t':
    case ' ':
       if(
-         MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ||
-         MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser )
+         (
+            MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ||
+            MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser ) 
+         ) && '\r' != parser->base.last_c
+         && '\n' != parser->base.last_c
+         && '\t' != parser->base.last_c
+         && ' ' != parser->base.last_c
       ) {
-         if( 0 >= parser->base.token_sz ) {
-            break;
+         if( 0 < parser->base.token_sz ) {
+            debug_printf( MLISP_TRACE_LVL, "found symbol: %s (" SIZE_T_FMT ")",
+               parser->base.token, parser->base.token_sz );
+
+            str_idx = mdata_strtable_append( &(parser->str_table),
+               parser->base.token, parser->base.token_sz );
          }
 
-         debug_printf( MLISP_TRACE_LVL, "found symbol: %s (" SIZE_T_FMT ")",
-            parser->base.token, parser->base.token_sz );
-
          /* TODO: Create symbol expression. */
-         str_idx = mdata_strtable_append( &(parser->str_table),
-            parser->base.token, parser->base.token_sz );
+         if( MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ) {
+            
+         }
 
+         /* Decide what the next symbol should be. */
          prev_state = mlisp_parser_pstate_pop( parser );
          debug_printf( MLISP_TRACE_LVL, "prev state: %s",
             gc_mlisp_pstate_names[prev_state] );
@@ -145,11 +262,14 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    case '(':
       if(
          MLISP_PSTATE_NONE == mlisp_parser_pstate( parser ) ||
-         MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ||
          MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser ) ||
          MLISP_PSTATE_SYMBOL_B == mlisp_parser_pstate( parser )
       ) {
          /* TODO: Push new parser expression. */
+         _mlisp_ast_add_child( parser );
+
+         if( MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser ) ) {
+         }  
 
          /* Prep the parser to interpret symbols. */
          retval = mlisp_parser_pstate_push( parser, MLISP_PSTATE_SYMBOL_OP );
@@ -168,20 +288,21 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          MLISP_PSTATE_SYMBOL_A == mlisp_parser_pstate( parser ) ||
          MLISP_PSTATE_SYMBOL_B == mlisp_parser_pstate( parser )
       ) {
-         if( 0 >= parser->base.token_sz ) {
-            break;
+         if( 0 < parser->base.token_sz ) {
+            str_idx = mdata_strtable_append( &(parser->str_table),
+               parser->base.token, parser->base.token_sz );
+            debug_printf( MLISP_TRACE_LVL, "found symbol: %s",
+               parser->base.token );
+            mlisp_parser_reset_token( parser );
          }
 
          /* TODO: Create symbol expression. */
-         str_idx = mdata_strtable_append( &(parser->str_table),
-            parser->base.token, parser->base.token_sz );
 
-         debug_printf( MLISP_TRACE_LVL, "found symbol: %s",
-            parser->base.token );
-         mlisp_parser_reset_token( parser );
          mlisp_parser_pstate_pop( parser );
 
          /* TODO: Move back up to parent expression. */
+
+         _mlisp_ast_traverse_parent( parser );
 
       } else if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
          retval = mlisp_parser_append_token( parser, c );
@@ -211,6 +332,7 @@ cleanup:
 
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
    mdata_strtable_free( &(parser->str_table) );
+   maug_mfree( parser->ast_h );
 }
 
 #else
