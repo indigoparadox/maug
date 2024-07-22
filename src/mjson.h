@@ -34,11 +34,20 @@ struct MJSON_PARSER {
    ((&((parser)->base))->pstate_sz > 0 ? \
       (&((parser)->base))->pstate[(&((parser)->base))->pstate_sz - 1] : MJSON_PSTATE_NONE)
 
-#define mjson_parser_pstate_push( parser, new_pstate ) \
-   mparser_pstate_push( "mjson", &((parser)->base), new_pstate )
+#ifdef MPARSER_TRACE_NAMES
+#  define mjson_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( \
+         "mjson", &((parser)->base), new_pstate, gc_mjson_pstate_names )
 
-#define mjson_parser_pstate_pop( parser ) \
-   mparser_pstate_pop( "mjson", &(parser->base) )
+#  define mjson_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( "mjson", &(parser->base), gc_mjson_pstate_names )
+#else
+#  define mjson_parser_pstate_push( parser, new_pstate ) \
+      mparser_pstate_push( "mjson", &((parser)->base), new_pstate )
+ 
+#  define mjson_parser_pstate_pop( parser ) \
+      mparser_pstate_pop( "mjson", &(parser->base) )
+#endif /* MPARSER_TRACE_NAMES */
 
 #define mjson_parser_invalid_c( parser, c, retval ) \
    mparser_invalid_c( mjson, &((parser)->base), c, retval )
