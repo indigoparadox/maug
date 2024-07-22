@@ -6,10 +6,24 @@
 #  define MDATA_TRACE_LVL 0
 #endif /* !MDATA_TRACE_LVL */
 
+#ifndef MDATA_VECTOR_INIT_SZ
+#  define MDATA_VECTOR_INIT_SZ 10
+#endif /* !MDATA_TRACE_LVL */
+
+#define MDATA_FLAG_ACTIVE 0x01
+
 struct MDATA_STRTABLE {
    MAUG_MHANDLE str_h;
    size_t str_sz;
    size_t str_sz_max;
+};
+
+struct MDATA_VECTOR {
+   MAUG_MHANDLE data_h;
+   uint8_t* data_bytes;
+   size_t ct_max;
+   size_t ct;
+   size_t item_sz;
 };
 
 ssize_t mdata_strtable_find(
@@ -28,6 +42,27 @@ void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
    if( NULL != ptr ) { \
       maug_munlock( (str_table)->str_h, ptr ); \
    }
+
+#define mdata_vector_lock( v ) \
+   maug_mlock( (v)->data_h, (v)->data_bytes ); \
+   maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes );
+
+#define mdata_vector_unlock( v ) \
+   if( NULL != (v)->data_bytes ) { \
+      maug_munlock( (v)->data_h, (v)->data_bytes ); \
+   }
+
+#define mdata_vector_get( v, idx, type ) \
+   ((type*)mdata_vector_get_void( v, idx ));
+
+#define _mdata_vector_flags_ptr( v, idx ) \
+   (&((v)->data_bytes[((idx) * ((v)->item_sz + 1 /* flags */))]))
+
+#define _mdata_vector_item_ptr( v, idx ) \
+   (&((v)->data_bytes[ \
+      ((idx) * ((v)->item_sz + 1 /* flags */)) + 1 /* flags */]))
+
+#define mdata_retval( idx ) ((idx) * -1)
 
 #ifdef MDATA_C
 
@@ -143,6 +178,98 @@ cleanup:
 void mdata_strtable_free( struct MDATA_STRTABLE* str_table ) {
    if( (MAUG_MHANDLE)NULL != str_table->str_h ) {
       maug_mfree( str_table->str_h );
+   }
+}
+
+/* === */
+
+ssize_t mdata_vector_append(
+   struct MDATA_VECTOR* v, void* item, size_t item_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t idx_out = -1;
+   MAUG_MHANDLE data_h_new = NULL;
+   uint8_t* data_flags_addr = NULL;
+   uint8_t autounlock = 0;
+
+   if( NULL != v->data_bytes ) {
+      autounlock = 1;
+      mdata_vector_unlock( v );
+   }
+
+   /* Make sure there are free nodes. */
+   if( (MAUG_MHANDLE)NULL == v->data_h ) {
+      assert( 0 == v->ct_max );
+
+      v->ct_max = MDATA_VECTOR_INIT_SZ;
+      debug_printf(
+         MDATA_TRACE_LVL,
+         "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
+         v->ct_max, item_sz );
+      v->data_h = maug_malloc( v->ct_max, item_sz + 1 /* flags */ );
+      v->item_sz = item_sz;
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
+
+   } else {
+      assert( item_sz == v->item_sz );
+      debug_printf(
+         MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
+         v->ct_max * 2 );
+      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz + 1 );
+      v->ct_max *= 2;
+   }
+
+   /* Lock the vector to work in it a bit. */
+   mdata_vector_lock( v );
+
+   if( NULL != item ) {
+      idx_out = v->ct;
+
+      debug_printf(
+         MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
+         idx_out );
+
+      *_mdata_vector_flags_ptr( v, idx_out ) |= MDATA_FLAG_ACTIVE;
+
+      memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
+
+      v->ct++;
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      idx_out = retval * -1;
+      assert( 0 > idx_out );
+   }
+
+   if( autounlock && NULL == v->data_bytes ) {
+      mdata_vector_lock( v );
+   } else if( !autounlock && NULL != v->data_bytes ) {
+      mdata_vector_unlock( v );
+   }
+
+   return idx_out;
+}
+
+/* === */
+
+void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
+   ssize_t idx_out = -1;
+   uint8_t* data_flags_addr = NULL;
+
+   assert( NULL != v->data_bytes );
+
+   data_flags_addr = &(v->data_bytes[0]);
+   while( MDATA_FLAG_ACTIVE == (MDATA_FLAG_ACTIVE & *data_flags_addr) ) {
+      data_flags_addr += v->item_sz + 1;
+      idx_out++;
+   }
+
+   if( 0 > idx_out ) {
+      return NULL;
+   } else {
+      return _mdata_vector_item_ptr( v, idx );
    }
 }
 

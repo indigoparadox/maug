@@ -36,6 +36,8 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_WAIT     0x0040
 
+#define MERROR_EXEC     0x0040
+
 #define MERROR_TIMEOUT  0x0080
 
 /*! \} */ /* maug_error_retvals */
