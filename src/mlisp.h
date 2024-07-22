@@ -10,14 +10,6 @@
 #  define MLISP_TRACE_LVL 0
 #endif /* !MLISP_TRACE_LVL */
 
-#ifndef MLISP_AST_INIT_SZ
-#  define MLISP_AST_INIT_SZ 10
-#endif /* !MLISP_AST_INIT_SZ */
-
-#ifndef MLISP_ENV_INIT_SZ
-#  define MLISP_ENV_INIT_SZ 10
-#endif /* !MLISP_ENV_INIT_SZ */
-
 #ifndef MLISP_AST_IDX_CHILDREN_MAX
 #  define MLISP_AST_IDX_CHILDREN_MAX 2
 #endif /* !MLISP_AST_IDX_CHILDREN_MAX */
@@ -47,7 +39,6 @@ struct MLISP_ENV_NODE {
 };
 
 struct MLISP_AST_NODE {
-   uint8_t flags;
    size_t token_idx;
    ssize_t step_iter;
    ssize_t ast_idx_parent;
@@ -62,11 +53,7 @@ struct MLISP_PARSER {
    size_t env_sz;
    size_t env_sz_max;
    struct MDATA_VECTOR ast;
-   /*
-   MAUG_MHANDLE ast_h;
-   size_t ast_sz;
-   size_t ast_sz_max;
-   */
+   struct MDATA_VECTOR env;
    ssize_t ast_node_iter;
 };
 
@@ -118,80 +105,18 @@ MLISP_PARSER_PSTATE_TABLE( MPARSER_PSTATE_TABLE_CONST )
 
 MPARSER_PSTATE_NAMES( MLISP_PARSER_PSTATE_TABLE, mlisp )
 
-/* TODO: Switch back to retval directly. */
 static MERROR_RETVAL
 _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_AST_NODE* parent_ast_node = NULL;
+   struct MLISP_AST_NODE* n_parent = NULL;
    struct MLISP_AST_NODE ast_node;
-   ssize_t child_idx_iter = -1;
-   ssize_t parser_child_idx_out = 0;
+   ssize_t parent_child_idx = -1;
+   ssize_t new_idx_out = 0;
    size_t i = 0;
-
-#if 0
-   struct MLISP_AST_NODE* ast_nodes = NULL;
-   MAUG_MHANDLE ast_h_new = NULL;
-   
-   /* Make sure there are free nodes. */
-   if( (MAUG_MHANDLE)NULL == parser->ast_h ) {
-      assert( 0 == parser->ast_sz_max );
-
-      parser->ast_sz_max = MLISP_AST_INIT_SZ;
-      debug_printf(
-         MDATA_TRACE_LVL, "creating AST of " SIZE_T_FMT " nodes...",
-         parser->ast_sz_max );
-      parser->ast_h = maug_malloc(
-         parser->ast_sz_max, sizeof( struct MLISP_AST_NODE ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser->ast_h );
-
-   } else {
-      debug_printf(
-         MDATA_TRACE_LVL, "enlarging string table to " SIZE_T_FMT "...",
-         parser->ast_sz_max * 2 );
-      maug_mrealloc_test(
-         ast_h_new, parser->ast_h, parser->ast_sz_max * 2,
-         sizeof( struct MLISP_AST_NODE ) );
-      parser->ast_sz_max *= 2;
-   }
-
-   maug_mlock( parser->ast_h, ast_nodes );
-   maug_cleanup_if_null_lock( struct MLISP_AST_NODE*, ast_nodes );
-
-   /* Find a free node. */
-   while(
-      MLISP_AST_FLAG_ACTIVE ==
-      (MLISP_AST_FLAG_ACTIVE & ast_nodes[parser_child_idx_out].flags)
-   ) {
-      parser_child_idx_out++;
-   }
-
-   assert( parser_child_idx_out < parser->ast_sz_max );
-#endif
 
    mdata_vector_lock( &(parser->ast) );
 
-   parent_ast_node = mdata_vector_get(
-      &(parser->ast), child_idx_iter, struct MLISP_AST_NODE );
-
-   /* Find an available child slot. */
-   if( 0 <= parser->ast_node_iter ) {
-      child_idx_iter = 0;
-      while( -1 != parent_ast_node->ast_idx_children[child_idx_iter] ) {
-         child_idx_iter++;
-      }
-   }
-
-   debug_printf( MLISP_TRACE_LVL, "setting up node " SSIZE_T_FMT
-      " under parent: " SSIZE_T_FMT " as child " SSIZE_T_FMT,
-      parser_child_idx_out, parser->ast_node_iter, child_idx_iter );
-
-   if( 0 <= parser->ast_node_iter ) {
-      /* Add child node based on parser state. */
-      parent_ast_node->ast_idx_children[child_idx_iter] =
-         parser_child_idx_out;
-   }
-
-   ast_node.flags |= MLISP_AST_FLAG_ACTIVE;
+   /* Setup the new node to copy. */
    ast_node.ast_idx_parent = parser->ast_node_iter;
    for( i = 0 ; MLISP_AST_IDX_CHILDREN_MAX > i ; i++ ) {
       ast_node.ast_idx_children[i] = -1;
@@ -200,20 +125,33 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
    ast_node.step_iter = -1;
 
    /* Add the node to the AST and set it as the current node. */
-   parser_child_idx_out = mdata_vector_append(
+   new_idx_out = mdata_vector_append(
       &(parser->ast), &ast_node, sizeof( struct MLISP_AST_NODE ) );
-   if( 0 > parser_child_idx_out ) {
-      retval = mdata_retval( parser_child_idx_out );
+   if( 0 > new_idx_out ) {
+      retval = mdata_retval( new_idx_out );
    }
-   parser->ast_node_iter = parser_child_idx_out;
+
+   /* Find an available child slot on the parent, if there is one. */
+   if( 0 <= ast_node.ast_idx_parent ) {
+      n_parent = mdata_vector_get(
+         &(parser->ast), ast_node.ast_idx_parent, struct MLISP_AST_NODE );
+
+      /* Find the first free child slot. */
+      parent_child_idx = 0;
+      while( -1 != n_parent->ast_idx_children[parent_child_idx] ) {
+         parent_child_idx++;
+      }
+
+      n_parent->ast_idx_children[parent_child_idx] = new_idx_out;
+   }
+
+   parser->ast_node_iter = new_idx_out;
+
+   debug_printf( MLISP_TRACE_LVL, "setting up node " SSIZE_T_FMT
+      " under parent: " SSIZE_T_FMT " as child " SSIZE_T_FMT,
+      new_idx_out, ast_node.ast_idx_parent, parent_child_idx );
 
 cleanup:
-
-   /*
-   if( NULL != ast_nodes ) {
-      maug_munlock( parser->ast_h, ast_nodes );
-   }
-   */
 
    mdata_vector_unlock( &(parser->ast) );
 
@@ -396,7 +334,6 @@ cleanup:
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t str_idx = -1;
-   mparser_pstate_t prev_state = 0;
 
    debug_printf( MLISP_TRACE_LVL,
       SIZE_T_FMT ": \"%c\" (last: \"%c\") (%s (%d)) (sz: " SIZE_T_FMT ")",
@@ -549,19 +486,27 @@ MERROR_RETVAL mlisp_add_env(
 
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
+   ssize_t append_retval = 0;
 
    maug_mzero( parser, sizeof( struct MLISP_PARSER ) );
 
    parser->ast_node_iter = -1;
- 
-   mdata_vector_append(
-      &(parser->ast), NULL, sizeof( struct MLISP_AST_NODE ) );
 
-   /* Setup the initial env. */
-   /* parser->env_sz_max = MLISP_ENV_INIT_SZ;
-   parser->env_h = maug_malloc( MAUG
-      parser->env_sz_max, sizeof( struct MLISP_ENV_NODE ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser->env_h ); */
+   /* Allocate the vectors for AST and ENV. */
+ 
+   append_retval = mdata_vector_append(
+      &(parser->ast), NULL, sizeof( struct MLISP_AST_NODE ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
+   maug_cleanup_if_not_ok();
+
+   append_retval = mdata_vector_append(
+      &(parser->env), NULL, sizeof( struct MLISP_ENV_NODE ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
+   maug_cleanup_if_not_ok();
 
 cleanup:
 

@@ -10,8 +10,6 @@
 #  define MDATA_VECTOR_INIT_SZ 10
 #endif /* !MDATA_TRACE_LVL */
 
-#define MDATA_FLAG_ACTIVE 0x01
-
 struct MDATA_STRTABLE {
    MAUG_MHANDLE str_h;
    size_t str_sz;
@@ -55,12 +53,8 @@ void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
 #define mdata_vector_get( v, idx, type ) \
    ((type*)mdata_vector_get_void( v, idx ));
 
-#define _mdata_vector_flags_ptr( v, idx ) \
-   (&((v)->data_bytes[((idx) * ((v)->item_sz + 1 /* flags */))]))
-
 #define _mdata_vector_item_ptr( v, idx ) \
-   (&((v)->data_bytes[ \
-      ((idx) * ((v)->item_sz + 1 /* flags */)) + 1 /* flags */]))
+   (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
 
 #define mdata_retval( idx ) ((idx) * -1)
 
@@ -189,7 +183,6 @@ ssize_t mdata_vector_append(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_out = -1;
    MAUG_MHANDLE data_h_new = NULL;
-   uint8_t* data_flags_addr = NULL;
    uint8_t autounlock = 0;
 
    if( NULL != v->data_bytes ) {
@@ -206,7 +199,7 @@ ssize_t mdata_vector_append(
          MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
          v->ct_max, item_sz );
-      v->data_h = maug_malloc( v->ct_max, item_sz + 1 /* flags */ );
+      v->data_h = maug_malloc( v->ct_max, item_sz );
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
@@ -215,7 +208,7 @@ ssize_t mdata_vector_append(
       debug_printf(
          MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
          v->ct_max * 2 );
-      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz + 1 );
+      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz );
       v->ct_max *= 2;
    }
 
@@ -228,8 +221,6 @@ ssize_t mdata_vector_append(
       debug_printf(
          MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
          idx_out );
-
-      *_mdata_vector_flags_ptr( v, idx_out ) |= MDATA_FLAG_ACTIVE;
 
       memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
 
@@ -255,18 +246,15 @@ cleanup:
 /* === */
 
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
-   ssize_t idx_out = -1;
-   uint8_t* data_flags_addr = NULL;
+
+   debug_printf( MDATA_TRACE_LVL,
+      "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT "...",
+      idx, v->ct );
 
    assert( NULL != v->data_bytes );
+   assert( idx < v->ct );
 
-   data_flags_addr = &(v->data_bytes[0]);
-   while( MDATA_FLAG_ACTIVE == (MDATA_FLAG_ACTIVE & *data_flags_addr) ) {
-      data_flags_addr += v->item_sz + 1;
-      idx_out++;
-   }
-
-   if( 0 > idx_out ) {
+   if( idx >= v->ct ) {
       return NULL;
    } else {
       return _mdata_vector_item_ptr( v, idx );
