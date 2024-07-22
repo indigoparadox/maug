@@ -32,6 +32,8 @@ ssize_t mdata_strtable_append(
 
 void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
 
+void mdata_vector_free( struct MDATA_VECTOR* v );
+
 #define mdata_strtable_lock( str_table, ptr ) \
    maug_mlock( (str_table)->str_h, ptr ); \
    maug_cleanup_if_null_lock( char*, ptr );
@@ -51,7 +53,9 @@ void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
    }
 
 #define mdata_vector_get( v, idx, type ) \
-   ((type*)mdata_vector_get_void( v, idx ));
+   ((type*)mdata_vector_get_void( v, idx ))
+
+#define mdata_vector_ct( v ) ((v)->ct)
 
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
@@ -225,11 +229,14 @@ ssize_t mdata_vector_append(
       memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
 
       v->ct++;
+   } else {
+      idx_out = 0;
    }
 
 cleanup:
 
    if( MERROR_OK != retval ) {
+      error_printf( "error adding to vector: %d", retval );
       idx_out = retval * -1;
       assert( 0 > idx_out );
    }
@@ -258,6 +265,14 @@ void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
       return NULL;
    } else {
       return _mdata_vector_item_ptr( v, idx );
+   }
+}
+
+/* === */
+
+void mdata_vector_free( struct MDATA_VECTOR* v ) {
+   if( (MAUG_MHANDLE)NULL != v->data_h ) {
+      maug_mfree( v->data_h );
    }
 }
 

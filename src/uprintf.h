@@ -308,6 +308,8 @@ int maug_zdigits( size_t num, int base );
 #define maug_hctoi( c ) \
    ('9' > (c) ? (c) - '0' : 'a' > (c) ? 10 + (c) - 'A' : 10 + (c) - 'a')
 
+int maug_is_num( const char* str, size_t str_sz );
+
 int maug_itoa( long int num, char* dest, int dest_sz, int base );
 
 int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
@@ -327,8 +329,26 @@ void maug_printf( const char* fmt, ... );
 
 #ifdef UPRINTF_C
 
+#include <string.h> /* strlen() */
+
 uint32_t g_maug_printf_line = 0;
 int g_maug_uprintf_threshold = DEBUG_THRESHOLD;
+
+int maug_is_num( const char* str, size_t str_sz ) {
+   size_t i = 0;
+
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      if( '0' > str[i] || '9' < str[i] ) {
+         return 0;
+      }
+   }
+
+   return 1;
+}
 
 int maug_digits( long int num, int base ) {
    int digits = 0;
