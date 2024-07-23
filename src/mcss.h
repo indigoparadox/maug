@@ -133,7 +133,7 @@
    f( 16, RIGHT, ssize_t, mcss_style_size_t, 0 ) \
    f( 17, BOTTOM, ssize_t, mcss_style_size_t, 0 ) \
    f( 18, PADDING, ssize_t, mcss_style_size_t, 0 ) \
-   f( 19, FONT_FAMILY, ssize_t, mcss_style_str_t, 0 )
+   f( 19, FONT_FAMILY, mdata_strpool_idx_t, mcss_style_str_t, 0 )
 
 #define mcss_prop_is_heritable( prop_id ) \
    (MCSS_PROP_COLOR == prop_id || \
@@ -190,7 +190,7 @@ struct MCSS_PARSER {
    struct MCSS_STYLE* styles;
    size_t styles_sz;
    size_t styles_sz_max;
-   struct MDATA_STRTABLE str_table;
+   struct MDATA_STRTABLE strpool;
    RETROFLAT_COLOR colors[16];
 };
 
@@ -392,7 +392,7 @@ cleanup:
 
 MERROR_RETVAL mcss_style_str_t(
    struct MCSS_PARSER* parser, const char* prop_name,
-   ssize_t* str_idx_p
+   mdata_strpool_idx_t* str_idx_p
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -407,8 +407,8 @@ MERROR_RETVAL mcss_style_str_t(
       goto cleanup;
    }
 
-   *str_idx_p = mdata_strtable_append(
-      &(parser->str_table), parser->base.token, parser->base.token_sz );
+   *str_idx_p = mdata_strpool_append(
+      &(parser->strpool), parser->base.token, parser->base.token_sz );
 
 cleanup:
 
@@ -710,7 +710,7 @@ void mcss_parser_free( struct MCSS_PARSER* parser ) {
       maug_mfree( parser->styles_h );
    }
 
-   mdata_strtable_free( &(parser->str_table ) );
+   mdata_strpool_free( &(parser->strpool ) );
 }
 
 MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {

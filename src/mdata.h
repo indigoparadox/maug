@@ -10,7 +10,7 @@
 #  define MDATA_VECTOR_INIT_SZ 10
 #endif /* !MDATA_TRACE_LVL */
 
-typedef ssize_t mdata_strtable_idx_t;
+typedef ssize_t mdata_strpool_idx_t;
 
 struct MDATA_STRTABLE {
    MAUG_MHANDLE str_h;
@@ -26,23 +26,23 @@ struct MDATA_VECTOR {
    size_t item_sz;
 };
 
-ssize_t mdata_strtable_find(
-   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz );
+ssize_t mdata_strpool_find(
+   struct MDATA_STRTABLE* strpool, const char* str, size_t str_sz );
 
-ssize_t mdata_strtable_append(
-   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz );
+ssize_t mdata_strpool_append(
+   struct MDATA_STRTABLE* strpool, const char* str, size_t str_sz );
 
-void mdata_strtable_free( struct MDATA_STRTABLE* str_table );
+void mdata_strpool_free( struct MDATA_STRTABLE* strpool );
 
 void mdata_vector_free( struct MDATA_VECTOR* v );
 
-#define mdata_strtable_lock( str_table, ptr ) \
-   maug_mlock( (str_table)->str_h, ptr ); \
+#define mdata_strpool_lock( strpool, ptr ) \
+   maug_mlock( (strpool)->str_h, ptr ); \
    maug_cleanup_if_null_lock( char*, ptr );
 
-#define mdata_strtable_unlock( str_table, ptr ) \
+#define mdata_strpool_unlock( strpool, ptr ) \
    if( NULL != ptr ) { \
-      maug_munlock( (str_table)->str_h, ptr ); \
+      maug_munlock( (strpool)->str_h, ptr ); \
    }
 
 #define mdata_vector_lock( v ) \
@@ -68,27 +68,27 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #include <string.h> /* strncpy() */
 
-ssize_t mdata_strtable_find(
-   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz
+ssize_t mdata_strpool_find(
+   struct MDATA_STRTABLE* strpool, const char* str, size_t str_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
-   char* str_table_p = NULL;
+   char* strpool_p = NULL;
 
-   if( NULL == str_table->str_h ) {
-      error_printf( "str_table not allocated!" );
+   if( NULL == strpool->str_h ) {
+      error_printf( "strpool not allocated!" );
       i = -1;
       goto cleanup;
    }
 
-   maug_mlock( str_table->str_h, str_table_p );
+   maug_mlock( strpool->str_h, strpool_p );
 
-   for( i = 0 ; str_table->str_sz > i ; i++ ) {
-      if( 0 == strncmp( &(str_table_p[i]), str, str_sz + 1 ) ) {
+   for( i = 0 ; strpool->str_sz > i ; i++ ) {
+      if( 0 == strncmp( &(strpool_p[i]), str, str_sz + 1 ) ) {
          /* String found. */
          debug_printf(
-            MDATA_TRACE_LVL, "found str_table_idx: " SIZE_T_FMT ": \"%s\"",
-            i, &(str_table_p[i]) );
+            MDATA_TRACE_LVL, "found strpool_idx: " SIZE_T_FMT ": \"%s\"",
+            i, &(strpool_p[i]) );
          goto cleanup;
       }
    }
@@ -102,63 +102,63 @@ cleanup:
       i = retval * -1;
    }
 
-   if( NULL != str_table_p ) {
-      maug_munlock( str_table->str_h, str_table_p );
+   if( NULL != strpool_p ) {
+      maug_munlock( strpool->str_h, strpool_p );
    }
 
    return i;
 }
 
-ssize_t mdata_strtable_append(
-   struct MDATA_STRTABLE* str_table, const char* str, size_t str_sz
+ssize_t mdata_strpool_append(
+   struct MDATA_STRTABLE* strpool, const char* str, size_t str_sz
 ) {
    ssize_t idx_p_out = 0;
    MAUG_MHANDLE str_h_new = (MAUG_MHANDLE)NULL;
-   char* str_table_p = NULL;
+   char* strpool_p = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Search the str_stable for an identical string and return that index.
     */
-   idx_p_out = mdata_strtable_find( str_table, str, str_sz );
+   idx_p_out = mdata_strpool_find( strpool, str, str_sz );
    if( -1 != idx_p_out ) {
       /* Found, or error returned. */
       goto cleanup;
    }
 
-   if( (MAUG_MHANDLE)NULL == str_table->str_h ) {
+   if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
       debug_printf(
          MDATA_TRACE_LVL, "creating string table of " SIZE_T_FMT " chars...",
          str_sz + 1 );
-      str_table->str_h = maug_malloc( str_sz + 1, 1 );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, str_table->str_h );
-      str_table->str_sz_max = str_sz + 1;
+      strpool->str_h = maug_malloc( str_sz + 1, 1 );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
+      strpool->str_sz_max = str_sz + 1;
 
    } else {
-      while( str_table->str_sz_max <= str_table->str_sz + str_sz + 1 ) {
+      while( strpool->str_sz_max <= strpool->str_sz + str_sz + 1 ) {
          debug_printf(
             MDATA_TRACE_LVL, "enlarging string table to " SIZE_T_FMT "...",
-            str_table->str_sz_max * 2 );
+            strpool->str_sz_max * 2 );
          maug_mrealloc_test(
-            str_h_new, str_table->str_h, str_table->str_sz_max, (size_t)2 );
-         str_table->str_sz_max *= 2;
+            str_h_new, strpool->str_h, strpool->str_sz_max, (size_t)2 );
+         strpool->str_sz_max *= 2;
       }
    }
 
-   maug_mlock( str_table->str_h, str_table_p );
-   maug_cleanup_if_null_alloc( char*, str_table_p );
+   maug_mlock( strpool->str_h, strpool_p );
+   maug_cleanup_if_null_alloc( char*, strpool_p );
 
    /* Add this string at the end of the string table. */
-   strncpy( &(str_table_p[str_table->str_sz]), str, str_sz );
-   str_table_p[str_table->str_sz + str_sz] = '\0';
+   strncpy( &(strpool_p[strpool->str_sz]), str, str_sz );
+   strpool_p[strpool->str_sz + str_sz] = '\0';
 
-   idx_p_out = str_table->str_sz;
+   idx_p_out = strpool->str_sz;
 
    debug_printf(
-      MDATA_TRACE_LVL, "set str_table_idx: " SIZE_T_FMT ": \"%s\"",
-      str_table->str_sz, &(str_table_p[str_table->str_sz]) );
+      MDATA_TRACE_LVL, "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
+      strpool->str_sz, &(strpool_p[strpool->str_sz]) );
 
    /* Set the string table cursor to the next available spot. */
-   str_table->str_sz += str_sz + 1; /* +1 for terminating NULL. */
+   strpool->str_sz += str_sz + 1; /* +1 for terminating NULL. */
 
 cleanup:
 
@@ -166,8 +166,8 @@ cleanup:
       idx_p_out = retval * -1;
    }
 
-   if( NULL != str_table_p ) {
-      maug_munlock( str_table->str_h, str_table_p );
+   if( NULL != strpool_p ) {
+      maug_munlock( strpool->str_h, strpool_p );
    }
 
    return idx_p_out;
@@ -175,9 +175,9 @@ cleanup:
 
 /* === */
 
-void mdata_strtable_free( struct MDATA_STRTABLE* str_table ) {
-   if( (MAUG_MHANDLE)NULL != str_table->str_h ) {
-      maug_mfree( str_table->str_h );
+void mdata_strpool_free( struct MDATA_STRTABLE* strpool ) {
+   if( (MAUG_MHANDLE)NULL != strpool->str_h ) {
+      maug_mfree( strpool->str_h );
    }
 }
 

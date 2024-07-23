@@ -418,7 +418,7 @@ static MERROR_RETVAL retrohtr_load_font(
    struct MCSS_STYLE* effect_style
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* str_table = NULL;
+   char* strpool = NULL;
 
 #ifdef RETROGXC_PRESENT
    if( 0 <= *font_idx_p ) {
@@ -432,7 +432,7 @@ static MERROR_RETVAL retrohtr_load_font(
       goto cleanup;
    }
 
-   mdata_strtable_lock( &(styler->str_table), str_table );
+   mdata_strpool_lock( &(styler->strpool), strpool );
 
    if( 0 > effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
@@ -444,15 +444,15 @@ static MERROR_RETVAL retrohtr_load_font(
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
    *font_idx_p =
-      retrogxc_load_font( &(str_table[effect_style->FONT_FAMILY]), 0, 33, 93 );
+      retrogxc_load_font( &(strpool[effect_style->FONT_FAMILY]), 0, 33, 93 );
 #else
    retval = retrofont_load(
-      &(str_table[effect_style->FONT_FAMILY]), font_h_p, 0, 33, 93 );
+      &(strpool[effect_style->FONT_FAMILY]), font_h_p, 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
 
-   mdata_strtable_unlock( &(styler->str_table), str_table );
+   mdata_strpool_unlock( &(styler->strpool), strpool );
 
    return retval;
 }
