@@ -152,6 +152,11 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    struct MLISP_PARSER* parser, const char* strpool,
    size_t token_strpool_idx, size_t token_strpool_sz );
 
+MERROR_RETVAL mlisp_env_set_strpool(
+   struct MLISP_PARSER* parser,
+   size_t token_idx, size_t token_sz,
+   uint8_t env_type, void* data );
+
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, const char* token, size_t token_sz,
    uint8_t env_type, void* data );
@@ -509,6 +514,61 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
 /* === */
 
+MERROR_RETVAL mlisp_env_set_strpool(
+   struct MLISP_PARSER* parser,
+   size_t token_idx, size_t token_sz,
+   uint8_t env_type, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_ENV_NODE env_node;
+   ssize_t new_idx_out = -1;
+
+   /* This requires env be locked before entrance! */
+   /* TODO: Autolock. */
+
+#  define _MLISP_TYPE_TABLE_ASGNSP( idx, ctype, name, const_name, fmt, iv ) \
+      case idx: \
+         debug_printf( 1, "copying " #ctype "..." ); \
+         /* TODO: This fails when assigning function pointer, so a different
+          *       macro using memcpy is used in env_set. Why?
+          */ \
+         env_node.value.name = *((ctype*)data); \
+         break;
+
+   mdata_vector_lock( &(parser->env) );
+
+   debug_printf( 1, "settting: " SSIZE_T_FMT ": %d", token_idx,
+      ((union MLISP_VAL*)data)->integer );
+
+   /* Setup the new node to copy. */
+   maug_mzero( &env_node, sizeof( struct MLISP_ENV_NODE ) );
+   env_node.name_strpool_idx = token_idx;
+   env_node.type = env_type;
+   switch( env_type ) {
+      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGNSP );
+   }
+
+   /* Add the node to the env. */
+   new_idx_out = mdata_vector_append(
+      &(parser->env), &env_node, sizeof( struct MLISP_ENV_NODE ) );
+   if( 0 > new_idx_out ) {
+      retval = mdata_retval( new_idx_out );
+   }
+   maug_cleanup_if_not_ok();
+
+   debug_printf( MLISP_TRACE_LVL,
+      "setup env node " SSIZE_T_FMT ": " SSIZE_T_FMT ": %d",
+      new_idx_out, token_idx, env_node.value.integer );
+
+cleanup:
+
+   mdata_vector_unlock( &(parser->env) );
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, const char* token, size_t token_sz,
    uint8_t env_type, void* data
@@ -519,7 +579,11 @@ MERROR_RETVAL mlisp_env_set(
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt, iv ) \
       case idx: \
-         memcpy( &(env_node.value.name), &data, sizeof( ctype ) ); \
+         debug_printf( 1, "copying " #ctype "..." ); \
+         /* TODO: This produces wonky ints, so a different
+          *       macro using memcpy is used in env_set_strpool. Why?
+          */ \
+         memcpy( &(env_node.value), &data, sizeof( ctype ) ); \
          break;
 
    mdata_vector_lock( &(parser->env) );
@@ -584,6 +648,9 @@ MERROR_RETVAL _mlisp_env_cb_define( struct MLISP_PARSER* parser ) {
    mdata_strpool_lock( &(parser->strpool), strpool );
    debug_printf( MLISP_TRACE_LVL,
       "key %s: %d", &(strpool[key.value.strpool_idx]), val.value.integer );
+
+   retval = mlisp_env_set_strpool(
+      parser, key.value.strpool_idx, 0, val.type, &(val.value) );
 
 cleanup:
 
