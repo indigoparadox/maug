@@ -310,6 +310,8 @@ int maug_zdigits( size_t num, int base );
 
 int maug_is_num( const char* str, size_t str_sz );
 
+int maug_is_float( const char* str, size_t str_sz );
+
 int maug_itoa( long int num, char* dest, int dest_sz, int base );
 
 int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
@@ -343,6 +345,22 @@ int maug_is_num( const char* str, size_t str_sz ) {
 
    for( i = 0 ; str_sz > i ; i++ ) {
       if( '0' > str[i] || '9' < str[i] ) {
+         return 0;
+      }
+   }
+
+   return 1;
+}
+
+int maug_is_float( const char* str, size_t str_sz ) {
+   size_t i = 0;
+
+   if( 0 == str_sz ) {
+      str_sz = strlen( str );
+   }
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      if( ('0' > str[i] || '9' < str[i]) && '.' != str[i] ) {
          return 0;
       }
    }
