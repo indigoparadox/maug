@@ -10,6 +10,8 @@
 #  define MDATA_VECTOR_INIT_SZ 10
 #endif /* !MDATA_TRACE_LVL */
 
+typedef ssize_t mdata_strtable_idx_t;
+
 struct MDATA_STRTABLE {
    MAUG_MHANDLE str_h;
    size_t str_sz;
