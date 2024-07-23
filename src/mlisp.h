@@ -26,11 +26,11 @@
    f( 3, int16_t,        integer,         INT,     "%d", val->integer ) \
    f( 4, float,          floating,        FLOAT,   "%f", val->floating )
 
-#define MLISP_PARSER_PSTATE_TABLE( f ) \
-   f( MLISP_PSTATE_NONE, 0 ) \
-   f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
-   f( MLISP_PSTATE_SYMBOL, 2 ) \
-   f( MLISP_PSTATE_STRING, 3 )
+#define MLISP_PARSER_PSTATE_TABLE( f, io ) \
+   f( MLISP_PSTATE_NONE, 0, io ) \
+   f( MLISP_PSTATE_SYMBOL_OP, 1, io ) \
+   f( MLISP_PSTATE_SYMBOL, 2, io ) \
+   f( MLISP_PSTATE_STRING, 3, io )
 
 struct MLISP_PARSER;
 
@@ -118,11 +118,25 @@ struct MLISP_PARSER {
    parser->token_parser( \
       (parser)->token, (parser)->token_sz, (parser)->token_parser_arg )
 
+#define mlisp_stack_peek( parser ) \
+   (0 < (parser)->stack_idx ? \
+      (parser)->stack[(parser)->stack_idx - 1].type : 0)
+
 #define mlisp_stack_push( parser, ctype ) \
    (_mlisp_stack_push_ ## ctype( parser, ctype i ))
 
-#define mlisp_stack_pop( parser, ctype ) \
-   (_mlisp_stack_pop_ ## ctype( parser, ctype* out ))
+#define _MLISP_TYPE_TABLE_POPT( idx, ctype, name, const_name, fmt, iv ) \
+   } else if( \
+      0 < (parser)->stack_idx && \
+      MLISP_TYPE_ ## const_name == \
+         (parser)->stack[(parser)->stack_idx - 1].type \
+   ) { \
+      retval = _mlisp_stack_pop_ ## ctype( parser, &(o.name) );
+
+#define mlisp_stack_pop( parser, o ) \
+   if( 0 ) { \
+   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_POPT ) \
+   }
 
 MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_PARSER* parser, size_t ast_node_idx, size_t depth, char ab );
@@ -536,9 +550,7 @@ cleanup:
 /* === */
 
 static
-MERROR_RETVAL _mlisp_env_cb_multiply(
-   union MLISP_VAL* out, union MLISP_VAL* in, size_t in_sz
-) {
+MERROR_RETVAL _mlisp_env_cb_multiply( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    return retval;
@@ -547,12 +559,17 @@ MERROR_RETVAL _mlisp_env_cb_multiply(
 /* === */
 
 static
-MERROR_RETVAL _mlisp_env_cb_define(
-   union MLISP_VAL* out, union MLISP_VAL* in, size_t in_sz
-) {
+MERROR_RETVAL _mlisp_env_cb_define( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
+   union MLISP_VAL key;
+   union MLISP_VAL val;
+   uint8_t key_type = 0;
+   uint8_t val_type = 0;
+
+   mlisp_stack_pop( parser, o )
 
    debug_printf( 1, "---------DEFINE---------" );
+   debug_printf( MLISP_TRACE_LVL, "key type: %d", key_type );
 
    return retval;
 }
@@ -637,7 +654,7 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt, iv ) \
-   } else if( MLISP_TYPE_ ## const_name ) { \
+   } else if( MLISP_TYPE_ ## const_name == env_type ) { \
       _mlisp_stack_push_ ## ctype( parser, env_ ## name );
 
    if( MLISP_TYPE_CB == env_type ) {
