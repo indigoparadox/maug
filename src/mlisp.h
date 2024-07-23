@@ -2,6 +2,11 @@
 #ifndef MLISP_H
 #define MLISP_H
 
+/**
+ * \addtogroup mlisp MLISP Interpreter
+ * \{
+ */
+
 #ifndef MLISP_TOKEN_SZ_MAX
 #  define MLISP_TOKEN_SZ_MAX 4096
 #endif /* !MLISP_TOKEN_SZ_MAX */
@@ -26,11 +31,11 @@
    f( 3, int16_t,        integer,         INT,     "%d", val->integer ) \
    f( 4, float,          floating,        FLOAT,   "%f", val->floating )
 
-#define MLISP_PARSER_PSTATE_TABLE( f, io ) \
-   f( MLISP_PSTATE_NONE, 0, io ) \
-   f( MLISP_PSTATE_SYMBOL_OP, 1, io ) \
-   f( MLISP_PSTATE_SYMBOL, 2, io ) \
-   f( MLISP_PSTATE_STRING, 3, io )
+#define MLISP_PARSER_PSTATE_TABLE( f ) \
+   f( MLISP_PSTATE_NONE, 0 ) \
+   f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
+   f( MLISP_PSTATE_SYMBOL, 2 ) \
+   f( MLISP_PSTATE_STRING, 3 )
 
 struct MLISP_PARSER;
 
@@ -125,24 +130,24 @@ struct MLISP_PARSER {
 #define mlisp_stack_push( parser, ctype ) \
    (_mlisp_stack_push_ ## ctype( parser, ctype i ))
 
-#define _MLISP_TYPE_TABLE_POPT( idx, ctype, name, const_name, fmt, iv ) \
-   } else if( \
-      0 < (parser)->stack_idx && \
-      MLISP_TYPE_ ## const_name == \
-         (parser)->stack[(parser)->stack_idx - 1].type \
-   ) { \
-      retval = _mlisp_stack_pop_ ## ctype( parser, &(o.name) );
-
-#define mlisp_stack_pop( parser, o ) \
-   if( 0 ) { \
-   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_POPT ) \
-   }
-
 MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_PARSER* parser, size_t ast_node_idx, size_t depth, char ab );
 
 MERROR_RETVAL mlisp_stack_dump( struct MLISP_PARSER* parser );
 
+MERROR_RETVAL mlisp_stack_pop(
+   struct MLISP_PARSER* parser, struct MLISP_STACK_NODE* o );
+
+/**
+ * \brief Get a node from the environment denoted by a string in the strpool.
+ * \param parser 
+ * \param token_strpool_idx Index of the env key in the strpool.
+ * \param token_strpool_sz Length of the env key in the strpool. Use 0 to
+ *                         detect automatically by NULL termination.
+ * \return Pointer to env_node in MLISP_PARSER::env. This is not a copy, so
+ *         the pointer is only valid for so long as MLISP_PARSER:env remains
+ *         locked!
+ */
 struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    struct MLISP_PARSER* parser, const char* strpool,
    size_t token_strpool_idx, size_t token_strpool_sz );
@@ -158,6 +163,8 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c );
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
 
 void mlisp_parser_free( struct MLISP_PARSER* parser );
+
+/*! \} */ /* mlisp */
 
 #ifdef MLISP_C
 
@@ -440,32 +447,32 @@ MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_PUSH );
 
 /* === */
 
-#define _MLISP_TYPE_TABLE_POP( idx, ctype, name, const_name, fmt, iv ) \
-   MERROR_RETVAL _mlisp_stack_pop_ ## ctype( \
-      struct MLISP_PARSER* parser, ctype* o \
-   ) { \
-      MERROR_RETVAL retval = MERROR_OK; \
-      if( parser->stack_idx == 0 ) { \
-         error_printf( "stack underflow!" ); \
-         retval = MERROR_OVERFLOW; \
-         goto cleanup; \
-      } \
-      parser->stack_idx--; \
-      if( \
-         MLISP_TYPE_ ## const_name != \
-         parser->stack[parser->stack_idx].type \
-      ) { \
-         error_printf( "pop type mismatch!" ); \
-         retval = MERROR_FILE; \
-         goto cleanup; \
-      } \
-      debug_printf( MLISP_TRACE_LVL, "popping " #const_name ); \
-      *o = parser->stack[parser->stack_idx].value.name; \
-   cleanup: \
-      return retval; \
+MERROR_RETVAL mlisp_stack_pop(
+   struct MLISP_PARSER* parser, struct MLISP_STACK_NODE* o
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Check for valid stack pointer. */
+   if( parser->stack_idx == 0 ) {
+      error_printf( "stack underflow!" );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
    }
 
-MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_POP );
+   /* Perform the pop! */
+   parser->stack_idx--;
+
+   debug_printf( MLISP_TRACE_LVL, "popping: " SSIZE_T_FMT, parser->stack_idx );
+
+   memcpy(
+      o,
+      &(parser->stack[parser->stack_idx]),
+      sizeof( struct MLISP_STACK_NODE ) );
+
+cleanup:
+
+   return retval;
+}
 
 /* === */
 
@@ -482,6 +489,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    size_t i = 0;
 
    /* This requires env be locked before entrance! */
+   /* TODO: Autolock. */
    
    while( parser->env.ct > i ) {
       node_test = mdata_vector_get( &(parser->env), i, struct MLISP_ENV_NODE );
@@ -561,15 +569,25 @@ MERROR_RETVAL _mlisp_env_cb_multiply( struct MLISP_PARSER* parser ) {
 static
 MERROR_RETVAL _mlisp_env_cb_define( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
-   union MLISP_VAL key;
-   union MLISP_VAL val;
-   uint8_t key_type = 0;
-   uint8_t val_type = 0;
+   struct MLISP_STACK_NODE key;
+   struct MLISP_STACK_NODE val;
+   char* strpool = NULL;
 
-   mlisp_stack_pop( parser, o )
+   retval = mlisp_stack_pop( parser, &val );
+   maug_cleanup_if_not_ok();
+
+   retval = mlisp_stack_pop( parser, &key );
+   maug_cleanup_if_not_ok();
 
    debug_printf( 1, "---------DEFINE---------" );
-   debug_printf( MLISP_TRACE_LVL, "key type: %d", key_type );
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+   debug_printf( MLISP_TRACE_LVL,
+      "key %s: %d", &(strpool[key.value.strpool_idx]), val.value.integer );
+
+cleanup:
+
+   mdata_strpool_unlock( &(parser->strpool), strpool );
 
    return retval;
 }
