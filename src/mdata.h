@@ -36,12 +36,14 @@ void mdata_strpool_free( struct MDATA_STRTABLE* strpool );
 
 /**
  * \warning The vector must not be locked before an append or allocate!
+ *          Reallocation could change pointers gotten during a lock!
  */
 ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, void* item, size_t item_sz );
 
 /**
  * \warning The vector must not be locked before an append or allocate!
+ *          Reallocation could change pointers gotten during a lock!
  */
 MERROR_RETVAL mdata_vector_alloc(
    struct MDATA_VECTOR* v, size_t item_sz, size_t item_ct_init );
@@ -200,14 +202,6 @@ ssize_t mdata_vector_append(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_out = -1;
-   uint8_t autounlock = 0;
-
-   /*
-   if( NULL != v->data_bytes ) {
-      autounlock = 1;
-      mdata_vector_unlock( v );
-   }
-   */
 
    mdata_vector_alloc( v, item_sz, MDATA_VECTOR_INIT_SZ );
 
@@ -235,14 +229,6 @@ cleanup:
       idx_out = retval * -1;
       assert( 0 > idx_out );
    }
-
-   /*
-   if( autounlock && NULL == v->data_bytes ) {
-      mdata_vector_lock( v );
-   } else if( !autounlock && NULL != v->data_bytes ) {
-      mdata_vector_unlock( v );
-   }
-   */
 
    mdata_vector_unlock( v );
 
