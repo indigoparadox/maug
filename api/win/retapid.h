@@ -20,6 +20,18 @@
 #	define RETROFLAT_API_WIN32
 #endif /* RETROFLAT_API_WINCE */
 
+/*
+#define RETROFLAT_VIEWPORT_OVERRIDE_MOVE
+
+#define retroflat_viewport_move_x( x ) \
+   retroflat_viewport_move_x_generic( \
+      x >= (retroflat_screen_w() >> 1) ? x : 0 );
+
+#define retroflat_viewport_move_y( y ) \
+   retroflat_viewport_move_y_generic( \
+      y >= (retroflat_screen_h() >> 1) ? y : 0 );
+*/
+
 /* == Win16/Win32 == */
 
 typedef int16_t RETROFLAT_IN_KEY;

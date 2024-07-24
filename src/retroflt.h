@@ -1140,11 +1140,13 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
 
-#  define retroflat_viewport_move_x( x ) \
-   retroflat_viewport_move_x_generic( x )
+#  ifndef RETROFLAT_VIEWPORT_OVERRIDE_MOVE
+#     define retroflat_viewport_move_x( x ) \
+         retroflat_viewport_move_x_generic( x )
 
-#  define retroflat_viewport_move_y( y ) \
-   retroflat_viewport_move_y_generic( y )
+#     define retroflat_viewport_move_y( y ) \
+         retroflat_viewport_move_y_generic( y )
+#  endif /* !RETROFLAT_VIEWPORT_OVERRIDE_MOVE */
 
 #endif /* RETROFLAT_SOFT_VIEWPORT || DOCUMENTATION */
 
