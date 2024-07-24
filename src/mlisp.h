@@ -23,7 +23,7 @@
 #  define MLISP_AST_IDX_CHILDREN_MAX 10
 #endif /* !MLISP_AST_IDX_CHILDREN_MAX */
 
-#define MLISP_AST_FLAG_ACTIVE 0x01
+#define MLISP_AST_FLAG_LAMBDA 0x02
 
 /**
  * \addtogroup mlisp_types MLISP Types
@@ -82,7 +82,8 @@ struct MLISP_STACK_NODE {
 };
 
 struct MLISP_AST_NODE {
-   size_t token_idx;
+   uint8_t flags;
+   mdata_strpool_idx_t token_idx;
    size_t token_sz;
    ssize_t ast_idx_parent;
    ssize_t env_idx_op;
@@ -300,12 +301,25 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    n = mdata_vector_get(
       &(parser->ast), parser->ast_node_iter, struct MLISP_AST_NODE );
 
-   /* Debug report. */
    mdata_strpool_lock( &(parser->strpool), strpool );
-   assert( 0 < strlen( &(strpool[token_idx]) ) );
+   if( 0 == token_sz ) {
+      token_sz = strlen( &(strpool[token_idx]) );
+   }
+   assert( 0 < token_sz );
+
+   /* Setup flags based on token name. */
+   if( 0 == strncmp( &(strpool[token_idx]), "lambda", token_sz ) ) {
+      /* Special node: lambda. */
+      debug_printf( MLISP_TRACE_LVL,
+         "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
+         &(strpool[token_idx]), token_sz );
+      n->flags |= MLISP_AST_FLAG_LAMBDA;
+   }
+
+   /* Debug report. */
    debug_printf( MLISP_TRACE_LVL, "setting node " SSIZE_T_FMT
-      " token: \"%s\"",
-      parser->ast_node_iter, &(strpool[token_idx]) );
+      " token: \"%s\" (" SIZE_T_FMT ")",
+      parser->ast_node_iter, &(strpool[token_idx]), token_sz );
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
    /* Set the token from the strpool. */
@@ -402,10 +416,10 @@ MERROR_RETVAL mlisp_ast_dump(
    n = mdata_vector_get( &(parser->ast), ast_node_idx, struct MLISP_AST_NODE );
    mdata_strpool_lock( &(parser->strpool), strpool );
    debug_printf( MLISP_TRACE_LVL,
-      "%s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SIZE_T_FMT
-         ", c: " SSIZE_T_FMT ")",
-      indent, ab, &(strpool[n->token_idx]),
-      ast_node_idx, n->token_idx, n->ast_idx_children_sz );
+      "%s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SSIZE_T_FMT
+         ", c: " SSIZE_T_FMT ", f: 0x%02x)",
+      indent, ab, 0 <= n->token_idx ? &(strpool[n->token_idx]) : "",
+      ast_node_idx, n->token_idx, n->ast_idx_children_sz, n->flags );
    mdata_strpool_unlock( &(parser->strpool), strpool );
    for( i = 0 ; MLISP_AST_IDX_CHILDREN_MAX > i ; i++ ) {
       if( -1 == n->ast_idx_children[i] ) {
@@ -439,7 +453,7 @@ MERROR_RETVAL mlisp_stack_dump(
    char* strpool = NULL;
    union MLISP_VAL* val = NULL;
 
-#  define _MLISP_TYPE_TABLE_DUMP( idx, ctype, name, const_name, fmt, iv ) \
+#  define _MLISP_TYPE_TABLE_DUMPS( idx, ctype, name, const_name, fmt, iv ) \
       if( MLISP_TYPE_ ## const_name == exec->stack[i].type ) { \
          val = &(exec->stack[i].value); \
          debug_printf( MLISP_TRACE_LVL, \
@@ -449,7 +463,7 @@ MERROR_RETVAL mlisp_stack_dump(
 
    mdata_strpool_lock( &(parser->strpool), strpool ); \
    while( i < exec->stack_idx ) {
-      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMP );
+      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPS );
       i++;
    }
    mdata_strpool_unlock( &(parser->strpool), strpool ); \
@@ -512,6 +526,40 @@ cleanup:
 /* === */
 
 /* Env Functons */
+
+/* === */
+
+MERROR_RETVAL mlisp_env_dump(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   char* strpool = NULL;
+   union MLISP_VAL* val = NULL;
+   struct MLISP_ENV_NODE* e = NULL;
+
+#  define _MLISP_TYPE_TABLE_DUMPE( idx, ctype, name, const_name, fmt, iv ) \
+      if( MLISP_TYPE_ ## const_name == e->type ) { \
+         val = &(e->value); \
+         debug_printf( MLISP_TRACE_LVL, \
+            "env \"%s\" (" #const_name "): " fmt, \
+            &(strpool[e->name_strpool_idx]), iv ); \
+      }
+
+   mdata_strpool_lock( &(parser->strpool), strpool ); \
+   mdata_vector_lock( &(parser->env) );
+   while( i < mdata_vector_ct( &(parser->env) ) ) {
+      e = mdata_vector_get( &(parser->env), i, struct MLISP_ENV_NODE );
+      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPE );
+      i++;
+   }
+   mdata_vector_unlock( &(parser->env) );
+   mdata_strpool_unlock( &(parser->strpool), strpool ); \
+
+cleanup:
+
+   return retval;
+}
 
 /* === */
 
@@ -737,6 +785,15 @@ static MERROR_RETVAL _mlisp_step_iter(
    ctype env_ ## name = (ctype)0;
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVD )
+
+   /* Check for special types like lambda, that are lazily evaluated. */
+   if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
+      /* TODO: When executing a lambda, pop the stack for each child of the
+       *       first s-expression after the name (second absolute?).
+       */
+      debug_printf( MLISP_TRACE_LVL, "skipping lambda..." );
+      goto cleanup;
+   }
 
    /* Grab the current exec index for the child vector for this node. */
    p_child_idx = mdata_vector_get(
