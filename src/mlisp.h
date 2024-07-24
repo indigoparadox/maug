@@ -780,14 +780,18 @@ cleanup:
 
 static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec );
+
+/* === */
+
+static MERROR_RETVAL _mlisp_step_iter_children(
+   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
-   struct MLISP_ENV_NODE* env_node_p = NULL;
-   struct MLISP_AST_NODE* n_child = NULL;
    size_t* p_child_idx = NULL;
-   struct MLISP_ENV_NODE env_node;
+   struct MLISP_AST_NODE* n_child = NULL;
+   char* strpool = NULL;
 
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
@@ -829,6 +833,29 @@ static MERROR_RETVAL _mlisp_step_iter(
       goto cleanup;
    }
 
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _mlisp_step_iter(
+   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* strpool = NULL;
+   struct MLISP_ENV_NODE* env_node_p = NULL;
+   struct MLISP_ENV_NODE env_node;
+
+   if(
+      MERROR_EXEC ==
+      (retval = _mlisp_step_iter_children( parser, n, n_idx, exec ))
+   ) {
+      goto cleanup;
+   }
+
    /* Now that the children have been evaluated above, evaluate this node.
     * Assume all the previously called children are now on the stack.
     */
@@ -837,8 +864,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    mdata_strpool_lock( &(parser->strpool), strpool );
    mdata_vector_lock( &(parser->env) );
    assert( 0 < strlen( &(strpool[n->token_idx]) ) );
-   debug_printf( MLISP_EXEC_TRACE_LVL, "eval %s (" SSIZE_T_FMT " steps done)",
-      &(strpool[n->token_idx]), *p_child_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL, "eval %s", &(strpool[n->token_idx]) );
    if( NULL != (env_node_p = mlisp_env_get_strpool(
       parser, strpool, n->token_idx, n->token_sz
    ) ) ) {
