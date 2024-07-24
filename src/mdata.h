@@ -34,6 +34,18 @@ ssize_t mdata_strpool_append(
 
 void mdata_strpool_free( struct MDATA_STRTABLE* strpool );
 
+/**
+ * \warning The vector must not be locked before an append or allocate!
+ */
+ssize_t mdata_vector_append(
+   struct MDATA_VECTOR* v, void* item, size_t item_sz );
+
+/**
+ * \warning The vector must not be locked before an append or allocate!
+ */
+MERROR_RETVAL mdata_vector_alloc(
+   struct MDATA_VECTOR* v, size_t item_sz, size_t item_ct_init );
+
 void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define mdata_strpool_lock( strpool, ptr ) \
@@ -188,35 +200,16 @@ ssize_t mdata_vector_append(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_out = -1;
-   MAUG_MHANDLE data_h_new = NULL;
    uint8_t autounlock = 0;
 
+   /*
    if( NULL != v->data_bytes ) {
       autounlock = 1;
       mdata_vector_unlock( v );
    }
+   */
 
-   /* Make sure there are free nodes. */
-   if( (MAUG_MHANDLE)NULL == v->data_h ) {
-      assert( 0 == v->ct_max );
-
-      v->ct_max = MDATA_VECTOR_INIT_SZ;
-      debug_printf(
-         MDATA_TRACE_LVL,
-         "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
-         v->ct_max, item_sz );
-      v->data_h = maug_malloc( v->ct_max, item_sz );
-      v->item_sz = item_sz;
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
-
-   } else {
-      assert( item_sz == v->item_sz );
-      debug_printf(
-         MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
-         v->ct_max * 2 );
-      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz );
-      v->ct_max *= 2;
-   }
+   mdata_vector_alloc( v, item_sz, MDATA_VECTOR_INIT_SZ );
 
    /* Lock the vector to work in it a bit. */
    mdata_vector_lock( v );
@@ -243,11 +236,15 @@ cleanup:
       assert( 0 > idx_out );
    }
 
+   /*
    if( autounlock && NULL == v->data_bytes ) {
       mdata_vector_lock( v );
    } else if( !autounlock && NULL != v->data_bytes ) {
       mdata_vector_unlock( v );
    }
+   */
+
+   mdata_vector_unlock( v );
 
    return idx_out;
 }
@@ -268,6 +265,47 @@ void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
    } else {
       return _mdata_vector_item_ptr( v, idx );
    }
+}
+
+/* === */
+
+MERROR_RETVAL mdata_vector_alloc(
+   struct MDATA_VECTOR* v, size_t item_sz, size_t item_ct_init
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE data_h_new = NULL;
+
+   if( NULL != v->data_bytes ) {
+      error_printf( "vector cannot be resized while locked!" );
+      retval = MERROR_ALLOC;
+      goto cleanup;
+   }
+
+   /* Make sure there are free nodes. */
+   if( (MAUG_MHANDLE)NULL == v->data_h ) {
+      assert( 0 == v->ct_max );
+
+      v->ct_max = item_ct_init;
+      debug_printf(
+         MDATA_TRACE_LVL,
+         "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
+         v->ct_max, item_sz );
+      v->data_h = maug_malloc( v->ct_max, item_sz );
+      v->item_sz = item_sz;
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
+
+   } else {
+      assert( item_sz == v->item_sz );
+      debug_printf(
+         MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
+         v->ct_max * 2 );
+      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz );
+      v->ct_max *= 2;
+   }
+
+cleanup:
+
+   return retval;
 }
 
 /* === */

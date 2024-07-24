@@ -65,18 +65,15 @@ struct MLISP_STACK_NODE {
 struct MLISP_AST_NODE {
    size_t token_idx;
    size_t token_sz;
-   /**
-    * \brief Next child to evaluate in MLISP_AST_NODE::ast_idx_children when
-    *        _mlisp_step_iter() is called on this node.
-    * \todo Don't like keeping this state in the AST... need a parallel
-    *       structure with a stack and nested step counter state.
-    */
-   ssize_t step_iter;
-   /*! \brief Number of children in MLISP_AST_NODE::ast_idx_children. */
-   ssize_t step_iter_max;
    ssize_t ast_idx_parent;
    ssize_t env_idx_op;
    ssize_t ast_idx_children[MLISP_AST_IDX_CHILDREN_MAX];
+   /*! \brief Number of children in MLISP_AST_NODE::ast_idx_children. */
+   size_t ast_idx_children_sz;
+};
+
+struct MLISP_EXEC_STATE {
+   struct MDATA_VECTOR per_node_child_idx;
 };
 
 struct MLISP_PARSER {
@@ -88,7 +85,7 @@ struct MLISP_PARSER {
    struct MDATA_VECTOR ast;
    struct MDATA_VECTOR env;
    ssize_t ast_node_iter;
-   ssize_t ast_idx_children[MLISP_AST_IDX_CHILDREN_MAX];
+   /* ssize_t ast_idx_children[MLISP_AST_IDX_CHILDREN_MAX]; */
    struct MLISP_STACK_NODE stack[MLISP_STACK_DEPTH_MAX];
    size_t stack_idx;
 };
@@ -164,7 +161,8 @@ MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, const char* token, size_t token_sz,
    uint8_t env_type, void* data );
 
-MERROR_RETVAL mlisp_step( struct MLISP_PARSER* parser );
+MERROR_RETVAL mlisp_step(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c );
 
@@ -200,8 +198,6 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
    ssize_t new_idx_out = 0;
    size_t i = 0;
 
-   mdata_vector_lock( &(parser->ast) );
-
    /* Setup the new node to copy. */
    maug_mzero( &ast_node, sizeof( struct MLISP_AST_NODE ) );
    ast_node.ast_idx_parent = parser->ast_node_iter;
@@ -209,8 +205,10 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
       ast_node.ast_idx_children[i] = -1;
    }
    ast_node.token_idx = -1;
-   ast_node.step_iter = 0;
-   ast_node.step_iter_max = 0;
+   ast_node.ast_idx_children_sz = 0;
+
+   debug_printf( MLISP_TRACE_LVL, "adding node under " SSIZE_T_FMT "...",
+      ast_node.ast_idx_parent );
 
    /* Add the node to the AST and set it as the current node. */
    new_idx_out = mdata_vector_append(
@@ -221,6 +219,8 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
 
    /* Find an available child slot on the parent, if there is one. */
    if( 0 <= ast_node.ast_idx_parent ) {
+      mdata_vector_lock( &(parser->ast) );
+
       n_parent = mdata_vector_get(
          &(parser->ast), ast_node.ast_idx_parent, struct MLISP_AST_NODE );
 
@@ -231,26 +231,29 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
       }
 
       n_parent->ast_idx_children[parent_child_idx] = new_idx_out;
-      n_parent->step_iter_max++;
+      n_parent->ast_idx_children_sz++;
+
+      n_parent = NULL;
+      mdata_vector_unlock( &(parser->ast) );
    } else {
       /* Find the first free child slot *on the parser*. */
+      /*
       parent_child_idx = 0;
       while( -1 != parser->ast_idx_children[parent_child_idx] ) {
          parent_child_idx++;
       }
 
       parser->ast_idx_children[parent_child_idx] = new_idx_out;
+      */
    }
 
    parser->ast_node_iter = new_idx_out;
 
-   debug_printf( MLISP_TRACE_LVL, "setup node " SSIZE_T_FMT
+   debug_printf( MLISP_TRACE_LVL, "added node " SSIZE_T_FMT
       " under parent: " SSIZE_T_FMT " as child " SSIZE_T_FMT,
       new_idx_out, ast_node.ast_idx_parent, parent_child_idx );
 
 cleanup:
-
-   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
@@ -371,10 +374,10 @@ MERROR_RETVAL mlisp_ast_dump(
    n = mdata_vector_get( &(parser->ast), ast_node_idx, struct MLISP_AST_NODE );
    mdata_strpool_lock( &(parser->strpool), strpool );
    debug_printf( MLISP_TRACE_LVL,
-      "%s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SIZE_T_FMT ", s: "
-         SSIZE_T_FMT ", s_m: " SSIZE_T_FMT ")",
+      "%s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SIZE_T_FMT
+         ", c: " SSIZE_T_FMT ")",
       indent, ab, &(strpool[n->token_idx]),
-      ast_node_idx, n->token_idx, n->step_iter, n->step_iter_max );
+      ast_node_idx, n->token_idx, n->ast_idx_children_sz );
    mdata_strpool_unlock( &(parser->strpool), strpool );
    for( i = 0 ; MLISP_AST_IDX_CHILDREN_MAX > i ; i++ ) {
       if( -1 == n->ast_idx_children[i] ) {
@@ -540,21 +543,24 @@ MERROR_RETVAL mlisp_env_set_strpool(
          env_node.value.name = *((ctype*)data); \
          break;
 
-   mdata_vector_lock( &(parser->env) );
-
    /* Setup the new node to copy. */
    maug_mzero( &env_node, sizeof( struct MLISP_ENV_NODE ) );
    env_node.name_strpool_idx = token_idx;
    env_node.type = env_type;
    switch( env_type ) {
-      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGNSP );
+   MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGNSP );
 
-      case 3 /* MLISP_TYPE_STR */:
-         debug_printf( MLISP_TRACE_LVL,
-            "setting env: strpool(" SSIZE_T_FMT "): strpool(" SSIZE_T_FMT ")",
-               token_idx, *((ssize_t*)data) );
-         env_node.value.strpool_idx = *((mdata_strpool_idx_t*)data);
-         break;
+   case 3 /* MLISP_TYPE_STR */:
+      debug_printf( MLISP_TRACE_LVL,
+         "setting env: strpool(" SSIZE_T_FMT "): strpool(" SSIZE_T_FMT ")",
+            token_idx, *((ssize_t*)data) );
+      env_node.value.strpool_idx = *((mdata_strpool_idx_t*)data);
+      break;
+
+   default:
+      error_printf( "attempted to define invalid type: %d", env_type );
+      retval = MERROR_EXEC;
+      goto cleanup;
    }
 
    /* Add the node to the env. */
@@ -566,8 +572,6 @@ MERROR_RETVAL mlisp_env_set_strpool(
    maug_cleanup_if_not_ok();
 
 cleanup:
-
-   mdata_vector_unlock( &(parser->env) );
 
    return retval;
 }
@@ -584,14 +588,14 @@ MERROR_RETVAL mlisp_env_set(
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt, iv ) \
       case idx: \
-         debug_printf( 1, "copying " #ctype "..." ); \
+         debug_printf( 1, \
+            "setting env: %s: #" fmt, \
+               token, (ctype)*((ctype*)data) ); \
          /* TODO: This produces wonky ints, so a different
           *       macro using memcpy is used in env_set_strpool. Why?
           */ \
          memcpy( &(env_node.value), &data, sizeof( ctype ) ); \
          break;
-
-   mdata_vector_lock( &(parser->env) );
 
    /* Setup the new node to copy. */
    maug_mzero( &env_node, sizeof( struct MLISP_ENV_NODE ) );
@@ -603,7 +607,18 @@ MERROR_RETVAL mlisp_env_set(
    maug_cleanup_if_not_ok();
    env_node.type = env_type;
    switch( env_type ) {
-      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGN );
+   MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGN );
+
+   case 4 /* mlisp_env_cb_t */:
+      debug_printf( MLISP_TRACE_LVL,
+         "setting env: %s): 0x%p", token, (mlisp_env_cb_t)data );
+      env_node.value.cb = (mlisp_env_cb_t)data;
+      break;
+
+   default:
+      error_printf( "attempted to define invalid type: %d", env_type );
+      retval = MERROR_EXEC;
+      goto cleanup;
    }
 
    /* Add the node to the env. */
@@ -618,8 +633,6 @@ MERROR_RETVAL mlisp_env_set(
       new_idx_out, token );
 
 cleanup:
-
-   mdata_vector_unlock( &(parser->env) );
 
    return retval;
 }
@@ -688,6 +701,9 @@ MERROR_RETVAL _mlisp_env_cb_define( struct MLISP_PARSER* parser ) {
 
    mdata_strpool_lock( &(parser->strpool), strpool );
 
+   debug_printf( MLISP_TRACE_LVL, "define \"%s\" (strpool(" SIZE_T_FMT "))...",
+      &(strpool[key.value.strpool_idx]), key.value.strpool_idx );
+
    retval = mlisp_env_set_strpool(
       parser, key.value.strpool_idx, 0, val.type, &(val.value) );
 
@@ -705,33 +721,47 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_step_iter(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n
+   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* strpool = NULL;
    struct MLISP_ENV_NODE* env_node_p = NULL;
    uint8_t env_type = 0;
+   struct MLISP_AST_NODE* n_child = NULL;
+   size_t* p_child_idx = NULL;
+   size_t zero = 0;
 
 #  define _MLISP_TYPE_TABLE_ENVD( idx, ctype, name, const_name, fmt, iv ) \
    ctype env_ ## name = (ctype)0;
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVD )
 
-   if( n->step_iter_max > n->step_iter ) {
+   /* Grab the current exec index for the child vector for this node. */
+   p_child_idx = mdata_vector_get(
+      &(exec->per_node_child_idx), n_idx, size_t );
+   assert( NULL != p_child_idx );
+   debug_printf( MLISP_TRACE_LVL,
+      "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_child_idx );
+
+   if( n->ast_idx_children_sz > *p_child_idx ) {
       /* Call the next uncalled child. */
-      retval = _mlisp_step_iter( parser,
-         mdata_vector_get( &(parser->ast), n->ast_idx_children[n->step_iter],
-            struct MLISP_AST_NODE ) );
+      n_child = mdata_vector_get(
+         &(parser->ast), n->ast_idx_children[*p_child_idx],
+         struct MLISP_AST_NODE );
+      retval = _mlisp_step_iter(
+         parser, n_child, n->ast_idx_children[*p_child_idx], exec );
       if( MERROR_EXEC != retval ) {
          mdata_strpool_lock( &(parser->strpool), strpool );
          assert( 0 < strlen( &(strpool[n->token_idx]) ) );
          debug_printf( MLISP_TRACE_LVL,
             "eval step " SSIZE_T_FMT " under %s...",
-            n->step_iter, &(strpool[n->token_idx]) );
+            *p_child_idx, &(strpool[n->token_idx]) );
          mdata_strpool_unlock( &(parser->strpool), strpool );
 
          /* Increment this node, since the child actually executed. */
-         n->step_iter++;
+         (*p_child_idx)++;
       }
       /* Could not exec *this* node yet, so don't increment its parent. */
       retval = MERROR_EXEC;
@@ -748,7 +778,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    mdata_vector_lock( &(parser->env) );
    assert( 0 < strlen( &(strpool[n->token_idx]) ) );
    debug_printf( MLISP_TRACE_LVL, "eval %s (" SSIZE_T_FMT " steps done)",
-      &(strpool[n->token_idx]), n->step_iter );
+      &(strpool[n->token_idx]), *p_child_idx );
    if( NULL != (env_node_p = mlisp_env_get_strpool(
       parser, strpool, n->token_idx, n->token_sz
    ) ) ) {
@@ -818,24 +848,43 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mlisp_step( struct MLISP_PARSER* parser ) {
+MERROR_RETVAL mlisp_step(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_AST_NODE* n = NULL;
+   size_t zero = 0;
+   size_t* p_child_idx = NULL;
 
-   mdata_vector_lock( &(parser->ast) );
-
-   if( 0 > parser->ast_node_iter ) {
-      error_printf( "invalid AST node: " SSIZE_T_FMT, parser->ast_node_iter );
-      retval = MERROR_EXEC;
-      goto cleanup;
+   if( 0 == mdata_vector_ct( &(exec->per_node_child_idx) ) ) {
+      debug_printf( MLISP_TRACE_LVL, "creating exec state..." );
+      retval = mdata_vector_append(
+         &(exec->per_node_child_idx), &zero, sizeof( size_t ) );
+      maug_cleanup_if_not_ok();
    }
 
-   n = mdata_vector_get(
-      &(parser->ast), parser->ast_node_iter, struct MLISP_AST_NODE );
+   debug_printf( MLISP_TRACE_LVL, "heartbeat start" );
+
+   /* Make sure there's an exec child node for every AST node. */
+   while(
+      mdata_vector_ct( &(exec->per_node_child_idx) ) <= 
+      mdata_vector_ct( &(parser->ast) )
+   ) {
+      retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
+         sizeof( size_t ) );
+   }
+
+   mdata_vector_lock( &(parser->ast) );
+   mdata_vector_lock( &(exec->per_node_child_idx) );
+
+   p_child_idx = mdata_vector_get( &(exec->per_node_child_idx), 0, size_t );
+   assert( NULL != p_child_idx );
+
+   n = mdata_vector_get( &(parser->ast), 0, struct MLISP_AST_NODE );
    assert( NULL != n );
 
    /* Find next unevaluated symbol. */
-   retval = _mlisp_step_iter( parser, n );
+   retval = _mlisp_step_iter( parser, n, parser->ast_node_iter, exec );
    if( MERROR_EXEC == retval ) {
       retval = 0;
    } else if( 0 == retval ) {
@@ -844,8 +893,9 @@ MERROR_RETVAL mlisp_step( struct MLISP_PARSER* parser ) {
   
 cleanup:
 
-   debug_printf( MLISP_TRACE_LVL, "heartbeat: %x", retval );
+   debug_printf( MLISP_TRACE_LVL, "heartbeat end: %x", retval );
 
+   mdata_vector_unlock( &(exec->per_node_child_idx) );
    mdata_vector_unlock( &(parser->ast) );
 
    return retval;
@@ -902,7 +952,7 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          retval = mlisp_parser_pstate_push( parser, MLISP_PSTATE_SYMBOL );
          maug_cleanup_if_not_ok();
 
-         mlisp_ast_dump( parser, 0, 0, 0 );
+         /* mlisp_ast_dump( parser, 0, 0, 0 ); */
 
       } else if(
          MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser )
@@ -970,7 +1020,7 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          mlisp_parser_pstate_pop( parser );
          _mlisp_ast_traverse_parent( parser );
 
-         mlisp_ast_dump( parser, 0, 0, 0 );
+         /* mlisp_ast_dump( parser, 0, 0, 0 ); */
 
       } else if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
          retval = mlisp_parser_append_token( parser, c );
@@ -1012,21 +1062,23 @@ MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    maug_mzero( parser, sizeof( struct MLISP_PARSER ) );
 
    parser->ast_node_iter = -1;
+   /*
    for( i = 0 ; MLISP_AST_IDX_CHILDREN_MAX > i ; i++ ) {
       parser->ast_idx_children[i] = -1;
    }
+   */
 
    /* Allocate the vectors for AST and ENV. */
  
-   append_retval = mdata_vector_append(
-      &(parser->ast), NULL, sizeof( struct MLISP_AST_NODE ) );
+   append_retval = mdata_vector_alloc(
+      &(parser->ast), sizeof( struct MLISP_AST_NODE ), MDATA_VECTOR_INIT_SZ );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
    }
    maug_cleanup_if_not_ok();
 
-   append_retval = mdata_vector_append(
-      &(parser->env), NULL, sizeof( struct MLISP_ENV_NODE ) );
+   append_retval = mdata_vector_alloc(
+      &(parser->env), sizeof( struct MLISP_ENV_NODE ), MDATA_VECTOR_INIT_SZ );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
    }
