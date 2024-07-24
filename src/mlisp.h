@@ -25,10 +25,25 @@
 
 #define MLISP_AST_FLAG_ACTIVE 0x01
 
+/**
+ * \addtogroup mlisp_types MLISP Types
+ * \{
+ */
+
+/**
+ * \brief Table of numeric types.
+ *
+ * These are carved out because they can usually be handled in a similar way.
+ */
 #define MLISP_NUM_TYPE_TABLE( f ) \
    f( 1, int16_t,        integer,         INT,     "%d", val->integer ) \
    f( 2, float,          floating,        FLOAT,   "%f", val->floating )
 
+/**
+ * \brief Table of other types.
+ *
+ * These are special cases that must usually be handled manually.
+ */
 #define MLISP_TYPE_TABLE( f ) \
    MLISP_NUM_TYPE_TABLE( f ) \
    f( 3, mdata_strpool_idx_t, strpool_idx, STR, "%s", &(strpool[val->strpool_idx]) ) \
@@ -39,6 +54,8 @@
    f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
    f( MLISP_PSTATE_SYMBOL, 2 ) \
    f( MLISP_PSTATE_STRING, 3 )
+
+/*! \} */ /* mlisp_types */
 
 struct MLISP_PARSER;
 struct MLISP_EXEC_STATE;
@@ -167,11 +184,6 @@ MERROR_RETVAL mlisp_stack_pop(
 struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    struct MLISP_PARSER* parser, const char* strpool,
    size_t token_strpool_idx, size_t token_strpool_sz );
-
-MERROR_RETVAL mlisp_env_set_strpool(
-   struct MLISP_PARSER* parser,
-   size_t token_idx, size_t token_sz,
-   uint8_t env_type, void* data );
 
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, const char* token, size_t token_sz,
@@ -512,7 +524,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    size_t i = 0;
 
    /* This requires env be locked before entrance! */
-   /* TODO: Autolock. */
+   /* TODO: Autolock? */
    
    while( parser->env.ct > i ) {
       node_test = mdata_vector_get( &(parser->env), i, struct MLISP_ENV_NODE );
@@ -532,64 +544,6 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
 /* === */
 
-MERROR_RETVAL mlisp_env_set_strpool(
-   struct MLISP_PARSER* parser,
-   size_t token_idx, size_t token_sz,
-   uint8_t env_type, void* data
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_ENV_NODE env_node;
-   ssize_t new_idx_out = -1;
-
-   /* This requires env be locked before entrance! */
-   /* TODO: Autolock. */
-
-#  define _MLISP_TYPE_TABLE_ASGNSP( idx, ctype, name, const_name, fmt, iv ) \
-      case idx: \
-         debug_printf( MLISP_TRACE_LVL, \
-            "setting env: strpool(" SSIZE_T_FMT "): #" fmt, \
-               token_idx, (ctype)*((ctype*)data) ); \
-         /* TODO: This fails when assigning function pointer, so a different
-          *       macro using memcpy is used in env_set. Why?
-          */ \
-         env_node.value.name = *((ctype*)data); \
-         break;
-
-   /* Setup the new node to copy. */
-   maug_mzero( &env_node, sizeof( struct MLISP_ENV_NODE ) );
-   env_node.name_strpool_idx = token_idx;
-   env_node.type = env_type;
-   switch( env_type ) {
-   MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGNSP );
-
-   case 3 /* MLISP_TYPE_STR */:
-      debug_printf( MLISP_TRACE_LVL,
-         "setting env: strpool(" SSIZE_T_FMT "): strpool(" SSIZE_T_FMT ")",
-            token_idx, *((ssize_t*)data) );
-      env_node.value.strpool_idx = *((mdata_strpool_idx_t*)data);
-      break;
-
-   default:
-      error_printf( "attempted to define invalid type: %d", env_type );
-      retval = MERROR_EXEC;
-      goto cleanup;
-   }
-
-   /* Add the node to the env. */
-   new_idx_out = mdata_vector_append(
-      &(parser->env), &env_node, sizeof( struct MLISP_ENV_NODE ) );
-   if( 0 > new_idx_out ) {
-      retval = mdata_retval( new_idx_out );
-   }
-   maug_cleanup_if_not_ok();
-
-cleanup:
-
-   return retval;
-}
-
-/* === */
-
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, const char* token, size_t token_sz,
    uint8_t env_type, void* data
@@ -603,10 +557,7 @@ MERROR_RETVAL mlisp_env_set(
          debug_printf( 1, \
             "setting env: %s: #" fmt, \
                token, (ctype)*((ctype*)data) ); \
-         /* TODO: This produces wonky ints, so a different
-          *       macro using memcpy is used in env_set_strpool. Why?
-          */ \
-         memcpy( &(env_node.value), &data, sizeof( ctype ) ); \
+         env_node.value.name = *((ctype*)data); \
          break;
 
    /* Setup the new node to copy. */
@@ -621,7 +572,16 @@ MERROR_RETVAL mlisp_env_set(
    switch( env_type ) {
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGN );
 
-   case 4 /* mlisp_env_cb_t */:
+   /* Special cases: */
+
+   case 3 /* MLISP_TYPE_STR */:
+      debug_printf( MLISP_TRACE_LVL,
+         "setting env: %s: strpool(" SSIZE_T_FMT ")",
+            token, *((ssize_t*)data) );
+      env_node.value.strpool_idx = *((mdata_strpool_idx_t*)data);
+      break;
+
+   case 4 /* MLISP_TYPE_CB */:
       debug_printf( MLISP_TRACE_LVL,
          "setting env: %s): 0x%p", token, (mlisp_env_cb_t)data );
       env_node.value.cb = (mlisp_env_cb_t)data;
@@ -701,6 +661,9 @@ MERROR_RETVAL _mlisp_env_cb_define(
    struct MLISP_STACK_NODE key;
    struct MLISP_STACK_NODE val;
    char* strpool = NULL;
+   MAUG_MHANDLE key_tmp_h = NULL;
+   size_t key_sz = 0;
+   char* key_tmp = NULL;
 
    retval = mlisp_stack_pop( exec, &val );
    maug_cleanup_if_not_ok();
@@ -717,15 +680,38 @@ MERROR_RETVAL _mlisp_env_cb_define(
 
    mdata_strpool_lock( &(parser->strpool), strpool );
 
+   /* Allocate a temporary string to hold the key. */
+   key_sz = strlen( &(strpool[key.value.strpool_idx]) );
+   key_tmp_h = maug_malloc( key_sz + 1, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, key_tmp_h );
+
+   maug_mlock( key_tmp_h, key_tmp );
+   maug_cleanup_if_null_lock( char*, key_tmp );
+
+   maug_mzero( key_tmp, key_sz + 1 );
+   strncpy( key_tmp, &(strpool[key.value.strpool_idx]), key_sz );
+
    debug_printf( MLISP_TRACE_LVL, "define \"%s\" (strpool(" SIZE_T_FMT "))...",
       &(strpool[key.value.strpool_idx]), key.value.strpool_idx );
 
-   retval = mlisp_env_set_strpool(
-      parser, key.value.strpool_idx, 0, val.type, &(val.value) );
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+   assert( NULL == strpool );
+
+   retval = mlisp_env_set( parser, key_tmp, 0, val.type, &(val.value) );
 
 cleanup:
 
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+   if( NULL != key_tmp ) {
+      maug_munlock( key_tmp_h, key_tmp );
+   }
+
+   if( NULL != key_tmp_h ) {
+      maug_mfree( key_tmp_h );
+   }
+
+   if( NULL != strpool ) {
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+   }
 
    return retval;
 }
@@ -783,10 +769,9 @@ static MERROR_RETVAL _mlisp_step_iter(
       goto cleanup;
    }
 
-   /* Evaluate this node, assuming all the previously called children are on
-    * the stack.
+   /* Now that the children have been evaluated above, evaluate this node.
+    * Assume all the previously called children are now on the stack.
     */
-   /* TODO */
 
    /* Grab the token for this node and figure out what it is. */
    mdata_strpool_lock( &(parser->strpool), strpool );
@@ -844,19 +829,7 @@ static MERROR_RETVAL _mlisp_step_iter(
       _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
    }
 
-   /*
-   } else if( is_num ) {
-      _mlisp_stack_push_int16_t( parser, i_tmp );
-   } else {
-      _mlisp_stack_push_mdata_strpool_idx_t( parser, n->token_idx );
-   }
-   */
-
 cleanup:
-
-   /*
-   debug_printf( MLISP_TRACE_LVL,
-      "step " SSIZE_T_FMT " exec done: %d", n->step_iter, retval ); */
 
    return retval;
 }
