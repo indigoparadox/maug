@@ -785,14 +785,9 @@ static MERROR_RETVAL _mlisp_step_iter(
    MERROR_RETVAL retval = MERROR_OK;
    char* strpool = NULL;
    struct MLISP_ENV_NODE* env_node_p = NULL;
-   uint8_t env_type = 0;
    struct MLISP_AST_NODE* n_child = NULL;
    size_t* p_child_idx = NULL;
-
-#  define _MLISP_TYPE_TABLE_ENVD( idx, ctype, name, const_name, fmt, iv ) \
-   ctype env_ ## name = (ctype)0;
-
-   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVD )
+   struct MLISP_ENV_NODE env_node;
 
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
@@ -853,40 +848,32 @@ static MERROR_RETVAL _mlisp_step_iter(
 
       /* Copy onto native stack so we can unlock env in case this is a
        * callback that needs to execute. */
-#  define _MLISP_TYPE_TABLE_ENV( idx, ctype, name, const_name, fmt, iv ) \
-      } else if( MLISP_TYPE_ ## const_name == env_node_p->type ) { \
-         env_ ## name = env_node_p->value.name; \
-
-      if( 0 ) {
-      MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENV )
-      }
-
-      env_type = env_node_p->type;
+      memcpy( &env_node, env_node_p, sizeof( struct MLISP_ENV_NODE ) );
       env_node_p = NULL;
 
    } else if( maug_is_num( &(strpool[n->token_idx]), n->token_sz ) ) {
       /* A numeric literal. */
-      env_integer = atoi( &(strpool[n->token_idx]) );
-      env_type = MLISP_TYPE_INT;
+      env_node.value.integer = atoi( &(strpool[n->token_idx]) );
+      env_node.type = MLISP_TYPE_INT;
 
    } else if( maug_is_float( &(strpool[n->token_idx]), n->token_sz ) ) {
-      env_floating = atof( &(strpool[n->token_idx]) );
-      env_type = MLISP_TYPE_FLOAT;
+      env_node.value.floating = atof( &(strpool[n->token_idx]) );
+      env_node.type = MLISP_TYPE_FLOAT;
    }
    mdata_vector_unlock( &(parser->env) );
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt, iv ) \
-   } else if( MLISP_TYPE_ ## const_name == env_type ) { \
-      _mlisp_stack_push_ ## ctype( exec, env_ ## name );
+   } else if( MLISP_TYPE_ ## const_name == env_node.type ) { \
+      _mlisp_stack_push_ ## ctype( exec, env_node.value.name );
 
-   if( MLISP_TYPE_CB == env_type ) {
+   if( MLISP_TYPE_CB == env_node.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
-      retval = env_cb( parser, exec );
+      retval = env_node.value.cb( parser, exec );
       maug_cleanup_if_not_ok();
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
