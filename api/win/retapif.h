@@ -1361,11 +1361,11 @@ void retroflat_px(
    if( NULL != target->bits ) {
       /* Modify target bits directly (faster) if available! */
       /* WinG bitmaps are 8-bit palettized, so use the index directly. */
-      if( 0 > target->h ) {
-         target->bits[((target->h - 1 - y) * target->tex.w) + x] =
+      if( 0 > retroflat_bitmap_h( target ) ) {
+         target->bits[((retroflat_bitmap_h( target ) - 1 - y) * retroflat_bitmap_w( target )) + x] =
             color_idx;
       } else {
-         target->bits[(y * target->tex.w) + x] =
+         target->bits[(y * retroflat_bitmap_w( target )) + x] =
             color_idx;
       }
    } else {

@@ -899,12 +899,14 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
    mdata_strpool_idx_t str_idx = -1;
 
+#ifdef MPARSER_TRACE_NAMES
    debug_printf( MLISP_TRACE_LVL,
       SIZE_T_FMT ": \"%c\" (last: \"%c\") (%s (%d)) (sz: " SIZE_T_FMT ")",
       parser->base.i, c, parser->base.last_c,
       gc_mlisp_pstate_names[mlisp_parser_pstate( parser )],
       mlisp_parser_pstate( parser ),
       parser->base.pstate_sz );
+#endif /* MPARSER_TRACE_NAMES */
 
    switch( c ) {
    case '\r':

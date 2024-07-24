@@ -41,6 +41,8 @@ void mdata_strpool_free( struct MDATA_STRTABLE* strpool );
 ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, void* item, size_t item_sz );
 
+void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
+
 /**
  * \warning The vector must not be locked before an append or allocate!
  *          Reallocation could change pointers gotten during a lock!
