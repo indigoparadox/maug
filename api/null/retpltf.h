@@ -173,11 +173,13 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
 #  ifndef RETROFLAT_OPENGL
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -187,12 +189,14 @@ void retroflat_blit_bitmap(
    assert( NULL != src );
 
 #  if defined( RETROFLAT_OPENGL )
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
+   retval = retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
 #  else
 
    /* TODO */
 
 #  endif /* RETROFLAT_OPENGL */
+
+   return retval;
 }
 
 /* === */

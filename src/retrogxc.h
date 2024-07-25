@@ -386,7 +386,8 @@ MERROR_RETVAL retrogxc_blit_bitmap(
 
    maug_mlock( assets[bitmap_idx].handle, bitmap );
 
-   retroflat_blit_bitmap( target, bitmap, s_x, s_y, d_x, d_y, w, h, instance );
+   retval = retroflat_blit_bitmap(
+      target, bitmap, s_x, s_y, d_x, d_y, w, h, instance );
 
 cleanup:
 

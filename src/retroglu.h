@@ -441,7 +441,7 @@ void retroglu_string(
 
 int retroglu_draw_release( struct RETROFLAT_BITMAP* bmp );
 
-void retroglu_blit_bitmap(
+MERROR_RETVAL retroglu_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
    int16_t instance );
@@ -1885,12 +1885,15 @@ void retroglu_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroglu_blit_bitmap(
+MERROR_RETVAL retroglu_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    int y_iter = 0;
+
+   /* TODO: Check memcpy, etc? */
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Create ortho sprite on screen. */
@@ -1913,6 +1916,8 @@ void retroglu_blit_bitmap(
       maug_munlock( src->tex.bytes_h, src->tex.bytes );
 
    }
+
+   return retval;
 }
 
 /* === */

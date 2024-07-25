@@ -1342,7 +1342,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
  * \param h Pixel height of the region to blit.
  * \todo Currently s_x, s_y, w, and h are not functional on all platforms!
  */
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance );

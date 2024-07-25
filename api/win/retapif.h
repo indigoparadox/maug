@@ -192,7 +192,7 @@ static LRESULT CALLBACK WndProc(
             if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not determine buffer device context!" );
-               g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+               g_retroflat_state->retval = MERROR_GUI;
                retroflat_quit( g_retroflat_state->retval );
                break;
             }
@@ -201,7 +201,7 @@ static LRESULT CALLBACK WndProc(
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not create screen buffer!" );
-            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+            g_retroflat_state->retval = MERROR_GUI;
             retroflat_quit( g_retroflat_state->retval );
             break;
          }
@@ -233,7 +233,7 @@ static LRESULT CALLBACK WndProc(
          if( (HDC)NULL == hdc_paint ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not determine window device context!" );
-            g_retroflat_state->retval = RETROFLAT_ERROR_GRAPHICS;
+            g_retroflat_state->retval = MERROR_GUI;
             retroflat_quit( g_retroflat_state->retval );
             break;
          }
@@ -244,7 +244,7 @@ static LRESULT CALLBACK WndProc(
 
 #        ifdef RETROFLAT_WING
          if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
-            g_w.WinGStretchBlt(
+            if( !g_w.WinGStretchBlt(
                hdc_paint,
                0, 0,
                g_retroflat_state->screen_w, g_retroflat_state->screen_h,
@@ -252,7 +252,12 @@ static LRESULT CALLBACK WndProc(
                0, 0,
                g_retroflat_state->screen_w,
                g_retroflat_state->screen_h
-            );
+            ) ) {
+               retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+                  "Error", "Could not blit to screen!" );
+               g_retroflat_state->retval = MERROR_GUI;
+               retroflat_quit( g_retroflat_state->retval );
+            }
 #           ifdef RETROFLAT_API_WIN32
             GdiFlush();
 #           endif /* RETROFLAT_API_WIN32 */
@@ -391,6 +396,8 @@ static int retroflat_bitmap_win_transparency(
    unsigned long txp_color = 0;
    uint8_t autorelock = 0;
 
+   assert( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & bmp_out->flags) );
+
    /* Unlock the mask if one exists. */
    if( (HDC)NULL == bmp_out->hdc_mask ) {
       debug_printf( 1, "autolocking transparency mask..." );
@@ -421,7 +428,7 @@ static int retroflat_bitmap_win_transparency(
    BitBlt(
       bmp_out->hdc_b, 0, 0, w, h, bmp_out->hdc_mask, 0, 0, SRCINVERT );
 
-   debug_printf( 1, "created new transparency mask!" );
+   debug_printf( 1, "updated transparency mask for %p", bmp_out );
 
 cleanup:
 
@@ -612,7 +619,7 @@ MERROR_RETVAL retroflat_init_platform(
    if( !g_retroflat_state->platform.window ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not create window!" );
-      retval = RETROFLAT_ERROR_GRAPHICS;
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -820,8 +827,8 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
-   int retval = RETROFLAT_OK;
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = RETROFLAT_OK;
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -892,6 +899,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* Trigger a screen refresh if this was a screen lock. */
       if( (HWND)NULL != g_retroflat_state->platform.window ) {
          InvalidateRect( g_retroflat_state->platform.window, 0, TRUE );
+         UpdateWindow( g_retroflat_state->platform.window );
       }
 
 #     ifdef RETROFLAT_VDP
@@ -1134,7 +1142,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       ) {
          retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
             "Error", "Could not determine recommended format!" );
-         retval = RETROFLAT_ERROR_GRAPHICS;
+         retval = MERROR_GUI;
          goto cleanup;
       }
    }
@@ -1142,17 +1150,23 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    debug_printf( 0, "creating bitmap..." );
 
-   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
-   bmp_out->bmi.header.biPlanes = 1;
-   bmp_out->bmi.header.biCompression = BI_RGB;
    bmp_out->bmi.header.biWidth = w;
 #     ifdef RETROFLAT_WING
    bmp_out->bmi.header.biHeight *= h;
+   if(
+      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+   ) {
 #     else
    bmp_out->bmi.header.biHeight = h;
 #     endif /* RETROFLAT_WING */
+   bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
+   bmp_out->bmi.header.biPlanes = 1;
+   bmp_out->bmi.header.biCompression = BI_RGB;
    bmp_out->bmi.header.biBitCount = 32;
    bmp_out->bmi.header.biSizeImage = w * h * 4;
+#     ifdef RETROFLAT_WING
+   }
+#endif /* RETROFLAT_WING */
 
    GetSystemPaletteEntries(
       g_retroflat_state->platform.hdc_win, 0,
@@ -1179,8 +1193,11 @@ MERROR_RETVAL retroflat_create_bitmap(
          bmp_out->hdc_b,
          (BITMAPINFO far*)(&bmp_out->bmi),
          (void far*)&(bmp_out->bits) );
+      assert( NULL != bmp_out->b );
 
       debug_printf( 1, "WinG bitmap bits: %p", bmp_out->bits );
+
+      bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
 
    } else {
 #     endif /* RETROFLAT_WING */
@@ -1203,6 +1220,8 @@ MERROR_RETVAL retroflat_create_bitmap(
       debug_printf( 1, "creating new transparency mask bitmap..." );
       bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
       maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
+   } else {
+      bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
    }
 
 #     ifdef RETROFLAT_WING
@@ -1250,13 +1269,13 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
-#  ifndef RETROFLAT_OPENGL
    int retval = 0;
+#  ifndef RETROFLAT_OPENGL
    int locked_src_internal = 0;
 #  endif /* RETROFLAT_OPENGL */
 
@@ -1304,16 +1323,40 @@ void retroflat_blit_bitmap(
 
    if( (HBITMAP)NULL != src->mask ) {
       /* Use mask to blit transparency. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND );
+      if(
+         !BitBlt(
+            target->hdc_b, d_x, d_y, w, h, src->hdc_mask, s_x, s_y, SRCAND )
+      ) {
+         error_printf(
+            "error during mask blit from bitmap %p to bitmap %p",
+            src, target );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
 
       /* Do actual blit. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT );
+      if(
+         !BitBlt(
+            target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCPAINT )
+      ) {
+         error_printf(
+            "error during blit from bitmap %p to bitmap %p",
+            src, target );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
    } else {
       /* Just overwrite entire rect. */
-      BitBlt(
-         target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCCOPY );
+      if(
+         !BitBlt(
+            target->hdc_b, d_x, d_y, w, h, src->hdc_b, s_x, s_y, SRCCOPY )
+      ) {
+         error_printf(
+            "error during blit from bitmap %p to bitmap %p",
+            src, target );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
    }
 
 cleanup:
@@ -1323,6 +1366,7 @@ cleanup:
    }
 
 #  endif /* RETROFLAT_OPENGL */
+   return retval;
 }
 
 /* === */
@@ -1362,11 +1406,12 @@ void retroflat_px(
       /* Modify target bits directly (faster) if available! */
       /* WinG bitmaps are 8-bit palettized, so use the index directly. */
       if( 0 > retroflat_bitmap_h( target ) ) {
+         /* TODO: Are these h/w used correctly? */
          target->bits[((retroflat_bitmap_h( target ) - 1 - y) * retroflat_bitmap_w( target )) + x] =
-            color_idx;
+            g_retroflat_state->palette[color_idx];
       } else {
          target->bits[(y * retroflat_bitmap_w( target )) + x] =
-            color_idx;
+            g_retroflat_state->palette[color_idx];
       }
    } else {
       /* Use slow Windows GDI. */

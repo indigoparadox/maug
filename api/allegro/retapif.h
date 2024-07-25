@@ -292,11 +292,12 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
 
    /* Allegro not setup for hardware scrolling. */
    if(
@@ -304,7 +305,7 @@ void retroflat_blit_bitmap(
       retroflat_bitmap_w( target ) + w <= d_x ||
       retroflat_bitmap_h( target ) + h <= d_y
    ) {
-      return;
+      goto cleanup;
    }
 
    if( NULL == target ) {
@@ -322,9 +323,13 @@ void retroflat_blit_bitmap(
       draw_sprite( target->b, src->b, d_x, d_y );
    } else {
       /* Handle partial blit. */
+      /* TODO: Can we determine if there was an error? */
       blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
    }
 
+cleanup:
+
+   return retval;
 }
 
 /* === */

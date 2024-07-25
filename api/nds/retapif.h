@@ -524,7 +524,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
@@ -557,7 +557,7 @@ void retroflat_blit_bitmap(
 
 cleanup:
 
-   return;
+   return retval;
 }
 
 /* === */

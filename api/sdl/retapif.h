@@ -705,17 +705,16 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-void retroflat_blit_bitmap(
+MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
 #  elif defined( RETROFLAT_API_SDL2 )
-   MERROR_RETVAL retval = MERROR_OK;
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
@@ -735,7 +734,8 @@ void retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   retval = 
+      retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -761,6 +761,7 @@ void retroflat_blit_bitmap(
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
    if( 0 != retval ) {
       error_printf( "could not blit surface: %s", SDL_GetError() );
+      retval = MERROR_GUI;
    }
 #     else
 
@@ -769,12 +770,14 @@ void retroflat_blit_bitmap(
       target->renderer, src->texture, &src_rect, &dest_rect );
    if( 0 != retval ) {
       error_printf( "could not blit surface: %s", SDL_GetError() );
+      retval = MERROR_GUI;
    }
 
 #     endif /* !RETROFLAT_API_SDL1 */
 
 #  endif
 
+   return retval;
 }
 
 /* === */
