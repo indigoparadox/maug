@@ -190,7 +190,7 @@ struct MCSS_PARSER {
    struct MCSS_STYLE* styles;
    size_t styles_sz;
    size_t styles_sz_max;
-   struct MDATA_STRTABLE strpool;
+   struct MDATA_STRPOOL strpool;
    RETROFLAT_COLOR colors[16];
 };
 

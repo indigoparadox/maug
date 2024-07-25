@@ -56,7 +56,7 @@ typedef ssize_t mlisp_lambda_t;
  */
 #define MLISP_TYPE_TABLE( f ) \
    MLISP_NUM_TYPE_TABLE( f ) \
-   f( 3, mdata_strpool_idx_t, strpool_idx,     STR,      "%s" ) \
+   f( 3, mdata_strpool_idx_t, strpool_idx,     STR,      SSIZE_T_FMT ) \
    f( 4, mlisp_env_cb_t,      cb,              CB,       "%p" ) \
    f( 5, mlisp_lambda_t,      lambda,          LAMBDA,   SIZE_T_FMT )
 
@@ -111,7 +111,7 @@ struct MLISP_EXEC_STATE {
 
 struct MLISP_PARSER {
    struct MPARSER base;
-   struct MDATA_STRTABLE strpool;
+   struct MDATA_STRPOOL strpool;
    MAUG_MHANDLE env_h;
    struct MDATA_VECTOR ast;
    ssize_t ast_node_iter;
@@ -311,6 +311,7 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
 
    n = mdata_vector_get(
       &(parser->ast), parser->ast_node_iter, struct MLISP_AST_NODE );
+   assert( NULL != n );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
    if( 0 == token_sz ) {
@@ -338,6 +339,10 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    n->token_sz = token_sz;
 
 cleanup:
+
+   if( NULL != strpool ) {
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+   }
 
    mdata_vector_unlock( &(parser->ast) );
 
@@ -513,6 +518,8 @@ cleanup:
          retval = MERROR_OVERFLOW; \
          goto cleanup; \
       } \
+      debug_printf( MLISP_EXEC_TRACE_LVL, \
+         "pushing " #const_name " onto stack: " fmt, i ); \
       exec->stack[exec->stack_idx].type = MLISP_TYPE_ ## const_name; \
       exec->stack[exec->stack_idx].value.name = i; \
       exec->stack_idx++; \
@@ -539,7 +546,8 @@ MERROR_RETVAL mlisp_stack_pop(
    /* Perform the pop! */
    exec->stack_idx--;
 
-   debug_printf( MLISP_EXEC_TRACE_LVL, "popping: " SSIZE_T_FMT, exec->stack_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "popping: " SSIZE_T_FMT, exec->stack_idx );
 
    memcpy(
       o,
@@ -619,7 +627,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
    /* This requires env be locked before entrance! */
    /* TODO: Autolock? */
-   
+
    while( parser->env.ct > i ) {
       node_test = mdata_vector_get( &(parser->env), i, struct MLISP_ENV_NODE );
       if( 0 == strncmp(
@@ -653,7 +661,7 @@ MERROR_RETVAL mlisp_env_set(
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt ) \
       case idx: \
-         debug_printf( 1, \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
             "setting env: \"%s\": #" fmt, \
                token, (ctype)*((ctype*)data) ); \
          env_node.value.name = *((ctype*)data); \
@@ -797,7 +805,8 @@ MERROR_RETVAL _mlisp_env_cb_define(
    maug_mzero( key_tmp, key_sz + 1 );
    strncpy( key_tmp, &(strpool[key.value.strpool_idx]), key_sz );
 
-   debug_printf( MLISP_EXEC_TRACE_LVL, "define \"%s\" (strpool(" SIZE_T_FMT "))...",
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "define \"%s\" (strpool(" SIZE_T_FMT "))...",
       &(strpool[key.value.strpool_idx]), key.value.strpool_idx );
 
    mdata_strpool_unlock( &(parser->strpool), strpool );
@@ -921,7 +930,11 @@ static MERROR_RETVAL _mlisp_step_iter(
    mdata_strpool_lock( &(parser->strpool), strpool );
    mdata_vector_lock( &(parser->env) );
    assert( 0 < strlen( &(strpool[n->token_idx]) ) );
-   debug_printf( MLISP_EXEC_TRACE_LVL, "eval %s", &(strpool[n->token_idx]) );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "eval node " SIZE_T_FMT ": \"%s\" [%x] (i: " SSIZE_T_FMT
+         ", strlen: " SIZE_T_FMT ")",
+      n_idx, &(strpool[n->token_idx]), strpool[n->token_idx], n->token_idx,
+         strlen( &(strpool[n->token_idx]) ) );
    if( NULL != (env_node_p = mlisp_env_get_strpool(
       parser, strpool, n->token_idx, n->token_sz
    ) ) ) {
@@ -1061,7 +1074,8 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          && '(' != parser->base.last_c
       ) {
          assert( 0 < parser->base.token_sz );
-         debug_printf( MLISP_PARSE_TRACE_LVL, "found symbol: %s (" SIZE_T_FMT ")",
+         debug_printf( MLISP_PARSE_TRACE_LVL,
+            "found symbol: %s (" SIZE_T_FMT ")",
             parser->base.token, parser->base.token_sz );
 
          /* Grab the symbol to use for the op of the child created by the last
@@ -1092,7 +1106,8 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          && '(' != parser->base.last_c
       ) {
          assert( 0 < parser->base.token_sz );
-         debug_printf( MLISP_PARSE_TRACE_LVL, "found symbol: %s (" SIZE_T_FMT ")",
+         debug_printf( MLISP_PARSE_TRACE_LVL,
+            "found symbol: %s (" SIZE_T_FMT ")",
             parser->base.token, parser->base.token_sz );
 
          /* A raw token without parens terminated by whitespace can't have
