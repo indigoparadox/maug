@@ -6,6 +6,8 @@
 
 #define RETROFLAT_NO_GENERIC_LOOP 1
 
+#define RETROFLAT_SOFT_VIEWPORT
+
 #  ifndef RETROFLAT_OPENGL
 #     error "RETROFLAT_API_GLUT specified without RETROFLAT_OPENGL!"
 #     define RETROFLAT_OPENGL
