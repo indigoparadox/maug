@@ -1382,13 +1382,24 @@ void retrohtr_tree_dump(
    debug_printf(
       1,
       "%s" SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
-      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ") f: " SSIZE_T_FMT,
+      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ") f: "
+#ifdef RETROGXC_PRESENT
+      SSIZE_T_FMT,
+#else
+      "%p",
+#endif /* RETROGXC_PRESENT */
       indents, iter,
       0 <= tree->nodes[iter].tag ?
          gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type]
             : "ROOT",
       tree->nodes[iter].x, tree->nodes[iter].y,
-      tree->nodes[iter].w, tree->nodes[iter].h, tree->nodes[iter].font_idx );
+      tree->nodes[iter].w, tree->nodes[iter].h,
+#ifdef RETROGXC_PRESENT
+      tree->nodes[iter].font_idx
+#else
+      tree->nodes[iter].font_h
+#endif /* RETROGXC_PRESENT */
+   );
 
    retrohtr_tree_dump( tree, parser, tree->nodes[iter].first_child, d + 1 );
 
