@@ -282,7 +282,7 @@ MERROR_RETVAL mdata_vector_alloc(
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
-   } else {
+   } else if( v->ct_max <= v->ct + 1 ) {
       assert( item_sz == v->item_sz );
       debug_printf(
          MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
