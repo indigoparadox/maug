@@ -129,7 +129,7 @@ MERROR_RETVAL retrohtr_tree_pos(
    struct MCSS_STYLE* prev_sibling_style,
    struct MCSS_STYLE* parent_style, ssize_t node_idx, size_t d );
 
-void retrohtr_tree_draw(
+MERROR_RETVAL retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d );
 
@@ -434,7 +434,11 @@ static MERROR_RETVAL retrohtr_load_font(
 
    mdata_strpool_lock( &(styler->strpool), strpool );
 
-   if( 0 > effect_style->FONT_FAMILY ) {
+   debug_printf( RETROHTR_TRACE_LVL,
+      "loading font: %s (" SSIZE_T_FMT ")",
+      &(strpool[effect_style->FONT_FAMILY]), effect_style->FONT_FAMILY );
+
+   if( 0 >= effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
       /* TODO: Load fallback font? */
       retval = MERROR_GUI;
@@ -554,21 +558,22 @@ MERROR_RETVAL retrohtr_tree_size(
    
    /* Figure out how big the contents of this node are. */
 
+   /* Font is heritable, so load it for all nodes even if we don't use it. */
+   retval = retrohtr_load_font(
+      &(parser->styler),
+#ifdef RETROGXC_PRESENT
+      &(retrohtr_node( tree, node_idx )->font_idx),
+#else
+      &(retrohtr_node( tree, node_idx )->font_h),
+#endif /* RETROGXC_PRESENT */
+      &effect_style );
+   maug_cleanup_if_not_ok();
+
    if(
       0 <= tag_idx &&
       MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type
    ) {
       /* Get text size to use in calculations below. */
-
-      retval = retrohtr_load_font(
-         &(parser->styler),
-#ifdef RETROGXC_PRESENT
-         &(retrohtr_node( tree, node_idx )->font_idx),
-#else
-         &(retrohtr_node( tree, node_idx )->font_h),
-#endif /* RETROGXC_PRESENT */
-         &effect_style );
-      maug_cleanup_if_not_ok();
 
       maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
       maug_cleanup_if_null_alloc( char*, tag_content );
@@ -1160,7 +1165,7 @@ cleanup:
    return retval;
 }
 
-void retrohtr_tree_draw(
+MERROR_RETVAL retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d
 ) {
@@ -1172,7 +1177,7 @@ void retrohtr_tree_draw(
    node = retrohtr_node( tree, node_idx );
 
    if( NULL == node ) {
-      return;
+      return MERROR_OK;
    }
 
    /* TODO: Multi-pass, draw absolute pos afterwards. */
@@ -1190,12 +1195,13 @@ void retrohtr_tree_draw(
 
    if( MHTML_TAG_TYPE_TEXT == tag->base.type ) {
       maug_mlock( tag->TEXT.content, tag_content );
+      /* This might be NULL. That's fine. */
       if( NULL == tag_content ) {
-         error_printf( "could not lock tag content!" );
-         return;
+         goto cleanup;
       }
 
 #ifdef RETROGXC_PRESENT
+      /* This is a retrogxc index, so it can be zero. */
       maug_cleanup_if_lt(
          node->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
 
@@ -1205,7 +1211,7 @@ void retrohtr_tree_draw(
          retrohtr_node_screen_y( tree, node_idx ),
          node->w, node->h, 0 );
 #else
-      maug_cleanup_if_not_null( MAUG_MHANDLE, node->font_h, MERROR_GUI );
+      maug_cleanup_if_null( MAUG_MHANDLE, node->font_h, MERROR_GUI );
 
       retrofont_string(
          NULL, node->fg, tag_content, 0, node->font_h,
@@ -1307,6 +1313,8 @@ cleanup:
       retrogui_redraw_ctls( &(tree->gui) );
       retrogui_unlock( &(tree->gui) );
    }
+
+   return retval;
 }
 
 retrogui_idc_t retrohtr_tree_poll_ctls(
@@ -1374,13 +1382,13 @@ void retrohtr_tree_dump(
    debug_printf(
       1,
       "%s" SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
-      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ")",
+      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ") f: " SSIZE_T_FMT,
       indents, iter,
       0 <= tree->nodes[iter].tag ?
          gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type]
             : "ROOT",
       tree->nodes[iter].x, tree->nodes[iter].y,
-      tree->nodes[iter].w, tree->nodes[iter].h );
+      tree->nodes[iter].w, tree->nodes[iter].h, tree->nodes[iter].font_idx );
 
    retrohtr_tree_dump( tree, parser, tree->nodes[iter].first_child, d + 1 );
 

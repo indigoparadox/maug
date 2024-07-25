@@ -86,6 +86,9 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
 
    maug_mzero( glyph_h_buf, 10 );
 
+   assert( NULL != font_name );
+   assert( ' ' <= font_name[0] );
+
    p_c = strrchr( font_name, '.' );
    while( p_c - 1 > font_name ) {
       /* Start at the char before the '.' and work backwords until a '-'. */

@@ -137,7 +137,8 @@
 
 #define mcss_prop_is_heritable( prop_id ) \
    (MCSS_PROP_COLOR == prop_id || \
-   MCSS_PROP_BACKGROUND_COLOR == prop_id)
+   MCSS_PROP_BACKGROUND_COLOR == prop_id || \
+   MCSS_PROP_FONT_FAMILY == prop_id)
 
 #define mcss_prop_is_active( prop ) \
    (MCSS_PROP_FLAG_ACTIVE == (MCSS_PROP_FLAG_ACTIVE & prop ## _flags))
@@ -407,8 +408,13 @@ MERROR_RETVAL mcss_style_str_t(
       goto cleanup;
    }
 
+   debug_printf( MCSS_TRACE_LVL,
+      "setting %s: %s", prop_name, parser->base.token );
+
    *str_idx_p = mdata_strpool_append(
       &(parser->strpool), parser->base.token, parser->base.token_sz );
+
+   assert( 0 < *str_idx_p ); /* strpool indexes are never 0. */
 
 cleanup:
 

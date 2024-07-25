@@ -70,8 +70,10 @@ void mcssmerge_styles(
                0 <= effect_style->prop_n ? \
                gc_retroflat_color_names[effect_style->prop_n] : "NULL" ); \
          } \
-         debug_printf( MCSSMERG_TRACE_LVL, "%s using parent %s", \
-            gc_mhtml_tag_names[tag_type], #prop_n ); \
+         debug_printf( MCSSMERG_TRACE_LVL, \
+            "%s using parent %s: " SSIZE_T_FMT, \
+            gc_mhtml_tag_names[tag_type], #prop_n, \
+            (ssize_t)(parent_style->prop_n) ); \
          effect_style->prop_n = parent_style->prop_n; \
          effect_style->prop_n ## _flags = parent_style->prop_n ## _flags; \
          if( MCSS_PROP_BACKGROUND_COLOR == p_id ) { \
@@ -88,8 +90,9 @@ void mcssmerge_styles(
          mcss_prop_is_active( tag_style->prop_n ) \
       ) { \
          /* Use new property. */ \
-         debug_printf( MCSSMERG_TRACE_LVL, "%s using style %s", \
-            gc_mhtml_tag_names[tag_type], #prop_n ); \
+         debug_printf( MCSSMERG_TRACE_LVL, "%s using style %s: " SSIZE_T_FMT, \
+            gc_mhtml_tag_names[tag_type], #prop_n, \
+            (ssize_t)(tag_style->prop_n) ); \
          if( MCSS_PROP_COLOR == p_id ) { \
             debug_printf( MCSSMERG_TRACE_LVL, "color %s", \
                0 <= effect_style->prop_n ? \
