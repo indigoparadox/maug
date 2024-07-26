@@ -2,6 +2,8 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+/* TODO: WinG runs but just shows an empty window. */
+
 /* For now, these are set by WinMain(), so they need to be outside of the
  * state that's zeroed on init()!
  */

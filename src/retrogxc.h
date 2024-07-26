@@ -4,6 +4,10 @@
 
 #include <maug.h>
 
+/* TODO: Unified asset type that automatically uses RetroGXC if present and
+ *       directly loads assets to handles if not.
+ */
+
 #define RETROGXC_PRESENT 1
 
 #ifndef RETROGXC_INITIAL_SZ
