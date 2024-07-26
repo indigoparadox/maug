@@ -44,6 +44,8 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
 ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, void* item, size_t item_sz );
 
+MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx );
+
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
 
 /**
@@ -295,10 +297,49 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   if( NULL != v->data_bytes ) {
+      error_printf( "vector cannot be resized while locked!" );
+      retval = MERROR_ALLOC;
+      goto cleanup;
+   }
+
+   if( v->ct <= idx ) {
+      error_printf( "index out of range!" );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   debug_printf( MDATA_TRACE_LVL, "removing vector item: " SIZE_T_FMT, idx );
+
+   assert( 0 < v->item_sz );
+
+   mdata_vector_unlock( v );
+
+   for( i = idx ; v->ct > i + 1 ; i++ ) {
+      debug_printf( MDATA_TRACE_LVL,
+         "shifting vector item " SIZE_T_FMT " up by 1...", i );
+      memcpy( &(v->data_bytes[i]), &(v->data_bytes[i + 1]), v->item_sz );
+   }
+
+   v->ct--;
+
+cleanup:
+
+   mdata_vector_unlock( v );
+
+   return retval;
+}
+
+/* === */
+
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
 
    debug_printf( MDATA_TRACE_LVL,
-      "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT "...",
+      "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       idx, v->ct );
 
    assert( NULL != v->data_bytes );

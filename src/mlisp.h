@@ -105,8 +105,8 @@ struct MLISP_AST_NODE {
 
 struct MLISP_EXEC_STATE {
    struct MDATA_VECTOR per_node_child_idx;
-   struct MLISP_STACK_NODE stack[MLISP_STACK_DEPTH_MAX];
-   size_t stack_idx;
+   struct MDATA_VECTOR stack;
+   struct MDATA_VECTOR ret;
 };
 
 struct MLISP_PARSER {
@@ -167,10 +167,6 @@ MERROR_RETVAL mlisp_ast_dump(
  * \addtogroup mlisp_stack MLISP Execution Stack
  * \{
  */
-
-#define mlisp_stack_peek( exec ) \
-   (0 < (exec)->stack_idx ? \
-      (exec)->stack[(parser)->stack_idx - 1].type : 0)
 
 #define mlisp_stack_push( exec, i, ctype ) \
    (_mlisp_stack_push_ ## ctype( exec, (ctype)i ))
@@ -467,39 +463,43 @@ MERROR_RETVAL mlisp_stack_dump(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    char* strpool = NULL;
+   struct MLISP_STACK_NODE* n_stack = NULL;
 
 #  define _MLISP_TYPE_TABLE_DUMPS( idx, ctype, name, const_name, fmt ) \
-      } else if( MLISP_TYPE_ ## const_name == exec->stack[i].type ) { \
+      } else if( MLISP_TYPE_ ## const_name == n_stack->type ) { \
          debug_printf( MLISP_TRACE_LVL, \
             "stack " SIZE_T_FMT " (" #const_name "): " fmt, \
-            i, exec->stack[i].value.name ); \
+            i, n_stack->value.name );
 
+   mdata_vector_lock( &(exec->stack) );
    mdata_strpool_lock( &(parser->strpool), strpool ); \
-   while( i < exec->stack_idx ) {
-      if( 0 ) {
-      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPS );
+   while( i < mdata_vector_ct( &(exec->stack) ) ) {
+      n_stack = mdata_vector_get( &(exec->stack), i, struct MLISP_STACK_NODE );
 
       /* Handle special exceptions. */
-      } else if( MLISP_TYPE_STR == exec->stack[i].type ) {
+      if( MLISP_TYPE_STR == n_stack->type ) {
          debug_printf( MLISP_TRACE_LVL,
             "stack " SIZE_T_FMT " (STR): %s",
-            i, &(strpool[exec->stack[i].value.strpool_idx]) );
+            i, &(strpool[n_stack->value.strpool_idx]) );
 
-      } else if( MLISP_TYPE_CB == exec->stack[i].type ) {
+      } else if( MLISP_TYPE_CB == n_stack->type ) {
          debug_printf( MLISP_TRACE_LVL,
-            "stack " SIZE_T_FMT " (CB): %p", i, exec->stack[i].value.cb );
+            "stack " SIZE_T_FMT " (CB): %p", i, n_stack->value.cb );
 
-      } else if( MLISP_TYPE_LAMBDA == exec->stack[i].type ) {
+      } else if( MLISP_TYPE_LAMBDA == n_stack->type ) {
          debug_printf( MLISP_TRACE_LVL,
             "stack " SIZE_T_FMT " (LAMBDA): " SIZE_T_FMT,
-               i, exec->stack[i].value.lambda );
+               i, n_stack->value.lambda );
 
+      /* Handle numeric types. */
+      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPS );
       } else {
-         error_printf( "invalid stack type: %u", exec->stack[i].type );
+         error_printf( "invalid stack type: %u", n_stack->type );
       }
       i++;
    }
-   mdata_strpool_unlock( &(parser->strpool), strpool ); \
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+   mdata_vector_unlock( &(exec->stack) );
 
 cleanup:
 
@@ -512,18 +512,19 @@ cleanup:
    MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
       struct MLISP_EXEC_STATE* exec, ctype i \
    ) { \
+      struct MLISP_STACK_NODE n_stack; \
       MERROR_RETVAL retval = MERROR_OK; \
-      if( exec->stack_idx + 1 >= MLISP_STACK_DEPTH_MAX ) { \
-         error_printf( "stack overflow!" ); \
-         retval = MERROR_OVERFLOW; \
-         goto cleanup; \
-      } \
       debug_printf( MLISP_EXEC_TRACE_LVL, \
          "pushing " #const_name " onto stack: " fmt, i ); \
-      exec->stack[exec->stack_idx].type = MLISP_TYPE_ ## const_name; \
-      exec->stack[exec->stack_idx].value.name = i; \
-      exec->stack_idx++; \
-   cleanup: \
+      n_stack.type = MLISP_TYPE_ ## const_name; \
+      n_stack.value.name = i; \
+      retval = mdata_vector_append( \
+         &(exec->stack), &n_stack, sizeof( struct MLISP_STACK_NODE ) ); \
+      if( 0 > retval ) { \
+         retval = mdata_retval( retval ); \
+      } else { \
+         retval = 0; \
+      } \
       return retval; \
    }
 
@@ -535,24 +536,30 @@ MERROR_RETVAL mlisp_stack_pop(
    struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_STACK_NODE* n_stack = NULL;
+   size_t n_idx = 0;
 
    /* Check for valid stack pointer. */
-   if( exec->stack_idx == 0 ) {
+   if( mdata_vector_ct( &(exec->stack) ) == 0 ) {
       error_printf( "stack underflow!" );
       retval = MERROR_OVERFLOW;
       goto cleanup;
    }
 
+   n_idx = mdata_vector_ct( &(exec->stack) ) - 1;
+
    /* Perform the pop! */
-   exec->stack_idx--;
+   debug_printf( MLISP_EXEC_TRACE_LVL, "popping: " SSIZE_T_FMT, n_idx );
 
-   debug_printf( MLISP_EXEC_TRACE_LVL,
-      "popping: " SSIZE_T_FMT, exec->stack_idx );
+   mdata_vector_lock( &(exec->stack) );
+   n_stack = mdata_vector_get(
+      &(exec->stack), n_idx, struct MLISP_STACK_NODE );
+   assert( NULL != n_stack );
+   memcpy( o, n_stack, sizeof( struct MLISP_STACK_NODE ) );
+   n_stack = NULL;
+   mdata_vector_unlock( &(exec->stack) );
 
-   memcpy(
-      o,
-      &(exec->stack[exec->stack_idx]),
-      sizeof( struct MLISP_STACK_NODE ) );
+   retval = mdata_vector_remove( &(exec->stack), n_idx );
 
 cleanup:
 
@@ -854,9 +861,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
 
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
-      /* TODO: When executing a lambda, pop the stack for each child of the
-       *       first s-expression after the name (second absolute?).
-       */
       debug_printf( MLISP_EXEC_TRACE_LVL, "skipping lambda children..." );
       goto cleanup;
    }
@@ -894,6 +898,21 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    }
 
 cleanup:
+
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _mlisp_step_lambda(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, ssize_t n_idx
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO: When executing a lambda, pop the stack for each child of the
+    *       first s-expression after the name (second absolute?) and assign
+    *       them into a new env. Then eval second child with new env.
+    */
 
    return retval;
 }
@@ -971,6 +990,9 @@ static MERROR_RETVAL _mlisp_step_iter(
        */
       retval = env_node.value.cb( parser, exec );
       maug_cleanup_if_not_ok();
+
+   } else if( MLISP_TYPE_LAMBDA == env_node.type ) {
+      _mlisp_step_lambda( parser, exec, env_node.value.lambda );
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
