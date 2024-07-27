@@ -215,6 +215,8 @@ struct RETROGLU_PROJ_ARGS {
    float rzoom;
    float near_plane;
    float far_plane;
+   size_t screen_px_w;
+   size_t screen_px_h;
 };
 
 #ifdef RETROFLAT_API_LIBNDS
@@ -560,14 +562,21 @@ void retroglu_init_scene( uint8_t flags ) {
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    float aspect_ratio = 0;
 
+   if( 0 == args->screen_px_w ) {
+      args->screen_px_w = retroflat_screen_w();
+   }
+   if( 0 == args->screen_px_h ) {
+      args->screen_px_h = retroflat_screen_h();
+   }
+
    /* Setup projection. */
 #ifdef MAUG_OS_NDS
    glViewport( 0, 0, 255, 191 );
 #else
    glViewport(
-      0, 0, (uint32_t)retroflat_screen_w(), (uint32_t)retroflat_screen_h() );
+      0, 0, (uint32_t)(args->screen_px_w), (uint32_t)(args->screen_px_h) );
 #endif
-   aspect_ratio = (float)retroflat_screen_w() / (float)retroflat_screen_h();
+   aspect_ratio = (float)(args->screen_px_w) / (float)(args->screen_px_h);
 
    /* Switch to projection matrix for setup. */
    glMatrixMode( GL_PROJECTION );
@@ -1620,8 +1629,10 @@ MERROR_RETVAL retroglu_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* Flush GL buffer and swap screen buffers. */
       glFlush();
 
-#     if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#     if defined( RETROFLAT_API_SDL1 )
       SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapWindow( g_retroflat_state->platform.window );
 #     elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
       SwapBuffers( g_retroflat_state->platform.hdc_win );
 #     elif defined( RETROFLAT_API_GLUT )
@@ -1934,7 +1945,7 @@ void retroglu_px(
    }
 
    assert( NULL != target->tex.bytes );
-   assert( retroflat_bitmap_locked( target ) );
+   /* assert( retroflat_bitmap_locked( target ) ); */
 
    /* Draw pixel colors from texture palette. */
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =

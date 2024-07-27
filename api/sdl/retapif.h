@@ -714,7 +714,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
-#  elif defined( RETROFLAT_API_SDL2 )
+#  elif defined( RETROFLAT_API_SDL2 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
