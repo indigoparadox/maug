@@ -332,8 +332,6 @@ static LRESULT CALLBACK WndProc(
          g_retroflat_state->platform.last_mouse_y = GET_Y_LPARAM( lParam );
          break;
 
-      /* TODO: Handle resize message. */
-
       case WM_DESTROY:
          if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             DeleteObject( g_retroflat_state->buffer.b );
@@ -342,6 +340,7 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_SIZE:
+         /* Handle resize message. */
          retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
          if( NULL != g_retroflat_state->on_resize ) {
             g_retroflat_state->on_resize(

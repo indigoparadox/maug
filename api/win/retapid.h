@@ -32,6 +32,16 @@
       y >= (retroflat_screen_h() >> 1) ? y : 0 );
 */
 
+#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
+#  if !defined( RETROFLAT_WIN_STYLE )
+#     if defined( RETROFLAT_API_WINCE )
+#        define RETROFLAT_WIN_STYLE (WS_VISIBLE)
+#     else
+#        define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW)
+#     endif /* RETROFLAT_API_WINCE */
+#  endif /* !RETROFLAT_WIN_STYLE */
+#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+
 /* == Win16/Win32 == */
 
 typedef int16_t RETROFLAT_IN_KEY;

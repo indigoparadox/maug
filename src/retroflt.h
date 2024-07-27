@@ -724,16 +724,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_VDP_ARGS_SZ_MAX 255
 #endif /* !RETROFLAT_VDP_ARGS_SZ_MAX */
 
-#if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-#  if !defined( RETROFLAT_WIN_STYLE )
-#     if defined( RETROFLAT_API_WINCE )
-#        define RETROFLAT_WIN_STYLE (WS_VISIBLE)
-#     else
-#        define RETROFLAT_WIN_STYLE (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME)
-#     endif /* RETROFLAT_API_WINCE */
-#  endif /* !RETROFLAT_WIN_STYLE */
-#endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
 #if defined( RETROFLAT_API_SDL2 )
 #  if !defined( NO_RETROFLAT_RESIZABLE )
 #     define RETROFLAT_WIN_FLAGS SDL_WINDOW_RESIZABLE
