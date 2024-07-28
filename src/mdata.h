@@ -48,6 +48,9 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx );
 
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
 
+MERROR_RETVAL mdata_vector_copy(
+   struct MDATA_VECTOR* v_dest, struct MDATA_VECTOR* v_src );
+
 /**
  * \warning The vector must not be locked before an append or allocate!
  *          Reallocation could change pointers gotten during a lock!
@@ -350,6 +353,46 @@ void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
    } else {
       return _mdata_vector_item_ptr( v, idx );
    }
+}
+
+/* === */
+
+MERROR_RETVAL mdata_vector_copy(
+   struct MDATA_VECTOR* v_dest, struct MDATA_VECTOR* v_src
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( NULL != v_src->data_bytes ) {
+      error_printf( "vector cannot be copied while locked!" );
+      retval = MERROR_ALLOC;
+      goto cleanup;
+   }
+
+   assert( 0 < v_src->item_sz );
+   assert( 0 < v_src->ct_max );
+
+   v_dest->ct_max = v_src->ct_max;
+   v_dest->ct = v_src->ct;
+   v_dest->item_sz = v_src->item_sz;
+   debug_printf(
+      MDATA_TRACE_LVL,
+      "copying " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
+      v_src->ct_max, v_src->item_sz );
+   v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
+
+   mdata_vector_lock( v_dest );
+   mdata_vector_lock( v_src );
+
+   memcpy( v_dest->data_bytes, v_src->data_bytes,
+      v_src->ct_max * v_src->item_sz );
+
+cleanup:
+
+   mdata_vector_unlock( v_src );
+   mdata_vector_unlock( v_dest );
+
+   return retval;
 }
 
 /* === */
