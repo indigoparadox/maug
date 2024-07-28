@@ -89,7 +89,7 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
    assert( NULL != font_name );
    assert( ' ' <= font_name[0] );
 
-   p_c = strrchr( font_name, '.' );
+   p_c = maug_strrchr( font_name, '.' );
    while( p_c - 1 > font_name ) {
       /* Start at the char before the '.' and work backwords until a '-'. */
       p_c--;
@@ -147,7 +147,7 @@ MERROR_RETVAL retrofont_load(
 
    /* Try to separate the string into index:glyph bytes.  */
    #define retrofont_split_glyph_line( line, line_bytes ) \
-      line_bytes = strchr( line, ':' ); \
+      line_bytes = maug_strchr( line, ':' ); \
       if( NULL == line_bytes ) { \
          error_printf( "invalid line: %s", line ); \
          retval = MERROR_PARSE; \
@@ -163,7 +163,7 @@ MERROR_RETVAL retrofont_load(
    maug_cleanup_if_not_ok();
    retrofont_split_glyph_line( line, line_bytes );
    maug_cleanup_if_not_ok();
-   glyph_w_bytes = (strlen( line_bytes ) / glyph_h) >> 1; /* 2 hex per byte */
+   glyph_w_bytes = (maug_strlen( line_bytes ) / glyph_h) >> 1; /* 2 hex per byte */
    debug_printf( RETROFONT_TRACE_LVL, "glyph_w_bytes: %u", glyph_w_bytes );
    glyph_w = glyph_w_bytes * 8;
 
@@ -253,7 +253,7 @@ MERROR_RETVAL retrofont_load(
 #if 0 < RETROFONT_TRACE_LVL
       debug_printf( RETROFONT_TRACE_LVL,
          "%u %s (" SIZE_T_FMT " hbytes)", glyph_idx - first_glyph, line_bytes,
-         strlen( line_bytes ) );
+         maug_strlen( line_bytes ) );
 #endif
    }
 
@@ -338,7 +338,7 @@ void retrofont_string(
    }
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    maug_mlock( font_h, font );
@@ -413,7 +413,7 @@ MERROR_RETVAL retrofont_string_sz(
    }
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    maug_mlock( font_h, font );

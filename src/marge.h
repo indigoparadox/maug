@@ -2,9 +2,6 @@
 #ifndef MARGE_H
 #define MARGE_H
 
-/* For strlen, strncpy */
-#include <string.h>
-
 #include <merror.h>
 
 /**
@@ -239,21 +236,21 @@ MERROR_RETVAL maug_add_arg(
    }
 
    if( 0 >= arg_sz ) {
-      arg_sz = strlen( arg );
+      arg_sz = maug_strlen( arg );
    }
    assert( arg_sz < MAUG_CLI_ARG_SZ_MAX );
 
    if( 0 >= help_sz ) {
-      help_sz = strlen( help );
+      help_sz = maug_strlen( help );
    }
    assert( help_sz < MAUG_CLI_ARG_HELP_SZ_MAX );
 
    /* Add arg to arrays. */
 
-   strncpy( g_maug_cli_args[slot_idx], arg, arg_sz );
+   maug_strncpy( g_maug_cli_args[slot_idx], arg, arg_sz );
    g_maug_cli_args[slot_idx + 1][0] = '\0';
    
-   strncpy( g_maug_cli_arg_help[slot_idx], help, help_sz );
+   maug_strncpy( g_maug_cli_arg_help[slot_idx], help, help_sz );
    g_maug_cli_arg_help[slot_idx + 1][0] = '\0';
    
    g_maug_cli_arg_sz[slot_idx] = arg_sz;

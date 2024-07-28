@@ -311,7 +311,7 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
 
    mdata_strpool_lock( &(parser->strpool), strpool );
    if( 0 == token_sz ) {
-      token_sz = strlen( &(strpool[token_idx]) );
+      token_sz = maug_strlen( &(strpool[token_idx]) );
    }
    assert( 0 < token_sz );
 
@@ -662,7 +662,7 @@ MERROR_RETVAL mlisp_env_set(
    ssize_t new_idx_out = -1;
 
    if( 0 == token_sz ) {
-      token_sz = strlen( token );
+      token_sz = maug_strlen( token );
    }
    assert( 0 < token_sz );
 
@@ -802,7 +802,7 @@ MERROR_RETVAL _mlisp_env_cb_define(
    mdata_strpool_lock( &(parser->strpool), strpool );
 
    /* Allocate a temporary string to hold the key. */
-   key_sz = strlen( &(strpool[key.value.strpool_idx]) );
+   key_sz = maug_strlen( &(strpool[key.value.strpool_idx]) );
    key_tmp_h = maug_malloc( key_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, key_tmp_h );
 
@@ -810,7 +810,7 @@ MERROR_RETVAL _mlisp_env_cb_define(
    maug_cleanup_if_null_lock( char*, key_tmp );
 
    maug_mzero( key_tmp, key_sz + 1 );
-   strncpy( key_tmp, &(strpool[key.value.strpool_idx]), key_sz );
+   maug_strncpy( key_tmp, &(strpool[key.value.strpool_idx]), key_sz );
 
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "define \"%s\" (strpool(" SIZE_T_FMT "))...",
@@ -882,7 +882,7 @@ static MERROR_RETVAL _mlisp_step_iter_children(
          parser, n_child, n->ast_idx_children[*p_child_idx], exec );
       if( MERROR_OK == retval ) {
          mdata_strpool_lock( &(parser->strpool), strpool );
-         assert( 0 < strlen( &(strpool[n->token_idx]) ) );
+         assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
          debug_printf( MLISP_EXEC_TRACE_LVL,
             "eval step " SSIZE_T_FMT " under %s...",
             *p_child_idx, &(strpool[n->token_idx]) );
@@ -948,12 +948,12 @@ static MERROR_RETVAL _mlisp_step_iter(
    /* Grab the token for this node and figure out what it is. */
    mdata_strpool_lock( &(parser->strpool), strpool );
    mdata_vector_lock( &(parser->env) );
-   assert( 0 < strlen( &(strpool[n->token_idx]) ) );
+   assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "eval node " SIZE_T_FMT ": \"%s\" [%x] (i: " SSIZE_T_FMT
-         ", strlen: " SIZE_T_FMT ")",
+         ", maug_strlen: " SIZE_T_FMT ")",
       n_idx, &(strpool[n->token_idx]), strpool[n->token_idx], n->token_idx,
-         strlen( &(strpool[n->token_idx]) ) );
+         maug_strlen( &(strpool[n->token_idx]) ) );
    if( NULL != (env_node_p = mlisp_env_get_strpool(
       parser, strpool, n->token_idx, n->token_sz
    ) ) ) {

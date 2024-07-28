@@ -759,7 +759,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       debug_printf(
          RETROGLU_TRACE_LVL, "adding material: \"%s\" at idx: %d\n",
          parser->token, parser->obj->materials_sz - 1 );
-      strncpy(
+      maug_strncpy(
          parser->obj->materials[parser->obj->materials_sz - 1].name,
          parser->token,
          RETROGLU_MATERIAL_NAME_SZ_MAX );
@@ -769,7 +769,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       /* Check against generic tokens. */
       while( '\0' != g_retroglu_token_strings[i][0] ) {
          if(
-            parser->token_sz == strlen( g_retroglu_token_strings[i] ) &&
+            parser->token_sz == maug_strlen( g_retroglu_token_strings[i] ) &&
             0 == strncmp(
                parser->token, g_retroglu_token_strings[i],
                parser->token_sz )
@@ -1519,7 +1519,7 @@ void retroglu_string(
 #  endif /* RETROGLU_NO_TEXTURE_LISTS */
 
    if( str_sz == 0 ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {

@@ -331,8 +331,6 @@ void maug_printf( const char* fmt, ... );
 
 #ifdef UPRINTF_C
 
-#include <string.h> /* strlen() */
-
 uint32_t g_maug_printf_line = 0;
 int g_maug_uprintf_threshold = DEBUG_THRESHOLD;
 
@@ -340,7 +338,7 @@ int maug_is_num( const char* str, size_t str_sz ) {
    size_t i = 0;
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {
@@ -356,7 +354,7 @@ int maug_is_float( const char* str, size_t str_sz ) {
    size_t i = 0;
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {

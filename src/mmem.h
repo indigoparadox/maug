@@ -16,6 +16,7 @@
 #elif defined( MAUG_OS_DOS_REAL )
 
 #  include <stdlib.h> /* malloc() */
+#  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
 
 typedef void* MAUG_MHANDLE;
 
@@ -40,9 +41,17 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
+#  define maug_strlen( str ) strlen( str )
+
+#  define maug_strchr( str, c ) strchr( str, c )
+
+#  define maug_strrchr( str, c ) strrchr( str, c )
+
 #else
 
 #  include <stdlib.h> /* For *alloc() */
+
+#  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
 
 typedef void* MAUG_MHANDLE;
 
@@ -70,6 +79,12 @@ typedef void* MAUG_MHANDLE;
 #  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
 
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
+
+#  define maug_strlen( str ) strlen( str )
+
+#  define maug_strchr( str, c ) strchr( str, c )
+
+#  define maug_strrchr( str, c ) strrchr( str, c )
 
 #endif
 

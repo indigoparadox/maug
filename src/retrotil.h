@@ -339,7 +339,7 @@ static void retrotile_parser_match_token(
    while( '\0' != gc_retrotile_mstate_tokens[j][0] ) {
       if(
          /* Make sure tokens match. */
-         strlen( gc_retrotile_mstate_tokens[j] ) != token_sz ||
+         maug_strlen( gc_retrotile_mstate_tokens[j] ) != token_sz ||
          0 != strncmp(
             token, gc_retrotile_mstate_tokens[j], token_sz
          )
@@ -443,7 +443,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur );
 
             /* Parse tile image. */
-            strncpy(
+            maug_strncpy(
                tile_defs[parser->tileset_id_cur].image_path,
                token,
                RETROTILE_TILESET_IMAGE_STR_SZ_MAX );
@@ -700,6 +700,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    char filename_path[RETROFLAT_PATH_MAX];
    mfile_t buffer;
    char c;
+   char* filename_ext = NULL;
 
    /* Initialize parser. */
    parser_h = maug_malloc( 1, sizeof( struct RETROTILE_PARSER ) );
@@ -741,7 +742,13 @@ MERROR_RETVAL retrotile_parse_json_file(
       parser->jparser.base.wait_data = wait_data;
 
       /* Figure out if we're parsing a .tmj or .tsj. */
-      if( 's' == strrchr( filename, '.' )[2] ) {
+      filename_ext = maug_strrchr( filename, '.' );
+      if( NULL == filename_ext ) {
+         error_printf( "could not parse filename extension!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      if( 's' == filename_ext[2] ) {
          debug_printf( RETROTILE_TRACE_LVL, "(tile_defs mode)" );
          parser->mode = RETROTILE_PARSER_MODE_DEFS;
          parser->jparser.token_parser = retrotile_parser_parse_tiledef_token;
@@ -806,7 +813,13 @@ MERROR_RETVAL retrotile_parse_json_file(
 
       mfile_reset( &buffer );
 
-      if( 's' != strrchr( filename, '.' )[2] ) {
+      filename_ext = maug_strrchr( filename, '.' );
+      if( NULL == filename_ext ) {
+         error_printf( "could not parse filename extension!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      if( 's' != filename_ext[2] ) {
          debug_printf( RETROTILE_TRACE_LVL,
             "pass %u found " SIZE_T_FMT " layers",
             parser->pass, parser->pass_layer_iter );

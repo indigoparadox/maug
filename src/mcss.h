@@ -271,7 +271,7 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mcss_prop_names[i][0] ) {
       if(
-         parser->base.token_sz == strlen( gc_mcss_prop_names[i] ) &&
+         parser->base.token_sz == maug_strlen( gc_mcss_prop_names[i] ) &&
          0 == strncmp(
             gc_mcss_prop_names[i], parser->base.token, parser->base.token_sz )
       ) {
@@ -512,7 +512,7 @@ MERROR_RETVAL mcss_push_style_class(
    retval = mcss_push_style( parser );
    maug_cleanup_if_not_ok();
 
-   strncpy( parser->styles[parser->styles_sz - 1].class, class,
+   maug_strncpy( parser->styles[parser->styles_sz - 1].class, class,
       MCSS_CLASS_SZ_MAX );
    parser->styles[parser->styles_sz - 1].class_sz = class_sz;
    debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": .%s",
@@ -531,7 +531,7 @@ MERROR_RETVAL mcss_push_style_id(
    retval = mcss_push_style( parser );
    maug_cleanup_if_not_ok();
 
-   strncpy( parser->styles[parser->styles_sz - 1].id, id,
+   maug_strncpy( parser->styles[parser->styles_sz - 1].id, id,
       MCSS_ID_SZ_MAX );
    parser->styles[parser->styles_sz - 1].id_sz = id_sz;
    debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": #%s",
@@ -555,8 +555,8 @@ MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser ) {
    } else if( MCSS_PSTATE_RULE == mcss_parser_pstate( parser ) ) {
       if(
          /* TODO: Break this out to make it more resilient. */
-         NULL != strchr( parser->base.token, '!' ) &&
-         0 == strncmp( "!important", strchr( parser->base.token, '!' ), 10 )
+         NULL != maug_strchr( parser->base.token, '!' ) &&
+         0 == strncmp( "!important", maug_strchr( parser->base.token, '!' ), 10 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
          parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;

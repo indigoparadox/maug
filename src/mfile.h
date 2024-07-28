@@ -467,6 +467,8 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
+#  elif defined( RETROFLAT_API_WINCE )
+   STATSTG file_stat;
 #  else
    struct stat file_stat;
 #  endif /* MFILE_MMAP */
@@ -528,7 +530,11 @@ cleanup:
 
    /* Get the file size from the OS. */
    stat( filename, &file_stat );
+#     ifdef RETROFLAT_API_WINCE
+   p_file->sz = file_stat.cbSize.QuadPart;
+#     else
    p_file->sz = file_stat.st_size;
+#     endif /* RETROFLAT_API_WINCE */
 
 #  define MFILE_GOT_FILE_SIZE 1
 

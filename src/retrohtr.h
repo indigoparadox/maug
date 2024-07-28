@@ -1372,7 +1372,7 @@ void retrohtr_tree_dump(
    /* Generate the indentation. */
    maug_mzero( indents, 30 );
    for( i = 0 ; d > i ; i++ ) {
-      if( strlen( indents ) >= 30 ) {
+      if( maug_strlen( indents ) >= 30 ) {
          break;
       }
       strcat( indents, "   " );

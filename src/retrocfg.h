@@ -113,7 +113,7 @@ static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
       /* The next arg must be the new var. */
    } else {
       debug_printf( 1, "setting config path to: %s", arg );
-      strncpy( g_retroflat_state->config_path, arg, RETROFLAT_PATH_MAX );
+      maug_strncpy( g_retroflat_state->config_path, arg, RETROFLAT_PATH_MAX );
    }
    return RETROFLAT_OK;
 }
@@ -125,13 +125,13 @@ static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
 
    if( NULL != args->config_path ) {
       debug_printf( 1, "setting config path to: %s", args->config_path );
-      strncpy(
+      maug_strncpy(
          g_retroflat_state->config_path,
          args->config_path, RETROFLAT_PATH_MAX );
    } else {
       debug_printf( 1, "setting config path to: %s%s",
          args->title, RETROFLAT_CONFIG_EXT );
-      strncpy(
+      maug_strncpy(
          g_retroflat_state->config_path, args->title, RETROFLAT_PATH_MAX );
       strncat(
          g_retroflat_state->config_path,
@@ -291,7 +291,7 @@ size_t retroflat_config_read(
       config, line, RETROFLAT_CONFIG_LN_SZ_MAX, 0 )
    ) {
       /* Size check. */
-      line_sz = strlen( line );
+      line_sz = maug_strlen( line );
       if( 1 >= line_sz || RETROFLAT_CONFIG_LN_SZ_MAX <= line_sz ) {
          error_printf( "invalid line sz: " SIZE_T_FMT, line_sz );
          continue;
@@ -301,7 +301,7 @@ size_t retroflat_config_read(
       if( '\n' == line[line_sz - 1] || '\r' == line[line_sz - 1] ) {
          debug_printf( 1, "stripping newline!" );
          line_sz--;
-         line[line_sz] = '\0'; /* NULL goes after strlen() finishes! */
+         line[line_sz] = '\0'; /* NULL goes after maug_strlen() finishes! */
       }
 
       /* Section check. */
@@ -312,7 +312,7 @@ size_t retroflat_config_read(
       }
       
       /* Split up key/value pair. */
-      line_val = strchr( line, '=' );
+      line_val = maug_strchr( line, '=' );
       if( NULL == line_val || line_val == line ) {
          error_printf( "invalid line: %s", line );
          continue;
@@ -335,7 +335,7 @@ size_t retroflat_config_read(
             goto cleanup;
 
          case RETROFLAT_BUFFER_STRING:
-            strncpy( (char*)buffer_out, line_val, buffer_out_sz_max );
+            maug_strncpy( (char*)buffer_out, line_val, buffer_out_sz_max );
             goto cleanup;
 
          case RETROFLAT_BUFFER_BOOL:
