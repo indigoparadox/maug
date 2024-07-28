@@ -124,7 +124,11 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
 };
 
+#     ifdef MAUG_NO_CLI
+#define retroflat_win_cli( cmd_line, argc_out ) 0
+#     else
 LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
+#     endif /* !MAUG_NO_CLI */
 
 #  ifdef RETROFLAT_OPENGL
 

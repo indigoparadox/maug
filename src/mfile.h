@@ -528,15 +528,11 @@ cleanup:
 
 #  else
 
+#     ifndef MAUG_NO_STAT
    /* Get the file size from the OS. */
    stat( filename, &file_stat );
-#     ifdef RETROFLAT_API_WINCE
-   p_file->sz = file_stat.cbSize.QuadPart;
-#     else
    p_file->sz = file_stat.st_size;
-#     endif /* RETROFLAT_API_WINCE */
-
-#  define MFILE_GOT_FILE_SIZE 1
+#     endif /* !MAUG_NO_STAT */
 
    /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, "rb" );
@@ -546,7 +542,7 @@ cleanup:
       goto cleanup;
    }
 
-#ifndef MFILE_GOT_FILE_SIZE
+#     ifdef MAUG_NO_STAT
    /* The standard is not required to support SEEK_END, among other issues.
     * This is probably the worst way to get file size.
     */
@@ -554,7 +550,7 @@ cleanup:
    fseek( p_file->h.file, 0, SEEK_END );
    p_file->sz = ftell( p_file->h.file );
    fseek( p_file->h.file, 0, SEEK_SET );
-#endif /* MAUG_OS_* */
+#     endif /* MAUG_NO_STAT */
 
    debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
       filename, p_file->sz );

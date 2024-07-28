@@ -16,6 +16,8 @@ struct RETROFLAT_WING_MODULE g_w;
 
 /* === */
 
+#ifndef MAUG_NO_CLI
+
 #  ifdef RETROFLAT_SCREENSAVER
 
 /* Windows screensaver (.scr) command-line arguments. */
@@ -127,6 +129,8 @@ cleanup:
 
    return argv_out;
 }
+
+#endif /* !MAUG_NO_CLI */
 
 /* === */
 

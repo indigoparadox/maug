@@ -14,6 +14,10 @@
 #  define MAUG_OS_DOS_REAL
 #endif /* RETROFLAT_OS_WIN */
 
+#ifdef RETROFLAT_NO_CLI
+#  define MAUG_NO_CLI
+#endif /* RETROFLAT_NO_CLI */
+
 #ifdef PATH_MAX
 #  define MAUG_PATH_SZ_MAX PATH_MAX
 #else
