@@ -132,9 +132,7 @@ union MAUG_FMT_SPEC {
    char c;
    void* p;
    char* s;
-#ifndef UPRINTF_NO_SIZET
    size_t z;
-#endif /* !UPRINTF_NO_SIZET */
 };
 
 #if defined( MAUG_OS_NDS )
@@ -279,9 +277,7 @@ extern platform_file g_log_file;
 
 int maug_digits( long int num, int base );
 
-#ifndef UPRINTF_NO_SIZET
 int maug_zdigits( size_t num, int base );
-#endif /* !UPRINTF_NO_SIZET */
 
 #define maug_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad ) \
    dest_idx += digits; \
@@ -316,9 +312,9 @@ int maug_itoa( long int num, char* dest, int dest_sz, int base );
 
 int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
 
-#ifndef UPRINTF_NO_SIZET
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base );
-#endif /* !UPRINTF_NO_SIZET */
+
+uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base );
 
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
@@ -393,7 +389,6 @@ int maug_digits( long int num, int base ) {
 
 /* === */
 
-#ifndef UPRINTF_NO_SIZET
 int maug_zdigits( size_t num, int base ) {
    int digits = 0;
    int negative = 0;
@@ -413,7 +408,6 @@ int maug_zdigits( size_t num, int base ) {
 
    return digits;
 }
-#endif /* !UPRINTF_NO_SIZET */
 
 /* === */
 
@@ -474,7 +468,6 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base ) {
 
 /* === */
 
-#ifndef UPRINTF_NO_SIZET
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
    size_t rem;
    int digits;
@@ -496,7 +489,32 @@ int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
 
    return digits;
 }
-#endif /* !UPRINTF_NO_SIZET */
+
+/* === */
+
+uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base ) {
+   size_t i = 0;
+   uint32_t u32_out = 0;
+
+   if( 0 == buffer_sz ) {
+      buffer_sz = maug_strlen( buffer );
+   }
+
+   for( i = 0 ; buffer_sz > i ; i++ ) {
+      if( 'a' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - 'a') + 10;
+      } else if( 'A' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - 'A') + 10;
+      } else if( '0' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - '0');
+      }
+   }
+
+   return u32_out;
+}
 
 /* === */
 
@@ -569,7 +587,6 @@ void maug_vsnprintf(
                   spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
                break;
 
-#ifndef UPRINTF_NO_SIZET
             case 'z':
                spec.z = va_arg( vargs, size_t );
                
@@ -582,7 +599,6 @@ void maug_vsnprintf(
                buffer_idx += maug_ztoa(
                   spec.z, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
                break;
-#endif /* !UPRINTF_NO_SIZET */
 
             case 'x':
                spec.d = va_arg( vargs, int );

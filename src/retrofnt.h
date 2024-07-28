@@ -207,8 +207,7 @@ MERROR_RETVAL retrofont_load(
       }
 
       /* Figure out the index of this glyph. */
-      /* TODO: Maug replacement for C99 crutch. */
-      glyph_idx = strtoul( line, NULL, 16 );
+      glyph_idx = maug_atou32( line, 0, 16 );
       if( glyph_idx < first_glyph || glyph_idx > first_glyph + glyphs_count ) {
          /* Skip glyph out of range. */
          continue;

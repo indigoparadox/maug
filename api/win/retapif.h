@@ -821,7 +821,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   return timeGetTime();
+   return GetTickCount();
 }
 
 /* === */
