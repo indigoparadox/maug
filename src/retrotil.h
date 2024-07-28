@@ -5,6 +5,8 @@
 #include <mjson.h>
 #include <mfile.h>
 
+/* TODO: Use a vector for tile_defs. */
+
 /**
  * \addtogroup retrotile RetroTile API
  * \brief Functions and structures for working with tilemaps/grids.
