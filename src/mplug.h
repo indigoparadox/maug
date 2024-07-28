@@ -55,7 +55,7 @@ MERROR_RETVAL mplug_load(
 #  pragma message( "warning: dlopen undefined!" )
 #endif /* RETROFLAT_OS_UNIX */
 
-   if( NULL == *p_mod_exe ) {
+   if( (mplug_mod_t)NULL == *p_mod_exe ) {
       error_printf( "unable to load module: %s", plugin_path );
       retval = MERROR_FILE;
    }

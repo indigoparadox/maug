@@ -2486,7 +2486,7 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
    assert( retroflat_bitmap_locked( target ) );
 
    font = retroflat_win_create_font( flags, font_str );
@@ -2591,7 +2591,7 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
 
    assert( retroflat_bitmap_locked( target ) );
 
