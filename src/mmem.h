@@ -11,32 +11,34 @@
 #if defined( MAUG_OS_PALM )
 
 /* TODO */
-#pragma message( "warning: not implemented!" )
+#  pragma message( "warning: not implemented!" )
 
 #elif defined( MAUG_OS_DOS_REAL )
 
-#include <stdlib.h> /* malloc() */
+#  include <stdlib.h> /* malloc() */
 
 typedef void* MAUG_MHANDLE;
 
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
-#define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
 
 /**
  * \warn This does not test that reallocation was successful! Use
  *       maug_mrealloc_test() for that.
  */
-#define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
+#  define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
 
-#define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
+#  define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
 
-#define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
+#  define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
 
-#define maug_mfree( handle ) free( handle ); handle = NULL;
+#  define maug_mfree( handle ) free( handle ); handle = NULL;
 
-#define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
+#  define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
 
-#define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
+#  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
+
+#  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
 #else
 
@@ -44,28 +46,30 @@ typedef void* MAUG_MHANDLE;
 
 typedef void* MAUG_MHANDLE;
 
-#define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
 
 /**
  * \warn This does not test that reallocation was successful! Use
  *       maug_mrealloc_test() for that.
  */
-#define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
+#  define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
 
 /**
  * \brief Zero the block of memory pointed to by ptr.
  *
  * \warn This should be used on pointers, not handles!
  */
-#define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
+#  define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
 
-#define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
+#  define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
 
-#define maug_mfree( handle ) free( handle ); handle = NULL;
+#  define maug_mfree( handle ) free( handle ); handle = NULL;
 
-#define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
+#  define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
 
-#define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
+#  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
+
+#  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
 #endif
 

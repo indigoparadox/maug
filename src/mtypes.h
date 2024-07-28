@@ -35,6 +35,10 @@ typedef unsigned long uint32_t;
 
 typedef unsigned long maug_ms_t;
 
+#	if defined( RETROFLAT_API_WINCE )
+typedef unsigned long off_t;
+#	endif /* RETROFLAT_API_WINCE */
+
 #else
 
 #  include <stdint.h>

@@ -29,7 +29,7 @@
 #ifndef UPRINTF_S32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_S32_FMT "%d"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER == 1200
 #     define UPRINTF_S32_FMT "%ld"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_S32_FMT */
@@ -37,7 +37,7 @@
 #ifndef UPRINTF_U32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_U32_FMT "%u"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER == 1200
 #     define UPRINTF_U32_FMT "%lu"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_U32_FMT */
@@ -45,7 +45,7 @@
 #ifndef UPRINTF_X32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_X32_FMT "%x"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER == 1200
 #     define UPRINTF_X32_FMT "%lx"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_X32_FMT */

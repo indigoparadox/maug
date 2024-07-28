@@ -2,7 +2,7 @@
 #ifndef MFILE_H
 #define MFILE_H
 
-#if !defined( MFILE_MMAP )
+#if !defined( MFILE_MMAP ) && !defined( RETROFLAT_API_WINCE )
 #  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 
