@@ -43,10 +43,6 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_strlen( str ) strlen( str )
 
-#  define maug_strchr( str, c ) strchr( str, c )
-
-#  define maug_strrchr( str, c ) strrchr( str, c )
-
 #else
 
 #  include <stdlib.h> /* For *alloc() */
@@ -82,10 +78,6 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_strlen( str ) strlen( str )
 
-#  define maug_strchr( str, c ) strchr( str, c )
-
-#  define maug_strrchr( str, c ) strrchr( str, c )
-
 #endif
 
 #define maug_mrealloc_test( new_handle, handle, nmemb, sz ) \
@@ -94,7 +86,45 @@ typedef void* MAUG_MHANDLE;
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, new_handle ); \
    handle = new_handle;
 
+char* maug_strchr( const char* str, char c );
+
+char* maug_strrchr( const char* str, char c );
+
 /*! \} */ /* maug_mem */
+
+#ifdef MMEM_C
+
+char* maug_strchr( const char* str, char c ) {
+   size_t str_sz = 0,
+      i = 0;
+
+   str_sz = maug_strlen( str );
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      if( str[i] == c ) {
+         return (char*)&(str[i]);
+      }
+   }
+
+   return NULL;
+}
+
+char* maug_strrchr( const char* str, char c ) {
+   size_t str_sz = 0,
+      i = 0;
+
+   str_sz = maug_strlen( str );
+
+   for( i = str_sz ; 0 <= i ; i-- ) {
+      if( str[i] == c ) {
+         return (char*)&(str[i]);
+      }
+   }
+
+   return NULL;
+}
+
+#endif /* MMEM_C */
 
 #endif /* !MMEM_H */
 

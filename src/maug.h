@@ -29,6 +29,9 @@
 
 #include <merror.h>
 
+#ifdef MAUG_C
+#  define MMEM_C
+#endif /* MAUG_C */
 #include <mmem.h>
 
 #if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 ))
