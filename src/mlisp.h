@@ -40,6 +40,10 @@
 
 typedef ssize_t mlisp_lambda_t;
 
+typedef int8_t mlisp_args_t;
+
+typedef int8_t mlisp_arge_t;
+
 /**
  * \brief Table of numeric types.
  *
@@ -56,9 +60,11 @@ typedef ssize_t mlisp_lambda_t;
  */
 #define MLISP_TYPE_TABLE( f ) \
    MLISP_NUM_TYPE_TABLE( f ) \
-   f( 3, mdata_strpool_idx_t, strpool_idx,     STR,      SSIZE_T_FMT ) \
-   f( 4, mlisp_env_cb_t,      cb,              CB,       "%p" ) \
-   f( 5, mlisp_lambda_t,      lambda,          LAMBDA,   SIZE_T_FMT )
+   f( 3, mdata_strpool_idx_t, strpool_idx,   STR,     SSIZE_T_FMT ) \
+   f( 4, mlisp_env_cb_t,      cb,            CB,      "%p" ) \
+   f( 5, mlisp_lambda_t,      lambda,        LAMBDA,  SIZE_T_FMT ) \
+   f( 6, mlisp_args_t,       args_start,    ARGS_S,  "%d" ) \
+   f( 7, mlisp_arge_t,       args_end,      ARGS_E,  "%d" )   
 
 #define MLISP_PARSER_PSTATE_TABLE( f ) \
    f( MLISP_PSTATE_NONE, 0 ) \
@@ -107,7 +113,6 @@ struct MLISP_EXEC_STATE {
    struct MDATA_VECTOR per_node_child_idx;
    struct MDATA_VECTOR stack;
    struct MDATA_VECTOR env;
-   MAUG_MHANDLE child_exec_h;
 };
 
 struct MLISP_PARSER {
@@ -914,6 +919,18 @@ static MERROR_RETVAL _mlisp_step_lambda(
     *       first s-expression after the name (second absolute?) and assign
     *       them into a new env. Then eval second child with new env.
     */
+
+   /* TODO: Put args into env between args and arge node types. On finish,
+    *       cycle through env in reverse and delete most recently added arg envs.
+    */
+
+   /* TODO: When searching env, search in reverse so most recent dupe args are
+    *       hit first.
+    */
+
+   debug_printf( 1, "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
+
+   debug_printf( 1, "xvxvxvxvxvxvx END STEP LAMBDA xvxvxvxvxvx" );
 
    return retval;
 }
