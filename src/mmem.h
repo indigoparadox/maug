@@ -15,9 +15,6 @@
 
 #elif defined( MAUG_OS_DOS_REAL )
 
-#  include <stdlib.h> /* malloc() */
-#  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
-
 typedef void* MAUG_MHANDLE;
 
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
@@ -44,10 +41,6 @@ typedef void* MAUG_MHANDLE;
 #  define maug_strlen( str ) strlen( str )
 
 #else
-
-#  include <stdlib.h> /* For *alloc() */
-
-#  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
 
 typedef void* MAUG_MHANDLE;
 
@@ -110,7 +103,7 @@ char* maug_strchr( const char* str, char c ) {
 }
 
 char* maug_strrchr( const char* str, char c ) {
-   size_t str_sz = 0,
+   ssize_t str_sz = 0,
       i = 0;
 
    str_sz = maug_strlen( str );

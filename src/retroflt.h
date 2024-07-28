@@ -1550,9 +1550,6 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
 };
 
-#  include <stdio.h>
-#  include <stdlib.h>
-
 /* Callback table is down below, after the statically-defined callbacks. */
 
 /* === Function Definitions === */

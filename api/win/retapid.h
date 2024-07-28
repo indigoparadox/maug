@@ -424,7 +424,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 /* Set the calling convention for WinMain, depending on Win16/Win32. */
 #  if defined( RETROFLAT_API_WIN16 )
 #     define WINXAPI PASCAL
-#  elif defined( RETROFLAT_API_WIN32 )
+#  else
 #     define WINXAPI WINAPI
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 

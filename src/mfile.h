@@ -58,7 +58,9 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 
 union MFILE_HANDLE {
+#ifndef MAUG_NO_FILE
    FILE* file;
+#endif /* !MAUG_NO_FILE */
    MAUG_MHANDLE mem;
 };
 
@@ -88,10 +90,15 @@ typedef struct MFILE_CADDY mfile_t;
       error_printf( "unknown file type: %d", (p_file)->type ); \
       break;
 
-#define mfile_has_bytes( p_file ) \
-   ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-      (off_t)ftell( (p_file)->h.file ) : \
-      (p_file)->mem_cursor) < (p_file)->sz)
+#ifdef MAUG_NO_FILE
+#  define mfile_has_bytes( p_file ) \
+      (((p_file)->mem_cursor) < (p_file)->sz)
+#else
+#  define mfile_has_bytes( p_file ) \
+      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
+         (off_t)ftell( (p_file)->h.file ) : \
+         (p_file)->mem_cursor) < (p_file)->sz)
+#endif /* MAUG_NO_FILE */
 
 #ifdef MFILE_LEGACY_MACROS
 
@@ -257,11 +264,11 @@ void mfile_close( mfile_t* p_file );
 #  include <unistd.h> /* close() */
 #  include <fcntl.h> /* open() */
 #  include <sys/stat.h> /* fstat() */
-#else
-#  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
 /* === */
+
+#ifndef MAUG_NO_FILE
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -330,6 +337,8 @@ MERROR_RETVAL mfile_file_read_line(
 
    return retval;
 }
+
+#endif /* !MAUG_NO_FILE */
 
 /* === */
 
@@ -458,6 +467,10 @@ MERROR_RETVAL mfile_lock_buffer(
 
    return retval;
 }
+
+/* === */
+
+#ifndef MAUG_NO_FILE
 
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -597,6 +610,10 @@ cleanup:
    return retval;
 }
 
+#endif /* !MAUG_NO_FILE */
+
+/* === */
+
 void mfile_close( mfile_t* p_file ) {
 #  ifdef MFILE_MMAP
    munmap( bytes_ptr_h, bytes_sz );
@@ -607,10 +624,12 @@ void mfile_close( mfile_t* p_file ) {
       /* Do nothing silently. */
       break;
 
+#ifndef MAUG_NO_FILE
    case MFILE_CADDY_TYPE_FILE:
       fclose( p_file->h.file );
       p_file->type = 0;
       break;
+#endif /* !MAUG_NO_FILE */
 
    case MFILE_CADDY_TYPE_MEM_BUFFER:
       if( NULL != p_file->mem_buffer ) {

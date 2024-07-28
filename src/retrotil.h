@@ -87,8 +87,8 @@ struct RETROTILE {
    uint32_t layers_offset;
    char name[RETROTILE_NAME_SZ_MAX];
    size_t tileset_fgid;
-   uint8_t tiles_h;
-   uint8_t tiles_w;
+   size_t tiles_h;
+   size_t tiles_w;
    float tile_scale;
 };
 
@@ -551,7 +551,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
                parser->t->tiles_w * parser->t->tiles_h
          ) {
             error_printf(
-               "tile " SIZE_T_FMT " outside of layer tile buffer size %d!",
+               "tile " SIZE_T_FMT " outside of layer tile buffer size "
+                  SIZE_T_FMT "!",
                parser->layer_tile_iter,
                parser->t->tiles_w * parser->t->tiles_h );
             retval = MERROR_OVERFLOW;
@@ -1161,9 +1162,9 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
-   int16_t x = 0,
-      y = 0,
-      offset_x = 0,
+   size_t x = 0,
+      y = 0;
+   int16_t offset_x = 0,
       offset_y = 0,
       finished = 0;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1247,7 +1248,8 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
 
             for( side_iter = 0 ; 4 > side_iter ; side_iter++ ) {
                debug_printf( RETROTILE_TRACE_LVL,
-                  "%d (%d), %d (%d) (%d, %d)", 
+                  SIZE_T_FMT " (%d), " SIZE_T_FMT " (%d) ("
+                  SIZE_T_FMT ", " SIZE_T_FMT ")", 
                   x,
                   gc_retroflat_offsets4_x[side_iter],
                   y,
@@ -1257,8 +1259,6 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
                /* Iterate through directions to expand. */
                /* TODO: Add tuning to select directional probability. */
                if(
-                  0 <= x + gc_retroflat_offsets4_x[side_iter] &&
-                  0 <= y + gc_retroflat_offsets4_y[side_iter] &&
                   t->tiles_w > x + gc_retroflat_offsets4_x[side_iter] &&
                   t->tiles_h > y + gc_retroflat_offsets4_y[side_iter] &&
                   -1 == temp_grid[
@@ -1299,9 +1299,9 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int16_t x = 0,
-      y = 0,
-      side_iter = 0,
+   size_t x = 0,
+      y = 0;
+   int16_t side_iter = 0,
       sides_avail = 0,
       sides_sum = 0;
    /* Sides start from 12 on the clock (up). */
@@ -1335,7 +1335,8 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
             sides_avail++;
             debug_printf(
                RETROTILE_TRACE_LVL,
-               "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
+               "si %d: x, y: " SIZE_T_FMT " (+%d), " SIZE_T_FMT
+                  " (+%d) idx: " SIZE_T_FMT,
                side_iter,
                x + gc_retroflat_offsets8_x[side_iter],
                gc_retroflat_offsets8_x[side_iter],
