@@ -2,6 +2,13 @@
 #ifndef MAUG_H
 #define MAUG_H
 
+#if !defined( MAUG_NO_STDLIB )
+#  include <stdio.h>
+#  include <stdlib.h> /* malloc() */
+#  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
+#endif /* !MAUG_NO_STDLIB */
+#include <stdarg.h>
+
 #include <mlegacy.h>
 
 #ifdef MAUG_OS_PALM
@@ -29,6 +36,9 @@
 
 #include <merror.h>
 
+#ifdef MAUG_C
+#  define MMEM_C
+#endif /* MAUG_C */
 #include <mmem.h>
 
 #if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 ))

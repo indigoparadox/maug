@@ -336,7 +336,7 @@ int16_t retrogxc_load_asset(
       if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
          assets[i].type = asset_type;
          idx = i;
-         strncpy( assets[i].id, res_p, RETROFLAT_ASSETS_PATH_MAX );
+         maug_strncpy( assets[i].id, res_p, RETROFLAT_ASSETS_PATH_MAX );
          debug_printf( RETROGXC_TRACE_LVL,
             "asset type %d, \"%s\" assigned cache ID: %d",
             asset_type, res_p, idx );

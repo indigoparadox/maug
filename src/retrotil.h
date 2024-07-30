@@ -5,6 +5,8 @@
 #include <mjson.h>
 #include <mfile.h>
 
+/* TODO: Use a vector for tile_defs. */
+
 /**
  * \addtogroup retrotile RetroTile API
  * \brief Functions and structures for working with tilemaps/grids.
@@ -66,6 +68,18 @@
 
 /*! \} */ /* retrotile_defs_types */
 
+/**
+ * \brief Flag for retrotile_gen_diamond_square_iter() indicating that passed
+ *        ::RETROTILE_DATA_DS object should be initialized (first pass).
+ *
+ * This should only be used if calling retrotile_gen_diamond_square_iter()
+ * from outside retrotil.h with a ::RETROTILE_DATA_DS object, so as to return
+ * statistics about the generated terrain. Otherwise, a NULL can be passed to
+ * retrotile_gen_diamond_square_iter() so that it will just use an internal
+ * object which will always be initialized.
+ */
+#define RETROTILE_DS_FLAG_INIT_DATA    0x02
+
 #define RETROTILE_IDX_FMT "%u"
 
 struct RETROTILE_TILE_DEF {
@@ -85,8 +99,8 @@ struct RETROTILE {
    uint32_t layers_offset;
    char name[RETROTILE_NAME_SZ_MAX];
    size_t tileset_fgid;
-   uint8_t tiles_h;
-   uint8_t tiles_w;
+   size_t tiles_h;
+   size_t tiles_w;
    float tile_scale;
 };
 
@@ -107,6 +121,8 @@ struct RETROTILE_DATA_DS {
    int16_t sect_w_half;
    /*! \brief Half of the height of subsector in a given iteration. */
    int16_t sect_h_half;
+   retroflat_tile_t highest_generated;
+   retroflat_tile_t lowest_generated;
 };
 
 struct RETROTILE_DATA_BORDER {
@@ -339,7 +355,7 @@ static void retrotile_parser_match_token(
    while( '\0' != gc_retrotile_mstate_tokens[j][0] ) {
       if(
          /* Make sure tokens match. */
-         strlen( gc_retrotile_mstate_tokens[j] ) != token_sz ||
+         maug_strlen( gc_retrotile_mstate_tokens[j] ) != token_sz ||
          0 != strncmp(
             token, gc_retrotile_mstate_tokens[j], token_sz
          )
@@ -443,7 +459,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur );
 
             /* Parse tile image. */
-            strncpy(
+            maug_strncpy(
                tile_defs[parser->tileset_id_cur].image_path,
                token,
                RETROTILE_TILESET_IMAGE_STR_SZ_MAX );
@@ -549,7 +565,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
                parser->t->tiles_w * parser->t->tiles_h
          ) {
             error_printf(
-               "tile " SIZE_T_FMT " outside of layer tile buffer size %d!",
+               "tile " SIZE_T_FMT " outside of layer tile buffer size "
+                  SIZE_T_FMT "!",
                parser->layer_tile_iter,
                parser->t->tiles_w * parser->t->tiles_h );
             retval = MERROR_OVERFLOW;
@@ -700,6 +717,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    char filename_path[RETROFLAT_PATH_MAX];
    mfile_t buffer;
    char c;
+   char* filename_ext = NULL;
 
    /* Initialize parser. */
    parser_h = maug_malloc( 1, sizeof( struct RETROTILE_PARSER ) );
@@ -741,7 +759,13 @@ MERROR_RETVAL retrotile_parse_json_file(
       parser->jparser.base.wait_data = wait_data;
 
       /* Figure out if we're parsing a .tmj or .tsj. */
-      if( 's' == strrchr( filename, '.' )[2] ) {
+      filename_ext = maug_strrchr( filename, '.' );
+      if( NULL == filename_ext ) {
+         error_printf( "could not parse filename extension!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      if( 's' == filename_ext[2] ) {
          debug_printf( RETROTILE_TRACE_LVL, "(tile_defs mode)" );
          parser->mode = RETROTILE_PARSER_MODE_DEFS;
          parser->jparser.token_parser = retrotile_parser_parse_tiledef_token;
@@ -806,7 +830,13 @@ MERROR_RETVAL retrotile_parse_json_file(
 
       mfile_reset( &buffer );
 
-      if( 's' != strrchr( filename, '.' )[2] ) {
+      filename_ext = maug_strrchr( filename, '.' );
+      if( NULL == filename_ext ) {
+         error_printf( "could not parse filename extension!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      if( 's' != filename_ext[2] ) {
          debug_printf( RETROTILE_TRACE_LVL,
             "pass %u found " SIZE_T_FMT " layers",
             parser->pass, parser->pass_layer_iter );
@@ -1011,23 +1041,48 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    maug_cleanup_if_null_alloc( struct GRIDCITY_TILE*, tiles );
    */
 
+   #define _retrotile_ds_update_statistics( data, tile ) \
+      /* Gather statistics. */ \
+      if( (data)->highest_generated < (tile) && 32767 > (tile) ) { \
+         (data)->highest_generated = (tile); \
+      } \
+      if( (data)->lowest_generated > (tile) && 0 < (tile) ) { \
+         (data)->lowest_generated = (tile); \
+      }
+
    layer = retrotile_get_layer_p( t, layer_idx );
 
-   if( NULL == data ) {
-      data_ds_h = maug_malloc( 1, sizeof( struct RETROTILE_DATA_DS ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_ds_h );
-      free_ds_data = 1;
-      maug_mlock( data_ds_h, data_ds );
-      maug_cleanup_if_null_alloc( struct RETROTILE_DATA_DS*, data_ds );
-      maug_mzero( data_ds, sizeof( struct RETROTILE_DATA_DS ) );
+   if(
+      NULL == data ||
+      RETROTILE_DS_FLAG_INIT_DATA == (RETROTILE_DS_FLAG_INIT_DATA & flags)
+   ) {
+      /* This must be the first call, so initialize or allocate a new struct.
+       */
+      if( NULL == data ) {
+         /* An internal struct needs to be allocated before initialization. */
+         data_ds_h = maug_malloc( 1, sizeof( struct RETROTILE_DATA_DS ) );
+         maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_ds_h );
+         free_ds_data = 1;
+         maug_mlock( data_ds_h, data_ds );
+         maug_cleanup_if_null_alloc( struct RETROTILE_DATA_DS*, data_ds );
+      } else {
+         data_ds = (struct RETROTILE_DATA_DS*)data;
+      }
 
+      /* Initialize passed tilemap while we're handling first call stuff. */
       memset( retrotile_get_tiles_p( layer ), -1,
          t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) );
 
+      /* Initialize DS struct from tilemap properties. */
+      maug_mzero( data_ds, sizeof( struct RETROTILE_DATA_DS ) );
       data_ds->sect_w = t->tiles_w;
       data_ds->sect_h = t->tiles_h;
       data_ds->sect_w_half = data_ds->sect_w >> 1;
       data_ds->sect_h_half = data_ds->sect_h >> 1;
+      data_ds->lowest_generated = 32767;
+
+      /* Disable this flag for subsequent calls. */
+      flags &= ~RETROTILE_DS_FLAG_INIT_DATA;
    } else {
       data_ds = (struct RETROTILE_DATA_DS*)data;
    }
@@ -1066,6 +1121,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    avg = 
       retrotile_gen_diamond_square_avg( corners_x, corners_y, t, layer );
 
+   debug_printf( 1, "avg :%d", avg );
+
    tile_iter = &(retrotile_get_tile(
       t, layer,
       data_ds->sect_x + data_ds->sect_w_half,
@@ -1077,6 +1134,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       goto cleanup;
    }
    *tile_iter = avg;
+   _retrotile_ds_update_statistics( data_ds, avg );
 
    /* assert( 0 <= tiles[tile_idx].terrain );
 
@@ -1102,6 +1160,8 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
          data_ds_sub.sect_h = data_ds->sect_h_half;
          data_ds_sub.sect_w_half = data_ds_sub.sect_w >> 1;
          data_ds_sub.sect_h_half = data_ds_sub.sect_h >> 1;
+         data_ds_sub.lowest_generated = 32767;
+         data_ds_sub.highest_generated = 0;
 
          debug_printf(
             RETROTILE_TRACE_LVL, "%d: child sector at %d x %d, %d wide",
@@ -1112,6 +1172,11 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
             t, min_z, max_z, tuning, layer_idx, flags, &data_ds_sub,
             animation_cb, animation_cb_data );
          maug_cleanup_if_not_ok();
+
+         _retrotile_ds_update_statistics(
+            data_ds, data_ds_sub.highest_generated );
+         _retrotile_ds_update_statistics(
+            data_ds, data_ds_sub.lowest_generated );
       }
    }
 
@@ -1146,9 +1211,9 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
-   int16_t x = 0,
-      y = 0,
-      offset_x = 0,
+   size_t x = 0,
+      y = 0;
+   int16_t offset_x = 0,
       offset_y = 0,
       finished = 0;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1232,7 +1297,8 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
 
             for( side_iter = 0 ; 4 > side_iter ; side_iter++ ) {
                debug_printf( RETROTILE_TRACE_LVL,
-                  "%d (%d), %d (%d) (%d, %d)", 
+                  SIZE_T_FMT " (%d), " SIZE_T_FMT " (%d) ("
+                  SIZE_T_FMT ", " SIZE_T_FMT ")", 
                   x,
                   gc_retroflat_offsets4_x[side_iter],
                   y,
@@ -1242,8 +1308,6 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
                /* Iterate through directions to expand. */
                /* TODO: Add tuning to select directional probability. */
                if(
-                  0 <= x + gc_retroflat_offsets4_x[side_iter] &&
-                  0 <= y + gc_retroflat_offsets4_y[side_iter] &&
                   t->tiles_w > x + gc_retroflat_offsets4_x[side_iter] &&
                   t->tiles_h > y + gc_retroflat_offsets4_y[side_iter] &&
                   -1 == temp_grid[
@@ -1284,9 +1348,9 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int16_t x = 0,
-      y = 0,
-      side_iter = 0,
+   size_t x = 0,
+      y = 0;
+   int16_t side_iter = 0,
       sides_avail = 0,
       sides_sum = 0;
    /* Sides start from 12 on the clock (up). */
@@ -1309,8 +1373,6 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
          /* Grab values for available sides. */
          for( side_iter = 0 ; 8 > side_iter ; side_iter++ ) {
             if(
-               0 > x + gc_retroflat_offsets8_x[side_iter] ||
-               0 > y + gc_retroflat_offsets8_y[side_iter] ||
                t->tiles_w <= x + gc_retroflat_offsets8_x[side_iter] ||
                t->tiles_h <= y + gc_retroflat_offsets8_y[side_iter]
             ) {
@@ -1320,7 +1382,8 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
             sides_avail++;
             debug_printf(
                RETROTILE_TRACE_LVL,
-               "si %d: x, y: %d (+%d), %d (+%d) idx: %d",
+               "si %d: x, y: " SIZE_T_FMT " (+%d), " SIZE_T_FMT
+                  " (+%d) idx: " SIZE_T_FMT,
                side_iter,
                x + gc_retroflat_offsets8_x[side_iter],
                gc_retroflat_offsets8_x[side_iter],

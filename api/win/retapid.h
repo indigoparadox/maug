@@ -124,7 +124,11 @@ struct RETROFLAT_BITMAP {
    struct RETROFLAT_BMI bmi;
 };
 
+#     ifdef MAUG_NO_CLI
+#define retroflat_win_cli( cmd_line, argc_out ) 0
+#     else
 LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out );
+#     endif /* !MAUG_NO_CLI */
 
 #  ifdef RETROFLAT_OPENGL
 
@@ -420,7 +424,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 /* Set the calling convention for WinMain, depending on Win16/Win32. */
 #  if defined( RETROFLAT_API_WIN16 )
 #     define WINXAPI PASCAL
-#  elif defined( RETROFLAT_API_WIN32 )
+#  else
 #     define WINXAPI WINAPI
 #  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 

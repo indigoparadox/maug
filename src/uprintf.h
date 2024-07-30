@@ -4,9 +4,6 @@
 
 #include <mtypes.h>
 
-#include <stdio.h>
-#include <stdarg.h>
-
 #ifndef MAUG_NO_LEGACY
 #  include <mlegacy.h>
 #endif /* !MAUG_NO_LEGACY */
@@ -29,7 +26,7 @@
 #ifndef UPRINTF_S32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_S32_FMT "%d"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER <= 1200
 #     define UPRINTF_S32_FMT "%ld"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_S32_FMT */
@@ -37,7 +34,7 @@
 #ifndef UPRINTF_U32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_U32_FMT "%u"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER <= 1200
 #     define UPRINTF_U32_FMT "%lu"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_U32_FMT */
@@ -45,7 +42,7 @@
 #ifndef UPRINTF_X32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_X32_FMT "%x"
-#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ )
+#  elif __LONG_WIDTH__ == 32 || defined( __WATCOMC__ ) || defined( __BORLANDC__ ) || _MSC_VER <= 1200
 #     define UPRINTF_X32_FMT "%lx"
 #  endif /* __LONG_WIDTH__ */
 #endif /* !UPRINTF_X32_FMT */
@@ -132,9 +129,7 @@ union MAUG_FMT_SPEC {
    char c;
    void* p;
    char* s;
-#ifndef UPRINTF_NO_SIZET
    size_t z;
-#endif /* !UPRINTF_NO_SIZET */
 };
 
 #if defined( MAUG_OS_NDS )
@@ -279,9 +274,7 @@ extern platform_file g_log_file;
 
 int maug_digits( long int num, int base );
 
-#ifndef UPRINTF_NO_SIZET
 int maug_zdigits( size_t num, int base );
-#endif /* !UPRINTF_NO_SIZET */
 
 #define maug_xtoa( num, base, rem, dest, dest_idx, digits, digits_done, pad ) \
    dest_idx += digits; \
@@ -316,9 +309,9 @@ int maug_itoa( long int num, char* dest, int dest_sz, int base );
 
 int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
 
-#ifndef UPRINTF_NO_SIZET
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base );
-#endif /* !UPRINTF_NO_SIZET */
+
+uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base );
 
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
@@ -331,8 +324,6 @@ void maug_printf( const char* fmt, ... );
 
 #ifdef UPRINTF_C
 
-#include <string.h> /* strlen() */
-
 uint32_t g_maug_printf_line = 0;
 int g_maug_uprintf_threshold = DEBUG_THRESHOLD;
 
@@ -340,7 +331,7 @@ int maug_is_num( const char* str, size_t str_sz ) {
    size_t i = 0;
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {
@@ -356,7 +347,7 @@ int maug_is_float( const char* str, size_t str_sz ) {
    size_t i = 0;
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {
@@ -395,7 +386,6 @@ int maug_digits( long int num, int base ) {
 
 /* === */
 
-#ifndef UPRINTF_NO_SIZET
 int maug_zdigits( size_t num, int base ) {
    int digits = 0;
    int negative = 0;
@@ -415,7 +405,6 @@ int maug_zdigits( size_t num, int base ) {
 
    return digits;
 }
-#endif /* !UPRINTF_NO_SIZET */
 
 /* === */
 
@@ -476,7 +465,6 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base ) {
 
 /* === */
 
-#ifndef UPRINTF_NO_SIZET
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
    size_t rem;
    int digits;
@@ -498,7 +486,32 @@ int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
 
    return digits;
 }
-#endif /* !UPRINTF_NO_SIZET */
+
+/* === */
+
+uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base ) {
+   size_t i = 0;
+   uint32_t u32_out = 0;
+
+   if( 0 == buffer_sz ) {
+      buffer_sz = maug_strlen( buffer );
+   }
+
+   for( i = 0 ; buffer_sz > i ; i++ ) {
+      if( 'a' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - 'a') + 10;
+      } else if( 'A' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - 'A') + 10;
+      } else if( '0' <= buffer[i] ) {
+         u32_out *= base;
+         u32_out += (buffer[i] - '0');
+      }
+   }
+
+   return u32_out;
+}
 
 /* === */
 
@@ -571,7 +584,6 @@ void maug_vsnprintf(
                   spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
                break;
 
-#ifndef UPRINTF_NO_SIZET
             case 'z':
                spec.z = va_arg( vargs, size_t );
                
@@ -584,7 +596,6 @@ void maug_vsnprintf(
                buffer_idx += maug_ztoa(
                   spec.z, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
                break;
-#endif /* !UPRINTF_NO_SIZET */
 
             case 'x':
                spec.d = va_arg( vargs, int );
@@ -692,6 +703,8 @@ void maug_printf( const char* fmt, ... ) {
 
 /* === */
 
+#ifndef MAUG_NO_FILE
+
 void maug_debug_printf(
    FILE* out, uint8_t flags, const char* src_name, size_t line, int16_t lvl,
    const char* fmt, ...
@@ -718,6 +731,8 @@ void maug_debug_printf(
       platform_fflush( out );
    }
 }
+
+#endif /* !MAUG_NO_FILE */
 
 #else
 

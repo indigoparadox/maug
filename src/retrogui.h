@@ -64,7 +64,7 @@
    /* Sanity checking. */ \
    assert( NULL != src_str ); \
    if( 0 == str_sz ) { \
-      str_sz = strlen( src_str ); \
+      str_sz = maug_strlen( src_str ); \
       debug_printf( RETROGUI_TRACE_LVL, \
          "determined str sz of \"%s\": " SIZE_T_FMT, src_str, str_sz ); \
    } \
@@ -86,7 +86,7 @@
    maug_mzero( str_tmp, str_sz + 1 ); \
    debug_printf( RETROGUI_TRACE_LVL, \
       "zeroed str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
-   strncpy( str_tmp, src_str, str_sz ); \
+   maug_strncpy( str_tmp, src_str, str_sz ); \
    debug_printf( RETROGUI_TRACE_LVL, "copied str as: \"%s\"", str_tmp ); \
    maug_munlock( dest_ctl. field ## _h, str_tmp );
 
@@ -355,7 +355,7 @@ static retrogui_idc_t retrogui_click_LISTBOX(
       }
 
       /* Try next variable-length string. */
-      i += strlen( &(ctl->LISTBOX.list[i]) ) + 1;
+      i += maug_strlen( &(ctl->LISTBOX.list[i]) ) + 1;
       assert( i <= ctl->LISTBOX.list_sz );
       j++;
    }
@@ -439,7 +439,7 @@ static void retrogui_redraw_LISTBOX(
 #endif /* RETROGXC_PRESENT */
 
       /* Move to next variable-length string. */
-      i += strlen( &(ctl->LISTBOX.list[i]) ) + 1;
+      i += maug_strlen( &(ctl->LISTBOX.list[i]) ) + 1;
       assert( i <= ctl->LISTBOX.list_sz );
       j++;
    }
@@ -522,7 +522,7 @@ MERROR_RETVAL retrogui_push_listbox_item(
    maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
    maug_cleanup_if_null_alloc( char*, ctl->LISTBOX.list );
 
-   strncpy( &(ctl->LISTBOX.list[ctl->LISTBOX.list_sz]), item, item_sz );
+   maug_strncpy( &(ctl->LISTBOX.list[ctl->LISTBOX.list_sz]), item, item_sz );
    ctl->LISTBOX.list[ctl->LISTBOX.list_sz + item_sz] = '\0';
    ctl->LISTBOX.list_sz += item_sz + 1;
 
@@ -1549,7 +1549,7 @@ MERROR_RETVAL retrogui_get_ctl_text(
       maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
       maug_cleanup_if_null_lock( char*, ctl->TEXTBOX.text );
 
-      strncpy( buffer, ctl->TEXTBOX.text, buffer_sz );
+      maug_strncpy( buffer, ctl->TEXTBOX.text, buffer_sz );
 #  endif
    } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
 #  if defined( RETROGUI_NATIVE_WIN )
@@ -1558,7 +1558,7 @@ MERROR_RETVAL retrogui_get_ctl_text(
       maug_mlock( ctl->LABEL.label_h, ctl->LABEL.label );
       maug_cleanup_if_null_lock( char*, ctl->LABEL.label );
 
-      strncpy( buffer, ctl->LABEL.label, buffer_sz );
+      maug_strncpy( buffer, ctl->LABEL.label, buffer_sz );
 #  endif
 
    }

@@ -406,7 +406,7 @@ MERROR_RETVAL mhtml_push_element_tag( struct MHTML_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mhtml_tag_names[i][0] ) {
       if(
-         parser->base.token_sz == strlen( gc_mhtml_tag_names[i] ) &&
+         parser->base.token_sz == maug_strlen( gc_mhtml_tag_names[i] ) &&
          0 == strncmp(
             gc_mhtml_tag_names[i], parser->base.token, parser->base.token_sz )
       ) {
@@ -481,7 +481,7 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       }
 
       /* Copy token to tag text. */
-      strncpy( tag_content, parser->base.token, parser->base.token_sz );
+      maug_strncpy( tag_content, parser->base.token, parser->base.token_sz );
       tag_content[parser->base.token_sz] = '\0';
       parser->tags[parser->tag_iter].TEXT.content_sz = parser->base.token_sz;
    }
@@ -507,7 +507,7 @@ MERROR_RETVAL mhtml_push_attrib_key( struct MHTML_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mhtml_attrib_names[i][0] ) {
       if(
-         parser->base.token_sz == strlen( gc_mhtml_attrib_names[i] ) &&
+         parser->base.token_sz == maug_strlen( gc_mhtml_attrib_names[i] ) &&
          0 == strncmp(
             gc_mhtml_attrib_names[i], parser->base.token, parser->base.token_sz )
       ) {
@@ -552,14 +552,14 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       goto cleanup;
 
    } else if( MHTML_ATTRIB_KEY_CLASS == parser->attrib_key ) {
-      strncpy(
+      maug_strncpy(
          parser->tags[parser->tag_iter].base.classes,
          parser->base.token,
          MCSS_CLASS_SZ_MAX );
       parser->tags[parser->tag_iter].base.classes_sz = parser->base.token_sz;
 
    } else if( MHTML_ATTRIB_KEY_ID == parser->attrib_key ) {
-      strncpy(
+      maug_strncpy(
          parser->tags[parser->tag_iter].base.id,
          parser->base.token,
          MCSS_ID_SZ_MAX );
@@ -567,7 +567,7 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
    } else if( MHTML_ATTRIB_KEY_SRC == parser->attrib_key ) {
       /* TODO: Validate tag type. */
-      strncpy(
+      maug_strncpy(
          parser->tags[parser->tag_iter].IMG.src,
          parser->base.token,
          MHTML_SRC_HREF_SZ_MAX );
@@ -576,14 +576,14 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
    } else if( MHTML_ATTRIB_KEY_TYPE == parser->attrib_key ) {
       /* TODO: Validate tag type. */
 
-      if( 0 == strncpy( parser->base.token, "button", 7 ) ) {
+      if( 0 == maug_strncpy( parser->base.token, "button", 7 ) ) {
          parser->tags[parser->tag_iter].INPUT.input_type =
             MHTML_INPUT_TYPE_BUTTON;
       }
 
    } else if( MHTML_ATTRIB_KEY_NAME == parser->attrib_key ) {
       /* TODO: Validate tag type. */
-      strncpy(
+      maug_strncpy(
          parser->tags[parser->tag_iter].INPUT.name,
          parser->base.token,
          MCSS_ID_SZ_MAX );
@@ -591,7 +591,7 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
 
    } else if( MHTML_ATTRIB_KEY_VALUE == parser->attrib_key ) {
       /* TODO: Validate tag type. */
-      strncpy(
+      maug_strncpy(
          parser->tags[parser->tag_iter].INPUT.value,
          parser->base.token,
          MCSS_ID_SZ_MAX );
@@ -851,11 +851,11 @@ void mhtml_dump_tree(
       }
 
       if(
-         strlen( dump_line ) + 7 /* ("TEXT: \n") */
-            + strlen( tag_content ) < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 7 /* ("TEXT: \n") */
+            + maug_strlen( tag_content ) < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
             "TEXT: %s\n", tag_content );
       }
 
@@ -863,8 +863,8 @@ void mhtml_dump_tree(
 
    } else {
       if(
-         strlen( dump_line ) +
-         strlen( gc_mhtml_tag_names[parser->tags[iter].base.type] ) <
+         maug_strlen( dump_line ) +
+         maug_strlen( gc_mhtml_tag_names[parser->tags[iter].base.type] ) <
          MHTML_DUMP_LINE_SZ
       ) {
          strcat( dump_line,
@@ -873,50 +873,50 @@ void mhtml_dump_tree(
 
       if(
          0 <= parser->tags[iter].base.style &&
-         strlen( dump_line ) + 9 /* (styled) */ < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 9 /* (styled) */ < MHTML_DUMP_LINE_SZ
       ) {
          strcat( dump_line, " (styled)" );
       }
 
       if(
          0 < parser->tags[iter].base.id_sz &&
-         strlen( dump_line ) + 7 /* (id: ) */
-            + strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 7 /* (id: ) */
+            + maug_strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
             " (id: %s)", parser->tags[iter].base.id );
       }
 
       if(
          0 < parser->tags[iter].base.classes_sz &&
-         strlen( dump_line ) + 12 /* (classes: ) */
-            + strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 12 /* (classes: ) */
+            + maug_strlen( parser->tags[iter].base.id ) < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
             " (classes: %s)", parser->tags[iter].base.classes );
       }
 
       if(
          MHTML_TAG_TYPE_IMG == parser->tags[iter].base.type &&
          0 < parser->tags[iter].IMG.src_sz &&
-         strlen( dump_line ) + 8 /* (src: ) */
-            + strlen( parser->tags[iter].IMG.src ) < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 8 /* (src: ) */
+            + maug_strlen( parser->tags[iter].IMG.src ) < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
             " (src: %s)", parser->tags[iter].IMG.src );
       }
 
       if(
          MHTML_TAG_TYPE_INPUT == parser->tags[iter].base.type &&
          0 < parser->tags[iter].INPUT.value_sz &&
-         strlen( dump_line ) + 10 /* (value: ) */
-            + strlen( parser->tags[iter].INPUT.value ) < MHTML_DUMP_LINE_SZ
+         maug_strlen( dump_line ) + 10 /* (value: ) */
+            + maug_strlen( parser->tags[iter].INPUT.value ) < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - strlen( dump_line ),
+         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
+            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
             " (value: %s)", parser->tags[iter].INPUT.value );
       }
 

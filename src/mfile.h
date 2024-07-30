@@ -2,7 +2,7 @@
 #ifndef MFILE_H
 #define MFILE_H
 
-#if !defined( MFILE_MMAP )
+#if !defined( MFILE_MMAP ) && !defined( RETROFLAT_API_WINCE )
 #  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 
@@ -58,7 +58,9 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 
 union MFILE_HANDLE {
+#ifndef MAUG_NO_FILE
    FILE* file;
+#endif /* !MAUG_NO_FILE */
    MAUG_MHANDLE mem;
 };
 
@@ -88,10 +90,15 @@ typedef struct MFILE_CADDY mfile_t;
       error_printf( "unknown file type: %d", (p_file)->type ); \
       break;
 
-#define mfile_has_bytes( p_file ) \
-   ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-      (off_t)ftell( (p_file)->h.file ) : \
-      (p_file)->mem_cursor) < (p_file)->sz)
+#ifdef MAUG_NO_FILE
+#  define mfile_has_bytes( p_file ) \
+      (((p_file)->mem_cursor) < (p_file)->sz)
+#else
+#  define mfile_has_bytes( p_file ) \
+      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
+         (off_t)ftell( (p_file)->h.file ) : \
+         (p_file)->mem_cursor) < (p_file)->sz)
+#endif /* MAUG_NO_FILE */
 
 #ifdef MFILE_LEGACY_MACROS
 
@@ -257,11 +264,11 @@ void mfile_close( mfile_t* p_file );
 #  include <unistd.h> /* close() */
 #  include <fcntl.h> /* open() */
 #  include <sys/stat.h> /* fstat() */
-#else
-#  include <stdio.h>
 #endif /* RETROFLAT_OS_UNIX */
 
 /* === */
+
+#ifndef MAUG_NO_FILE
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -330,6 +337,8 @@ MERROR_RETVAL mfile_file_read_line(
 
    return retval;
 }
+
+#endif /* !MAUG_NO_FILE */
 
 /* === */
 
@@ -459,6 +468,10 @@ MERROR_RETVAL mfile_lock_buffer(
    return retval;
 }
 
+/* === */
+
+#ifndef MAUG_NO_FILE
+
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( MVFS_ENABLED )
@@ -467,6 +480,8 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
+#  elif defined( RETROFLAT_API_WINCE )
+   STATSTG file_stat;
 #  else
    struct stat file_stat;
 #  endif /* MFILE_MMAP */
@@ -526,11 +541,11 @@ cleanup:
 
 #  else
 
+#     ifndef MAUG_NO_STAT
    /* Get the file size from the OS. */
    stat( filename, &file_stat );
    p_file->sz = file_stat.st_size;
-
-#  define MFILE_GOT_FILE_SIZE 1
+#     endif /* !MAUG_NO_STAT */
 
    /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, "rb" );
@@ -540,7 +555,7 @@ cleanup:
       goto cleanup;
    }
 
-#ifndef MFILE_GOT_FILE_SIZE
+#     ifdef MAUG_NO_STAT
    /* The standard is not required to support SEEK_END, among other issues.
     * This is probably the worst way to get file size.
     */
@@ -548,7 +563,7 @@ cleanup:
    fseek( p_file->h.file, 0, SEEK_END );
    p_file->sz = ftell( p_file->h.file );
    fseek( p_file->h.file, 0, SEEK_SET );
-#endif /* MAUG_OS_* */
+#     endif /* MAUG_NO_STAT */
 
    debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
       filename, p_file->sz );
@@ -595,6 +610,10 @@ cleanup:
    return retval;
 }
 
+#endif /* !MAUG_NO_FILE */
+
+/* === */
+
 void mfile_close( mfile_t* p_file ) {
 #  ifdef MFILE_MMAP
    munmap( bytes_ptr_h, bytes_sz );
@@ -605,10 +624,12 @@ void mfile_close( mfile_t* p_file ) {
       /* Do nothing silently. */
       break;
 
+#ifndef MAUG_NO_FILE
    case MFILE_CADDY_TYPE_FILE:
       fclose( p_file->h.file );
       p_file->type = 0;
       break;
+#endif /* !MAUG_NO_FILE */
 
    case MFILE_CADDY_TYPE_MEM_BUFFER:
       if( NULL != p_file->mem_buffer ) {

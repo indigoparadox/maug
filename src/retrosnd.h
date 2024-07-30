@@ -426,14 +426,14 @@ cleanup:
       devs_list_buf_h = maug_malloc( 1, devs_list_buf_sz );
 
       maug_mlock( devs_list_buf_h, devs_list_buf );
-      strncpy( devs_list_buf, "MIDI devices:\n", devs_list_buf_sz );
+      maug_strncpy( devs_list_buf, "MIDI devices:\n", devs_list_buf_sz );
       maug_munlock( devs_list_buf_h, devs_list_buf );
 
       for( i = 0 ; num_devs > i ; i++ ) {
          midiOutGetDevCaps( i, &midi_caps, sizeof( MIDIOUTCAPS ) );
          if(
             /* +2 for newline and NULL. */
-            devs_list_buf_pos + 2 + strlen( midi_caps.szPname )
+            devs_list_buf_pos + 2 + maug_strlen( midi_caps.szPname )
             > devs_list_buf_sz
          ) {
             /* Grow buffer if we need to. */
@@ -443,13 +443,13 @@ cleanup:
             maug_cleanup_if_null_alloc( MAUG_MHANDLE, devs_list_buf_new );
             devs_list_buf_h = devs_list_buf_new;
          }
-         assert( devs_list_buf_sz + 2 + strlen( midi_caps.szPname )
+         assert( devs_list_buf_sz + 2 + maug_strlen( midi_caps.szPname )
             > devs_list_buf_sz );
 
          /* Copy the current device name into the buffer. */
          maug_mlock( devs_list_buf_h, devs_list_buf );
          strcpy( &(devs_list_buf[devs_list_buf_pos]), midi_caps.szPname );
-         devs_list_buf_pos += strlen( midi_caps.szPname );
+         devs_list_buf_pos += maug_strlen( midi_caps.szPname );
          devs_list_buf[devs_list_buf_pos++] = '\n';
          devs_list_buf[devs_list_buf_pos] = '\0';
          maug_munlock( devs_list_buf_h, devs_list_buf );
@@ -502,7 +502,7 @@ cleanup:
 
 void retrosnd_set_sf_bank( const char* filename_in ) {
 #ifdef RETROSND_API_PC_BIOS
-   strncpy( g_retrosnd_state.sf_bank_filename, filename_in,
+   maug_strncpy( g_retrosnd_state.sf_bank_filename, filename_in,
       SF_BANK_FILENAME_SZ_MAX );
 #endif /* RETROSND_API_PC_BIOS */
 }

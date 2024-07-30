@@ -90,8 +90,6 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #ifdef MDATA_C
 
-#include <string.h> /* strncpy() */
-
 ssize_t mdata_strpool_find(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz
 ) {
@@ -189,7 +187,7 @@ ssize_t mdata_strpool_append(
       strpool->str_sz, strpool_p );
 
    /* Add this string at the end of the string table. */
-   strncpy( &(strpool_p[strpool->str_sz + sizeof( size_t )]), str, str_sz );
+   maug_strncpy( &(strpool_p[strpool->str_sz + sizeof( size_t )]), str, str_sz );
    strpool_p[strpool->str_sz + sizeof( size_t ) + str_sz] = '\0';
 
    /* Add the size of the string to the strpool. */

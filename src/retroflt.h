@@ -1550,10 +1550,6 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NAMES )
 };
 
-#  include <stdio.h>
-#  include <stdlib.h>
-#  include <string.h>
-
 /* Callback table is down below, after the statically-defined callbacks. */
 
 /* === Function Definitions === */
@@ -1821,7 +1817,7 @@ static int retrosnd_cli_rsd_def(
       debug_printf( 2, "env: MAUG_MIDI_DOS: %s", env_var );
 
       /* Turn comma separator into NULL split. */
-      for( i = 0 ; strlen( env_var ) > i ; i++ ) {
+      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
          if( ',' == env_var[i] ) {
             /* Split into two null-terminated strings. */
             env_var[i] = '\0';
@@ -1859,7 +1855,7 @@ static int retrosnd_cli_rsd_def(
 
       debug_printf( 2, "env: MAUG_MIDI_ALSA: %s", env_var );
 
-      for( i = 0 ; strlen( env_var ) > i ; i++ ) {
+      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
          if( ':' == env_var[i] ) {
             /* Split into two null-terminated strings. */
             env_var[i] = '\0';
@@ -1989,7 +1985,7 @@ static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* Next arg is VDP args str. */
    } else {
-      strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
+      maug_strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
       debug_printf( 1, "VDP args: %s", g_retroflat_state->vdp_args );
    }
    return RETROFLAT_OK;
@@ -2148,7 +2144,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Set the assets path. */
    memset( g_retroflat_state->assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
    if( NULL != args->assets_path ) {
-      strncpy( g_retroflat_state->assets_path,
+      maug_strncpy( g_retroflat_state->assets_path,
          args->assets_path, RETROFLAT_ASSETS_PATH_MAX );
    }
 
@@ -2490,7 +2486,7 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
    assert( retroflat_bitmap_locked( target ) );
 
    font = retroflat_win_create_font( flags, font_str );
@@ -2542,7 +2538,7 @@ void retroflat_string(
 #  endif /* !RETROFLAT_OPENGL */
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
 #  if defined( RETROFLAT_OPENGL )
@@ -2595,12 +2591,12 @@ cleanup:
 
    /* == Win16/Win32 == */
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
 
    assert( retroflat_bitmap_locked( target ) );
 
    /* DrawText will draw gibberish even if the string is null-terminated! */
-   str_sz = strlen( str );
+   str_sz = maug_strlen( str );
 
    memset( &sz, '\0', sizeof( SIZE ) );
 

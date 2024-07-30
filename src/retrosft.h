@@ -418,7 +418,7 @@ void retrosoft_string_sz(
 ) {
    /* TODO: Put a little more effort into sizing. */
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
@@ -437,7 +437,7 @@ void retrosoft_string(
    int x = x_orig;
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {

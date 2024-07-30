@@ -16,6 +16,8 @@ struct RETROFLAT_WING_MODULE g_w;
 
 /* === */
 
+#ifndef MAUG_NO_CLI
+
 #  ifdef RETROFLAT_SCREENSAVER
 
 /* Windows screensaver (.scr) command-line arguments. */
@@ -127,6 +129,8 @@ cleanup:
 
    return argv_out;
 }
+
+#endif /* !MAUG_NO_CLI */
 
 /* === */
 
@@ -817,7 +821,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   return timeGetTime();
+   return GetTickCount();
 }
 
 /* === */
@@ -917,7 +921,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif
    } else {
       /* Update the transparency mask. */
-      if( NULL != bmp->mask ) {
+      if( (HBITMAP)NULL != bmp->mask ) {
          retval = retroflat_bitmap_win_transparency( bmp,
             bmp->bmi.header.biWidth, bmp->bmi.header.biHeight );
          maug_cleanup_if_not_ok();
@@ -958,7 +962,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    char* buf = NULL;
    FILE* bmp_file = NULL;
    long int i, x, y, w, h, colors, offset, sz, read;
-#  elif defined( RETROFLAT_API_WIN32 ) && !defined( RETROFLAT_OPENGL )
+#  elif !defined( RETROFLAT_OPENGL )
    BITMAP bm;
 #  endif /* RETROFLAT_API_WIN32 */
 
@@ -1248,7 +1252,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
    /* == Win16/Win32 == */
 
-   if( NULL != bmp->old_hbm_b ) {
+   if( (HBITMAP)NULL != bmp->old_hbm_b ) {
       SelectObject( bmp->hdc_b, bmp->old_hbm_b );
       bmp->old_hbm_b = (HBITMAP)NULL;
       bmp->old_hbm_b = (HBITMAP)NULL;
@@ -1517,7 +1521,7 @@ void retroflat_line(
       return;
    }
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
 
    assert( retroflat_bitmap_locked( target ) );
 
@@ -1576,7 +1580,7 @@ void retroflat_ellipse(
       return;
    }
 
-   assert( NULL != target->b );
+   assert( (HBITMAP)NULL != target->b );
    assert( retroflat_bitmap_locked( target ) );
 
    retroflat_win_setup_brush( old_brush, target, color, flags );

@@ -140,7 +140,7 @@ static MERROR_RETVAL retrocon_cmd_print(
    MERROR_RETVAL retval = MERROR_OK;
    char* print_line = NULL;
 
-   print_line = strchr( line, ' ' );
+   print_line = maug_strchr( line, ' ' );
    if( NULL == print_line ) {
       /* Not technically an error. */
       goto cleanup;
@@ -252,7 +252,7 @@ MERROR_RETVAL retrocon_add_command(
 
    maug_cleanup_if_ge_overflow( con->callbacks_sz + 1, RETROCON_CB_SZ_MAX );
 
-   strncpy(
+   maug_strncpy(
       con->callback_names[con->callbacks_sz], cmd, RETROCON_CB_NAME_SZ_MAX );
 
    con->callbacks[con->callbacks_sz] = cb;
@@ -359,7 +359,7 @@ MERROR_RETVAL retrocon_exec_line(
       if(
          0 == strncmp(
             /* TODO: Compare up to first space in line. */
-            con->callback_names[i], line, strlen( con->callback_names[i] ) )
+            con->callback_names[i], line, maug_strlen( con->callback_names[i] ) )
       ) {
          retval = con->callbacks[i](
             con, line, line_sz, con->callback_data[i] );
@@ -442,7 +442,7 @@ MERROR_RETVAL retrocon_input(
       retrogui_unlock( &(con->gui) );
       maug_cleanup_if_not_ok();
 
-      if( 0 == strlen( lbuffer ) ) {
+      if( 0 == maug_strlen( lbuffer ) ) {
          /* Do nothing if line is empty. */
          goto cleanup;
       }
