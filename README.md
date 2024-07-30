@@ -24,9 +24,15 @@ Maug has the following design goals and constraints:
 
 - Setup Makefile to compile .solib/.dll/.ovl dynamic libs.
 
-- Use mfile to simplify loading compiled-in resources likes fonts or bitmaps.
-
 - Square-tile-based isometric engine.
+
+- Reimplement retrotile with vectors for tiledefs.
+
+- Replace iffy semi-vectors in mhtml/mcss with vectors.
+
+- Replace obj vertice arrays with vectors in retroglu.
+
+- Implement lambdas in mlisp with separators for pruning sequentally added env args.
 
 ## Modules
 
