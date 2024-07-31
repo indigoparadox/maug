@@ -2,8 +2,6 @@
 #ifndef RETROFLT_H
 #define RETROFLT_H
 
-#include <mtypes.h>
-
 /**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.

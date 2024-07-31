@@ -2,6 +2,8 @@
 #ifndef MAUG_H
 #define MAUG_H
 
+#include <mtypes.h>
+
 #if !defined( MAUG_NO_STDLIB )
 #  include <stdio.h>
 #  include <stdlib.h> /* malloc() */

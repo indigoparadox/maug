@@ -330,7 +330,9 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_LBUTTONDOWN:
+#ifndef RETROFLAT_API_WINCE
       case WM_RBUTTONDOWN:
+#endif /* !RETROFLAT_API_WINCE */
          g_retroflat_state->platform.last_mouse = wParam;
          g_retroflat_state->platform.last_mouse_x = GET_X_LPARAM( lParam );
          g_retroflat_state->platform.last_mouse_y = GET_Y_LPARAM( lParam );
@@ -549,7 +551,9 @@ MERROR_RETVAL retroflat_init_platform(
    wc.hIcon         = LoadIcon(
       g_retroflat_instance, MAKEINTRESOURCE( RETROFLAT_ICO_RES_ID ) );
 #     endif /* RETROFLAT_ICO_RES_ID */
+#     ifndef RETROFLAT_API_WINCE
    wc.hCursor       = LoadCursor( 0, IDC_ARROW );
+#     endif /* !RETROFLAT_API_WINCE */
    wc.hbrBackground = (HBRUSH)( COLOR_BTNFACE + 1 );
    /* wc.lpszMenuName  = MAKEINTRESOURCE( IDR_MAINMENU ); */
    wc.lpszClassName = RETROFLAT_WINDOW_CLASS;
@@ -1114,7 +1118,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 #  ifndef RETROFLAT_OPENGL
    int i = 0;
+#     ifndef RETROFLAT_API_WINCE
    PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
+#     endif /* !RETROFLAT_API_WINCE */
 #  endif /* !RETROFLAT_OPENGL */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -1173,6 +1179,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    }
 #endif /* RETROFLAT_WING */
 
+#ifndef RETROFLAT_API_WINCE
+   /* TODO: How should we setup the palette in Windows CE? */
    GetSystemPaletteEntries(
       g_retroflat_state->platform.hdc_win, 0,
       RETROFLAT_BMP_COLORS_SZ_MAX, palette );
@@ -1182,6 +1190,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       bmp_out->bmi.colors[i].rgbBlue = palette[i].peBlue;
       bmp_out->bmi.colors[i].rgbReserved = 0;
    }
+#endif /* !RETROFLAT_API_WINCE */
 
 #     ifdef RETROFLAT_WING
    /* Now try to create the WinG bitmap using the header we've built. */

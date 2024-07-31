@@ -22,6 +22,46 @@ MERROR_RETVAL retroflat_load_xpm(
 extern MAUG_CONST char* SEG_MCONST gc_xpm_filenames[];
 extern MAUG_CONST char** SEG_MCONST gc_xpm_data[];
 
+static MERROR_RETVAL retroflat_xpm_header(
+   const char* line, size_t line_sz, int* w, int* h, int* colors, int* bypp
+) {
+   size_t i = 0;
+   int16_t i_cur = 0;
+   const char* num_start = line;
+   uint8_t num_cur = 0;
+   MERROR_RETVAL retval = MERROR_FILE;
+
+   /* TODO: Generalize into varags. */
+
+   #define _retroflat_xpm_scan_case( idx, num ) \
+         case idx: \
+            (num) = maug_atou32( num_start, i_cur, 10 ); \
+            debug_printf( 1, "%u: %s became: %d", idx, num_start, num ); \
+            num_start = &(line[i]); \
+            i_cur = 0; \
+            num_cur++; \
+            continue;
+
+   for( i = 0 ; line_sz > i ; i++ ) {
+      i_cur++;
+      if( i == line_sz - 1 && 3 == num_cur ) {
+         retval = MERROR_OK;
+      }
+      if( ' ' == line[i] || line_sz - 1 == i ) {
+         switch( num_cur ) {
+         _retroflat_xpm_scan_case( 0, *w )
+         _retroflat_xpm_scan_case( 1, *h )
+         _retroflat_xpm_scan_case( 2, *colors )
+         _retroflat_xpm_scan_case( 3, *bypp )
+         }
+      } 
+   }
+
+cleanup:
+
+   return retval;
+}
+
 MERROR_RETVAL retroflat_load_xpm(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
@@ -52,8 +92,12 @@ xpm_found:
 
    /* Load XPM and draw it to a new bitmap. */
 
-   sscanf( gc_xpm_data[xpm_idx][0], "%d %d %d %d",
+   /* sscanf( gc_xpm_data[xpm_idx][0], "%d %d %d %d",
+      &bmp_w, &bmp_h, &bmp_colors, &bmp_bypp ); */
+   retval = retroflat_xpm_header(
+      gc_xpm_data[xpm_idx][0], maug_strlen( gc_xpm_data[xpm_idx][0] ),
       &bmp_w, &bmp_h, &bmp_colors, &bmp_bypp );
+   maug_cleanup_if_not_ok();
 
    assert( 16 == bmp_colors );
    assert( 1 == bmp_bypp );

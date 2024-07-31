@@ -4,6 +4,12 @@
 
 #include <merror.h>
 
+#ifdef MAUG_NO_CLI
+
+#  define maug_add_arg( arg, arg_sz, help, help_sz, arg_cb, def_cb, data ) (0)
+
+#else
+
 /**
  * \addtogroup maug_cli Command Line API
  * \brief Tools for parsing command line arguments.
@@ -274,6 +280,8 @@ MERROR_RETVAL maug_add_arg(
 #endif /* MARGE_C */
 
 /*! \} */ /* maug_cli */
+
+#endif /* MAUG_NO_CLI */
 
 #endif /* MARGE_H */
 

@@ -222,10 +222,6 @@ typedef struct MFILE_CADDY mfile_t;
    mfile_default_case( p_file ); \
    }
 
-#endif /* MFILE_LEGACY_MACROS */
-
-#define mfile_get_sz( p_file ) ((p_file)->sz)
-
 #define mfile_reset( p_file ) \
    switch( (p_file)->type ) { \
    case MFILE_CADDY_TYPE_FILE: \
@@ -236,6 +232,10 @@ typedef struct MFILE_CADDY mfile_t;
       break; \
    mfile_default_case( p_file ); \
    }
+
+#endif /* MFILE_LEGACY_MACROS */
+
+#define mfile_get_sz( p_file ) ((p_file)->sz)
 
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
@@ -470,8 +470,6 @@ MERROR_RETVAL mfile_lock_buffer(
 
 /* === */
 
-#ifndef MAUG_NO_FILE
-
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( MVFS_ENABLED )
@@ -609,8 +607,6 @@ cleanup:
 
    return retval;
 }
-
-#endif /* !MAUG_NO_FILE */
 
 /* === */
 

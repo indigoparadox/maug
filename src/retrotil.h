@@ -290,8 +290,6 @@ MERROR_RETVAL retrotile_alloc(
 
 #ifdef RETROTIL_C
 
-#  include <stdio.h>
-
 #  include <mparser.h>
 
 /* TODO: Function names should be verb_noun! */
@@ -828,7 +826,7 @@ MERROR_RETVAL retrotile_parse_json_file(
          }
       }
 
-      mfile_reset( &buffer );
+      buffer.seek( &buffer, 0 );
 
       filename_ext = maug_strrchr( filename, '.' );
       if( NULL == filename_ext ) {

@@ -182,6 +182,16 @@ static void error_printf( const char* fmt, ... ) {
 
 /* TODO: Figure out a way to get the calling line number for a function. */
 
+#ifdef RETROFLAT_API_WINCE
+
+static void debug_printf( int level, const char* fmt, ... ) {
+}
+
+static void error_printf( const char* fmt, ... ) {
+}
+
+#else
+
 static void debug_printf( int level, const char* fmt, ... ) {
    va_list argp;
 
@@ -201,6 +211,8 @@ static void error_printf( const char* fmt, ... ) {
    va_end( argp );
    printf( "\n" );
 }
+
+#endif /* RETROFLAT_API_WINCE */
 
 #  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is " SIZE_T_FMT " bytes", (sz) );
 
