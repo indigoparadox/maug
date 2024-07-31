@@ -965,7 +965,7 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    /* Grab the token for this node and figure out what it is. */
    mdata_strpool_lock( &(parser->strpool), strpool );
-   mdata_vector_lock( &(parser->env) );
+   mdata_vector_lock( &(exec->env) );
    assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "eval node " SIZE_T_FMT ": \"%s\" [%x] (i: " SSIZE_T_FMT
