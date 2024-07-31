@@ -34,6 +34,10 @@ Maug has the following design goals and constraints:
 
 - Implement lambdas in mlisp with separators for pruning sequentally added env args.
 
+- Implement resolution detection in Windows CE.
+
+- Implement timing/blit mode setting options on all platforms.
+
 ## Modules
 
 ### Makefiles
