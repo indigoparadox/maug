@@ -30,7 +30,7 @@ ifeq ("$(LDFLAGS_GCC64_WIN)","")
 	LDFLAGS_GCC64_WIN := -mwindows -lgdi32 -lwinmm
 endif
 
-ifeq ("$(RELEASE)","RELEASE")
+ifeq ("$(BUILD)","RELEASE")
 	CFLAGS_GCC_WIN += -O2
 	CFLAGS_GCC64_WIN += -O2
 	CFLAGS_WATCOM386 += -ol+ -ok -oi -oh -or
@@ -59,7 +59,7 @@ ifeq ("$(WINDRES_GCC64_MINGW)","")
 	WINDRES_GCC64_MINGW = x86_64-w64-mingw32-windres
 endif
 
-ifneq ("$(RELEASE)","RELEASE")
+ifneq ("$(BUILD)","RELEASE")
 ifneq ("$(WIN_FORCE_CONSOLE_LOG)","1")
 	CFLAGS_WATCOM_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
 	CFLAGS_WATCOM386_WIN += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"

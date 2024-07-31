@@ -7,6 +7,7 @@ endif
 
 INCLUDES_GCC += -I$(MAUG_ROOT)/src
 INCLUDES_WATCOM += -i=$(MAUG_ROOT)/src
+INCLUDES_VS += /I $(MAUG_ROOT)/src
 
 ifeq ("$(OPENGL)","1")
 	DEFINES_GCC += -DRETROFLAT_OPENGL
@@ -34,11 +35,12 @@ ifeq ($(DEBUG_THRESHOLD),)
 endif
 
 # Build debug unless release specified.
-ifeq ("$(RELEASE)","RELEASE")
+ifeq ("$(BUILD)","RELEASE")
 	CFLAGS_WATCOM += -ot
 	CFLAGS_WATCOM386 += -ot
 	CFLAGS_GCC += -O2
 	CFLAGS_GCC64 += -O2
+	CFLAGS_CECL += /O2 /D "NDEBUG" /W1 /ML
 else
 	CFLAGS_WATCOM += -d3 -db -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)
 	CFLAGS_WATCOM386 += -d3 -db -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)
@@ -49,6 +51,7 @@ else
 	CFLAGS_EMCC += -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD) -Wall
 	LDFLAGS_EMCC += --profiling-functions
 	LDFLAGS_WATCOM386 += debug all
+	CFLAGS_CECL += /W1 /MLd
 endif
 
 ifeq ("$(PEDANTIC)","1")
@@ -95,6 +98,7 @@ include maug/make/Makevfs.inc
 include maug/make/Makexpm.inc
 include maug/make/Makeunix.inc
 include maug/make/Makewin.inc
+include maug/make/Makece.inc
 include maug/make/Makewasm.inc
 include maug/make/Makedos.inc
 include maug/make/Makends.inc

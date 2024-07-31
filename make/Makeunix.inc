@@ -15,7 +15,7 @@ ifeq ("$(LDFLAGS_GCC64_UNIX)","")
 	LDFLAGS_GCC64_UNIX := -lasound -ldl
 endif
 
-ifneq ("$(RELEASE)","RELEASE")
+ifneq ("$(BUILD)","RELEASE")
 	# Build debug unless release specified.
 	GCC_FSAN := -fsanitize=address -fsanitize=leak -fsanitize=undefined 
 	CFLAGS_GCC_UNIX += $(GCC_FSAN) -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)

@@ -18,7 +18,7 @@
 typedef void* MAUG_MHANDLE;
 
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
-#  define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) (void*)malloc( sz * nmemb )
 
 /**
  * \warn This does not test that reallocation was successful! Use
@@ -44,7 +44,7 @@ typedef void* MAUG_MHANDLE;
 
 typedef void* MAUG_MHANDLE;
 
-#  define maug_malloc( nmemb, sz ) malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) (void*)malloc( sz * nmemb )
 
 /**
  * \warn This does not test that reallocation was successful! Use
