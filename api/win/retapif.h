@@ -471,9 +471,10 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* == Win16/Win32 == */
 
-#     ifdef RETROFLAT_API_WINCE
+#     ifdef MAUG_NO_STDLIB
    srand( GetTickCount() );
 #     else
+   /* Time makes a better random seed if available. */
    srand( time( NULL ) );
 #     endif /* RETROFLAT_API_WINCE */
 
@@ -1546,10 +1547,7 @@ void retroflat_line(
 
 /* cleanup: */
 
-   if( (HPEN)NULL != pen ) {
-      SelectObject( target->hdc_b, old_pen );
-      DeleteObject( pen );
-   }
+   retroflat_win_cleanup_pen( old_pen, target )
 
 #  endif /* RETROFLAT_OPENGL */
 }

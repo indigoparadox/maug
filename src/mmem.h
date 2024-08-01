@@ -24,7 +24,8 @@ typedef void* MAUG_MHANDLE;
  * \warn This does not test that reallocation was successful! Use
  *       maug_mrealloc_test() for that.
  */
-#  define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
+#  define maug_mrealloc( handle, nmemb, sz ) \
+      (void*)realloc( handle, (sz) * (nmemb) )
 
 #  define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
 
@@ -50,7 +51,8 @@ typedef void* MAUG_MHANDLE;
  * \warn This does not test that reallocation was successful! Use
  *       maug_mrealloc_test() for that.
  */
-#  define maug_mrealloc( handle, nmemb, sz ) realloc( handle, (sz) * (nmemb) )
+#  define maug_mrealloc( handle, nmemb, sz ) \
+      (void*)realloc( handle, (sz) * (nmemb) )
 
 /**
  * \brief Zero the block of memory pointed to by ptr.
