@@ -35,6 +35,10 @@ MERROR_RETVAL mplug_load(
    char plugin_path[MAUG_PATH_SZ_MAX + 1];
 #ifdef RETROFLAT_OS_WIN
    size_t i = 0;
+#  ifdef MAUG_WCHAR
+   wchar_t* plugin_path_w = NULL;
+   int plugin_path_w_sz = 0;
+#  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
    memset( plugin_path, '\0', MAUG_PATH_SZ_MAX + 1 );
@@ -50,7 +54,44 @@ MERROR_RETVAL mplug_load(
          plugin_path[i] = '\\';
       }
    }
-   *p_mod_exe = LoadLibrary( plugin_path );
+#  ifdef MAUG_WCHAR
+   plugin_path_w_sz = MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, plugin_path, -1, NULL, 0 );
+   if( 0 >= plugin_path ) {
+      error_printf(
+         "unable to allocate wide path for module: %s", plugin_path );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+   plugin_path_w = malloc( plugin_path_w_sz + 1 );
+   maug_cleanup_if_null_alloc( wchar_t*, plugin_path_w );
+   maug_mzero( plugin_path_w, plugin_path_w_sz + 1 );
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, plugin_path, -1,
+      plugin_path_w, plugin_path_w_sz
+   ) ) {
+      error_printf(
+         "unable to convert wide path for module: %s", plugin_path );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+#  endif /* MAUG_WCHAR */
+   *p_mod_exe = (mplug_mod_t)LoadLibrary(
+#  ifdef MAUG_WCHAR
+      plugin_path_w
+#  else
+      plugin_path
+#  endif /* MAUG_WCHAR */
+   );
+
+cleanup:
+
+#  ifdef MAUG_WCHAR
+   if( NULL != plugin_path_w ) {
+      free( plugin_path_w );
+   }
+#  endif /* MAUG_WCHAR */
 #else
 #  pragma message( "warning: dlopen undefined!" )
 #endif /* RETROFLAT_OS_UNIX */
@@ -69,7 +110,10 @@ MERROR_RETVAL mplug_call(
    MERROR_RETVAL retval = MERROR_OK;
    mplug_proc_t plugin_proc = (mplug_proc_t)NULL;
 #ifdef RETROFLAT_OS_WIN
-   char proc_name_ex[MAUG_PATH_SZ_MAX + 1];
+   char proc_name_ex[MAUG_PATH_SZ_MAX + 1] = { 0 };
+#  ifdef MAUG_WCHAR
+   wchar_t proc_name_ex_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+#  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef RETROFLAT_OS_UNIX
@@ -79,7 +123,21 @@ MERROR_RETVAL mplug_call(
 
    /* Append a _ to the proc_name to match calling convention name scheme. */
    maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX, "%s_", proc_name );
+
+#  ifdef MAUG_WCHAR
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, proc_name_ex, -1, proc_name_ex_w,
+      MAUG_PATH_SZ_MAX
+   ) ) {
+      error_printf( "could not create wide proc name!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   plugin_proc = (mplug_proc_t)GetProcAddressW( mod_exe, proc_name_ex_w );
+#  else
    plugin_proc = (mplug_proc_t)GetProcAddress( mod_exe, proc_name_ex );
+#  endif /* MAUG_WCHAR */
 #else
 #  pragma message( "dlsym undefined!" )
 #endif

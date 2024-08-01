@@ -2,6 +2,10 @@
 #ifndef MAUG_H
 #define MAUG_H
 
+#ifndef MAUG_NO_LEGACY
+#  include <mlegacy.h>
+#endif /* !MAUG_NO_LEGACY */
+
 #include <mtypes.h>
 
 #if !defined( MAUG_NO_STDLIB )
@@ -10,8 +14,6 @@
 #  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
 #endif /* !MAUG_NO_STDLIB */
 #include <stdarg.h>
-
-#include <mlegacy.h>
 
 #ifdef MAUG_OS_PALM
 /* PalmOS doesn't work with const. */

@@ -468,6 +468,10 @@ MERROR_RETVAL retroflat_init_platform(
    DWORD window_style_ex = 0;
    int ww = 0,
       wh = 0;
+#ifdef MAUG_WCHAR
+   wchar_t title_w[RETROFLAT_TITLE_MAX + 1] = { 0 };
+   wchar_t class_w[sizeof( RETROFLAT_WINDOW_CLASS ) + 1] = { 0 };
+#endif /* MAUG_WCHAR */
 
    /* == Win16/Win32 == */
 
@@ -544,6 +548,25 @@ MERROR_RETVAL retroflat_init_platform(
 
    debug_printf( 1, "retroflat: creating window class..." );
 
+#     ifdef MAUG_WCHAR
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, args->title, -1, title_w,
+      RETROFLAT_TITLE_MAX
+   ) ) {
+      error_printf( "could not create wide window title!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, RETROFLAT_WINDOW_CLASS, -1, class_w,
+      sizeof( RETROFLAT_WINDOW_CLASS )
+   ) ) {
+      error_printf( "could not create wide window class!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+#     endif /* MAUG_WCHAR */
+
    memset( &wc, '\0', sizeof( WNDCLASS ) );
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
@@ -557,9 +580,19 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* !RETROFLAT_API_WINCE */
    wc.hbrBackground = (HBRUSH)( COLOR_BTNFACE + 1 );
    /* wc.lpszMenuName  = MAKEINTRESOURCE( IDR_MAINMENU ); */
+#     ifdef MAUG_WCHAR
+   wc.lpszClassName = class_w;
+#     else
    wc.lpszClassName = RETROFLAT_WINDOW_CLASS;
+#     endif /* MAUG_WCHAR */
 
-   if( !RegisterClass( &wc ) ) {
+   if(
+#     ifdef MAUG_WCHAR
+      0 == RegisterClassW( &wc )
+#     else
+      0 == RegisterClass( &wc )
+#     endif /* MAUG_WCHAR */
+   ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not register window class!" );
       goto cleanup;
@@ -603,8 +636,19 @@ MERROR_RETVAL retroflat_init_platform(
    }
 #     endif /* RETROFLAT_SCREENSAVER */
 
+#     ifdef MAUG_WCHAR
+   g_retroflat_state->platform.window = CreateWindowExW(
+#     else
    g_retroflat_state->platform.window = CreateWindowEx(
-      window_style_ex, RETROFLAT_WINDOW_CLASS, args->title,
+#     endif /* MAUG_WCHAR */
+      window_style_ex,
+#     ifdef MAUG_WCHAR
+      class_w,
+      title_w,
+#     else
+      RETROFLAT_WINDOW_CLASS,
+      args->title,
+#     endif /* MAUG_WCHAR */
       window_style,
 #     ifdef RETROFLAT_API_WINCE
       0, 0, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -776,6 +820,9 @@ cleanup:
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {
+   /* This function avoids dynamic allocation in the vain hope that it will
+    * make it more stable, maybe to report something it couldn't, otherwise.
+    */
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 #  if (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN )) || \
@@ -783,6 +830,10 @@ void retroflat_message(
    defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
    uint32_t win_msg_flags = 0;
 #  endif
+#  ifdef MAUG_WCHAR
+   wchar_t msg_out_w[RETROFLAT_MSG_MAX + 1] = { 0 };
+   wchar_t title_w[RETROFLAT_TITLE_MAX + 1] = { 0 };
+#  endif /* MAUG_WCHAR */
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
@@ -802,7 +853,18 @@ void retroflat_message(
       break;
    }
 
+#  ifdef MAUG_WCHAR
+   /* TODO: Fail on conversion failure? */
+   MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, title, -1, title_w,
+      RETROFLAT_TITLE_MAX );
+   MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, msg_out, -1, msg_out_w,
+      RETROFLAT_MSG_MAX );
+   MessageBox( retroflat_root_win(), msg_out_w, title_w, win_msg_flags );
+#  else
    MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
+#  endif /* MAUG_WCHAR */
 
    va_end( vargs );
 }
@@ -812,13 +874,24 @@ void retroflat_message(
 void retroflat_set_title( const char* format, ... ) {
    char title[RETROFLAT_TITLE_MAX + 1];
    va_list vargs;
+#ifdef MAUG_WCHAR
+   wchar_t title_w[RETROFLAT_TITLE_MAX + 1] = { 0 };
+#endif /* MAUG_WCHAR */
 
    /* Build the title. */
    va_start( vargs, format );
    memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
+#ifdef MAUG_WCHAR
+   /* TODO: Fail on conversion failure? */
+   MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, title, -1, title_w,
+      RETROFLAT_TITLE_MAX );
+   SetWindowTextW( g_retroflat_state->platform.window, title_w );
+#else
    SetWindowText( g_retroflat_state->platform.window, title );
+#endif /* MAUG_WCHAR */
 
    va_end( vargs );
 }
@@ -961,7 +1034,7 @@ cleanup:
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
-   char filename_path[RETROFLAT_PATH_MAX + 1];
+   char filename_path[RETROFLAT_PATH_MAX + 1] = { 0 };
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
@@ -970,6 +1043,9 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  elif !defined( RETROFLAT_OPENGL )
    BITMAP bm;
 #  endif /* RETROFLAT_API_WIN32 */
+#  ifdef MAUG_WCHAR
+   wchar_t filename_path_w[RETROFLAT_PATH_MAX + 1] = { 0 };
+#  endif /* MAUG_WCHAR */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -1055,8 +1131,19 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* == Win32 == */
 
+#        ifdef MAUG_WCHAR
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, filename_path, -1, filename_path_w,
+      RETROFLAT_PATH_MAX
+   ) ) {
+      error_printf( "could not create wide filename path!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+#        endif /* MAUG_WCHAR */
+
 #        ifdef RETROFLAT_API_WINCE
-   bmp_out->b = SHLoadDIBitmap( filename_path );
+   bmp_out->b = SHLoadDIBitmap( filename_path_w );
 #        else
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );

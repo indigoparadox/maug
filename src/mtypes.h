@@ -9,10 +9,6 @@
  * implementation that can be called from legacy projects.
  */
 
-#ifndef MAUG_NO_LEGACY
-#  include <mlegacy.h>
-#endif /* !MAUG_NO_LEGACY */
-
 #if defined( MAUG_OS_PALM )
 
 typedef UInt8 uint8_t;
