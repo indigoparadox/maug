@@ -448,6 +448,7 @@ cleanup:
 
          /* Copy the current device name into the buffer. */
          maug_mlock( devs_list_buf_h, devs_list_buf );
+         /* TODO: Replace with maug_strncpy() */
          strcpy( &(devs_list_buf[devs_list_buf_pos]), midi_caps.szPname );
          devs_list_buf_pos += maug_strlen( midi_caps.szPname );
          devs_list_buf[devs_list_buf_pos++] = '\n';

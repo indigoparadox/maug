@@ -32,12 +32,11 @@ MERROR_RETVAL mplug_load(
    const char* plugin_basename, mplug_mod_t* p_mod_exe
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char plugin_path[MAUG_PATH_SZ_MAX + 1];
+   char plugin_path[MAUG_PATH_SZ_MAX + 1] = { 0 };
 #ifdef RETROFLAT_OS_WIN
    size_t i = 0;
 #  ifdef MAUG_WCHAR
-   wchar_t* plugin_path_w = NULL;
-   int plugin_path_w_sz = 0;
+   wchar_t plugin_path_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
 #  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
@@ -55,20 +54,9 @@ MERROR_RETVAL mplug_load(
       }
    }
 #  ifdef MAUG_WCHAR
-   plugin_path_w_sz = MultiByteToWideChar(
-      CP_ACP, MB_PRECOMPOSED, plugin_path, -1, NULL, 0 );
-   if( 0 >= plugin_path ) {
-      error_printf(
-         "unable to allocate wide path for module: %s", plugin_path );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-   plugin_path_w = malloc( plugin_path_w_sz + 1 );
-   maug_cleanup_if_null_alloc( wchar_t*, plugin_path_w );
-   maug_mzero( plugin_path_w, plugin_path_w_sz + 1 );
    if( 0 == MultiByteToWideChar(
       CP_ACP, MB_PRECOMPOSED, plugin_path, -1,
-      plugin_path_w, plugin_path_w_sz
+      plugin_path_w, MAUG_PATH_SZ_MAX
    ) ) {
       error_printf(
          "unable to convert wide path for module: %s", plugin_path );
@@ -76,14 +64,10 @@ MERROR_RETVAL mplug_load(
       goto cleanup;
    }
 
-#  endif /* MAUG_WCHAR */
-   *p_mod_exe = (mplug_mod_t)LoadLibrary(
-#  ifdef MAUG_WCHAR
-      plugin_path_w
+   *p_mod_exe = (mplug_mod_t)LoadLibraryW( plugin_path_w );
 #  else
-      plugin_path
+   *p_mod_exe = (mplug_mod_t)LoadLibrary( plugin_path );
 #  endif /* MAUG_WCHAR */
-   );
 
 cleanup:
 
