@@ -920,7 +920,6 @@ MERROR_RETVAL retrohtr_tree_pos(
    ssize_t node_iter_idx = -1;
    ssize_t prev_sibling_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
-   union RETROGUI_CTL* ctl = NULL;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -1137,14 +1136,12 @@ MERROR_RETVAL retrohtr_tree_pos(
 
    if( MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type ) {
       /* Feed the position back to the GUI control created during tree_size. */
-      retrogui_lock( &(tree->gui) );
-      ctl = retrogui_get_ctl_by_idc( &(tree->gui), node_idx );
-      retrogui_pos_ctl( &(tree->gui), ctl,
+      retval = retrogui_pos_ctl( &(tree->gui), node_idx,
          retrohtr_node_screen_x( tree, node_idx ),
          retrohtr_node_screen_y( tree, node_idx ),
          retrohtr_node( tree, node_idx )->w,
          retrohtr_node( tree, node_idx )->h );
-      retrogui_unlock( &(tree->gui) );
+      maug_cleanup_if_not_ok();
    }
 
    debug_printf( RETROHTR_TRACE_LVL,
@@ -1335,20 +1332,12 @@ retrogui_idc_t retrohtr_tree_poll_ctls(
       return 0;
    }
 
-   retrogui_lock( &(tree->gui) );
-
    idc = retrogui_poll_ctls( &(tree->gui), input, input_evt );
 
    if( 0 < idc ) {
       debug_printf(
          RETROHTR_TRACE_LVL, "setting node " SIZE_T_FMT " dirty...", idc );
       retrohtr_node( tree, idc )->flags |= RETROHTR_NODE_FLAG_DIRTY;
-   }
-
-cleanup:
-
-   if( retrogui_is_locked( &(tree->gui) ) ) {
-      retrogui_unlock( &(tree->gui) );
    }
 
    if( MERROR_OK != retval ) {

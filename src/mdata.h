@@ -71,11 +71,13 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define mdata_vector_lock( v ) \
    maug_mlock( (v)->data_h, (v)->data_bytes ); \
-   maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes );
+   maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
+   debug_printf( MDATA_TRACE_LVL, "locked vector!" );
 
 #define mdata_vector_unlock( v ) \
    if( NULL != (v)->data_bytes ) { \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
+      debug_printf( MDATA_TRACE_LVL, "unlocked vector!" ); \
    }
 
 #define mdata_vector_get( v, idx, type ) \
