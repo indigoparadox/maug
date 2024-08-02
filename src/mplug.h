@@ -108,7 +108,7 @@ MERROR_RETVAL mplug_call(
    /* Append a _ to the proc_name to match calling convention name scheme. */
    maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX, "%s_", proc_name );
 
-#  ifdef MAUG_WCHAR
+#  if defined( MAUG_WCHAR ) && defined( RETROFLAT_API_WINCE )
    if( 0 == MultiByteToWideChar(
       CP_ACP, MB_PRECOMPOSED, proc_name_ex, -1, proc_name_ex_w,
       MAUG_PATH_SZ_MAX

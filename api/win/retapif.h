@@ -1144,6 +1144,9 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #        ifdef RETROFLAT_API_WINCE
    bmp_out->b = SHLoadDIBitmap( filename_path_w );
+#        elif defined( MAUG_WCHAR )
+   bmp_out->b = LoadImageA(
+      NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
 #        else
    bmp_out->b = LoadImage(
       NULL, filename_path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE );
