@@ -1497,6 +1497,9 @@ MERROR_RETVAL retrogui_pos_ctl(
       ctl->base.idc, gui->x + ctl->base.x, gui->y + ctl->base.y,
          ctl->base.w, ctl->base.h );
 
+   /* New position! Redraw! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
 cleanup:
 
    mdata_vector_unlock( &(gui->ctls) );
@@ -1753,6 +1756,9 @@ MERROR_RETVAL retrogui_set_ctl_text(
       error_printf( "invalid control type! no label!" );
       goto cleanup;
    }
+
+   /* New text! Redraw! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
 
 cleanup:
 
