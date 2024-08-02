@@ -83,6 +83,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define mdata_vector_ct( v ) ((v)->ct)
 
+#define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
+
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
 
