@@ -547,10 +547,8 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       for( ; parser->base.token_sz > i ; i++ ) {
          retval = mcss_parse_c( &(parser->styler), parser->base.token[i] );
          maug_cleanup_if_not_ok();
-         #  ifdef MAUG_C
-         }
+      }
 
-      #  endif /* MAUG_C */
       debug_printf( 1, "out of style characters..." );
       mcss_parser_flush( &(parser->styler) );
 
