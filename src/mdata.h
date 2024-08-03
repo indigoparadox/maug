@@ -83,6 +83,11 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 #define mdata_vector_get( v, idx, type ) \
    ((type*)mdata_vector_get_void( v, idx ))
 
+#define mdata_vector_get_last( v, type ) \
+   (0 < mdata_vector_ct( v ) ? \
+      ((type*)mdata_vector_get_void( v, \
+         mdata_vector_ct( v ) - 1 )) : NULL)
+
 #define mdata_vector_ct( v ) ((v)->ct)
 
 #define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
@@ -348,7 +353,6 @@ void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
       idx, v->ct );
 
    assert( NULL != v->data_bytes );
-   assert( idx < v->ct );
 
    if( idx >= v->ct ) {
       return NULL;

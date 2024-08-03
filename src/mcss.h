@@ -32,6 +32,29 @@
 
 #define MCSS_PROP_FLAG_AUTO      0x04
 
+/**
+ * \addtogroup mcss_styles MCSS API Styles
+ * \brief Values for mcss_push_style() to determine selector type.
+ * \{
+ */
+
+/**
+ * \brief The style has no selector, and is a per-HTML element style.
+ */
+#define MCSS_SELECT_NONE          0x00
+
+/**
+ * \brief The select is selected by HTML element ID.
+ */
+#define MCSS_SELECT_ID            0x01
+
+/**
+ * \brief The select is selected by HTML element class.
+ */
+#define MCSS_SELECT_CLASS         0x02
+
+/*! \} */
+
 #define MCSS_PARSER_PSTATE_TABLE( f ) \
    f( MCSS_PSTATE_NONE, 0 ) \
    f( MCSS_PSTATE_VALUE, 1 ) \
@@ -75,34 +98,6 @@
 
 #define mcss_parser_append_token( parser, c ) \
    mparser_append_token( "mcss", &((parser)->base), c )
-
-/**
- * \addtogroup mcss_parser_locking MCSS Parser Locking
- * \brief Self-locking mechanism for CSS parser styles tree.
- *
- * Because a single style may have to be passed through many layers of parsing
- * and reading, it is more convenient to have the locked handle attached to   
- * the parser directly and manipulated from there.
- *
- * \warning Please note that locking currently does NOT include the string
- *          table, and this must be locked and unlocked separately.
- * \{
- */
-
-#define mcss_parser_lock( parser ) \
-   if( NULL == (parser)->styles ) { \
-      maug_mlock( (parser)->styles_h, (parser)->styles ); \
-      maug_cleanup_if_null_alloc( struct MCSS_STYLE*, (parser)->styles ); \
-   }
-
-#define mcss_parser_unlock( parser ) \
-   if( NULL != (parser)->styles ) { \
-      maug_munlock( (parser)->styles_h, (parser)->styles ); \
-   }
-
-#define mcss_parser_is_locked( parser ) (NULL != (parser)->styles)
-
-/*! \} */
 
 /**
  * \brief Clear enough state to start parsing a new block from scratch.
@@ -183,19 +178,14 @@ struct MCSS_PARSER {
    int16_t prop_key;
    /*! \brief Flags to push with next pushed prop val. */
    uint8_t prop_flags;
-   MAUG_MHANDLE styles_h;
-   /**
-    * \brief Locked handle for MCSS_PARSER::styles_h. Please see
-    *        \ref mcss_parser_locking for more information.
-    */
-   struct MCSS_STYLE* styles;
-   size_t styles_sz;
-   size_t styles_sz_max;
+   struct MDATA_VECTOR styles;
    struct MDATA_STRPOOL strpool;
    RETROFLAT_COLOR colors[16];
 };
 
-MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser );
+MERROR_RETVAL mcss_push_style(
+   struct MCSS_PARSER* parser, uint8_t select_by,
+   const char* select, size_t select_sz );
 
 MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser );
 
@@ -277,7 +267,7 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
       ) {
          debug_printf( MCSS_TRACE_LVL,
             "selected style (" SSIZE_T_FMT ") property: %s",
-            parser->styles_sz - 1, gc_mcss_prop_names[i] );
+            mdata_vector_ct( &(parser->styles) ) - 1, gc_mcss_prop_names[i] );
          parser->prop_key = i;
          goto cleanup;
       }
@@ -398,9 +388,6 @@ MERROR_RETVAL mcss_style_str_t(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    
-   /* str_idx_p is a pointer into the parser styles, so it should be locked! */
-   assert( mcss_parser_is_locked( parser ) );
-
    mparser_token_replace( &((parser)->base), i, '!', '\0' ); /* !important */
 
    if( 0 == parser->base.token_sz ) {
@@ -448,17 +435,21 @@ MERROR_RETVAL mcss_style_size_t(
 
 MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
+   struct MCSS_STYLE* style = NULL;
 
+   mdata_vector_lock( &(parser->styles) );
+
+   /* Grab the last pushed style. */
+   style = mdata_vector_get_last( &(parser->styles), struct MCSS_STYLE );
+   assert( NULL != style );
+
+   /* Pass parsed style value and flags based on its type. */
    #define MCSS_PROP_TABLE_PARSE( idx, prop_n, prop_t, prop_prse, def ) \
       case idx: \
-         retval = prop_prse( \
-            parser, #prop_n, \
-            &(parser->styles[parser->styles_sz - 1].prop_n) ); \
+         retval = prop_prse( parser, #prop_n, &(style->prop_n) ); \
          maug_cleanup_if_not_ok(); \
-         parser->styles[parser->styles_sz - 1].prop_n ## _flags = \
-            parser->prop_flags; \
-         parser->styles[parser->styles_sz - 1].prop_n ## _flags |= \
-            MCSS_PROP_FLAG_ACTIVE; \
+         style->prop_n ## _flags = parser->prop_flags; \
+         style->prop_n ## _flags |= MCSS_PROP_FLAG_ACTIVE; \
          break;
 
    switch( parser->prop_key ) {
@@ -471,71 +462,48 @@ MERROR_RETVAL mcss_push_prop_val( struct MCSS_PARSER* parser ) {
 
 cleanup:
 
+   mdata_vector_unlock( &(parser->styles) );
+
    parser->prop_flags = 0;
 
    return retval;
 }
 
-MERROR_RETVAL mcss_push_style( struct MCSS_PARSER* parser ) {
+MERROR_RETVAL mcss_push_style(
+   struct MCSS_PARSER* parser, uint8_t select_by,
+   const char* select, size_t select_sz
+) {
    MERROR_RETVAL retval = MERROR_OK;
-   MAUG_MHANDLE styles_h_new = (MAUG_MHANDLE)NULL;
+   struct MCSS_STYLE style;
+   ssize_t style_idx = 0;
 
-   /* TODO: Lock styles? */
+   /* Create an empty new style. */
+   maug_mzero( &style, sizeof( struct MCSS_STYLE ) );
 
-   /* Allocate more styles if needed. */
-   if( parser->styles_sz + 1 >= parser->styles_sz_max ) {
-      maug_munlock( parser->styles_h, parser->styles );
-      maug_mrealloc_test( styles_h_new, parser->styles_h,
-         parser->styles_sz_max * 2, sizeof( struct MCSS_STYLE ) );
-      maug_mlock( parser->styles_h, parser->styles );
-      parser->styles_sz_max *= 2;
+   /* Define the selector. */
+   /* TODO: Merge selector fields to save space; add select_by to struct. */
+   switch( select_by ) {
+   case MCSS_SELECT_CLASS:
+      maug_strncpy( style.class, select, MCSS_CLASS_SZ_MAX );
+      style.class_sz = select_sz;
+      debug_printf( MCSS_TRACE_LVL, "pushed style block " SSIZE_T_FMT ": .%s",
+         style_idx, style.class );
+      break;
+
+   case MCSS_SELECT_ID:
+      maug_strncpy( style.id, select, MCSS_ID_SZ_MAX );
+      style.id_sz = select_sz;
+      debug_printf( MCSS_TRACE_LVL, "pushed style block " SSIZE_T_FMT ": #%s",
+         style_idx, style.id );
+      break;
    }
 
-   parser->styles_sz++;
-
-   retval = mcss_style_init( &(parser->styles[parser->styles_sz - 1]) );
-   maug_cleanup_if_not_ok();
-   
-   /* Actual bounds check is in the maug_mrealloc_test() above. */
-   assert( parser->styles_sz < parser->styles_sz_max );
-
-cleanup:
-
-   return retval;
-}
-
-MERROR_RETVAL mcss_push_style_class(
-   struct MCSS_PARSER* parser, const char* class, size_t class_sz
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   retval = mcss_push_style( parser );
-   maug_cleanup_if_not_ok();
-
-   maug_strncpy( parser->styles[parser->styles_sz - 1].class, class,
-      MCSS_CLASS_SZ_MAX );
-   parser->styles[parser->styles_sz - 1].class_sz = class_sz;
-   debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": .%s",
-      parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].class );
-
-cleanup:
-
-   return retval;
-}
-
-MERROR_RETVAL mcss_push_style_id(
-   struct MCSS_PARSER* parser, const char* id, size_t id_sz
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   retval = mcss_push_style( parser );
-   maug_cleanup_if_not_ok();
-
-   maug_strncpy( parser->styles[parser->styles_sz - 1].id, id,
-      MCSS_ID_SZ_MAX );
-   parser->styles[parser->styles_sz - 1].id_sz = id_sz;
-   debug_printf( MCSS_TRACE_LVL, "pushed style block " SIZE_T_FMT ": #%s",
-      parser->styles_sz - 1, parser->styles[parser->styles_sz - 1].id );
+   style_idx = mdata_vector_append(
+      &(parser->styles), &style, sizeof( struct MCSS_STYLE ) );
+   if( 0 > style_idx ) {
+      retval = style_idx * -1;
+      goto cleanup;
+   }
 
 cleanup:
 
@@ -657,12 +625,14 @@ MERROR_RETVAL mcss_parse_c( struct MCSS_PARSER* parser, char c ) {
 
    case '{':
       if( MCSS_PSTATE_CLASS == mcss_parser_pstate( parser ) ) {
-         mcss_push_style_class( parser, parser->base.token, parser->base.token_sz );
+         mcss_push_style( parser, MCSS_SELECT_CLASS,
+            parser->base.token, parser->base.token_sz );
          mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
          mcss_parser_reset_token( parser );
 
       } else if( MCSS_PSTATE_ID == mcss_parser_pstate( parser ) ) {
-         mcss_push_style_id( parser, parser->base.token, parser->base.token_sz );
+         mcss_push_style( parser, MCSS_SELECT_ID,
+            parser->base.token, parser->base.token_sz );
          mcss_parser_pstate_push( parser, MCSS_PSTATE_BLOCK );
          mcss_parser_reset_token( parser );
       }
@@ -710,11 +680,7 @@ void mcss_parser_free( struct MCSS_PARSER* parser ) {
 
    debug_printf( MCSS_TRACE_LVL, "freeing style parser..." );
 
-   mcss_parser_unlock( parser );
-
-   if( NULL != parser->styles_h ) {
-      maug_mfree( parser->styles_h );
-   }
+   mdata_vector_free( &(parser->styles) );
 
    mdata_strpool_free( &(parser->strpool ) );
 }
@@ -722,29 +688,13 @@ void mcss_parser_free( struct MCSS_PARSER* parser ) {
 MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   assert( 0 == parser->styles_sz );
-   assert( (MAUG_MHANDLE)NULL == parser->styles );
-
    /* Perform initial tag allocation. */
-   parser->styles_sz_max = MCSS_PARSER_STYLES_INIT_SZ;
-   debug_printf( MCSS_TRACE_LVL, "allocating " SIZE_T_FMT " styles...",
-      parser->styles_sz_max );
-   parser->styles_h = maug_malloc(
-      parser->styles_sz_max, sizeof( struct MCSS_STYLE ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser->styles_h );
-   assert( (MAUG_MHANDLE)NULL != parser->styles_h );
-   if( NULL == parser->styles_h ) {
-      error_printf( "unable to allocate " SIZE_T_FMT " styles!",
-         parser->styles_sz_max );
-      goto cleanup;
-   }
+   debug_printf( MCSS_TRACE_LVL, "allocating styles..." );
 
    #define MCSS_COLOR_TABLE_HUES( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       parser->colors[idx] = RETROFLAT_COLOR_ ## name_u;
 
    RETROFLAT_COLOR_TABLE( MCSS_COLOR_TABLE_HUES )
-
-cleanup:
 
    return retval;
 }

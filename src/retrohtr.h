@@ -342,6 +342,9 @@ MERROR_RETVAL retrohtr_apply_styles(
    ssize_t tag_style_idx = -1;
    size_t tag_type = 0,
       i = 0;
+   struct MCSS_STYLE* style = NULL;
+
+   mdata_vector_lock( &(parser->styler.styles) );
 
    maug_mzero( effect_style, sizeof( struct MCSS_STYLE ) );
 
@@ -351,44 +354,46 @@ MERROR_RETVAL retrohtr_apply_styles(
 
    tag_type = mhtml_tag( parser, tag_idx )->base.type;
 
-   /* Try to apply class/ID styles. */
+   /* Merge style based on HTML element class. */
    if( 0 < mhtml_tag( parser, tag_idx )->base.classes_sz ) {
-      for( i = 0 ; parser->styler.styles_sz > i ; i++ ) {
+      for( i = 0 ; mdata_vector_ct( &(parser->styler.styles) ) > i ; i++ ) {
+         style = mdata_vector_get(
+            &(parser->styler.styles), i, struct MCSS_STYLE );
+
          if(
+            NULL != style &&
             0 == strncmp(
                mhtml_tag( parser, tag_idx )->base.classes,
-               parser->styler.styles[i].class,
+               style->class,
                mhtml_tag( parser, tag_idx )->base.classes_sz
             )
          ) {
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag class: %s",
-               parser->styler.styles[i].class );
+               style->class );
 
-            mcssmerge_styles(
-               effect_style,
-               parent_style,
-               &(parser->styler.styles[i]),
-               tag_type );
+            mcssmerge_styles( effect_style, parent_style, style, tag_type );
          }
       }
    }
+
+   /* Merge style based on HTML element ID. */
    if( 0 < mhtml_tag( parser, tag_idx )->base.id_sz ) {
-      for( i = 0 ; parser->styler.styles_sz > i ; i++ ) {
+      for( i = 0 ; mdata_vector_ct( &(parser->styler.styles) ) > i ; i++ ) {
+         style = mdata_vector_get(
+            &(parser->styler.styles), i, struct MCSS_STYLE );
+
          if(
+            NULL != style &&
             0 == strncmp(
                mhtml_tag( parser, tag_idx )->base.id,
-               parser->styler.styles[i].id,
+               style->id,
                mhtml_tag( parser, tag_idx )->base.id_sz
             )
          ) {
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag ID: %s",
-               parser->styler.styles[i].id );
+               style->id );
 
-            mcssmerge_styles(
-               effect_style,
-               parent_style,
-               &(parser->styler.styles[i]),
-               tag_type );
+            mcssmerge_styles( effect_style, parent_style, style, tag_type );
          }
       }
    }
@@ -398,12 +403,16 @@ MERROR_RETVAL retrohtr_apply_styles(
 
 cleanup:
 
+   /* TODO: Separate this out of cleanup phase. */
+
+   /* This might be NULL! */
+   style = mdata_vector_get(
+      &(parser->styler.styles), tag_style_idx, struct MCSS_STYLE );
+
    /* Make sure we have a root style. */
-   mcssmerge_styles(
-      effect_style,
-      parent_style,
-      0 <= tag_style_idx ? &(parser->styler.styles[tag_style_idx]) : NULL,
-      tag_type );
+   mcssmerge_styles( effect_style, parent_style, style, tag_type );
+
+   mdata_vector_unlock( &(parser->styler.styles) );
 
    return retval;
 }

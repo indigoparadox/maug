@@ -24,6 +24,9 @@ void mcssmerge_styles(
    struct MCSS_STYLE* tag_style,
    size_t tag_type
 ) {
+   /* At least one of these styles probably comes from the locked vector of the
+    * CSS styles parser, so... keep that in mind?
+    */
 
    if(
       MCSS_STYLE_FLAG_ACTIVE !=

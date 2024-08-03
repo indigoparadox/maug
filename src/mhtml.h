@@ -111,14 +111,12 @@
    if( NULL == (parser)->tags ) { \
       maug_mlock( (parser)->tags_h, (parser)->tags ); \
       maug_cleanup_if_null_alloc( union MHTML_TAG*, (parser)->tags ); \
-   } \
-   mcss_parser_lock( &((parser)->styler) );
+   }
 
 #define mhtml_parser_unlock( parser ) \
    if( NULL != (parser)->tags ) { \
       maug_munlock( (parser)->tags_h, (parser)->tags ); \
-   } \
-   mcss_parser_unlock( &((parser)->styler) );
+   }
 
 #define mhtml_parser_is_locked( parser ) (NULL != (parser)->tags)
 
@@ -536,16 +534,23 @@ MERROR_RETVAL mhtml_push_attrib_val( struct MHTML_PARSER* parser ) {
       debug_printf( MHTML_TRACE_LVL, "style: %s", parser->base.token );
       /* TODO: Parse and attach style. */
 
-      retval = mcss_push_style( &(parser->styler) );
+      /* Create an empty new style. */
+      mhtml_parser_unlock( parser );
+      retval = mcss_push_style( &(parser->styler), MCSS_SELECT_NONE, NULL, 0 );
       maug_cleanup_if_not_ok();
+      mhtml_parser_lock( parser );
       
       /* Set the new style as this tag's explicit style. */
-      parser->tags[parser->tag_iter].base.style = parser->styler.styles_sz - 1;
+      parser->tags[parser->tag_iter].base.style =
+         mdata_vector_ct( &(parser->styler.styles) ) - 1;
 
       for( ; parser->base.token_sz > i ; i++ ) {
          retval = mcss_parse_c( &(parser->styler), parser->base.token[i] );
          maug_cleanup_if_not_ok();
-      }
+         #  ifdef MAUG_C
+         }
+
+      #  endif /* MAUG_C */
       debug_printf( 1, "out of style characters..." );
       mcss_parser_flush( &(parser->styler) );
 

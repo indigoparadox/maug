@@ -1572,8 +1572,7 @@ MERROR_RETVAL retrogui_push_ctl(
    mdata_vector_lock( &(gui->ctls) );
 
    /* TODO: More elegant way to grab index. */
-   ctl = mdata_vector_get( &(gui->ctls),
-      mdata_vector_ct( &(gui->ctls) ) - 1,
+   ctl = mdata_vector_get_last( &(gui->ctls),
       union RETROGUI_CTL );
    assert( NULL != ctl );
 
