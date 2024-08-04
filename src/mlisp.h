@@ -132,7 +132,6 @@ struct MLISP_EXEC_STATE {
 struct MLISP_PARSER {
    struct MPARSER base;
    struct MDATA_STRPOOL strpool;
-   MAUG_MHANDLE env_h;
    struct MDATA_VECTOR ast;
    ssize_t ast_node_iter;
 };
@@ -978,8 +977,32 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t arg_idx = 0;
+   struct MLISP_STACK_NODE stack_n_arg;
+   struct MLISP_AST_NODE* ast_n_arg = NULL;
+   char* strpool = NULL;
 
       /* TODO: Pop stack into args in the env. */
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+
+   while( n->ast_idx_children_sz > arg_idx ) {
+      
+      retval = mlisp_stack_pop( exec, &stack_n_arg );
+      maug_cleanup_if_not_ok();
+
+      ast_n_arg = mdata_vector_get(
+         &(parser->ast), n->ast_idx_children[arg_idx],
+         struct MLISP_AST_NODE );
+
+      debug_printf( 1, "ARG: %s", &(strpool[ast_n_arg->token_idx]) );
+
+      arg_idx++;
+   }
+
+cleanup:
+
+   mdata_strpool_unlock( &(parser->strpool), strpool );
 
    return retval;
 }
