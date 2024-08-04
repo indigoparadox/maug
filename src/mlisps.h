@@ -28,6 +28,7 @@ typedef ssize_t mlisp_lambda_t;
 
 typedef mlisp_lambda_t mlisp_args_t;
 typedef mlisp_lambda_t mlisp_arge_t;
+typedef mlisp_lambda_t mlisp_if_t;
 typedef mlisp_lambda_t mlisp_then_t;
 
 typedef uint8_t mlisp_bool_t;
@@ -54,7 +55,8 @@ typedef uint8_t mlisp_bool_t;
    f( 6, mlisp_lambda_t,      lambda,        LAMBDA,  SSIZE_T_FMT ) \
    f( 7, mlisp_args_t,        args_start,    ARGS_S,  SSIZE_T_FMT ) \
    f( 8, mlisp_arge_t,        args_end,      ARGS_E,  SSIZE_T_FMT ) \
-   f( 9, mlisp_then_t,        then,          THEN,  SSIZE_T_FMT )   
+   f( 9, mlisp_if_t,          iffy,          IF,      SSIZE_T_FMT ) \
+   f(10, mlisp_then_t,        then,          THEN,    SSIZE_T_FMT )   
 
 /*! \} */ /* mlisp_types */
 

@@ -585,24 +585,6 @@ cleanup:
 /* === */
 
 static
-MERROR_RETVAL _mlisp_env_cb_if(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   /* TODO: As a special form, this might be easier with its own iter...
-    */
-
-   /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
-    *       dive in.
-    */
-
-   return retval;
-}
-
-/* === */
-
-static
 MERROR_RETVAL _mlisp_env_cb_define(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
 ) {
@@ -683,7 +665,10 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       n_idx, *p_child_idx );
 
    if(
-      MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) &&
+      (
+         MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ||
+         MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n->flags) 
+      ) &&
       0 == *p_child_idx
    ) {
       /* A lambda definition was found, and its exec counter is still pointing
@@ -924,6 +909,25 @@ cleanup:
 
 /* === */
 
+static MERROR_RETVAL _mlisp_step_if(
+   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#ifdef MLISP_DEBUG_TRACE
+   exec->trace[exec->trace_depth++] = n_idx;
+#endif /* MLISP_DEBUG_TRACE */
+
+   /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
+    *       dive in.
+    */
+
+   return retval;
+}
+
+/* === */
+
 static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
@@ -966,7 +970,11 @@ static MERROR_RETVAL _mlisp_step_iter(
          ", maug_strlen: " SIZE_T_FMT ")",
       n_idx, &(strpool[n->token_idx]), strpool[n->token_idx], n->token_idx,
          maug_strlen( &(strpool[n->token_idx]) ) );
-   if( NULL != (e_p = mlisp_env_get_strpool(
+   if( 0 == strncmp( &(strpool[n->token_idx]), "if", n->token_sz ) ) {
+      /* Fake env node e to step_if below. */
+      e.type = MLISP_TYPE_IF;
+
+   } else if( NULL != (e_p = mlisp_env_get_strpool(
       parser, exec, strpool, n->token_idx, n->token_sz
    ) ) ) {
       /* A literal found in the environment. */
@@ -979,11 +987,12 @@ static MERROR_RETVAL _mlisp_step_iter(
       e_p = NULL;
 
    } else if( maug_is_num( &(strpool[n->token_idx]), n->token_sz ) ) {
-      /* A numeric literal. */
+      /* Fake env node e from a numeric literal. */
       e.value.integer = atoi( &(strpool[n->token_idx]) );
       e.type = MLISP_TYPE_INT;
 
    } else if( maug_is_float( &(strpool[n->token_idx]), n->token_sz ) ) {
+      /* Fake env node e from a floating point numeric literal. */
       e.value.floating = atof( &(strpool[n->token_idx]) );
       e.type = MLISP_TYPE_FLOAT;
    }
@@ -998,7 +1007,10 @@ static MERROR_RETVAL _mlisp_step_iter(
    } else if( MLISP_TYPE_ ## const_name == e.type ) { \
       _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
-   if( MLISP_TYPE_CB == e.type ) {
+   if( MLISP_TYPE_IF == e.type ) {
+      retval = _mlisp_step_if( parser, n, n_idx, exec );
+
+   } else if( MLISP_TYPE_CB == e.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
@@ -1130,10 +1142,6 @@ MERROR_RETVAL mlisp_exec_init(
 
    retval = mlisp_env_set(
       parser, exec, "define", 6, MLISP_TYPE_CB, _mlisp_env_cb_define,
-      MLISP_ENV_FLAG_BUILTIN );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
       MLISP_ENV_FLAG_BUILTIN );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
