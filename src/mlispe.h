@@ -647,6 +647,34 @@ static MERROR_RETVAL _mlisp_step_iter(
 
 /* === */
 
+static MERROR_RETVAL _mlisp_preempt(
+   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx
+) {
+   /* Could not exec *this* node yet, so don't increment its parent. */
+   MERROR_RETVAL retval = MERROR_PREEMPT;
+   char* strpool = NULL;
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+   assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "eval step " SSIZE_T_FMT " under %s...",
+      *p_child_idx, &(strpool[n->token_idx]) );
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+
+   /* Increment this node, since the child actually executed. */
+   (*p_child_idx)++;
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+      n_idx, *p_child_idx );
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 static MERROR_RETVAL _mlisp_step_iter_children(
    struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
@@ -654,7 +682,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_child_idx = NULL;
    struct MLISP_AST_NODE* n_child = NULL;
-   char* strpool = NULL;
 
    /* Grab the current exec index for the child vector for this node. */
    p_child_idx = mdata_vector_get(
@@ -690,21 +717,7 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       retval = _mlisp_step_iter(
          parser, n_child, n->ast_idx_children[*p_child_idx], exec );
       if( MERROR_OK == retval ) {
-         mdata_strpool_lock( &(parser->strpool), strpool );
-         assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
-         debug_printf( MLISP_EXEC_TRACE_LVL,
-            "eval step " SSIZE_T_FMT " under %s...",
-            *p_child_idx, &(strpool[n->token_idx]) );
-         mdata_strpool_unlock( &(parser->strpool), strpool );
-
-         /* Increment this node, since the child actually executed. */
-         (*p_child_idx)++;
-         debug_printf( MLISP_EXEC_TRACE_LVL,
-            "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
-            n_idx, *p_child_idx );
-
-         /* Could not exec *this* node yet, so don't increment its parent. */
-         retval = MERROR_PREEMPT;
+         retval = _mlisp_preempt( parser, n, n_idx, exec, p_child_idx );
       }
       goto cleanup;
    }
@@ -784,7 +797,6 @@ static MERROR_RETVAL _mlisp_step_lambda(
    size_t* p_args_child_idx = NULL;
    struct MLISP_AST_NODE* n_args = NULL;
    struct MLISP_AST_NODE* n_child = NULL;
-   char* strpool = NULL;
    ssize_t ret_idx = 0;
 
 #ifdef MLISP_DEBUG_TRACE
@@ -879,21 +891,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
       retval = _mlisp_step_iter(
          parser, n_child, n->ast_idx_children[*p_lambda_child_idx], exec );
       if( MERROR_OK == retval ) {
-         mdata_strpool_lock( &(parser->strpool), strpool );
-         assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
-         debug_printf( MLISP_EXEC_TRACE_LVL,
-            "eval step " SSIZE_T_FMT " under %s...",
-            *p_lambda_child_idx, &(strpool[n->token_idx]) );
-         mdata_strpool_unlock( &(parser->strpool), strpool );
-
-         /* Increment this node, since the child actually executed. */
-         (*p_lambda_child_idx)++;
-         debug_printf( MLISP_EXEC_TRACE_LVL,
-            "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
-            n_idx, *p_lambda_child_idx );
-
-         /* Could not exec *this* node yet, so don't increment its parent. */
-         retval = MERROR_PREEMPT;
+         retval = _mlisp_preempt( parser, n, n_idx, exec, p_lambda_child_idx );
       }
 
    }
@@ -915,6 +913,8 @@ static MERROR_RETVAL _mlisp_step_if(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   debug_printf( 1, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
+
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
 #endif /* MLISP_DEBUG_TRACE */
@@ -922,6 +922,8 @@ static MERROR_RETVAL _mlisp_step_if(
    /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
     *       dive in.
     */
+
+   debug_printf( 1, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
 
    return retval;
 }
