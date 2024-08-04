@@ -205,7 +205,7 @@ MERROR_RETVAL mlisp_stack_pop(
  * \param token_strpool_idx Index of the env key in the strpool.
  * \param token_strpool_sz Length of the env key in the strpool. Use 0 to
  *                         detect automatically by NULL termination.
- * \return Pointer to env_node in MLISP_PARSER::env. This is not a copy, so
+ * \return Pointer to e in MLISP_PARSER::env. This is not a copy, so
  *         the pointer is only valid for so long as MLISP_PARSER:env remains
  *         locked!
  */
@@ -724,7 +724,7 @@ MERROR_RETVAL mlisp_env_set(
    uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_ENV_NODE env_node;
+   struct MLISP_ENV_NODE e;
    ssize_t new_idx_out = -1;
 
    if( 0 == token_sz ) {
@@ -737,19 +737,19 @@ MERROR_RETVAL mlisp_env_set(
          debug_printf( MLISP_EXEC_TRACE_LVL, \
             "setting env: \"%s\": #" fmt, \
                token, (ctype)*((ctype*)data) ); \
-         env_node.value.name = *((ctype*)data); \
+         e.value.name = *((ctype*)data); \
          break;
 
    /* Setup the new node to copy. */
-   maug_mzero( &env_node, sizeof( struct MLISP_ENV_NODE ) );
-   env_node.flags = flags;
-   env_node.name_strpool_idx =
+   maug_mzero( &e, sizeof( struct MLISP_ENV_NODE ) );
+   e.flags = flags;
+   e.name_strpool_idx =
       mdata_strpool_append( &(parser->strpool), token, token_sz );
-   if( 0 > env_node.name_strpool_idx ) {
-      retval = mdata_retval( env_node.name_strpool_idx );
+   if( 0 > e.name_strpool_idx ) {
+      retval = mdata_retval( e.name_strpool_idx );
    }
    maug_cleanup_if_not_ok();
-   env_node.type = env_type;
+   e.type = env_type;
    switch( env_type ) {
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGN );
 
@@ -759,34 +759,34 @@ MERROR_RETVAL mlisp_env_set(
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "setting env: \"%s\": strpool(" SSIZE_T_FMT ")",
          token, *((ssize_t*)data) );
-      env_node.value.strpool_idx = *((mdata_strpool_idx_t*)data);
+      e.value.strpool_idx = *((mdata_strpool_idx_t*)data);
       break;
 
    case 5 /* MLISP_TYPE_CB */:
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "setting env: \"%s\": 0x%p", token, (mlisp_env_cb_t)data );
-      env_node.value.cb = (mlisp_env_cb_t)data;
+      e.value.cb = (mlisp_env_cb_t)data;
       break;
 
    case 6 /* MLISP_TYPE_LAMBDA */:
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "setting env: \"%s\": node #" SSIZE_T_FMT,
          token, *((mlisp_lambda_t*)data) );
-      env_node.value.lambda = *((mlisp_lambda_t*)data);
+      e.value.lambda = *((mlisp_lambda_t*)data);
       break;
 
    case 7: /* MLISP_TYPE_ARGS_S */
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "setting env: \"%s\": node #" SSIZE_T_FMT,
          token, *((mlisp_args_t*)data) );
-      env_node.value.args_start = *((mlisp_args_t*)data);
+      e.value.args_start = *((mlisp_args_t*)data);
       break;
 
    case 8: /* MLISP_TYPE_ARGS_E */
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "setting env: \"%s\": node #" SSIZE_T_FMT,
          token, *((mlisp_arge_t*)data) );
-      env_node.value.args_end = *((mlisp_arge_t*)data);
+      e.value.args_end = *((mlisp_arge_t*)data);
       break;
 
    default:
@@ -797,7 +797,7 @@ MERROR_RETVAL mlisp_env_set(
 
    /* Add the node to the env. */
    new_idx_out = mdata_vector_append(
-      &(exec->env), &env_node, sizeof( struct MLISP_ENV_NODE ) );
+      &(exec->env), &e, sizeof( struct MLISP_ENV_NODE ) );
    if( 0 > new_idx_out ) {
       retval = mdata_retval( new_idx_out );
    }
@@ -817,7 +817,7 @@ static
 MERROR_RETVAL _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
-   struct MLISP_ENV_NODE* env_n = NULL;
+   struct MLISP_ENV_NODE* e = NULL;
    size_t removed = 0;
 
    assert( 0 < mdata_vector_ct( &(exec->env) ) );
@@ -825,9 +825,9 @@ MERROR_RETVAL _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
    mdata_vector_lock( &(exec->env) );
 
    for( i = mdata_vector_ct( &(exec->env) ) - 1; 0 <= i ; i-- ) {
-      env_n = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
 
-      if( MLISP_TYPE_ARGS_S != env_n->type ) {
+      if( MLISP_TYPE_ARGS_S != e->type ) {
          /* Hunt for the initial env arg separator. */
          continue;
       }
@@ -835,14 +835,14 @@ MERROR_RETVAL _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "found initial env arg separator: " SSIZE_T_FMT, i );
 
-      while( MLISP_TYPE_ARGS_E != env_n->type ) {
+      while( MLISP_TYPE_ARGS_E != e->type ) {
          mdata_vector_unlock( &(exec->env) );
          retval = mdata_vector_remove( &(exec->env), i );
          maug_cleanup_if_not_ok();
          mdata_vector_lock( &(exec->env) );
 
-         /* Refresh env_n based on what i *now* points to. */
-         env_n = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+         /* Refresh e based on what i *now* points to. */
+         e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
 
          removed++;
       }
@@ -1276,8 +1276,8 @@ static MERROR_RETVAL _mlisp_step_iter(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* strpool = NULL;
-   struct MLISP_ENV_NODE* env_node_p = NULL;
-   struct MLISP_ENV_NODE env_node;
+   struct MLISP_ENV_NODE* e_p = NULL;
+   struct MLISP_ENV_NODE e;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1312,26 +1312,26 @@ static MERROR_RETVAL _mlisp_step_iter(
          ", maug_strlen: " SIZE_T_FMT ")",
       n_idx, &(strpool[n->token_idx]), strpool[n->token_idx], n->token_idx,
          maug_strlen( &(strpool[n->token_idx]) ) );
-   if( NULL != (env_node_p = mlisp_env_get_strpool(
+   if( NULL != (e_p = mlisp_env_get_strpool(
       parser, exec, strpool, n->token_idx, n->token_sz
    ) ) ) {
       /* A literal found in the environment. */
       debug_printf( MLISP_EXEC_TRACE_LVL, "found %s in env!",
-         &(strpool[env_node_p->name_strpool_idx]) );
+         &(strpool[e_p->name_strpool_idx]) );
 
       /* Copy onto native stack so we can unlock env in case this is a
        * callback that needs to execute. */
-      memcpy( &env_node, env_node_p, sizeof( struct MLISP_ENV_NODE ) );
-      env_node_p = NULL;
+      memcpy( &e, e_p, sizeof( struct MLISP_ENV_NODE ) );
+      e_p = NULL;
 
    } else if( maug_is_num( &(strpool[n->token_idx]), n->token_sz ) ) {
       /* A numeric literal. */
-      env_node.value.integer = atoi( &(strpool[n->token_idx]) );
-      env_node.type = MLISP_TYPE_INT;
+      e.value.integer = atoi( &(strpool[n->token_idx]) );
+      e.type = MLISP_TYPE_INT;
 
    } else if( maug_is_float( &(strpool[n->token_idx]), n->token_sz ) ) {
-      env_node.value.floating = atof( &(strpool[n->token_idx]) );
-      env_node.type = MLISP_TYPE_FLOAT;
+      e.value.floating = atof( &(strpool[n->token_idx]) );
+      e.type = MLISP_TYPE_FLOAT;
    }
 
    /* TODO: Handle undefined symbols with an error. */
@@ -1341,18 +1341,18 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt ) \
-   } else if( MLISP_TYPE_ ## const_name == env_node.type ) { \
-      _mlisp_stack_push_ ## ctype( exec, env_node.value.name );
+   } else if( MLISP_TYPE_ ## const_name == e.type ) { \
+      _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
-   if( MLISP_TYPE_CB == env_node.type ) {
+   if( MLISP_TYPE_CB == e.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
-      retval = env_node.value.cb( parser, exec );
+      retval = e.value.cb( parser, exec );
       maug_cleanup_if_not_ok();
 
-   } else if( MLISP_TYPE_LAMBDA == env_node.type ) {
+   } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
        * to this lambda-call node, but _mlisp_step_lambda() returns
        * MERROR_PREEMPT up the chain for subsequent heartbeats, until lambda is
@@ -1360,8 +1360,8 @@ static MERROR_RETVAL _mlisp_step_iter(
        */
       retval = _mlisp_step_lambda( parser,
          mdata_vector_get(
-            &(parser->ast), env_node.value.lambda, struct MLISP_AST_NODE ),
-         env_node.value.lambda, exec );
+            &(parser->ast), e.value.lambda, struct MLISP_AST_NODE ),
+         e.value.lambda, exec );
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
