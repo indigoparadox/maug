@@ -178,7 +178,7 @@ ssize_t mdata_strpool_append(
    /* Pad out allocated space so size_t is always aligned. */
    padding = sizeof( size_t ) - ((str_sz + 1 /* NULL */) % sizeof( size_t ));
    alloc_sz = sizeof( size_t ) + str_sz + 1 /* NULL */ + padding;
-   assert( 0 == alloc_sz % 8 );
+   assert( 0 == alloc_sz % sizeof( size_t ) );
 
    debug_printf( MDATA_TRACE_LVL,
       "adding size_t (" SIZE_T_FMT " bytes) + string %s (" SIZE_T_FMT
@@ -200,7 +200,7 @@ ssize_t mdata_strpool_append(
    strpool_p[strpool->str_sz + sizeof( size_t ) + str_sz] = '\0';
 
    /* Add the size of the string to the strpool. */
-   assert( 0 == strpool->str_sz % 8 );
+   assert( 0 == strpool->str_sz % sizeof( size_t ) );
    p_str_sz = (size_t*)&(strpool_p[strpool->str_sz]);
    *p_str_sz = alloc_sz;
 

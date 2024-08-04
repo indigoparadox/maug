@@ -33,6 +33,10 @@
 
 #define MLISP_AST_FLAG_LAMBDA 0x02
 
+#ifndef MLISP_TRACE_SIGIL
+#  define MLISP_TRACE_SIGIL "TRACE"
+#endif /* !MLISP_TRACE_SIGIL */
+
 /**
  * \addtogroup mlisp_types MLISP Types
  * \{
@@ -113,6 +117,10 @@ struct MLISP_EXEC_STATE {
    struct MDATA_VECTOR per_node_child_idx;
    struct MDATA_VECTOR stack;
    struct MDATA_VECTOR env;
+#ifdef MLISP_DEBUG_TRACE
+   size_t trace[MLISP_DEBUG_TRACE];
+   size_t trace_depth;
+#endif /* MLISP_DEBUG_TRACE */
 };
 
 struct MLISP_PARSER {
@@ -416,7 +424,8 @@ MERROR_RETVAL mlisp_ast_dump(
    if( NULL == parser->ast.data_bytes ) {
       autolock = 1;
       mdata_vector_lock( &(parser->ast) );
-      debug_printf( MLISP_TRACE_LVL, "--- BEGIN AST DUMP ---" );
+      debug_printf( MLISP_TRACE_LVL,
+         MLISP_TRACE_SIGIL " --- BEGIN AST DUMP ---" );
    }
 
    /* Make indent. */
@@ -434,7 +443,7 @@ MERROR_RETVAL mlisp_ast_dump(
    n = mdata_vector_get( &(parser->ast), ast_node_idx, struct MLISP_AST_NODE );
    mdata_strpool_lock( &(parser->strpool), strpool );
    debug_printf( MLISP_TRACE_LVL,
-      "%s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SSIZE_T_FMT
+      MLISP_TRACE_SIGIL " %s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SSIZE_T_FMT
          ", c: " SSIZE_T_FMT ", f: 0x%02x)",
       indent, ab, 0 <= n->token_idx ? &(strpool[n->token_idx]) : "",
       ast_node_idx, n->token_idx, n->ast_idx_children_sz, n->flags );
@@ -451,7 +460,8 @@ cleanup:
 
    if( NULL != parser->ast.data_bytes && autolock ) {
       mdata_vector_unlock( &(parser->ast) );
-      debug_printf( MLISP_TRACE_LVL, "--- END AST DUMP ---" );
+      debug_printf( MLISP_TRACE_LVL,
+         MLISP_TRACE_SIGIL " --- END AST DUMP ---" );
    }
 
    return retval;
@@ -485,7 +495,7 @@ MERROR_RETVAL mlisp_stack_dump(
       /* Handle special exceptions. */
       if( MLISP_TYPE_STR == n_stack->type ) {
          debug_printf( MLISP_TRACE_LVL,
-            "stack " SIZE_T_FMT " (STR): %s",
+            MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (STR): %s",
             i, &(strpool[n_stack->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == n_stack->type ) {
@@ -589,7 +599,7 @@ MERROR_RETVAL mlisp_env_dump(
 #  define _MLISP_TYPE_TABLE_DUMPE( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == e->type ) { \
          debug_printf( MLISP_TRACE_LVL, \
-            "env \"%s\" (" #const_name "): " fmt, \
+            MLISP_TRACE_SIGIL " env \"%s\" (" #const_name "): " fmt, \
             &(strpool[e->name_strpool_idx]), e->value.name ); \
 
    mdata_strpool_lock( &(parser->strpool), strpool ); \
@@ -865,12 +875,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    struct MLISP_AST_NODE* n_child = NULL;
    char* strpool = NULL;
 
-   /* Check for special types like lambda, that are lazily evaluated. */
-   if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "skipping lambda children..." );
-      goto cleanup;
-   }
-
    /* Grab the current exec index for the child vector for this node. */
    p_child_idx = mdata_vector_get(
       &(exec->per_node_child_idx), n_idx, size_t );
@@ -878,6 +882,21 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_child_idx );
+
+   if(
+      MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) &&
+      0 == *p_child_idx
+   ) {
+      /* A lambda definition was found, and its exec counter is still pointing
+       * to the arg list. This means the lambda was *not* called on the last
+       * heartbeat, and we're probably just enountering its definition.
+       *
+       * Lambdas are lazily evaluated, so don't pursue it further until it's
+       * called (stee _mlisp_step_lambda() for more info on this.
+       */
+      debug_printf( MLISP_EXEC_TRACE_LVL, "skipping lambda children..." );
+      goto cleanup;
+   }
 
    if( n->ast_idx_children_sz > *p_child_idx ) {
       /* Call the next uncalled child. */
@@ -896,6 +915,9 @@ static MERROR_RETVAL _mlisp_step_iter_children(
 
          /* Increment this node, since the child actually executed. */
          (*p_child_idx)++;
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+            n_idx, *p_child_idx );
 
          /* Could not exec *this* node yet, so don't increment its parent. */
          retval = MERROR_EXEC;
@@ -914,6 +936,10 @@ static MERROR_RETVAL _mlisp_step_lambda(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, ssize_t n_idx
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t* p_child_idx = NULL;
+   struct MLISP_AST_NODE* n_child = NULL;
+   char* strpool = NULL;
+   size_t n_arg_idx = 0;
 
    /* TODO: When executing a lambda, pop the stack for each child of the
     *       first s-expression after the name (second absolute?) and assign
@@ -929,6 +955,20 @@ static MERROR_RETVAL _mlisp_step_lambda(
     */
 
    debug_printf( 1, "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
+
+   /* Grab the current exec index for the child vector for this node. */
+   p_child_idx = mdata_vector_get(
+      &(exec->per_node_child_idx), n_idx, size_t );
+   assert( NULL != p_child_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_child_idx );
+
+   /* TODO: Set return call on stack after args. */
+
+   /* TODO: Pop stack into args in the env. */
+
+   /* TODO: Setup exec pointers to call lambda def on next heartbeat. */
 
    debug_printf( 1, "xvxvxvxvxvxvx END STEP LAMBDA xvxvxvxvxvx" );
 
@@ -946,6 +986,10 @@ static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_ENV_NODE* env_node_p = NULL;
    struct MLISP_ENV_NODE env_node;
 
+#ifdef MLISP_DEBUG_TRACE
+   exec->trace[exec->trace_depth++] = n_idx;
+#endif /* MLISP_DEBUG_TRACE */
+
    if(
       MERROR_OK !=
       (retval = _mlisp_step_iter_children( parser, n, n_idx, exec ))
@@ -955,6 +999,7 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
+      debug_printf( 1, "LAMBDA DEF FOUND" );
       mlisp_stack_push( exec, n_idx, mlisp_lambda_t );
       goto cleanup;
    }
@@ -1031,6 +1076,14 @@ MERROR_RETVAL mlisp_step(
    struct MLISP_AST_NODE* n = NULL;
    size_t zero = 0;
    size_t* p_child_idx = NULL;
+#ifdef MLISP_DEBUG_TRACE
+   size_t i = 0;
+   char trace_str[MLISP_DEBUG_TRACE * 5];
+   maug_ms_t ms_start = 0;
+   maug_ms_t ms_end = 0;
+
+   ms_start = retroflat_get_ms();
+#endif /* MLISP_DEBUG_TRACE */
 
    if( 0 == mdata_vector_ct( &(exec->per_node_child_idx) ) ) {
       debug_printf( MLISP_EXEC_TRACE_LVL, "creating exec state..." );
@@ -1059,6 +1112,10 @@ MERROR_RETVAL mlisp_step(
    n = mdata_vector_get( &(parser->ast), 0, struct MLISP_AST_NODE );
    assert( NULL != n );
 
+#ifdef MLISP_DEBUG_TRACE
+   exec->trace_depth = 0;
+#endif /* MLISP_DEBUG_TRACE */
+
    /* Find next unevaluated symbol. */
    retval = _mlisp_step_iter( parser, n, parser->ast_node_iter, exec );
    if( MERROR_EXEC == retval ) {
@@ -1066,6 +1123,21 @@ MERROR_RETVAL mlisp_step(
    } else if( MERROR_OK == retval ) {
       retval = MERROR_EXEC;
    }
+
+#ifdef MLISP_DEBUG_TRACE
+   ms_end = retroflat_get_ms();
+
+   maug_mzero( trace_str, MLISP_DEBUG_TRACE * 5 );
+   for( i = 0 ; exec->trace_depth > i ; i++ ) {
+      maug_snprintf(
+         &(trace_str[maug_strlen( trace_str )]),
+         (MLISP_DEBUG_TRACE * 5) - maug_strlen( trace_str ),
+         SIZE_T_FMT ", ", exec->trace[i] );
+   }
+   debug_printf( 1,
+      MLISP_TRACE_SIGIL " HBEXEC (%u): %s",
+      ms_end - ms_start, trace_str );
+#endif /* MLISP_DEBUG_TRACE */
   
 cleanup:
 

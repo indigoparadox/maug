@@ -79,8 +79,6 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 typedef int16_t RETROFLAT_IN_KEY;
 
-#     define RETROFLAT_MS_FMT "%lu"
-
 typedef HDC (WINGAPI *WinGCreateDC_t)();
 typedef BOOL (WINGAPI *WinGRecommendDIBFormat_t)( BITMAPINFO FAR* );
 typedef HBITMAP (WINGAPI *WinGCreateBitmap_t)(
