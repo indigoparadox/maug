@@ -590,6 +590,13 @@ MERROR_RETVAL _mlisp_env_cb_if(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   /* TODO: As a special form, this might be easier with its own iter...
+    */
+
+   /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
+    *       dive in.
+    */
+
    return retval;
 }
 
