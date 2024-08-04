@@ -95,7 +95,8 @@
 #  define MJSON_C
 #  define MHTML_C
 #  define MPARSER_C
-#  define MLISP_C
+#  define MLISPP_C
+#  define MLISPE_C
 #endif /* MAUG_C */
 
 #ifndef MAUG_NO_RETRO
