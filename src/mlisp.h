@@ -581,8 +581,6 @@ MERROR_RETVAL mlisp_stack_pop(
    n_idx = mdata_vector_ct( &(exec->stack) ) - 1;
 
    /* Perform the pop! */
-   debug_printf( MLISP_EXEC_TRACE_LVL, "popping: " SSIZE_T_FMT, n_idx );
-
    mdata_vector_lock( &(exec->stack) );
    n_stack = mdata_vector_get(
       &(exec->stack), n_idx, struct MLISP_STACK_NODE );
@@ -590,6 +588,15 @@ MERROR_RETVAL mlisp_stack_pop(
    memcpy( o, n_stack, sizeof( struct MLISP_STACK_NODE ) );
    n_stack = NULL;
    mdata_vector_unlock( &(exec->stack) );
+
+#  define _MLISP_TYPE_TABLE_POPD( idx, ctype, name, const_name, fmt ) \
+      } else if( MLISP_TYPE_ ## const_name == o->type ) { \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
+            "popping: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name );
+
+   if( 0 ) {
+   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_POPD )
+   }
 
    retval = mdata_vector_remove( &(exec->stack), n_idx );
 
@@ -782,6 +789,48 @@ MERROR_RETVAL mlisp_env_set(
       new_idx_out, token );
 
 cleanup:
+
+   return retval;
+}
+
+/* === */
+
+static
+MERROR_RETVAL _mlisp_env_cb_add(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_STACK_NODE adds[2];
+   char* strpool = NULL;
+   /* TODO: Vary type based on added types. */
+   int sum = 0;
+   size_t i = 0;
+
+#  define _MLISP_TYPE_TABLE_ADD( idx, ctype, name, const_name, fmt ) \
+      } else if( MLISP_TYPE_ ## const_name == adds[i].type ) { \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
+            "add: %d * " fmt, sum, adds[i].value.name ); \
+         sum += adds[i].value.name;
+
+   for( i = 0 ; 2 > i ; i++ ) {
+      retval = mlisp_stack_pop( exec, &(adds[i]) );
+      maug_cleanup_if_not_ok();
+
+      if( 0 ) {
+      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ADD )
+      } else {
+         error_printf( "add: invalid type!" );
+         retval = MERROR_USR;
+         goto cleanup;
+      }
+   }
+
+   retval = mlisp_stack_push( exec, sum, int16_t );
+
+cleanup:
+
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+
 
    return retval;
 }
@@ -1025,6 +1074,8 @@ static MERROR_RETVAL _mlisp_step_lambda(
    size_t* p_lambda_child_idx = NULL;
    size_t* p_args_child_idx = NULL;
    struct MLISP_AST_NODE* n_args = NULL;
+   struct MLISP_AST_NODE* n_child = NULL;
+   char* strpool = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1099,13 +1150,41 @@ static MERROR_RETVAL _mlisp_step_lambda(
        */
       retval = MERROR_PREEMPT;
 
+   } else if( *p_lambda_child_idx >= n->ast_idx_children_sz ) {
+
+      /* No more children to execute! */
+      retval = MERROR_OK;
+
    } else {
 
-      /* TODO: Dive into first lambda child until we no longer can. */
+      /* Dive into first lambda child until we no longer can. */
 
-      /* TODO: If MERROR_PREEMPT is not returned, remove args_s and args_e. */
+      n_child = mdata_vector_get(
+         &(parser->ast), n->ast_idx_children[*p_lambda_child_idx],
+         struct MLISP_AST_NODE );
+      retval = _mlisp_step_iter(
+         parser, n_child, n->ast_idx_children[*p_lambda_child_idx], exec );
+      if( MERROR_OK == retval ) {
+         mdata_strpool_lock( &(parser->strpool), strpool );
+         assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "eval step " SSIZE_T_FMT " under %s...",
+            *p_lambda_child_idx, &(strpool[n->token_idx]) );
+         mdata_strpool_unlock( &(parser->strpool), strpool );
+
+         /* Increment this node, since the child actually executed. */
+         (*p_lambda_child_idx)++;
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+            n_idx, *p_lambda_child_idx );
+
+         /* Could not exec *this* node yet, so don't increment its parent. */
+         retval = MERROR_PREEMPT;
+      }
 
    }
+
+   /* TODO: If MERROR_PREEMPT is not returned, remove args_s and args_e. */
 
    debug_printf( 1, "xvxvxvxvxvxvx END STEP LAMBDA xvxvxvxvxvx" );
 
@@ -1179,6 +1258,9 @@ static MERROR_RETVAL _mlisp_step_iter(
       env_node.value.floating = atof( &(strpool[n->token_idx]) );
       env_node.type = MLISP_TYPE_FLOAT;
    }
+
+   /* TODO: Handle undefined symbols with an error. */
+
    mdata_vector_unlock( &(exec->env) );
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
@@ -1510,6 +1592,9 @@ MERROR_RETVAL mlisp_exec_init(
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "*", 1, MLISP_TYPE_CB, _mlisp_env_cb_multiply );
+   maug_cleanup_if_not_ok();
+   retval = mlisp_env_set(
+      parser, exec, "+", 1, MLISP_TYPE_CB, _mlisp_env_cb_add );
    maug_cleanup_if_not_ok();
 
 cleanup:
