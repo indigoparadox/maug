@@ -28,6 +28,9 @@ typedef ssize_t mlisp_lambda_t;
 
 typedef mlisp_lambda_t mlisp_args_t;
 typedef mlisp_lambda_t mlisp_arge_t;
+typedef mlisp_lambda_t mlisp_then_t;
+
+typedef uint8_t mlisp_bool_t;
 
 /**
  * \brief Table of numeric types.
@@ -37,7 +40,7 @@ typedef mlisp_lambda_t mlisp_arge_t;
 #define MLISP_NUM_TYPE_TABLE( f ) \
    f( 1, int16_t,             integer,         INT,      "%d" ) \
    f( 2, float,               floating,        FLOAT,    "%f" ) \
-   f( 3, uint8_t,             boolean,         BOOLEAN,  "%u" )
+   f( 3, mlisp_bool_t,        boolean,         BOOLEAN,  "%u" )
 
 /**
  * \brief Table of other types.
@@ -49,14 +52,9 @@ typedef mlisp_lambda_t mlisp_arge_t;
    f( 4, mdata_strpool_idx_t, strpool_idx,   STR,     SSIZE_T_FMT ) \
    f( 5, mlisp_env_cb_t,      cb,            CB,      "%p" ) \
    f( 6, mlisp_lambda_t,      lambda,        LAMBDA,  SSIZE_T_FMT ) \
-   f( 7, mlisp_args_t,       args_start,    ARGS_S,  SSIZE_T_FMT ) \
-   f( 8, mlisp_arge_t,       args_end,      ARGS_E,  SSIZE_T_FMT )   
-
-#define MLISP_PARSER_PSTATE_TABLE( f ) \
-   f( MLISP_PSTATE_NONE, 0 ) \
-   f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
-   f( MLISP_PSTATE_SYMBOL, 2 ) \
-   f( MLISP_PSTATE_STRING, 3 )
+   f( 7, mlisp_args_t,        args_start,    ARGS_S,  SSIZE_T_FMT ) \
+   f( 8, mlisp_arge_t,        args_end,      ARGS_E,  SSIZE_T_FMT ) \
+   f( 9, mlisp_then_t,        then,          THEN,  SSIZE_T_FMT )   
 
 /*! \} */ /* mlisp_types */
 
@@ -64,7 +62,7 @@ struct MLISP_PARSER;
 struct MLISP_EXEC_STATE;
 
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags );
 
 #define _MLISP_TYPE_TABLE_FIELDS( idx, ctype, name, const_name, fmt ) \
    ctype name;

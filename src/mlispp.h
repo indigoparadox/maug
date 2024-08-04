@@ -15,6 +15,19 @@
 
 #define MLISP_AST_FLAG_LAMBDA 0x02
 
+#define MLISP_AST_FLAG_IF     0x04
+
+#define MLISP_AST_FLAG_IF_COND   0x08
+
+#define MLISP_AST_FLAG_IF_THEN   0x10
+
+#define MLISP_PARSER_PSTATE_TABLE( f ) \
+   f( MLISP_PSTATE_NONE, 0 ) \
+   f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
+   f( MLISP_PSTATE_SYMBOL, 2 ) \
+   f( MLISP_PSTATE_STRING, 3 ) \
+   f( MLISP_PSTATE_LAMBDA_ARGS, 4 )
+
 /**
  * \addtogroup mlisp_parser MLISP Abstract Syntax Tree Parser
  * \{
@@ -87,7 +100,7 @@ MPARSER_PSTATE_NAMES( MLISP_PARSER_PSTATE_TABLE, mlisp )
 /* === */
 
 static MERROR_RETVAL
-_mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
+_mlisp_ast_add_child( struct MLISP_PARSER* parser, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_AST_NODE* n_parent = NULL;
    struct MLISP_AST_NODE ast_node;
@@ -103,6 +116,7 @@ _mlisp_ast_add_child( struct MLISP_PARSER* parser ) {
    }
    ast_node.token_idx = -1;
    ast_node.ast_idx_children_sz = 0;
+   ast_node.flags = flags;
 
    debug_printf( MLISP_PARSE_TRACE_LVL, "adding node under " SSIZE_T_FMT "...",
       ast_node.ast_idx_parent );
@@ -177,12 +191,18 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    assert( 0 < token_sz );
 
    /* Setup flags based on token name. */
-   if( 0 == strncmp( &(strpool[token_idx]), "lambda", token_sz ) ) {
+   if( 0 == strncmp( &(strpool[token_idx]), "lambda", token_sz + 1 ) ) {
       /* Special node: lambda. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
          &(strpool[token_idx]), token_sz );
       n->flags |= MLISP_AST_FLAG_LAMBDA;
+   } else if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz + 1 ) ) {
+      /* Special node: if. */
+      debug_printf( MLISP_PARSE_TRACE_LVL,
+         "setting node \"%s\" (" SIZE_T_FMT ") flag: IF",
+         &(strpool[token_idx]), token_sz );
+      n->flags |= MLISP_AST_FLAG_IF;
    }
 
    /* Debug report. */
@@ -247,7 +267,7 @@ MERROR_RETVAL _mlisp_ast_add_raw_token( struct MLISP_PARSER* parser ) {
       goto cleanup;
    }
 
-   _mlisp_ast_add_child( parser );
+   _mlisp_ast_add_child( parser, 0 );
    _mlisp_ast_set_child_token( parser, str_idx, parser->base.token_sz );
    mlisp_parser_reset_token( parser );
    retval = _mlisp_ast_traverse_parent( parser );
@@ -323,6 +343,9 @@ cleanup:
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
    mdata_strpool_idx_t str_idx = -1;
+   uint8_t n_flags = 0;
+   size_t n_children = 0;
+   struct MLISP_AST_NODE* n = NULL;
 
 #ifdef MPARSER_TRACE_NAMES
    debug_printf( MLISP_PARSE_TRACE_LVL,
@@ -332,6 +355,15 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
       mlisp_parser_pstate( parser ),
       parser->base.pstate_sz );
 #endif /* MPARSER_TRACE_NAMES */
+
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get(
+      &(parser->ast), parser->ast_node_iter, struct MLISP_AST_NODE );
+   if( NULL != n ) {
+      n_flags = n->flags;
+      n_children = n->ast_idx_children_sz;
+   }
+   mdata_vector_unlock( &(parser->ast) );
 
    switch( c ) {
    case '\r':
@@ -371,7 +403,10 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          /* mlisp_ast_dump( parser, 0, 0, 0 ); */
 
       } else if(
-         MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser )
+         (
+            MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser ) ||
+            MLISP_PSTATE_LAMBDA_ARGS == mlisp_parser_pstate( parser )
+         )
          /* Don't terminate the current symbol if the last_c was *any* of the
           * other terminating characters.
           */
@@ -404,13 +439,37 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          MLISP_PSTATE_NONE == mlisp_parser_pstate( parser ) ||
          MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser )
       ) {
-         /* First symbol after an open paren is an op. */
-         retval = mlisp_parser_pstate_push( parser, MLISP_PSTATE_SYMBOL_OP );
+         if(
+            MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n_flags) &&
+            0 == n_children
+         ) {
+            /* Special case: all tokens in this parent are lambda args. */
+            retval =
+               mlisp_parser_pstate_push( parser, MLISP_PSTATE_LAMBDA_ARGS );
+         } else {
+            /* Otherwise, first symbol after an open paren is an op. */
+            retval = mlisp_parser_pstate_push( parser, MLISP_PSTATE_SYMBOL_OP );
+         }
          maug_cleanup_if_not_ok();
          mlisp_parser_reset_token( parser );
 
          /* Add a new empty child to be filled out when tokens are parsed. */
-         _mlisp_ast_add_child( parser );
+         if(
+            MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n_flags) &&
+            0 == n_children
+         ) {
+            /* Parent is IF with no children. */
+            _mlisp_ast_add_child( parser, MLISP_AST_FLAG_IF_COND );
+         } else if(
+            MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n_flags) &&
+            0 < n_children
+         ) {
+            /* Parent is IF with >= 1 children. */
+            _mlisp_ast_add_child( parser, MLISP_AST_FLAG_IF_THEN );
+         } else {
+            /* Parent is just a normal node. */
+            _mlisp_ast_add_child( parser, 0 );
+         }
 
       } else if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
          retval = mlisp_parser_append_token( parser, c );
@@ -424,7 +483,8 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    case ')':
       if(
          MLISP_PSTATE_SYMBOL_OP == mlisp_parser_pstate( parser ) ||
-         MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser )
+         MLISP_PSTATE_SYMBOL == mlisp_parser_pstate( parser ) ||
+         MLISP_PSTATE_LAMBDA_ARGS == mlisp_parser_pstate( parser )
       ) {
          if( 0 < parser->base.token_sz ) {
             /* A raw token without parens terminated by whitespace can't have

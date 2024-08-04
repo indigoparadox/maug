@@ -62,6 +62,8 @@ MERROR_RETVAL mdata_vector_alloc(
 
 void mdata_vector_free( struct MDATA_VECTOR* v );
 
+#define mdata_strpool_sz( strpool ) ((strpool)->str_sz_max)
+
 #define mdata_strpool_lock( strpool, ptr ) \
    maug_mlock( (strpool)->str_h, ptr ); \
    maug_cleanup_if_null_lock( char*, ptr );
@@ -91,6 +93,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
          mdata_vector_ct( v ) - 1 )) : NULL)
 
 #define mdata_vector_ct( v ) ((v)->ct)
+
+#define mdata_vector_sz( v ) (((v)->ct_max) * ((v)->item_sz))
 
 #define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
 
