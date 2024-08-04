@@ -369,12 +369,16 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
 
    assert( 0 < v->item_sz );
 
-   mdata_vector_unlock( v );
+   mdata_vector_lock( v );
 
    for( i = idx ; v->ct > i + 1 ; i++ ) {
       debug_printf( MDATA_TRACE_LVL,
-         "shifting vector item " SIZE_T_FMT " up by 1...", i );
-      memcpy( &(v->data_bytes[i]), &(v->data_bytes[i + 1]), v->item_sz );
+         "shifting " SIZE_T_FMT "-byte vector item " SIZE_T_FMT " up by 1...",
+         v->item_sz, i );
+      memcpy(
+         &(v->data_bytes[i * v->item_sz]),
+         &(v->data_bytes[(i + 1) * v->item_sz]),
+         v->item_sz );
    }
 
    v->ct--;
