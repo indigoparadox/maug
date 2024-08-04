@@ -814,7 +814,8 @@ cleanup:
 /* === */
 
 static
-MERROR_RETVAL _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
+ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
+   ssize_t ret_idx = 0;
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
@@ -833,7 +834,11 @@ MERROR_RETVAL _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
       }
 
       debug_printf( MLISP_EXEC_TRACE_LVL,
-         "found initial env arg separator: " SSIZE_T_FMT, i );
+         "found initial env arg separator " SSIZE_T_FMT " with ret: "
+            SSIZE_T_FMT,
+         i, e->value.args_start );
+
+      ret_idx = e->value.args_start;
 
       while( MLISP_TYPE_ARGS_E != e->type ) {
          mdata_vector_unlock( &(exec->env) );
@@ -864,7 +869,11 @@ cleanup:
 
    mdata_vector_unlock( &(exec->env) );
 
-   return retval;
+   if( MERROR_OK != retval ) {
+      ret_idx = retval * -1;
+   }
+
+   return ret_idx;
 }
 
 /* === */
@@ -883,7 +892,7 @@ MERROR_RETVAL _mlisp_env_cb_add(
 #  define _MLISP_TYPE_TABLE_ADD( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == adds[i].type ) { \
          debug_printf( MLISP_EXEC_TRACE_LVL, \
-            "add: %d * " fmt, sum, adds[i].value.name ); \
+            "add: %d + " fmt, sum, adds[i].value.name ); \
          sum += adds[i].value.name;
 
    for( i = 0 ; 2 > i ; i++ ) {
@@ -1151,6 +1160,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
    struct MLISP_AST_NODE* n_args = NULL;
    struct MLISP_AST_NODE* n_child = NULL;
    char* strpool = NULL;
+   ssize_t ret_idx = 0;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1228,7 +1238,10 @@ static MERROR_RETVAL _mlisp_step_lambda(
    } else if( *p_lambda_child_idx >= n->ast_idx_children_sz ) {
 
       /* No more children to execute! */
-      retval = _mlisp_env_prune_args( exec );
+      ret_idx = _mlisp_env_prune_args( exec );
+      if( 0 > ret_idx ) {
+         retval = ret_idx * -1;
+      }
 
    } else {
 
