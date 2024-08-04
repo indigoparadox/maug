@@ -837,9 +837,7 @@ MERROR_RETVAL _mlisp_env_cb_define(
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE key;
    struct MLISP_STACK_NODE val;
-   char* strpool = NULL;
    MAUG_MHANDLE key_tmp_h = NULL;
-   size_t key_sz = 0;
    char* key_tmp = NULL;
 
    retval = mlisp_stack_pop( exec, &val );
@@ -855,25 +853,17 @@ MERROR_RETVAL _mlisp_env_cb_define(
       goto cleanup;
    }
 
-   mdata_strpool_lock( &(parser->strpool), strpool );
-
-   /* Allocate a temporary string to hold the key. */
-   key_sz = maug_strlen( &(strpool[key.value.strpool_idx]) );
-   key_tmp_h = maug_malloc( key_sz + 1, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, key_tmp_h );
+   key_tmp_h = mdata_strpool_extract(
+      &(parser->strpool), key.value.strpool_idx );
+   /* TODO: Handle this gracefully. */
+   assert( NULL != key_tmp_h );
 
    maug_mlock( key_tmp_h, key_tmp );
    maug_cleanup_if_null_lock( char*, key_tmp );
 
-   maug_mzero( key_tmp, key_sz + 1 );
-   maug_strncpy( key_tmp, &(strpool[key.value.strpool_idx]), key_sz );
-
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "define \"%s\" (strpool(" SIZE_T_FMT "))...",
-      &(strpool[key.value.strpool_idx]), key.value.strpool_idx );
-
-   mdata_strpool_unlock( &(parser->strpool), strpool );
-   assert( NULL == strpool );
+      key_tmp, key.value.strpool_idx );
 
    retval = mlisp_env_set( parser, exec, key_tmp, 0, val.type, &(val.value) );
 
@@ -885,10 +875,6 @@ cleanup:
 
    if( NULL != key_tmp_h ) {
       maug_mfree( key_tmp_h );
-   }
-
-   if( NULL != strpool ) {
-      mdata_strpool_unlock( &(parser->strpool), strpool );
    }
 
    return retval;
@@ -980,11 +966,13 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
    size_t arg_idx = 0;
    struct MLISP_STACK_NODE stack_n_arg;
    struct MLISP_AST_NODE* ast_n_arg = NULL;
-   char* strpool = NULL;
+   MAUG_MHANDLE key_tmp_h = NULL;
+   char* key_tmp = NULL;
 
-      /* TODO: Pop stack into args in the env. */
-
-   mdata_strpool_lock( &(parser->strpool), strpool );
+   /* Pop stack into args into the env. These are all the results of previous
+    * evaluations, before the lambda call, so we can just grab them all in
+    * one go!
+    */
 
    while( n->ast_idx_children_sz > arg_idx ) {
       
@@ -995,14 +983,34 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
          &(parser->ast), n->ast_idx_children[arg_idx],
          struct MLISP_AST_NODE );
 
-      debug_printf( 1, "ARG: %s", &(strpool[ast_n_arg->token_idx]) );
+      /* Pull out the arg name from the strpool so we can call env_set(). */
+      key_tmp_h = mdata_strpool_extract(
+         &(parser->strpool), ast_n_arg->token_idx );
+      /* TODO: Handle this gracefully. */
+      assert( NULL != key_tmp_h );
+
+      maug_mlock( key_tmp_h, key_tmp );
+      maug_cleanup_if_null_lock( char*, key_tmp );
+
+      retval = mlisp_env_set(
+         parser, exec, key_tmp, 0, stack_n_arg.type, &(stack_n_arg.value) );
+      maug_cleanup_if_not_ok();
+
+      maug_munlock( key_tmp_h, key_tmp );
+      maug_mfree( key_tmp_h );
 
       arg_idx++;
    }
 
 cleanup:
 
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+   if( NULL != key_tmp ) {
+      maug_munlock( key_tmp_h, key_tmp );
+   }
+
+   if( NULL != key_tmp_h ) {
+      maug_mfree( key_tmp_h );
+   }
 
    return retval;
 }
@@ -1014,12 +1022,13 @@ static MERROR_RETVAL _mlisp_step_lambda(
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t* p_child_idx = NULL;
+   size_t* p_lambda_child_idx = NULL;
+   size_t* p_args_child_idx = NULL;
+   struct MLISP_AST_NODE* n_args = NULL;
 
-   /* TODO: When executing a lambda, pop the stack for each child of the
-    *       first s-expression after the name (second absolute?) and assign
-    *       them into a new env. Then eval second child with new env.
-    */
+#ifdef MLISP_DEBUG_TRACE
+   exec->trace[exec->trace_depth++] = n_idx;
+#endif /* MLISP_DEBUG_TRACE */
 
    /* TODO: Put args into env between args and arge node types. On finish,
     *       cycle through env in reverse and delete most recently added arg envs.
@@ -1032,39 +1041,58 @@ static MERROR_RETVAL _mlisp_step_lambda(
    debug_printf( 1, "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
 
    /* Grab the current exec index for the child vector for this node. */
-   p_child_idx = mdata_vector_get(
+   p_lambda_child_idx = mdata_vector_get(
       &(exec->per_node_child_idx), n_idx, size_t );
-   assert( NULL != p_child_idx );
+   assert( NULL != p_lambda_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
-      n_idx, *p_child_idx );
+      "child idx for lambda AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_lambda_child_idx );
 
-   if( 0 == *p_child_idx ) {
-      /* Set return call in env before args, in *before-arg* delimiter, so the
-      * args can be stripped off later when we return. */
-      retval = mlisp_env_set(
-         parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx );
-      maug_cleanup_if_not_ok();
+   /* There needs to be an arg node and an exec node. */
+   /* TODO: Handle this gracefully. */
+   assert( 1 < n->ast_idx_children_sz );
+
+   if( 0 == *p_lambda_child_idx ) {
+      /* Parse the args passed to this lambda into the env, temporarily. */
+
+      /* Get the current args node. */
+      n_args = mdata_vector_get(
+         &(parser->ast), n->ast_idx_children[*p_lambda_child_idx],
+         struct MLISP_AST_NODE );
+
+      /* Get the current args node child index. */
+      p_args_child_idx = mdata_vector_get(
+         &(exec->per_node_child_idx),
+         n->ast_idx_children[*p_lambda_child_idx], size_t );
+      assert( NULL != p_args_child_idx );
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "child idx for args AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+         *p_lambda_child_idx, *p_args_child_idx );
+
+      if( 0 == *p_args_child_idx ) {
+         /* Set return call in env before first arg, in *before-arg* delimiter,
+          * so the args can be stripped off later when we return. */
+         retval = mlisp_env_set(
+            parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx );
+         maug_cleanup_if_not_ok();
+      }
 
       /* Pop stack into args in the env. */
       retval = _mlisp_step_lambda_args(
-         parser,
-         mdata_vector_get(
-            &(parser->ast), n->ast_idx_children[*p_child_idx],
-            struct MLISP_AST_NODE ),
-         n->ast_idx_children[*p_child_idx], exec );
+         parser, n_args, n->ast_idx_children[*p_lambda_child_idx], exec );
 
-      /* Set *after-arg* delimiter in env */
-      retval = mlisp_env_set(
-         parser, exec, "$ARGS_E$", 0, MLISP_TYPE_ARGS_E, &n_idx );
-      maug_cleanup_if_not_ok();
+      if( MERROR_OK == retval ) {
+         /* Set *after-arg* delimiter in env after last arg. */
+         retval = mlisp_env_set(
+            parser, exec, "$ARGS_E$", 0, MLISP_TYPE_ARGS_E, &n_idx );
+         maug_cleanup_if_not_ok();
 
-      /* Increment *p_child_idx and place args_e so persistant env vars can be
-       * defined afterwards. */
-      (*p_child_idx)++;
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
-         n_idx, *p_child_idx );
+         /* Increment child idx so we call the exec child on next heartbeat. */
+         (*p_lambda_child_idx)++;
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+            n_idx, *p_lambda_child_idx );
+      }
 
       /* Set the error to MERROR_PREEMPT so that caller knows this lambda isn't
        * finished executing.

@@ -29,6 +29,8 @@ struct MDATA_VECTOR {
 ssize_t mdata_strpool_find(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz );
 
+MAUG_MHANDLE mdata_strpool_extract( struct MDATA_STRPOOL* s, size_t i );
+
 ssize_t mdata_strpool_append(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz );
 
@@ -152,6 +154,46 @@ cleanup:
 
    return i;
 }
+
+/* === */
+
+MAUG_MHANDLE mdata_strpool_extract( struct MDATA_STRPOOL* s, size_t i ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* strpool = NULL;
+   MAUG_MHANDLE out_h = NULL;
+   size_t out_sz = 0;
+   char* out_tmp = NULL;
+
+   mdata_strpool_lock( s, strpool );
+
+   out_sz = maug_strlen( &(strpool[i]) );
+   out_h = maug_malloc( out_sz + 1, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
+
+   maug_mlock( out_h, out_tmp );
+   maug_cleanup_if_null_lock( char*, out_tmp );
+
+   maug_mzero( out_tmp, out_sz + 1 );
+   maug_strncpy( out_tmp, &(strpool[i]), out_sz );
+
+cleanup:
+
+   if( NULL != out_tmp ) {
+      maug_munlock( out_h, out_tmp );
+   }
+
+   if( MERROR_OK != retval && NULL != out_h ) {
+      maug_mfree( out_h );
+   }
+
+   if( NULL != strpool ) {
+      mdata_strpool_unlock( s, strpool );
+   }
+
+   return out_h;
+}
+
+/* === */
 
 ssize_t mdata_strpool_append(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz
