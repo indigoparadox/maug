@@ -303,7 +303,6 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    size_t i = 0;
 
    /* This requires env be locked before entrance! */
-   /* TODO: Autolock? */
 
    while( exec->env.ct > i ) {
       assert( mdata_vector_is_locked( &(exec->env) ) );
@@ -337,6 +336,8 @@ MERROR_RETVAL mlisp_env_set(
       token_sz = maug_strlen( token );
    }
    assert( 0 < token_sz );
+
+   /* TODO: Find previous env nodes with same token and change. */
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt ) \
       case idx: \
@@ -720,8 +721,6 @@ static MERROR_RETVAL _mlisp_preempt(
    char* strpool = NULL;
    struct MLISP_AST_NODE* n = NULL;
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
@@ -739,8 +738,6 @@ static MERROR_RETVAL _mlisp_preempt(
 
 cleanup:
 
-   mdata_vector_unlock( &(parser->ast) );
-
    return retval;
 }
 
@@ -752,7 +749,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_child_idx = NULL;
    struct MLISP_AST_NODE* n = NULL;
-   size_t child_idx = 0;
 
    /* Grab the current exec index for the child vector for this node. */
    assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
@@ -763,8 +759,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_child_idx );
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    if(
@@ -788,15 +782,9 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    if( mlisp_ast_has_ready_children( *p_child_idx, n ) ) {
       /* Call the next uncalled child. */
 
-      /* Prepare for stepping. */
-      child_idx = n->ast_idx_children[*p_child_idx];
-      assert( mdata_vector_is_locked( &(parser->ast) ) );
-      mdata_vector_unlock( &(parser->ast) );
-
       /* Step and check. */
-      assert( !mdata_vector_is_locked( &(parser->ast) ) );
-      retval = _mlisp_step_iter( parser, child_idx, exec );
-      assert( !mdata_vector_is_locked( &(parser->ast) ) );
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_child_idx], exec );
       if( MERROR_OK == retval ) {
          retval = _mlisp_preempt(
             "node", parser, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
@@ -816,8 +804,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    }
 
 cleanup:
-
-   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
@@ -839,9 +825,6 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
     * evaluations, before the lambda call, so we can just grab them all in
     * one go!
     */
-
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
 
    /* Get the current args node. */
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
@@ -885,8 +868,6 @@ cleanup:
    if( NULL != key_tmp_h ) {
       maug_mfree( key_tmp_h );
    }
-
-   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
@@ -944,7 +925,6 @@ static MERROR_RETVAL _mlisp_reset_lambda(
       "resetting lambda " SIZE_T_FMT "...", n_idx );
 
    assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
    assert( !mdata_vector_is_locked( &(exec->env) ) );
 
    /* Clear off lambda stack args. */
@@ -955,9 +935,7 @@ static MERROR_RETVAL _mlisp_reset_lambda(
    maug_cleanup_if_not_ok();
 
    /* Reset per-node program counters. */
-   mdata_vector_lock( &(parser->ast) );
    retval = _mlisp_reset_child_pcs( parser, n_idx, exec );
-   mdata_vector_unlock( &(parser->ast) );
 
 cleanup:
 
@@ -1032,21 +1010,12 @@ static MERROR_RETVAL _mlisp_step_lambda(
    size_t* p_lambda_child_idx = NULL;
    size_t* p_args_child_idx = NULL;
    struct MLISP_AST_NODE* n = NULL;
-   size_t child_idx = 0;
    ssize_t tail_idx = 0;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
    assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
-
-   /* TODO: Put args into env between args and arge node types. On finish,
-    *       cycle through env in reverse and delete most recently added arg envs.
-    */
-
-   /* TODO: When searching env, search in reverse so most recent dupe args are
-    *       hit first.
-    */
 
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
@@ -1060,8 +1029,6 @@ static MERROR_RETVAL _mlisp_step_lambda(
       "child idx for lambda AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_lambda_child_idx );
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
    
    tail_idx = _mlisp_detect_tail_call( parser, n_idx, exec );
@@ -1071,9 +1038,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
        * replace it with a new one afterwards.
        */
       debug_printf( MLISP_EXEC_TRACE_LVL, "TAIL TIME!" );
-      mdata_vector_unlock( &(parser->ast) );
       _mlisp_reset_lambda( parser, n_idx, exec );
-      mdata_vector_lock( &(parser->ast) );
    }
 
    exec->flags |= MLISP_EXEC_FLAG_IN_LAMBDA;
@@ -1084,8 +1049,6 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
    if( 0 == *p_lambda_child_idx ) {
       /* Parse the args passed to this lambda into the env, temporarily. */
-
-      /* XXX */
 
       /* Get the current args node child index. */
       assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
@@ -1100,13 +1063,10 @@ static MERROR_RETVAL _mlisp_step_lambda(
       if( 0 == *p_args_child_idx ) {
          /* Set return call in env before first arg, in *before-arg* delimiter,
          * so the args can be stripped off later when we return. */
-         /* TODO: Push the index of the CALLER, not the LAMBDA? */
          retval = mlisp_env_set(
             parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx, NULL, 0 );
          maug_cleanup_if_not_ok();
       }
-
-      mdata_vector_unlock( &(parser->ast) );
 
       /* Pop stack into args in the env. */
       retval = _mlisp_step_lambda_args(
@@ -1130,15 +1090,11 @@ static MERROR_RETVAL _mlisp_step_lambda(
       */
       retval = MERROR_PREEMPT;
 
-      /* XXX */
-
    } else if( mlisp_ast_has_ready_children( *p_lambda_child_idx, n ) ) {
       /* Dive into first lambda child until we no longer can. */
 
-      child_idx = n->ast_idx_children[*p_lambda_child_idx];
-      mdata_vector_unlock( &(parser->ast) );
-
-      retval = _mlisp_step_iter( parser, child_idx, exec );
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_lambda_child_idx], exec );
 
       if( MERROR_OK == retval ) {
          retval = _mlisp_preempt(
@@ -1148,18 +1104,15 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
    } else {
       /* No more children to execute! */
-      mdata_vector_unlock( &(parser->ast) );
       _mlisp_reset_lambda( parser, n_idx, exec );
    }
 
-   /* TODO: If MERROR_PREEMPT is not returned, remove args_s and args_e. */
+   /* TODO: If MERROR_PREEMPT is not returned, remove args_s and args_e? */
 
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "xvxvxvxvxvxvx END STEP LAMBDA xvxvxvxvxvx" );
 
 cleanup:
-
-   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
@@ -1174,7 +1127,6 @@ static MERROR_RETVAL _mlisp_step_if(
    size_t* p_if_child_idx = NULL;
    struct MLISP_STACK_NODE s;
    struct MLISP_AST_NODE* n = NULL;
-   size_t child_idx = 0;
 
    debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
 
@@ -1187,20 +1139,13 @@ static MERROR_RETVAL _mlisp_step_if(
       "child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_if_child_idx );
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    if( 0 == *p_if_child_idx ) {
-      /* TODO: Evaluating if condition. */
-
-      /* Prepare for stepping. */
-      child_idx = n->ast_idx_children[*p_if_child_idx];
-      mdata_vector_unlock( &(parser->ast) );
-
-      /* Handle it like any other statement. */
+      /* Evaluating if condition. */
       debug_printf( MLISP_EXEC_TRACE_LVL, "stepping into condition..." );
-      retval = _mlisp_step_iter( parser, child_idx, exec );
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_if_child_idx], exec );
       debug_printf( MLISP_EXEC_TRACE_LVL, "...stepped out of condition" );
 
       /* Vary the child we jump to based on the boolean val on the stack. */
@@ -1230,11 +1175,10 @@ static MERROR_RETVAL _mlisp_step_if(
          "descending into IF path: " SIZE_T_FMT, *p_if_child_idx );
       
       /* Prepare for stepping. */
-      child_idx = n->ast_idx_children[*p_if_child_idx];
-      mdata_vector_unlock( &(parser->ast) );
 
       /* Step and check. */
-      retval = _mlisp_step_iter( parser, child_idx, exec );
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_if_child_idx], exec );
       if( MERROR_OK == retval ) {
          retval = _mlisp_preempt(
             "if", parser, n_idx, exec, p_if_child_idx, 3 );
@@ -1243,9 +1187,35 @@ static MERROR_RETVAL _mlisp_step_if(
 
 cleanup:
 
-   mdata_vector_unlock( &(parser->ast) );
-
    debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
+
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _mlisp_stack_cleanup(
+   struct MLISP_PARSER* parser, size_t n_idx, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t i = 0;
+   struct MLISP_STACK_NODE o;
+
+   /* Pop elements off the stack until we hit the matching begin frame. */
+   i = mdata_vector_ct( &(exec->stack) ) - 1;
+   while( 0 <= i ) {
+      
+      retval = mlisp_stack_pop( exec, &o );
+      maug_cleanup_if_not_ok();
+
+      if( MLISP_TYPE_BEGIN == o.type && n_idx == o.value.begin ) {
+         break;
+      }
+
+      i--;
+   }
+
+cleanup:
 
    return retval;
 }
@@ -1329,7 +1299,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    assert( mdata_vector_is_locked( &(exec->per_node_visit_ct) ) );
    p_visit_ct = mdata_vector_get(
@@ -1341,9 +1311,6 @@ static MERROR_RETVAL _mlisp_step_iter(
       n_idx, *p_visit_ct );
 
    /* Push a stack frame marker on the first visit to a BEGIN node. */
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
-   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
    if(
       MLISP_AST_FLAG_BEGIN == (MLISP_AST_FLAG_BEGIN & n->flags) &&
       1 == *p_visit_ct
@@ -1351,7 +1318,6 @@ static MERROR_RETVAL _mlisp_step_iter(
       /* Push a stack frame on first visit. */
       _mlisp_stack_push_mlisp_begin_t( exec, n_idx );
    }
-   mdata_vector_unlock( &(parser->ast) );
 
    if(
       MERROR_OK !=
@@ -1360,16 +1326,11 @@ static MERROR_RETVAL _mlisp_step_iter(
       goto cleanup;
    }
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-   mdata_vector_lock( &(parser->ast) );
-   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
-
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
       /* Push the lambda to the stack so that the "define" above it can
        * grab it and associate it with the env.
        */
-      mdata_vector_unlock( &(parser->ast) );
       mlisp_stack_push( exec, n_idx, mlisp_lambda_t );
       goto cleanup;
    }
@@ -1387,7 +1348,6 @@ static MERROR_RETVAL _mlisp_step_iter(
    /* TODO: Handle undefined symbols with an error. */
 
    /* Prepare to step. */
-   mdata_vector_unlock( &(parser->ast) );
 
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt ) \
@@ -1395,7 +1355,10 @@ static MERROR_RETVAL _mlisp_step_iter(
       _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
    if( MLISP_TYPE_BEGIN == e.type ) {
-      /* TODO: Cleanup the stack push since this BEGIN's stack frame. */
+      /* Cleanup the stack that's been pushed by children since this BEGIN's
+       * initial visit.
+       */
+      retval = _mlisp_stack_cleanup( parser, n_idx, exec );
 
    } else if( MLISP_TYPE_IF == e.type ) {
       retval = _mlisp_step_if( parser, n_idx, exec );
@@ -1406,7 +1369,6 @@ static MERROR_RETVAL _mlisp_step_iter(
        * redundant case below, but that can't be helped...
        */
       retval = e.value.cb( parser, exec, e.cb_data, e.flags );
-      maug_cleanup_if_not_ok();
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
@@ -1443,16 +1405,15 @@ MERROR_RETVAL mlisp_step(
 
    debug_printf( MLISP_EXEC_TRACE_LVL, "heartbeat start" );
 
-   assert( !mdata_vector_is_locked( &(parser->ast) ) );
-
    /* These can remain locked for the whole step, as they're never added or
     * removed.
     */
-   /* TODO: Can we keep the AST locked for the whole step, too? */
    assert( !mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
    assert( !mdata_vector_is_locked( &(exec->per_node_visit_ct) ) );
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
    mdata_vector_lock( &(exec->per_node_child_idx) );
    mdata_vector_lock( &(exec->per_node_visit_ct) );
+   mdata_vector_lock( &(parser->ast) );
 
    exec->flags = 0;
 
@@ -1467,11 +1428,11 @@ MERROR_RETVAL mlisp_step(
       retval = MERROR_OK;
    } else if( MERROR_OK == retval ) {
       /* The last node executed completely. */
+      debug_printf( MLISP_EXEC_TRACE_LVL, "execution terminated successfully" );
+      retval = MERROR_EXEC; /* Signal the caller: we're out of instructions! */
+   } else {
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "execution terminated with retval: %d", retval );
-      retval = MERROR_EXEC;
-   } else {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "execution terminated successfully" );
    }
 
 #ifdef MLISP_DEBUG_TRACE
@@ -1493,6 +1454,8 @@ cleanup:
 
    debug_printf( MLISP_EXEC_TRACE_LVL, "heartbeat end: %x", retval );
 
+   assert( mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_unlock( &(parser->ast) );
    mdata_vector_unlock( &(exec->per_node_visit_ct) );
    mdata_vector_unlock( &(exec->per_node_child_idx) );
 
