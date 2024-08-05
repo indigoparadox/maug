@@ -385,7 +385,7 @@ MERROR_RETVAL mlisp_env_set(
 
    default:
       error_printf( "attempted to define invalid type: %d", env_type );
-      retval = MERROR_USR;
+      retval = MERROR_EXEC;
       goto cleanup;
    }
 
@@ -497,7 +497,7 @@ MERROR_RETVAL _mlisp_env_cb_cmp(
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_CMP )
    } else {
       error_printf( "cmp: invalid type!" );
-      retval = MERROR_USR;
+      retval = MERROR_EXEC;
       goto cleanup;
    }
 
@@ -508,13 +508,15 @@ MERROR_RETVAL _mlisp_env_cb_cmp(
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_CMP )
    } else {
       error_printf( "cmp: invalid type!" );
-      retval = MERROR_USR;
+      retval = MERROR_EXEC;
       goto cleanup;
    }
 
    if( MLISP_ENV_FLAG_CMP_GT == (MLISP_ENV_FLAG_CMP_GT & flags) ) {
+      debug_printf( MLISP_TRACE_LVL, "cmp %d > %d", a_int, b_int );
       truth = a_int > b_int;
    } else if( MLISP_ENV_FLAG_CMP_LT == (MLISP_ENV_FLAG_CMP_LT & flags) ) {
+      debug_printf( MLISP_TRACE_LVL, "cmp %d < %d", a_int, b_int );
       truth = a_int < b_int;
    }
    /* TODO: = */
@@ -567,7 +569,7 @@ MERROR_RETVAL _mlisp_env_cb_arithmetic(
       MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ARI )
       } else {
          error_printf( "arithmetic: invalid type!" );
-         retval = MERROR_USR;
+         retval = MERROR_EXEC;
          goto cleanup;
       }
    }
@@ -649,7 +651,8 @@ static MERROR_RETVAL _mlisp_step_iter(
 
 static MERROR_RETVAL _mlisp_preempt(
    struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx
+   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx,
+   size_t new_idx
 ) {
    /* Could not exec *this* node yet, so don't increment its parent. */
    MERROR_RETVAL retval = MERROR_PREEMPT;
@@ -663,7 +666,7 @@ static MERROR_RETVAL _mlisp_preempt(
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
    /* Increment this node, since the child actually executed. */
-   (*p_child_idx)++;
+   (*p_child_idx) = new_idx;
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
       n_idx, *p_child_idx );
@@ -693,10 +696,10 @@ static MERROR_RETVAL _mlisp_step_iter_children(
 
    if(
       (
-         MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ||
-         MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n->flags) 
-      ) &&
-      0 == *p_child_idx
+         MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) &&
+         0 == *p_child_idx
+      ) ||
+      MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n->flags) 
    ) {
       /* A lambda definition was found, and its exec counter is still pointing
        * to the arg list. This means the lambda was *not* called on the last
@@ -717,7 +720,8 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       retval = _mlisp_step_iter(
          parser, n_child, n->ast_idx_children[*p_child_idx], exec );
       if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt( parser, n, n_idx, exec, p_child_idx );
+         retval = _mlisp_preempt(
+            parser, n, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
       }
       goto cleanup;
    }
@@ -734,7 +738,7 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t arg_idx = 0;
+   ssize_t arg_idx = n->ast_idx_children_sz - 1;
    struct MLISP_STACK_NODE stack_n_arg;
    struct MLISP_AST_NODE* ast_n_arg = NULL;
    MAUG_MHANDLE key_tmp_h = NULL;
@@ -745,7 +749,7 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
     * one go!
     */
 
-   while( n->ast_idx_children_sz > arg_idx ) {
+   while( 0 <= arg_idx ) {
       
       retval = mlisp_stack_pop( exec, &stack_n_arg );
       maug_cleanup_if_not_ok();
@@ -770,7 +774,7 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
       maug_munlock( key_tmp_h, key_tmp );
       maug_mfree( key_tmp_h );
 
-      arg_idx++;
+      arg_idx--;
    }
 
 cleanup:
@@ -801,6 +805,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
+   assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
 
    /* TODO: Put args into env between args and arge node types. On finish,
@@ -891,7 +896,10 @@ static MERROR_RETVAL _mlisp_step_lambda(
       retval = _mlisp_step_iter(
          parser, n_child, n->ast_idx_children[*p_lambda_child_idx], exec );
       if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt( parser, n, n_idx, exec, p_lambda_child_idx );
+         retval =
+            _mlisp_preempt(
+               parser, n, n_idx, exec, p_lambda_child_idx,
+               (*p_lambda_child_idx) + 1 );
       }
 
    }
@@ -912,16 +920,61 @@ static MERROR_RETVAL _mlisp_step_if(
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t* p_if_child_idx = NULL;
+   struct MLISP_AST_NODE* n_child = NULL;
+   struct MLISP_STACK_NODE s;
 
    debug_printf( 1, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
 
-#ifdef MLISP_DEBUG_TRACE
-   exec->trace[exec->trace_depth++] = n_idx;
-#endif /* MLISP_DEBUG_TRACE */
+   /* Grab the current exec index for the child vector for this node. */
+   p_if_child_idx = mdata_vector_get(
+      &(exec->per_node_child_idx), n_idx, size_t );
+   assert( NULL != p_if_child_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_if_child_idx );
 
-   /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
-    *       dive in.
-    */
+   if( 0 == *p_if_child_idx ) {
+      /* TODO: Evaluating if condition. */
+
+      n_child = mdata_vector_get(
+         &(parser->ast), n->ast_idx_children[*p_if_child_idx],
+         struct MLISP_AST_NODE );
+      retval = _mlisp_step_iter(
+         parser, n_child, n->ast_idx_children[*p_if_child_idx], exec );
+      if( MERROR_OK == retval ) {
+         /* Condition evaluation complete. */
+
+         /* Pop the result and check it. */
+         retval = mlisp_stack_pop( exec, &s );
+         maug_cleanup_if_not_ok();
+         if( MLISP_TYPE_BOOLEAN != s.type ) {
+            error_printf( "(if) can only evaulate boolean type!" );
+            retval = MERROR_EXEC;
+            goto cleanup;
+         }
+
+         /* Set the child pointer to 1 if TRUE and 2 if FALSE. */
+         retval = _mlisp_preempt(
+            parser, n, n_idx, exec, p_if_child_idx,
+            /* Flip boolean and increment. */
+            (1 - s.value.boolean) + 1 );
+      }
+
+      /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
+      *       dive in.
+      */
+
+   } else if( 3 > *p_if_child_idx ) {
+      /* Pursuing TRUE or FALSE clause. */
+      retval = _mlisp_step_iter(
+         parser, n_child, n->ast_idx_children[*p_if_child_idx], exec );
+      if( MERROR_OK == retval ) {
+         retval = _mlisp_preempt( parser, n, n_idx, exec, p_if_child_idx, 3 );
+      }
+   }
+
+cleanup:
 
    debug_printf( 1, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
 
@@ -941,6 +994,7 @@ static MERROR_RETVAL _mlisp_step_iter(
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
+   assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
 
    if(
@@ -1093,9 +1147,15 @@ MERROR_RETVAL mlisp_step(
    /* Find next unevaluated symbol. */
    retval = _mlisp_step_iter( parser, n, 0, exec );
    if( MERROR_PREEMPT == retval ) {
+      /* There's still more to execute. */
       retval = MERROR_OK;
    } else if( MERROR_OK == retval ) {
+      /* The last node executed completely. */
+      debug_printf( MLISP_TRACE_LVL,
+         "execution terminated with retval: %d", retval );
       retval = MERROR_EXEC;
+   } else {
+      debug_printf( MLISP_TRACE_LVL, "execution terminated successfully" );
    }
 
 #ifdef MLISP_DEBUG_TRACE
