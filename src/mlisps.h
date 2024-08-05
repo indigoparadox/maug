@@ -97,6 +97,7 @@ struct MLISP_AST_NODE {
 };
 
 struct MLISP_EXEC_STATE {
+   uint8_t flags;
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
    struct MDATA_VECTOR stack;
