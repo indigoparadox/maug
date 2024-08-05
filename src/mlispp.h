@@ -7,6 +7,9 @@
 /**
  * \addtogroup mlisp MLISP Interpreter
  * \{
+ *
+ * \file mlispp.h
+ * \brief MLISP Parser Functions and Macros
  */
 
 #ifndef MLISP_PARSE_TRACE_LVL

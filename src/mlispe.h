@@ -7,6 +7,9 @@
 /**
  * \addtogroup mlisp MLISP Interpreter
  * \{
+ *
+ * \file mlispe.h
+ * \brief MLISP Interpreter Functions and Macros
  */
 
 #ifndef MLISP_TOKEN_SZ_MAX
@@ -19,16 +22,31 @@
 
 #define MLISP_ENV_FLAG_BUILTIN   0x02
 
+/*! \brief Flag for _mlisp_env_cb_cmp() specifying TRUE if A > B. */
 #define MLISP_ENV_FLAG_CMP_GT    0x10
 
+/*! \brief Flag for _mlisp_env_cb_cmp() specifying TRUE if A < B. */
 #define MLISP_ENV_FLAG_CMP_LT    0x20
 
+/*! \brief Flag for _mlisp_env_cb_cmp() specifying TRUE if A == B. */
 #define MLISP_ENV_FLAG_CMP_EQ    0x40
 
+/*! \brief Flag for _mlisp_env_cb_arithmetic() specifying to add A + B. */
 #define MLISP_ENV_FLAG_ARI_ADD   0x10
 
+/*! \brief Flag for _mlisp_env_cb_arithmetic() specifying to multiply A * B. */
 #define MLISP_ENV_FLAG_ARI_MUL   0x20
 
+/**
+ * \brief Flag for MLISP_EXEC_STATE::flags indicating that execution has
+ *        entered at least one lambda in its traversal during *this*
+ *        heartbeat cycle.
+ *
+ * \todo This is a bit of a hack, and we need a better way to determine if
+ *       it was the same lambda for tail-call detection. Currently, it's a
+ *       combination of this and matching the n_idx passed to
+ *       _mlisp_detect_tail_call() to the last arg env frame.
+ */
 #define MLISP_EXEC_FLAG_IN_LAMBDA   0x02
 
 /**
@@ -36,12 +54,26 @@
  * \{
  */
 
+/**
+ * \brief Push a value onto MLISP_EXEC_STATE::stack.
+ * \param exec Pointer to the running ::MLISP_EXEC_STATE.
+ * \param i Value to push.
+ * \param C type of the value to push. Please see \ref mlisp_types for more
+ *        information.
+ * \warning MLISP_EXEC_STATE::stack should be *unlocked* prior to calling!
+ */
 #define mlisp_stack_push( exec, i, ctype ) \
    (_mlisp_stack_push_ ## ctype( exec, (ctype)i ))
 
 MERROR_RETVAL mlisp_stack_dump(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
+/**
+ * \brief Pop a value off of (removing from) MLISP_EXEC_STATE::stack and copy
+ *        it to a provided output.
+ *
+ * \warning MLISP_EXEC_STATE::stack should be *unlocked* prior to calling!
+ */
 MERROR_RETVAL mlisp_stack_pop(
    struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o );
 
