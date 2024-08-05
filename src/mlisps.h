@@ -64,7 +64,8 @@ struct MLISP_PARSER;
 struct MLISP_EXEC_STATE;
 
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags );
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   void* cb_data, uint8_t flags );
 
 #define _MLISP_TYPE_TABLE_FIELDS( idx, ctype, name, const_name, fmt ) \
    ctype name;
@@ -78,6 +79,7 @@ struct MLISP_ENV_NODE {
    uint8_t type;
    mdata_strpool_idx_t name_strpool_idx;
    union MLISP_VAL value;
+   void* cb_data;
 };
 
 struct MLISP_STACK_NODE {

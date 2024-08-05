@@ -64,7 +64,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* token, size_t token_sz, uint8_t env_type, void* data,
-   uint8_t flags );
+   void* cb_data, uint8_t flags );
 
 MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
@@ -322,7 +322,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* token, size_t token_sz, uint8_t env_type, void* data,
-   uint8_t flags
+   void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_ENV_NODE e;
@@ -351,6 +351,7 @@ MERROR_RETVAL mlisp_env_set(
    }
    maug_cleanup_if_not_ok();
    e.type = env_type;
+   e.cb_data = cb_data;
    switch( env_type ) {
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ASGN );
 
@@ -527,7 +528,8 @@ cleanup:
 
 static
 MERROR_RETVAL _mlisp_env_cb_cmp(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE tmp;
@@ -588,7 +590,8 @@ cleanup:
 
 static
 MERROR_RETVAL _mlisp_env_cb_arithmetic(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE mults[2];
@@ -643,7 +646,8 @@ cleanup:
 
 static
 MERROR_RETVAL _mlisp_env_cb_define(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE key;
@@ -678,7 +682,7 @@ MERROR_RETVAL _mlisp_env_cb_define(
       key_tmp, key.value.strpool_idx );
 
    retval = mlisp_env_set(
-      parser, exec, key_tmp, 0, val.type, &(val.value), 0 );
+      parser, exec, key_tmp, 0, val.type, &(val.value), NULL, 0 );
 
 cleanup:
 
@@ -861,7 +865,8 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
       maug_cleanup_if_null_lock( char*, key_tmp );
 
       retval = mlisp_env_set(
-         parser, exec, key_tmp, 0, stack_n_arg.type, &(stack_n_arg.value), 0 );
+         parser, exec, key_tmp, 0, stack_n_arg.type, &(stack_n_arg.value),
+         NULL, 0 );
       maug_cleanup_if_not_ok();
 
       maug_munlock( key_tmp_h, key_tmp );
@@ -927,7 +932,7 @@ static MERROR_RETVAL _mlisp_reset_lambda(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t ret_idx = 0;
 
-   debug_printf( MLISP_DEBUG_TRACE,
+   debug_printf( MLISP_EXEC_TRACE_LVL,
       "resetting lambda " SIZE_T_FMT "...", n_idx );
 
    assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
@@ -1089,7 +1094,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
          * so the args can be stripped off later when we return. */
          /* TODO: Push the index of the CALLER, not the LAMBDA? */
          retval = mlisp_env_set(
-            parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx, 0 );
+            parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx, NULL, 0 );
          maug_cleanup_if_not_ok();
       }
 
@@ -1102,7 +1107,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
       if( MERROR_OK == retval ) {
          /* Set *after-arg* delimiter in env after last arg. */
          retval = mlisp_env_set(
-            parser, exec, "$ARGS_E$", 0, MLISP_TYPE_ARGS_E, &n_idx, 0 );
+            parser, exec, "$ARGS_E$", 0, MLISP_TYPE_ARGS_E, &n_idx, NULL, 0 );
          maug_cleanup_if_not_ok();
 
          /* Increment child idx so we call the exec child on next heartbeat. */
@@ -1362,7 +1367,7 @@ static MERROR_RETVAL _mlisp_step_iter(
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
-      retval = e.value.cb( parser, exec, e.flags );
+      retval = e.value.cb( parser, exec, e.cb_data, e.flags );
       maug_cleanup_if_not_ok();
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
@@ -1489,27 +1494,27 @@ MERROR_RETVAL mlisp_exec_init(
 
    retval = mlisp_env_set(
       parser, exec, "define", 6, MLISP_TYPE_CB, _mlisp_env_cb_define,
-      MLISP_ENV_FLAG_BUILTIN );
+      NULL, MLISP_ENV_FLAG_BUILTIN );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "*", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MUL );
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MUL );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "+", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_ADD );
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_ADD );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "<", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_LT );
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_LT );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, ">", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_GT );
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_GT );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "=", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_EQ );
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_EQ );
    maug_cleanup_if_not_ok();
 
 cleanup:
