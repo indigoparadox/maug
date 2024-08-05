@@ -889,6 +889,9 @@ static MERROR_RETVAL _mlisp_step_lambda(
    ssize_t ret_idx = 0;
    struct MLISP_AST_NODE* n = NULL;
    size_t child_idx = 0;
+   struct MLISP_ENV_NODE e_start_frame; 
+   ssize_t frame_idx = 0;
+   char* strpool = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -979,12 +982,46 @@ static MERROR_RETVAL _mlisp_step_lambda(
    } else {
       /* Dive into first lambda child until we no longer can. */
 
-      /* Prepare for stepping. */
+      /* XXX */
+
+      /* First, determine if this is a tail call. */
+      frame_idx = _mlisp_env_get_env_frame( exec, &e_start_frame );
+
+      /* Get the env node for the statement we're about to call. */
+      assert( !mdata_vector_is_locked( &(exec->env) ) );
+      mdata_vector_lock( &(exec->env) );
+      mdata_strpool_lock( &(parser->strpool), strpool );
+
+      /* Grab child_idx in case this *isn't* a tail call. */
       child_idx = n->ast_idx_children[*p_lambda_child_idx];
+
+      if( 0 < frame_idx ) {
+         debug_printf( 1,
+            "ZRQZ esf " SSIZE_T_FMT " val: " SSIZE_T_FMT,
+            frame_idx, e_start_frame.value.args_start );
+      } else {
+         debug_printf( 1, "ZRQZ no esf!" );
+      }
+
+      /* Prepare for stepping. */
+      assert( mdata_vector_is_locked( &(parser->ast) ) );
       mdata_vector_unlock( &(parser->ast) );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+
+      /* Check if this is a tail-call. */
+      mdata_vector_unlock( &(exec->env) );
+ 
+      /* XXX */
 
       /* Step and check. */
-      retval = _mlisp_step_iter( parser, child_idx, exec );
+      if( 0 < frame_idx && e_start_frame.value.args_start == n_idx ) {
+         /* TODO: Actually implement recursion. */
+         debug_printf( 1,
+            "TAIL TIME: " SSIZE_T_FMT, e_start_frame.value.args_start );
+      } else {
+         retval = _mlisp_step_iter( parser, child_idx, exec );
+      }
+
       if( MERROR_OK == retval ) {
          retval = _mlisp_preempt(
                parser, n_idx, exec, p_lambda_child_idx,
@@ -1012,15 +1049,9 @@ static MERROR_RETVAL _mlisp_step_if(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_if_child_idx = NULL;
-   struct MLISP_AST_NODE* n_child = NULL;
    struct MLISP_STACK_NODE s;
-   struct MLISP_ENV_NODE* p_e = NULL;
-   char* strpool = NULL;
    struct MLISP_AST_NODE* n = NULL;
    size_t child_idx = 0;
-   uint8_t is_same_lambda = 0;
-   struct MLISP_ENV_NODE e_start_frame; 
-   ssize_t frame_idx = 0;
 
    debug_printf( 1, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
 
@@ -1040,49 +1071,14 @@ static MERROR_RETVAL _mlisp_step_if(
    if( 0 == *p_if_child_idx ) {
       /* TODO: Evaluating if condition. */
 
-      frame_idx = _mlisp_env_get_env_frame( exec, &e_start_frame );
-      assert( 0 < frame_idx );
-
-      /* Grab the node for this IF. */
-      n_child = mdata_vector_get(
-         &(parser->ast), n->ast_idx_children[*p_if_child_idx],
-         struct MLISP_AST_NODE );
-
-      /* Get the env node for the statement we're about to call. */
-      assert( !mdata_vector_is_locked( &(exec->env) ) );
-      mdata_vector_lock( &(exec->env) );
-      mdata_strpool_lock( &(parser->strpool), strpool );
-      p_e = mlisp_env_get_strpool(
-         parser, exec, strpool, n_child->token_idx, n_child->token_sz );
-      mdata_strpool_unlock( &(parser->strpool), strpool );
-
-      /* Grab child_idx in case this *isn't* a tail call. */
-      child_idx = n->ast_idx_children[*p_if_child_idx];
-
       /* Prepare for stepping. */
+      child_idx = n->ast_idx_children[*p_if_child_idx];
       mdata_vector_unlock( &(parser->ast) );
 
-      /* Check if this is a tail-call. */
-      if(
-         NULL != p_e &&
-         MLISP_TYPE_LAMBDA == p_e->type &&
-         e_start_frame.value.args_start == p_e->value.lambda
-      ) {
-         is_same_lambda = 1;
-      } else {
-         is_same_lambda = 0;
-      }
-      mdata_vector_unlock( &(exec->env) );
- 
-      if( is_same_lambda ) {
-         debug_printf( 1,
-            "TAILTIME! " SSIZE_T_FMT, e_start_frame.value.args_start );
+      /* Handle it like any other statement. */
+      retval = _mlisp_step_iter( parser, child_idx, exec );
 
-      } else {
-         /* Handle it like any other statement. */
-         retval = _mlisp_step_iter( parser, child_idx, exec );
-      }
-
+      /* Vary the child we jump to based on the boolean val on the stack. */
       if( MERROR_OK == retval ) {
          /* Condition evaluation complete. */
 
@@ -1090,7 +1086,7 @@ static MERROR_RETVAL _mlisp_step_if(
          retval = mlisp_stack_pop( exec, &s );
          maug_cleanup_if_not_ok();
          if( MLISP_TYPE_BOOLEAN != s.type ) {
-            error_printf( "(if) can only evaulate boolean type!" );
+            error_printf( "(if) can only evaluate boolean type!" );
             retval = MERROR_EXEC;
             goto cleanup;
          }
