@@ -87,7 +87,7 @@ MERROR_RETVAL mlisp_stack_dump(
 
 #  define _MLISP_TYPE_TABLE_DUMPS( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == n_stack->type ) { \
-         debug_printf( MLISP_TRACE_LVL, \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (" #const_name "): " fmt, \
             i, n_stack->value.name );
 
@@ -98,27 +98,27 @@ MERROR_RETVAL mlisp_stack_dump(
 
       /* Handle special exceptions. */
       if( MLISP_TYPE_STR == n_stack->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (STR): %s",
             i, &(strpool[n_stack->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == n_stack->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (CB): %p",
             i, n_stack->value.cb );
 
       } else if( MLISP_TYPE_LAMBDA == n_stack->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (LAMBDA): " SIZE_T_FMT,
                i, n_stack->value.lambda );
 
       } else if( MLISP_TYPE_ARGS_S == n_stack->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_S): " SIZE_T_FMT,
                i, n_stack->value.args_start );
 
       } else if( MLISP_TYPE_ARGS_E == n_stack->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_E): " SIZE_T_FMT,
                i, n_stack->value.args_end );
 
@@ -220,7 +220,7 @@ MERROR_RETVAL mlisp_env_dump(
 
 #  define _MLISP_TYPE_TABLE_DUMPE( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == e->type ) { \
-         debug_printf( MLISP_TRACE_LVL, \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT \
                " \"%s\" (" #const_name "): " fmt, \
             i, &(strpool[e->name_strpool_idx]), e->value.name ); \
@@ -228,6 +228,7 @@ MERROR_RETVAL mlisp_env_dump(
    mdata_strpool_lock( &(parser->strpool), strpool ); \
    mdata_vector_lock( &(exec->env) );
    while( i < mdata_vector_ct( &(exec->env) ) ) {
+      assert( mdata_vector_is_locked( &(exec->env) ) );
       e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
 
       if( MLISP_ENV_FLAG_BUILTIN == (MLISP_ENV_FLAG_BUILTIN & e->flags) ) {
@@ -240,30 +241,30 @@ MERROR_RETVAL mlisp_env_dump(
       MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPE );
       /* Handle special exceptions. */
       } else if( MLISP_TYPE_STR == e->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT " \"%s\" (STR): %s",
             i, &(strpool[e->name_strpool_idx]),
             &(strpool[e->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == e->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT " \"%s\" (CB): %p",
             i, &(strpool[e->name_strpool_idx]), e->value.cb );
 
       } else if( MLISP_TYPE_LAMBDA == e->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (LAMBDA): " SIZE_T_FMT,
             i, &(strpool[e->name_strpool_idx]), e->value.lambda );
 
       } else if( MLISP_TYPE_ARGS_S == e->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (ARGS_S): " SIZE_T_FMT,
             i, &(strpool[e->name_strpool_idx]), e->value.args_start );
 
       } else if( MLISP_TYPE_ARGS_E == e->type ) {
-         debug_printf( MLISP_TRACE_LVL,
+         debug_printf( MLISP_EXEC_TRACE_LVL,
             MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (ARGS_E): " SIZE_T_FMT,
             i, &(strpool[e->name_strpool_idx]), e->value.args_end );
@@ -295,6 +296,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    /* TODO: Autolock? */
 
    while( exec->env.ct > i ) {
+      assert( mdata_vector_is_locked( &(exec->env) ) );
       node_test = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
       if( 0 == strncmp(
          &(strpool[node_test->name_strpool_idx]),
@@ -407,20 +409,26 @@ cleanup:
 
 /* === */
 
-static
-ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
-   ssize_t ret_idx = 0;
+static ssize_t _mlisp_env_get_env_frame(
+   struct MLISP_EXEC_STATE* exec, struct MLISP_ENV_NODE* e_out
+) {
    MERROR_RETVAL retval = MERROR_OK;
-   ssize_t i = 0;
+   ssize_t ret_idx = 0;
    struct MLISP_ENV_NODE* e = NULL;
-   size_t removed = 0;
+   ssize_t i = 0;
+   uint8_t autolock = 0;
 
-   assert( 0 < mdata_vector_ct( &(exec->env) ) );
-
-   mdata_vector_lock( &(exec->env) );
+   if( !mdata_vector_is_locked( &(exec->env) ) ) {
+      mdata_vector_lock( &(exec->env) );
+      autolock = 1;
+   }
 
    for( i = mdata_vector_ct( &(exec->env) ) - 1; 0 <= i ; i-- ) {
+      /* debug_printf( MLISP_EXEC_TRACE_LVL,
+         "getting frame (trying " SSIZE_T_FMT "...)", i ); */
+      assert( mdata_vector_is_locked( &(exec->env) ) );
       e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      assert( NULL != e );
 
       if( MLISP_TYPE_ARGS_S != e->type ) {
          /* Hunt for the initial env arg separator. */
@@ -432,32 +440,72 @@ ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
             SSIZE_T_FMT,
          i, e->value.args_start );
 
-      ret_idx = e->value.args_start;
-
-      while( MLISP_TYPE_ARGS_E != e->type ) {
-         mdata_vector_unlock( &(exec->env) );
-         retval = mdata_vector_remove( &(exec->env), i );
-         maug_cleanup_if_not_ok();
-         mdata_vector_lock( &(exec->env) );
-
-         /* Refresh e based on what i *now* points to. */
-         e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
-
-         removed++;
+      ret_idx = i;
+      if( NULL != e_out ) {
+         memcpy( e_out, e, sizeof( struct MLISP_ENV_NODE ) );
       }
+      break;
+   }
 
-      /* Remove the actual terminal separator. */
+cleanup:
+
+   if( autolock ) {
+      mdata_vector_unlock( &(exec->env) );
+   }
+ 
+   if( MERROR_OK != retval ) {
+      ret_idx = retval * -1;
+   }
+
+   return ret_idx;
+}
+
+/* === */
+
+static
+ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
+   ssize_t ret_idx = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t i = 0;
+   struct MLISP_ENV_NODE* e = NULL;
+   size_t removed = 0;
+
+   /* This function modifies the env, so existing locks might break. */
+   assert( !mdata_vector_is_locked( &(exec->env) ) );
+
+   assert( 0 < mdata_vector_ct( &(exec->env) ) );
+
+   mdata_vector_lock( &(exec->env) );
+
+   /* Get the most recent start frame in the env. */
+   i = _mlisp_env_get_env_frame( exec, NULL );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "pruning env args starting from env frame " SSIZE_T_FMT "...", i );
+   e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+   assert( NULL != e );
+
+   while( MLISP_TYPE_ARGS_E != e->type ) {
       mdata_vector_unlock( &(exec->env) );
       retval = mdata_vector_remove( &(exec->env), i );
       maug_cleanup_if_not_ok();
       mdata_vector_lock( &(exec->env) );
 
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "removed " SIZE_T_FMT " args!", removed );
+      /* Refresh e based on what i *now* points to. */
+      assert( mdata_vector_is_locked( &(exec->env) ) );
+      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      assert( NULL != e );
 
-      /* If we made it this far, we're done! */
-      break;
+      removed++;
    }
+
+   /* Remove the actual terminal separator. */
+   mdata_vector_unlock( &(exec->env) );
+   retval = mdata_vector_remove( &(exec->env), i );
+   maug_cleanup_if_not_ok();
+   mdata_vector_lock( &(exec->env) );
+
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "removed " SIZE_T_FMT " args!", removed );
 
 cleanup:
 
@@ -513,10 +561,10 @@ MERROR_RETVAL _mlisp_env_cb_cmp(
    }
 
    if( MLISP_ENV_FLAG_CMP_GT == (MLISP_ENV_FLAG_CMP_GT & flags) ) {
-      debug_printf( MLISP_TRACE_LVL, "cmp %d > %d", a_int, b_int );
+      debug_printf( MLISP_EXEC_TRACE_LVL, "cmp %d > %d", a_int, b_int );
       truth = a_int > b_int;
    } else if( MLISP_ENV_FLAG_CMP_LT == (MLISP_ENV_FLAG_CMP_LT & flags) ) {
-      debug_printf( MLISP_TRACE_LVL, "cmp %d < %d", a_int, b_int );
+      debug_printf( MLISP_EXEC_TRACE_LVL, "cmp %d < %d", a_int, b_int );
       truth = a_int < b_int;
    }
    /* TODO: = */
@@ -551,13 +599,15 @@ MERROR_RETVAL _mlisp_env_cb_arithmetic(
 
 #  define _MLISP_TYPE_TABLE_ARI( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == mults[i].type ) { \
-         debug_printf( MLISP_EXEC_TRACE_LVL, \
-            "multiply: %d * " fmt, product, mults[i].value.name ); \
          if( MLISP_ENV_FLAG_ARI_ADD == (MLISP_ENV_FLAG_ARI_ADD & flags) ) { \
+            debug_printf( MLISP_EXEC_TRACE_LVL, \
+               "arithmetic: %d + " fmt, product, mults[i].value.name ); \
             product += mults[i].value.name; \
          } else if( \
             MLISP_ENV_FLAG_ARI_MUL == (MLISP_ENV_FLAG_ARI_MUL & flags) \
          ) { \
+            debug_printf( MLISP_EXEC_TRACE_LVL, \
+               "arithmetic: %d * " fmt, product, mults[i].value.name ); \
             product *= mults[i].value.name; \
          }
 
@@ -604,6 +654,7 @@ MERROR_RETVAL _mlisp_env_cb_define(
 
    if( MLISP_TYPE_STR != key.type ) {
       /* TODO: Do we want to allow defining other types? */
+      /* TODO: We can use _mlisp_eval_token_strpool, maybe? */
       error_printf( "define: invalid key type: %d", key.type );
       retval = MERROR_EXEC;
       goto cleanup;
@@ -644,19 +695,24 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_step_iter(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec );
 
 /* === */
 
 static MERROR_RETVAL _mlisp_preempt(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx,
    size_t new_idx
 ) {
    /* Could not exec *this* node yet, so don't increment its parent. */
    MERROR_RETVAL retval = MERROR_PREEMPT;
    char* strpool = NULL;
+   struct MLISP_AST_NODE* n = NULL;
+
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
    assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
@@ -673,26 +729,33 @@ static MERROR_RETVAL _mlisp_preempt(
 
 cleanup:
 
+   mdata_vector_unlock( &(parser->ast) );
+
    return retval;
 }
 
 /* === */
 
 static MERROR_RETVAL _mlisp_step_iter_children(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec
+   struct MLISP_PARSER* parser, size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_child_idx = NULL;
-   struct MLISP_AST_NODE* n_child = NULL;
+   struct MLISP_AST_NODE* n = NULL;
+   size_t child_idx = 0;
 
    /* Grab the current exec index for the child vector for this node. */
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
    p_child_idx = mdata_vector_get(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_child_idx );
+
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    if(
       (
@@ -714,19 +777,34 @@ static MERROR_RETVAL _mlisp_step_iter_children(
 
    if( n->ast_idx_children_sz > *p_child_idx ) {
       /* Call the next uncalled child. */
-      n_child = mdata_vector_get(
-         &(parser->ast), n->ast_idx_children[*p_child_idx],
-         struct MLISP_AST_NODE );
-      retval = _mlisp_step_iter(
-         parser, n_child, n->ast_idx_children[*p_child_idx], exec );
+
+      /* Prepare for stepping. */
+      child_idx = n->ast_idx_children[*p_child_idx];
+      assert( mdata_vector_is_locked( &(parser->ast) ) );
+      mdata_vector_unlock( &(parser->ast) );
+
+      /* Step and check. */
+      assert( !mdata_vector_is_locked( &(parser->ast) ) );
+      retval = _mlisp_step_iter( parser, child_idx, exec );
+      assert( !mdata_vector_is_locked( &(parser->ast) ) );
       if( MERROR_OK == retval ) {
          retval = _mlisp_preempt(
-            parser, n, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
+            parser, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
       }
       goto cleanup;
+   } else {
+      /* Reset the node's child pointer to 0... this will allow it to be
+       * re-entered later.
+       */
+      debug_printf( MDATA_TRACE_LVL,
+         "resetting node " SIZE_T_FMT " child pointer to 0...",
+         n_idx );
+      *p_child_idx = 0;
    }
 
 cleanup:
+
+   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
@@ -734,20 +812,27 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_step_lambda_args(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec
+   struct MLISP_PARSER* parser, size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   ssize_t arg_idx = n->ast_idx_children_sz - 1;
+   ssize_t arg_idx = 0;
    struct MLISP_STACK_NODE stack_n_arg;
    struct MLISP_AST_NODE* ast_n_arg = NULL;
    MAUG_MHANDLE key_tmp_h = NULL;
    char* key_tmp = NULL;
+   struct MLISP_AST_NODE* n = NULL;
 
    /* Pop stack into args into the env. These are all the results of previous
     * evaluations, before the lambda call, so we can just grab them all in
     * one go!
     */
+
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+
+   /* Get the current args node. */
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
+   arg_idx = n->ast_idx_children_sz - 1;
 
    while( 0 <= arg_idx ) {
       
@@ -787,21 +872,23 @@ cleanup:
       maug_mfree( key_tmp_h );
    }
 
+   mdata_vector_unlock( &(parser->ast) );
+
    return retval;
 }
 
 /* === */
 
 static MERROR_RETVAL _mlisp_step_lambda(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_lambda_child_idx = NULL;
    size_t* p_args_child_idx = NULL;
-   struct MLISP_AST_NODE* n_args = NULL;
-   struct MLISP_AST_NODE* n_child = NULL;
    ssize_t ret_idx = 0;
+   struct MLISP_AST_NODE* n = NULL;
+   size_t child_idx = 0;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -819,12 +906,17 @@ static MERROR_RETVAL _mlisp_step_lambda(
    debug_printf( 1, "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
 
    /* Grab the current exec index for the child vector for this node. */
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
    p_lambda_child_idx = mdata_vector_get(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_lambda_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "child idx for lambda AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_lambda_child_idx );
+
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    /* There needs to be an arg node and an exec node. */
    /* TODO: Handle this gracefully. */
@@ -833,12 +925,8 @@ static MERROR_RETVAL _mlisp_step_lambda(
    if( 0 == *p_lambda_child_idx ) {
       /* Parse the args passed to this lambda into the env, temporarily. */
 
-      /* Get the current args node. */
-      n_args = mdata_vector_get(
-         &(parser->ast), n->ast_idx_children[*p_lambda_child_idx],
-         struct MLISP_AST_NODE );
-
       /* Get the current args node child index. */
+      assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
       p_args_child_idx = mdata_vector_get(
          &(exec->per_node_child_idx),
          n->ast_idx_children[*p_lambda_child_idx], size_t );
@@ -856,9 +944,11 @@ static MERROR_RETVAL _mlisp_step_lambda(
          maug_cleanup_if_not_ok();
       }
 
+      mdata_vector_unlock( &(parser->ast) );
+
       /* Pop stack into args in the env. */
       retval = _mlisp_step_lambda_args(
-         parser, n_args, n->ast_idx_children[*p_lambda_child_idx], exec );
+         parser, n->ast_idx_children[*p_lambda_child_idx], exec );
 
       if( MERROR_OK == retval ) {
          /* Set *after-arg* delimiter in env after last arg. */
@@ -887,18 +977,17 @@ static MERROR_RETVAL _mlisp_step_lambda(
       }
 
    } else {
-
       /* Dive into first lambda child until we no longer can. */
 
-      n_child = mdata_vector_get(
-         &(parser->ast), n->ast_idx_children[*p_lambda_child_idx],
-         struct MLISP_AST_NODE );
-      retval = _mlisp_step_iter(
-         parser, n_child, n->ast_idx_children[*p_lambda_child_idx], exec );
+      /* Prepare for stepping. */
+      child_idx = n->ast_idx_children[*p_lambda_child_idx];
+      mdata_vector_unlock( &(parser->ast) );
+
+      /* Step and check. */
+      retval = _mlisp_step_iter( parser, child_idx, exec );
       if( MERROR_OK == retval ) {
-         retval =
-            _mlisp_preempt(
-               parser, n, n_idx, exec, p_lambda_child_idx,
+         retval = _mlisp_preempt(
+               parser, n_idx, exec, p_lambda_child_idx,
                (*p_lambda_child_idx) + 1 );
       }
 
@@ -910,23 +999,33 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
 cleanup:
 
+   mdata_vector_unlock( &(parser->ast) );
+
    return retval;
 }
 
 /* === */
 
 static MERROR_RETVAL _mlisp_step_if(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_if_child_idx = NULL;
    struct MLISP_AST_NODE* n_child = NULL;
    struct MLISP_STACK_NODE s;
+   struct MLISP_ENV_NODE* p_e = NULL;
+   char* strpool = NULL;
+   struct MLISP_AST_NODE* n = NULL;
+   size_t child_idx = 0;
+   uint8_t is_same_lambda = 0;
+   struct MLISP_ENV_NODE e_start_frame; 
+   ssize_t frame_idx = 0;
 
    debug_printf( 1, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
 
    /* Grab the current exec index for the child vector for this node. */
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
    p_if_child_idx = mdata_vector_get(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_if_child_idx );
@@ -934,14 +1033,56 @@ static MERROR_RETVAL _mlisp_step_if(
       "child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
       n_idx, *p_if_child_idx );
 
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
+
    if( 0 == *p_if_child_idx ) {
       /* TODO: Evaluating if condition. */
 
+      frame_idx = _mlisp_env_get_env_frame( exec, &e_start_frame );
+      assert( 0 < frame_idx );
+
+      /* Grab the node for this IF. */
       n_child = mdata_vector_get(
          &(parser->ast), n->ast_idx_children[*p_if_child_idx],
          struct MLISP_AST_NODE );
-      retval = _mlisp_step_iter(
-         parser, n_child, n->ast_idx_children[*p_if_child_idx], exec );
+
+      /* Get the env node for the statement we're about to call. */
+      assert( !mdata_vector_is_locked( &(exec->env) ) );
+      mdata_vector_lock( &(exec->env) );
+      mdata_strpool_lock( &(parser->strpool), strpool );
+      p_e = mlisp_env_get_strpool(
+         parser, exec, strpool, n_child->token_idx, n_child->token_sz );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+
+      /* Grab child_idx in case this *isn't* a tail call. */
+      child_idx = n->ast_idx_children[*p_if_child_idx];
+
+      /* Prepare for stepping. */
+      mdata_vector_unlock( &(parser->ast) );
+
+      /* Check if this is a tail-call. */
+      if(
+         NULL != p_e &&
+         MLISP_TYPE_LAMBDA == p_e->type &&
+         e_start_frame.value.args_start == p_e->value.lambda
+      ) {
+         is_same_lambda = 1;
+      } else {
+         is_same_lambda = 0;
+      }
+      mdata_vector_unlock( &(exec->env) );
+ 
+      if( is_same_lambda ) {
+         debug_printf( 1,
+            "TAILTIME! " SSIZE_T_FMT, e_start_frame.value.args_start );
+
+      } else {
+         /* Handle it like any other statement. */
+         retval = _mlisp_step_iter( parser, child_idx, exec );
+      }
+
       if( MERROR_OK == retval ) {
          /* Condition evaluation complete. */
 
@@ -956,25 +1097,28 @@ static MERROR_RETVAL _mlisp_step_if(
 
          /* Set the child pointer to 1 if TRUE and 2 if FALSE. */
          retval = _mlisp_preempt(
-            parser, n, n_idx, exec, p_if_child_idx,
+            parser, n_idx, exec, p_if_child_idx,
             /* Flip boolean and increment. */
             (1 - s.value.boolean) + 1 );
       }
 
-      /* TODO: Reset parent child_idx_iter if tail-call achieved, otherwise
-      *       dive in.
-      */
-
    } else if( 3 > *p_if_child_idx ) {
       /* Pursuing TRUE or FALSE clause. */
-      retval = _mlisp_step_iter(
-         parser, n_child, n->ast_idx_children[*p_if_child_idx], exec );
+      
+      /* Prepare for stepping. */
+      child_idx = n->ast_idx_children[*p_if_child_idx];
+      mdata_vector_unlock( &(parser->ast) );
+
+      /* Step and check. */
+      retval = _mlisp_step_iter( parser, child_idx, exec );
       if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt( parser, n, n_idx, exec, p_if_child_idx, 3 );
+         retval = _mlisp_preempt( parser, n_idx, exec, p_if_child_idx, 3 );
       }
    }
 
 cleanup:
+
+   mdata_vector_unlock( &(parser->ast) );
 
    debug_printf( 1, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
 
@@ -983,32 +1127,97 @@ cleanup:
 
 /* === */
 
+static MERROR_RETVAL _mlisp_eval_token_strpool(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   size_t token_idx, size_t token_sz, struct MLISP_ENV_NODE* e_out
+) {
+   uint8_t autolock = 0;
+   char* strpool = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_ENV_NODE* p_e = NULL;
+
+   if( !mdata_vector_is_locked( &(exec->env) ) ) {
+      mdata_vector_lock( &(exec->env) );
+      autolock = 1;
+   }
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+   
+   assert( 0 < maug_strlen( &(strpool[token_idx]) ) );
+
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "eval token: \"%s\" (maug_strlen: " SIZE_T_FMT ")",
+      &(strpool[token_idx]), maug_strlen( &(strpool[token_idx]) ) );
+   if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz ) ) {
+      /* Fake env node e to step_if below. */
+      e_out->type = MLISP_TYPE_IF;
+
+   } else if( NULL != (p_e = mlisp_env_get_strpool(
+      parser, exec, strpool, token_idx, token_sz
+   ) ) ) {
+      /* A literal found in the environment. */
+      debug_printf( MLISP_EXEC_TRACE_LVL, "found %s in env!",
+         &(strpool[p_e->name_strpool_idx]) );
+
+      /* Copy onto native stack so we can unlock env in case this is a
+       * callback that needs to execute. */
+      memcpy( e_out, p_e, sizeof( struct MLISP_ENV_NODE ) );
+      p_e = NULL;
+
+   } else if( maug_is_num( &(strpool[token_idx]), token_sz ) ) {
+      /* Fake env node e from a numeric literal. */
+      e_out->value.integer = atoi( &(strpool[token_idx]) );
+      e_out->type = MLISP_TYPE_INT;
+
+   } else if( maug_is_float( &(strpool[token_idx]), token_sz ) ) {
+      /* Fake env node e from a floating point numeric literal. */
+      e_out->value.floating = atof( &(strpool[token_idx]) );
+      e_out->type = MLISP_TYPE_FLOAT;
+   }
+
+cleanup:
+
+   if( autolock ) {
+      mdata_vector_unlock( &(exec->env) );
+   }
+
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+
+   return retval;
+}
+
 static MERROR_RETVAL _mlisp_step_iter(
-   struct MLISP_PARSER* parser, struct MLISP_AST_NODE* n,
+   struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
-   struct MLISP_ENV_NODE* e_p = NULL;
    struct MLISP_ENV_NODE e;
+   struct MLISP_AST_NODE* n = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
    assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
 
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+
    if(
       MERROR_OK !=
-      (retval = _mlisp_step_iter_children( parser, n, n_idx, exec ))
+      (retval = _mlisp_step_iter_children( parser, n_idx, exec ))
    ) {
       goto cleanup;
    }
+
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
    /* Check for special types like lambda, that are lazily evaluated. */
    if( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
       /* Push the lambda to the stack so that the "define" above it can
        * grab it and associate it with the env.
        */
+      mdata_vector_unlock( &(parser->ast) );
       mlisp_stack_push( exec, n_idx, mlisp_lambda_t );
       goto cleanup;
    }
@@ -1018,45 +1227,15 @@ static MERROR_RETVAL _mlisp_step_iter(
     */
 
    /* Grab the token for this node and figure out what it is. */
-   mdata_strpool_lock( &(parser->strpool), strpool );
-   mdata_vector_lock( &(exec->env) );
-   assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
-   debug_printf( MLISP_EXEC_TRACE_LVL,
-      "eval node " SIZE_T_FMT ": \"%s\" [%x] (i: " SSIZE_T_FMT
-         ", maug_strlen: " SIZE_T_FMT ")",
-      n_idx, &(strpool[n->token_idx]), strpool[n->token_idx], n->token_idx,
-         maug_strlen( &(strpool[n->token_idx]) ) );
-   if( 0 == strncmp( &(strpool[n->token_idx]), "if", n->token_sz ) ) {
-      /* Fake env node e to step_if below. */
-      e.type = MLISP_TYPE_IF;
 
-   } else if( NULL != (e_p = mlisp_env_get_strpool(
-      parser, exec, strpool, n->token_idx, n->token_sz
-   ) ) ) {
-      /* A literal found in the environment. */
-      debug_printf( MLISP_EXEC_TRACE_LVL, "found %s in env!",
-         &(strpool[e_p->name_strpool_idx]) );
-
-      /* Copy onto native stack so we can unlock env in case this is a
-       * callback that needs to execute. */
-      memcpy( &e, e_p, sizeof( struct MLISP_ENV_NODE ) );
-      e_p = NULL;
-
-   } else if( maug_is_num( &(strpool[n->token_idx]), n->token_sz ) ) {
-      /* Fake env node e from a numeric literal. */
-      e.value.integer = atoi( &(strpool[n->token_idx]) );
-      e.type = MLISP_TYPE_INT;
-
-   } else if( maug_is_float( &(strpool[n->token_idx]), n->token_sz ) ) {
-      /* Fake env node e from a floating point numeric literal. */
-      e.value.floating = atof( &(strpool[n->token_idx]) );
-      e.type = MLISP_TYPE_FLOAT;
-   }
+   retval = _mlisp_eval_token_strpool(
+      parser, exec, n->token_idx, n->token_sz, &e );
+   maug_cleanup_if_not_ok();
 
    /* TODO: Handle undefined symbols with an error. */
 
-   mdata_vector_unlock( &(exec->env) );
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+   /* Prepare to step. */
+   mdata_vector_unlock( &(parser->ast) );
 
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt ) \
@@ -1064,7 +1243,7 @@ static MERROR_RETVAL _mlisp_step_iter(
       _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
    if( MLISP_TYPE_IF == e.type ) {
-      retval = _mlisp_step_if( parser, n, n_idx, exec );
+      retval = _mlisp_step_if( parser, n_idx, exec );
 
    } else if( MLISP_TYPE_CB == e.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
@@ -1080,10 +1259,7 @@ static MERROR_RETVAL _mlisp_step_iter(
        * MERROR_PREEMPT up the chain for subsequent heartbeats, until lambda is
        * done.
        */
-      retval = _mlisp_step_lambda( parser,
-         mdata_vector_get(
-            &(parser->ast), e.value.lambda, struct MLISP_AST_NODE ),
-         e.value.lambda, exec );
+      retval = _mlisp_step_lambda( parser, e.value.lambda, exec );
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
@@ -1101,7 +1277,6 @@ MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_AST_NODE* n = NULL;
    size_t zero = 0;
    size_t* p_child_idx = NULL;
 #ifdef MLISP_DEBUG_TRACE
@@ -1131,31 +1306,28 @@ MERROR_RETVAL mlisp_step(
          sizeof( size_t ) );
    }
 
-   mdata_vector_lock( &(parser->ast) );
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
    mdata_vector_lock( &(exec->per_node_child_idx) );
-
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
    p_child_idx = mdata_vector_get( &(exec->per_node_child_idx), 0, size_t );
    assert( NULL != p_child_idx );
-
-   n = mdata_vector_get( &(parser->ast), 0, struct MLISP_AST_NODE );
-   assert( NULL != n );
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace_depth = 0;
 #endif /* MLISP_DEBUG_TRACE */
 
    /* Find next unevaluated symbol. */
-   retval = _mlisp_step_iter( parser, n, 0, exec );
+   retval = _mlisp_step_iter( parser, 0, exec );
    if( MERROR_PREEMPT == retval ) {
       /* There's still more to execute. */
       retval = MERROR_OK;
    } else if( MERROR_OK == retval ) {
       /* The last node executed completely. */
-      debug_printf( MLISP_TRACE_LVL,
+      debug_printf( MLISP_EXEC_TRACE_LVL,
          "execution terminated with retval: %d", retval );
       retval = MERROR_EXEC;
    } else {
-      debug_printf( MLISP_TRACE_LVL, "execution terminated successfully" );
+      debug_printf( MLISP_EXEC_TRACE_LVL, "execution terminated successfully" );
    }
 
 #ifdef MLISP_DEBUG_TRACE
@@ -1178,7 +1350,6 @@ cleanup:
    debug_printf( MLISP_EXEC_TRACE_LVL, "heartbeat end: %x", retval );
 
    mdata_vector_unlock( &(exec->per_node_child_idx) );
-   mdata_vector_unlock( &(parser->ast) );
 
    return retval;
 }
