@@ -127,6 +127,11 @@ MERROR_RETVAL mlisp_stack_dump(
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_E): " SIZE_T_FMT,
                i, n_stack->value.args_end );
 
+      } else if( MLISP_TYPE_BEGIN == n_stack->type ) {
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (BEGIN): " SIZE_T_FMT,
+               i, n_stack->value.begin );
+
       /* Handle numeric types. */
       MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPS );
       } else {
@@ -468,8 +473,7 @@ cleanup:
 
 /* === */
 
-static
-ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
+static ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
    ssize_t ret_idx = 0;
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
@@ -526,8 +530,7 @@ cleanup:
 
 /* === */
 
-static
-MERROR_RETVAL _mlisp_env_cb_cmp(
+static MERROR_RETVAL _mlisp_env_cb_cmp(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    void* cb_data, uint8_t flags
 ) {
@@ -588,8 +591,7 @@ cleanup:
 
 /* === */
 
-static
-MERROR_RETVAL _mlisp_env_cb_arithmetic(
+static MERROR_RETVAL _mlisp_env_cb_arithmetic(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    void* cb_data, uint8_t flags
 ) {
@@ -644,8 +646,7 @@ cleanup:
 
 /* === */
 
-static
-MERROR_RETVAL _mlisp_env_cb_define(
+static MERROR_RETVAL _mlisp_env_cb_define(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    void* cb_data, uint8_t flags
 ) {
@@ -898,6 +899,7 @@ static MERROR_RETVAL _mlisp_reset_child_pcs(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_child_idx = NULL;
+   size_t* p_visit_ct = NULL;
    struct MLISP_AST_NODE* n = NULL;
    size_t i = 0;
 
@@ -909,6 +911,12 @@ static MERROR_RETVAL _mlisp_reset_child_pcs(
    p_child_idx = mdata_vector_get( &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_child_idx );
    *p_child_idx = 0;
+
+   debug_printf( MLISP_TRACE_LVL,
+      "resetting visit count on node: " SIZE_T_FMT, n_idx );
+   p_visit_ct = mdata_vector_get( &(exec->per_node_visit_ct), n_idx, size_t );
+   assert( NULL != p_visit_ct );
+   *p_visit_ct = 0;
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
@@ -958,7 +966,7 @@ cleanup:
 
 /* === */
 
-ssize_t _mlisp_detect_tail_call(
+static ssize_t _mlisp_detect_tail_call(
    struct MLISP_PARSER* parser, size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -1265,7 +1273,11 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "eval token: \"%s\" (maug_strlen: " SIZE_T_FMT ")",
       &(strpool[token_idx]), maug_strlen( &(strpool[token_idx]) ) );
-   if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz ) ) {
+   if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz ) ) {
+      /* Fake env node e to step_begin below. */
+      e_out->type = MLISP_TYPE_BEGIN;
+
+   } else if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz ) ) {
       /* Fake env node e to step_if below. */
       e_out->type = MLISP_TYPE_IF;
 
@@ -1310,6 +1322,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_ENV_NODE e;
    struct MLISP_AST_NODE* n = NULL;
+   size_t* p_visit_ct = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1317,6 +1330,28 @@ static MERROR_RETVAL _mlisp_step_iter(
 #endif /* MLISP_DEBUG_TRACE */
 
    assert( !mdata_vector_is_locked( &(parser->ast) ) );
+
+   assert( mdata_vector_is_locked( &(exec->per_node_visit_ct) ) );
+   p_visit_ct = mdata_vector_get(
+      &(exec->per_node_visit_ct), n_idx, size_t );
+   assert( NULL != p_visit_ct );
+   (*p_visit_ct)++;
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "visit count for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_visit_ct );
+
+   /* Push a stack frame marker on the first visit to a BEGIN node. */
+   assert( !mdata_vector_is_locked( &(parser->ast) ) );
+   mdata_vector_lock( &(parser->ast) );
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
+   if(
+      MLISP_AST_FLAG_BEGIN == (MLISP_AST_FLAG_BEGIN & n->flags) &&
+      1 == *p_visit_ct
+   ) {
+      /* Push a stack frame on first visit. */
+      _mlisp_stack_push_mlisp_begin_t( exec, n_idx );
+   }
+   mdata_vector_unlock( &(parser->ast) );
 
    if(
       MERROR_OK !=
@@ -1359,7 +1394,10 @@ static MERROR_RETVAL _mlisp_step_iter(
    } else if( MLISP_TYPE_ ## const_name == e.type ) { \
       _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
-   if( MLISP_TYPE_IF == e.type ) {
+   if( MLISP_TYPE_BEGIN == e.type ) {
+      /* TODO: Cleanup the stack push since this BEGIN's stack frame. */
+
+   } else if( MLISP_TYPE_IF == e.type ) {
       retval = _mlisp_step_if( parser, n_idx, exec );
 
    } else if( MLISP_TYPE_CB == e.type ) {
@@ -1394,8 +1432,6 @@ MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t zero = 0;
-   size_t* p_child_idx = NULL;
 #ifdef MLISP_DEBUG_TRACE
    size_t i = 0;
    char trace_str[MLISP_DEBUG_TRACE * 5];
@@ -1405,29 +1441,18 @@ MERROR_RETVAL mlisp_step(
    ms_start = retroflat_get_ms();
 #endif /* MLISP_DEBUG_TRACE */
 
-   if( 0 == mdata_vector_ct( &(exec->per_node_child_idx) ) ) {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "creating exec state..." );
-      retval = mdata_vector_append(
-         &(exec->per_node_child_idx), &zero, sizeof( size_t ) );
-      maug_cleanup_if_not_ok();
-   }
-
    debug_printf( MLISP_EXEC_TRACE_LVL, "heartbeat start" );
 
-   /* Make sure there's an exec child node for every AST node. */
-   while(
-      mdata_vector_ct( &(exec->per_node_child_idx) ) <= 
-      mdata_vector_ct( &(parser->ast) )
-   ) {
-      retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
-         sizeof( size_t ) );
-   }
-
    assert( !mdata_vector_is_locked( &(parser->ast) ) );
+
+   /* These can remain locked for the whole step, as they're never added or
+    * removed.
+    */
+   /* TODO: Can we keep the AST locked for the whole step, too? */
+   assert( !mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
+   assert( !mdata_vector_is_locked( &(exec->per_node_visit_ct) ) );
    mdata_vector_lock( &(exec->per_node_child_idx) );
-   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-   p_child_idx = mdata_vector_get( &(exec->per_node_child_idx), 0, size_t );
-   assert( NULL != p_child_idx );
+   mdata_vector_lock( &(exec->per_node_visit_ct) );
 
    exec->flags = 0;
 
@@ -1468,6 +1493,7 @@ cleanup:
 
    debug_printf( MLISP_EXEC_TRACE_LVL, "heartbeat end: %x", retval );
 
+   mdata_vector_unlock( &(exec->per_node_visit_ct) );
    mdata_vector_unlock( &(exec->per_node_child_idx) );
 
    return retval;
@@ -1480,6 +1506,7 @@ MERROR_RETVAL mlisp_exec_init(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
+   size_t zero = 0;
 
    maug_mzero( exec, sizeof( struct MLISP_EXEC_STATE ) );
 
@@ -1489,6 +1516,34 @@ MERROR_RETVAL mlisp_exec_init(
       retval = mdata_retval( append_retval );
    }
    maug_cleanup_if_not_ok();
+
+   /* Create the node PCs. */
+   retval = mdata_vector_append(
+      &(exec->per_node_child_idx), &zero, sizeof( size_t ) );
+   maug_cleanup_if_not_ok();
+
+   /* Make sure there's an exec child node for every AST node. */
+   while(
+      mdata_vector_ct( &(exec->per_node_child_idx) ) <= 
+      mdata_vector_ct( &(parser->ast) )
+   ) {
+      retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
+         sizeof( size_t ) );
+   }
+
+   /* Create the node visit counters. */
+   retval = mdata_vector_append(
+      &(exec->per_node_visit_ct), &zero, sizeof( size_t ) );
+   maug_cleanup_if_not_ok();
+
+   /* Make sure there's an exec visit count for every AST node. */
+   while(
+      mdata_vector_ct( &(exec->per_node_visit_ct) ) <= 
+      mdata_vector_ct( &(parser->ast) )
+   ) {
+      retval = mdata_vector_append( &(exec->per_node_visit_ct), &zero,
+         sizeof( size_t ) );
+   }
 
    /* Setup initial env. */
 
@@ -1530,6 +1585,7 @@ cleanup:
 
 void mlisp_exec_free( struct MLISP_EXEC_STATE* exec ) {
    mdata_vector_free( &(exec->per_node_child_idx) );
+   mdata_vector_free( &(exec->per_node_visit_ct) );
    mdata_vector_free( &(exec->stack) );
    mdata_vector_free( &(exec->env) );
 }

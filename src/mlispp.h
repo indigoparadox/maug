@@ -17,9 +17,7 @@
 
 #define MLISP_AST_FLAG_IF     0x04
 
-#define MLISP_AST_FLAG_IF_COND   0x08
-
-#define MLISP_AST_FLAG_IF_THEN   0x10
+#define MLISP_AST_FLAG_BEGIN  0x20
 
 #define MLISP_PARSER_PSTATE_TABLE( f ) \
    f( MLISP_PSTATE_NONE, 0 ) \
@@ -197,12 +195,20 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
          "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
          &(strpool[token_idx]), token_sz );
       n->flags |= MLISP_AST_FLAG_LAMBDA;
+
    } else if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz + 1 ) ) {
       /* Special node: if. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: IF",
          &(strpool[token_idx]), token_sz );
       n->flags |= MLISP_AST_FLAG_IF;
+
+   } else if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz + 1 ) ) {
+      /* Special node: if. */
+      debug_printf( MLISP_PARSE_TRACE_LVL,
+         "setting node \"%s\" (" SIZE_T_FMT ") flag: BEGIN",
+         &(strpool[token_idx]), token_sz );
+      n->flags |= MLISP_AST_FLAG_BEGIN;
    }
 
    /* Debug report. */
@@ -454,22 +460,7 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          mlisp_parser_reset_token( parser );
 
          /* Add a new empty child to be filled out when tokens are parsed. */
-         if(
-            MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n_flags) &&
-            0 == n_children
-         ) {
-            /* Parent is IF with no children. */
-            _mlisp_ast_add_child( parser, MLISP_AST_FLAG_IF_COND );
-         } else if(
-            MLISP_AST_FLAG_IF == (MLISP_AST_FLAG_IF & n_flags) &&
-            0 < n_children
-         ) {
-            /* Parent is IF with >= 1 children. */
-            _mlisp_ast_add_child( parser, MLISP_AST_FLAG_IF_THEN );
-         } else {
-            /* Parent is just a normal node. */
-            _mlisp_ast_add_child( parser, 0 );
-         }
+         _mlisp_ast_add_child( parser, 0 );
 
       } else if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
          retval = mlisp_parser_append_token( parser, c );

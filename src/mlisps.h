@@ -29,7 +29,7 @@ typedef ssize_t mlisp_lambda_t;
 typedef mlisp_lambda_t mlisp_args_t;
 typedef mlisp_lambda_t mlisp_arge_t;
 typedef mlisp_lambda_t mlisp_if_t;
-typedef mlisp_lambda_t mlisp_then_t;
+typedef mlisp_lambda_t mlisp_begin_t;
 
 typedef uint8_t mlisp_bool_t;
 
@@ -56,7 +56,7 @@ typedef uint8_t mlisp_bool_t;
    f( 7, mlisp_args_t,        args_start,    ARGS_S,  SSIZE_T_FMT ) \
    f( 8, mlisp_arge_t,        args_end,      ARGS_E,  SSIZE_T_FMT ) \
    f( 9, mlisp_if_t,          iffy,          IF,      SSIZE_T_FMT ) \
-   f(10, mlisp_then_t,        then,          THEN,    SSIZE_T_FMT )   
+   f(10, mlisp_begin_t,       begin,         BEGIN,   SSIZE_T_FMT )   
 
 /*! \} */ /* mlisp_types */
 
@@ -100,6 +100,8 @@ struct MLISP_AST_NODE {
 
 struct MLISP_EXEC_STATE {
    uint8_t flags;
+   /*! \brief The number of times each node has been visited ever. */
+   struct MDATA_VECTOR per_node_visit_ct;
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
    struct MDATA_VECTOR stack;
