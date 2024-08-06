@@ -108,6 +108,15 @@ MERROR_RETVAL mlisp_step(
 
 #ifdef MLISPE_C
 
+static MERROR_RETVAL _mlisp_preempt(
+   const char* caller, struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx,
+   size_t new_idx );
+
+static MERROR_RETVAL _mlisp_step_iter(
+   struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec );
+
 /* === */
 
 /* Stack Functions */
@@ -564,7 +573,7 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_env_cb_cmp(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -625,7 +634,7 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_env_cb_arithmetic(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -680,7 +689,7 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_env_cb_define(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -733,13 +742,82 @@ cleanup:
 
 /* === */
 
-/* Execution Functions */
+static MERROR_RETVAL _mlisp_env_cb_if(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
+   void* cb_data, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t* p_if_child_idx = NULL;
+   struct MLISP_STACK_NODE s;
+   struct MLISP_AST_NODE* n = NULL;
+
+   debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
+
+   /* Grab the current exec index for the child vector for this node. */
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
+   p_if_child_idx = mdata_vector_get(
+      &(exec->per_node_child_idx), n_idx, size_t );
+   assert( NULL != p_if_child_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      n_idx, *p_if_child_idx );
+
+   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
+
+   if( 0 == *p_if_child_idx ) {
+      /* Evaluating if condition. */
+      debug_printf( MLISP_EXEC_TRACE_LVL, "stepping into condition..." );
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_if_child_idx], exec );
+      debug_printf( MLISP_EXEC_TRACE_LVL, "...stepped out of condition" );
+
+      /* Vary the child we jump to based on the boolean val on the stack. */
+      if( MERROR_OK == retval ) {
+         /* Condition evaluation complete. */
+
+         /* Pop the result and check it. */
+         retval = mlisp_stack_pop( exec, &s );
+         maug_cleanup_if_not_ok();
+         if( MLISP_TYPE_BOOLEAN != s.type ) {
+            error_printf( "(if) can only evaluate boolean type!" );
+            retval = MERROR_EXEC;
+            goto cleanup;
+         }
+
+         /* Set the child pointer to 1 if TRUE and 2 if FALSE. */
+         retval = _mlisp_preempt(
+            "if", parser, n_idx, exec, p_if_child_idx,
+            /* Flip boolean and increment. */
+            (1 - s.value.boolean) + 1 );
+      }
+
+   } else if( 3 > *p_if_child_idx ) {
+      /* Pursuing TRUE or FALSE clause. */
+
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "descending into IF path: " SIZE_T_FMT, *p_if_child_idx );
+      
+      /* Prepare for stepping. */
+
+      /* Step and check. */
+      retval = _mlisp_step_iter(
+         parser, n->ast_idx_children[*p_if_child_idx], exec );
+      if( MERROR_OK == retval ) {
+         retval = _mlisp_preempt(
+            "if", parser, n_idx, exec, p_if_child_idx, 3 );
+      }
+   }
+
+cleanup:
+
+   debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
+
+   return retval;
+}
 
 /* === */
 
-static MERROR_RETVAL _mlisp_step_iter(
-   struct MLISP_PARSER* parser,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec );
+/* Execution Functions */
 
 /* === */
 
@@ -1151,79 +1229,6 @@ cleanup:
 
 /* === */
 
-static MERROR_RETVAL _mlisp_step_if(
-   struct MLISP_PARSER* parser,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   size_t* p_if_child_idx = NULL;
-   struct MLISP_STACK_NODE s;
-   struct MLISP_AST_NODE* n = NULL;
-
-   debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr STEP IF qrqrqrqrqr" );
-
-   /* Grab the current exec index for the child vector for this node. */
-   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-   p_if_child_idx = mdata_vector_get(
-      &(exec->per_node_child_idx), n_idx, size_t );
-   assert( NULL != p_if_child_idx );
-   debug_printf( MLISP_EXEC_TRACE_LVL,
-      "child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
-      n_idx, *p_if_child_idx );
-
-   n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
-
-   if( 0 == *p_if_child_idx ) {
-      /* Evaluating if condition. */
-      debug_printf( MLISP_EXEC_TRACE_LVL, "stepping into condition..." );
-      retval = _mlisp_step_iter(
-         parser, n->ast_idx_children[*p_if_child_idx], exec );
-      debug_printf( MLISP_EXEC_TRACE_LVL, "...stepped out of condition" );
-
-      /* Vary the child we jump to based on the boolean val on the stack. */
-      if( MERROR_OK == retval ) {
-         /* Condition evaluation complete. */
-
-         /* Pop the result and check it. */
-         retval = mlisp_stack_pop( exec, &s );
-         maug_cleanup_if_not_ok();
-         if( MLISP_TYPE_BOOLEAN != s.type ) {
-            error_printf( "(if) can only evaluate boolean type!" );
-            retval = MERROR_EXEC;
-            goto cleanup;
-         }
-
-         /* Set the child pointer to 1 if TRUE and 2 if FALSE. */
-         retval = _mlisp_preempt(
-            "if", parser, n_idx, exec, p_if_child_idx,
-            /* Flip boolean and increment. */
-            (1 - s.value.boolean) + 1 );
-      }
-
-   } else if( 3 > *p_if_child_idx ) {
-      /* Pursuing TRUE or FALSE clause. */
-
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "descending into IF path: " SIZE_T_FMT, *p_if_child_idx );
-      
-      /* Prepare for stepping. */
-
-      /* Step and check. */
-      retval = _mlisp_step_iter(
-         parser, n->ast_idx_children[*p_if_child_idx], exec );
-      if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt(
-            "if", parser, n_idx, exec, p_if_child_idx, 3 );
-      }
-   }
-
-cleanup:
-
-   debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
-
-   return retval;
-}
-
 /* === */
 
 static MERROR_RETVAL _mlisp_stack_cleanup(
@@ -1278,10 +1283,6 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
    if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz ) ) {
       /* Fake env node e to step_begin below. */
       e_out->type = MLISP_TYPE_BEGIN;
-
-   } else if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz ) ) {
-      /* Fake env node e to step_if below. */
-      e_out->type = MLISP_TYPE_IF;
 
    } else if( NULL != (p_e = mlisp_env_get_strpool(
       parser, exec, strpool, token_idx, token_sz
@@ -1392,15 +1393,12 @@ static MERROR_RETVAL _mlisp_step_iter(
        */
       retval = _mlisp_stack_cleanup( parser, n_idx, exec );
 
-   } else if( MLISP_TYPE_IF == e.type ) {
-      retval = _mlisp_step_if( parser, n_idx, exec );
-
    } else if( MLISP_TYPE_CB == e.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
-      retval = e.value.cb( parser, exec, e.cb_data, e.flags );
+      retval = e.value.cb( parser, exec, n_idx, e.cb_data, e.flags );
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
@@ -1542,6 +1540,10 @@ MERROR_RETVAL mlisp_exec_init(
 
    /* Setup initial env. */
 
+   retval = mlisp_env_set(
+      parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "define", 6, MLISP_TYPE_CB, _mlisp_env_cb_define,
       NULL, MLISP_ENV_FLAG_BUILTIN );

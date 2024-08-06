@@ -58,7 +58,6 @@ typedef uint8_t mlisp_bool_t;
    f( 6, mlisp_lambda_t,      lambda,        LAMBDA,  SSIZE_T_FMT ) \
    f( 7, mlisp_args_t,        args_start,    ARGS_S,  SSIZE_T_FMT ) \
    f( 8, mlisp_arge_t,        args_end,      ARGS_E,  SSIZE_T_FMT ) \
-   f( 9, mlisp_if_t,          iffy,          IF,      SSIZE_T_FMT ) \
    f(10, mlisp_begin_t,       begin,         BEGIN,   SSIZE_T_FMT )   
 
 /*! \} */ /* mlisp_types */
@@ -67,7 +66,7 @@ struct MLISP_PARSER;
 struct MLISP_EXEC_STATE;
 
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    void* cb_data, uint8_t flags );
 
 #define _MLISP_TYPE_TABLE_FIELDS( idx, ctype, name, const_name, fmt ) \
