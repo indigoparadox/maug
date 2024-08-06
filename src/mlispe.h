@@ -612,14 +612,22 @@ static MERROR_RETVAL _mlisp_env_cb_cmp(
       goto cleanup;
    }
 
+   /* TODO: String comparison? */
+
    if( MLISP_ENV_FLAG_CMP_GT == (MLISP_ENV_FLAG_CMP_GT & flags) ) {
       debug_printf( MLISP_EXEC_TRACE_LVL, "cmp %d > %d", a_int, b_int );
       truth = a_int > b_int;
    } else if( MLISP_ENV_FLAG_CMP_LT == (MLISP_ENV_FLAG_CMP_LT & flags) ) {
       debug_printf( MLISP_EXEC_TRACE_LVL, "cmp %d < %d", a_int, b_int );
       truth = a_int < b_int;
+   } else if( MLISP_ENV_FLAG_CMP_EQ == (MLISP_ENV_FLAG_CMP_EQ & flags) ) {
+      debug_printf( MLISP_EXEC_TRACE_LVL, "cmp %d == %d", a_int, b_int );
+      truth = a_int == b_int;
+   } else {
+      error_printf( "invalid parameter provided to _mlisp_env_cb_cmp()!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
    }
-   /* TODO: = */
 
    retval = mlisp_stack_push( exec, truth, mlisp_bool_t );
 
@@ -1281,7 +1289,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       "eval token: \"%s\" (maug_strlen: " SIZE_T_FMT ")",
       &(strpool[token_idx]), maug_strlen( &(strpool[token_idx]) ) );
    if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz ) ) {
-      /* Fake env node e to step_begin below. */
+      /* Fake env node e to signal step_iter() to place/cleanup stack frame. */
       e_out->type = MLISP_TYPE_BEGIN;
 
    } else if( NULL != (p_e = mlisp_env_get_strpool(
@@ -1305,6 +1313,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       /* Fake env node e from a floating point numeric literal. */
       e_out->value.floating = atof( &(strpool[token_idx]) );
       e_out->type = MLISP_TYPE_FLOAT;
+
    }
 
 cleanup:
@@ -1377,8 +1386,6 @@ static MERROR_RETVAL _mlisp_step_iter(
    retval = _mlisp_eval_token_strpool(
       parser, exec, n->token_idx, n->token_sz, &e );
    maug_cleanup_if_not_ok();
-
-   /* TODO: Handle undefined symbols with an error. */
 
    /* Prepare to step. */
 
