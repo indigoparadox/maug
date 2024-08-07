@@ -118,10 +118,16 @@ static void _retroflat_nds_blit_sprite(
    int tile_idx = 0,
       tile_x = 0,
       tile_y = 0;
+   const int metatile_sz = 
+      (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX) * 4;
 
    assert( RETROFLAT_NDS_SPRITES_ACTIVE > instance );
 
    /* Blitting a sprite. */
+
+   oamSetXY( RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y );
+   g_retroflat_state->platform.oam_dx[instance] = d_x;
+   g_retroflat_state->platform.oam_dy[instance] = d_y;
 
    if(
       g_retroflat_state->platform.oam_entries[instance] == src &&
@@ -129,9 +135,6 @@ static void _retroflat_nds_blit_sprite(
       s_y == g_retroflat_state->platform.oam_sy[instance]
    ) {
       /* Bitmap already loaded, so just move it and avoid a dmaCopy(). */
-      oamSetXY( RETROFLAT_NDS_OAM_ACTIVE, instance, d_x, d_y );
-      g_retroflat_state->platform.oam_dx[instance] = d_x;
-      g_retroflat_state->platform.oam_dy[instance] = d_y;
       goto cleanup;
    }
 
@@ -149,14 +152,16 @@ static void _retroflat_nds_blit_sprite(
       tile_idx = 0;
    } else {
       /* Index = y * w + x, but with each step converted from px to tiles. */
-      tile_idx = ((s_y / h) * (src->w / w)) + (s_x / w);
+      /* TODO: src->w doesn't seem to be quite right... explosion broken. */
+      tile_idx = ((s_y) * (src->w)) + (s_x);
    }
    debug_printf(
       RETROFLAT_PLATFORM_TRACE_LVL, "loading bitmap tiles into OAM..." );
+   
    dmaCopy(
-      src->tiles +
-         (tile_idx * (RETROFLAT_NDS_BG_TILE_W_PX * RETROFLAT_NDS_BG_TILE_H_PX)),
-      g_retroflat_state->platform.sprite_frames[instance], (w * h) );
+      ((uint8_t*)src->tiles) + tile_idx,
+      g_retroflat_state->platform.sprite_frames[instance],
+         metatile_sz);
 
    /* TODO: Clear pixel layer if it obscures sprite. */
 
@@ -537,13 +542,19 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    assert( NULL != src );
-   
+
    /* Clip off-screen drawing. */
    if(
       retroflat_screen_w() <= d_x || 0 > d_x ||
       retroflat_screen_h() <= d_y || 0 > d_y
    ) {
-      return;
+      if( 0 < instance ) {
+         oamClearSprite( RETROFLAT_NDS_OAM_ACTIVE, instance );
+         g_retroflat_state->platform.oam_entries[instance] = NULL;
+         g_retroflat_state->platform.oam_sx[instance] = -1;
+         g_retroflat_state->platform.oam_sy[instance] = -1;
+      }
+      goto cleanup;
    }
 
    if( 0 < instance ) {

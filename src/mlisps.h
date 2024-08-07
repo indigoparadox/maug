@@ -119,6 +119,7 @@ struct MLISP_EXEC_STATE {
  *        heartbeat cycle. Used to detect tail calls.
  */
    struct MDATA_VECTOR lambda_trace;
+   void* cb_attachment;
 #ifdef MLISP_DEBUG_TRACE
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;

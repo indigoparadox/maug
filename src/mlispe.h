@@ -83,7 +83,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
-   const char* token, size_t token_sz, uint8_t env_type, void* data,
+   const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
 MERROR_RETVAL mlisp_step(
@@ -354,7 +354,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
-   const char* token, size_t token_sz, uint8_t env_type, void* data,
+   const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
