@@ -37,6 +37,10 @@
 /*! \brief Flag for _mlisp_env_cb_arithmetic() specifying to multiply A * B. */
 #define MLISP_ENV_FLAG_ARI_MUL   0x20
 
+#define MLISP_ENV_FLAG_ARI_DIV   0x40
+
+#define MLISP_ENV_FLAG_ARI_MOD   0x80
+
 /**
  * \addtogroup mlisp_stack MLISP Execution Stack
  * \{
@@ -634,37 +638,66 @@ static MERROR_RETVAL _mlisp_env_cb_arithmetic(
    void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_STACK_NODE mults[2];
+   struct MLISP_STACK_NODE num;
    char* strpool = NULL;
    /* TODO: Vary type based on multiplied types. */
-   int product = 0;
+   int16_t num_out = 0;
    size_t i = 0;
 
-   if( MLISP_ENV_FLAG_ARI_MUL == (MLISP_ENV_FLAG_ARI_MUL & flags) ) {
-      /* Start with 1 and multiply it below. */
-      product = 1;
+#  define _MLISP_TYPE_TABLE_ARI1( idx, ctype, name, const_name, fmt ) \
+      } else if( MLISP_TYPE_ ## const_name == num.type ) { \
+         num_out = num.value.name;
+
+   retval = mlisp_stack_pop( exec, &num );
+   maug_cleanup_if_not_ok();
+
+   if( 0 ) {
+   MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ARI1 )
+   } else {
+      error_printf( "arithmetic: invalid type!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
    }
 
-#  define _MLISP_TYPE_TABLE_ARI( idx, ctype, name, const_name, fmt ) \
-      } else if( MLISP_TYPE_ ## const_name == mults[i].type ) { \
-         if( MLISP_ENV_FLAG_ARI_ADD == (MLISP_ENV_FLAG_ARI_ADD & flags) ) { \
-            debug_printf( MLISP_EXEC_TRACE_LVL, \
-               "arithmetic: %d + " fmt, product, mults[i].value.name ); \
-            product += mults[i].value.name; \
-         } else if( \
-            MLISP_ENV_FLAG_ARI_MUL == (MLISP_ENV_FLAG_ARI_MUL & flags) \
-         ) { \
-            debug_printf( MLISP_EXEC_TRACE_LVL, \
-               "arithmetic: %d * " fmt, product, mults[i].value.name ); \
-            product *= mults[i].value.name; \
-         }
+#  define _MLISP_TYPE_TABLE_ARI2( idx, ctype, name, const_name, fmt ) \
+      } else if( \
+         MLISP_TYPE_ ## const_name == num.type && \
+         MLISP_ENV_FLAG_ARI_ADD == (MLISP_ENV_FLAG_ARI_ADD & flags) \
+      ) { \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
+            "arithmetic: %d + " fmt, num_out, num.value.name ); \
+         num_out += num.value.name; \
+      } else if( \
+         MLISP_TYPE_ ## const_name == num.type && \
+         MLISP_ENV_FLAG_ARI_MUL == (MLISP_ENV_FLAG_ARI_MUL & flags) \
+      ) { \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
+            "arithmetic: %d * " fmt, num_out, num.value.name ); \
+         num_out *= num.value.name; \
+      } else if( \
+         MLISP_TYPE_ ## const_name == num.type && \
+         MLISP_ENV_FLAG_ARI_DIV == (MLISP_ENV_FLAG_ARI_DIV & flags) \
+      ) { \
+         debug_printf( MLISP_EXEC_TRACE_LVL, \
+            "arithmetic: %d / " fmt, num_out, num.value.name ); \
+         num_out /= num.value.name; \
 
-   for( i = 0 ; 2 > i ; i++ ) {
-      retval = mlisp_stack_pop( exec, &(mults[i]) );
+   /* TODO: Get number of args. */
+   for( i = 0 ; 1 > i ; i++ ) {
+      retval = mlisp_stack_pop( exec, &num );
       maug_cleanup_if_not_ok();
 
       if( 0 ) {
-      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ARI )
+      MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_ARI2 )
+
+      } else if(
+         MLISP_TYPE_INT == num.type &&
+         MLISP_ENV_FLAG_ARI_MOD == (MLISP_ENV_FLAG_ARI_MOD & flags)
+      ) {
+         /* Modulus is a special case, as you can't mod by float. */
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "arithmetic: %d %% %d", num_out, num.value.integer );
+         num_out %= num.value.integer;
       } else {
          error_printf( "arithmetic: invalid type!" );
          retval = MERROR_EXEC;
@@ -672,7 +705,7 @@ static MERROR_RETVAL _mlisp_env_cb_arithmetic(
       }
    }
 
-   retval = mlisp_stack_push( exec, product, int16_t );
+   retval = mlisp_stack_push( exec, num_out, int16_t );
 
 cleanup:
 
@@ -1514,6 +1547,14 @@ MERROR_RETVAL mlisp_exec_init(
    retval = mlisp_env_set(
       parser, exec, "+", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
       NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_ADD );
+   maug_cleanup_if_not_ok();
+   retval = mlisp_env_set(
+      parser, exec, "/", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_DIV );
+   maug_cleanup_if_not_ok();
+   retval = mlisp_env_set(
+      parser, exec, "%", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MOD );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "<", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
