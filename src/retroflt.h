@@ -2070,59 +2070,68 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* All platforms: add command-line args based on compile definitons. */
 
 #     ifdef RETROSND_ARGS
-	maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
+	retval = maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
       "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd,
          (maug_cli_cb)retrosnd_cli_rsd_def, args );
-	maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
+   maug_cleanup_if_not_ok();
+	retval = maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
       "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, NULL, args );
+   maug_cleanup_if_not_ok();
 #     endif /* RETROSND_ARGS */
 
 #     ifdef RETROFLAT_SCREENSAVER
-	maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
+	retval = maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
       "Preview screensaver", 0, (maug_cli_cb)retroflat_cli_p, NULL, args );
-	maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 2,
+   maug_cleanup_if_not_ok();
+	retval = maug_add_arg( MAUG_CLI_SIGIL "s", MAUG_CLI_SIGIL_SZ + 2,
       "Launch screensaver", 0, (maug_cli_cb)retroflat_cli_s, NULL, args );
+   maug_cleanup_if_not_ok();
 #     endif /* RETROFLAT_SCREENSAVER */
 
 #     ifdef RETROFLAT_API_PC_BIOS
-   maug_add_arg( MAUG_CLI_SIGIL "rfm", MAUG_CLI_SIGIL_SZ + 4,
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfm", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen mode.", 0,
       (maug_cli_cb)retroflat_cli_rfm,
       (maug_cli_cb)retroflat_cli_rfm_def, args );
+   maug_cleanup_if_not_ok();
 #     elif !defined( RETROFLAT_NO_CLI_SZ )
-   maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen X position.", 0,
       (maug_cli_cb)retroflat_cli_rfx,
       (maug_cli_cb)retroflat_cli_rfx_def, args );
-   maug_add_arg( MAUG_CLI_SIGIL "rfy", MAUG_CLI_SIGIL_SZ + 4,
+   maug_cleanup_if_not_ok();
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfy", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen Y position.", 0,
       (maug_cli_cb)retroflat_cli_rfy,
       (maug_cli_cb)retroflat_cli_rfy_def, args );
-   maug_add_arg( MAUG_CLI_SIGIL "rfw", MAUG_CLI_SIGIL_SZ + 4,
+   maug_cleanup_if_not_ok();
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfw", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen width.", 0,
       (maug_cli_cb)retroflat_cli_rfw,
       (maug_cli_cb)retroflat_cli_rfw_def, args );
-   maug_add_arg( MAUG_CLI_SIGIL "rfh", MAUG_CLI_SIGIL_SZ + 4,
+   maug_cleanup_if_not_ok();
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfh", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen height.", 0,
       (maug_cli_cb)retroflat_cli_rfh,
       (maug_cli_cb)retroflat_cli_rfh_def, args );
+   maug_cleanup_if_not_ok();
 #     endif /* !RETROFLAT_NO_CLI_SZ */
 
 #     ifdef RETROFLAT_VDP
-   maug_add_arg( MAUG_CLI_SIGIL "vdp", MAUG_CLI_SIGIL_SZ + 4,
+   retval = maug_add_arg( MAUG_CLI_SIGIL "vdp", MAUG_CLI_SIGIL_SZ + 4,
       "Pass a string of args to the VDP.", 0,
       (maug_cli_cb)retroflat_cli_vdp, NULL, args );
+   maug_cleanup_if_not_ok();
 #     endif /* RETROFLAT_VDP */
 
-   maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfu", MAUG_CLI_SIGIL_SZ + 4,
       "Unlock FPS.", 0,
       (maug_cli_cb)retroflat_cli_u, (maug_cli_cb)retroflat_cli_u_def, args );
+   maug_cleanup_if_not_ok();
 
    /* Parse command line args. */
    retval = maug_parse_args( argc, argv );
-   if( RETROFLAT_OK != retval ) {
-      goto cleanup;
-   }
+   maug_cleanup_if_not_ok();
 
 #  else
 
