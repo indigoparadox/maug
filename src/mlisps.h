@@ -114,6 +114,11 @@ struct MLISP_EXEC_STATE {
     * denote env definitions that are actually args for the current lambda.
     */
    struct MDATA_VECTOR env;
+/**
+ * \brief Path through any lambdas the execution has entered during *this*
+ *        heartbeat cycle. Used to detect tail calls.
+ */
+   struct MDATA_VECTOR lambda_trace;
 #ifdef MLISP_DEBUG_TRACE
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;

@@ -38,18 +38,6 @@
 #define MLISP_ENV_FLAG_ARI_MUL   0x20
 
 /**
- * \brief Flag for MLISP_EXEC_STATE::flags indicating that execution has
- *        entered at least one lambda in its traversal during *this*
- *        heartbeat cycle.
- *
- * \todo This is a bit of a hack, and we need a better way to determine if
- *       it was the same lambda for tail-call detection. Currently, it's a
- *       combination of this and matching the n_idx passed to
- *       _mlisp_detect_tail_call() to the last arg env frame.
- */
-#define MLISP_EXEC_FLAG_IN_LAMBDA   0x02
-
-/**
  * \addtogroup mlisp_stack MLISP Execution Stack
  * \{
  */
@@ -341,11 +329,11 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 ) {
    struct MLISP_ENV_NODE* node_out = NULL;
    struct MLISP_ENV_NODE* node_test = NULL;
-   size_t i = 0;
+   ssize_t i = mdata_vector_ct( &(exec->env) ) - 1;
 
    /* This requires env be locked before entrance! */
 
-   while( exec->env.ct > i ) {
+   while( 0 <= i ) {
       assert( mdata_vector_is_locked( &(exec->env) ) );
       node_test = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
       if( 0 == strncmp(
@@ -356,7 +344,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
          node_out = node_test;
          break;
       }
-      i++;
+      i--;
    }
 
    return node_out;
@@ -1062,64 +1050,6 @@ cleanup:
 
 /* === */
 
-static ssize_t _mlisp_detect_tail_call(
-   struct MLISP_PARSER* parser, size_t n_idx, struct MLISP_EXEC_STATE* exec
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   ssize_t frame_idx = 0;
-   char* strpool = NULL;
-   struct MLISP_ENV_NODE e_start_frame; 
-   ssize_t ret_idx = 0;
-
-   assert( !mdata_vector_is_locked( &(exec->env) ) );
-
-   /* TODO: How do we know the flag came from *this* lambda? */
-
-   if(
-      MLISP_EXEC_FLAG_IN_LAMBDA != (MLISP_EXEC_FLAG_IN_LAMBDA & exec->flags)
-   ) {
-      goto cleanup;
-   }
-
-   /* First, determine if this is a tail call. */
-   frame_idx = _mlisp_env_get_env_frame( exec, &e_start_frame );
-
-   /* Get the env node for the statement we're about to call. */
-   assert( !mdata_vector_is_locked( &(exec->env) ) );
-   mdata_vector_lock( &(exec->env) );
-   mdata_strpool_lock( &(parser->strpool), strpool );
-
-   if( 0 < frame_idx ) {
-      debug_printf( MLISP_EXEC_FLAG_IN_LAMBDA,
-         "esf " SSIZE_T_FMT " val: " SSIZE_T_FMT,
-         frame_idx, e_start_frame.value.args_start );
-   } else {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "no esf!" );
-   }
-
-   if( 0 < frame_idx && e_start_frame.value.args_start == n_idx ) {
-      ret_idx = n_idx;
-   }  
-
-cleanup:
-
-   if( NULL != strpool ) {
-      mdata_strpool_unlock( &(parser->strpool), strpool );
-   }
-
-   if( mdata_vector_is_locked( &(exec->env) ) ) {
-      mdata_vector_unlock( &(exec->env) );
-   }
-
-   if( MERROR_OK != retval ) {
-      ret_idx = retval * -1;
-   }
-
-   return ret_idx;
-}
-
-/* === */
-
 static MERROR_RETVAL _mlisp_step_lambda(
    struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
@@ -1128,15 +1058,36 @@ static MERROR_RETVAL _mlisp_step_lambda(
    size_t* p_lambda_child_idx = NULL;
    size_t* p_args_child_idx = NULL;
    struct MLISP_AST_NODE* n = NULL;
-   ssize_t tail_idx = 0;
+   size_t* p_n_last_lambda = NULL;
+   ssize_t append_retval = 0;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
    assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
 #endif /* MLISP_DEBUG_TRACE */
 
+   /* n_idx is the node of this lambda. */
+   mdata_vector_lock( &(exec->lambda_trace) );
+   p_n_last_lambda = mdata_vector_get_last( &(exec->lambda_trace), size_t );
+   mdata_vector_unlock( &(exec->lambda_trace) );
+   if( NULL != p_n_last_lambda && n_idx == *p_n_last_lambda ) {
+      /* This is a recursive call, so get rid of the lambda context so we can
+       * replace it with a new one afterwards.
+       */
+      debug_printf( MLISP_EXEC_TRACE_LVL, "TRACE TAIL TIME!" );
+      _mlisp_reset_lambda( parser, n_idx, exec );
+      retval = mdata_vector_remove_last( &(exec->lambda_trace) );
+      maug_cleanup_if_not_ok();
+   }
+
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "xvxvxvxvxvxvx STEP LAMBDA xvxvxvxvxvx" );
+      "xvxvxvxvxvxvx STEP LAMBDA " SIZE_T_FMT " xvxvxvxvxvx", n_idx );
+
+   /* Note that we passed through this lambda to detect tail calls later. */
+   append_retval = mdata_vector_append(
+      &(exec->lambda_trace), &n_idx, sizeof( size_t ) );
+   retval = mdata_retval( append_retval );
+   maug_cleanup_if_not_ok();
 
    /* Grab the current exec index for the child vector for this node. */
    assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
@@ -1149,18 +1100,6 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
    
-   tail_idx = _mlisp_detect_tail_call( parser, n_idx, exec );
-
-   if( 0 < tail_idx ) {
-      /* This is a recursive call, so get rid of the lambda context so we can
-       * replace it with a new one afterwards.
-       */
-      debug_printf( MLISP_EXEC_TRACE_LVL, "TAIL TIME!" );
-      _mlisp_reset_lambda( parser, n_idx, exec );
-   }
-
-   exec->flags |= MLISP_EXEC_FLAG_IN_LAMBDA;
-
    /* There needs to be an arg node and an exec node. */
    /* TODO: Handle this gracefully. */
    assert( 1 < n->ast_idx_children_sz );
@@ -1180,7 +1119,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
       if( 0 == *p_args_child_idx ) {
          /* Set return call in env before first arg, in *before-arg* delimiter,
-         * so the args can be stripped off later when we return. */
+          * so the args can be stripped off later when we return. */
          retval = mlisp_env_set(
             parser, exec, "$ARGS_S$", 0, MLISP_TYPE_ARGS_S, &n_idx, NULL, 0 );
          maug_cleanup_if_not_ok();
@@ -1204,8 +1143,8 @@ static MERROR_RETVAL _mlisp_step_lambda(
       }
 
       /* Set the error to MERROR_PREEMPT so that caller knows this lambda isn't
-      * finished executing.
-      */
+       * finished executing.
+       */
       retval = MERROR_PREEMPT;
 
    } else if( mlisp_ast_has_ready_children( *p_lambda_child_idx, n ) ) {
@@ -1227,10 +1166,13 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
    /* TODO: If MERROR_PREEMPT is not returned, remove args_s and args_e? */
 
-   debug_printf( MLISP_EXEC_TRACE_LVL,
-      "xvxvxvxvxvxvx END STEP LAMBDA xvxvxvxvxvx" );
-
 cleanup:
+
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "xvxvxvxvxvxvx END STEP LAMBDA " SIZE_T_FMT " xvxvxvxvxvx", n_idx );
+
+   /* Cleanup the passthrough note for this heartbeat. */
+   mdata_vector_remove_last( &(exec->lambda_trace) );
 
    return retval;
 }
@@ -1453,6 +1395,7 @@ MERROR_RETVAL mlisp_step(
    mdata_vector_lock( &(parser->ast) );
 
    exec->flags = 0;
+   assert( 0 == mdata_vector_ct( &(exec->lambda_trace) ) );
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace_depth = 0;
@@ -1509,6 +1452,15 @@ MERROR_RETVAL mlisp_exec_init(
    size_t zero = 0;
 
    maug_mzero( exec, sizeof( struct MLISP_EXEC_STATE ) );
+
+   /* Setup lambda visit stack so it can be locked on first step. */
+   retval = mdata_vector_append(
+      &(exec->lambda_trace), &zero, sizeof( size_t ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
+   maug_cleanup_if_not_ok();
+   mdata_vector_remove_last( &(exec->lambda_trace) );
 
    append_retval = mdata_vector_alloc(
       &(exec->env), sizeof( struct MLISP_ENV_NODE ), MDATA_VECTOR_INIT_SZ );
@@ -1592,6 +1544,7 @@ void mlisp_exec_free( struct MLISP_EXEC_STATE* exec ) {
    mdata_vector_free( &(exec->per_node_visit_ct) );
    mdata_vector_free( &(exec->stack) );
    mdata_vector_free( &(exec->env) );
+   mdata_vector_free( &(exec->lambda_trace) );
 }
 
 #else

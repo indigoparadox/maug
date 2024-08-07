@@ -92,6 +92,10 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
       ((type*)mdata_vector_get_void( v, \
          mdata_vector_ct( v ) - 1 )) : NULL)
 
+#define mdata_vector_remove_last( v ) \
+   (0 < mdata_vector_ct( v ) ? \
+      (mdata_vector_remove( v, mdata_vector_ct( v ) - 1 )) : MERROR_OVERFLOW)
+
 #define mdata_vector_ct( v ) ((v)->ct)
 
 #define mdata_vector_sz( v ) (((v)->ct_max) * ((v)->item_sz))
@@ -101,7 +105,7 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
 
-#define mdata_retval( idx ) ((idx) * -1)
+#define mdata_retval( idx ) (0 > idx ? ((idx) * -1) : MERROR_OK)
 
 #ifdef MDATA_C
 
