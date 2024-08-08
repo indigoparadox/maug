@@ -566,7 +566,7 @@ cleanup:
 
 static MERROR_RETVAL _mlisp_env_cb_cmp(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   void* cb_data, uint8_t flags
+   size_t args_c, void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE tmp;
@@ -635,7 +635,7 @@ cleanup:
 
 static MERROR_RETVAL _mlisp_env_cb_arithmetic(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   void* cb_data, uint8_t flags
+   size_t args_c, void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE num;
@@ -682,8 +682,7 @@ static MERROR_RETVAL _mlisp_env_cb_arithmetic(
             "arithmetic: %d / " fmt, num_out, num.value.name ); \
          num_out /= num.value.name; \
 
-   /* TODO: Get number of args. */
-   for( i = 0 ; 1 > i ; i++ ) {
+   for( i = 0 ; args_c - 1 > i ; i++ ) {
       retval = mlisp_stack_pop( exec, &num );
       maug_cleanup_if_not_ok();
 
@@ -719,7 +718,7 @@ cleanup:
 
 static MERROR_RETVAL _mlisp_env_cb_define(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   void* cb_data, uint8_t flags
+   size_t args_c, void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE key;
@@ -773,7 +772,7 @@ cleanup:
 
 static MERROR_RETVAL _mlisp_env_cb_if(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   void* cb_data, uint8_t flags
+   size_t args_c, void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_if_child_idx = NULL;
@@ -1310,6 +1309,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_ENV_NODE e;
    struct MLISP_AST_NODE* n = NULL;
    size_t* p_visit_ct = NULL;
+   size_t* p_child_idx = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1376,11 +1376,17 @@ static MERROR_RETVAL _mlisp_step_iter(
       retval = _mlisp_stack_cleanup( parser, n_idx, exec );
 
    } else if( MLISP_TYPE_CB == e.type ) {
+
+      assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
+      p_child_idx = mdata_vector_get(
+         &(exec->per_node_child_idx), n_idx, size_t );
+
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
-      retval = e.value.cb( parser, exec, n_idx, e.cb_data, e.flags );
+      retval = e.value.cb(
+         parser, exec, n_idx, *p_child_idx, e.cb_data, e.flags );
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing

@@ -67,7 +67,7 @@ struct MLISP_EXEC_STATE;
 
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   void* cb_data, uint8_t flags );
+   size_t args_c, void* cb_data, uint8_t flags );
 
 #define _MLISP_TYPE_TABLE_FIELDS( idx, ctype, name, const_name, fmt ) \
    ctype name;
