@@ -182,12 +182,14 @@ static void error_printf( const char* fmt, ... ) {
 
 /* TODO: Figure out a way to get the calling line number for a function. */
 
-#ifdef RETROFLAT_API_WINCE
+#ifdef RETROFLAT_API_WINCE /* TODO: Use MAUG_OS_WIN */
 
 static void debug_printf( int level, const char* fmt, ... ) {
+   /* TODO: Use maug_vsnprintf() and Windows file APIs. */
 }
 
 static void error_printf( const char* fmt, ... ) {
+   /* TODO: Use maug_vsnprintf() and Windows file APIs. */
 }
 
 #else
@@ -324,6 +326,8 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base );
 
 uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base );
+
+float maug_atof( const char* buffer, size_t buffer_sz );
 
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
@@ -519,10 +523,45 @@ uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base ) {
       } else if( '0' <= buffer[i] ) {
          u32_out *= base;
          u32_out += (buffer[i] - '0');
+      } else {
+         break;
       }
    }
 
    return u32_out;
+}
+
+/* === */
+
+float maug_atof( const char* buffer, size_t buffer_sz ) {
+   size_t i = 0;
+   float float_out = 0;
+   float dec_sz = -1;
+
+   if( 0 == buffer_sz ) {
+      buffer_sz = maug_strlen( buffer );
+   }
+
+   for( i = 0 ; buffer_sz > i ; i++ ) {
+      if( '0' <= buffer[i] && '9' >= buffer[i] ) {
+         if( 0 > dec_sz ) {
+            /* Tack the numbers on before the floating point. */
+            float_out *= 10;
+            float_out += (buffer[i] - '0');
+         } else {
+            /* Tack the numbers on after the floating point. */
+            float_out += ((buffer[i] - '0') * dec_sz);
+            dec_sz *= 0.1;
+         }
+      } else if( '.' == buffer[i] ) {
+         /* Start parsing post-point numbers. */
+         dec_sz = 0.1;
+      } else {
+         break;
+      }
+   }
+
+   return float_out;
 }
 
 /* === */
@@ -715,7 +754,7 @@ void maug_printf( const char* fmt, ... ) {
 
 /* === */
 
-#ifndef MAUG_NO_FILE
+#ifndef RETROFLAT_API_WINCE /* TODO */
 
 void maug_debug_printf(
    FILE* out, uint8_t flags, const char* src_name, size_t line, int16_t lvl,
@@ -744,7 +783,7 @@ void maug_debug_printf(
    }
 }
 
-#endif /* !MAUG_NO_FILE */
+#endif /* !RETROFLAT_API_WINCE */
 
 #else
 

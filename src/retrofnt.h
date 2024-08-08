@@ -196,7 +196,7 @@ MERROR_RETVAL retrofont_load(
 
    while( mfile_has_bytes( &font_file ) ) {
       retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
-      
+
       retrofont_split_glyph_line( line, line_bytes );
       if( MERROR_PARSE == retval ) {
          /* The line couldn't parse, so skip it, but don't give up entirely and
@@ -212,6 +212,8 @@ MERROR_RETVAL retrofont_load(
          /* Skip glyph out of range. */
          continue;
       }
+
+      debug_printf( RETROFONT_TRACE_LVL, "found glyph: %u", glyph_idx );
 
       /* Find where to put the decoded glyph. */
       p_glyph = retrofont_glyph_at( font, glyph_idx );
@@ -247,6 +249,9 @@ MERROR_RETVAL retrofont_load(
 #endif
 
       font->glyphs_count++;
+
+      debug_printf( RETROFONT_TRACE_LVL,
+         "parsed %u glyphs...", font->glyphs_count );
 
       /* If we're not tracing, try to omit printfs from the inner loop! */
 #if 0 < RETROFONT_TRACE_LVL

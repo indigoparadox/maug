@@ -706,10 +706,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_MSG_MAX 4096
 #endif /* !RETROFLAT_MSG_MAX */
 
-#ifndef RETROFLAT_PATH_MAX
-/*! \brief Maximum size allocated for asset paths. */
-#  define RETROFLAT_PATH_MAX 256
-#endif /* !RETROFLAT_PATH_MAX */
+#define RETROFLAT_PATH_MAX MAUG_PATH_MAX
 
 #ifndef RETROFLAT_TITLE_MAX
 #  define RETROFLAT_TITLE_MAX 255

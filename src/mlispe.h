@@ -1280,12 +1280,13 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
 
    } else if( maug_is_num( &(strpool[token_idx]), token_sz ) ) {
       /* Fake env node e from a numeric literal. */
-      e_out->value.integer = atoi( &(strpool[token_idx]) );
+      e_out->value.integer =
+         maug_atou32( &(strpool[token_idx]), token_sz, 10 );
       e_out->type = MLISP_TYPE_INT;
 
    } else if( maug_is_float( &(strpool[token_idx]), token_sz ) ) {
       /* Fake env node e from a floating point numeric literal. */
-      e_out->value.floating = atof( &(strpool[token_idx]) );
+      e_out->value.floating = maug_atof( &(strpool[token_idx]), token_sz );
       e_out->type = MLISP_TYPE_FLOAT;
 
    }
@@ -1432,6 +1433,12 @@ MERROR_RETVAL mlisp_step(
    mdata_vector_lock( &(exec->per_node_child_idx) );
    mdata_vector_lock( &(exec->per_node_visit_ct) );
    mdata_vector_lock( &(parser->ast) );
+
+   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
+      error_printf( "no valid AST present; could not exec!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
 
    exec->flags = 0;
    assert( 0 == mdata_vector_ct( &(exec->lambda_trace) ) );

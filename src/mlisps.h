@@ -73,7 +73,7 @@ typedef MERROR_RETVAL (*mlisp_env_cb_t)(
    ctype name;
 
 union MLISP_VAL {
-   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_FIELDS );
+   MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_FIELDS )
 };
 
 struct MLISP_ENV_NODE {
