@@ -63,11 +63,11 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 
 union MFILE_HANDLE {
-#ifdef MAUG_OS_WIN
+#ifdef MAUG_API_WIN32
    HANDLE handle;
 #else
    FILE* file;
-#endif /* !MAUG_OS_WIN */
+#endif /* !MAUG_API_WIN32 */
    MAUG_MHANDLE mem;
 };
 
@@ -97,7 +97,7 @@ typedef struct MFILE_CADDY mfile_t;
       error_printf( "unknown file type: %d", (p_file)->type ); \
       break;
 
-#ifdef MAUG_OS_WIN
+#ifdef MAUG_API_WIN32
 #  define mfile_has_bytes( p_file ) \
       ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
          (off_t)SetFilePointer( (p_file)->h.handle, 0, NULL, FILE_CURRENT ) : \
@@ -277,7 +277,7 @@ void mfile_close( mfile_t* p_file );
 
 /* === */
 
-#ifdef MAUG_OS_WIN
+#ifdef MAUG_API_WIN32
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -452,7 +452,7 @@ MERROR_RETVAL mfile_file_read_line(
    return retval;
 }
 
-#endif /* !MAUG_OS_WIN */
+#endif /* !MAUG_API_WIN32 */
 
 /* === */
 
@@ -654,7 +654,7 @@ cleanup:
       close( in_file );
    }
 
-#  elif defined( MAUG_OS_WIN )
+#  elif defined( MAUG_API_WIN32 )
 
    /* TODO: Wide chars. */
 
@@ -756,7 +756,7 @@ void mfile_close( mfile_t* p_file ) {
       break;
 
    case MFILE_CADDY_TYPE_FILE:
-#ifdef MAUG_OS_WIN
+#ifdef MAUG_API_WIN32
       CloseHandle( p_file->h.handle );
 #else
       fclose( p_file->h.file );
