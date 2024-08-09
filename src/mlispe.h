@@ -93,6 +93,12 @@ MERROR_RETVAL mlisp_env_set(
 MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
+#define _MLISP_TYPE_TABLE_PUSH_PROTO( idx, ctype, name, const_name, fmt ) \
+   MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
+      struct MLISP_EXEC_STATE* exec, ctype i );
+
+MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_PUSH_PROTO )
+
 /*! \} */ /* mlisp */
 
 #define mlisp_ast_has_ready_children( exec_child_idx, n ) \
@@ -710,7 +716,6 @@ cleanup:
 
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
-
    return retval;
 }
 
@@ -839,6 +844,37 @@ static MERROR_RETVAL _mlisp_env_cb_if(
 cleanup:
 
    debug_printf( MLISP_EXEC_TRACE_LVL, "qrqrqrqrqr END STEP IF qrqrqrqrqr" );
+
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _mlisp_env_cb_random(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
+   size_t args_c, void* cb_data, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_STACK_NODE mod;
+   int16_t random_int = 0;
+
+   retval = mlisp_stack_pop( exec, &mod );
+   maug_cleanup_if_not_ok();
+
+   if( MLISP_TYPE_INT != mod.type ) {
+      /* TODO: Setup float. */
+      error_printf( "random: invalid modulus type: %d", mod.type );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   random_int = retroflat_get_rand() % mod.value.integer;
+
+   debug_printf( 1, "random: %d", random_int ); 
+
+   mlisp_stack_push( exec, random_int, int16_t );
+
+cleanup:
 
    return retval;
 }
@@ -1545,6 +1581,10 @@ MERROR_RETVAL mlisp_exec_init(
 
    /* Setup initial env. */
 
+   retval = mlisp_env_set(
+      parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
       NULL, MLISP_ENV_FLAG_BUILTIN );
