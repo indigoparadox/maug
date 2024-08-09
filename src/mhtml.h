@@ -455,6 +455,7 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    }
 
    /* Allocate text memory. */
+   /* TODO: Switch to strpool. */
    parser->tags[parser->tag_iter].TEXT.content =
       maug_malloc( parser->base.token_sz + 1, 1 );
    maug_cleanup_if_null_alloc(
