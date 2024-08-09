@@ -27,7 +27,8 @@
    f( MLISP_PSTATE_SYMBOL_OP, 1 ) \
    f( MLISP_PSTATE_SYMBOL, 2 ) \
    f( MLISP_PSTATE_STRING, 3 ) \
-   f( MLISP_PSTATE_LAMBDA_ARGS, 4 )
+   f( MLISP_PSTATE_LAMBDA_ARGS, 4 ) \
+   f( MLISP_PSTATE_COMMENT, 5 )
 
 /**
  * \addtogroup mlisp_parser MLISP Abstract Syntax Tree Parser
@@ -377,6 +378,12 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    switch( c ) {
    case '\r':
    case '\n':
+      if( MLISP_PSTATE_COMMENT == mlisp_parser_pstate( parser ) ) {
+         /* End comment on newline. */
+         mlisp_parser_pstate_pop( parser );
+         break;
+      }
+      
    case '\t':
    case ' ':
       if(
@@ -502,7 +509,16 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
       }
       break;
 
+   case ';':
+      if( MLISP_PSTATE_COMMENT != mlisp_parser_pstate( parser ) ) {
+         mlisp_parser_pstate_push( parser, MLISP_PSTATE_COMMENT );
+         break;
+      }
+
    default:
+      if( MLISP_PSTATE_COMMENT == mlisp_parser_pstate( parser ) ) {
+         break;
+      }
       retval = mlisp_parser_append_token( parser, c );
       maug_cleanup_if_not_ok();
       break;

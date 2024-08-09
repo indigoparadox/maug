@@ -274,7 +274,7 @@ MERROR_RETVAL mlisp_env_dump(
                " \"%s\" (" #const_name "): " fmt, \
             i, &(strpool[e->name_strpool_idx]), e->value.name ); \
 
-   mdata_strpool_lock( &(parser->strpool), strpool ); \
+   mdata_strpool_lock( &(parser->strpool), strpool );
    mdata_vector_lock( &(exec->env) );
    while( i < mdata_vector_ct( &(exec->env) ) ) {
       assert( mdata_vector_is_locked( &(exec->env) ) );
@@ -324,7 +324,7 @@ MERROR_RETVAL mlisp_env_dump(
       i++;
    }
    mdata_vector_unlock( &(exec->env) );
-   mdata_strpool_unlock( &(parser->strpool), strpool ); \
+   mdata_strpool_unlock( &(parser->strpool), strpool );
 
 cleanup:
 
