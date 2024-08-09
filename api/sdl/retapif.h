@@ -2,6 +2,10 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+#ifndef SDL_WINDOW_SCALE
+#  define SDL_WINDOW_SCALE 1
+#endif /* SDL_WINDOW_SCALE */
+
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -166,7 +170,8 @@ MERROR_RETVAL retroflat_init_platform(
    /* Create the main window. */
    g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      args->screen_w, args->screen_h, RETROFLAT_WIN_FLAGS );
+      args->screen_w * SDL_WINDOW_SCALE,
+      args->screen_h * SDL_WINDOW_SCALE, RETROFLAT_WIN_FLAGS );
    maug_cleanup_if_null(
       SDL_Window*, g_retroflat_state->platform.window,
       RETROFLAT_ERROR_GRAPHICS );

@@ -42,9 +42,16 @@ $$(MVFS_H_DIR)/mvfs.h: $(1)
 	# Close include guard.
 	echo "\n#endif" >> $$@
 
+ifeq ($$(FORCE_MVFS),)
+$$(warning *********************************************************)
+$$(warning  VFS is not universally enabled! Specify FORCE_MVFS := 1)
+$$(warning *********************************************************)
+else
 CFLAGS_OPT_GCC += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
 CFLAGS_OPT_WATCOM += -D$$(MVFS_DEFINE) -i=$$(MVFS_H_DIR)
 MAUG_DEPS += $$(MVFS_H_DIR)/mvfs.h
+endif
+MVFS_AVAIL := 1
 
 endef
 

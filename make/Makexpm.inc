@@ -48,9 +48,16 @@ $$(RETROXPM_H_DIR)/xpmasset.h: $(1)
 
 #GLOBAL_INCLUDES += $$(RETROXPM_H_DIR)
 
+ifeq ($$(FORCE_XPM),)
+$$(warning *********************************************************)
+$$(warning  XPM is not universally enabled! Specify FORCE_XPM := 1)
+$$(warning *********************************************************)
+else
 CFLAGS_OPT_GCC += -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR)
 CFLAGS_OPT_WATCOM += -DRETROFLAT_XPM -i=$$(RETROXPM_H_DIR)
 MAUG_DEPS += $$(RETROXPM_H_DIR)/xpmasset.h
+endif
+XPM_AVAIL := 1
 
 #CLEAN_TARGETS += $$(RETROXPM_H_DIR)/xpmasset.h
 

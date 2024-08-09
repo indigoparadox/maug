@@ -3,6 +3,24 @@
 
 define TGTWASMSDL
 
+ifeq ($$(FORCE_MVFS),)
+ifeq ($$(MVFS_AVAIL),1)
+# Selectively enable VFS for this platform.
+$$(info Selectively enabling MVFS for platform "WASM" with no filesystem!)
+CFLAGS_OPT_WASM += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
+MAUG_DEPS_WASM += $$(MVFS_H_DIR)/mvfs.h
+endif
+endif
+
+ifeq ($$(FORCE_XPM),)
+ifeq ($$(XPM_AVAIL),1)
+# Selectively enable XPM for this platform.
+$$(info Selectively enabling XPM for platform "WASM" with no filesystem!)
+CFLAGS_OPT_WASM += -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR)
+MAUG_DEPS_WASM += $$(RETROXPM_H_DIR)/xpmasset.h
+endif
+endif
+
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/sdl
 
@@ -20,10 +38,10 @@ endif
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))
 	$$(EMCC) -o $$@ $$^ $$(LDFLAGS_EMCC) $$(EMCC_FLAGS_SDL)
 
-obj/wasm/%.o: %.c | $$(MAUG_DEPS)
+obj/wasm/%.o: %.c | $$(MAUG_DEPS) $$(MAUG_DEPS_WASM)
 	$$(MD) $$(dir $$@)
 	$$(EMCC) -c -o $$@ $$< $$(CFLAGS_EMCC) $$(EMCC_FLAGS_SDL) \
-		$$(CFLAGS_OPT_GCC)
+		$$(CFLAGS_OPT_GCC) $$(CFLAGS_OPT_WASM)
 
 CLEAN_TARGETS += $(1).html $(1).js $(1).wasm
 

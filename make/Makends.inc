@@ -45,6 +45,15 @@ C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)
 
 MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
+ifeq ($$(FORCE_MVFS),)
+ifeq ($$(MVFS_AVAIL),1)
+# Selectively enable VFS for this platform.
+$$(info Selectively enabling MVFS for platform "NDS" with no filesystem!)
+CFLAGS_OPT_GCC_NDS += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
+MAUG_DEPS_NDS += $$(MVFS_H_DIR)/mvfs.h
+endif
+endif
+
 $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 

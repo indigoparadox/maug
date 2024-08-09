@@ -34,13 +34,17 @@ static MERROR_RETVAL retroflat_xpm_header(
    /* TODO: Generalize into varags. */
 
    #define _retroflat_xpm_scan_case( idx, num ) \
-         case idx: \
-            (num) = maug_atou32( num_start, i_cur, 10 ); \
-            debug_printf( 1, "%u: %s became: %d", idx, num_start, num ); \
+      case idx: \
+         (num) = maug_atou32( num_start, i_cur, 10 ); \
+         /* debug_printf( 1, "%u: \"%s\" became: %d", idx, num_start, num ); */ \
+         if( ' ' == line[i] ) { \
+            num_start = &(line[i + 1]); \
+         } else { \
             num_start = &(line[i]); \
-            i_cur = 0; \
-            num_cur++; \
-            continue;
+         } \
+         i_cur = 0; \
+         num_cur++; \
+         continue;
 
    for( i = 0 ; line_sz > i ; i++ ) {
       i_cur++;
@@ -98,6 +102,8 @@ xpm_found:
       gc_xpm_data[xpm_idx][0], maug_strlen( gc_xpm_data[xpm_idx][0] ),
       &bmp_w, &bmp_h, &bmp_colors, &bmp_bypp );
    maug_cleanup_if_not_ok();
+
+   debug_printf( 1, "bitmap has: %d colors, %d bypp", bmp_colors, bmp_bypp );
 
    assert( 16 == bmp_colors );
    assert( 1 == bmp_bypp );
