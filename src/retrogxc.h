@@ -90,38 +90,23 @@ MERROR_RETVAL retrogxc_string_sz(
    size_t font_idx, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
+MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx );
+
 #ifdef RETROGXC_C
 
-static MAUG_MHANDLE gs_retrogxc_handle = (MAUG_MHANDLE)NULL;
-static size_t gs_retrogxc_sz = 0;
+static struct MDATA_VECTOR gs_retrogxc_bitmaps;
 
 /* === */
 
 MERROR_RETVAL retrogxc_init() {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
 
-   gs_retrogxc_handle = maug_malloc(
-      RETROGXC_INITIAL_SZ, sizeof( struct RETROFLAT_CACHE_ASSET ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, gs_retrogxc_handle );
-   gs_retrogxc_sz = RETROGXC_INITIAL_SZ;
-
+   /*
    size_printf( RETROGXC_TRACE_LVL,
       "asset struct", sizeof( struct RETROFLAT_CACHE_ASSET ) );
    size_printf( RETROGXC_TRACE_LVL, "initial graphics cache",
       sizeof( struct RETROFLAT_CACHE_ASSET ) * gs_retrogxc_sz );
-
-   maug_mlock( gs_retrogxc_handle, assets );
-   maug_cleanup_if_null_alloc( struct RETROFLAT_CACHE_ASSET*, assets );
-   maug_mzero(
-      assets,
-      RETROGXC_INITIAL_SZ * sizeof( struct RETROFLAT_CACHE_ASSET ) );
-
-cleanup:
-
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
-   }
+   */
 
    return retval;
 }
@@ -129,57 +114,57 @@ cleanup:
 /* === */
 
 void retrogxc_clear_cache() {
-   size_t i = 0,
-      dropped_count = 0;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+   size_t dropped_count = 0;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
    struct RETROFLAT_BITMAP* bitmap = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
 
-   maug_mlock( gs_retrogxc_handle, assets );
-   for( i = 0 ; gs_retrogxc_sz > i ; i++ ) {
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
 
-      /* Basic node sanity checking. */
-      if( RETROGXC_ASSET_TYPE_NONE == assets[i].type ) {
-         continue;
-      } else if( NULL == assets[i].handle ) {
-         error_printf( "invalid asset handle in asset #" SIZE_T_FMT, i );
-         continue;
-      }
+   while( 0 < mdata_vector_ct( &gs_retrogxc_bitmaps ) ) {
+      asset = mdata_vector_get(
+         &gs_retrogxc_bitmaps, 0, struct RETROFLAT_CACHE_ASSET );
+      assert( NULL != asset );
 
       /* Asset-type-specific cleanup. */
-      if( RETROGXC_ASSET_TYPE_BITMAP == assets[i].type ) {
-         maug_mlock( assets[i].handle, bitmap );
+      switch( asset->type ) {
+      case RETROGXC_ASSET_TYPE_BITMAP:
+         maug_mlock( asset->handle, bitmap );
          if( NULL != bitmap ) {
             retroflat_destroy_bitmap( bitmap );
          }
-         maug_munlock( assets[i].handle, bitmap );
-         maug_mfree( assets[i].handle );
+         maug_munlock( asset->handle, bitmap );
+         maug_mfree( asset->handle );
          dropped_count++;
 
-      } else if( RETROGXC_ASSET_TYPE_FONT == assets[i].type ) {
+      case RETROGXC_ASSET_TYPE_FONT:
          /* Fonts are just a blob of data after a struct, so just free it! */
-         maug_mfree( assets[i].handle );
+         maug_mfree( asset->handle );
          dropped_count++;
       }
 
+      mdata_vector_unlock( &gs_retrogxc_bitmaps );
+      mdata_vector_remove( &gs_retrogxc_bitmaps, 0 );
+      mdata_vector_lock( &gs_retrogxc_bitmaps );
    }
-   maug_mzero( assets,
-      sizeof( struct RETROFLAT_CACHE_ASSET ) * gs_retrogxc_sz );
-   maug_munlock( gs_retrogxc_handle, assets );
    
    debug_printf( RETROGXC_TRACE_LVL,
-      "graphics cache cleared (" SIZE_T_FMT " of " SIZE_T_FMT " assets)",
-      dropped_count, gs_retrogxc_sz );
+      "graphics cache cleared (" SIZE_T_FMT " assets)", dropped_count );
 
-#  ifndef NO_GUI
-   /* window_reload_frames(); */
-#  endif /* !NO_GUI */
+cleanup:
+
+   if( MERROR_OK == retval ) {
+      mdata_vector_unlock( &gs_retrogxc_bitmaps );
+   }
+
+   return;
 }
 
 /* === */
 
 void retrogxc_shutdown() {
    retrogxc_clear_cache();
-   maug_mfree( gs_retrogxc_handle );
+   mdata_vector_free( &gs_retrogxc_bitmaps );
 }
 
 /* === */
@@ -299,49 +284,57 @@ int16_t retrogxc_load_asset(
 ) {
    int16_t idx = RETROGXC_ERROR_CACHE_MISS,
       i = 0;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+   struct RETROFLAT_CACHE_ASSET asset_new;
+   struct RETROFLAT_CACHE_ASSET* asset_iter = NULL;
    RETROGXC_ASSET_TYPE asset_type = RETROGXC_ASSET_TYPE_NONE;
+   MERROR_RETVAL retval = MERROR_OK;
 
-   maug_mlock( gs_retrogxc_handle, assets );
+   maug_mzero( &asset_new, sizeof( struct RETROFLAT_CACHE_ASSET ) );
+
+   if( 0 == mdata_vector_ct( &gs_retrogxc_bitmaps ) ) {
+      goto just_load_asset;
+   }
 
    /* Try to find the bitmap already in the cache. */
-   for( i = 0 ; gs_retrogxc_sz > (size_t)i ; i++ ) {
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+   for( i = 0 ; mdata_vector_ct( &gs_retrogxc_bitmaps ) > (size_t)i ; i++ ) {
+      asset_iter = mdata_vector_get(
+         &gs_retrogxc_bitmaps, i, struct RETROFLAT_CACHE_ASSET );
+      assert( NULL != asset_iter );
       debug_printf( RETROGXC_TRACE_LVL, "\"%s\" vs \"%s\"",
-         assets[i].id, res_p );
-      if( 0 == retroflat_cmp_asset_path( assets[i].id, res_p ) ) {
+        asset_iter->id, res_p );
+      if( 0 == retroflat_cmp_asset_path( asset_iter->id, res_p ) ) {
          debug_printf( RETROGXC_TRACE_LVL,
             "found asset \"%s\" at index %d with type %d!",
-            res_p, i, assets[i].type );
+            res_p, i, asset_iter->type );
          idx = i;
+         mdata_vector_unlock( &gs_retrogxc_bitmaps );
          goto cleanup;
       }
    }
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
+
+just_load_asset:
 
    /* Bitmap not found. */
    debug_printf( RETROGXC_TRACE_LVL,
       "asset %s not found in cache; loading...", res_p );
-   for( i = 0 ; gs_retrogxc_sz > (size_t)i ; i++ ) {
-      /* Find a new empty slot. */
-      debug_printf( RETROGXC_TRACE_LVL, "trying cache slot: %d", i );
-      if( RETROGXC_ASSET_TYPE_NONE != assets[i].type ) {
-         continue;
-      }
 
-      debug_printf( RETROGXC_TRACE_LVL,
-         "found free cache slot: %d (%p)", i, &(assets[i]) );
-
-      /* Call the format-specific loader. */
-      assert( (MAUG_MHANDLE)NULL == assets[i].handle );
-      asset_type = l( res_p, &(assets[i].handle), data, flags );
-      if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
-         assets[i].type = asset_type;
-         idx = i;
-         maug_strncpy( assets[i].id, res_p, RETROFLAT_ASSETS_PATH_MAX );
-         debug_printf( RETROGXC_TRACE_LVL,
-            "asset type %d, \"%s\" assigned cache ID: %d",
-            asset_type, res_p, idx );
+   /* Call the format-specific loader. */
+   asset_type = l( res_p, &asset_new.handle, data, flags );
+   if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
+      asset_new.type = asset_type;
+      maug_strncpy( asset_new.id, res_p, RETROFLAT_ASSETS_PATH_MAX );
+      idx = mdata_vector_append(
+         &gs_retrogxc_bitmaps, &asset_new,
+         sizeof( struct RETROFLAT_CACHE_ASSET ) );
+      if( 0 > idx ) {
          goto cleanup;
       }
+      debug_printf( RETROGXC_TRACE_LVL,
+         "asset type %d, \"%s\" assigned cache ID: %d",
+         asset_type, res_p, idx );
+      goto cleanup;
    }
 
    /* Still not found! */
@@ -349,8 +342,8 @@ int16_t retrogxc_load_asset(
 
 cleanup:
 
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
+   if( MERROR_OK != retval ) {
+      idx = retval * -1;
    }
 
    return idx;
@@ -364,31 +357,29 @@ MERROR_RETVAL retrogxc_blit_bitmap(
    size_t w, size_t h, int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
    struct RETROFLAT_BITMAP* bitmap = NULL;
 
-   if( gs_retrogxc_sz <= bitmap_idx ) {
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+
+   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= bitmap_idx ) {
       error_printf( "invalid bitmap index: " SIZE_T_FMT, bitmap_idx );
       retval = MERROR_OVERFLOW;
       goto cleanup;
    }
 
-   maug_mlock( gs_retrogxc_handle, assets );
-   if( NULL == assets ) {
-      error_printf( "could not lock cache!" );
-      retval = MERROR_ALLOC;
-      goto cleanup;
-   }
+   asset = mdata_vector_get(
+      &gs_retrogxc_bitmaps, bitmap_idx, struct RETROFLAT_CACHE_ASSET );
 
-   if( RETROGXC_ASSET_TYPE_BITMAP != assets[bitmap_idx].type ) {
+   if( RETROGXC_ASSET_TYPE_BITMAP != asset->type ) {
       error_printf(
          "index " SIZE_T_FMT " not present in cache or not bitmap (%d)!",
-         bitmap_idx, assets[bitmap_idx].type );
+         bitmap_idx, asset->type );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
-   maug_mlock( assets[bitmap_idx].handle, bitmap );
+   maug_mlock( asset->handle, bitmap );
 
    retval = retroflat_blit_bitmap(
       target, bitmap, s_x, s_y, d_x, d_y, w, h, instance );
@@ -396,14 +387,58 @@ MERROR_RETVAL retrogxc_blit_bitmap(
 cleanup:
 
    if( NULL != bitmap ) {
-      maug_munlock( assets[bitmap_idx].handle, bitmap );
+      maug_munlock( asset->handle, bitmap );
    }
 
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
-   }
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
 
    return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
+   struct RETROFLAT_BITMAP* bitmap = NULL;
+   size_t w_out = 0;
+
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+
+   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= bitmap_idx ) {
+      error_printf( "invalid bitmap index: " SIZE_T_FMT, bitmap_idx );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   asset = mdata_vector_get(
+      &gs_retrogxc_bitmaps, bitmap_idx, struct RETROFLAT_CACHE_ASSET );
+
+   if( RETROGXC_ASSET_TYPE_BITMAP != asset->type ) {
+      error_printf(
+         "index " SIZE_T_FMT " not present in cache or not bitmap (%d)!",
+         bitmap_idx, asset->type );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   maug_mlock( asset->handle, bitmap );
+
+   w_out = retroflat_bitmap_w( bitmap );
+
+cleanup:
+
+   if( NULL != bitmap ) {
+      maug_munlock( asset->handle, bitmap );
+   }
+
+   if( MERROR_OK != retval ) {
+      w_out = 0;
+   }
+
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
+
+   return w_out;
 }
 
 /* === */
@@ -435,38 +470,33 @@ MERROR_RETVAL retrogxc_string(
    size_t max_w, size_t max_h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
 
-   if( gs_retrogxc_sz <= font_idx ) {
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+
+   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= font_idx ) {
       error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
       retval = MERROR_OVERFLOW;
       goto cleanup;
    }
 
-   maug_mlock( gs_retrogxc_handle, assets );
-   if( NULL == assets ) {
-      error_printf( "could not lock cache!" );
-      retval = MERROR_ALLOC;
-      goto cleanup;
-   }
+   asset = mdata_vector_get(
+      &gs_retrogxc_bitmaps, font_idx, struct RETROFLAT_CACHE_ASSET );
 
-   if( RETROGXC_ASSET_TYPE_FONT != assets[font_idx].type ) {
+   if( RETROGXC_ASSET_TYPE_FONT != asset->type ) {
       error_printf(
          "index " SIZE_T_FMT " not present in cache or not font (%d)!",
-         font_idx, assets[font_idx].type );
+         font_idx, asset->type );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
    retrofont_string(
-      target, color, str, str_sz, assets[font_idx].handle,
-      x, y, max_w, max_h, flags );
+      target, color, str, str_sz, asset->handle, x, y, max_w, max_h, flags );
 
 cleanup:
 
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
-   }
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
 
    return retval;
 }
@@ -479,38 +509,34 @@ MERROR_RETVAL retrogxc_string_sz(
    size_t* out_w_p, size_t* out_h_p, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* assets = NULL;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
 
-   if( gs_retrogxc_sz <= font_idx ) {
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+
+   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= font_idx ) {
       error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
       retval = MERROR_OVERFLOW;
       goto cleanup;
    }
 
-   maug_mlock( gs_retrogxc_handle, assets );
-   if( NULL == assets ) {
-      error_printf( "could not lock cache!" );
-      retval = MERROR_ALLOC;
-      goto cleanup;
-   }
+   asset = mdata_vector_get(
+      &gs_retrogxc_bitmaps, font_idx, struct RETROFLAT_CACHE_ASSET );
 
-   if( RETROGXC_ASSET_TYPE_FONT != assets[font_idx].type ) {
+   if( RETROGXC_ASSET_TYPE_FONT != asset->type ) {
       error_printf(
          "index " SIZE_T_FMT " not present in cache or not font (%d)!",
-         font_idx, assets[font_idx].type );
+         font_idx, asset->type );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
    retrofont_string_sz(
-      target, str, str_sz, assets[font_idx].handle,
+      target, str, str_sz, asset->handle,
       max_w, max_h, out_w_p, out_h_p, flags );
 
 cleanup:
 
-   if( NULL != assets ) {
-      maug_munlock( gs_retrogxc_handle, assets );
-   }
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
 
    return retval;
 }
