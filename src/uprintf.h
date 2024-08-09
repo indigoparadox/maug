@@ -315,7 +315,7 @@ int maug_zdigits( size_t num, int base );
 #define maug_hctoi( c ) \
    ('9' > (c) ? (c) - '0' : 'a' > (c) ? 10 + (c) - 'A' : 10 + (c) - 'a')
 
-int maug_is_num( const char* str, size_t str_sz );
+int maug_is_num( const char* str, size_t str_sz, uint8_t base, uint8_t sign );
 
 int maug_is_float( const char* str, size_t str_sz );
 
@@ -326,6 +326,8 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base );
 
 uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base );
+
+int32_t maug_atos32( const char* buffer, size_t buffer_sz );
 
 float maug_atof( const char* buffer, size_t buffer_sz );
 
@@ -343,7 +345,7 @@ void maug_printf( const char* fmt, ... );
 uint32_t g_maug_printf_line = 0;
 int g_maug_uprintf_threshold = DEBUG_THRESHOLD;
 
-int maug_is_num( const char* str, size_t str_sz ) {
+int maug_is_num( const char* str, size_t str_sz, uint8_t base, uint8_t sign ) {
    size_t i = 0;
 
    if( 0 == str_sz ) {
@@ -351,7 +353,10 @@ int maug_is_num( const char* str, size_t str_sz ) {
    }
 
    for( i = 0 ; str_sz > i ; i++ ) {
-      if( '0' > str[i] || '9' < str[i] ) {
+      /* TODO: Base detection. */
+      if( sign && 0 == i && '-' == str[i] ) {
+         continue;
+      } else if( '0' > str[i] || '9' < str[i] ) {
          return 0;
       }
    }
@@ -529,6 +534,34 @@ uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base ) {
    }
 
    return u32_out;
+}
+
+/* === */
+
+int32_t maug_atos32( const char* buffer, size_t buffer_sz ) {
+   size_t i = 0;
+   int32_t s32_out = 0;
+   uint32_t is_neg = 0;
+
+   if( 0 == buffer_sz ) {
+      buffer_sz = maug_strlen( buffer );
+   }
+
+   for( i = 0 ; buffer_sz > i ; i++ ) {
+      if( '-' == buffer[i] && 0 == i ) {
+         is_neg = 1;
+      } else if( '0' <= buffer[i] && '9' >= buffer[i] ) {
+         s32_out += (buffer[i] - '0');
+      } else {
+         break;
+      }
+   }
+
+   if( is_neg ) {
+      s32_out *= -1;
+   }
+
+   return s32_out;
 }
 
 /* === */

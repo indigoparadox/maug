@@ -710,6 +710,8 @@ static MERROR_RETVAL _mlisp_env_cb_arithmetic(
       }
    }
 
+   debug_printf( MLISP_EXEC_TRACE_LVL, "arithmetic result: %d", num_out );
+
    retval = mlisp_stack_push( exec, num_out, int16_t );
 
 cleanup:
@@ -1314,10 +1316,10 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       memcpy( e_out, p_e, sizeof( struct MLISP_ENV_NODE ) );
       p_e = NULL;
 
-   } else if( maug_is_num( &(strpool[token_idx]), token_sz ) ) {
+   } else if( maug_is_num( &(strpool[token_idx]), token_sz, 10, 1 ) ) {
       /* Fake env node e from a numeric literal. */
       e_out->value.integer =
-         maug_atou32( &(strpool[token_idx]), token_sz, 10 );
+         maug_atos32( &(strpool[token_idx]), token_sz );
       e_out->type = MLISP_TYPE_INT;
 
    } else if( maug_is_float( &(strpool[token_idx]), token_sz ) ) {
