@@ -824,7 +824,7 @@ static MERROR_RETVAL _mlisp_env_cb_if(
             (1 - s.value.boolean) + 1 );
       }
 
-   } else if( 3 > *p_if_child_idx ) {
+   } else if( args_c > *p_if_child_idx ) { /* 3 if else present, else 2. */
       /* Pursuing TRUE or FALSE clause. */
 
       debug_printf( MLISP_EXEC_TRACE_LVL,
@@ -870,7 +870,7 @@ static MERROR_RETVAL _mlisp_env_cb_random(
 
    random_int = retroflat_get_rand() % mod.value.integer;
 
-   debug_printf( 1, "random: %d", random_int ); 
+   debug_printf( MLISP_EXEC_TRACE_LVL, "random: %d", random_int ); 
 
    mlisp_stack_push( exec, random_int, int16_t );
 
@@ -1346,7 +1346,6 @@ static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_ENV_NODE e;
    struct MLISP_AST_NODE* n = NULL;
    size_t* p_visit_ct = NULL;
-   size_t* p_child_idx = NULL;
 
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
@@ -1413,17 +1412,12 @@ static MERROR_RETVAL _mlisp_step_iter(
       retval = _mlisp_stack_cleanup( parser, n_idx, exec );
 
    } else if( MLISP_TYPE_CB == e.type ) {
-
-      assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-      p_child_idx = mdata_vector_get(
-         &(exec->per_node_child_idx), n_idx, size_t );
-
       /* This is a special case... rather than pushing the callback, *execute*
        * it and let it push its result to the stack. This will create a 
        * redundant case below, but that can't be helped...
        */
       retval = e.value.cb(
-         parser, exec, n_idx, *p_child_idx, e.cb_data, e.flags );
+         parser, exec, n_idx, n->ast_idx_children_sz, e.cb_data, e.flags );
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
