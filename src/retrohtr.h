@@ -552,7 +552,7 @@ MERROR_RETVAL retrohtr_tree_size(
    struct MCSS_STYLE effect_style;
    struct MCSS_STYLE child_prev_sibling_style;
    struct MCSS_STYLE child_style;
-   char* tag_content = NULL;
+   char* strpool = NULL;
    ssize_t child_iter_idx = -1;
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
@@ -625,15 +625,15 @@ MERROR_RETVAL retrohtr_tree_size(
    if( 0 <= tag_idx && MHTML_TAG_TYPE_TEXT == p_tag_iter->base.type ) {
       /* Get text size to use in calculations below. */
 
-      maug_mlock( p_tag_iter->TEXT.content, tag_content );
-      maug_cleanup_if_null_alloc( char*, tag_content );
+      mdata_strpool_lock( &(parser->strpool), strpool );
 
 #ifdef RETROGXC_PRESENT
       retrogxc_string_sz(
 #else
       retrofont_string_sz(
 #endif /* RETROGXC_PRESENT */
-         NULL, tag_content, p_tag_iter->TEXT.content_sz,
+         NULL, &(strpool[p_tag_iter->TEXT.content_idx]),
+         p_tag_iter->TEXT.content_sz,
 #ifdef RETROGXC_PRESENT
          retrohtr_node( tree, node_idx )->font_idx,
 #else
@@ -648,7 +648,7 @@ MERROR_RETVAL retrohtr_tree_size(
       debug_printf( RETROHTR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          retrohtr_node( tree, node_idx )->w );
 
-      maug_munlock( p_tag_iter->TEXT.content, tag_content );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
 
    } else if(
       0 <= tag_idx &&
@@ -1256,7 +1256,7 @@ MERROR_RETVAL retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d
 ) {
-   char* tag_content = NULL;
+   char* strpool = NULL;
    union MHTML_TAG* p_tag = NULL;
    struct RETROHTR_RENDER_NODE* node = NULL;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1287,33 +1287,37 @@ MERROR_RETVAL retrohtr_tree_draw(
 
    /* Perform drawing. */
    if( MHTML_TAG_TYPE_TEXT == p_tag->base.type ) {
-      maug_mlock( p_tag->TEXT.content, tag_content );
-      /* This might be NULL. That's fine. */
-      if( NULL == tag_content ) {
+
+      if(
+         0 > p_tag->TEXT.content_idx ||
+#ifdef RETROGXC_PRESENT
+         0 > node->font_idx
+#else
+         NULL == node->font_h
+#endif /* RETROGXC_PRESENT */
+      ) {
          goto cleanup;
       }
 
+      mdata_strpool_lock( &(parser->strpool), strpool );
+
 #ifdef RETROGXC_PRESENT
-      /* This is a retrogxc index, so it can be zero. */
-      maug_cleanup_if_lt(
-         node->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
-
       retrogxc_string(
-         NULL, node->fg, tag_content, 0, node->font_idx,
-         retrohtr_node_screen_x( tree, node_idx ),
-         retrohtr_node_screen_y( tree, node_idx ),
-         node->w, node->h, 0 );
 #else
-      maug_cleanup_if_null( MAUG_MHANDLE, node->font_h, MERROR_GUI );
-
       retrofont_string(
-         NULL, node->fg, tag_content, 0, node->font_h,
+#endif /* RETROGXC_PRESENT */
+         NULL, node->fg,
+         &(strpool[p_tag->TEXT.content_idx]), p_tag->TEXT.content_sz,
+#ifdef RETROGXC_PRESENT
+         node->font_idx,
+#else
+         node->font_h,
+#endif /* RETROGXC_PRESENT */
          retrohtr_node_screen_x( tree, node_idx ),
          retrohtr_node_screen_y( tree, node_idx ),
          node->w, node->h, 0 );
-#endif /* RETROGXC_PRESENT */
 
-      maug_munlock( p_tag->TEXT.content, tag_content );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
 
    } else if( MHTML_TAG_TYPE_BODY == p_tag->base.type ) {
 

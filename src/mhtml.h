@@ -46,8 +46,8 @@
    f(  2, DIV, void* none;, BLOCK ) \
    f(  3, HEAD, void* none;, NONE ) \
    f(  4, HTML, void* none;, BLOCK ) \
-   f(  5, TEXT, MAUG_MHANDLE content; size_t content_sz;, INLINE ) \
-   f(  6, TITLE, MAUG_MHANDLE content; size_t content_sz;, NONE ) \
+   f(  5, TEXT, ssize_t content_idx; size_t content_sz;, INLINE ) \
+   f(  6, TITLE, ssize_t content_idx; size_t content_sz;, NONE ) \
    f(  7, SPAN, void* none;, INLINE ) \
    f(  8, BR, void* none;, BLOCK ) \
    f(  9, STYLE, void* none;, NONE ) \
@@ -214,20 +214,13 @@ MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
 
    debug_printf( MHTML_TRACE_LVL, "freeing HTML parser..." );
 
+   mdata_strpool_free( &(parser->strpool) );
+
    mdata_vector_lock( &(parser->tags) );
 
    while( 0 < mdata_vector_ct( &(parser->tags) ) ) {
       tag_iter = mdata_vector_get( &(parser->tags), 0, union MHTML_TAG );
       assert( NULL != tag_iter );
-      if(
-         (
-            MHTML_TAG_TYPE_TEXT == tag_iter->base.type ||
-            MHTML_TAG_TYPE_STYLE == tag_iter->base.type
-         ) &&
-         (MAUG_MHANDLE)NULL != tag_iter->TEXT.content
-      ) {
-         maug_mfree( tag_iter->TEXT.content );
-      }
 
       mdata_vector_unlock( &(parser->tags) );
       mdata_vector_remove( &(parser->tags), 0 );
@@ -420,11 +413,8 @@ cleanup:
 
 MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* tag_content = NULL;
    size_t i = 0;
    union MHTML_TAG* p_tag_iter = NULL;
-
-   /* TODO: Move text to strpool. */
 
    retval = mhtml_push_tag( parser );
    maug_cleanup_if_not_ok();
@@ -444,15 +434,6 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       p_tag_iter->base.type = MHTML_TAG_TYPE_TEXT;
    }
 
-   /* Allocate text memory. */
-   /* TODO: Switch to strpool. */
-   p_tag_iter->TEXT.content =
-      maug_malloc( parser->base.token_sz + 1, 1 );
-   maug_cleanup_if_null_alloc(
-      MAUG_MHANDLE, p_tag_iter->TEXT.content );
-   maug_mlock( p_tag_iter->TEXT.content, tag_content );
-   maug_cleanup_if_null_alloc( char*, tag_content );
-
    if( MHTML_TAG_TYPE_STYLE == p_tag_iter->base.type ) {
       /* TODO: If it's the last character and there's still a token, process it! */
       debug_printf( MHTML_TRACE_LVL, "parsing STYLE tag..." );
@@ -470,14 +451,12 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       }
 
       /* Copy token to tag text. */
-      maug_strncpy( tag_content, parser->base.token, parser->base.token_sz );
-      tag_content[parser->base.token_sz] = '\0';
+      p_tag_iter->TEXT.content_idx = mdata_strpool_append(
+         &(parser->strpool), parser->base.token, parser->base.token_sz );
       p_tag_iter->TEXT.content_sz = parser->base.token_sz;
    }
 
    debug_printf( 1, "done processing tag contents..." );
-
-   maug_munlock( p_tag_iter->TEXT.content, tag_content );
 
 cleanup:
 
@@ -836,7 +815,7 @@ MERROR_RETVAL mhtml_dump_tree(
    struct MHTML_PARSER* parser, ssize_t iter, size_t d
 ) {
    size_t i = 0;
-   char* tag_content = NULL;
+   char* strpool = NULL;
    char dump_line[MHTML_DUMP_LINE_SZ + 1];
    union MHTML_TAG* p_tag_iter = NULL;
    ssize_t first_child = -1;
@@ -859,22 +838,23 @@ MERROR_RETVAL mhtml_dump_tree(
       strcat( dump_line, " " );
    }
    if( MHTML_TAG_TYPE_TEXT == p_tag_iter->base.type ) {
-      maug_mlock( p_tag_iter->TEXT.content, tag_content );
-      if( NULL == tag_content ) {
-         error_printf( "could not lock tag content!" );
+      if( -1 == p_tag_iter->TEXT.content_idx ) {
+         error_printf( "no tag content present!" );
          goto cleanup;
       }
 
+      mdata_strpool_lock( &(parser->strpool), strpool );
+
       if(
          maug_strlen( dump_line ) + 7 /* ("TEXT: \n") */
-            + maug_strlen( tag_content ) < MHTML_DUMP_LINE_SZ
+            + p_tag_iter->TEXT.content_sz < MHTML_DUMP_LINE_SZ
       ) {
-         maug_snprintf( &(dump_line[maug_strlen( dump_line )]),
-            MHTML_DUMP_LINE_SZ - maug_strlen( dump_line ),
-            "TEXT: %s\n", tag_content );
+         strcat( dump_line, "TEXT: " );
+         strcat( dump_line, &(strpool[p_tag_iter->TEXT.content_idx]) );
+         strcat( dump_line, "\n" );
       }
 
-      maug_munlock( p_tag_iter->TEXT.content, tag_content );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
 
    } else {
       if(
