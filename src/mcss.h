@@ -413,7 +413,6 @@ MERROR_RETVAL mcss_style_size_t(
    ssize_t* num_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
 
    mparser_token_upper( &((parser)->base), i );
 
