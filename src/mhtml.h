@@ -109,12 +109,6 @@
 #define mhtml_parser_append_token( parser, c ) \
    mparser_append_token( "mhtml", &((parser)->base), c )
 
-#define mhtml_parser_lock( parser ) \
-   mdata_vector_lock( &((parser)->tags) );
-
-#define mhtml_parser_unlock( parser ) \
-   mdata_vector_unlock( &((parser)->tags) );
-
 #define mhtml_parser_set_tag_iter( parser, iter ) \
    debug_printf( MHTML_TRACE_LVL, "setting tag_iter to: " SSIZE_T_FMT \
       " (previously: " SSIZE_T_FMT ")", (ssize_t)iter, (parser)->tag_iter ); \
@@ -220,7 +214,7 @@ MERROR_RETVAL mhtml_parser_free( struct MHTML_PARSER* parser ) {
 
    debug_printf( MHTML_TRACE_LVL, "freeing HTML parser..." );
 
-   mhtml_parser_lock( parser );
+   mdata_vector_lock( &(parser->tags) );
 
    while( 0 < mdata_vector_ct( &(parser->tags) ) ) {
       tag_iter = mdata_vector_get( &(parser->tags), 0, union MHTML_TAG );
@@ -541,10 +535,10 @@ static MERROR_RETVAL _mhtml_set_attrib_val( struct MHTML_PARSER* parser ) {
       /* TODO: Parse and attach style. */
 
       /* Create an empty new style. */
-      mhtml_parser_unlock( parser );
+      mdata_vector_unlock( &(parser->tags) );
       retval = mcss_push_style( &(parser->styler), MCSS_SELECT_NONE, NULL, 0 );
       maug_cleanup_if_not_ok();
-      mhtml_parser_lock( parser );
+      mdata_vector_lock( &(parser->tags) );
       
       /* Set the new style as this tag's explicit style. */
       p_tag_iter->base.style =
