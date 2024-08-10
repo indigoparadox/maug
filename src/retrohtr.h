@@ -138,7 +138,7 @@ retrogui_idc_t retrohtr_tree_poll_ctls(
    RETROFLAT_IN_KEY* input,
    struct RETROFLAT_INPUT* input_evt );
 
-void retrohtr_tree_dump(
+MERROR_RETVAL retrohtr_tree_dump(
    struct RETROHTR_RENDER_TREE* tree, struct MHTML_PARSER* parser,
    ssize_t iter, size_t d );
 
@@ -264,14 +264,25 @@ MERROR_RETVAL retrohtr_tree_create(
    ssize_t node_new_idx = -1;
    ssize_t tag_iter_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
+   union MHTML_TAG* p_tag_iter = NULL;
+   ssize_t tag_next_idx = 0;
 
-   if( NULL == mhtml_tag( parser, tag_idx ) ) {
+   debug_printf( RETROHTR_TRACE_LVL, 
+      "creating render node for tag: " SSIZE_T_FMT, tag_idx );
+
+   mdata_vector_lock( &(parser->tags) );
+
+   if( 0 > tag_idx ) {
+      goto cleanup;
+   }
+   p_tag_iter = mdata_vector_get( &(parser->tags), tag_idx, union MHTML_TAG );
+   if( NULL == p_tag_iter ) {
       goto cleanup;
    }
 
    /* Make sure we have a single root node. */
    if( 0 > node_idx ) {
-      assert( MHTML_TAG_TYPE_BODY == mhtml_tag( parser, tag_idx )->base.type );
+      assert( MHTML_TAG_TYPE_BODY == p_tag_iter->base.type );
 
       node_new_idx = retrohtr_add_node_child( tree, node_idx );
       if( 0 > node_new_idx ) {
@@ -291,9 +302,12 @@ MERROR_RETVAL retrohtr_tree_create(
       retrohtr_node( tree, node_idx )->h = h;
    }
 
-   tag_iter_idx = mhtml_tag( parser, tag_idx )->base.first_child;
+   tag_iter_idx = p_tag_iter->base.first_child;
    while( 0 <= tag_iter_idx ) {
       node_new_idx = retrohtr_add_node_child( tree, node_idx );
+      p_tag_iter = mdata_vector_get(
+         &(parser->tags), tag_iter_idx, union MHTML_TAG );
+      assert( NULL != p_tag_iter );
       if( 0 > node_new_idx ) {
          goto cleanup;
       }
@@ -303,32 +317,42 @@ MERROR_RETVAL retrohtr_tree_create(
       debug_printf( RETROHTR_TRACE_LVL,
          "rendering node " SSIZE_T_FMT " (%s) under node " SSIZE_T_FMT,
          node_new_idx,
-         gc_mhtml_tag_names[mhtml_tag( parser, tag_iter_idx )->base.type],
+         gc_mhtml_tag_names[p_tag_iter->base.type],
          node_idx );
 
       /* Tag-specific rendering preparations. */
-      if( MHTML_TAG_TYPE_IMG == mhtml_tag( parser, tag_iter_idx )->base.type ) {
+      if( MHTML_TAG_TYPE_IMG == p_tag_iter->base.type ) {
          /* Load the image for rendering later. */
          retval = retroflat_load_bitmap(
-            mhtml_tag( parser, tag_iter_idx )->IMG.src,
+            p_tag_iter->IMG.src,
             &(retrohtr_node( tree, node_new_idx )->bitmap),
             RETROFLAT_FLAGS_LITERAL_PATH );
          if( MERROR_OK == retval ) {
             debug_printf( RETROHTR_TRACE_LVL, "loaded img: %s", 
-               mhtml_tag( parser, tag_iter_idx )->IMG.src );
+               p_tag_iter->IMG.src );
          } else {
-            error_printf( "could not load img: %s",
-               mhtml_tag( parser, tag_iter_idx )->IMG.src );
+            error_printf( "could not load img: %s", p_tag_iter->IMG.src );
          }
       }
 
-      retrohtr_tree_create( parser, tree, x, y, w, h,
-         tag_iter_idx, node_new_idx, d + 1 );
+      tag_next_idx = p_tag_iter->base.next_sibling;
 
-      tag_iter_idx = mhtml_tag( parser, tag_iter_idx )->base.next_sibling;
+      mdata_vector_unlock( &(parser->tags) );
+
+      retval = retrohtr_tree_create( parser, tree, x, y, w, h,
+         tag_iter_idx, node_new_idx, d + 1 );
+      maug_cleanup_if_not_ok();
+
+      mdata_vector_lock( &(parser->tags) );
+
+      tag_iter_idx = tag_next_idx;
    }
 
 cleanup:
+
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
+   }
 
    return retval;
 }
@@ -343,19 +367,29 @@ MERROR_RETVAL retrohtr_apply_styles(
    size_t tag_type = 0,
       i = 0;
    struct MCSS_STYLE* style = NULL;
+   union MHTML_TAG* p_tag_iter = NULL;
 
+   debug_printf( RETROHTR_TRACE_LVL,
+      "applying styles for tag: " SSIZE_T_FMT, tag_idx );
+
+   assert( !mdata_vector_is_locked( &(parser->tags) ) );
    mdata_vector_lock( &(parser->styler.styles) );
+   mdata_vector_lock( &(parser->tags) );
 
    maug_mzero( effect_style, sizeof( struct MCSS_STYLE ) );
 
    if( 0 >= tag_idx ) {
       goto cleanup;
    }
+   p_tag_iter = mdata_vector_get( &(parser->tags), tag_idx, union MHTML_TAG );
+   if( NULL == p_tag_iter ) {
+      goto cleanup;
+   }
 
-   tag_type = mhtml_tag( parser, tag_idx )->base.type;
+   tag_type = p_tag_iter->base.type;
 
    /* Merge style based on HTML element class. */
-   if( 0 < mhtml_tag( parser, tag_idx )->base.classes_sz ) {
+   if( 0 < p_tag_iter->base.classes_sz ) {
       for( i = 0 ; mdata_vector_ct( &(parser->styler.styles) ) > i ; i++ ) {
          style = mdata_vector_get(
             &(parser->styler.styles), i, struct MCSS_STYLE );
@@ -363,9 +397,9 @@ MERROR_RETVAL retrohtr_apply_styles(
          if(
             NULL != style &&
             0 == strncmp(
-               mhtml_tag( parser, tag_idx )->base.classes,
+               p_tag_iter->base.classes,
                style->class,
-               mhtml_tag( parser, tag_idx )->base.classes_sz
+               p_tag_iter->base.classes_sz
             )
          ) {
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag class: %s",
@@ -377,7 +411,7 @@ MERROR_RETVAL retrohtr_apply_styles(
    }
 
    /* Merge style based on HTML element ID. */
-   if( 0 < mhtml_tag( parser, tag_idx )->base.id_sz ) {
+   if( 0 < p_tag_iter->base.id_sz ) {
       for( i = 0 ; mdata_vector_ct( &(parser->styler.styles) ) > i ; i++ ) {
          style = mdata_vector_get(
             &(parser->styler.styles), i, struct MCSS_STYLE );
@@ -385,9 +419,9 @@ MERROR_RETVAL retrohtr_apply_styles(
          if(
             NULL != style &&
             0 == strncmp(
-               mhtml_tag( parser, tag_idx )->base.id,
+               p_tag_iter->base.id,
                style->id,
-               mhtml_tag( parser, tag_idx )->base.id_sz
+               p_tag_iter->base.id_sz
             )
          ) {
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag ID: %s",
@@ -399,7 +433,7 @@ MERROR_RETVAL retrohtr_apply_styles(
    }
 
    /* Grab element-specific style last. */
-   tag_style_idx = mhtml_tag( parser, tag_idx )->base.style;
+   tag_style_idx = p_tag_iter->base.style;
 
 cleanup:
 
@@ -412,6 +446,7 @@ cleanup:
    /* Make sure we have a root style. */
    mcssmerge_styles( effect_style, parent_style, style, tag_type );
 
+   mdata_vector_unlock( &(parser->tags) );
    mdata_vector_unlock( &(parser->styler.styles) );
 
    return retval;
@@ -525,6 +560,8 @@ MERROR_RETVAL retrohtr_tree_size(
    size_t this_line_h = 0;
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL ctl;
+   union MHTML_TAG* p_tag_iter = NULL;
+   union MHTML_TAG* p_tag_node = NULL;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -532,8 +569,15 @@ MERROR_RETVAL retrohtr_tree_size(
 
    tag_idx = retrohtr_node( tree, node_idx )->tag;
 
-   retrohtr_apply_styles(
+   retval = retrohtr_apply_styles(
       parser, tree, parent_style, &effect_style, tag_idx );
+   maug_cleanup_if_not_ok();
+
+   assert( !mdata_vector_is_locked( &(parser->tags) ) );
+   mdata_vector_lock( &(parser->tags) );
+
+   p_tag_iter = mdata_vector_get( &(parser->tags), tag_idx, union MHTML_TAG );
+   assert( NULL != p_tag_iter );
 
    /* position */
 
@@ -578,13 +622,10 @@ MERROR_RETVAL retrohtr_tree_size(
       &effect_style );
    maug_cleanup_if_not_ok();
 
-   if(
-      0 <= tag_idx &&
-      MHTML_TAG_TYPE_TEXT == mhtml_tag( parser, tag_idx )->base.type
-   ) {
+   if( 0 <= tag_idx && MHTML_TAG_TYPE_TEXT == p_tag_iter->base.type ) {
       /* Get text size to use in calculations below. */
 
-      maug_mlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
+      maug_mlock( p_tag_iter->TEXT.content, tag_content );
       maug_cleanup_if_null_alloc( char*, tag_content );
 
 #ifdef RETROGXC_PRESENT
@@ -592,7 +633,7 @@ MERROR_RETVAL retrohtr_tree_size(
 #else
       retrofont_string_sz(
 #endif /* RETROGXC_PRESENT */
-         NULL, tag_content, mhtml_tag( parser, tag_idx )->TEXT.content_sz,
+         NULL, tag_content, p_tag_iter->TEXT.content_sz,
 #ifdef RETROGXC_PRESENT
          retrohtr_node( tree, node_idx )->font_idx,
 #else
@@ -607,11 +648,11 @@ MERROR_RETVAL retrohtr_tree_size(
       debug_printf( RETROHTR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          retrohtr_node( tree, node_idx )->w );
 
-      maug_munlock( mhtml_tag( parser, tag_idx )->TEXT.content, tag_content );
+      maug_munlock( p_tag_iter->TEXT.content, tag_content );
 
    } else if(
       0 <= tag_idx &&
-      MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type
+      MHTML_TAG_TYPE_INPUT == p_tag_iter->base.type
    ) {
       /* Push the control (for the client renderer to redraw later). */
 
@@ -628,13 +669,16 @@ MERROR_RETVAL retrohtr_tree_size(
          retrogui_unlock( &(tree->gui) );
          goto cleanup;
       }
+
+      p_tag_node = mdata_vector_get(
+         &(parser->tags),
+         retrohtr_node( tree, node_idx )->tag, union MHTML_TAG );
       
       ctl.base.x = retrohtr_node( tree, node_idx )->x;
       ctl.base.y = retrohtr_node( tree, node_idx )->y;
       ctl.base.w = 0;
       ctl.base.h = 0;
-      ctl.BUTTON.label = mhtml_tag( parser,
-            retrohtr_node( tree, node_idx )->tag )->INPUT.value;
+      ctl.BUTTON.label = p_tag_node->INPUT.value;
 
       /* Grab determined size back from control. */
       retrohtr_node( tree, node_idx )->w = ctl.base.w;
@@ -646,10 +690,7 @@ MERROR_RETVAL retrohtr_tree_size(
 
       retrogui_unlock( &(tree->gui) );
 
-   } else if(
-      0 <= tag_idx &&
-      MHTML_TAG_TYPE_IMG == mhtml_tag( parser, tag_idx )->base.type
-   ) {
+   } else if( 0 <= tag_idx && MHTML_TAG_TYPE_IMG == p_tag_iter->base.type ) {
 
       if( retroflat_bitmap_ok( &(retrohtr_node( tree, node_idx )->bitmap) ) ) {
          retrohtr_node( tree, node_idx )->w =
@@ -666,6 +707,7 @@ MERROR_RETVAL retrohtr_tree_size(
 
       maug_mzero( &child_prev_sibling_style, sizeof( struct MCSS_STYLE ) );
       node_iter_idx = retrohtr_node( tree, node_idx )->first_child;
+      mdata_vector_unlock( &(parser->tags) );
       while( 0 <= node_iter_idx ) {
          retrohtr_tree_size(
             parser, tree, &child_prev_sibling_style, &effect_style,
@@ -673,6 +715,10 @@ MERROR_RETVAL retrohtr_tree_size(
 
          node_iter_idx = retrohtr_node( tree, node_iter_idx )->next_sibling;
       }
+   }
+
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
    }
 
    /* If our width is still zero, then size based on children. */
@@ -690,13 +736,16 @@ MERROR_RETVAL retrohtr_tree_size(
       /* Cycle through children and use greatest width. */
       child_iter_idx = retrohtr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
-         retrohtr_apply_styles(
+         assert( !mdata_vector_is_locked( &(parser->tags) ) );
+         retval = retrohtr_apply_styles(
             parser, tree, &effect_style, &child_style,
             retrohtr_node( tree, child_iter_idx )->tag );
+         maug_cleanup_if_not_ok();
          
          /* Skip ABSOLUTE nodes. */
          if( MCSS_POSITION_ABSOLUTE == child_style.POSITION ) {
-            child_iter_idx = retrohtr_node( tree, child_iter_idx )->next_sibling;
+            child_iter_idx = 
+               retrohtr_node( tree, child_iter_idx )->next_sibling;
             continue;
          }
 
@@ -730,6 +779,7 @@ MERROR_RETVAL retrohtr_tree_size(
       /* Cycle through children and add heights. */
       child_iter_idx = retrohtr_node( tree, node_idx )->first_child;
       while( 0 <= child_iter_idx ) {
+         assert( !mdata_vector_is_locked( &(parser->tags) ) );
          retrohtr_apply_styles(
             parser, tree, &effect_style, &child_style,
             retrohtr_node( tree, child_iter_idx )->tag );
@@ -799,6 +849,10 @@ MERROR_RETVAL retrohtr_tree_size(
 
 cleanup:
 
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
+   }
+
    /* We're done with the prev_sibling_style for this iter, so prepare it for
     * the next called by the parent!
     */
@@ -863,6 +917,7 @@ static MERROR_RETVAL retrohtr_mark_edge_child_nodes(
    struct MCSS_STYLE effect_style;
    size_t col_idx = 0; /* How many nodes right (X)? */
    size_t row_idx = 0; /* How many nodes down (Y)? */
+   union MHTML_TAG* p_tag_iter = NULL;
 
    node_sibling_idx = retrohtr_node( tree, node_parent_idx )->first_child;
    while( 0 <= node_sibling_idx ) {
@@ -904,14 +959,29 @@ static MERROR_RETVAL retrohtr_mark_edge_child_nodes(
          retrohtr_node( tree, node_sibling_idx )->edge |= RETROHTR_EDGE_LEFT;
       }
 
+      assert( !mdata_vector_is_locked( &(parser->tags) ) );
+      mdata_vector_lock( &(parser->tags) );
+
+      p_tag_iter = mdata_vector_get( &(parser->tags),
+         retrohtr_node( tree, node_sibling_idx )->tag,
+         union MHTML_TAG );
+      assert( NULL != p_tag_iter );
+
       debug_printf( 1, "marking node " SIZE_T_FMT " (%s) edge: %u",
          node_sibling_idx,
-         gc_mhtml_tag_names[parser->tags[
-            retrohtr_node( tree, node_sibling_idx )->tag].base.type],
+         gc_mhtml_tag_names[p_tag_iter->base.type],
          retrohtr_node( tree, node_sibling_idx )->edge );
+
+      mdata_vector_unlock( &(parser->tags) );
 
       node_sibling_idx = 
          retrohtr_node( tree, node_sibling_idx )->next_sibling;
+   }
+
+cleanup:
+
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
    }
 
    return retval;
@@ -929,6 +999,7 @@ MERROR_RETVAL retrohtr_tree_pos(
    ssize_t node_iter_idx = -1;
    ssize_t prev_sibling_idx = -1;
    MERROR_RETVAL retval = MERROR_OK;
+   union MHTML_TAG* p_tag_iter = NULL;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -939,7 +1010,8 @@ MERROR_RETVAL retrohtr_tree_pos(
    retrohtr_apply_styles(
       parser, tree, parent_style, &effect_style, tag_idx );
 
-   prev_sibling_idx = retrohtr_find_prev_sibling_in_box_model( tree, node_idx );
+   prev_sibling_idx =
+      retrohtr_find_prev_sibling_in_box_model( tree, node_idx );
 
    /* x */
 
@@ -1143,7 +1215,12 @@ MERROR_RETVAL retrohtr_tree_pos(
       node_iter_idx = retrohtr_node( tree, node_iter_idx )->next_sibling;
    }
 
-   if( MHTML_TAG_TYPE_INPUT == mhtml_tag( parser, tag_idx )->base.type ) {
+   assert( !mdata_vector_is_locked( &(parser->tags) ) );
+   mdata_vector_lock( &(parser->tags) );
+   p_tag_iter = mdata_vector_get( &(parser->tags), tag_idx, union MHTML_TAG );
+   assert( NULL != p_tag_iter );
+
+   if( MHTML_TAG_TYPE_INPUT == p_tag_iter->base.type ) {
       /* Feed the position back to the GUI control created during tree_size. */
       retval = retrogui_pos_ctl( &(tree->gui), node_idx,
          retrohtr_node_screen_x( tree, node_idx ),
@@ -1158,6 +1235,10 @@ MERROR_RETVAL retrohtr_tree_pos(
    retrohtr_node( tree, node_idx )->flags |= RETROHTR_NODE_FLAG_DIRTY;
  
 cleanup:
+
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
+   }
 
    /* We're done with the prev_sibling_style for this iter, so prepare it for
     * the next called by the parent!
@@ -1176,7 +1257,7 @@ MERROR_RETVAL retrohtr_tree_draw(
    ssize_t node_idx, size_t d
 ) {
    char* tag_content = NULL;
-   union MHTML_TAG* tag = NULL;
+   union MHTML_TAG* p_tag = NULL;
    struct RETROHTR_RENDER_NODE* node = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -1196,11 +1277,17 @@ MERROR_RETVAL retrohtr_tree_draw(
       goto cleanup;
    }
 
-   /* Perform drawing. */
-   tag = mhtml_tag( parser, node->tag );
+   assert( !mdata_vector_is_locked( &(parser->tags) ) );
+   mdata_vector_lock( &(parser->tags) );
 
-   if( MHTML_TAG_TYPE_TEXT == tag->base.type ) {
-      maug_mlock( tag->TEXT.content, tag_content );
+   p_tag = mdata_vector_get( &(parser->tags), node->tag, union MHTML_TAG );
+   if( NULL == p_tag ) {
+      goto cleanup;
+   }
+
+   /* Perform drawing. */
+   if( MHTML_TAG_TYPE_TEXT == p_tag->base.type ) {
+      maug_mlock( p_tag->TEXT.content, tag_content );
       /* This might be NULL. That's fine. */
       if( NULL == tag_content ) {
          goto cleanup;
@@ -1226,9 +1313,9 @@ MERROR_RETVAL retrohtr_tree_draw(
          node->w, node->h, 0 );
 #endif /* RETROGXC_PRESENT */
 
-      maug_munlock( tag->TEXT.content, tag_content );
+      maug_munlock( p_tag->TEXT.content, tag_content );
 
-   } else if( MHTML_TAG_TYPE_BODY == tag->base.type ) {
+   } else if( MHTML_TAG_TYPE_BODY == p_tag->base.type ) {
 
       debug_printf(
          RETROHTR_TRACE_LVL, "drawing BODY node " SIZE_T_FMT "...", node_idx );
@@ -1244,7 +1331,7 @@ MERROR_RETVAL retrohtr_tree_draw(
             RETROFLAT_FLAGS_FILL );
       }
 
-   } else if( MHTML_TAG_TYPE_IMG == tag->base.type ) {
+   } else if( MHTML_TAG_TYPE_IMG == p_tag->base.type ) {
       /* Blit the image. */
       
       if( !retroflat_bitmap_ok( &(retrohtr_node( tree, node_idx )->bitmap) ) ) {
@@ -1265,7 +1352,7 @@ MERROR_RETVAL retrohtr_tree_draw(
          /* retrohtr_node( tree, node_idx )->w,
          retrohtr_node( tree, node_idx )->h */ );
 
-   } else if( MHTML_TAG_TYPE_INPUT == tag->base.type ) {
+   } else if( MHTML_TAG_TYPE_INPUT == p_tag->base.type ) {
 
       debug_printf(
          RETROHTR_TRACE_LVL, "setting tree GUI dirty..." );
@@ -1278,9 +1365,9 @@ MERROR_RETVAL retrohtr_tree_draw(
       }
 
       debug_printf(
-         RETROHTR_TRACE_LVL, "drawing %s node " SIZE_T_FMT "...",
-         gc_mhtml_tag_names[parser->tags[
-            retrohtr_node( tree, node_idx )->tag].base.type],
+         RETROHTR_TRACE_LVL, "drawing xs node " SIZE_T_FMT "...",
+         /* gc_mhtml_tag_names[mhtml_tag( parser,
+            retrohtr_node( tree, node_idx )->tag )->base.type], */
          node_idx );
 
       retroflat_rect(
@@ -1297,6 +1384,10 @@ cleanup:
 
    if( retrogui_is_locked( &(tree->gui) ) ) {
       retrogui_unlock( &(tree->gui) );
+   }
+
+   if( mdata_vector_is_locked( &(parser->tags) ) ) {
+      mdata_vector_unlock( &(parser->tags) );
    }
 
    if( MERROR_OK != retval ) {
@@ -1356,15 +1447,26 @@ retrogui_idc_t retrohtr_tree_poll_ctls(
    return idc;
 }
 
-void retrohtr_tree_dump(
+MERROR_RETVAL retrohtr_tree_dump(
    struct RETROHTR_RENDER_TREE* tree, struct MHTML_PARSER* parser,
-   ssize_t iter, size_t d
+   ssize_t node_idx, size_t d
 ) {
    size_t i = 0;
    char indents[31];
+   union MHTML_TAG* p_tag_iter = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
 
-   if( 0 > iter ) {
-      return;
+   if( 0 > node_idx ) {
+      return MERROR_OK;
+   }
+
+   assert( !mdata_vector_is_locked( &(parser->tags) ) );
+   mdata_vector_lock( &(parser->tags) );
+
+   p_tag_iter = mdata_vector_get(
+      &(parser->tags), tree->nodes[node_idx].tag, union MHTML_TAG );
+   if( NULL == p_tag_iter ) {
+      goto cleanup;
    }
 
    /* Generate the indentation. */
@@ -1386,22 +1488,31 @@ void retrohtr_tree_dump(
 #else
       "%p",
 #endif /* RETROGXC_PRESENT */
-      indents, iter,
-      0 <= tree->nodes[iter].tag ?
-         gc_mhtml_tag_names[parser->tags[tree->nodes[iter].tag].base.type]
-            : "ROOT",
-      tree->nodes[iter].x, tree->nodes[iter].y,
-      tree->nodes[iter].w, tree->nodes[iter].h,
+      indents, node_idx,
+      0 <= tree->nodes[node_idx].tag ?
+         gc_mhtml_tag_names[p_tag_iter->base.type] : "ROOT",
+      tree->nodes[node_idx].x, tree->nodes[node_idx].y,
+      tree->nodes[node_idx].w, tree->nodes[node_idx].h,
 #ifdef RETROGXC_PRESENT
-      tree->nodes[iter].font_idx
+      tree->nodes[node_idx].font_idx
 #else
-      tree->nodes[iter].font_h
+      tree->nodes[node_idx].font_h
 #endif /* RETROGXC_PRESENT */
    );
 
-   retrohtr_tree_dump( tree, parser, tree->nodes[iter].first_child, d + 1 );
+   mdata_vector_unlock( &(parser->tags) );
 
-   retrohtr_tree_dump( tree, parser, tree->nodes[iter].next_sibling, d );
+   retval = retrohtr_tree_dump(
+      tree, parser, tree->nodes[node_idx].first_child, d + 1 );
+   maug_cleanup_if_not_ok();
+
+   retval = retrohtr_tree_dump(
+      tree, parser, tree->nodes[node_idx].next_sibling, d );
+   maug_cleanup_if_not_ok();
+
+cleanup:
+
+   return retval;
 }
 
 void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
