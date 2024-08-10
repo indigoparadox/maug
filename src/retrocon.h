@@ -353,15 +353,20 @@ MERROR_RETVAL retrocon_exec_line(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
+   char line_cap[RETROCON_LBUFFER_SZ_MAX + 1];
 
-   maug_str_upper( line, line_sz );
+   /* Create an uppercase for comparison. */
+   maug_mzero( line_cap, RETROCON_LBUFFER_SZ_MAX + 1 );
+   strncpy( line_cap, line, RETROCON_LBUFFER_SZ_MAX );
+   maug_str_upper( line_cap, line_sz );
 
    /* Find callback with name starting line. */
    for( i = 0 ; con->callbacks_sz > i ; i++ ) {
       if(
          0 == strncmp(
             /* TODO: Compare up to first space in line. */
-            con->callback_names[i], line, maug_strlen( con->callback_names[i] ) )
+            con->callback_names[i], line_cap,
+            maug_strlen( con->callback_names[i] ) )
       ) {
          retval = con->callbacks[i](
             con, line, line_sz, con->callback_data[i] );
@@ -449,7 +454,7 @@ MERROR_RETVAL retrocon_input(
       }
 
       /* Execute/reset line. */
-      retval = retrocon_exec_line( con, lbuffer, RETROCON_LBUFFER_SZ_MAX );
+      retval = retrocon_exec_line( con, lbuffer, maug_strlen( lbuffer ) );
    }
 
 #if 0

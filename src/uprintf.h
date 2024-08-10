@@ -335,6 +335,8 @@ float maug_atof( const char* buffer, size_t buffer_sz );
 
 void maug_str_upper( char* line, size_t line_sz );
 
+void maug_str_lower( char* line, size_t line_sz );
+
 MERROR_RETVAL maug_tok_str(
    size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz );
 
@@ -622,6 +624,18 @@ void maug_str_upper( char* line, size_t line_sz ) {
 
 /* === */
 
+void maug_str_lower( char* line, size_t line_sz ) {
+   size_t i = 0;
+
+   for( i = 0 ; line_sz > i ; i++ ) {
+      if( 0x41 <= line[i] && 0x5a >= line[i] ) {
+         line[i] += 0x20;
+      }
+   }
+}
+
+/* === */
+
 MERROR_RETVAL maug_tok_str(
    size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz
 ) {
@@ -642,6 +656,8 @@ MERROR_RETVAL maug_tok_str(
          if( idx_iter > idx ) {
             /* All chars copied! */
             retval = MERROR_OK;
+            out[i_out++] = '\0';
+            assert( i_out < out_sz );
             goto cleanup;
          }
          continue;
