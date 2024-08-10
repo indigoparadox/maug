@@ -78,11 +78,7 @@ struct MPARSER {
 
 /* Normalize token case. */
 #define mparser_token_upper( parser, i ) \
-   for( i = 0 ; (parser)->token_sz > i ; i++ ) { \
-      if( 0x61 <= (parser)->token[i] && 0x7a >= (parser)->token[i] ) { \
-         (parser)->token[i] -= 0x20; \
-      } \
-   }
+   maug_str_upper( (parser)->token, (parser)->token_sz )
 
 /* Normalize token case. */
 #define mparser_token_replace( parser, i, c, r ) \

@@ -110,7 +110,7 @@ MERROR_RETVAL retrocon_add_command(
 MERROR_RETVAL retrocon_print_line( struct RETROCON* con, const char* line );
 
 MERROR_RETVAL retrocon_exec_line(
-   struct RETROCON* con, const char* line, size_t line_sz );
+   struct RETROCON* con, char* line, size_t line_sz );
 
 int retrocon_debounce( struct RETROCON* con, int c );
 
@@ -349,10 +349,12 @@ cleanup:
 }
 
 MERROR_RETVAL retrocon_exec_line(
-   struct RETROCON* con, const char* line, size_t line_sz
+   struct RETROCON* con, char* line, size_t line_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
+
+   maug_str_upper( line, line_sz );
 
    /* Find callback with name starting line. */
    for( i = 0 ; con->callbacks_sz > i ; i++ ) {

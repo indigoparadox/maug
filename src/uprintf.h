@@ -331,6 +331,8 @@ int32_t maug_atos32( const char* buffer, size_t buffer_sz );
 
 float maug_atof( const char* buffer, size_t buffer_sz );
 
+void maug_str_upper( char* line, size_t line_sz );
+
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
 
@@ -595,6 +597,18 @@ float maug_atof( const char* buffer, size_t buffer_sz ) {
    }
 
    return float_out;
+}
+
+/* === */
+
+void maug_str_upper( char* line, size_t line_sz ) {
+   size_t i = 0;
+
+   for( i = 0 ; line_sz > i ; i++ ) {
+      if( 0x61 <= line[i] && 0x7a >= line[i] ) {
+         line[i] -= 0x20;
+      }
+   }
 }
 
 /* === */
