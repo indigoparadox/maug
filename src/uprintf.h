@@ -23,6 +23,8 @@
 #define UPRINTF_S16_FMT "%d"
 #define UPRINTF_U16_FMT "%u"
 
+#define UPRINTF_S16_DIGITS 5
+
 #ifndef UPRINTF_S32_FMT
 #  if __LONG_WIDTH__ == 64 || __EMSCRIPTEN__
 #     define UPRINTF_S32_FMT "%d"
@@ -333,6 +335,12 @@ float maug_atof( const char* buffer, size_t buffer_sz );
 
 void maug_str_upper( char* line, size_t line_sz );
 
+MERROR_RETVAL maug_tok_str(
+   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz );
+
+MERROR_RETVAL maug_tok_int(
+   size_t idx, const char* line, size_t line_sz, int16_t* out );
+
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
 
@@ -553,6 +561,7 @@ int32_t maug_atos32( const char* buffer, size_t buffer_sz ) {
       if( '-' == buffer[i] && 0 == i ) {
          is_neg = 1;
       } else if( '0' <= buffer[i] && '9' >= buffer[i] ) {
+         s32_out *= 10;
          s32_out += (buffer[i] - '0');
       } else {
          break;
@@ -609,6 +618,71 @@ void maug_str_upper( char* line, size_t line_sz ) {
          line[i] -= 0x20;
       }
    }
+}
+
+/* === */
+
+MERROR_RETVAL maug_tok_str(
+   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz
+) {
+   MERROR_RETVAL retval = MERROR_OVERFLOW;
+   size_t idx_iter = 0;
+   size_t i_out = 0;
+   size_t i_in = 0;
+
+   if( 0 == line_sz ) {
+      line_sz = maug_strlen( line );
+      assert( 0 < line );
+   }
+
+   for( i_in = 0 ; line_sz >= i_in ; i_in++ ) {
+      if( '\n' == line[i_in] || ' ' == line[i_in] || '\0' == line[i_in] ) {
+         /* TODO: Filter out multi-whitespace. */
+         idx_iter++;
+         if( idx_iter > idx ) {
+            /* All chars copied! */
+            retval = MERROR_OK;
+            goto cleanup;
+         }
+         continue;
+      } else if( idx_iter == idx ) {
+         if( i_out + 1 >= out_sz ) {
+            error_printf(
+               "token " SIZE_T_FMT " would exceed buffer sz: " SIZE_T_FMT,
+               idx, out_sz );
+            goto cleanup;
+         }
+         /* Copy current char over. */
+         out[i_out++] = line[i_in];
+      }
+   }
+
+   error_printf( "token " SIZE_T_FMT " not available in line!", idx );
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL maug_tok_int(
+   size_t idx, const char* line, size_t line_sz, int16_t* out
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char out_str[UPRINTF_S16_DIGITS + 1];
+
+   maug_mzero( out_str, UPRINTF_S16_DIGITS + 1 );
+
+   retval = maug_tok_str(
+      idx, line, line_sz, out_str, UPRINTF_S16_DIGITS + 1 );
+   maug_cleanup_if_not_ok();
+   
+   *out = maug_atos32( out_str, UPRINTF_S16_DIGITS );
+
+cleanup:
+
+   return retval;
 }
 
 /* === */
