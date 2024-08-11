@@ -108,38 +108,40 @@ size_t retroflat_config_read(
 
 #ifdef RETROCFG_C
 
-static int retroflat_cli_c( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+#ifndef MAUG_NO_CLI
+
+static MERROR_RETVAL retroflat_cli_c(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   if( -1 == arg_c ) {
+      memset( g_retroflat_state->config_path, '\0', RETROFLAT_PATH_MAX + 1 );
+
+      if( NULL != args->config_path ) {
+         debug_printf( 1, "setting config path to: %s", args->config_path );
+         maug_strncpy(
+            g_retroflat_state->config_path,
+            args->config_path, RETROFLAT_PATH_MAX );
+      } else {
+         debug_printf( 1, "setting config path to: %s%s",
+            args->title, RETROFLAT_CONFIG_EXT );
+         maug_strncpy(
+            g_retroflat_state->config_path, args->title, RETROFLAT_PATH_MAX );
+         strncat(
+            g_retroflat_state->config_path,
+            RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
+      }
+   } else if(
+      0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 )
+   ) {
       /* The next arg must be the new var. */
    } else {
       debug_printf( 1, "setting config path to: %s", arg );
       maug_strncpy( g_retroflat_state->config_path, arg, RETROFLAT_PATH_MAX );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
-/* === */
-
-static int retroflat_cli_c_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   memset( g_retroflat_state->config_path, '\0', RETROFLAT_PATH_MAX + 1 );
-
-   if( NULL != args->config_path ) {
-      debug_printf( 1, "setting config path to: %s", args->config_path );
-      maug_strncpy(
-         g_retroflat_state->config_path,
-         args->config_path, RETROFLAT_PATH_MAX );
-   } else {
-      debug_printf( 1, "setting config path to: %s%s",
-         args->title, RETROFLAT_CONFIG_EXT );
-      maug_strncpy(
-         g_retroflat_state->config_path, args->title, RETROFLAT_PATH_MAX );
-      strncat(
-         g_retroflat_state->config_path,
-         RETROFLAT_CONFIG_EXT, RETROFLAT_PATH_MAX );
-   }
-
-   return RETROFLAT_OK;
-}
+#endif /* !MAUG_NO_CLI */
 
 /* === */
 
@@ -148,7 +150,7 @@ MERROR_RETVAL retroflat_config_init( struct RETROFLAT_ARGS* args ) {
 
    maug_add_arg( MAUG_CLI_SIGIL "rfc", MAUG_CLI_SIGIL_SZ + 4,
       "Set the config path.", 0,
-      (maug_cli_cb)retroflat_cli_c, (maug_cli_cb)retroflat_cli_c_def, args );
+      (maug_cli_cb)retroflat_cli_c, args );
 
    return retval;
 }

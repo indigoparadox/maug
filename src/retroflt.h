@@ -1768,7 +1768,7 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 #  ifdef RETROSND_ARGS
 
-static int retrosnd_cli_rsl(
+static MERROR_RETVAL retrosnd_cli_rsl(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if(
@@ -1777,12 +1777,22 @@ static int retrosnd_cli_rsl(
    ) {
       args->snd_flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
-static int retrosnd_cli_rsd(
+static MERROR_RETVAL retrosnd_cli_rsd(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
+#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
+   char* env_var = NULL;
+   size_t i = 0;
+#     elif defined( RETROSND_API_ALSA )
+   char* env_var = NULL;
+#     elif defined( RETROSND_API_WINMM )
+   char* env_var = NULL;
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
+
 
    if( 0 > arg_c ) {
 #     ifdef RETROSND_API_PC_BIOS
@@ -1885,14 +1895,14 @@ static int retrosnd_cli_rsd(
    }
 
 cleanup:
-   return RETROFLAT_OK;
+   return retval;
 }
 
 # endif /* RETROSND_ARGS */
 
 #  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
 
-static int retroflat_cli_rfx(
+static MERROR_RETVAL retroflat_cli_rfx(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
@@ -1906,10 +1916,10 @@ static int retroflat_cli_rfx(
    } else {
       args->screen_x = atoi( arg );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
-static int retroflat_cli_rfy(
+static MERROR_RETVAL retroflat_cli_rfy(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
@@ -1923,10 +1933,10 @@ static int retroflat_cli_rfy(
    } else {
       args->screen_y = atoi( arg );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
-static int retroflat_cli_rfw(
+static MERROR_RETVAL retroflat_cli_rfw(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
@@ -1940,10 +1950,10 @@ static int retroflat_cli_rfw(
    } else {
       args->screen_w = atoi( arg );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
-static int retroflat_cli_rfh(
+static MERROR_RETVAL retroflat_cli_rfh(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
@@ -1957,13 +1967,13 @@ static int retroflat_cli_rfh(
    } else {
       args->screen_h = atoi( arg );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
 #  endif /* !RETROFLAT_API_PC_BIOS && !RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_VDP
-static int retroflat_cli_vdp(
+static MERROR_RETVAL retroflat_cli_vdp(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
@@ -1972,11 +1982,11 @@ static int retroflat_cli_vdp(
       maug_strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
       debug_printf( 1, "VDP args: %s", g_retroflat_state->vdp_args );
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 #  endif /* RETROFLAT_VDP */
 
-static int retroflat_cli_u(
+static MERROR_RETVAL retroflat_cli_u(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
@@ -1987,7 +1997,7 @@ static int retroflat_cli_u(
       debug_printf( 1, "unlocking FPS..." );
       args->flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
    }
-   return RETROFLAT_OK;
+   return MERROR_OK;
 }
 
 #endif /* !RETROFLAT_NO_CLI */
@@ -2101,7 +2111,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #     ifdef RETROFLAT_VDP
    retval = maug_add_arg( MAUG_CLI_SIGIL "vdp", MAUG_CLI_SIGIL_SZ + 4,
       "Pass a string of args to the VDP.", 0,
-      (maug_cli_cb)retroflat_cli_vdp, NULL, args );
+      (maug_cli_cb)retroflat_cli_vdp, args );
    maug_cleanup_if_not_ok();
 #     endif /* RETROFLAT_VDP */
 
