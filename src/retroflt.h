@@ -914,7 +914,8 @@ struct RETROFLAT_ARGS {
    int screen_y;
 #  endif /* RETROFLAT_API_PC_BIOS */
    uint8_t snd_flags;
-#  if defined( RETROSND_API_WINMM )
+#  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
+#  elif defined( RETROSND_API_WINMM )
    UINT snd_dev_id;
 #  elif defined( RETROSND_API_PC_BIOS )
    uint16_t snd_io_base;
@@ -1767,14 +1768,18 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 #  ifdef RETROSND_ARGS
 
-static int retrosnd_cli_rsl( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retrosnd_cli_rsl(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       args->snd_flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
    }
    return RETROFLAT_OK;
 }
 
-static int retrosnd_cli_rsd( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
@@ -1791,12 +1796,16 @@ static int retrosnd_cli_rsd( const char* arg, struct RETROFLAT_ARGS* args ) {
 }
 
 static int retrosnd_cli_rsd_def(
-   const char* arg, struct RETROFLAT_ARGS* args
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
-   char* env_var = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 #     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
+   char* env_var = NULL;
    size_t i = 0;
+#     elif defined( RETROSND_API_ALSA )
+   char* env_var = NULL;
+#     elif defined( RETROSND_API_WINMM )
+   char* env_var = NULL;
 #     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
 #     ifdef RETROSND_API_PC_BIOS
@@ -1838,6 +1847,8 @@ static int retrosnd_cli_rsd_def(
       args->snd_driver = 8;
       args->snd_io_base = 0x388;
    }
+
+cleanup:
 #     elif defined( RETROSND_API_ALSA )
    if( 0 == args->snd_client ) {
       env_var = getenv( "MAUG_MIDI_ALSA" );
@@ -1863,6 +1874,7 @@ static int retrosnd_cli_rsd_def(
          args->snd_client, args->snd_port );
    }
 
+cleanup:
 #     elif defined( RETROSND_API_WINMM )
    env_var = getenv( "MAUG_MIDI_WIN" );
 
@@ -1880,9 +1892,10 @@ static int retrosnd_cli_rsd_def(
       args->snd_dev_id = 0;
    }
    debug_printf( 3, "setting MIDI device to: %u", args->snd_dev_id );
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
 
 cleanup:
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
+
    return retval;
 }
 
@@ -1890,7 +1903,9 @@ cleanup:
 
 #  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
 
-static int retroflat_cli_rfx( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfx(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
@@ -1899,14 +1914,18 @@ static int retroflat_cli_rfx( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfx_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfx_def(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == args->screen_w ) {
       args->screen_x = 0;
    }
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfy( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfy(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
@@ -1915,68 +1934,61 @@ static int retroflat_cli_rfy( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfy_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfy_def(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == args->screen_h ) {
       args->screen_y = 0;
    }
    return RETROFLAT_OK;
 }
 
-static void retroflat_cli_apply_scale( struct RETROFLAT_ARGS* args ) {
-#if defined( RETROFLAT_API_SDL2 )
-   /*
-   if(
-      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
-   ) {
-      args->screen_w *= 2;
-      debug_printf( 1, "doubling screen_w to: %d", args->screen_w );
-      args->screen_h *= 2;
-      debug_printf( 1, "doubling screen_h to: %d", args->screen_h );
-   }
-   */
-#endif /* RETROFLAT_API_SDL2 */
-}
-
-static int retroflat_cli_rfw( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfw(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
-      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfw_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfw_def(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == args->screen_w ) {
       args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
    }
-   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfh( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfh(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfh", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
-      retroflat_cli_apply_scale( args );
    }
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_rfh_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_rfh_def(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == args->screen_h ) {
       args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
    }
-   retroflat_cli_apply_scale( args );
    return RETROFLAT_OK;
 }
 
 #  endif /* !RETROFLAT_API_PC_BIOS && !RETROFLAT_NO_CLI_SZ */
 
 #  ifdef RETROFLAT_VDP
-static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_vdp(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* Next arg is VDP args str. */
    } else {
@@ -1987,7 +1999,9 @@ static int retroflat_cli_vdp( const char* arg, struct RETROFLAT_ARGS* args ) {
 }
 #  endif /* RETROFLAT_VDP */
 
-static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_u(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       debug_printf( 1, "unlocking FPS..." );
       args->flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
@@ -1995,7 +2009,9 @@ static int retroflat_cli_u( const char* arg, struct RETROFLAT_ARGS* args ) {
    return RETROFLAT_OK;
 }
 
-static int retroflat_cli_u_def( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_u_def(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
    args->flags &= ~RETROFLAT_FLAGS_UNLOCK_FPS;
    return RETROFLAT_OK;
 }

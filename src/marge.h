@@ -52,7 +52,8 @@
 #  define MAUG_CLI_ARG_SZ_MAX 20
 #endif /* !MAUG_CLI_ARG_SZ_MAX */
 
-typedef MERROR_RETVAL (*maug_cli_cb)( const char* arg, void* data );
+typedef
+MERROR_RETVAL (*maug_cli_cb)( const char* arg, ssize_t arg_c, void* data );
 
 /*! \brief Default CLI arguments for all RetroFlat programs. */
 #define MAUG_CLI( f ) \
@@ -114,7 +115,7 @@ static int g_maug_cli_arg_called[MAUG_CLI_ARG_LIST_SZ_MAX] = {
 
 /* == Function Definitions = = */
 
-static int maug_cli_h( const char* arg, void* args ) {
+static int maug_cli_h( const char* arg, ssize_t arg_c, void* args ) {
    int i = 0;
 
    fprintf( stderr, "usage:\n\n" );
@@ -172,7 +173,7 @@ int maug_parse_args( int argc, char* argv[] ) {
             /* Increment called count and run the callback. */
             g_maug_cli_arg_called[const_i]++;
             retval = g_maug_cli_arg_callbacks[const_i]( argv[arg_i],
-               g_maug_cli_data[const_i] );
+               g_maug_cli_arg_called[const_i], g_maug_cli_data[const_i] );
             if( MERROR_OK != retval ) {
                goto cleanup;
             }
@@ -188,7 +189,7 @@ int maug_parse_args( int argc, char* argv[] ) {
           */
          g_maug_cli_arg_called[last_i]++;
          retval = g_maug_cli_arg_callbacks[last_i]( argv[arg_i],
-            g_maug_cli_data[last_i] );
+            g_maug_cli_arg_called[last_i], g_maug_cli_data[last_i] );
          if( MERROR_OK != retval ) {
             goto cleanup;
          }
@@ -205,7 +206,7 @@ int maug_parse_args( int argc, char* argv[] ) {
          debug_printf( 1, "calling default arg for uncalled \"%s\"...",
             g_maug_cli_args[const_i] );
          retval =
-            g_maug_cli_def_callbacks[const_i]( "", g_maug_cli_data[const_i] );
+            g_maug_cli_def_callbacks[const_i]( "", g_maug_cli_arg_called[const_i], g_maug_cli_data[const_i] );
          if( MERROR_OK != retval ) {
             goto cleanup;
          }
