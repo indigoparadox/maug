@@ -307,7 +307,7 @@ struct RETROGLU_PROJ_ARGS {
  */
 #define retroglu_parser_state( parser, new_state ) \
    debug_printf( \
-      RETROGLU_TRACE_LVL, "changing parser to state: %d\n", new_state ); \
+      RETROGLU_TRACE_LVL, "changing parser to state: %d", new_state ); \
    (parser)->state = new_state;
 
 /**
@@ -650,7 +650,7 @@ void retroglu_parse_init(
    } else if( RETROGLU_PARSER_STATE_ ## cond == parser->state ) { \
       /* TODO: Maug replacement for C99 crutch. */ \
       parser->obj->array[parser->obj->sz].val = strtod( parser->token, NULL ); \
-      debug_printf( RETROGLU_TRACE_LVL, "vertex %d " desc ": %f\n", \
+      debug_printf( RETROGLU_TRACE_LVL, "vertex %d " desc ": %f", \
          parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_ ## state_next );
 
@@ -667,12 +667,12 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    /* NULL-terminate token. */
    parser->token[parser->token_sz] = '\0';
 
-   debug_printf( RETROGLU_TRACE_LVL, "token: %s\n", parser->token );
+   debug_printf( RETROGLU_TRACE_LVL, "token: %s", parser->token );
 
    if( RETROGLU_PARSER_STATE_MATERIAL_LIB == parser->state ) {
 
       debug_printf(
-         RETROGLU_TRACE_LVL, "parsing material lib: %s\n", parser->token );
+         RETROGLU_TRACE_LVL, "parsing material lib: %s", parser->token );
       retroglu_parser_state( parser, RETROGLU_PARSER_STATE_NONE );
       assert( NULL != parser->load_mtl );
       return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
@@ -687,7 +687,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( RETROGLU_TRACE_LVL, "face %d, vertex %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, vertex %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -705,7 +705,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( RETROGLU_TRACE_LVL, "face %d, normal %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, normal %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vnormal_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -723,7 +723,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
             atoi( parser->token );
 
-      debug_printf( RETROGLU_TRACE_LVL, "face %d, texture %d: %d\n",
+      debug_printf( RETROGLU_TRACE_LVL, "face %d, texture %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
          parser->obj->faces[parser->obj->faces_sz].vtexture_idxs[
             parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] );
@@ -741,12 +741,12 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
       for( i = 0 ; parser->obj->materials_sz > i ; i++ ) {
          debug_printf(
             RETROGLU_TRACE_LVL,
-            "%s vs %s\n", parser->obj->materials[i].name, parser->token );
+            "%s vs %s", parser->obj->materials[i].name, parser->token );
          if( 0 == strncmp(
             parser->obj->materials[i].name, parser->token,
             RETROGLU_MATERIAL_NAME_SZ_MAX
          ) ) {
-            debug_printf( RETROGLU_TRACE_LVL, "using material: \"%s\" (%d)\n",
+            debug_printf( RETROGLU_TRACE_LVL, "using material: \"%s\" (%d)",
                parser->obj->materials[i].name, i );
             parser->material_idx = i;
             break;
@@ -757,7 +757,7 @@ retroglu_parse_token( struct RETROGLU_PARSER* parser ) {
    } else if( RETROGLU_PARSER_STATE_MATERIAL_NAME == parser->state ) {
 
       debug_printf(
-         RETROGLU_TRACE_LVL, "adding material: \"%s\" at idx: %d\n",
+         RETROGLU_TRACE_LVL, "adding material: \"%s\" at idx: %d",
          parser->token, parser->obj->materials_sz - 1 );
       maug_strncpy(
          parser->obj->materials[parser->obj->materials_sz - 1].name,
@@ -795,7 +795,7 @@ retroglu_append_token( struct RETROGLU_PARSER* parser, unsigned char c ) {
 
    /* Protect against token overflow. */
    if( parser->token_sz >= RETROGLU_PARSER_TOKEN_SZ_MAX ) {
-      debug_printf( RETROGLU_TRACE_LVL, "token out of bounds!\n" );
+      debug_printf( RETROGLU_TRACE_LVL, "token out of bounds!" );
       return RETROGLU_PARSER_ERROR;
    }
 
@@ -938,14 +938,11 @@ MERROR_RETVAL retroglu_parse_obj_file(
    const char* filename, struct RETROGLU_PARSER* parser,
    struct RETROGLU_OBJ* obj
 ) {
-   FILE* obj_file = NULL;
-   uint32_t i = 0; /* Index in file buffer, so long. */
-   size_t obj_read = 0;
    int auto_parser = 0; /* Did we provision parser? */
-   uint8_t* obj_buf = NULL;
-   size_t obj_buf_sz = 0;
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
+   mfile_t obj_file;
+   char c;
 
    if( NULL == parser ) {
       parser = calloc( 1, sizeof( struct RETROGLU_PARSER ) );
@@ -959,33 +956,19 @@ MERROR_RETVAL retroglu_parse_obj_file(
       g_retroflat_state->assets_path, RETROFLAT_PATH_SEP, filename );
 
    /* Open the file and allocate the buffer. */
-   debug_printf( RETROGLU_TRACE_LVL, "opening %s...", filename_path );
-   obj_file = fopen( filename_path, "r" );
-   assert( NULL != obj_file );
-   fseek( obj_file, 0, SEEK_END );
-   obj_buf_sz = ftell( obj_file );
-   fseek( obj_file, 0, SEEK_SET );
-   debug_printf(
-      RETROGLU_TRACE_LVL,
-      "opened %s, " SIZE_T_FMT " bytes", filename_path, obj_buf_sz );
-   obj_buf = calloc( 1, obj_buf_sz );
-   assert( NULL != obj_buf );
-   obj_read = fread( obj_buf, 1, obj_buf_sz, obj_file );
-   debug_printf( RETROGLU_TRACE_LVL, "read " SIZE_T_FMT " bytes", obj_read );
-   assert( obj_read == obj_buf_sz );
-   fclose( obj_file );
+   retval = mfile_open_read( filename_path, &obj_file );
+   maug_cleanup_if_not_ok();
 
    retroglu_parse_init( 
       parser, obj, (retroglu_mtl_cb)retroglu_parse_obj_file, obj );
 
    /* Parse the obj, byte by byte. */
-   for( i = 0 ; obj_buf_sz > i ; i++ ) {
-      retval = retroglu_parse_obj_c( parser, obj_buf[i] );
-      assert( 0 <= retval );
+   while( mfile_has_bytes( &obj_file ) ) {
+      retval = obj_file.read_int( &obj_file, (uint8_t*)&c, 1, 0 );
+      maug_cleanup_if_not_ok();
+      retval = retroglu_parse_obj_c( parser, c );
+      maug_cleanup_if_not_ok();
    }
-   free( obj_buf );
-   obj_buf = NULL;
-   obj_buf_sz = 0;
 
    if( auto_parser ) {
       free( parser );
@@ -996,6 +979,8 @@ MERROR_RETVAL retroglu_parse_obj_file(
       RETROGLU_TRACE_LVL,
       "parsed %s, %u vertices, %u materials",
       filename_path, obj->vertices_sz, obj->materials_sz );
+
+cleanup:
 
    return retval;
 }
