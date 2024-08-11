@@ -77,7 +77,9 @@
  */
 #define RETROSND_VOICE_GUNSHOT      128
 
-#if defined( RETROSND_API_PC_BIOS )
+#if defined( RETROSND_API_SDL2 ) || defined( RETROSND_API_SDL1 )
+#  include <SDL_mixer.h>
+#elif defined( RETROSND_API_PC_BIOS )
 #  include <conio.h>
 #  define RETROSND_MPU_FLAG_OUTPUT 0x40
 #  define RETROSND_MPU_TIMEOUT 30
@@ -93,7 +95,10 @@ struct RETROSND_STATE {
     * \brief Bitfield indicating global state with \ref maug_retrosnd_flags.
     */
    uint8_t flags;
-#if defined( RETROSND_API_PC_BIOS )
+#if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
+   Mix_Music* music;
+   int audio_open;
+#elif defined( RETROSND_API_PC_BIOS )
    uint16_t io_base;
    uint8_t io_timeout;
    uint8_t driver;
@@ -256,7 +261,8 @@ static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
 
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  ifdef RETROSND_API_PC_BIOS
+#  if defined( RETROSND_API_SDL2 ) || defined( RETROSND_API_SDL1 )
+#  elif defined( RETROSND_API_PC_BIOS )
    uint8_t b = 0;
    int16_t timeout = 0;
 #  elif defined( RETROSND_API_ALSA )
@@ -274,7 +280,33 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
 
-#  if defined( RETROSND_API_PC_BIOS )
+#  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
+
+   if( 0 > SDL_Init( SDL_INIT_AUDIO ) ) {
+      error_printf( "couldn't initialize SDL audio: %s", SDL_GetError() );
+      retval = MERROR_SND;
+   }
+
+#     ifdef RETROSND_API_SDL1
+   if( !Mix_Init( MIX_INIT_OGG ) ) {
+#     else
+   if( !Mix_Init( MIX_INIT_MID | MIX_INIT_OGG ) ) {
+#     endif /* RETROFLAT_OS_WASM */
+      error_printf( "couldn't initialize SDL mixer: %s", Mix_GetError() );
+      retval = MERROR_SND;
+   }
+
+   if(
+      0 > Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 0 )
+   ) {
+      error_printf( "couldn't open SDL mixer audio: %s", Mix_GetError() );
+      retval = MERROR_SND;
+   }
+
+   g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
+
+cleanup:
+#  elif defined( RETROSND_API_PC_BIOS )
 
    /* Clear all flags to start. */
    g_retrosnd_state.flags = 0;
@@ -831,13 +863,50 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
+   MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROSND_API_SDL2 ) || defined( RETROSND_API_SDL1 )
+   SDL_AudioSpec spec;
+
+   /* TODO: Handle gracefully. */
+   assert( NULL == g_retrosnd_state.music );
+   g_retrosnd_state.music = Mix_LoadMUS( filename );
+   if( NULL == g_retrosnd_state.music ) {
+      error_printf( "could not load \"%s\": %s", filename, Mix_GetError() );
+      retval = MERROR_SND;
+   }
+
+   Mix_PlayMusic( g_retrosnd_state.music, -1 );
+#  else
+#     pragma message( "warning: midi_play_smf not implemented" )
+#  endif
+
+   return retval;
+}
+
+/* === */
+
 void retrosnd_shutdown() {
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retrosnd_state.flags) ) {
       return;
    }
 
-#  ifdef RETROSND_API_PC_BIOS
+#  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
+   if( Mix_PlayingMusic() ) {
+      Mix_HaltMusic();
+   }
+   if( g_retrosnd_state.music ) {
+      Mix_FreeMusic( g_retrosnd_state.music );
+      g_retrosnd_state.music = NULL;
+   }
+   if( g_retrosnd_state.audio_open ) {
+      Mix_CloseAudio();
+      g_retrosnd_state.audio_open = 0;
+   }
+
+   Mix_Quit();
+#  elif defined( RETROSND_API_PC_BIOS )
    switch( g_retrosnd_state.driver ) {
    case RETROSND_PC_BIOS_MPU:
       /* TODO */

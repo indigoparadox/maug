@@ -24,15 +24,19 @@ endif
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/sdl
 
+ifneq ("$$(AUDIO_FILES)","")
+	EMCC_FLAGS_SDL += --use-preload-plugins $$(addprefix --preload-file ,$$(AUDIO_FILES))
+endif
+
 ifeq ("$$(OPENGL)","1")
-   WASM_SDL_VER := 1
+   SDL_VER_WASM := 1
 	EMCC_FLAGS_SDL += -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=1 -DRETROFLAT_OPENGL
 endif
 
-ifeq ("$$(WASM_SDL_VER)","1")
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1
+ifeq ("$$(SDL_VER_WASM)","1")
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_MIXER=1
 else
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))

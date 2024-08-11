@@ -3,16 +3,16 @@
 
 # Setup default CFLAGS/LDFLAGS for all UNIX targets.
 ifeq ("$(CFLAGS_GCC_UNIX)","")
-	CFLAGS_GCC_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_API_ALSA -DRETROSND_ARGS
+	CFLAGS_GCC_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_ARGS
 endif
 ifeq ("$(LDFLAGS_GCC_UNIX)","")
-	LDFLAGS_GCC_UNIX := -lasound -ldl
+	LDFLAGS_GCC_UNIX := -ldl
 endif
 ifeq ("$(CFLAGS_GCC64_UNIX)","")
-	CFLAGS_GCC64_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_API_ALSA -DRETROSND_ARGS
+	CFLAGS_GCC64_UNIX := -DRETROFLAT_OS_UNIX -DRETROSND_ARGS
 endif
 ifeq ("$(LDFLAGS_GCC64_UNIX)","")
-	LDFLAGS_GCC64_UNIX := -lasound -ldl
+	LDFLAGS_GCC64_UNIX := -ldl
 endif
 
 ifneq ("$(BUILD)","RELEASE")
@@ -57,12 +57,12 @@ endif
 
 ifeq ("$$(SDL_VER_UNIX)","1")
 	CFLAGS_GCC_UNIX_SDL += \
-		-DRETROFLAT_API_SDL1 $$(shell pkg-config sdl --cflags)
-	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl --libs)
+		-DRETROFLAT_API_SDL1 $$(shell pkg-config sdl SDL_mixer --cflags) -DRETROSND_API_SDL1
+	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl SDL_mixer --libs)
 else
 	CFLAGS_GCC_UNIX_SDL += \
-		-DRETROFLAT_API_SDL2 $$(shell pkg-config sdl2 --cflags)
-	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --libs)
+		-DRETROFLAT_API_SDL2 $$(shell pkg-config sdl2 SDL2_mixer --cflags) -DRETROSND_API_SDL2
+	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
 endif
 
 $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
@@ -119,9 +119,9 @@ endef
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXGLUT
 
-CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut
+CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut -DRETROSND_API_ALSA
 
-LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs)
+LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
 
 $(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
