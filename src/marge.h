@@ -6,7 +6,7 @@
 
 #ifdef MAUG_NO_CLI
 
-#  define maug_add_arg( arg, arg_sz, help, help_sz, arg_cb, def_cb, data ) (0)
+#  define maug_add_arg( arg, arg_sz, help, help_sz, arg_cb, data ) (0)
 
 #else
 
@@ -39,6 +39,7 @@
 #  define MAUG_CLI_SIGIL "-"
 #endif /* !MAUG_CLI_SIGIL */
 
+#define MAUG_CLI_ARG_C_DEFAULT -1
 
 #ifndef MAUG_CLI_ARG_LIST_SZ_MAX
 #  define MAUG_CLI_ARG_LIST_SZ_MAX 20
@@ -57,7 +58,7 @@ MERROR_RETVAL (*maug_cli_cb)( const char* arg, ssize_t arg_c, void* data );
 
 /*! \brief Default CLI arguments for all RetroFlat programs. */
 #define MAUG_CLI( f ) \
-   f( MAUG_CLI_SIGIL "h", 3, "Display help and exit.", maug_cli_h, NULL )
+   f( MAUG_CLI_SIGIL "h", 3, "Display help and exit.", maug_cli_h )
 
 int maug_parse_args( int argc, char* argv[] );
 
@@ -71,13 +72,13 @@ int maug_parse_args( int argc, char* argv[] );
  */
 MERROR_RETVAL maug_add_arg(
    const char* arg, int arg_sz, const char* help, int help_sz,
-   maug_cli_cb arg_cb, maug_cli_cb def_cb, void* data );
+   maug_cli_cb arg_cb, void* data );
 
 #ifdef MARGE_C
 
 /* == Global Tables == */
 
-#define MAUG_CLI_ARG_ARG( arg, arg_sz, help, arg_callback, def_callback ) \
+#define MAUG_CLI_ARG_ARG( arg, arg_sz, help, arg_callback ) \
    arg,
 
 static char g_maug_cli_args[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_SZ_MAX] = {
@@ -85,7 +86,7 @@ static char g_maug_cli_args[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_SZ_MAX] = {
    ""
 };
 
-#define MAUG_CLI_ARG_SZ( arg, arg_sz, help, arg_callback, def_callback ) \
+#define MAUG_CLI_ARG_SZ( arg, arg_sz, help, arg_callback ) \
    arg_sz,
 
 static int g_maug_cli_arg_sz[MAUG_CLI_ARG_LIST_SZ_MAX] = {
@@ -93,7 +94,7 @@ static int g_maug_cli_arg_sz[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    0
 };
 
-#define MAUG_CLI_ARG_HELP( arg, arg_sz, help, arg_callback, def_callback ) \
+#define MAUG_CLI_ARG_HELP( arg, arg_sz, help, arg_callback ) \
    help,
 
 static char g_maug_cli_arg_help[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_HELP_SZ_MAX] = {
@@ -101,13 +102,13 @@ static char g_maug_cli_arg_help[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_HELP_SZ_M
    ""
 };
 
-#define MAUG_CLI_ARG_DATA( arg, arg_sz, help, arg_callback, def_callback ) NULL,
+#define MAUG_CLI_ARG_DATA( arg, arg_sz, help, arg_callback ) NULL,
 static void* g_maug_cli_data[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_DATA )
    NULL
 };
 
-#define MAUG_CLI_ARG_CALLED( arg, arg_sz, help, arg_callback, def_callback ) 0,
+#define MAUG_CLI_ARG_CALLED( arg, arg_sz, help, arg_callback ) 0,
 static int g_maug_cli_arg_called[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_CALLED )
    0
@@ -117,6 +118,11 @@ static int g_maug_cli_arg_called[MAUG_CLI_ARG_LIST_SZ_MAX] = {
 
 static int maug_cli_h( const char* arg, ssize_t arg_c, void* args ) {
    int i = 0;
+
+   if( 0 > arg_c ) {
+      /* Just pass by on default case. */
+      return 0;
+   }
 
    fprintf( stderr, "usage:\n\n" );
 
@@ -136,19 +142,11 @@ static int maug_cli_h( const char* arg, ssize_t arg_c, void* args ) {
 /* === */
 
 /* Define these below the built-in callbacks, above. */
-#define MAUG_CLI_ARG_CB( arg, arg_sz, help, arg_callback, def_callback ) \
+#define MAUG_CLI_ARG_CB( arg, arg_sz, help, arg_callback ) \
    arg_callback,
 
 maug_cli_cb g_maug_cli_arg_callbacks[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_CB )
-   NULL
-};
-
-#define MAUG_CLI_DEF_CB( arg, arg_sz, help, arg_callback, def_callback ) \
-   def_callback,
-
-maug_cli_cb g_maug_cli_def_callbacks[MAUG_CLI_ARG_LIST_SZ_MAX] = {
-   MAUG_CLI( MAUG_CLI_DEF_CB )
    NULL
 };
 
@@ -201,12 +199,13 @@ int maug_parse_args( int argc, char* argv[] ) {
    while( '\0' != g_maug_cli_args[const_i][0] ) {
       if(
          0 == g_maug_cli_arg_called[const_i] &&
-         NULL != g_maug_cli_def_callbacks[const_i]
+         NULL != g_maug_cli_arg_callbacks[const_i]
       ) {
          debug_printf( 1, "calling default arg for uncalled \"%s\"...",
             g_maug_cli_args[const_i] );
          retval =
-            g_maug_cli_def_callbacks[const_i]( "", g_maug_cli_arg_called[const_i], g_maug_cli_data[const_i] );
+            g_maug_cli_arg_callbacks[const_i](
+               "", MAUG_CLI_ARG_C_DEFAULT, g_maug_cli_data[const_i] );
          if( MERROR_OK != retval ) {
             goto cleanup;
          }
@@ -223,7 +222,7 @@ cleanup:
 
 MERROR_RETVAL maug_add_arg(
    const char* arg, int arg_sz, const char* help, int help_sz,
-   maug_cli_cb arg_cb, maug_cli_cb def_cb, void* data
+   maug_cli_cb arg_cb, void* data
 ) {
    int slot_idx = 0;
 
@@ -265,9 +264,6 @@ MERROR_RETVAL maug_add_arg(
    
    g_maug_cli_arg_callbacks[slot_idx] = arg_cb;
    g_maug_cli_arg_callbacks[slot_idx + 1] = NULL;
-
-   g_maug_cli_def_callbacks[slot_idx] = def_cb;
-   g_maug_cli_def_callbacks[slot_idx + 1] = NULL;
 
    g_maug_cli_arg_called[slot_idx] = 0;
    g_maug_cli_arg_called[slot_idx + 1] = 0;
