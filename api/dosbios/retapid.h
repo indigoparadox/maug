@@ -194,5 +194,21 @@ struct RETROFLAT_PLATFORM {
    uint8_t screen_mode;
 };
 
+#ifndef NO_RETROSND
+
+#  define RETROSND_MPU_FLAG_OUTPUT 0x40
+#  define RETROSND_MPU_TIMEOUT 30
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+   uint16_t io_base;
+   uint8_t io_timeout;
+   uint8_t driver;
+   struct RETROSND_ADLIB_VOICE* adlib_voices;
+   char sf_bank_filename[SF_BANK_FILENAME_SZ_MAX + 1];
+};
+
+#endif /* !NO_RETROSND */
+
 #endif /* !RETPLTD_H */
 

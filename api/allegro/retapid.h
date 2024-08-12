@@ -155,5 +155,13 @@ struct RETROFLAT_PLATFORM {
    unsigned int         close_button;
 };
 
+#ifndef NO_RETROSND
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+};
+
+#endif /* !NO_RETROSND */
+
 #endif /* !RETPLTD_H */
 

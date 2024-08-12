@@ -257,5 +257,13 @@ uint8_t retroflat_viewport_focus(
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
 
+#ifndef NO_RETROSND
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+};
+
+#endif /* !NO_RETROSND */
+
 #endif /* !RETPLTD_H */
 

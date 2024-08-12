@@ -478,5 +478,14 @@ struct RETROFLAT_PLATFORM {
    unsigned int         last_mouse_y;
 };
 
+#ifndef NO_RETROSND
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+   HMIDIOUT mo_handle;
+};
+
+#endif /* !NO_RETROSND */
+
 #endif /* !RETPLTD_H */
 

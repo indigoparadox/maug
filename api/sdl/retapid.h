@@ -21,6 +21,9 @@
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
 #     include <SDL_getenv.h>
 #  endif /* RETROFLAT_API_SDL1 */
+#  ifndef NO_RETROSND
+#     include <SDL_mixer.h>
+#  endif /* !NO_RETROSND */
 
 #  if !defined( RETROFLAT_SOFT_SHAPES )
 #     define RETROFLAT_SOFT_SHAPES
@@ -218,6 +221,16 @@ struct RETROFLAT_PLATFORM {
 #  endif /* !RETROFLAT_API_SDL1 */
    int                  mouse_state;
 };
+
+#ifndef NO_RETROSND
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+   Mix_Music* music;
+   int audio_open;
+};
+
+#endif /* !NO_RETROSND */
 
 #endif /* !RETPLTD_H */
 
