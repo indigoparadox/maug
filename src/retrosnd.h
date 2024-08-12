@@ -137,6 +137,10 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
 
 void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
 
+MERROR_RETVAL retrosnd_midi_play_smf( const char* filename );
+
+uint8_t retrosnd_midi_is_playing_smf();
+
 void retrosnd_shutdown();
 
 #ifdef RETROSND_C
@@ -872,20 +876,50 @@ MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
 
    /* TODO: Use chunks and play at pitch/velocity? */
 
-   /* TODO: Handle gracefully. */
-   assert( NULL == g_retrosnd_state.music );
+   if( Mix_PlayingMusic() ) {
+      debug_printf( RETROSND_TRACE_LVL, "stopping music..." );
+      Mix_HaltMusic();
+   }
+
+   if( NULL != g_retrosnd_state.music ) {
+      debug_printf( RETROSND_TRACE_LVL, "unloading music..." );
+      Mix_FreeMusic( g_retrosnd_state.music );
+      g_retrosnd_state.music = NULL;
+   }
+
+   if( NULL == filename ) {
+      goto cleanup;
+   }
+
+   /* Attempt to load requested music. */
+
    g_retrosnd_state.music = Mix_LoadMUS( filename );
    if( NULL == g_retrosnd_state.music ) {
       error_printf( "could not load \"%s\": %s", filename, Mix_GetError() );
       retval = MERROR_SND;
    }
 
+   debug_printf( RETROSND_TRACE_LVL, "%s loaded, playing...", filename );
+
    Mix_PlayMusic( g_retrosnd_state.music, -1 );
+
+cleanup:
 #  else
 #     pragma message( "warning: midi_play_smf not implemented" )
 #  endif
 
    return retval;
+}
+
+/* === */
+
+uint8_t retrosnd_midi_is_playing_smf() {
+#  if defined( RETROSND_API_SDL2 ) || defined( RETROSND_API_SDL1 )
+   return Mix_PlayingMusic();
+#  else
+#     pragma message( "warning: midi_play_smf not implemented" )
+   return 1;
+#  endif
 }
 
 /* === */
