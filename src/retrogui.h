@@ -234,6 +234,8 @@ MERROR_RETVAL retrogui_init_ctl(
 
 MERROR_RETVAL retrogui_init( struct RETROGUI* gui );
 
+MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc );
+
 MERROR_RETVAL retrogui_free( struct RETROGUI* gui );
 
 #ifdef RETROGUI_C
@@ -1606,6 +1608,48 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc ) {
+   size_t i = 0;
+   union RETROGUI_CTL* ctl = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( retrogui_is_locked( gui ) ) {
+      error_printf( "GUI is locked!" );
+      goto cleanup;
+   }
+
+   assert( !retrogui_is_locked( gui ) );
+   mdata_vector_lock( &(gui->ctls) );
+
+   #define RETROGUI_CTL_TABLE_FREE_CTL( idx, c_name, c_fields ) \
+      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+         retrogui_free_ ## c_name( ctl );
+
+   for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
+      ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
+      if( idc != ctl->base.idc ) {
+         continue;
+      }
+
+      /* Free the control data. */
+      if( 0 ) {
+      RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_FREE_CTL )
+      }
+
+      /* Remove the control. */
+      mdata_vector_unlock( &(gui->ctls) );
+      mdata_vector_remove( &(gui->ctls), i );
+      mdata_vector_lock( &(gui->ctls) );
+      break;
+   }
+
+   mdata_vector_unlock( &(gui->ctls) );
+
+cleanup:
+
+   return retval;
+}
+
 #ifndef RETROGUI_NO_TEXTBOX
 
 MERROR_RETVAL retrogui_get_ctl_text(
@@ -1721,11 +1765,12 @@ MERROR_RETVAL retrogui_set_ctl_text(
    }
 
    /* Perform the buffer substitutions. */
-   buffer_h = maug_malloc( 1, buffer_sz );
+   buffer_h = maug_malloc( 1, buffer_sz + 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
 
    maug_mlock( buffer_h, buffer );
    maug_cleanup_if_null_lock( char*, buffer );
+   maug_mzero( buffer, buffer_sz + 1 );
 
    assert( NULL != fmt );
    assert( NULL != buffer );
@@ -1738,7 +1783,7 @@ MERROR_RETVAL retrogui_set_ctl_text(
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_BUTTON == ctl->base.type ) {
       assert( NULL == ctl->BUTTON.label );
-      _retrogui_copy_str( label, buffer, ctl->BUTTON, label_tmp, label_sz );
+      _retrogui_copy_str( label, buffer, ctl->BUTTON, label_tmp, buffer_sz );
    } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
       assert( NULL == ctl->LABEL.label );
       _retrogui_copy_str( label, buffer, ctl->LABEL, label_tmp, label_sz );
