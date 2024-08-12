@@ -1793,7 +1793,6 @@ static MERROR_RETVAL retrosnd_cli_rsd(
    char* env_var = NULL;
 #     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
 
-
    if( 0 > arg_c ) {
 #     ifdef RETROSND_API_PC_BIOS
    if( NULL != env_var ) {
@@ -1894,7 +1893,14 @@ static MERROR_RETVAL retrosnd_cli_rsd(
 #     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
    }
 
+#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
 cleanup:
+#     elif defined( RETROSND_API_ALSA )
+cleanup:
+#     elif defined( RETROSND_API_WINMM )
+cleanup:
+#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
+
    return retval;
 }
 

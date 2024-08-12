@@ -27,7 +27,7 @@ struct RETROCON {
 
 #  define retrocon_init( con, fn, x, y, w, h ) (MERROR_OK)
 
-#  define retrocon_add_command( con, cmd, cb, cb_data )
+#  define retrocon_add_command( con, cmd, cb, cb_data ) (MERROR_OK)
 
 #  define retrocon_display( con, display )
 

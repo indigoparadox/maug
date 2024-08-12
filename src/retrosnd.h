@@ -285,6 +285,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    if( 0 > SDL_Init( SDL_INIT_AUDIO ) ) {
       error_printf( "couldn't initialize SDL audio: %s", SDL_GetError() );
       retval = MERROR_SND;
+      goto cleanup;
    }
 
 #     ifdef RETROSND_API_SDL1
@@ -294,6 +295,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 #     endif /* RETROFLAT_OS_WASM */
       error_printf( "couldn't initialize SDL mixer: %s", Mix_GetError() );
       retval = MERROR_SND;
+      goto cleanup;
    }
 
    if(
@@ -301,6 +303,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    ) {
       error_printf( "couldn't open SDL mixer audio: %s", Mix_GetError() );
       retval = MERROR_SND;
+      goto cleanup;
    }
 
    g_retrosnd_state.flags |= RETROSND_FLAG_INIT;
@@ -866,7 +869,8 @@ cleanup:
 MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROSND_API_SDL2 ) || defined( RETROSND_API_SDL1 )
-   SDL_AudioSpec spec;
+
+   /* TODO: Use chunks and play at pitch/velocity? */
 
    /* TODO: Handle gracefully. */
    assert( NULL == g_retrosnd_state.music );
