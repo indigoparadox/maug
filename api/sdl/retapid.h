@@ -144,7 +144,9 @@ struct RETROFLAT_BITMAP {
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
 #  endif /* RETROFLAT_OPENGL */
-#  ifdef RETROFLAT_API_SDL1
+#  ifdef RETROFLAT_OPENGL
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
+#  elif defined( RETROFLAT_API_SDL1 )
 #     define retroflat_bitmap_locked( bmp ) \
          (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
 #  else

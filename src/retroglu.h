@@ -439,6 +439,8 @@ void retroglu_string(
    float x, float y, float z, const RETROGLU_COLOR color,
    const char* str, size_t str_sz, const char* font_str, uint8_t flags );
 
+MERROR_RETVAL retroglu_check_errors( const char* desc );
+
 /* int retroglu_draw_lock( struct RETROFLAT_BITMAP* bmp ); */
 
 int retroglu_draw_release( struct RETROFLAT_BITMAP* bmp );
@@ -563,10 +565,20 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    float aspect_ratio = 0;
 
    if( 0 == args->screen_px_w ) {
+      debug_printf( 1,
+         "using assumed screen width: " SIZE_T_FMT, retroflat_screen_w() );
       args->screen_px_w = retroflat_screen_w();
+   } else {
+      debug_printf( 1,
+         "using specified screen width: " SIZE_T_FMT, retroflat_screen_w() );
    }
    if( 0 == args->screen_px_h ) {
+      debug_printf( 1,
+         "using assumed screen height: " SIZE_T_FMT, retroflat_screen_h() );
       args->screen_px_h = retroflat_screen_h();
+   } else {
+      debug_printf( 1,
+         "using specified screen height: " SIZE_T_FMT, retroflat_screen_h() );
    }
 
    /* Setup projection. */
@@ -1808,7 +1820,10 @@ MERROR_RETVAL retroglu_create_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#ifndef RETROGLU_NO_TEXTURES
+#ifdef RETROGLU_NO_TEXTURES
+   error_printf( "textures not enabled!" );
+   retval = MERROR_GUI;
+#else
 
    if( w > 256 ) {
       error_printf( "warning! attempting to create texture with w > 256 ("
@@ -1830,7 +1845,7 @@ MERROR_RETVAL retroglu_create_bitmap(
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
 
    maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
+   maug_cleanup_if_null_lock( uint8_t*, bmp_out->tex.bytes );
 
    /* TODO: Overflow checking. */
    maug_mzero(
@@ -1924,7 +1939,10 @@ void retroglu_px(
 ) {
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_FLAGS_BITMAP_RO ==
+         (RETROFLAT_FLAGS_BITMAP_RO & target->flags) ||
+      target->tex.w <= x ||
+      target->tex.h <= y
    ) {
       return;
    }
