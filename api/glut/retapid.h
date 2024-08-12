@@ -154,5 +154,13 @@ struct RETROFLAT_PLATFORM {
    int16_t              retroflat_last_key;
 };
 
+#ifndef NO_RETROSND
+
+struct RETROFLAT_SOUND {
+   uint8_t flags;
+};
+
+#endif /* !NO_RETROSND */
+
 #endif /* !RETPLTD_H */
 
