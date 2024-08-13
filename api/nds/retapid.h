@@ -30,6 +30,10 @@
 #  define RETROFLAT_PLATFORM_TRACE_LVL 0
 #endif /* !RETROFLAT_PLATFORM_TRACE_LVL */
 
+#ifndef RETROFLAT_NDS_VOLUME
+#  define RETROFLAT_NDS_VOLUME 32
+#endif /* !RETROFLAT_NDS_VOLUME */
+
 #define RETROFLAT_NDS_BG_W_TILES 32
 
 /* Determined by configurator:

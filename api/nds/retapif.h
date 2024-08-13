@@ -16,8 +16,8 @@ const size_t gc_ndsassets_tiles_widths[] = {};
 const size_t gc_ndsassets_tiles_heights[] = {};
 #  endif /* !NDSASSET_H */
 
-const unsigned short gc_retroflat_nds_pal_default[256] __attribute__((aligned(4))) __attribute__((visibility("hidden")))=
-{
+static const unsigned short _gc_retroflat_nds_pal_default[256]
+__attribute__((aligned(4))) = {
 	0x0000,0x5400,0x02A0,0x56A0,0x0015,0x5415,0x0155,0x56B5,
 	0x294A,0x7D4A,0x2BEA,0x7FEA,0x295F,0x7D5F,0x2BFF,0x7FFF,
 	0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,0x0842,
@@ -53,6 +53,28 @@ const unsigned short gc_retroflat_nds_pal_default[256] __attribute__((aligned(4)
 	0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,0x77BD,
 	0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,0x7BDE,
 	0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,0x7FFF,
+};
+
+/* Table of MIDI pitch values roughly transcribed to frequencies in Hz...
+ * These sound kind of wonky with the square wave generator, though!
+ */
+static const uint16_t _gc_retroflat_nds_midi_freq[128] = {
+       8,     9,     9,    10,    10,    11,    12,    12,
+      13,    14,    15,    15,    16,    17,    18,    19,
+      21,    22,    23,    24,    26,    28,    29,    31,
+      33,    35,    37,    39,    41,    44,    46,    49,
+      52,    55,    58,    62,    65,    69,    73,    78,
+      82,    87,    92,    98,   104,   110,   117,   123,
+     131,   139,   147,   156,   165,   175,   185,   196,
+     208,   220,   233,   247,   262,   277,   294,   311,
+     330,   349,   370,   392,   415,   440,   466,   494,
+     523,   554,   587,   622,   659,   698,   740,   784,
+     831,   880,   932,   988,  1047,  1109,  1175,  1245,
+    1319,  1397,  1480,  1568,  1661,  1760,  1865,  1976,
+    2093,  2217,  2349,  2489,  2637,  2794,  2960,  3136,
+    3322,  3520,  3729,  3951,  4186,  4435,  4699,  4978,
+    5274,  5588,  5920,  5920,  6645,  7040,  7459,  7902,
+    8372,  8870,  9397,  9956, 10548, 11175, 11840, 12544
 };
 
 static void _retroflat_nds_change_bg() {
@@ -497,7 +519,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->tiles = calloc( w, h );
    maug_cleanup_if_null_alloc( unsigned int*, bmp_out->tiles );
    bmp_out->tiles_len = w * h;
-   bmp_out->pal = (unsigned short*)gc_retroflat_nds_pal_default;
+   bmp_out->pal = (unsigned short*)_gc_retroflat_nds_pal_default;
    bmp_out->pal_len = 512;
    bmp_out->w = w;
    bmp_out->h = h;
@@ -828,11 +850,14 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
-   g_retroflat_state->sound.channels[channel] =
-      soundPlayPSG( 100, 2620, 32, 64 );
 
-   debug_printf( 1, "playing channel %u on DS channel: %u",
-      channel, g_retroflat_state->sound.channels[channel] );
+   g_retroflat_state->sound.channels[channel] =
+      soundPlayPSG( DutyCycle_87, _gc_retroflat_nds_midi_freq[pitch],
+      RETROFLAT_NDS_VOLUME, 64 );
+
+   debug_printf( 1, "playing channel %u at freq %u on DS channel: %u",
+      channel, _gc_retroflat_nds_midi_freq[pitch],
+      g_retroflat_state->sound.channels[channel] );
 
 }
 
