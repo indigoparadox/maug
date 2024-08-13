@@ -261,6 +261,7 @@ uint8_t retroflat_viewport_focus(
 
 struct RETROFLAT_SOUND {
    uint8_t flags;
+   uint8_t channels[RETROSND_CHANNEL_CT];
 };
 
 #endif /* !NO_RETROSND */

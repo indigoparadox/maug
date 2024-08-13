@@ -776,7 +776,9 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
 
-#  pragma message( "warning: init not implemented" )
+   soundEnable();
+
+   g_retroflat_state->sound.flags |= RETROSND_FLAG_INIT;
 
    return retval;
 }
@@ -826,7 +828,11 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
-#  pragma message( "warning: note_on not implemented" )
+   g_retroflat_state->sound.channels[channel] =
+      soundPlayPSG( 100, 2620, 32, 64 );
+
+   debug_printf( 1, "playing channel %u on DS channel: %u",
+      channel, g_retroflat_state->sound.channels[channel] );
 
 }
 
@@ -841,7 +847,7 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
-#  pragma message( "warning: note_off not implemented" )
+   soundKill( g_retroflat_state->sound.channels[channel] );
 
 }
 
@@ -873,7 +879,8 @@ void retrosnd_shutdown() {
       return;
    }
 
-#  pragma message( "warning: shutdown not implemented" )
+   soundDisable();
+
 }
 
 #endif /* !NO_RETROSND */

@@ -875,6 +875,113 @@ struct RETROFLAT_GLTEX {
 };
 #endif /* RETROFLAT_OPENGL */
 
+struct RETROFLAT_ARGS;
+
+#ifndef NO_RETROSND
+
+/**
+ * \addtogroup maug_retrosnd RetroSound API
+ * \brief Abstraction layer header for sound on retro systems.
+ * \{
+ *
+ * \file retrosnd.h
+ * \brief Abstraction layer header for sound on retro systems.
+ *
+ * RetroSound is a compatibility layer for making sound
+ * on various platforms, including Windows, MS-DOS or Linux.
+ *
+ * To use, define RETROSND_C before including this header from your main.c.
+ *
+ * You may include this header in other .c files, as well, but RETROSND_C
+ * should \b ONLY be declared \b ONCE in the entire program.
+ *
+ * It is *highly* advised to use this in conjunction with retroflt.h.
+ *
+ * maug.h should also be included before this header.
+ *
+ * Special thanks to: "Programming the Adlib/Sound Blaster FM Music Chips"
+ * by Jeffrey S. Lee (https://bochs.sourceforge.io/techspec/adlib_sb.txt)
+ * and "The Gravis Ultrasound" by neuraldk
+ * (http://neuraldk.org/document.php?gus) for DOS platform-specific stuff.
+ *
+ * And the MPU-401 interface for being so darn simple!
+ */
+
+#ifndef RETROSND_TRACE_LVL
+#  define RETROSND_TRACE_LVL 0
+#endif /* !RETROSND_TRACE_LVL */
+
+#ifndef RETROSND_REG_TRACE_LVL
+#  define RETROSND_REG_TRACE_LVL 0
+#endif /* !RETROSND_REG_TRACE_LVL */
+
+/**
+ * \addtogroup maug_retrosnd_flags RetroSound State Flags
+ * \brief Flags indicating global state for the RETROSND_STATE::flags field.
+ * \{
+ */
+
+/**
+ * \brief Flag in RETROSND_STATE::flags indicating initialization was
+ *        successful.
+ */
+#define RETROSND_FLAG_INIT 0x01
+
+/*! \} */ /* maug_retrosnd_flags */
+
+#define RETROSND_VOICE_BREATH       122
+
+#define RETROSND_VOICE_SEASHORE     123
+
+#define RETROSND_VOICE_BIRD_TWEET   124
+
+#define RETROSND_VOICE_PHONE_RING   125
+
+#define RETROSND_VOICE_HELICOPTER   126
+
+#define RETROSND_VOICE_APPLAUSE     127
+
+/**
+ * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
+ *        sound effect.
+ */
+#define RETROSND_VOICE_GUNSHOT      128
+
+#define RETROSND_CHANNEL_CT         8
+
+/**
+ * \brief Initialize retrosnd engine.
+ * \param args A pointer to the RETROSND_ARGS struct initialized by
+ *        the calling program.
+ *
+ * The RETROSND_ARGS::snd_io_base field must be initialized with the address
+ * or other platform-specific indicator of the MIDI device to use.
+ */
+MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args );
+
+/**
+ * \brief Set the name of the voice bank filename to use.
+ */
+void retrosnd_set_sf_bank( const char* filename_in );
+
+void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
+
+void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val );
+
+void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
+
+void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
+
+MERROR_RETVAL retrosnd_midi_play_smf( const char* filename );
+
+uint8_t retrosnd_midi_is_playing_smf();
+
+void retrosnd_shutdown();
+
+/*! \} */ /* maug_retrosnd */
+
+#endif /* !NO_RETROSND */
+
 /* === OS-Specific Includes and Defines === */
 
 #if defined( RETROFLAT_OS_WIN ) && !defined( MAUG_WINDOWS_H )
@@ -1522,112 +1629,6 @@ void retroflat_resize_v();
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input );
 
 /*! \} */ /* maug_retroflt_input */
-
-/**
- * \addtogroup maug_retrosnd RetroSound API
- * \brief Abstraction layer header for sound on retro systems.
- * \{
- *
- * \file retrosnd.h
- * \brief Abstraction layer header for sound on retro systems.
- *
- * RetroSound is a compatibility layer for making sound
- * on various platforms, including Windows, MS-DOS or Linux.
- *
- * To use, define RETROSND_C before including this header from your main.c.
- *
- * You may include this header in other .c files, as well, but RETROSND_C
- * should \b ONLY be declared \b ONCE in the entire program.
- *
- * It is *highly* advised to use this in conjunction with retroflt.h.
- *
- * maug.h should also be included before this header.
- *
- * Special thanks to: "Programming the Adlib/Sound Blaster FM Music Chips"
- * by Jeffrey S. Lee (https://bochs.sourceforge.io/techspec/adlib_sb.txt)
- * and "The Gravis Ultrasound" by neuraldk
- * (http://neuraldk.org/document.php?gus) for DOS platform-specific stuff.
- *
- * And the MPU-401 interface for being so darn simple!
- */
-
-#ifndef RETROSND_TRACE_LVL
-#  define RETROSND_TRACE_LVL 0
-#endif /* !RETROSND_TRACE_LVL */
-
-#ifndef RETROSND_REG_TRACE_LVL
-#  define RETROSND_REG_TRACE_LVL 0
-#endif /* !RETROSND_REG_TRACE_LVL */
-
-#define SF_BANK_FILENAME_SZ_MAX 30
-
-/**
- * \addtogroup maug_retrosnd_flags RetroSound State Flags
- * \brief Flags indicating global state for the RETROSND_STATE::flags field.
- * \{
- */
-
-/**
- * \brief Flag in RETROSND_STATE::flags indicating initialization was
- *        successful.
- */
-#define RETROSND_FLAG_INIT 0x01
-
-/*! \} */ /* maug_retrosnd_flags */
-
-#define RETROSND_VOICE_BREATH       122
-
-#define RETROSND_VOICE_SEASHORE     123
-
-#define RETROSND_VOICE_BIRD_TWEET   124
-
-#define RETROSND_VOICE_PHONE_RING   125
-
-#define RETROSND_VOICE_HELICOPTER   126
-
-#define RETROSND_VOICE_APPLAUSE     127
-
-#define RETROSND_PC_BIOS_SPKR       0x01
-#define RETROSND_PC_BIOS_MPU        0x02
-#define RETROSND_PC_BIOS_GUS        0x04
-#define RETROSND_PC_BIOS_ADLIB      0x08
-
-/**
- * \brief Parameter for retrosnd_midi_set_voice() indicating a gunshot
- *        sound effect.
- */
-#define RETROSND_VOICE_GUNSHOT      128
-
-/**
- * \brief Initialize retrosnd engine.
- * \param args A pointer to the RETROSND_ARGS struct initialized by
- *        the calling program.
- *
- * The RETROSND_ARGS::snd_io_base field must be initialized with the address
- * or other platform-specific indicator of the MIDI device to use.
- */
-MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args );
-
-/**
- * \brief Set the name of the voice bank filename to use.
- */
-void retrosnd_set_sf_bank( const char* filename_in );
-
-void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice );
-
-void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val );
-
-void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
-
-void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
-
-MERROR_RETVAL retrosnd_midi_play_smf( const char* filename );
-
-uint8_t retrosnd_midi_is_playing_smf();
-
-void retrosnd_shutdown();
-
-/*! \} */ /* maug_retrosnd */
 
 #ifdef RETROFLT_C
 
@@ -2403,7 +2404,6 @@ void retroflat_shutdown( int retval ) {
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h ) {
       maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
    }
-
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {

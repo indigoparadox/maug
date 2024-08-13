@@ -968,7 +968,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
 cleanup:
 
-   return retval;'
+   return retval;
 }
 
 /* === */
