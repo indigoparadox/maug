@@ -375,6 +375,7 @@ static LRESULT CALLBACK WndProc(
                g_retroflat_state->loop_data );
          } else if( RETROFLAT_WIN_LOOP_TIMER_ID == wParam ) {
             /* Loop/tick timer has expired. */
+            /* TODO: Move this to message-processing loop. */
             assert( NULL != g_retroflat_state->loop_iter );
             g_retroflat_state->loop_iter(
                g_retroflat_state->loop_data );

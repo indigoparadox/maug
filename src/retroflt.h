@@ -435,6 +435,11 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_SCALE2X 0x10
 
+/**
+ * \brief Do not execute any more inter-frame loops until next frame.
+ */
+#define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
+
 /*! \} */ /* maug_retroflt_flags */
 
 /**
@@ -748,6 +753,13 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
 
 /*! \} */ /* maug_retroflt_compiling */
+
+#define retroflat_wait_for_frame() \
+   (g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_WAIT_FOR_FPS)
+
+#define retroflat_is_waiting_for_frame() \
+   (RETROFLAT_FLAGS_WAIT_FOR_FPS == \
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_WAIT_FOR_FPS))
 
 /**
  * \addtogroup maug_retroflt_assets RetroFlat Assets API
@@ -1741,24 +1753,29 @@ MERROR_RETVAL retroflat_loop_generic(
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
       if(
+         /* Not waiting for the next frame? */
+         RETROFLAT_FLAGS_WAIT_FOR_FPS !=
+         (RETROFLAT_FLAGS_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
+         /* Inter-frame loop present? */
+         NULL != g_retroflat_state->loop_iter
+      ) {
+         /* Run the loop iter as many times as possible. */
+         g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+      }
+      if(
          RETROFLAT_FLAGS_UNLOCK_FPS !=
          (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
-#     ifdef retroflat_wait_for_vblank
-         retroflat_wait_for_vblank();
-#     endif /* retroflat_wait_for_vblank() */
-         if( NULL != g_retroflat_state->loop_iter ) {
-            /* Run the loop iter as many times as possible. */
-            g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
-         }
          continue;
       }
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
       }
+      /* Reset wait-for-frame flag AFTER frame callback. */
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_WAIT_FOR_FPS;
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
          next = now + retroflat_fps_next();

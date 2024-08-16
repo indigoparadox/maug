@@ -14,8 +14,6 @@
 
 #  define RETROCON_DISABLE 1
 
-#define retroflat_wait_for_vblank() /* swiWaitForVBlank(); */
-
 #ifndef RETROFLAT_NDS_OAM_ACTIVE
 /*! \brief Active sprite engine screen on Nintendo DS. */
 #  define RETROFLAT_NDS_OAM_ACTIVE &oamMain
