@@ -362,6 +362,60 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 
 /* === */
 
+MERROR_RETVAL mlisp_env_unset(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   const char* token, size_t token_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t i = 0;
+   struct MLISP_ENV_NODE* e = NULL;
+   char* strpool = NULL;
+
+   assert( !mdata_vector_is_locked( &(exec->env) ) );
+   mdata_vector_lock( &(exec->env) );
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+
+   /* Search for the given token in the env. */
+   for( i = mdata_vector_ct( &(exec->env) ) - 1 ; 0 <= i ; i-- ) {
+      assert( mdata_vector_is_locked( &(exec->env) ) );
+      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+
+      if( MLISP_TYPE_ARGS_E == e->type ) {
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "reached end of env stack frame: " SSIZE_T_FMT, i );
+         goto cleanup;
+      }
+
+      if( 0 != strncmp(
+         token, &(strpool[e->name_strpool_idx]), token_sz + 1 )
+      ) {
+         continue;
+      }
+
+      /* Remove the token. */
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "found token %s: %s (" SSIZE_T_FMT "), removing...",
+         token, &(strpool[e->name_strpool_idx]), i );
+      mdata_vector_unlock( &(exec->env) );
+
+      retval = mdata_vector_remove( &(exec->env), i );
+      mdata_vector_lock( &(exec->env) );
+      goto cleanup;
+   }
+
+cleanup:
+
+   assert( mdata_vector_is_locked( &(exec->env) ) );
+   mdata_vector_unlock( &(exec->env) );
+
+   mdata_strpool_unlock( &(parser->strpool), strpool );
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_env_set(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
@@ -377,6 +431,9 @@ MERROR_RETVAL mlisp_env_set(
    assert( 0 < token_sz );
 
    /* TODO: Find previous env nodes with same token and change. */
+
+   retval = mlisp_env_unset( parser, exec, token, token_sz );
+   maug_cleanup_if_not_ok();
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt ) \
       case idx: \
