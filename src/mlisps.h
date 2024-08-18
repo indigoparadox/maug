@@ -23,6 +23,12 @@
 #endif /* !MLISP_AST_IDX_CHILDREN_MAX */
 
 /**
+ * \brief Flag for MLISP_EXEC_STATE::flags indicating next token is a term to
+ *        be defined.
+ */
+#define MLISP_EXEC_FLAG_DEF_TERM   0x02
+
+/**
  * \addtogroup mlisp_types MLISP Types
  * \{
  */

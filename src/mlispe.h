@@ -1019,6 +1019,18 @@ static MERROR_RETVAL _mlisp_step_iter_children(
    if( mlisp_ast_has_ready_children( *p_child_idx, n ) ) {
       /* Call the next uncalled child. */
 
+      if(
+         MLISP_AST_FLAG_DEFINE == (MLISP_AST_FLAG_DEFINE & n->flags) &&
+         0 == *p_child_idx
+      ) {
+         /* The next child is a term to be defined. */
+         debug_printf( MLISP_EXEC_TRACE_LVL,
+            "setting MLISP_EXEC_FLAG_DEF_TERM!" );
+         exec->flags |= MLISP_EXEC_FLAG_DEF_TERM;
+      } else {
+         exec->flags &= ~MLISP_EXEC_FLAG_DEF_TERM;
+      }
+
       /* Step and check. */
       retval = _mlisp_step_iter(
          parser, n->ast_idx_children[*p_child_idx], exec );
@@ -1447,6 +1459,7 @@ static MERROR_RETVAL _mlisp_step_iter(
       /* Push the lambda to the stack so that the "define" above it can
        * grab it and associate it with the env.
        */
+      /* TODO: Assert node above it is a define! */
       mlisp_stack_push( exec, n_idx, mlisp_lambda_t );
       goto cleanup;
    }
@@ -1468,7 +1481,15 @@ static MERROR_RETVAL _mlisp_step_iter(
    } else if( MLISP_TYPE_ ## const_name == e.type ) { \
       _mlisp_stack_push_ ## ctype( exec, e.value.name );
 
-   if( MLISP_TYPE_BEGIN == e.type ) {
+   if( MLISP_EXEC_FLAG_DEF_TERM == (MLISP_EXEC_FLAG_DEF_TERM & exec->flags) ) {
+      /* Avoid a deadlock when *re*-assigning terms caused by term being
+       * evaluated before it is defined.
+       */
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "special case! pushing literal to define: " SSIZE_T_FMT,
+         n->token_idx );
+      _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+   } else if( MLISP_TYPE_BEGIN == e.type ) {
       /* Cleanup the stack that's been pushed by children since this BEGIN's
        * initial visit.
        */

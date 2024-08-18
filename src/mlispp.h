@@ -20,6 +20,8 @@
 
 #define MLISP_AST_FLAG_IF     0x04
 
+#define MLISP_AST_FLAG_DEFINE 0x08
+
 #define MLISP_AST_FLAG_BEGIN  0x20
 
 #define MLISP_PARSER_PSTATE_TABLE( f ) \
@@ -208,11 +210,18 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
       n->flags |= MLISP_AST_FLAG_IF;
 
    } else if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz + 1 ) ) {
-      /* Special node: if. */
+      /* Special node: begin. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: BEGIN",
          &(strpool[token_idx]), token_sz );
       n->flags |= MLISP_AST_FLAG_BEGIN;
+
+   } else if( 0 == strncmp( &(strpool[token_idx]), "define", token_sz + 1 ) ) {
+      /* Special node: define. */
+      debug_printf( MLISP_PARSE_TRACE_LVL,
+         "setting node \"%s\" (" SIZE_T_FMT ") flag: DEFINE",
+         &(strpool[token_idx]), token_sz );
+      n->flags |= MLISP_AST_FLAG_DEFINE;
    }
 
    /* Debug report. */
