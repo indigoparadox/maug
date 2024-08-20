@@ -944,6 +944,38 @@ cleanup:
 
 /* === */
 
+static MERROR_RETVAL _mlisp_env_cb_or(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
+   size_t args_c, void* cb_data, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MLISP_STACK_NODE val;
+   mlisp_bool_t val_out = 0;
+   size_t i = 0;
+
+   for( i = 0 ; args_c > i ; i++ ) {
+      retval = mlisp_stack_pop( exec, &val );
+      maug_cleanup_if_not_ok();
+
+      if( MLISP_TYPE_BOOLEAN != val.type ) {
+         error_printf( "or: invalid boolean type: %d", val.type );
+      }
+
+      if( val.value.boolean ) {
+         debug_printf( MLISP_EXEC_TRACE_LVL, "found TRUE in OR!" );
+         val_out = 1;
+      }
+   }
+
+   _mlisp_stack_push_mlisp_bool_t( exec, val_out );
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 /* Execution Functions */
 
 /* === */
@@ -1659,6 +1691,10 @@ MERROR_RETVAL mlisp_exec_init(
 
    /* Setup initial env. */
 
+   retval = mlisp_env_set(
+      parser, exec, "or", 2, MLISP_TYPE_CB, _mlisp_env_cb_or,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
       NULL, MLISP_ENV_FLAG_BUILTIN );
