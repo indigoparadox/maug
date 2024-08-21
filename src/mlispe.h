@@ -41,6 +41,10 @@
 
 #define MLISP_ENV_FLAG_ARI_MOD   0x80
 
+#define MLISP_ENV_FLAG_ANO_OR    0x10
+
+#define MLISP_ENV_FLAG_ANO_AND   0x20
+
 /**
  * \addtogroup mlisp_stack MLISP Execution Stack
  * \{
@@ -944,14 +948,20 @@ cleanup:
 
 /* === */
 
-static MERROR_RETVAL _mlisp_env_cb_or(
+static MERROR_RETVAL _mlisp_env_cb_ano(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    size_t args_c, void* cb_data, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE val;
-   mlisp_bool_t val_out = 0;
+   mlisp_bool_t val_out =
+      MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) ?
+      0 : 1;
    size_t i = 0;
+
+   /* TODO: Switch this to a step_or() function so that we can opt not to
+    *       evaluate conditions unless prior stepped children are false.
+    */
 
    for( i = 0 ; args_c > i ; i++ ) {
       retval = mlisp_stack_pop( exec, &val );
@@ -962,8 +972,11 @@ static MERROR_RETVAL _mlisp_env_cb_or(
       }
 
       if( val.value.boolean ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL, "found TRUE in OR!" );
-         val_out = 1;
+         debug_printf( MLISP_EXEC_TRACE_LVL, "found TRUE in %s!",
+            MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) ?
+            "or" : "and" );
+         val_out =
+            MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) ? 1 : 0;
       }
    }
 
@@ -1692,8 +1705,12 @@ MERROR_RETVAL mlisp_exec_init(
    /* Setup initial env. */
 
    retval = mlisp_env_set(
-      parser, exec, "or", 2, MLISP_TYPE_CB, _mlisp_env_cb_or,
-      NULL, MLISP_ENV_FLAG_BUILTIN );
+      parser, exec, "and", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_AND );
+   maug_cleanup_if_not_ok();
+   retval = mlisp_env_set(
+      parser, exec, "or", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_OR );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
       parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
