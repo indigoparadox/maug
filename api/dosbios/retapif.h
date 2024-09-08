@@ -878,7 +878,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    /* No bank file by default. */
    memset(
       g_retroflat_state->sound.sf_bank_filename, '\0',
-      SF_BANK_FILENAME_SZ_MAX + 1 );
+      RETROFLAT_PATH_MAX + 1 );
 
    if( 0 == args->snd_io_base ) {
       /* Select default port. */
@@ -975,7 +975,7 @@ cleanup:
 
 void retrosnd_midi_set_sf_bank( const char* filename_in ) {
    maug_strncpy( g_retroflat_state->sound.sf_bank_filename, filename_in,
-      SF_BANK_FILENAME_SZ_MAX );
+      RETROFLAT_PATH_MAX );
 }
 
 /* === */
