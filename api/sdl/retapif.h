@@ -1175,10 +1175,10 @@ void retroflat_resize_v() {
 
 /* === */
 
-#ifndef NO_RETROSND
-
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+#ifndef NO_RETROSND
 
    if( 0 > SDL_Init( SDL_INIT_AUDIO ) ) {
       error_printf( "couldn't initialize SDL audio: %s", SDL_GetError() );
@@ -1208,18 +1208,22 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
 cleanup:
 
+#endif /* !NO_RETROSND */
+
    return retval;
 }
 
 /* === */
 
 void retrosnd_midi_set_sf_bank( const char* filename_in ) {
+#ifndef NO_RETROSND
    if(
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
       return;
    }
+#endif /* !NO_RETROSND */
 
 #     pragma message( "warning: set_sf_bank not implemented" )
 }
@@ -1227,12 +1231,14 @@ void retrosnd_midi_set_sf_bank( const char* filename_in ) {
 /* === */
 
 void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
+#ifndef NO_RETROSND
    if(
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
       return;
    }
+#endif /* !NO_RETROSND */
 
 #     pragma message( "warning: set_voice not implemented" )
 }
@@ -1240,12 +1246,14 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
 /* === */
 
 void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+#ifndef NO_RETROSND
    if(
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
       return;
    }
+#endif /* !NO_RETROSND */
 
 #     pragma message( "warning: set_control not implemented" )
 }
@@ -1253,12 +1261,14 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 /* === */
 
 void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#ifndef NO_RETROSND
    if(
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
       return;
    }
+#endif /* !NO_RETROSND */
 
 #     pragma message( "warning: note_on not implemented" )
 }
@@ -1266,12 +1276,14 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 /* === */
 
 void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#ifndef NO_RETROSND
    if(
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
       return;
    }
+#endif /* !NO_RETROSND */
 
 #     pragma message( "warning: note_off not implemented" )
 }
@@ -1280,6 +1292,8 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
 MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
    MERROR_RETVAL retval = MERROR_OK;
+
+#ifndef NO_RETROSND
 
    /* TODO: Use chunks and play at pitch/velocity? */
 
@@ -1312,18 +1326,26 @@ MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
 
 cleanup:
 
+#endif /* !NO_RETROSND */
+
    return retval;
 }
 
 /* === */
 
 uint8_t retrosnd_midi_is_playing_smf() {
+#ifndef NO_RETROSND
    return Mix_PlayingMusic();
+#else
+   return 1;
+#endif /* !NO_RETROSND */
 }
 
 /* === */
 
 void retrosnd_shutdown() {
+
+#ifndef NO_RETROSND
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
       return;
@@ -1342,9 +1364,10 @@ void retrosnd_shutdown() {
    }
 
    Mix_Quit();
-}
 
 #endif /* !NO_RETROSND */
+
+}
 
 #endif /* !RETPLTF_H */
 

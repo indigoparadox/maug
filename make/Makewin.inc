@@ -184,7 +184,8 @@ define TGT_WATCOM386_WIN_SDL
 # SDL is always on Pentium.
 CFLAGS_WATCOM386_WIN_SDL += \
 	-mf -5s -ei -fp5 -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/sdl \
-	-i=$(WATCOM)/h/nt -i=$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1
+	-i=$(WATCOM)/h/nt -i=$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1 \
+	-DNO_RETROSND
 
 LDFLAGS_WATCOM386_WIN_SDL += system nt_win libr {SDL SDLmain}
 
