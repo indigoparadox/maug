@@ -1060,10 +1060,16 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;
    RETROFLAT_IN_KEY key_out = 0;
+   int mouse_x, mouse_y;
 
    assert( NULL != input );
 
    input->key_flags = 0;
+
+   /* Always get mouse state, e.g. for hover detection. */
+   SDL_GetMouseState( &mouse_x, &mouse_y );
+   input->mouse_x = mouse_x / SDL_WINDOW_SCALE;
+   input->mouse_y = mouse_y / SDL_WINDOW_SCALE;
 
    SDL_PollEvent( &event );
 
