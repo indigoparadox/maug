@@ -1353,8 +1353,13 @@ void retrosnd_shutdown() {
 
 #ifndef NO_RETROSND
 
+   if( NULL == g_retroflat_state ) {
+      error_printf(
+         "retroflat not initialized! premature retroflat shutdown?" );
+      return;
+   }
+
    if(
-      NULL == g_retroflat_state ||
       RETROSND_FLAG_INIT !=
       (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
    ) {
