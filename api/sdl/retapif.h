@@ -1353,7 +1353,11 @@ void retrosnd_shutdown() {
 
 #ifndef NO_RETROSND
 
-   if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
+   if(
+      NULL == g_retroflat_state ||
+      RETROSND_FLAG_INIT !=
+      (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
+   ) {
       return;
    }
 
