@@ -669,6 +669,9 @@ cleanup:
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
    }
 
+   assert( NULL != bmp_out->surface );
+   assert( NULL != g_retroflat_state->buffer.renderer );
+
    /* Convert new surface to texture. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );

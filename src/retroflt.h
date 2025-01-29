@@ -2549,6 +2549,42 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 
 /* === */
 
+#ifdef RETROFLAT_VALA
+
+struct RETROFLAT_BITMAP* retroflat_new_bitmap(
+   size_t w, size_t h, uint8_t flags
+) {
+   struct RETROFLAT_BITMAP* b = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   b = calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   maug_cleanup_if_null_alloc( struct RETROFLAT_BITMAP*, b );
+
+   retval = retroflat_create_bitmap( w, h, b, flags );
+   maug_cleanup_if_not_ok();
+
+cleanup:
+
+   return b;
+}
+
+void retroflat_free_bitmap( struct RETROFLAT_BITMAP* b ) {
+   if( NULL == b ) {
+      goto cleanup;
+   }
+
+   retroflat_destroy_bitmap( b );
+
+   free( b );
+
+cleanup:
+   return;
+}
+
+#endif /* RETROFLAT_VALA */
+
+/* === */
+
 #ifndef RETROFLAT_NO_STRING
 
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
