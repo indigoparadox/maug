@@ -13,7 +13,7 @@ $(1).dll: $$(addprefix $$(OBJDIR_WATCOM_WIN32_PLUG)/,$$(subst .c,.o,$(2)))
 
 $$(OBJDIR_WATCOM_WIN32_PLUG)/%.o: %.c
 	$$(MD) "$$(dir $$@)"
-	$$(CC_WATCOM386) -Isrc -Imaug/src $$(CFLAGS_WATCOM386) \
+	INCLUDE=$(WATCOM)/h $$(CC_WATCOM386) -Isrc -Imaug/src $$(CFLAGS_WATCOM386) \
 		-I$$(WATCOM)/h/nt -bd $$< -fo=$$@ \
 		-DRETROFLAT_OS_WIN $$(PLUGIN_DEFINES) -mf -5r -fp5
 

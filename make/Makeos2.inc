@@ -29,7 +29,7 @@ $$(RES_WATCOM386_OS2_GLUT_DEP)
 
 $$(OBJDIR_WATCOM386_OS2_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
-	$$(CC_WATCOM386) \
+	INCLUDE=$(WATCOM)/h $$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_OS2) $$(CFLAGS_WATCOM386_OS2_GLUT) \
 		$$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
@@ -54,7 +54,7 @@ $$(RES_WATCOM386_OS2_SDL_DEP)
 
 $$(OBJDIR_WATCOM386_OS2_SDL)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
-	$$(CC_WATCOM386) \
+	INCLUDE=$(WATCOM)/h $$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_OS2) $$(CFLAGS_WATCOM386_OS2_SDL) \
 		$$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)

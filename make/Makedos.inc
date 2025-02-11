@@ -44,7 +44,7 @@ $(1)d.exe: $$(addprefix obj/doswa/,$$(subst .c,.o,$$(C_FILES)))
 
 obj/doswa/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
-	$$(CC_WATCOM386) \
+	INCLUDE=$(WATCOM)/h $$(CC_WATCOM386) \
 		$$(CFLAGS_WATCOM386) $$(CFLAGS_WATCOM386_DOS) \
 		$$(CFLAGS_WATCOM386_DOS_ALLEGRO) $$(CFLAGS_OPT_WATCOM) \
 		-fo=$$@ $$(<:%.c=%)
@@ -111,7 +111,7 @@ $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS
 
 obj/dos_bios/%.o: %.c | $$(MAUG_DEPS_BIOS)
 	$$(MD) $$(dir $$@)
-	$$(CC_WATCOM) \
+	INCLUDE=$(WATCOM)/h $$(CC_WATCOM) \
 		$$(CFLAGS_WATCOM) $$(CFLAGS_WATCOM_DOS) $$(CFLAGS_WATCOM_DOS_BIOS) \
 		$$(CFLAGS_OPT_WATCOM_BIOS) \
 		-fo=$$@ $$(<:%.c=%)
