@@ -112,3 +112,16 @@ RetroFlat can be quite bulky for 16-bit DOS. Please try adding RETROFLAT\_DOS\_M
 
 For 16-bit builds, `GLOBAL\_DEFINES += -DRETROFLAT\_NO\_RETROGXC` must be specified in the Makefile explicitly, or the cache will be enabled in the DOS stubs.
 
+### Emscripten in Debian Complains About FROZEN\_CACHE
+
+Do the following, to create a mutable emscripten cache in your `$HOME`:
+
+ - Make `$HOME/.emscripten` directory.
+ - Copy `/usr/share/emscripten/cache/` to `$HOME/.emscripten/cache`
+ - Copy `/usr/share/emscripten/.emscripten` to `$HOME/.emscripten/config`
+ - In `$HOME/.emscripten/config`:
+   * Set `FROZEN\_CACHE = False`.
+   * Set `CACHE = '/home/username/.emscripten/cache'`, where `/home/username` is whatever `$HOME` expands to.
+
+After doing this, building with emcc should work.
+
