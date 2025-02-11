@@ -21,6 +21,10 @@ MAUG_DEPS_WASM += $$(RETROXPM_H_DIR)/xpmasset.h
 endif
 endif
 
+ifneq ("$$(EMCC_CONFIG)","")
+	EMCC_EM_CONFIG := --em-config $$(EMCC_CONFIG)
+endif
+
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/sdl -s USE_OGG=1
 
@@ -40,11 +44,12 @@ else
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))
-	$$(EMCC) -o $$@ $$^ $$(LDFLAGS_EMCC) $$(EMCC_FLAGS_SDL)
+	$$(EMCC) $$(EMCC_EM_CONFIG) -o $$@ $$^ $$(LDFLAGS_EMCC) $$(EMCC_FLAGS_SDL)
 
 obj/wasm/%.o: %.c | $$(MAUG_DEPS) $$(MAUG_DEPS_WASM)
 	$$(MD) $$(dir $$@)
-	$$(EMCC) -c -o $$@ $$< $$(CFLAGS_EMCC) $$(EMCC_FLAGS_SDL) \
+	$$(EMCC) $$(EMCC_EM_CONFIG) \
+		-c -o $$@ $$< $$(CFLAGS_EMCC) $$(EMCC_FLAGS_SDL) \
 		$$(CFLAGS_OPT_GCC) $$(CFLAGS_OPT_WASM)
 
 CLEAN_TARGETS += $(1).html $(1).js $(1).wasm
