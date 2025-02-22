@@ -6,6 +6,17 @@ Augmented minimal standard library for C89 and legacy compilers.
 
 Current maug-based projects may be found under [The maug topic on GitHub](https://github.com/topics/maug)!
 
+## Requirements
+
+### All Platforms
+
+- xxd
+- GNU make
+
+**TODO**: List platform-specific requirements.
+
+**TODO**: Platform-specific compiler setup.
+
 ## Design Constraints
 
 Maug has the following design goals and constraints:
@@ -15,6 +26,8 @@ Maug has the following design goals and constraints:
 - Memory allocation uses a flat model (calloc/free), with no handle management.
 - Standard library calls are allowed, so long as they are universally
   available even in very old C89 compilers.
+
+**TODO**: Describe layer architecture.
 
 ## Roadmap
 
@@ -42,7 +55,38 @@ Maug has the following design goals and constraints:
 
 ### Makefiles
 
-Inside of the `make` subdirectory are a number of Makefiles that can be included from a project's Makefile in order to more conveniently build assets.
+Application Makefiles should `include maug/Makefile.inc` to enable the build macros. From there, a target must be defined with `$(eval $(call <target>,<appname>))` for each platform to build for.
+
+Many platforms support graphical application icons. These platforms will use \<appname\>.bmp if present, and the maug default icon if not.
+
+Some platforms support OpenGL (1.1), noted below. GLUT can **only** be used with OpenGL. Platforms that do not mention OpenGL at all in the notes, do not support OpenGL. OpenGL support on the Nintendo DS is finnicky.
+
+The following targets are currently available (possibly among others):
+
+|Target                    | OS           | Cplr   | API       | Notes        |
+|--------------------------|--------------|--------|-----------|--------------|
+|TGTDOSALE                 | DOS          | Watcom | Allegro   |              |
+|TGTDOSGAL                 | DOS          | DJGPP  | Allegro   |              |
+|TGTDOSBIOS                | DOS          | Watcom | BIOS      |              |
+|TGTNDSLIBN                | Nintendo DS  | GCC    | libn      | OpenGL (Opt) |
+|TGTOS2GL                  | OS/2         | Watcom | GLUT      | OpenGL ONLY  |
+|TGTOS2SDL                 | OS/2         | Watcom | SDL       |              |
+|TGT\_WATCOM\_WIN32\_PLUG  | Windows NT   | Watcom | Win32     | Plugins only |
+|TGT\_GCC\_UNIX\_PLUG      | UNIX         | GCC    | SDL       | Plugins only |
+|TGTUNIXSDL                | UNIX         | GCC    | SDL       |              |
+|TGTUNIXALE                | UNIX         | GCC    | Allegro   |              |
+|TGTUNIXGLUT               | UNIX         | GCC    | GLUT      | OpenGL ONLY  |
+|TGTWASMSDL                | Web          | emcc   | SDL       | OpenGL (Opt) |
+|TGTWINNT                  | Windows NT   | Watcom | Win32     | OpenGL (Opt) |
+|TGTWINGL                  | Windows NT   | Watcom | GLUT      | OpenGL ONLY  |
+|TGTWINSDL                 | Windows NT   | Watcom | SDL       | OpenGL (Opt) |
+|TGTWIN16                  | Windows 3.x  | Watcom | Win16     |              |
+|TGTWIN386                 | Windows 3.x  | Watcom | Win16     | 32-bit clean |
+|TGTWINNTGCC               | Windows NT   | GCC    | Win32     | OpenGL (Opt) |
+|TGTWIN64GCC               | Windows NT   | GCC    | Win32     | OpenGL (Opt) |
+|TGT\_CECL\_WINCE\_SH3     | Windows CE   | VC     | WinCE     |              |
+|TGT\_CECL\_WINCE\_MIPS    | Windows CE   | VC     | WinCE     |              |
+|TGT\_CECL\_WINCE\_X86     | Windows CE   | VC     | WinCE     |              |
 
 ### retroflt
 
