@@ -166,23 +166,3 @@ CFLAGS_WATCOM_WIN += -DRETROFLAT_ICO_RES_ID=$$(WIN_ICO_RES_ID)
 
 endef
 
-# ---
-
-define TGTSDLICO
-
-$$(OBJDIR_ICO)/sdl_ico.bmp: $(1).bmp
-	$$(MD) "$$(dir $$@)"
-	cp "$(1).bmp" "$$@"
-
-$$(OBJDIR_ICO)/sdl_ico.h: $$(OBJDIR_ICO)/sdl_ico.bmp
-	xxd -i $$< $$@
-
-MAUG_DEPS += $$(OBJDIR_ICO)/sdl_ico.h
-
-# Enable icon inclusion and define guard.
-DEFINES_GCC += -DRETROFLAT_SDL_ICO
-INCLUDES_GCC += -I$$(OBJDIR_ICO)
-CFLAGS_GCC += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_ICO)
-
-endef
-

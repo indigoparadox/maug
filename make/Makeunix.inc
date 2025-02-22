@@ -47,6 +47,10 @@ OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXSDL
 
+ifeq ("$(CFLAGS_GCC_UNIX_SDL)","")
+	CFLAGS_GCC_UNIX_SDL := -DRETROFLAT_SDL_ICO -I$(OBJDIR_GCC_UNIX_SDL)/ico
+endif
+
 CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sdl
 
 ifeq ("$$(VDP)","1")
@@ -65,11 +69,18 @@ else
 	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
 endif
 
+$$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.bmp:
+	$$(MD) "$$(dir $$@)"
+	if [ -f "$(1).bmp" ]; then cp "$(1).bmp" "$$@"; else cp "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+
+$$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.h: $$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.bmp
+	xxd -i $$< | sed 's/obj_gcc_Linux_sdl_ico/obj_ico/g' > $$@
+
 $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_SDL)
 
-$$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $$(MAUG_DEPS)
+$$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $$(MAUG_DEPS) $$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.h
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC) -c -o $$@ $$< \
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL) \
