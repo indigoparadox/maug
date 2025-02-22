@@ -1,6 +1,8 @@
 
 # vim: ft=make noexpandtab
 
+# TODO: Automatically use maug icon if no app icon present.
+
 ifeq ("$(CC_GCC_NDS)","")
 	CC_GCC_NDS := arm-none-eabi-gcc
 endif

@@ -12,6 +12,7 @@ Current maug-based projects may be found under [The maug topic on GitHub](https:
 
 - xxd
 - GNU make
+- ImageMagick convert
 
 **TODO**: List platform-specific requirements.
 

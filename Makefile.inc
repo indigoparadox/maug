@@ -92,7 +92,6 @@ ifeq ("$(EMCC)","")
 endif
 MD := mkdir -p
 
-include maug/make/Makeico.inc
 include maug/make/Maketpl.inc
 include maug/make/Makevfs.inc
 include maug/make/Makexpm.inc

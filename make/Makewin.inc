@@ -102,6 +102,26 @@ OBJDIR_WATCOM386_WIN_WIN16=obj/watcom386-win-win16
 OBJDIR_GCC_WIN_WIN32=obj/gcc-win-win32
 OBJDIR_GCC64_WIN_WIN32=obj/gcc64-win-win32
 
+ifndef $(WIN_ICO_RES_ID)
+	WIN_ICO_RES_ID=1000
+endif
+
+# ---
+
+define TGT_ICO_WIN
+
+# General utility macro to be called below to pick up the application icon
+# (<appname>.bmp) *or* the default maug icon if no application icon present.
+
+$(2)/win_ico.ico:
+	$$(MD) $$(dir $$@)
+	if [ -f "$$<.bmp" ]; then convert "$$<.bmp" "$$@"; else convert "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+
+$(2)/$(1).rc: $(2)/win_ico.ico
+	echo "$$(WIN_ICO_RES_ID)   ICON   \"$(2)/win_ico.ico\"" > $$@
+
+endef
+
 # ---
 
 define TGT_WATCOM386_WIN_WIN32
@@ -123,13 +143,18 @@ ifeq ("$$(VDP)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN32)))
+
+$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).rc
+	wrc -r $$< -bt=nt -fo=$$@
+
 $(1)nt.exe: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) | \
-$$(RES_WATCOM386_WIN_WIN32_DEP)
+$$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_WIN) \
 		$$(LDFLAGS_WATCOM386_WIN_WIN32) fil {$$^} \
-		$$(RES_WATCOM386_WIN_WIN32)
+		resource $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res
 
 $$(OBJDIR_WATCOM386_WIN_WIN32)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
@@ -149,19 +174,24 @@ TGTWINNT=$(TGT_WATCOM386_WIN_WIN32)
 
 define TGT_WATCOM386_WIN_GLUT
 
-# GLUT requires stack calling (-5s) and is always on Petium because OpenGL.
+# GLUT requires stack calling (-5s) and is always on Pentium because OpenGL.
 CFLAGS_WATCOM386_WIN_GLUT := \
 	-mf -5s -fp5 -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_GLUT -i=$(MAUG_ROOT)/api/glut
 
 LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_GLUT)))
+
+$$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).res: $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).rc
+	wrc -r $$< -bt=nt -fo=$$@
+
 $(1)ntgl.exe: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_GLUT)/,$$(subst .c,.o,$$(C_FILES))) | \
-$$(RES_WATCOM386_WIN_GLUT_DEP)
+$$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).res
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_WIN) \
 		$$(LDFLAGS_WATCOM386_WIN_GLUT) fil {$$^} \
-		$$(RES_WATCOM386_WIN_GLUT)
+		resource $$(OBJDIR_WATCOM386_WIN_GLUT)/$(1).res
 
 $$(OBJDIR_WATCOM386_WIN_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
@@ -189,13 +219,18 @@ CFLAGS_WATCOM386_WIN_SDL += \
 
 LDFLAGS_WATCOM386_WIN_SDL += system nt_win libr {SDL SDLmain}
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_SDL)))
+
+$$(OBJDIR_WATCOM386_WIN_SDL)/$(1).res: $$(OBJDIR_WATCOM386_WIN_SDL)/$(1).rc
+	wrc -r $$< -bt=nt -fo=$$@
+
 $(1)nts.exe: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_SDL)/,$$(subst .c,.o,$$(C_FILES))) | \
-$$(RES_WATCOM386_WIN_SDL_DEP)
+$$(OBJDIR_WATCOM386_WIN_SDL)/$(1).res
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) $$(LDFLAGS_WATCOM386_WIN) \
 		$$(LDFLAGS_WATCOM386_WIN_SDL) fil {$$^} \
-		$$(RES_WATCOM386_WIN_SDL)
+		resource $$(OBJDIR_WATCOM386_WIN_SDL)/$(1).res
 
 $$(OBJDIR_WATCOM386_WIN_SDL)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
@@ -231,14 +266,21 @@ CFLAGS_OPT_WATCOM_WIN16 := \
 
 MAUG_DEPS_WIN16 := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
+# Icon stuff.
+
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM_WIN_WIN16)))
+
+$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).res: $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).rc
+	wrc -r $$< -bt=windows -fo=$$@
+
 $(1)w3.exe: \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_MPLUG_OVLS))) | \
-$$(RES_WATCOM_WIN_WIN16_DEP)
+$$(OBJDIR_WATCOM_WIN_WIN16)/$(1).res
 	$(LD_WATCOM) name $$@ option dosseg option map \
 		$$(LDFLAGS_WATCOM) $$(LDFLAGS_WATCOM_WIN) \
 		$$(LDFLAGS_WATCOM_WIN_WIN16) fil {$$^} \
-		$$(RES_WATCOM_WIN_WIN16)
+		resource $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).res
 
 $$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS_WIN16)
 	$$(MD) "$$(dir $$@)"
@@ -264,9 +306,14 @@ CFLAGS_WATCOM386_WIN_WIN16 += \
 
 LDFLAGS_WATCOM386_WIN_WIN16 += system win386
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN16)))
+
+# No resource compiler stanza because that's handled by the rex > exe xform
+# below.
+
 $(1)w.rex: \
 $$(addprefix $$(OBJDIR_WATCOM386_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) | \
-$$(RES_WATCOM386_WIN_WIN16_DEP)
+$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc
 	$$(LD_WATCOM386) name $$@ \
 		$$(LDFLAGS_WATCOM386) \
 		$$(LDFLAGS_WATCOM386_WIN) \
@@ -274,7 +321,7 @@ $$(RES_WATCOM386_WIN_WIN16_DEP)
 
 $(1)w.exe: $(1)w.rex
 	wbind "$$<" -s "$$(WATCOM)/binw/win386.ext" -R \
-	$$(RES_WATCOM386_WIN_WIN16_DEP) "$$@"
+	$$(OBJDIR_WATCOM386_WIN_WIN16)/$(1).rc "$$@"
 
 $$(OBJDIR_WATCOM386_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) "$$(dir $$@)"
@@ -302,9 +349,14 @@ ifeq ("$$(VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN32)))
+
+$$(OBJDIR_GCC_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC_WIN_WIN32)/$(1).rc
+	$(WINDRES_GCC_MINGW) "$$<" -O coff -o "$$@"
+
 $(1)ntg.exe: \
 $$(addprefix $$(OBJDIR_GCC_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
-$$(RES_GCC_WIN_WIN32_DEP)
+$$(OBJDIR_GCC_WIN_WIN32)/$(1).res
 	$$(LD_GCC_MINGW) -o $$@ $$^ $$(LDFLAGS_GCC_WIN) $$(LDFLAGS_GCC_WIN_WIN32)
 
 $$(OBJDIR_GCC_WIN_WIN32)/%.o: %.c | $$(MAUG_DEPS)
@@ -335,11 +387,16 @@ ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
 endif
 
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN64)))
+
+$$(OBJDIR_GCC64_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC64_WIN_WIN32)/$(1).rc
+	$(WINDRES_GCC64_MINGW) "$$<" -O coff -o "$$@"
+
 # GCC64 for Windows gives undefined references to __fentry__ -g/-pg are used?
 
 $(1)64.exe: \
 $$(addprefix $$(OBJDIR_GCC64_WIN_WIN32)/,$$(subst .c,.o,$$(C_FILES))) \
-$$(RES_GCC64_WIN_WIN32_DEP)
+$$(OBJDIR_GCC64_WIN_WIN32)/$(1).res
 	$$(LD_GCC_MINGW64) -m64 -o $$@ $$^ \
 		$$(subst -pg,,$$(subst -g,,$$(LDFLAGS_GCC64))) \
 		$$(LDFLAGS_GCC64_WIN) $$(LDFLAGS_GCC64_WIN_WIN32)
