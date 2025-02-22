@@ -1,4 +1,4 @@
-# maug
+# ![maug Icon](maug.png) maug
 
 Augmented minimal standard library for C89 and legacy compilers.
 
