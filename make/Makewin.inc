@@ -115,7 +115,7 @@ define TGT_ICO_WIN
 
 $(2)/win_ico.ico:
 	$$(MD) $$(dir $$@)
-	if [ -f "$$<.bmp" ]; then convert "$$<.bmp" "$$@"; else convert "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+	if [ -f "$(1).bmp" ]; then convert "$(1).bmp" "$$@"; else convert "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
 
 $(2)/$(1).rc: $(2)/win_ico.ico
 	echo "$$(WIN_ICO_RES_ID)   ICON   \"$(2)/win_ico.ico\"" > $$@
@@ -220,6 +220,8 @@ CFLAGS_WATCOM386_WIN_SDL += \
 LDFLAGS_WATCOM386_WIN_SDL += system nt_win libr {SDL SDLmain}
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_SDL)))
+
+# TODO: Import icon for use in SDL window.
 
 $$(OBJDIR_WATCOM386_WIN_SDL)/$(1).res: $$(OBJDIR_WATCOM386_WIN_SDL)/$(1).rc
 	wrc -r $$< -bt=nt -fo=$$@
@@ -387,7 +389,7 @@ ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
 endif
 
-$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN64)))
+$(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC64_WIN_WIN32)))
 
 $$(OBJDIR_GCC64_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC64_WIN_WIN32)/$(1).rc
 	$(WINDRES_GCC64_MINGW) "$$<" -O coff -o "$$@"
