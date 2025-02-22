@@ -37,6 +37,22 @@ OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
 
 # ---
 
+# General utility macro to be called below to pick up the application icon
+# (<appname>.bmp) *or* the default maug icon if no application icon present.
+
+define TGT_ICO_UNIX_SDL
+
+$(2)/ico/sdl_ico.bmp:
+	$$(MD) "$$(dir $$@)"
+	if [ -f "$(1).bmp" ]; then cp "$(1).bmp" "$$@"; else cp "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+
+$(2)/ico/sdl_ico.h: $(2)/ico/sdl_ico.bmp
+	xxd -i $$< | sed 's/obj_.*_sdl/obj_ico_sdl/g' > $$@
+
+endef
+
+# ---
+
 # Target: UNIX OS/SDL API
 # Variables:
 # - SDL_VER_UNIX
@@ -69,12 +85,7 @@ else
 	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
 endif
 
-$$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.bmp:
-	$$(MD) "$$(dir $$@)"
-	if [ -f "$(1).bmp" ]; then cp "$(1).bmp" "$$@"; else cp "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
-
-$$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.h: $$(OBJDIR_GCC_UNIX_SDL)/ico/sdl_ico.bmp
-	xxd -i $$< | sed 's/obj_gcc_Linux_sdl_ico/obj_ico/g' > $$@
+$(eval $(call TGT_ICO_UNIX_SDL,$(1),$$(OBJDIR_GCC_UNIX_SDL)))
 
 $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
