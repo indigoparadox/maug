@@ -566,6 +566,10 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
  */
 #define RETROFLAT_INSTANCE_NULL (0)
 
+/**
+ * \relates retroflat_blit_bitmap
+ * \brief Declare that a given instance ID is for a tile, rather than a sprite.
+ */
 #define retroflat_instance_tile( instance ) \
   (instance * -1)
 
