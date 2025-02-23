@@ -117,9 +117,15 @@ define TGT_ICO_WIN
 # General utility macro to be called below to pick up the application icon
 # (<appname>.bmp) *or* the default maug icon if no application icon present.
 
+# TODO: Look for <appname>16.bmp, <appname>32.bmp to make multi-size icons.
+
 $(2)/win_ico.ico:
 	$$(MD) $$(dir $$@)
-	if [ -f "$(1).bmp" ]; then convert "$(1).bmp" "$$@"; else convert "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+	if [ -f "$(1).bmp" ]; then \
+		convert "$(1).bmp" -transparent black "$$@"; \
+	else \
+		convert "$$(MAUG_ROOT)/maug16.bmp" -transparent black "$$@"; \
+	fi
 
 $(2)/$(1).rc: $(2)/win_ico.ico
 	echo "$$(WIN_ICO_RES_ID)   ICON   \"$(2)/win_ico.ico\"" > $$@

@@ -28,7 +28,11 @@ define TGT_ICO_WINCE
 
 $(2)/win_ico.ico:
 	$$(MD) $$(dir $$@)
-	if [ -f "$$<.bmp" ]; then convert "$$<.bmp" "$$@"; else convert "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
+	if [ -f "$$<.bmp" ]; then \
+		convert "$$<.bmp" -transparent black "$$@"; \
+	else \
+		convert "$$(MAUG_ROOT)/maug16.bmp" -transparent black "$$@"; \
+	fi
 
 $(2)/$(1).rc: $(2)/win_ico.ico
 	echo "$$(WIN_ICO_RES_ID)   ICON   \"$(2)/win_ico.ico\"" > $$@
