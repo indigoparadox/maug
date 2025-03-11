@@ -17,25 +17,25 @@ endif
 
 # Setup CFLAGS_GCC_NDS
 
-DEFINES_GCC_NDS += -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD
+DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
 
-CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math -mlittle-endian
+CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
 
 # Setup CFLAGS_GCC_NDS_LIBNDS
 
 DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS
-INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include -I$(MAUG_ROOT)/api/nds
+INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include -I$(MAUG_ROOT)/api/nds -I $(DEVKITPRO)/calico/include
 
 CFLAGS_GCC_NDS_LIBNDS := $(DEFINES_GCC_NDS_LIBNDS) $(INCLUDES_GCC_NDS_LIBNDS)
 
 # Setup LDFLAGS_GCC_NDS
 
-LDFLAGS_GCC_NDS := -specs=ds_arm9.specs -mlittle-endian $(LIBS_GCC_NDS)
+LDFLAGS_GCC_NDS := -specs=$(DEVKITPRO)/calico/share/ds9.specs -ffunction-sections -fdata-sections
 
 # Setup LDFLAGS_GCC_NDS_LIBNDS
 
-LIBS_GCC_NDS_LIBNDS += -L$(DEVKITPRO)/libnds/lib -lnds9
+LIBS_GCC_NDS_LIBNDS += -L$(DEVKITPRO)/libnds/lib -lnds9 -L$(DEVKITPRO)/calico/lib -lcalico_ds9
 
 LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS)
 
@@ -61,7 +61,8 @@ endif
 endif
 
 $(1).nds: obj/nds-libnds/$(1).elf
-	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
+	$$(NDSTOOL) -c "$$@" -9 "$$<" \
+		-7 $$(DEVKITPRO)/calico/bin/ds7_maine.elf -b "$(2)" "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: \
 $$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES_NDS)))
