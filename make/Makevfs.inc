@@ -1,6 +1,8 @@
 
 # vim: ft=make noexpandtab
 
+# TODO: Error if xxd not present.
+
 MVFS_H_DIR := obj/mvfs
 MVFS_DEFINE := MVFS_ENABLED
 

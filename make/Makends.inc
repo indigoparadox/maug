@@ -4,11 +4,15 @@
 # TODO: Automatically use maug icon if no app icon present.
 
 ifeq ("$(CC_GCC_NDS)","")
-	CC_GCC_NDS := arm-none-eabi-gcc
+	CC_GCC_NDS := $(DEVKITARM)/bin/arm-none-eabi-gcc
 endif
 
 ifeq ("$(NDSTOOL)","")
-	NDSTOOL := ndstool
+	NDSTOOL := $(DEVKITPRO)/tools/bin/ndstool
+endif
+
+ifeq ("$(GRIT)","")
+	GRIT := $(DEVKITPRO)/tools/bin/grit
 endif
 
 # Setup CFLAGS_GCC_NDS
@@ -100,7 +104,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 		$$(NDSASSET_C_FILE)
 
 	for f in $$^; do \
-		grit $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa -o $$(NDSASSET_H_FILE); \
+		$$(GRIT) $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa -o $$(NDSASSET_H_FILE); \
 	done
 
 	# === Index Names ===
