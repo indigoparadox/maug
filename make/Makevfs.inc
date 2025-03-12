@@ -1,12 +1,17 @@
 
 # vim: ft=make noexpandtab
 
-# TODO: Error if xxd not present.
-
 MVFS_H_DIR := obj/mvfs
 MVFS_DEFINE := MVFS_ENABLED
 
 define MVFS
+
+ifeq ($$(XXD),)
+XXD := $$(shell which xxd)
+ifeq ($$(XXD),)
+$$(error xxd is not installed!)
+endif
+endif
 
 $$(MVFS_H_DIR)/mvfs.h: $(1)
 	mkdir -p obj/mvfs
@@ -15,7 +20,7 @@ $$(MVFS_H_DIR)/mvfs.h: $(1)
 	echo "#ifndef MVFS_H\n#define MVFS_H\n" > $$@
 
 	for f in $$^; do \
-		xxd -i "$$$$f" | sed 's/unsigned int/off_t/g' >> $$@ ; \
+		$$(XXD) -i "$$$$f" | sed 's/unsigned int/off_t/g' >> $$@ ; \
 	done
 
 	# Add a directory of file contents.

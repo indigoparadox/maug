@@ -46,8 +46,15 @@ $(2)/ico/sdl_ico.bmp:
 	$$(MD) "$$(dir $$@)"
 	if [ -f "$(1).bmp" ]; then cp "$(1).bmp" "$$@"; else cp "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
 
+ifeq ($$(XXD),)
+XXD := $$(shell which xxd)
+ifeq ($$(XXD),)
+$$(error xxd is not installed!)
+endif
+endif
+
 $(2)/ico/sdl_ico.h: $(2)/ico/sdl_ico.bmp
-	xxd -i $$< | sed 's/obj_.*_sdl/obj_ico_sdl/g' > $$@
+	$$(XXD) -i $$< | sed 's/obj_.*_sdl/obj_ico_sdl/g' > $$@
 
 endef
 
