@@ -112,7 +112,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 
 	for f in $$^; do \
 		$$(GRIT) $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa \
-		-o $$(NDSASSET_H_FILE); \
+			-o $$(NDSASSET_H_FILE); \
 	done
 
 	# === Index Names ===

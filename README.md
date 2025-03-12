@@ -18,6 +18,20 @@ Current maug-based projects may be found under [The maug topic on GitHub](https:
 
 **TODO**: Platform-specific compiler setup.
 
+### Nintendo DS
+
+At the present, the Nintendo DS port will only build with a devkitpro toolchain circa 2022. This can be found at https://wii.leseratte10.de/devkitPro/ and some packages that work at minimum are:
+
+- devkitARM r56
+- libnds 1.8.1-2
+- default\_arm7 0.7.4-4
+- other-stuff/grit 0.9.2
+- other-stuff/ndstool 2.1.2
+
+And 1.2.0 of the linker scripts at https://github.com/devkitPro/devkitarm-crtls/releases/tag/v1.2.0 (these can just be installed with `make`/`make install`.
+
+Work is in progress to update this, but the cause isn't obvious and time is in short supply these days!
+
 ## Design Constraints
 
 Maug has the following design goals and constraints:
