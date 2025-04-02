@@ -68,6 +68,20 @@ Maug has the following design goals and constraints:
 
 ## Modules
 
+In principle, the library is split into the following parts:
+
+|---------------|------------------|
+| Layer         | Location         | 
+|---------------|------------------|
+| retro*        | `src/retro\*.h   |
+|---------------|------------------|
+| retroflat API | `api/retapi\*.h` |
+|---------------|------------------|
+| maug          | `src/m\*.h`      |
+|---------------|------------------|
+
+Each layer relies on functionality provided by the layers below it. This means that a function in `retroglu.h` or `retroflt.h` in the `src/` directory may call a function provided by `api/dosbios/retapif.h` or `src/maug.h`, but a function in `src/maug.h` may not call a function from `src/retroflt.h`.
+
 ### Makefiles
 
 Application Makefiles should `include maug/Makefile.inc` to enable the build macros. From there, a target must be defined with `$(eval $(call <target>,<appname>))` for each platform to build for.
