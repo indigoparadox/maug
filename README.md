@@ -42,7 +42,7 @@ Maug has the following design goals and constraints:
 - Standard library calls are allowed, so long as they are universally
   available even in very old C89 compilers.
 
-**TODO**: Describe layer architecture.
+In addition, where modules may full functions or pull constants from is limited by the layer architecture described in **Modules**, below.
 
 ## Roadmap
 
@@ -70,15 +70,11 @@ Maug has the following design goals and constraints:
 
 In principle, the library is split into the following parts:
 
-|---------------|------------------|
 | Layer         | Location         | 
 |---------------|------------------|
-| retro*        | `src/retro\*.h   |
-|---------------|------------------|
-| retroflat API | `api/retapi\*.h` |
-|---------------|------------------|
-| maug          | `src/m\*.h`      |
-|---------------|------------------|
+| retro*        | `src/retro*.h`   |
+| retroflat API | `api/retapi*.h`  |
+| maug          | `src/m*.h`       |
 
 Each layer relies on functionality provided by the layers below it. This means that a function in `retroglu.h` or `retroflt.h` in the `src/` directory may call a function provided by `api/dosbios/retapif.h` or `src/maug.h`, but a function in `src/maug.h` may not call a function from `src/retroflt.h`.
 
