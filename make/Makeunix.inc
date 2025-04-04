@@ -25,10 +25,17 @@ ifneq ("$(BUILD)","RELEASE")
 endif
 
 ifeq ("$(OPENGL)","1")
-	CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
-	LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
-	CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
-	LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
+
+# Easier to understand error messages.
+ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
+$(error could not find pkg-config for gl!)
+endif
+
+CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
+LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
+CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
+LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
+
 endif
 
 OBJDIR_GCC_UNIX_ALLEGRO=obj/gcc-$(shell uname -s)-allegro
@@ -150,6 +157,11 @@ endef
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXALE
 
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config allegro --libs 2>/dev/null)","")
+$$(error could not find pkg-config for allegro!)
+endif
+
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) -I$(MAUG_ROOT)/api/allegro
 LDFLAGS_GCC_UNIX_ALLEGRO := \
@@ -179,6 +191,11 @@ endef
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXGLUT
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
+$$(error could not find pkg-config for gl!)
+endif
 
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut -DRETROSND_API_ALSA
 
