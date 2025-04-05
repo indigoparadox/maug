@@ -2,6 +2,14 @@
 #ifndef MDATA_H
 #define MDATA_H
 
+/**
+ * \addtogroup maug_data Data Memory API
+ * \brief Vectors and tables for storing data.
+ * \{
+ *
+ * \file mdata.h
+ */
+
 #ifndef MDATA_TRACE_LVL
 #  define MDATA_TRACE_LVL 0
 #endif /* !MDATA_TRACE_LVL */
@@ -12,17 +20,38 @@
 
 typedef ssize_t mdata_strpool_idx_t;
 
+/**
+ * \brief A pool of immutable text strings. Deduplicates strings to save memory.
+ *
+ * Append strings with mdata_strpool_append(), then reference them by the
+ * returned character index. Find strings with mdata_strpool_find() later
+ * and store that index.
+ */
 struct MDATA_STRPOOL {
    MAUG_MHANDLE str_h;
    size_t str_sz;
    size_t str_sz_max;
 };
 
+/**
+ * \brief A vector of objects, stored contiguously.
+ *
+ * May be initialized with mdata_vector_alloc() before use, but
+ * mdata_vector_append() will attempt to do this automatically.
+ */
 struct MDATA_VECTOR {
+   /*! \brief Handle for allocated items (unlocked). */
    MAUG_MHANDLE data_h;
+   /*! \brief Handle for allocated items (locked). */
    uint8_t* data_bytes;
+   /*! \brief Maximum number of items currently allocated for. */
    size_t ct_max;
+   /*! \brief Maximum number of items actually used. */
    size_t ct;
+   /**
+    * \brief Size, in bytes, of each item.
+    * \warning Attempting to store items with a different size will fail!
+    */
    size_t item_sz;
 };
 
@@ -46,6 +75,10 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
 ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, void* item, size_t item_sz );
 
+/**
+ * \brief Remove item at the given index, shifting subsequent items up by 1.
+ * \warning The vector must not be locked before a removal!
+ */
 MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx );
 
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
@@ -462,6 +495,7 @@ MERROR_RETVAL mdata_vector_alloc(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE data_h_new = NULL;
+   size_t new_ct = item_ct_init;
 
    if( NULL != v->data_bytes ) {
       error_printf( "vector cannot be resized while locked!" );
@@ -482,13 +516,21 @@ MERROR_RETVAL mdata_vector_alloc(
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
-   } else if( v->ct_max <= v->ct + 1 ) {
+   } else if( v->ct_max <= v->ct + 1 || v->ct_max <= item_ct_init ) {
       assert( item_sz == v->item_sz );
+      
+      /* Use ct * 2 or ct_init... whichever is larger! */
+      if( item_ct_init < v->ct_max * 2 ) {
+         assert( v->ct_max * 2 > v->ct_max );
+         new_ct = v->ct_max * 2;
+      }
+
+      /* Perform the resize. */
       debug_printf(
          MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
-         v->ct_max * 2 );
-      maug_mrealloc_test( data_h_new, v->data_h, v->ct_max * 2, item_sz );
-      v->ct_max *= 2;
+         new_ct );
+      maug_mrealloc_test( data_h_new, v->data_h, new_ct, item_sz );
+      v->ct_max = new_ct;
    }
 
 cleanup:
@@ -505,6 +547,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v ) {
 }
 
 #endif /* MDATA_C */
+
+/*! \} */ /* maug_data */
 
 #endif /* MDATA_H */
 

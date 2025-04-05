@@ -93,6 +93,17 @@ struct RETROTILE_LAYER {
    size_t sz;
 };
 
+/**
+ * \brief This is not currently used for anything, but is provided as a
+ *        a convenience for game logic.
+ */
+struct RETROTILE_COORDS {
+   /* \brief X position in tilemap tiles. */
+   size_t x;
+   /* \brief Y position in tilemap tiles. */
+   size_t y;
+};
+
 struct RETROTILE {
    uint32_t sz;
    uint32_t layers_count;
