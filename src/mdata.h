@@ -135,6 +135,9 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
 
+/* TODO: Implement insert sorting. */
+#define mdata_vector_insert_sort( v, i, t, field )
+
 /* TODO: Implement sorting. */
 #define mdata_vector_sort( v, t, field )
 
