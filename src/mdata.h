@@ -18,6 +18,10 @@
 #  define MDATA_VECTOR_INIT_SZ 10
 #endif /* !MDATA_TRACE_LVL */
 
+#ifndef MDATA_VECTOR_INIT_STEP_SZ
+#  define MDATA_VECTOR_INIT_STEP_SZ 10
+#endif /* !MDATA_VECTOR_INIT_STEP_SZ */
+
 typedef ssize_t mdata_strpool_idx_t;
 
 /**
@@ -48,6 +52,8 @@ struct MDATA_VECTOR {
    size_t ct_max;
    /*! \brief Maximum number of items actually used. */
    size_t ct;
+   /*! \brief Number of items added when more space is needed. */
+   size_t ct_step;
    /**
     * \brief Size, in bytes, of each item.
     * \warning Attempting to store items with a different size will fail!
@@ -522,6 +528,7 @@ MERROR_RETVAL mdata_vector_alloc(
       assert( 0 == v->ct_max );
 
       v->ct_max = item_ct_init;
+      v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
       debug_printf(
          MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
@@ -534,9 +541,9 @@ MERROR_RETVAL mdata_vector_alloc(
       assert( item_sz == v->item_sz );
       
       /* Use ct * 2 or ct_init... whichever is larger! */
-      if( item_ct_init < v->ct_max * 2 ) {
-         assert( v->ct_max * 2 > v->ct_max );
-         new_ct = v->ct_max * 2;
+      if( item_ct_init < v->ct_max + v->ct_step ) {
+         assert( v->ct_max + v->ct_step > v->ct_max );
+         new_ct = v->ct_max + v->ct_step;
       }
 
       /* Perform the resize. */
