@@ -2159,6 +2159,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: initializing..." );
 
    /* System sanity checks. */
+   assert( 2 <= sizeof( MERROR_RETVAL ) );
    assert( 4 == sizeof( uint32_t ) );
    assert( 4 == sizeof( int32_t ) );
    assert( 2 == sizeof( uint16_t ) );
