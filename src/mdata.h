@@ -135,6 +135,9 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
 
+/* TODO: Implement sorting. */
+#define mdata_vector_sort( v, t, field )
+
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
 
@@ -495,7 +498,9 @@ MERROR_RETVAL mdata_vector_alloc(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE data_h_new = NULL;
-   size_t new_ct = item_ct_init;
+   size_t new_ct = item_ct_init,
+      new_bytes_start = 0,
+      new_bytes_sz = 0;
 
    if( NULL != v->data_bytes ) {
       error_printf( "vector cannot be resized while locked!" );
@@ -530,6 +535,16 @@ MERROR_RETVAL mdata_vector_alloc(
          MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
          new_ct );
       maug_mrealloc_test( data_h_new, v->data_h, new_ct, item_sz );
+      
+      /* Zero out the new space. */
+      new_bytes_start = v->ct_max * v->item_sz;
+      assert( new_bytes_start >= v->ct_max );
+      new_bytes_sz = (new_ct * v->item_sz) - new_bytes_start;
+      assert( new_bytes_sz >= v->item_sz );
+      mdata_vector_lock( v );
+      maug_mzero( &(v->data_bytes[new_bytes_start]), new_bytes_sz );
+      mdata_vector_unlock( v );
+
       v->ct_max = new_ct;
    }
 
