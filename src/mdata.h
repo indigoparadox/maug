@@ -106,11 +106,18 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
       maug_munlock( (strpool)->str_h, ptr ); \
    }
 
+/**
+ * \warning mdata_vector_lock() should never be called *after* the cleanup
+ *          label! (This is fine for mdata_vector_unlock(), however.)
+ */
 #define mdata_vector_lock( v ) \
    maug_mlock( (v)->data_h, (v)->data_bytes ); \
    maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
    debug_printf( MDATA_TRACE_LVL, "locked vector!" );
 
+/**
+ * \note mdata_vector_unlock() may be called after the cleanup label.
+ */
 #define mdata_vector_unlock( v ) \
    if( NULL != (v)->data_bytes ) { \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
