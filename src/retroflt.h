@@ -1075,6 +1075,8 @@ struct RETROFLAT_VIEWPORT {
    retroflat_tile_t* refresh_grid;
 };
 
+#  define retroflat_screen_colors() (g_retroflat_state->screen_colors)
+
 #ifndef DOCUMENTATION
 
 #  define retroflat_viewport_world_x_generic() \
@@ -1321,6 +1323,8 @@ defined( RETROVDP_C )
    size_t               screen_w;
    /*! \brief The screen height as seen by the system, after scaling. */
    size_t               screen_h;
+   /*! \brief The number of colors the screen is capable of displaying. */
+   size_t               screen_colors;
 
    /* WARNING: The VDP requires the state specifier to be the same size
     *          as the one it was compiled for! Do not modify above here!
@@ -2325,11 +2329,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
 
+   debug_printf( 3, "screen initialized with: " SIZE_T_FMT "x" SIZE_T_FMT
+      " pixels with " SIZE_T_FMT " colors",
+      retroflat_screen_w(), retroflat_screen_h(), retroflat_screen_colors() );
+
    /* Setup the refresh grid, if requested, only after screen space has been
     * determined by the platform!
     */
    assert( 0 < retroflat_screen_w() );
    assert( 0 < retroflat_screen_h() );
+   assert( 0 < retroflat_screen_colors() );
    if(
       RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
       (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)

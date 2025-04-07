@@ -22,6 +22,9 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_SDL1 */
 
+   /* TODO: Add some flexibility for simulating lower-color platforms. */
+   g_retroflat_state->screen_colors = 16;
+
 #  if defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */

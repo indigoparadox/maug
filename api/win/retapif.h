@@ -495,6 +495,9 @@ MERROR_RETVAL retroflat_init_platform(
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
 
+   /* TODO: Detect screen colors. */
+   g_retroflat_state->screen_colors = 16;
+
 #     ifdef RETROFLAT_WING
    debug_printf( 3, "attempting to link WinG..." );
    /* Dynamically load the WinG procedures. */

@@ -165,6 +165,7 @@ static MERROR_RETVAL retroflat_init_platform(
    switch( args->screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       debug_printf( 3, "using CGA 320x200x4 colors" );
+      g_retroflat_state->screen_colors = 4;
       g_retroflat_state->screen_v_w = 320;
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;
@@ -176,6 +177,7 @@ static MERROR_RETVAL retroflat_init_platform(
 
    case RETROFLAT_SCREEN_MODE_VGA:
       debug_printf( 3, "using VGA 320x200x16 colors" );
+      g_retroflat_state->screen_colors = 16;
       g_retroflat_state->screen_v_w = 320;
       g_retroflat_state->screen_v_h = 200;
       g_retroflat_state->screen_w = 320;

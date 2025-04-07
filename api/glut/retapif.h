@@ -77,6 +77,9 @@ MERROR_RETVAL retroflat_init_platform(
          g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
 
+   /* We cap out at 16 colors. */
+   g_retroflat_state->screen_colors = 16;
+
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
 
