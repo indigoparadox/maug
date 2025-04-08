@@ -119,7 +119,7 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 #define mdata_vector_lock( v ) \
    maug_mlock( (v)->data_h, (v)->data_bytes ); \
    maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
-   debug_printf( MDATA_TRACE_LVL, "locked vector!" );
+   debug_printf( MDATA_TRACE_LVL, "locked vector " #v );
 
 /**
  * \note mdata_vector_unlock() may be called after the cleanup label.
@@ -127,7 +127,7 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 #define mdata_vector_unlock( v ) \
    if( NULL != (v)->data_bytes ) { \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
-      debug_printf( MDATA_TRACE_LVL, "unlocked vector!" ); \
+      debug_printf( MDATA_TRACE_LVL, "unlocked vector " #v ); \
    }
 
 #define mdata_vector_get( v, idx, type ) \
@@ -142,9 +142,26 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
    (0 < mdata_vector_ct( v ) ? \
       (mdata_vector_remove( v, mdata_vector_ct( v ) - 1 )) : MERROR_OVERFLOW)
 
+/**
+ * \return Number of items of MDATA_VECTOR::item_sz bytes actively stored in
+ *         this vector.
+ * \warning This is not neccessarily equal to amount of memory occupied by the
+ *          vector, as it may have allocated more than are currently occupied!
+ */
 #define mdata_vector_ct( v ) ((v)->ct)
 
+/**
+ * \return Number of bytes of heap memory occupied by this vector.
+ **/
 #define mdata_vector_sz( v ) (((v)->ct_max) * ((v)->item_sz))
+
+/**
+ * \brief Allocate and mark the new slots as active.
+ */
+#define mdata_vector_fill( v, ct_new, sz ) \
+   retval = mdata_vector_alloc( v, sz, ct_new ); \
+   maug_cleanup_if_not_ok(); \
+   (v)->ct = (ct_new);
 
 #define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
 

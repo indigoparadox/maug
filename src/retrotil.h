@@ -164,9 +164,8 @@ struct RETROTILE_DATA_BORDER {
  */
 
 typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
-   const char* filename, MAUG_MHANDLE* p_tm_h,
-   MAUG_MHANDLE* p_td_h, size_t* p_td_c,
-   mparser_wait_cb_t wait_cb, void* wait_data );
+   const char* dirname, const char* filename, MAUG_MHANDLE* p_tm_h,
+   struct MDATA_VECTOR* p_td, mparser_wait_cb_t wait_cb, void* wait_data );
 
 struct RETROTILE_PARSER {
    uint8_t mstate;
@@ -188,8 +187,8 @@ struct RETROTILE_PARSER {
    struct RETROTILE* t;
    retrotile_tj_parse_cb tj_parse_cb;
    struct MJSON_PARSER jparser;
-   MAUG_MHANDLE* p_tile_defs_h;
-   size_t* p_tile_defs_count;
+   struct MDATA_VECTOR* p_tile_defs;
+   char dirname[RETROFLAT_PATH_MAX + 1];
 };
 
 #define RETROTILE_PARSER_MSTATE_TABLE( f ) \
@@ -216,8 +215,8 @@ MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
 
 MERROR_RETVAL retrotile_parse_json_file(
-   const char* filename, MAUG_MHANDLE* p_tilemap_h,
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count,
+   const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
+   struct MDATA_VECTOR* p_tile_defs,
    mparser_wait_cb_t wait_cb, void* wait_data );
 
 /*! \} */ /* retrotile_parser */
@@ -290,9 +289,6 @@ MERROR_RETVAL retrotile_gen_borders_iter(
 
 struct RETROTILE_LAYER* retrotile_get_layer_p(
    struct RETROTILE* tilemap, uint32_t layer_idx );
-
-MERROR_RETVAL retrotile_alloc_tile_defs(
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count, size_t ndefs );
 
 MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count );
@@ -427,100 +423,101 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
    const char* token, size_t token_sz, void* parser_arg
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROTILE_TILE_DEF* tile_defs = NULL;
+   struct RETROTILE_TILE_DEF* tile_def = NULL;
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parser_arg;
    size_t tileset_id_parsed = 0;
 
-   if( 0 < *(parser->p_tile_defs_count) ) {
-      maug_mlock( *(parser->p_tile_defs_h), tile_defs );
-      maug_cleanup_if_null_alloc( struct RETROTILE_TILE_DEF*, tile_defs );
-   }
+   /* We don't lock the vector right away, since we might reallocate tile defs
+    * later on, below.
+    */
 
    if(
-      MJSON_PSTATE_OBJECT_VAL == 
+      MJSON_PSTATE_OBJECT_VAL != 
          mjson_parser_pstate( &(parser->jparser) )
    ) {
-      if( MTILESTATE_TILES_ID == parser->mstate ) {
-         retrotile_parser_mstate( parser, MTILESTATE_TILES );
-         if( 0 == parser->pass ) {
-            /* Parse tile ID. */
-            tileset_id_parsed = atoi( token );
-            if( tileset_id_parsed > parser->tileset_id_cur ) {
-               parser->tileset_id_cur = tileset_id_parsed;
-               debug_printf(
-                  RETROTILE_TRACE_LVL,
-                  "new highest tile ID: " SIZE_T_FMT,
-                  parser->tileset_id_cur );
-            }
-         } else {
-            /* TODO: atoi or atoul? */
-            parser->tileset_id_cur = atoi( token );
-            debug_printf(
-               RETROTILE_TRACE_LVL,
-               "next tile ID: " SIZE_T_FMT,
-               parser->tileset_id_cur );
-         }
-
-      } else if( MTILESTATE_TILES_IMAGE == parser->mstate ) {
-         if( 1 == parser->pass ) {
-            debug_printf(
-               RETROTILE_TRACE_LVL, "setting tile ID " SIZE_T_FMT "...",
-               parser->tileset_id_cur );
-
-            /* Parse tile image. */
-            maug_strncpy(
-               tile_defs[parser->tileset_id_cur].image_path,
-               token,
-               RETROTILE_TILESET_IMAGE_STR_SZ_MAX );
-
-            debug_printf(
-               RETROTILE_TRACE_LVL, "set tile ID " SIZE_T_FMT " to: %s",
-               parser->tileset_id_cur,
-               tile_defs[parser->tileset_id_cur].image_path );
-         }
-         retrotile_parser_mstate( parser, MTILESTATE_TILES );
-
-      } else if( MTILESTATE_TILES_PROP_NAME == parser->mstate ) {
-
-         if( 1 == parser->pass ) {
-            if( 0 == strncmp(
-               parser->jparser.base.token,
-               "rotate_x",
-               parser->jparser.base.token_sz
-            ) ) {
-               /* Found flag: rotate X! */
-               /* TODO: Read boolean value. */
-               if( parser->tileset_id_cur >= *(parser->p_tile_defs_count) ) {
-                  error_printf(
-                     "tileset ID " SIZE_T_FMT
-                     " outside of tile defs count " SIZE_T_FMT "!",
-                     parser->tileset_id_cur, *(parser->p_tile_defs_count) );
-                  retval = MERROR_OVERFLOW;
-                  goto cleanup;
-               }
-               tile_defs[parser->tileset_id_cur].flags |= 
-                  RETROTILE_TILE_FLAG_ROT_X;
-            }
-
-            /* TODO: Read boolean Z and fire particles prop/flag. */
-         }
-
-         retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
-
-      } else if( MTILESTATE_TILES_PROP_VAL == parser->mstate ) {
-
-         retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
-      }
+      /* Not a token we have to worry about! */
+      retrotile_parser_match_token( token, token_sz, parser );
       goto cleanup;
    }
 
-   retrotile_parser_match_token( token, token_sz, parser );
+   if( MTILESTATE_TILES_ID == parser->mstate ) {
+      retrotile_parser_mstate( parser, MTILESTATE_TILES );
+      if( 0 == parser->pass ) {
+         /* Parse tile ID. */
+         tileset_id_parsed = maug_atou32( token, token_sz, 10 );
+         if( tileset_id_parsed > parser->tileset_id_cur ) {
+            parser->tileset_id_cur = tileset_id_parsed;
+            debug_printf(
+               RETROTILE_TRACE_LVL,
+               "new highest tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
+         }
+      } else {
+         assert( 0 < mdata_vector_ct( parser->p_tile_defs ) );
+         parser->tileset_id_cur = maug_atou32( token, token_sz, 10 );
+         debug_printf(
+            RETROTILE_TRACE_LVL,
+            "next tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
+      }
+
+   } else if( MTILESTATE_TILES_IMAGE == parser->mstate ) {
+      if( 1 == parser->pass ) {
+         mdata_vector_lock( parser->p_tile_defs );
+         tile_def = mdata_vector_get(
+            parser->p_tile_defs, parser->tileset_id_cur,
+            struct RETROTILE_TILE_DEF );
+         assert( NULL != tile_def );
+
+         debug_printf(
+            RETROTILE_TRACE_LVL, "setting tile ID " SIZE_T_FMT "...",
+            parser->tileset_id_cur );
+
+         /* Parse tile image. */
+         maug_strncpy(
+            tile_def->image_path, token, RETROTILE_TILESET_IMAGE_STR_SZ_MAX );
+
+         debug_printf(
+            RETROTILE_TRACE_LVL, "set tile ID " SIZE_T_FMT " to: %s",
+            parser->tileset_id_cur, tile_def->image_path );
+      }
+      retrotile_parser_mstate( parser, MTILESTATE_TILES );
+
+   } else if( MTILESTATE_TILES_PROP_NAME == parser->mstate ) {
+
+      /* TODO: Make this a callback and move it into the calling program. */
+
+#if 0
+      if( 1 == parser->pass ) {
+         if( 0 == strncmp(
+            parser->jparser.base.token,
+            "rotate_x",
+            parser->jparser.base.token_sz
+         ) ) {
+            /* Found flag: rotate X! */
+            /* TODO: Read boolean value. */
+            if( parser->tileset_id_cur >= *(parser->p_tile_defs_count) ) {
+               error_printf(
+                  "tileset ID " SIZE_T_FMT
+                  " outside of tile defs count " SIZE_T_FMT "!",
+                  parser->tileset_id_cur, *(parser->p_tile_defs_count) );
+               retval = MERROR_OVERFLOW;
+               goto cleanup;
+            }
+            tile_defs[parser->tileset_id_cur].flags |= 
+               RETROTILE_TILE_FLAG_ROT_X;
+         }
+
+         /* TODO: Read boolean Z and fire particles prop/flag. */
+      }
+#endif
+      retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
+
+   } else if( MTILESTATE_TILES_PROP_VAL == parser->mstate ) {
+      retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
+   }
 
 cleanup:
 
-   if( NULL != tile_defs ) {
-      maug_munlock( *(parser->p_tile_defs_h), tile_defs );
-   }
+   mdata_vector_unlock( parser->p_tile_defs );
 
    return retval;
 }
@@ -529,15 +526,9 @@ MERROR_RETVAL retrotile_parser_parse_token(
    const char* token, size_t token_sz, void* parser_arg
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROTILE_TILE_DEF* tile_defs = NULL;
    struct RETROTILE_LAYER* tiles_layer = NULL;
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parser_arg;
    retroflat_tile_t* tiles = NULL;
-
-   if( 0 < *(parser->p_tile_defs_count) ) {
-      maug_mlock( *(parser->p_tile_defs_h), tile_defs );
-      maug_cleanup_if_null_alloc( struct RETROTILE_TILE_DEF*, tile_defs );
-   }
 
    if( MJSON_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
       if(
@@ -606,8 +597,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
          if( 1 == parser->pass ) {
             debug_printf( RETROTILE_TRACE_LVL, "parsing %s...", token );
             parser->tj_parse_cb(
-               token, NULL, parser->p_tile_defs_h,
-               parser->p_tile_defs_count,
+               parser->dirname, token, NULL, parser->p_tile_defs,
                parser->wait_cb, parser->wait_data );
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
@@ -641,10 +631,6 @@ MERROR_RETVAL retrotile_parser_parse_token(
    retrotile_parser_match_token( token, token_sz, parser );
 
 cleanup:
-
-   if( NULL != tile_defs ) {
-      maug_munlock( *(parser->p_tile_defs_h), tile_defs );
-   }
 
    return retval;
 }
@@ -716,9 +702,8 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 /* === */
 
 MERROR_RETVAL retrotile_parse_json_file(
-   const char* filename, MAUG_MHANDLE* p_tilemap_h,
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count,
-   mparser_wait_cb_t wait_cb, void* wait_data
+   const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
+   struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
@@ -738,18 +723,18 @@ MERROR_RETVAL retrotile_parse_json_file(
 
    parser->tj_parse_cb = retrotile_parse_json_file;
 
+   maug_strncpy( parser->dirname, dirname, RETROFLAT_PATH_MAX );
+
    /* Setup filename path. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
    maug_snprintf(
-      filename_path, RETROFLAT_PATH_MAX, "mapsrc/%s", filename );
+      filename_path, RETROFLAT_PATH_MAX, "%s/%s", dirname, filename );
 
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
 
    retval = mfile_open_read( filename_path, &buffer );
    maug_cleanup_if_not_ok();
-
-   assert( NULL != p_tile_defs_count );
 
    /* Parse JSON and react to state. */
    for( parser->pass = 0 ; 2 > parser->pass ; parser->pass++ ) {
@@ -787,18 +772,20 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->jparser.base.close_val = retrotile_json_close_val;
          parser->jparser.base.close_val_arg = parser;
          */
-         parser->p_tile_defs_h = p_tile_defs_h;
-         parser->p_tile_defs_count = p_tile_defs_count;
+         parser->p_tile_defs = p_tile_defs;
 
-         assert( NULL != p_tile_defs_h );
+         assert( NULL != p_tile_defs );
          if( 1 == parser->pass ) {
             /* Allocate tile defs based on highest tile ID found on
              * first pass.
              */
-            retval = retrotile_alloc_tile_defs(
-               p_tile_defs_h, p_tile_defs_count,
+            assert( 0 < parser->tileset_id_cur );
+            debug_printf(
+               RETROTILE_TRACE_LVL, "allocating " SIZE_T_FMT " tile defs...",
                parser->tileset_id_cur + 1 );
-            maug_cleanup_if_not_ok();
+            mdata_vector_fill(
+               parser->p_tile_defs, parser->tileset_id_cur + 1,
+               sizeof( struct RETROTILE_TILE_DEF ) );
          }
       } else {
          debug_printf( RETROTILE_TRACE_LVL, "(tilemap mode)" );
@@ -812,17 +799,16 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->jparser.close_obj_arg = parser;
          parser->jparser.token_parser = retrotile_parser_parse_token;
          parser->jparser.token_parser_arg = parser;
-         parser->p_tile_defs_h = p_tile_defs_h;
-         parser->p_tile_defs_count = p_tile_defs_count;
+         parser->p_tile_defs = p_tile_defs;
 
          assert( NULL != p_tilemap_h );
+         assert( NULL != p_tile_defs );
          if( 1 == parser->pass ) {
             /* Allocate tiles for the new layers. */
             retval = retrotile_alloc(
                p_tilemap_h, parser->tiles_w, parser->tiles_h,
                parser->pass_layer_iter );
             maug_cleanup_if_not_ok();
-
             maug_mlock( *p_tilemap_h, parser->t );
          }
          parser->pass_layer_iter = 0;
@@ -1599,39 +1585,6 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
    }
 
    return layer_iter;
-}
-
-
-/* === */
-
-MERROR_RETVAL retrotile_alloc_tile_defs(
-   MAUG_MHANDLE* p_tile_defs_h, size_t* p_tile_defs_count, size_t ndefs
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   struct RETROTILE_TILE_DEF* tile_defs = NULL;
-
-   assert( 0 == *p_tile_defs_count );
-   assert( NULL == *p_tile_defs_h );
-   debug_printf( 1, "allocating " SIZE_T_FMT " tile definitions ("
-      SIZE_T_FMT " bytes)...",
-      ndefs, ndefs * sizeof( struct RETROTILE_TILE_DEF ) );
-   *p_tile_defs_h =
-      maug_malloc( ndefs, sizeof( struct RETROTILE_TILE_DEF ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_tile_defs_h );
-   *p_tile_defs_count = ndefs;
-
-   /* Zero new allocs. */
-   maug_mlock( *p_tile_defs_h, tile_defs );
-   maug_cleanup_if_null_alloc( struct RETROTILE_TILE_DEF*, tile_defs );
-   maug_mzero( tile_defs, ndefs * sizeof( struct RETROTILE_TILE_DEF ) );
-
-cleanup:
-
-   if( NULL != tile_defs ) {
-      maug_munlock( *p_tile_defs_h, tile_defs );
-   }
-
-   return retval;
 }
 
 /* === */
