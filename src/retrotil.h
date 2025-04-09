@@ -397,11 +397,7 @@ static void retrotile_parser_match_token(
          j++;
          continue;
 
-      } else if(
-         /* None works in all modes! */
-         /* MTILESTATE_NONE != parser->mstate && */
-         parser->mode != gc_retrotile_mstate_modes[j]
-      ) {
+      } else if( parser->mode != gc_retrotile_mstate_modes[j] ) {
          debug_printf(
             RETROTILE_TRACE_LVL, "found token %s but incorrect mode %u!",
             token,
@@ -411,6 +407,23 @@ static void retrotile_parser_match_token(
 
       } else {
          /* Found it! */
+         debug_printf(
+            RETROTILE_TRACE_LVL,
+            "found token \"%s\" "
+#ifdef MPARSER_TRACE_NAMES
+               "under correct parent %s (%d)!",
+#else
+               "under correct parent %d!",
+#endif /* MPARSER_TRACE_NAMES */
+            token,
+#ifdef MPARSER_TRACE_NAMES
+            retrotile_mstate_name( parser->mstate ),
+            parser->mstate
+#else
+            parser->mstate
+#endif /* MPARSER_TRACE_NAMES */
+         );
+
          retrotile_parser_mstate( parser, j );
          return;
       }
@@ -684,7 +697,6 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 
    if( MTILESTATE_LAYER == parser->mstate ) {
       assert( RETROTILE_PARSER_MODE_MAP == parser->mode );
-      assert( parser->layer_tile_iter == 1600 );
       debug_printf( RETROTILE_TRACE_LVL,
          "incrementing pass layer to " SIZE_T_FMT " after " SIZE_T_FMT
             " tiles...",
