@@ -9,16 +9,13 @@
    f( MJSON_PSTATE_STRING, 3 ) \
    f( MJSON_PSTATE_LIST, 4 )
 
-typedef MERROR_RETVAL
-(*mjson_parse_token_cb)( const char* token, size_t token_sz, void* arg );
-
 typedef MERROR_RETVAL (*mjson_parse_close_cb)( void* arg );
 
 typedef MERROR_RETVAL (*mjson_parse_c_cb)( void* arg );
 
 struct MJSON_PARSER {
    struct MPARSER base;
-   mjson_parse_token_cb token_parser;
+   mparser_parse_token_cb token_parser;
    void* token_parser_arg;
    mjson_parse_close_cb close_list;
    void* close_list_arg;

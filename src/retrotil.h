@@ -11,7 +11,7 @@
  * \addtogroup retrotile RetroTile API
  * \brief Functions and structures for working with tilemaps/grids.
  * \{
- * \file retrotile.h
+ * \file retrotil.h
  */
 
 #ifndef RETROTILE_NAME_SZ_MAX
@@ -61,10 +61,29 @@
 #define RETROTILE_PARSER_MODE_MAP    0
 #define RETROTILE_PARSER_MODE_DEFS   1
 
+/**
+ * \relates RETROTILE_TILE_DEF
+ * \brief Indicates tile should block movement.
+ */
 #define RETROTILE_TILE_FLAG_BLOCK      0x01
-#define RETROTILE_TILE_FLAG_ROT_X      0x02
-#define RETROTILE_TILE_FLAG_ROT_Z      0x04
-#define RETROTILE_TILE_FLAG_PRTCL_FIRE 0x08
+
+/**
+ * \relates RETROTILE_TILE_DEF
+ * \brief Not currently used, but may be in the future.
+ */
+#define RETROTILE_TILE_FLAG_RESERVED1  0x02
+
+/**
+ * \relates RETROTILE_TILE_DEF
+ * \brief Not currently used, but may be in the future.
+ */
+#define RETROTILE_TILE_FLAG_RESERVED2  0x04
+
+/**
+ * \relates RETROTILE_TILE_DEF
+ * \brief Not currently used, but may be in the future.
+ */
+#define RETROTILE_TILE_FLAG_RESERVED3  0x08
 
 /*! \} */ /* retrotile_defs_types */
 
@@ -165,7 +184,8 @@ struct RETROTILE_DATA_BORDER {
 
 typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tm_h,
-   struct MDATA_VECTOR* p_td, mparser_wait_cb_t wait_cb, void* wait_data );
+   struct MDATA_VECTOR* p_td, mparser_wait_cb_t wait_cb, void* wait_data,
+   mparser_parse_token_cb token_cb );
 
 struct RETROTILE_PARSER {
    uint8_t mstate;
@@ -186,6 +206,7 @@ struct RETROTILE_PARSER {
    size_t tiles_h;
    struct RETROTILE* t;
    retrotile_tj_parse_cb tj_parse_cb;
+   mparser_parse_token_cb custom_token_cb;
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
    char dirname[RETROFLAT_PATH_MAX + 1];
@@ -214,10 +235,31 @@ struct RETROTILE_PARSER {
 MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
 
+/**
+ * \brief Parse the JSON file at the given path into a heap-allocated tilemap
+ *        with a ::RETROTILE struct header.
+ * \param dirname Base directory from which to load the tilemap and its
+ *                accompanying data files. This includes external tileset
+ *                files and tile graphics.
+ * \param filename Name of tilemap JSON file to parse, inside of dirname.
+ * \param p_tilemap_h Pointer to a ::MAUG_MHANDLE to allocate and load the
+ *                    tilemap into. The handle targeted should be NULL and,
+ *                    if this is successful, will no longer be NULL afterward.
+ * \param p_tile_defs Pointer to a ::MDATA_VECTOR to be loaded with
+ *                    ::RETROTILE_TILE_DEF structs from the given tilemap.
+ * \param wait_cb Callback to call every so often during loading (e.g. to
+ *                update a loading animation or similar).
+ * \param wait_data Arbitrary data to pass to wait_cb when it is called.
+ * \param token_cb Callback to parse engine-specific custom tokens from the
+ *                 tilemap JSON. Should return MERROR_PREEMPT is parsing is
+ *                 successful and should override standard parsing.
+ * \return MERROR_OK if successful or other MERROR_RETVAL otherwise.
+ */
 MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs,
-   mparser_wait_cb_t wait_cb, void* wait_data );
+   mparser_wait_cb_t wait_cb, void* wait_data,
+   mparser_parse_token_cb token_cb );
 
 /*! \} */ /* retrotile_parser */
 
@@ -311,7 +353,7 @@ MERROR_RETVAL retrotile_alloc(
 #endif
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
-      static MAUG_CONST uint8_t SEG_MCONST name = idx;
+      MAUG_CONST uint8_t SEG_MCONST name = idx;
 
 RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_CONST )
 
@@ -444,10 +486,17 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
     * later on, below.
     */
 
+   /* Try the custom parser. */
    if(
-      MJSON_PSTATE_OBJECT_VAL != 
-         mjson_parser_pstate( &(parser->jparser) )
+      NULL != parser->custom_token_cb &&
+      /* MERROR_PREEMPT is dealt with in cleanup. */
+      MERROR_OK != (retval = parser->custom_token_cb(
+         token, token_sz, parser_arg ))
    ) {
+      goto cleanup;
+   }
+
+   if( MJSON_PSTATE_OBJECT_VAL != mjson_parser_pstate( &(parser->jparser) ) ) {
       /* Not a token we have to worry about! */
       retrotile_parser_match_token( token, token_sz, parser );
       goto cleanup;
@@ -496,32 +545,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 
    } else if( MTILESTATE_TILES_PROP_NAME == parser->mstate ) {
 
-      /* TODO: Make this a callback and move it into the calling program. */
-
-#if 0
-      if( 1 == parser->pass ) {
-         if( 0 == strncmp(
-            parser->jparser.base.token,
-            "rotate_x",
-            parser->jparser.base.token_sz
-         ) ) {
-            /* Found flag: rotate X! */
-            /* TODO: Read boolean value. */
-            if( parser->tileset_id_cur >= *(parser->p_tile_defs_count) ) {
-               error_printf(
-                  "tileset ID " SIZE_T_FMT
-                  " outside of tile defs count " SIZE_T_FMT "!",
-                  parser->tileset_id_cur, *(parser->p_tile_defs_count) );
-               retval = MERROR_OVERFLOW;
-               goto cleanup;
-            }
-            tile_defs[parser->tileset_id_cur].flags |= 
-               RETROTILE_TILE_FLAG_ROT_X;
-         }
-
-         /* TODO: Read boolean Z and fire particles prop/flag. */
-      }
-#endif
+      /* This should be handled in the custom token parser callback. */
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
 
    } else if( MTILESTATE_TILES_PROP_VAL == parser->mstate ) {
@@ -531,6 +555,11 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 cleanup:
 
    mdata_vector_unlock( parser->p_tile_defs );
+
+   if( MERROR_PREEMPT == retval ) {
+      /* Reset custom callback retval. */
+      retval = MERROR_OK;
+   }
 
    return retval;
 }
@@ -611,7 +640,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
             debug_printf( RETROTILE_TRACE_LVL, "parsing %s...", token );
             parser->tj_parse_cb(
                parser->dirname, token, NULL, parser->p_tile_defs,
-               parser->wait_cb, parser->wait_data );
+               parser->wait_cb, parser->wait_data, parser->custom_token_cb );
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
 
@@ -715,7 +744,8 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 
 MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
-   struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data
+   struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data,
+   mparser_parse_token_cb token_cb
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
@@ -734,6 +764,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    maug_mzero( parser, sizeof( struct RETROTILE_PARSER ) );
 
    parser->tj_parse_cb = retrotile_parse_json_file;
+   parser->custom_token_cb = token_cb;
 
    maug_strncpy( parser->dirname, dirname, RETROFLAT_PATH_MAX );
 
@@ -1647,6 +1678,15 @@ cleanup:
 
    return retval;
 }
+
+#else
+
+/* This is defined externally so custom token callbacks can reference it. */
+
+#  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
+      extern MAUG_CONST uint8_t SEG_MCONST name;
+
+RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_CONST )
 
 #endif /* RETROTIL_C */
 

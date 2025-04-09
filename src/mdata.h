@@ -79,7 +79,7 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
  *          Reallocation could change pointers gotten during a lock!
  */
 ssize_t mdata_vector_append(
-   struct MDATA_VECTOR* v, void* item, size_t item_sz );
+   struct MDATA_VECTOR* v, const void* item, size_t item_sz );
 
 /**
  * \brief Remove item at the given index, shifting subsequent items up by 1.
@@ -386,7 +386,7 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool ) {
 /* === */
 
 ssize_t mdata_vector_append(
-   struct MDATA_VECTOR* v, void* item, size_t item_sz
+   struct MDATA_VECTOR* v, const void* item, size_t item_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_out = -1;
