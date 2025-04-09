@@ -49,6 +49,20 @@
 #endif /* MPARSER_TRACE_NAMES */
 
 /**
+ * \relates RETROTILE_PARSER
+ * \brief Value for RETROTILE_PARSER::mode indicating the parser is currently
+ *        parsing a tilemap.
+ */
+#define RETROTILE_PARSER_MODE_MAP    0
+
+/**
+ * \relates RETROTILE_PARSER
+ * \brief Value for RETROTILE_PARSER::mode indicating the parser is currently
+ *        parsing tile definitions.
+ */
+#define RETROTILE_PARSER_MODE_DEFS   1
+
+/**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
  * \{
  */
@@ -57,9 +71,6 @@
  * \addtogroup \retrotile_defs_types RetroTile Custom Property Types
  * \{
  */
-
-#define RETROTILE_PARSER_MODE_MAP    0
-#define RETROTILE_PARSER_MODE_DEFS   1
 
 /**
  * \relates RETROTILE_TILE_DEF
@@ -99,6 +110,9 @@
  */
 #define RETROTILE_DS_FLAG_INIT_DATA    0x02
 
+/**
+ * \brief Conversion specifier to use with ::retroflat_tile_t.
+ */
 #define RETROTILE_IDX_FMT "%u"
 
 struct RETROTILE_TILE_DEF {
@@ -123,14 +137,26 @@ struct RETROTILE_COORDS {
    size_t y;
 };
 
+/**
+ * \brief A struct representing a tilemap.
+ * \warning Only single-tileset tilemaps are supported!
+ * \warning Only tile layers are supported!
+ */
 struct RETROTILE {
+   /*! \brief Size of the tilemap in bytes (including this struct header). */
    uint32_t sz;
+   /*! \brief Number of tile layers in this tilemap. */
    uint32_t layers_count;
-   uint32_t layers_offset;
-   char name[RETROTILE_NAME_SZ_MAX];
+   /*! \brief First GID in the accompanying tileset. */
    size_t tileset_fgid;
+   /*! \brief Height of all layers of the tilemap in tiles. */
    size_t tiles_h;
+   /*! \brief Width of all layers of the tilemap in tiles. */
    size_t tiles_w;
+   /**
+    * \brief Amount by which to scale tiles (convenience property).
+    * \todo Replace this with a hashtable of custom properties.
+    * */
    float tile_scale;
 };
 
@@ -191,6 +217,7 @@ struct RETROTILE_PARSER {
    uint8_t mstate;
    /* TODO: Use flags and combine these. */
    uint8_t pass;
+   /*! \brief Value indicating the current type of object being parsed into. */
    uint8_t mode;
    mparser_wait_cb_t wait_cb;
    void* wait_data;
@@ -206,6 +233,11 @@ struct RETROTILE_PARSER {
    size_t tiles_h;
    struct RETROTILE* t;
    retrotile_tj_parse_cb tj_parse_cb;
+   /**
+    * \brief Callback to parse engine-specific custom tokens from the tilemap
+    *        JSON. Should return ::MERROR_PREEMPT if parsing is successful and
+    *        should override standard parsing.
+    */
    mparser_parse_token_cb custom_token_cb;
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
@@ -251,7 +283,7 @@ retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
  *                update a loading animation or similar).
  * \param wait_data Arbitrary data to pass to wait_cb when it is called.
  * \param token_cb Callback to parse engine-specific custom tokens from the
- *                 tilemap JSON. Should return MERROR_PREEMPT is parsing is
+ *                 tilemap JSON. Should return MERROR_PREEMPT if parsing is
  *                 successful and should override standard parsing.
  * \return MERROR_OK if successful or other MERROR_RETVAL otherwise.
  */
@@ -329,13 +361,13 @@ MERROR_RETVAL retrotile_gen_borders_iter(
    uint32_t tuning, size_t layer_idx, uint8_t flags, void* data,
    retrotile_ani_cb animation_cb, void* animation_cb_data );
 
+/*! \} */ /* retrotile_gen */
+
 struct RETROTILE_LAYER* retrotile_get_layer_p(
    struct RETROTILE* tilemap, uint32_t layer_idx );
 
 MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count );
-
-/*! \} */ /* retrotile_gen */
 
 #ifdef RETROTIL_C
 
@@ -628,7 +660,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
    ) {
       if( MTILESTATE_TILESETS_FGID == parser->mstate ) {
          if( 1 == parser->pass ) {
-            parser->t->tileset_fgid = atoi( token );
+            parser->t->tileset_fgid = maug_atou32( token, token_sz, 10 );
             debug_printf(
                RETROTILE_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
                parser->t->tileset_fgid );

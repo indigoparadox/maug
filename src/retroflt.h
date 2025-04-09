@@ -3,6 +3,20 @@
 #define RETROFLT_H
 
 /**
+ * \addtogroup retrotile
+ * \{
+ */
+
+/**
+ * \brief Value for an individual tile in a ::RETROTILE_LAYER.
+ * 
+ * This is defined early on so that it can be used in some other modules.
+ */
+typedef int16_t retroflat_tile_t;
+
+/*! \} */
+
+/**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.
  * \{
@@ -1057,8 +1071,6 @@ struct RETROFLAT_ARGS {
  *        acceleration where available.
  * \{
  */
-
-typedef int16_t retroflat_tile_t;
 
 struct RETROFLAT_VIEWPORT {
    /*! \brief X position of the viewport in real screen memory in pixels. */

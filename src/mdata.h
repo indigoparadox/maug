@@ -14,13 +14,35 @@
 #  define MDATA_TRACE_LVL 0
 #endif /* !MDATA_TRACE_LVL */
 
+/**
+ * \addtogroup mdata_vector
+ * \{
+ */
+
 #ifndef MDATA_VECTOR_INIT_SZ
+/**
+ * \relates MDATA_VECTOR
+ * \brief Default initial value for MDATA_VECTOR::ct_max.
+ **/
 #  define MDATA_VECTOR_INIT_SZ 10
 #endif /* !MDATA_TRACE_LVL */
 
 #ifndef MDATA_VECTOR_INIT_STEP_SZ
+/**
+ * \relates MDATA_VECTOR
+ * \brief Default initial value for MDATA_VECTOR::ct_step.
+ **/
 #  define MDATA_VECTOR_INIT_STEP_SZ 10
 #endif /* !MDATA_VECTOR_INIT_STEP_SZ */
+
+/*! \} */
+
+/**
+ * \addtogroup mdata_strpool Data Memory String Pools
+ * \brief Structure for storing a compact group of mutable, variable-length
+ *        character strings.
+ * \{
+ */
 
 typedef ssize_t mdata_strpool_idx_t;
 
@@ -37,11 +59,22 @@ struct MDATA_STRPOOL {
    size_t str_sz_max;
 };
 
+/*! \} */ /* mdata_strpool */
+
 /**
- * \brief A vector of objects, stored contiguously.
+ * \addtogroup mdata_vector Data Memory Vectors
+ * \brief Structure for storing a linear and compact array of values
+ * \{
+ */
+
+/**
+ * \brief A vector of uniformly-sized objects, stored contiguously.
  *
  * May be initialized with mdata_vector_alloc() before use, but
  * mdata_vector_append() will attempt to do this automatically.
+ *
+ * \warning Internal details may be subject to change, and should be accessed
+ *          with wrapper macros and convenience functions.
  */
 struct MDATA_VECTOR {
    /*! \brief Handle for allocated items (unlocked). */
@@ -61,6 +94,13 @@ struct MDATA_VECTOR {
    size_t item_sz;
 };
 
+/*! \} */ /* mdata_vector */
+
+/**
+ * \addtogroup mdata_strpool
+ * \{
+ */
+
 ssize_t mdata_strpool_find(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz );
 
@@ -74,7 +114,20 @@ MERROR_RETVAL mdata_strpool_alloc(
 
 void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
 
+/*! \} */
+
 /**
+ * \addtogroup mdata_vector
+ * \{
+ */
+
+/**
+ * \relates MDATA_VECTOR
+ * \brief Append an item to the specified vector.
+ * \param item_sz Size (in bytes) of the item to append. If the item is sized
+ *                differently from the first item appended, MERROR_OVERFLOW
+ *                will be returned and the item will not be appended.
+ * \return Index of the appended item or MERROR_RETVAL * -1 if append fails.
  * \warning The vector must not be locked before an append or allocate!
  *          Reallocation could change pointers gotten during a lock!
  */
@@ -82,11 +135,20 @@ ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, const void* item, size_t item_sz );
 
 /**
+ * \relates MDATA_VECTOR
  * \brief Remove item at the given index, shifting subsequent items up by 1.
  * \warning The vector must not be locked before a removal!
  */
 MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx );
 
+/**
+ * \relates MDATA_VECTOR
+ * \brief Get a generic pointer to an item in the MDATA_VECTOR.
+ * \param v Vector to request the item from. Should be locked!
+ * \param idx Index of item to retrieve.
+ * \return Return a generic pointer to the item at the requested index, or NULL
+ *         if the index is outside of the vector bounds.
+ */
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
 
 MERROR_RETVAL mdata_vector_copy(
@@ -101,6 +163,13 @@ MERROR_RETVAL mdata_vector_alloc(
 
 void mdata_vector_free( struct MDATA_VECTOR* v );
 
+/*! \} */ /* mdata_vector */
+
+/**
+ * \addtogroup mdata_strpool
+ * \{
+ */
+
 #define mdata_strpool_sz( strpool ) ((strpool)->str_sz_max)
 
 #define mdata_strpool_lock( strpool, ptr ) \
@@ -112,7 +181,18 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
       maug_munlock( (strpool)->str_h, ptr ); \
    }
 
+/*! \} */ /* mdata_strpool */
+
 /**
+ * \addtogroup mdata_vector
+ * \{
+ */
+
+/**
+ * \relates MDATA_VECTOR
+ * \brief Lock the vector. This should be done when items from the vector are
+ *        actively being referenced, so the system is not allowed to move the
+ *        vector's data allocation block.
  * \warning mdata_vector_lock() should never be called *after* the cleanup
  *          label! (This is fine for mdata_vector_unlock(), however.)
  */
@@ -122,6 +202,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
    debug_printf( MDATA_TRACE_LVL, "locked vector " #v );
 
 /**
+ * \relates MDATA_VECTOR
+ * \brief Unlock the vector so items may be added and removed.
  * \note mdata_vector_unlock() may be called after the cleanup label.
  */
 #define mdata_vector_unlock( v ) \
@@ -143,19 +225,22 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
       (mdata_vector_remove( v, mdata_vector_ct( v ) - 1 )) : MERROR_OVERFLOW)
 
 /**
- * \return Number of items of MDATA_VECTOR::item_sz bytes actively stored in
- *         this vector.
+ * \relates MDATA_VECTOR
+ * \brief Number of items of MDATA_VECTOR::item_sz bytes actively stored in
+ *        this vector.
  * \warning This is not neccessarily equal to amount of memory occupied by the
  *          vector, as it may have allocated more than are currently occupied!
  */
 #define mdata_vector_ct( v ) ((v)->ct)
 
 /**
- * \return Number of bytes of heap memory occupied by this vector.
- **/
+ * \relates MDATA_VECTOR
+ * \brief Number of bytes of heap memory occupied by this vector.
+ */
 #define mdata_vector_sz( v ) (((v)->ct_max) * ((v)->item_sz))
 
 /**
+ * \relates MDATA_VECTOR
  * \brief Allocate and mark the new slots as active.
  */
 #define mdata_vector_fill( v, ct_new, sz ) \
@@ -173,6 +258,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
+
+/*! \} */ /* mdata_vector */
 
 #define mdata_retval( idx ) (0 > idx ? ((idx) * -1) : MERROR_OK)
 
@@ -390,6 +477,14 @@ ssize_t mdata_vector_append(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_out = -1;
+
+   if( 0 < v->item_sz && item_sz != v->item_sz ) {
+      error_printf( "attempting to add item of " SIZE_T_FMT " bytes to vector, "
+         "but vector is already sized for " SIZE_T_FMT "-byte items!",
+         item_sz, v->item_sz );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
 
    mdata_vector_alloc( v, item_sz, MDATA_VECTOR_INIT_SZ );
 
