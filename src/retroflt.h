@@ -1074,26 +1074,84 @@ struct RETROFLAT_ARGS {
  * \brief The viewport data struct.
  * \warning Many of the fields in this struct are calculated based on each
  *          other, and so updates should only be made through
- *          retroflat_viewport_set_size()!
+ *          retroflat_viewport_set_pos_size()!
  */
 struct RETROFLAT_VIEWPORT {
-   /*! \brief X position of the viewport in real screen memory in pixels. */
+   /**
+    * \brief X position of the viewport in real screen memory in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_x() and
+    *        set through retroflat_viewport_set_pos_size().
+    * */
    int16_t screen_x;
-   /*! \brief Y position of the viewport in real screen memory in pixels. */
+   /**
+    * \brief Y position of the viewport in real screen memory in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_y() and
+    *        set through retroflat_viewport_set_pos_size()
+    * */
    int16_t screen_y;
+   /**
+    * \brief The X offset, in pixels, of the viewport on the world tilemap.
+    *        Should only be retrieved through retroflat_viewport_world_x() and
+    *        set through retroflat_viewport_set_world_pos().
+    */
    int16_t world_x;
+   /**
+    * \brief The Y offset, in pixels, of the viewport on the world tilemap.
+    *        Should only be retrieved through retroflat_viewport_world_y() and
+    *        set through retroflat_viewport_set_world_pos().
+    */
    int16_t world_y;
+   /**
+    * \brief The width of the entire world tilemap in pixels.
+    *        Should only be retrieved through retroflat_viewport_world_w() and
+    *        set through retroflat_viewport_set_world().
+    */
    int16_t world_w;
+   /**
+    * \brief The height of the entire world tilemap in pixels.
+    *        Should only be retrieved through retroflat_viewport_world_h() and
+    *        set through retroflat_viewport_set_world().
+    */
    int16_t world_h;
-   /*! \brief Viewport screen width in pixels. */
+   /**
+    * \brief Viewport width in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_w() and
+    *        set through retroflat_viewport_set_pos_size().
+    */
    uint16_t screen_w;
-   /*! \brief Viewport screen height in pixels. */
+   /**
+    * \brief Viewport height in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_w() and
+    *        set through retroflat_viewport_set_pos_size().
+    */
    uint16_t screen_h;
-   /*! \brief Difference between viewport width and screen width in pixels. */
+   /**
+    * \brief Difference between viewport width and screen width in pixels.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_w_remainder() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    uint16_t screen_w_remainder;
-   /*! \brief Difference between viewport height and screen height in pixels. */
+   /**
+    * \brief Difference between viewport height and screen height in pixels.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_h_remainder() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    uint16_t screen_h_remainder;
+   /**
+    * \brief The number of tiles across that fit in the viewport.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_tile_w() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    int16_t screen_tile_w;
+   /**
+    * \brief The number of tiles high that fit in the viewport.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_tile_h() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    int16_t screen_tile_h;
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    MAUG_MHANDLE refresh_grid_h;
@@ -1153,7 +1211,9 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_x) = x; \
    (g_retroflat_state->viewport.world_y) = y;
 
-#  define retroflat_viewport_set_size_generic( w_px, h_px ) \
+#  define retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px ) \
+   g_retroflat_state->viewport.screen_x = (x_px); \
+   g_retroflat_state->viewport.screen_x = (y_px); \
    g_retroflat_state->viewport.screen_tile_w = \
       /* Allocate 1 extra tile on each side for smooth scrolling. */ \
       (((w_px) / RETROFLAT_TILE_W) + 2); \
@@ -1167,9 +1227,9 @@ struct RETROFLAT_VIEWPORT {
    g_retroflat_state->viewport.screen_h = \
       (((h_px) / RETROFLAT_TILE_H) * RETROFLAT_TILE_H) + 2; \
    g_retroflat_state->viewport.screen_w_remainder = \
-      (w_px) - g_retroflat_state->viewport.screen_w; \
+      (x_px) + (w_px) - g_retroflat_state->viewport.screen_w; \
    g_retroflat_state->viewport.screen_h_remainder = \
-      (h_px) - g_retroflat_state->viewport.screen_h;
+      (y_px) + (h_px) - g_retroflat_state->viewport.screen_h;
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
 
@@ -1240,50 +1300,90 @@ uint8_t retroflat_viewport_focus_generic(
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
 
 #  ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-      /* Clamp world coordinates to tile borders to allow refresh grid to
+      /* These clamp world coordinates to tile borders to allow refresh grid to
        * function properly (smooth-scrolling tiles will always be in motion).
        */
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current viewport X position in the world in pixels.
+ */
 #     define retroflat_viewport_world_x() \
          ((retroflat_viewport_world_x_generic() \
             >> RETROFLAT_TILE_W_BITS) << RETROFLAT_TILE_W_BITS)
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current viewport Y position in the world in pixels.
+ */
 #     define retroflat_viewport_world_y() \
          ((retroflat_viewport_world_y_generic() \
             >> RETROFLAT_TILE_H_BITS) << RETROFLAT_TILE_H_BITS)
 #  else
-/*! \brief Return the current viewport X position in the world in pixels. */
 #     define retroflat_viewport_world_x() retroflat_viewport_world_x_generic()
-
-/*! \brief Return the current viewport Y position in the world in pixels. */
 #     define retroflat_viewport_world_y() retroflat_viewport_world_y_generic()
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
-/*! \brief Return the current width of the world in pixels. */
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current width of the world in pixels.
+ */
 #  define retroflat_viewport_world_w() \
    retroflat_viewport_world_w_generic()
 
-/*! \brief Return the current height of the world in pixels. */
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current height of the world in pixels.
+ */
 #  define retroflat_viewport_world_h() \
    retroflat_viewport_world_h_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current width of the world in tiles.
+ */
 #  define retroflat_viewport_screen_tile_w() \
    retroflat_viewport_screen_tile_w_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current height of the world in tiles.
+ */
 #  define retroflat_viewport_screen_tile_h() \
    retroflat_viewport_screen_tile_h_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the width of the viewport in pixels.
+ */
 #  define retroflat_viewport_screen_w() \
    retroflat_viewport_screen_w_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the height of the viewport in pixels.
+ */
 #  define retroflat_viewport_screen_h() \
    retroflat_viewport_screen_h_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the difference in pixels between the viewport X + width and the
+ *        screen width.
+ */
 #  define retroflat_viewport_screen_w_remainder() \
    retroflat_viewport_screen_w_remainder_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the difference in pixels between the viewport Y + height and
+ *        the screen height.
+ */
 #  define retroflat_viewport_screen_h_remainder() \
    retroflat_viewport_screen_h_remainder_generic()
 
 /**
+ * \relates RETROFLAT_VIEWPORT
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.
  * \param w The width of the world in pixels (tile_width * map_tile_width).
@@ -1292,6 +1392,10 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_set_world( w, h ) \
    retroflat_viewport_set_world_generic( w, h )
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the position of the viewport in the world in pixels.
+ */
 #  define retroflat_viewport_set_world_pos( x, y ) \
    retroflat_viewport_set_world_pos_generic( x, y )
 
@@ -1300,8 +1404,8 @@ uint8_t retroflat_viewport_focus_generic(
  * \brief Set the pixel width and height of the viewport, as well as some other
  *        dependent values frequently used in screen updates.
  */
-#  define retroflat_viewport_set_size( w_px, h_px ) \
-   retroflat_viewport_set_size_generic( w_px, h_px )
+#  define retroflat_viewport_set_pos_size( x_px, y_px, w_px, h_px ) \
+   retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px )
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
 
@@ -2451,7 +2555,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* This is intended as a default and can be modified by calling this macro
     * again later.
     */
-   retroflat_viewport_set_size( retroflat_screen_w(), retroflat_screen_h() );
+   retroflat_viewport_set_pos_size(
+      0, 0, retroflat_screen_w(), retroflat_screen_h() );
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    debug_printf( 1, "allocating refresh grid (%d tiles...)",
@@ -2893,8 +2998,6 @@ void retroflat_set_proc_resize(
 uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
    int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
 
-   g_retroflat_state->viewport.screen_x += x;
-
    /* Keep the viewport in the world arena. */
    if(
       0 < new_world_x &&
@@ -2911,8 +3014,6 @@ uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
 
 uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
    int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
-
-   g_retroflat_state->viewport.screen_y += y;
 
    /* Keep the viewport in the world arena. */
    if(
