@@ -420,6 +420,13 @@ MERROR_RETVAL retrocon_input(
 #  endif /* RETROFLAT_OPENGL */
          debug_printf( RETROCON_TRACE_LVL, "console closed!" );
 
+#  ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+         /* Mark all tiles as dirty when console is opened/closed. */
+         retroflat_viewport_lock_refresh();
+         retval = retrotile_clear_refresh( retroflat_screen_h() );
+         retroflat_viewport_unlock_refresh();
+#  endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
          /* Return, in case the caller needs to do something with this. */
          *p_idc_out = RETROCON_IDC_CLOSE;
       }

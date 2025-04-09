@@ -405,12 +405,6 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
 
-/**
- * \brief Flag for args->flags, indicating that a viewport tile refresh grid
- *        should be allocated and used.
- */
-#define RETROFLAT_FLAGS_VIEWPORT_REFRESH  0x20
-
 /*! \} */ /* maug_retroflt_drawing */
 
 /**
@@ -1069,9 +1063,19 @@ struct RETROFLAT_ARGS {
  * \addtogroup maug_retroflt_viewport RetroFlat Viewport API
  * \brief A flexible API to facilitate tile-based views using hardware
  *        acceleration where available.
+ *
+ * If no hardware acceleration is available on the platform, then the platform
+ * API header should define RETROFLAT_SOFT_VIEWPORT to enable the _generic
+ * functions and suffixes for this functionality.
  * \{
  */
 
+/**
+ * \brief The viewport data struct.
+ * \warning Many of the fields in this struct are calculated based on each
+ *          other, and so updates should only be made through
+ *          retroflat_viewport_set_size()!
+ */
 struct RETROFLAT_VIEWPORT {
    /*! \brief X position of the viewport in real screen memory in pixels. */
    int16_t screen_x;
@@ -1081,10 +1085,30 @@ struct RETROFLAT_VIEWPORT {
    int16_t world_y;
    int16_t world_w;
    int16_t world_h;
+   /*! \brief Viewport screen width in pixels. */
+   uint16_t screen_w;
+   /*! \brief Viewport screen height in pixels. */
+   uint16_t screen_h;
+   /*! \brief Difference between viewport width and screen width in pixels. */
+   uint16_t screen_w_remainder;
+   /*! \brief Difference between viewport height and screen height in pixels. */
+   uint16_t screen_h_remainder;
    int16_t screen_tile_w;
    int16_t screen_tile_h;
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    MAUG_MHANDLE refresh_grid_h;
+   /**
+    * \brief A grid of tile values representing the last-drawn values on-screen.
+    *
+    * If the value for a tile in this grid matches the value about to be drawn,
+    * the draw will be skipped. This increases performance a LOT on systems with
+    * slow video memory access.
+    *
+    * This functionality may be disabled by defining the macro
+    * RETROFLAT_NO_VIEWPORT_REFRESH on build.
+    */
    retroflat_tile_t* refresh_grid;
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 };
 
 #  define retroflat_screen_colors() (g_retroflat_state->screen_colors)
@@ -1109,6 +1133,18 @@ struct RETROFLAT_VIEWPORT {
 #  define retroflat_viewport_screen_tile_h_generic() \
    (g_retroflat_state->viewport.screen_tile_h)
 
+#  define retroflat_viewport_screen_w_generic() \
+   (g_retroflat_state->viewport.screen_w)
+
+#  define retroflat_viewport_screen_h_generic() \
+   (g_retroflat_state->viewport.screen_h)
+
+#  define retroflat_viewport_screen_w_remainder_generic() \
+   (g_retroflat_state->viewport.screen_w_remainder)
+
+#  define retroflat_viewport_screen_h_remainder_generic() \
+   (g_retroflat_state->viewport.screen_h_remainder)
+
 #  define retroflat_viewport_set_world_generic( w, h ) \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
@@ -1116,6 +1152,26 @@ struct RETROFLAT_VIEWPORT {
 #  define retroflat_viewport_set_world_pos_generic( x, y ) \
    (g_retroflat_state->viewport.world_x) = x; \
    (g_retroflat_state->viewport.world_y) = y;
+
+#  define retroflat_viewport_set_size_generic( w_px, h_px ) \
+   g_retroflat_state->viewport.screen_tile_w = \
+      /* Allocate 1 extra tile on each side for smooth scrolling. */ \
+      (((w_px) / RETROFLAT_TILE_W) + 2); \
+   g_retroflat_state->viewport.screen_tile_h = \
+      (((h_px) / RETROFLAT_TILE_H) + 2); \
+   /* We're not adding the extra room here since this won't be used for
+   * indexing or allocation but rather pixel detection.
+   */ \
+   g_retroflat_state->viewport.screen_w = \
+      (((w_px) / RETROFLAT_TILE_W) * RETROFLAT_TILE_W) + 2; \
+   g_retroflat_state->viewport.screen_h = \
+      (((h_px) / RETROFLAT_TILE_H) * RETROFLAT_TILE_H) + 2; \
+   g_retroflat_state->viewport.screen_w_remainder = \
+      (w_px) - g_retroflat_state->viewport.screen_w; \
+   g_retroflat_state->viewport.screen_h_remainder = \
+      (h_px) - g_retroflat_state->viewport.screen_h;
+
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
 
 #  define retroflat_viewport_lock_refresh_generic() \
    if( NULL == g_retroflat_state->viewport.refresh_grid ) { \
@@ -1164,6 +1220,8 @@ struct RETROFLAT_VIEWPORT {
             g_retroflat_state->viewport.screen_tile_w) + \
                _retroflat_viewport_refresh_tile_x( x_px )])
 
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
 uint8_t retroflat_viewport_move_x_generic( int16_t x );
 
 uint8_t retroflat_viewport_move_y_generic( int16_t y );
@@ -1181,9 +1239,9 @@ uint8_t retroflat_viewport_focus_generic(
 
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
 
-#  ifdef RETROFLAT_VIEWPORT_ADAPT
+#  ifndef RETROFLAT_NO_VIEWPORT_REFRESH
       /* Clamp world coordinates to tile borders to allow refresh grid to
-       * function properly.
+       * function properly (smooth-scrolling tiles will always be in motion).
        */
 #     define retroflat_viewport_world_x() \
          ((retroflat_viewport_world_x_generic() \
@@ -1197,7 +1255,7 @@ uint8_t retroflat_viewport_focus_generic(
 
 /*! \brief Return the current viewport Y position in the world in pixels. */
 #     define retroflat_viewport_world_y() retroflat_viewport_world_y_generic()
-#endif /* RETROFLAT_VIEWPORT_ADAPT */
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 /*! \brief Return the current width of the world in pixels. */
 #  define retroflat_viewport_world_w() \
@@ -1213,6 +1271,18 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_screen_tile_h() \
    retroflat_viewport_screen_tile_h_generic()
 
+#  define retroflat_viewport_screen_w() \
+   retroflat_viewport_screen_w_generic()
+
+#  define retroflat_viewport_screen_h() \
+   retroflat_viewport_screen_h_generic()
+
+#  define retroflat_viewport_screen_w_remainder() \
+   retroflat_viewport_screen_w_remainder_generic()
+
+#  define retroflat_viewport_screen_h_remainder() \
+   retroflat_viewport_screen_h_remainder_generic()
+
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.
@@ -1225,14 +1295,40 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_set_world_pos( x, y ) \
    retroflat_viewport_set_world_pos_generic( x, y )
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the pixel width and height of the viewport, as well as some other
+ *        dependent values frequently used in screen updates.
+ */
+#  define retroflat_viewport_set_size( w_px, h_px ) \
+   retroflat_viewport_set_size_generic( w_px, h_px )
+
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Lock access to RETROFLAT_VIEWPORT::refresh_grid in memory.
+ *
+ * This should be called before making references to the refresh grid e.g. with
+ * retroflat_viewport_tile_is_stale().
+ */
 #  define retroflat_viewport_lock_refresh() \
    retroflat_viewport_lock_refresh_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Unlock access to RETROFLAT_VIEWPORT::refresh_grid in memory.
+ *
+ * This should be called when references to the refresh grid are no longer in
+ * use and may be invalidated by the system.
+ */
 #  define retroflat_viewport_unlock_refresh() \
    retroflat_viewport_unlock_refresh_generic()
 
 #  define retroflat_viewport_set_refresh( x, y, tid ) \
    retroflat_viewport_set_refresh_generic( x, y, tid )
+
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 /**
  * \brief Move the viewport in a direction or combination thereof so that
@@ -2351,28 +2447,23 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 0 < retroflat_screen_w() );
    assert( 0 < retroflat_screen_h() );
    assert( 0 < retroflat_screen_colors() );
-   if(
-      RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
-      (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)
-   ) {
-      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_VIEWPORT_REFRESH;
 
-      g_retroflat_state->viewport.screen_tile_w = 
-         /* Allocate 1 extra tile on each side for smooth scrolling. */
-         ((retroflat_screen_w() / RETROFLAT_TILE_W) + 2);
-      g_retroflat_state->viewport.screen_tile_h = 
-         ((retroflat_screen_h() / RETROFLAT_TILE_H) + 2);
+   /* This is intended as a default and can be modified by calling this macro
+    * again later.
+    */
+   retroflat_viewport_set_size( retroflat_screen_w(), retroflat_screen_h() );
 
-      debug_printf( 1, "allocating refresh grid (%d tiles...)",
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h );
-      g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h,
-         sizeof( retroflat_tile_t ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE,
-         g_retroflat_state->viewport.refresh_grid_h );
-   }
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+   debug_printf( 1, "allocating refresh grid (%d tiles...)",
+      g_retroflat_state->viewport.screen_tile_w *
+      g_retroflat_state->viewport.screen_tile_h );
+   g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
+      g_retroflat_state->viewport.screen_tile_w *
+      g_retroflat_state->viewport.screen_tile_h,
+      sizeof( retroflat_tile_t ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE,
+      g_retroflat_state->viewport.refresh_grid_h );
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )
    retval = retrosoft_init();
@@ -2444,9 +2535,11 @@ void retroflat_shutdown( int retval ) {
 
    debug_printf( 1, "retroflat shutdown called..." );
 
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h ) {
       maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
    }
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {

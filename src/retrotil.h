@@ -118,6 +118,13 @@
 struct RETROTILE_TILE_DEF {
    uint8_t flags;
    char image_path[RETROTILE_TILESET_IMAGE_STR_SZ_MAX];
+   size_t x;
+   size_t y;
+#ifdef RETROGXC_PRESENT
+   ssize_t image_cache_id;
+#else
+   struct RETROFLAT_BITMAP image;
+#endif /* RETROGXC_PRESENT */
 };
 
 /*! \} */ /* retrotile_defs */
@@ -368,6 +375,12 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
 
 MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count );
+
+MERROR_RETVAL retrotile_clear_refresh( int16_t y_max );
+
+MERROR_RETVAL retrotile_topdown_draw(
+   struct RETROFLAT_BITMAP* target,
+   struct RETROTILE* t, struct MDATA_VECTOR* t_defs, uint8_t* p_flags );
 
 #ifdef RETROTIL_C
 
@@ -1707,6 +1720,117 @@ cleanup:
    if( NULL != tilemap ) {
       maug_munlock( *p_tilemap_h, tilemap );
    }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrotile_clear_refresh( int16_t y_max ) {
+   MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+   int16_t x = 0,
+      y = 0;
+
+   retroflat_viewport_lock_refresh();
+   for( y = 0 ; y_max > y ; y += RETROFLAT_TILE_H ) {
+      for( x = 0 ; retroflat_screen_w() > x ; x += RETROFLAT_TILE_W ) {
+         retroflat_viewport_set_refresh( x, y, -1 );
+      }
+   }
+
+cleanup:
+
+   retroflat_viewport_unlock_refresh();
+
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrotile_topdown_draw(
+   struct RETROFLAT_BITMAP* target,
+   struct RETROTILE* t, struct MDATA_VECTOR* t_defs, uint8_t* p_flags
+) {
+   int16_t x = 0,
+      y = 0,
+      x_tile = 0,
+      y_tile = 0;
+   retroflat_tile_t tile_id = 0;
+   struct RETROTILE_LAYER* layer = NULL;
+   struct RETROTILE_TILE_DEF* t_def = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   layer = retrotile_get_layer_p( t, 0 );
+
+   mdata_vector_lock( t_defs );
+   /* TODO: Rework this so it uses viewport tile indexes and then calculates
+    *       screen pixel X/Y from those? For performance?
+    */
+   for(
+      y = ((retroflat_viewport_world_y() >> 4) << 4) ;
+      y < (int)retroflat_viewport_world_y() + (int)retroflat_viewport_screen_h()
+      ; y += RETROFLAT_TILE_H
+   ) {
+      for(
+         x = ((retroflat_viewport_world_x() >> 4) << 4) ;
+         (int)retroflat_viewport_world_x() +
+            (int)retroflat_viewport_screen_w() > x ;
+         x += RETROFLAT_TILE_W
+      ) {
+         /* Limit to tiles that exist in the world. */
+         if(
+            -1 > x || -1 > y ||
+            (int)retroflat_viewport_world_w() <= x ||
+            (int)retroflat_viewport_world_h() <= y
+         ) {
+            continue;
+         }
+
+         /* Divide by tile width (16), or shift by 2^4. */
+         x_tile = x >> RETROFLAT_TILE_W_BITS;
+         y_tile = y >> RETROFLAT_TILE_H_BITS;
+
+         tile_id = retrotile_get_tile( t, layer, x_tile, y_tile );
+         t_def = mdata_vector_get(
+            t_defs, tile_id - t->tileset_fgid, struct RETROTILE_TILE_DEF );
+         assert( NULL != t_def );
+
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+         /* Check tile refresh buffer. */
+         retroflat_viewport_lock_refresh();
+         if( !retroflat_viewport_tile_is_stale(
+               x >> RETROFLAT_TILE_W_BITS, y >> RETROFLAT_TILE_H_BITS, tile_id
+         ) ) {
+            retroflat_viewport_unlock_refresh();
+            continue;
+         }
+         retroflat_viewport_unlock_refresh();
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
+#ifdef RETROGXC_PRESENT
+         retrogxc_blit_bitmap( target, t_def->image_cache_id,
+            t_def->x, t_def->y,
+            retroflat_viewport_screen_x( x ),
+            retroflat_viewport_screen_y( y ),
+            RETROFLAT_TILE_W, RETROFLAT_TILE_H,
+            retroflat_instance_tile( tile_id ) );
+#else
+         retroflat_blit_bitmap( target, &(t_def->image),
+            t_def->x, t_def->y,
+            retroflat_viewport_screen_x( x ),
+            retroflat_viewport_screen_y( y ),
+            RETROFLAT_TILE_W, RETROFLAT_TILE_H,
+            retroflat_instance_tile( tile_id ) );
+#endif /* RETROGXC_PRESENT */
+      }
+   }
+
+cleanup:
+
+   mdata_vector_unlock( t_defs );
 
    return retval;
 }
