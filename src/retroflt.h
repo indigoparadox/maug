@@ -1431,7 +1431,11 @@ uint8_t retroflat_viewport_focus_generic(
 
 /**
  * \relates RETROFLAT_VIEWPORT
- * \brief Set the tile at the given pixel coordinates to the given tile ID.
+ * \brief Set the tile at the given *screen* pixel coordinates to the given
+ *        tile ID.
+ *
+ * If these coordinates are from the world, they should subtract
+ * retroflat_viewport_screen_x()/retroflat_viewport_screen_y() first!
  *
  * When the viewport is redrawn, e.g. with retrotile_topdown_draw(), it will
  * not redraw this tile if the tile ID is still the same.

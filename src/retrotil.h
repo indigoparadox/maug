@@ -1868,7 +1868,10 @@ MERROR_RETVAL retrotile_topdown_draw(
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
          /* Check tile refresh buffer. */
          retroflat_viewport_lock_refresh();
-         if( !retroflat_viewport_tile_is_stale( x, y, tile_id ) ) {
+         if( !retroflat_viewport_tile_is_stale(
+            x - retroflat_viewport_world_x(),
+            y - retroflat_viewport_world_y(), tile_id
+         ) ) {
             retroflat_viewport_unlock_refresh();
             continue;
          }
