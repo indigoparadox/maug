@@ -649,6 +649,11 @@ MERROR_RETVAL mdata_vector_alloc(
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
+      /* Zero out the new space. */
+      mdata_vector_lock( v );
+      maug_mzero( v->data_bytes, v->ct_max * item_sz );
+      mdata_vector_unlock( v );
+
    } else if( v->ct_max <= v->ct + 1 || v->ct_max <= item_ct_init ) {
       assert( item_sz == v->item_sz );
       
