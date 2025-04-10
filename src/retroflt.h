@@ -1429,6 +1429,13 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_unlock_refresh() \
    retroflat_viewport_unlock_refresh_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the tile at the given pixel coordinates to the given tile ID.
+ *
+ * When the viewport is redrawn, e.g. with retrotile_topdown_draw(), it will
+ * not redraw this tile if the tile ID is still the same.
+ */
 #  define retroflat_viewport_set_refresh( x, y, tid ) \
    retroflat_viewport_set_refresh_generic( x, y, tid )
 
