@@ -19,10 +19,10 @@
 #  define RETROTILE_NAME_SZ_MAX 10
 #endif /* !RETROTILE_NAME_SZ_MAX */
 
-#ifndef RETROTILE_TILESET_IMAGE_STR_SZ_MAX
-/*! \brief Maximum number of chars in a RETROTILE_TILE_DEF::image_path. */
-#  define RETROTILE_TILESET_IMAGE_STR_SZ_MAX 48
-#endif /* !RETROTILE_TILESET_IMAGE_STR_SZ_MAX */
+#ifndef RETROTILE_PROP_NAME_SZ_MAX
+/*! \brief Maximum number of chars in a parsed property name. */
+#  define RETROTILE_PROP_NAME_SZ_MAX 10
+#endif /* !RETROTILE_PROP_NAME_SZ_MAX */
 
 #ifndef RETROTILE_TILE_SCALE_DEFAULT
 /*! \brief Default value for RETROTILE::tile_scale. */
@@ -117,7 +117,7 @@
 
 struct RETROTILE_TILE_DEF {
    uint8_t flags;
-   char image_path[RETROTILE_TILESET_IMAGE_STR_SZ_MAX];
+   retroflat_asset_path image_path;
    size_t x;
    size_t y;
 #ifdef RETROGXC_PRESENT
@@ -150,6 +150,7 @@ struct RETROTILE_COORDS {
  * \warning Only tile layers are supported!
  */
 struct RETROTILE {
+   char name[RETROTILE_NAME_SZ_MAX];
    /*! \brief Size of the tilemap in bytes (including this struct header). */
    uint32_t sz;
    /*! \brief Number of tile layers in this tilemap. */
@@ -230,6 +231,10 @@ struct RETROTILE_PARSER {
    void* wait_data;
    retroflat_ms_t wait_last;
    size_t layer_tile_iter;
+   /*! \brief The name of the last property key/value pair parsed. */
+   char last_prop_name[RETROTILE_PROP_NAME_SZ_MAX + 1];
+   /*! \brief The name to give to the new tilemap. */
+   char tilemap_name[RETROTILE_NAME_SZ_MAX + 1];
    size_t pass_layer_iter;
    /**
     * \brief Highest tileset ID on first pass and next ID to be assigned
@@ -253,23 +258,26 @@ struct RETROTILE_PARSER {
 
 #define RETROTILE_PARSER_MSTATE_TABLE( f ) \
    f( MTILESTATE_NONE,              0, "", 0, 0 ) \
-   f( MTILESTATE_HEIGHT,            1, "height",   0              , 0 ) \
-   f( MTILESTATE_WIDTH,             2, "width",    0              , 0 ) \
-   f( MTILESTATE_LAYERS,            3, "layers",   0              , 0 ) \
-   f( MTILESTATE_LAYER_DATA,        4, "data",     15 /* LAYER */, 0 ) \
-   f( MTILESTATE_LAYER_NAME,        5, "name",     15 /* LAYER */, 0 ) \
-   f( MTILESTATE_TILES,             6, "tiles",    0              , 1 ) \
-   f( MTILESTATE_TILES_ID,          7, "id",       6 /* TILES */  , 1 ) \
-   f( MTILESTATE_TILES_IMAGE,       8, "image",    6 /* TILES */  , 1 ) \
-   f( MTILESTATE_TILESETS,          9, "tilesets", 0              , 0 ) \
-   f( MTILESTATE_TILESETS_SRC,      10, "source",  9 /* TILESETS */, 0 ) \
-   f( MTILESTATE_TILESETS_FGID,     11, "firstgid",9 /* TILESETS */, 0 ) \
-   f( MTILESTATE_TILESETS_PROP,     12, "firstgid",9 /* TILESETS */, 0 ) \
-   f( MTILESTATE_GRID,              13, "grid",    0               , 1 ) \
-   f( MTILESTATE_TILES_PROP,        14, "properties",6 /* TILES */ , 1 ) \
-   f( MTILESTATE_LAYER,             15, "layers", /* [sic] */ 3    , 0 ) \
-   f( MTILESTATE_TILES_PROP_NAME,   16, "name",    14 /* TILES_PROP */ , 1 ) \
-   f( MTILESTATE_TILES_PROP_VAL,    17, "value",   14 /* TILES_PROP */ , 1 )
+   f( MTILESTATE_HEIGHT,            1, "height",      0                 , 0 ) \
+   f( MTILESTATE_WIDTH,             2, "width",       0                 , 0 ) \
+   f( MTILESTATE_LAYERS,            3, "layers",      0                 , 0 ) \
+   f( MTILESTATE_LAYER_DATA,        4, "data",        15 /* LAYER */    , 0 ) \
+   f( MTILESTATE_LAYER_NAME,        5, "name",        15 /* LAYER */    , 0 ) \
+   f( MTILESTATE_TILES,             6, "tiles",       0                 , 1 ) \
+   f( MTILESTATE_TILES_ID,          7, "id",          6 /* TILES */     , 1 ) \
+   f( MTILESTATE_TILES_IMAGE,       8, "image",       6 /* TILES */     , 1 ) \
+   f( MTILESTATE_TILESETS,          9, "tilesets",    0                 , 0 ) \
+   f( MTILESTATE_TILESETS_SRC,      10, "source",     9 /* TILESETS */  , 0 ) \
+   f( MTILESTATE_TILESETS_FGID,     11, "firstgid",   9 /* TILESETS */  , 0 ) \
+   f( MTILESTATE_TILESETS_PROP,     12, "firstgid",   9 /* TILESETS */  , 0 ) \
+   f( MTILESTATE_GRID,              13, "grid",       0                 , 1 ) \
+   f( MTILESTATE_TILES_PROP,        14, "properties", 6 /* TILES */     , 1 ) \
+   f( MTILESTATE_LAYER,             15, "layers", /* [sic] */ 3         , 0 ) \
+   f( MTILESTATE_TILES_PROP_NAME,   16, "name",       14 /* TIL_PROP */ , 1 ) \
+   f( MTILESTATE_TILES_PROP_VAL,    17, "value",      14 /* TIL_PROP */ , 1 ) \
+   f( MTILESTATE_PROP,              18, "properties", 0 /* NONE */      , 0 ) \
+   f( MTILESTATE_PROP_NAME,         19, "name",       18 /* PROP */     , 0 ) \
+   f( MTILESTATE_PROP_VAL,          20, "value",      18 /* PROP */     , 0 )
 
 MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
@@ -293,6 +301,7 @@ retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
  *                 tilemap JSON. Should return MERROR_PREEMPT if parsing is
  *                 successful and should override standard parsing.
  * \return MERROR_OK if successful or other MERROR_RETVAL otherwise.
+ * \note This function ignores RETROFLAT_STATE::assets_path.
  */
 MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
@@ -374,13 +383,14 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
    struct RETROTILE* tilemap, uint32_t layer_idx );
 
 MERROR_RETVAL retrotile_alloc(
-   MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count );
+   MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
+   const char* tilemap_name );
 
 MERROR_RETVAL retrotile_clear_refresh( int16_t y_max );
 
 MERROR_RETVAL retrotile_topdown_draw(
    struct RETROFLAT_BITMAP* target,
-   struct RETROTILE* t, struct MDATA_VECTOR* t_defs, uint8_t* p_flags );
+   struct RETROTILE* t, struct MDATA_VECTOR* t_defs );
 
 #ifdef RETROTIL_C
 
@@ -462,6 +472,7 @@ static void retrotile_parser_match_token(
           */
          parser->mstate != gc_retrotile_mstate_parents[j]
       ) {
+#ifdef RETROTILE_TRACE_TOKENS
          debug_printf(
             RETROTILE_TRACE_LVL,
             "found token \"%s\" "
@@ -481,19 +492,23 @@ static void retrotile_parser_match_token(
             gc_retrotile_mstate_parents[j]
 #endif /* MPARSER_TRACE_NAMES */
          );
+#endif /* !RETROTILE_TRACE_TOKENS */
          j++;
          continue;
 
       } else if( parser->mode != gc_retrotile_mstate_modes[j] ) {
+#ifdef RETROTILE_TRACE_TOKENS
          debug_printf(
             RETROTILE_TRACE_LVL, "found token %s but incorrect mode %u!",
             token,
             gc_retrotile_mstate_modes[j] );
+#endif /* !RETROTILE_TRACE_TOKENS */
          j++;
          continue;
 
       } else {
          /* Found it! */
+#ifdef RETROTILE_TRACE_TOKENS
          debug_printf(
             RETROTILE_TRACE_LVL,
             "found token \"%s\" "
@@ -510,6 +525,7 @@ static void retrotile_parser_match_token(
             parser->mstate
 #endif /* MPARSER_TRACE_NAMES */
          );
+#endif /* !RETROTILE_TRACE_TOKENS */
 
          retrotile_parser_mstate( parser, j );
          return;
@@ -579,8 +595,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             parser->tileset_id_cur );
 
          /* Parse tile image. */
-         maug_strncpy(
-            tile_def->image_path, token, RETROTILE_TILESET_IMAGE_STR_SZ_MAX );
+         maug_strncpy( tile_def->image_path, token, RETROFLAT_ASSETS_PATH_MAX );
 
          debug_printf(
             RETROTILE_TRACE_LVL, "set tile ID " SIZE_T_FMT " to: %s",
@@ -589,11 +604,13 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
       retrotile_parser_mstate( parser, MTILESTATE_TILES );
 
    } else if( MTILESTATE_TILES_PROP_NAME == parser->mstate ) {
-
-      /* This should be handled in the custom token parser callback. */
+      debug_printf( RETROTILE_TRACE_LVL, "parsing property: %s", token );
+      maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
+      maug_strncpy( parser->last_prop_name, token, RETROTILE_PROP_NAME_SZ_MAX );
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
 
    } else if( MTILESTATE_TILES_PROP_VAL == parser->mstate ) {
+      /* This should be handled in the custom token parser callback. */
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
    }
 
@@ -609,6 +626,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL retrotile_parser_parse_token(
    const char* token, size_t token_sz, void* parser_arg
 ) {
@@ -618,19 +637,30 @@ MERROR_RETVAL retrotile_parser_parse_token(
    retroflat_tile_t* tiles = NULL;
 
    if( MJSON_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
+      /* We're parsing a list. What lists do we care about? */
+
+      /* Please note that this is for new tokens encountered inside of a list.
+       * For dealing with the closing of a list, see
+       * retrotile_json_close_list()!
+       */
+
       if(
          1 == parser->pass &&
          MTILESTATE_LAYER_DATA == parser->mstate
       ) {
+         /* This is a list of layer data... AKA tiles! */
+
          /*
          assert( NULL != *(parser->p_tilemap_h) );
          maug_mlock( *(parser->p_tilemap_h), tilemap );
          maug_cleanup_if_null_alloc( struct RETROTILE*, tilemap );
          */
 
+         /*
          debug_printf( RETROTILE_TRACE_LVL,
             "selecting layer " SIZE_T_FMT "...",
             parser->pass_layer_iter );
+         */
          assert( NULL != parser->t );
          tiles_layer = retrotile_get_layer_p(
             parser->t, parser->pass_layer_iter );
@@ -639,10 +669,12 @@ MERROR_RETVAL retrotile_parser_parse_token(
          tiles = retrotile_get_tiles_p( tiles_layer );
 
          /* Parse tilemap tile. */
+         /*
          debug_printf( RETROTILE_TRACE_LVL,
             "layer " SIZE_T_FMT " tile: " SIZE_T_FMT " (tiles: %p)", 
             parser->pass_layer_iter, parser->layer_tile_iter,
             tiles );
+         */
          assert( NULL != token );
          assert( NULL != parser );
          assert( NULL != tiles );
@@ -663,6 +695,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
          assert( 0 == tiles[parser->layer_tile_iter] );
 
          tiles[parser->layer_tile_iter] = atoi( token );
+
       }
       parser->layer_tile_iter++;
       goto cleanup;
@@ -671,6 +704,15 @@ MERROR_RETVAL retrotile_parser_parse_token(
       MJSON_PSTATE_OBJECT_VAL == 
          mjson_parser_pstate( &(parser->jparser) )
    ) {
+
+      /* Pay attention to the retrotile_parser_mstate() calls here. We don't
+       * have a stack of states, and we really only track a few we're
+       * interested in. Even if we don't process their data here, we still
+       * use retrotile_parser_mstate() to move the parser mstate back up
+       * to the parent mstate when we're done with it. This kind of "fakes" a
+       * stack (in a well-formed file, of course).
+       */
+
       if( MTILESTATE_TILESETS_FGID == parser->mstate ) {
          if( 1 == parser->pass ) {
             parser->t->tileset_fgid = maug_atou32( token, token_sz, 10 );
@@ -711,6 +753,23 @@ MERROR_RETVAL retrotile_parser_parse_token(
          /* TODO: Store */
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
          
+      } else if( MTILESTATE_PROP_NAME == parser->mstate ) {
+         debug_printf( RETROTILE_TRACE_LVL, "parsing property: %s", token );
+         maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
+         maug_strncpy(
+            parser->last_prop_name, token, RETROTILE_PROP_NAME_SZ_MAX );
+         retrotile_parser_mstate( parser, MTILESTATE_PROP );
+
+      } else if( MTILESTATE_PROP_VAL == parser->mstate ) {
+         /* We're dealing with properties of the tilemap. */
+         if( 0 == strncmp(
+            "name", parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX
+         ) ) {
+            debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
+            maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
+         }
+
+         retrotile_parser_mstate( parser, MTILESTATE_PROP );
       }
       goto cleanup;
    }
@@ -729,7 +788,9 @@ MERROR_RETVAL retrotile_json_close_list( void* parg ) {
 
    if( MTILESTATE_LAYER_DATA == parser->mstate ) {
       assert( RETROTILE_PARSER_MODE_MAP == parser->mode );
-      assert( parser->layer_tile_iter == 1600 );
+      debug_printf( RETROTILE_TRACE_LVL, "parsed " SIZE_T_FMT " tiles!",
+         parser->layer_tile_iter );
+      assert( parser->layer_tile_iter > 0 );
       retrotile_parser_mstate( parser, MTILESTATE_LAYER );
 
    } else if( MTILESTATE_LAYERS == parser->mstate ) {
@@ -743,6 +804,9 @@ MERROR_RETVAL retrotile_json_close_list( void* parg ) {
    } else if( MTILESTATE_TILES_PROP == parser->mstate ) {
       assert( RETROTILE_PARSER_MODE_DEFS == parser->mode );
       retrotile_parser_mstate( parser, MTILESTATE_TILES );
+
+   } else if( MTILESTATE_PROP == parser->mstate ) {
+      retrotile_parser_mstate( parser, MTILESTATE_NONE );
    }
 
    return MERROR_OK;
@@ -895,7 +959,7 @@ MERROR_RETVAL retrotile_parse_json_file(
             /* Allocate tiles for the new layers. */
             retval = retrotile_alloc(
                p_tilemap_h, parser->tiles_w, parser->tiles_h,
-               parser->pass_layer_iter );
+               parser->pass_layer_iter, parser->tilemap_name );
             maug_cleanup_if_not_ok();
             maug_mlock( *p_tilemap_h, parser->t );
          }
@@ -1678,7 +1742,8 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
 /* === */
 
 MERROR_RETVAL retrotile_alloc(
-   MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count
+   MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
+   const char* tilemap_name
 ) {
    struct RETROTILE_LAYER* layer_iter = NULL;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1706,6 +1771,8 @@ MERROR_RETVAL retrotile_alloc(
    tilemap->tiles_w = w;
    tilemap->tiles_h = h;
    tilemap->tile_scale = RETROTILE_TILE_SCALE_DEFAULT;
+
+   maug_strncpy( tilemap->name, tilemap_name, RETROTILE_NAME_SZ_MAX );
 
    for( i = 0 ; layers_count > i ; i++ ) {
       layer_iter = retrotile_get_layer_p( tilemap, i );
@@ -1752,7 +1819,7 @@ cleanup:
 
 MERROR_RETVAL retrotile_topdown_draw(
    struct RETROFLAT_BITMAP* target,
-   struct RETROTILE* t, struct MDATA_VECTOR* t_defs, uint8_t* p_flags
+   struct RETROTILE* t, struct MDATA_VECTOR* t_defs
 ) {
    int16_t x = 0,
       y = 0,

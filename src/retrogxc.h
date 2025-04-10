@@ -360,6 +360,8 @@ MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
    struct RETROFLAT_BITMAP* bitmap = NULL;
 
+   assert( NULL != gs_retrogxc_bitmaps.data_h );
+
    mdata_vector_lock( &gs_retrogxc_bitmaps );
 
    if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= bitmap_idx ) {
