@@ -120,12 +120,9 @@ LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
 SDL_VER_UNIX := 2
 endif
 
-ifeq ("$$(CFLAGS_GCC_UNIX_SDL)","")
-	CFLAGS_GCC_UNIX_SDL := -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
-endif
-
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/sdl
+CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
 # = Make Icons =
 
