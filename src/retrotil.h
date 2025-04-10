@@ -1874,6 +1874,7 @@ MERROR_RETVAL retrotile_topdown_draw(
             retroflat_viewport_unlock_refresh();
             continue;
          }
+         retroflat_viewport_set_refresh( x, y, tile_id );
          retroflat_viewport_unlock_refresh();
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
