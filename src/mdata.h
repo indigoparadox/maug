@@ -97,6 +97,18 @@ struct MDATA_VECTOR {
 /*! \} */ /* mdata_vector */
 
 /**
+ * \addtogroup mdata_table Data Memory Tables
+ * \{
+ */
+
+struct MDATA_TABLE {
+   struct MDATA_VECTOR data_cols[2];
+   size_t key_sz;
+};
+
+/*! \} */
+
+/**
  * \addtogroup mdata_strpool
  * \{
  */
@@ -164,6 +176,20 @@ MERROR_RETVAL mdata_vector_alloc(
 void mdata_vector_free( struct MDATA_VECTOR* v );
 
 /*! \} */ /* mdata_vector */
+
+/**
+ * \addtogroup mdata_table
+ * \{
+ */
+
+MERROR_RETVAL mdata_table_set(
+   struct MDATA_TABLE* t, const char* key, size_t key_sz,
+   void* value, size_t value_sz );
+
+MERROR_RETVAL mdata_table_get_void(
+   struct MDATA_TABLE* t, const char* key, void** value_out, size_t value_sz );
+
+/*! \} */
 
 /**
  * \addtogroup mdata_strpool
@@ -692,6 +718,73 @@ void mdata_vector_free( struct MDATA_VECTOR* v ) {
    if( (MAUG_MHANDLE)NULL != v->data_h ) {
       maug_mfree( v->data_h );
    }
+}
+
+/* === */
+
+MERROR_RETVAL mdata_table_set(
+   struct MDATA_TABLE* t, const char* key, size_t key_sz,
+   void* value, size_t value_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t idx_key = -1;
+   ssize_t idx_val = -1;
+
+   /* TODO: This has all kinds of issues, obviously. At some point, turn it
+    *       into a proper hashtable that can operate in tiny conditions!
+    */
+   
+   assert(
+      mdata_vector_ct( &(t->data_cols[0]) ) ==
+      mdata_vector_ct( &(t->data_cols[1]) ) );
+
+   idx_key = mdata_vector_append( &(t->data_cols[0]), key, key_sz + 1 );
+   assert( 0 <= idx_key );
+
+   /* TODO: Atomicity: remove key if value fails! */
+
+   idx_val = mdata_vector_append( &(t->data_cols[1]), value, value_sz );
+   assert( 0 <= idx_val );
+
+/* cleanup: */
+
+   /* TODO: Set retval! */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mdata_table_get_void(
+   struct MDATA_TABLE* t, const char* key, void** value_out, size_t value_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* c = NULL;
+   size_t i = 0;
+
+   assert( NULL == *value_out );
+
+   mdata_vector_lock( &(t->data_cols[0]) );
+   mdata_vector_lock( &(t->data_cols[1]) );
+   for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
+      /* TODO: Maybe strpool would be better for this? */
+      c = mdata_vector_get( &(t->data_cols[0]), i, char );
+      assert( NULL != c );
+      if( 0 == strncmp( key, c, t->data_cols[0].item_sz - 1 ) ) {
+         *value_out = mdata_vector_get_void( &(t->data_cols[1]), i );
+         goto cleanup;
+      }
+   }
+
+   /* Not found! */
+   retval = MERROR_OVERFLOW;
+
+cleanup:
+   
+   mdata_vector_unlock( &(t->data_cols[0]) );
+   mdata_vector_unlock( &(t->data_cols[1]) );
+
+   return retval;
 }
 
 #endif /* MDATA_C */
