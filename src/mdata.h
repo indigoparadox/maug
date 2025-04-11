@@ -136,6 +136,9 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
 /**
  * \relates MDATA_VECTOR
  * \brief Append an item to the specified vector.
+ * \param v The vector to append to.
+ * \param item The address of an item to copy to the newly-created vector
+ *             slow, or NULL to not copy anything.
  * \param item_sz Size (in bytes) of the item to append. If the item is sized
  *                differently from the first item appended, MERROR_OVERFLOW
  *                will be returned and the item will not be appended.
@@ -517,19 +520,18 @@ ssize_t mdata_vector_append(
    /* Lock the vector to work in it a bit. */
    mdata_vector_lock( v );
 
-   if( NULL != item ) {
-      idx_out = v->ct;
+   idx_out = v->ct;
 
+   if( NULL != item ) {
+      /* Copy provided item. */
       debug_printf(
          MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
          idx_out );
 
       memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
-
-      v->ct++;
-   } else {
-      idx_out = 0;
    }
+
+   v->ct++;
 
 cleanup:
 

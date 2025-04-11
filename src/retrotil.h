@@ -132,6 +132,7 @@ struct RETROTILE_TILE_DEF {
 
 struct RETROTILE_LAYER {
    size_t sz;
+   uint16_t layer_class;
 };
 
 /**
@@ -220,7 +221,7 @@ struct RETROTILE_DATA_BORDER {
 typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tm_h,
    struct MDATA_VECTOR* p_td, mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb );
+   mparser_parse_token_cb token_cb, void* token_cb_data );
 
 struct RETROTILE_PARSER {
    uint8_t mstate;
@@ -252,6 +253,7 @@ struct RETROTILE_PARSER {
     *        should override standard parsing.
     */
    mparser_parse_token_cb custom_token_cb;
+   void* custom_token_cb_data;
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
    char dirname[RETROFLAT_PATH_MAX + 1];
@@ -310,7 +312,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs,
    mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb );
+   mparser_parse_token_cb token_cb, void* token_cb_data );
 
 /*! \} */ /* retrotile_parser */
 
@@ -669,6 +671,9 @@ MERROR_RETVAL retrotile_parser_parse_token(
             parser->t, parser->pass_layer_iter );
          assert( NULL != tiles_layer );
 
+         /* Apply the class parsed previously. */
+         tiles_layer->layer_class = parser->layer_class;
+
          tiles = retrotile_get_tiles_p( tiles_layer );
 
          /* Parse tilemap tile. */
@@ -731,7 +736,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
             debug_printf( RETROTILE_TRACE_LVL, "parsing %s...", token );
             parser->tj_parse_cb(
                parser->dirname, token, NULL, parser->p_tile_defs,
-               parser->wait_cb, parser->wait_data, parser->custom_token_cb );
+               parser->wait_cb, parser->wait_data,
+               parser->custom_token_cb, parser->custom_token_cb_data );
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
 
@@ -758,18 +764,16 @@ MERROR_RETVAL retrotile_parser_parse_token(
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
 
       } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
-         if( 0 == parser->pass ) {
-            if( 0 == strncmp( "mobiles", token, token_sz ) ) {
-               debug_printf( RETROTILE_TRACE_LVL,
-                  "layer " SIZE_T_FMT " type: mobiles",
-                  parser->pass_layer_iter );
-               parser->layer_class = RETROTILE_LAYER_MOBILES;
-            } else {
-               debug_printf( RETROTILE_TRACE_LVL,
-                  "layer " SIZE_T_FMT " type: tiles",
-                  parser->pass_layer_iter );
-               parser->layer_class = RETROTILE_LAYER_TILES;
-            }
+         if( 0 == strncmp( "mobiles", token, token_sz ) ) {
+            debug_printf( RETROTILE_TRACE_LVL,
+               "layer " SIZE_T_FMT " type: mobiles",
+               parser->pass_layer_iter );
+            parser->layer_class = RETROTILE_LAYER_MOBILES;
+         } else {
+            debug_printf( RETROTILE_TRACE_LVL,
+               "layer " SIZE_T_FMT " type: tiles",
+               parser->pass_layer_iter );
+            parser->layer_class = RETROTILE_LAYER_TILES;
          }
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
          
@@ -874,7 +878,7 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb
+   mparser_parse_token_cb token_cb, void* token_cb_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
@@ -894,6 +898,7 @@ MERROR_RETVAL retrotile_parse_json_file(
 
    parser->tj_parse_cb = retrotile_parse_json_file;
    parser->custom_token_cb = token_cb;
+   parser->custom_token_cb_data = token_cb_data;
 
    maug_strncpy( parser->dirname, dirname, RETROFLAT_PATH_MAX );
 
