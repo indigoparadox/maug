@@ -324,7 +324,7 @@ just_load_asset:
    asset_type = l( res_p, &asset_new.handle, data, flags );
    if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
       asset_new.type = asset_type;
-      maug_strncpy( asset_new.id, res_p, RETROFLAT_ASSETS_PATH_MAX );
+      retroflat_asset_path( asset_new.id, res_p );
       idx = mdata_vector_append(
          &gs_retrogxc_bitmaps, &asset_new,
          sizeof( struct RETROFLAT_CACHE_ASSET ) );

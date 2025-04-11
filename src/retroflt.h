@@ -790,6 +790,9 @@ typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
  */
 #define retroflat_cmp_asset_path( a, b ) strncmp( a, b, RETROFLAT_PATH_MAX )
 
+#define retroflat_assign_asset_path( tgt, src ) \
+   maug_strncpy( tgt, src, RETROFLAT_PATH_MAX )
+
 /*! \} */ /* maug_retroflt_assets */
 
 /**

@@ -601,7 +601,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          assert( NULL != tile_def );
 
          /* Parse tile image. */
-         maug_strncpy( tile_def->image_path, token, RETROFLAT_ASSETS_PATH_MAX );
+         retroflat_assign_asset_path( tile_def->image_path, token );
 
          debug_printf(
             RETROTILE_TRACE_LVL, "set tile ID " SIZE_T_FMT " to: %s",
@@ -821,7 +821,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
             "name", parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX
          ) ) {
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
-            maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
+            retroflat_assign_asset_path( parser->tilemap_name, token );
          }
 
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
