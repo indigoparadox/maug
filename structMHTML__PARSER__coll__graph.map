@@ -1,0 +1,7 @@
+<map id="MHTML_PARSER" name="MHTML_PARSER">
+<area shape="rect" id="Node000001" title=" " alt="" coords="87,94,216,120"/>
+<area shape="rect" id="Node000002" href="$structMDATA__STRPOOL.html" title="A pool of immutable text strings. Deduplicates strings to save memory." alt="" coords="5,5,143,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="97,41,143,92,139,95,93,45"/>
+<area shape="rect" id="Node000003" href="$structMDATA__VECTOR.html" title="A vector of uniformly&#45;sized objects, stored contiguously." alt="" coords="166,5,294,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,44,164,95,160,92,207,41"/>
+</map>
