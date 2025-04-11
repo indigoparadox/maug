@@ -5,8 +5,6 @@
 #include <mjson.h>
 #include <mfile.h>
 
-/* TODO: Use a vector for tile_defs. */
-
 /**
  * \addtogroup retrotile RetroTile API
  * \brief Functions and structures for working with tilemaps/grids.
@@ -61,6 +59,9 @@
  *        parsing tile definitions.
  */
 #define RETROTILE_PARSER_MODE_DEFS   1
+
+#define RETROTILE_LAYER_TILES    0
+#define RETROTILE_LAYER_MOBILES  0
 
 /**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
@@ -254,6 +255,7 @@ struct RETROTILE_PARSER {
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
    char dirname[RETROFLAT_PATH_MAX + 1];
+   uint16_t layer_class;
 };
 
 #define RETROTILE_PARSER_MSTATE_TABLE( f ) \
@@ -277,7 +279,8 @@ struct RETROTILE_PARSER {
    f( MTILESTATE_TILES_PROP_VAL,    17, "value",      14 /* TIL_PROP */ , 1 ) \
    f( MTILESTATE_PROP,              18, "properties", 0 /* NONE */      , 0 ) \
    f( MTILESTATE_PROP_NAME,         19, "name",       18 /* PROP */     , 0 ) \
-   f( MTILESTATE_PROP_VAL,          20, "value",      18 /* PROP */     , 0 )
+   f( MTILESTATE_PROP_VAL,          20, "value",      18 /* PROP */     , 0 ) \
+   f( MTILESTATE_LAYER_CLASS,       21, "class",      15 /* LAYER */    , 0 )
 
 MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
@@ -683,6 +686,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
             parser->layer_tile_iter >=
                parser->t->tiles_w * parser->t->tiles_h
          ) {
+            /* Tile is outside of layer! */
             error_printf(
                "tile " SIZE_T_FMT " outside of layer tile buffer size "
                   SIZE_T_FMT "!",
@@ -751,6 +755,22 @@ MERROR_RETVAL retrotile_parser_parse_token(
 
       } else if( MTILESTATE_LAYER_NAME == parser->mstate ) {
          /* TODO: Store */
+         retrotile_parser_mstate( parser, MTILESTATE_LAYER );
+
+      } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
+         if( 0 == parser->pass ) {
+            if( 0 == strncmp( "mobiles", token, token_sz ) ) {
+               debug_printf( RETROTILE_TRACE_LVL,
+                  "layer " SIZE_T_FMT " type: mobiles",
+                  parser->pass_layer_iter );
+               parser->layer_class = RETROTILE_LAYER_MOBILES;
+            } else {
+               debug_printf( RETROTILE_TRACE_LVL,
+                  "layer " SIZE_T_FMT " type: tiles",
+                  parser->pass_layer_iter );
+               parser->layer_class = RETROTILE_LAYER_TILES;
+            }
+         }
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
          
       } else if( MTILESTATE_PROP_NAME == parser->mstate ) {
