@@ -597,7 +597,7 @@ void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
       "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       idx, v->ct );
 
-   assert( NULL != v->data_bytes );
+   assert( 0 == v->ct || NULL != v->data_bytes );
 
    if( idx >= v->ct ) {
       return NULL;
