@@ -222,12 +222,13 @@ struct RETROTILE_DATA_BORDER {
 typedef MERROR_RETVAL (*retrotile_tj_parse_cb)(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tm_h,
    struct MDATA_VECTOR* p_td, mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb, void* token_cb_data );
+   mparser_parse_token_cb token_cb, void* token_cb_data, uint8_t passes );
 
 struct RETROTILE_PARSER {
    uint8_t mstate;
    /* TODO: Use flags and combine these. */
    uint8_t pass;
+   uint8_t passes_max;
    /*! \brief Value indicating the current type of object being parsed into. */
    uint8_t mode;
    mparser_wait_cb_t wait_cb;
@@ -309,6 +310,9 @@ retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
  * \param token_cb Callback to parse engine-specific custom tokens from the
  *                 tilemap JSON. Should return MERROR_PREEMPT if parsing is
  *                 successful and should override standard parsing.
+ * \param passes Number of passes to make on parsed tilemap. This can be
+ *               combined with token_cb for more advanced operations. The
+ *               minimum is 2.
  * \return MERROR_OK if successful or other MERROR_RETVAL otherwise.
  * \note This function ignores RETROFLAT_STATE::assets_path.
  */
@@ -316,7 +320,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs,
    mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb, void* token_cb_data );
+   mparser_parse_token_cb token_cb, void* token_cb_data, uint8_t passes );
 
 /*! \} */ /* retrotile_parser */
 
@@ -778,7 +782,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
             parser->tj_parse_cb(
                parser->dirname, token, NULL, parser->p_tile_defs,
                parser->wait_cb, parser->wait_data,
-               parser->custom_token_cb, parser->custom_token_cb_data );
+               parser->custom_token_cb, parser->custom_token_cb_data,
+               parser->passes_max );
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
 
@@ -925,7 +930,7 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 MERROR_RETVAL retrotile_parse_json_file(
    const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data,
-   mparser_parse_token_cb token_cb, void* token_cb_data
+   mparser_parse_token_cb token_cb, void* token_cb_data, uint8_t passes
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
@@ -949,6 +954,14 @@ MERROR_RETVAL retrotile_parse_json_file(
 
    maug_strncpy( parser->dirname, dirname, RETROFLAT_PATH_MAX );
 
+   if( 2 > passes ) {
+      debug_printf( RETROTILE_TRACE_LVL,
+         "increasing parse passes to minimum, 2!" );
+      passes = 2;
+   }
+
+   parser->passes_max = passes;
+
    /* Setup filename path. */
    memset( filename_path, '\0', RETROFLAT_PATH_MAX );
    /* TODO: Configurable path. */
@@ -961,7 +974,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    maug_cleanup_if_not_ok();
 
    /* Parse JSON and react to state. */
-   for( parser->pass = 0 ; 3 > parser->pass ; parser->pass++ ) {
+   for( parser->pass = 0 ; passes > parser->pass ; parser->pass++ ) {
       debug_printf( RETROTILE_TRACE_LVL, "beginning pass #%u...",
          parser->pass );
 
