@@ -136,15 +136,17 @@ struct RETROTILE_LAYER {
    uint16_t layer_class;
 };
 
+typedef int16_t retrotile_coord_t;
+
 /**
  * \brief This is not currently used for anything, but is provided as a
  *        a convenience for game logic.
  */
 struct RETROTILE_COORDS {
    /* \brief X position in tilemap tiles. */
-   uint16_t x;
+   retrotile_coord_t x;
    /* \brief Y position in tilemap tiles. */
-   uint16_t y;
+   retrotile_coord_t y;
 };
 
 /**
