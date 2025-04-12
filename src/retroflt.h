@@ -877,11 +877,17 @@ struct RETROFLAT_INPUT {
  * \{
  */
 
+typedef int8_t retroflat_dir4_t;
+
+typedef int8_t retroflat_dir8_t;
+
+#define RETROFLAT_DIR4_NONE  (-1)
 #define RETROFLAT_DIR4_NORTH  0
 #define RETROFLAT_DIR4_EAST   1
 #define RETROFLAT_DIR4_SOUTH  2
 #define RETROFLAT_DIR4_WEST   3
 
+#define RETROFLAT_DIR8_NONE   (-1)
 #define RETROFLAT_DIR8_NORTH  0
 #define RETROFLAT_DIR8_EAST   2
 #define RETROFLAT_DIR8_SOUTH  4
