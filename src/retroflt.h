@@ -1168,6 +1168,8 @@ struct RETROFLAT_VIEWPORT {
     *        calculated through retroflat_viewport_set_pos_size().
     */
    int16_t screen_tile_h;
+   int16_t world_tile_x;
+   int16_t world_tile_y;
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    MAUG_MHANDLE refresh_grid_h;
    /**
@@ -1193,6 +1195,12 @@ struct RETROFLAT_VIEWPORT {
 
 #  define retroflat_viewport_world_y_generic() \
    (g_retroflat_state->viewport.world_y)
+
+#  define retroflat_viewport_world_tile_x_generic() \
+   (g_retroflat_state->viewport.world_tile_x)
+
+#  define retroflat_viewport_world_tile_y_generic() \
+   (g_retroflat_state->viewport.world_tile_y)
 
 #  define retroflat_viewport_world_w_generic() \
    (g_retroflat_state->viewport.world_w)
@@ -1224,23 +1232,24 @@ struct RETROFLAT_VIEWPORT {
 
 #  define retroflat_viewport_set_world_pos_generic( x, y ) \
    (g_retroflat_state->viewport.world_x) = x; \
-   (g_retroflat_state->viewport.world_y) = y;
+   (g_retroflat_state->viewport.world_y) = y; \
+   (g_retroflat_state->viewport.world_tile_x) = (x) >> RETROFLAT_TILE_W_BITS; \
+   (g_retroflat_state->viewport.world_tile_y) = (y) >> RETROFLAT_TILE_H_BITS;
 
 #  define retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px ) \
    g_retroflat_state->viewport.screen_x = (x_px); \
    g_retroflat_state->viewport.screen_y = (y_px); \
    g_retroflat_state->viewport.screen_tile_w = \
-      /* Allocate 1 extra tile on each side for smooth scrolling. */ \
-      (((w_px) / RETROFLAT_TILE_W) + 2); \
+      ((w_px) / RETROFLAT_TILE_W); \
    g_retroflat_state->viewport.screen_tile_h = \
-      (((h_px) / RETROFLAT_TILE_H) + 2); \
+      ((h_px) / RETROFLAT_TILE_H); \
    /* We're not adding the extra room here since this won't be used for
    * indexing or allocation but rather pixel detection.
    */ \
    g_retroflat_state->viewport.screen_w = \
-      (((w_px) / RETROFLAT_TILE_W) * RETROFLAT_TILE_W) + 2; \
+      ((w_px) / RETROFLAT_TILE_W) * RETROFLAT_TILE_W; \
    g_retroflat_state->viewport.screen_h = \
-      (((h_px) / RETROFLAT_TILE_H) * RETROFLAT_TILE_H) + 2; \
+      ((h_px) / RETROFLAT_TILE_H) * RETROFLAT_TILE_H; \
    g_retroflat_state->viewport.screen_w_remainder = \
       (x_px) + (w_px) - g_retroflat_state->viewport.screen_w; \
    g_retroflat_state->viewport.screen_h_remainder = \
@@ -1283,17 +1292,17 @@ struct RETROFLAT_VIEWPORT {
       assert( 0 <= (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS) ); \
       g_retroflat_state->viewport.refresh_grid[ \
          /* Add +1 tile to make off-screen "-1" tile positive. */ \
-         (_retroflat_viewport_refresh_tile_y( y_px ) * \
-            g_retroflat_state->viewport.screen_tile_w) + \
-               _retroflat_viewport_refresh_tile_x( x_px )] = tid; \
+         ((_retroflat_viewport_refresh_tile_y( y_px ) + 1) * \
+            (g_retroflat_state->viewport.screen_tile_w + 2)) + \
+               (_retroflat_viewport_refresh_tile_x( x_px ) + 1)] = tid; \
    }
 
 #  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
       ((tile_id) != \
       g_retroflat_state->viewport.refresh_grid[ \
-         (_retroflat_viewport_refresh_tile_y( y_px ) * \
-            g_retroflat_state->viewport.screen_tile_w) + \
-               _retroflat_viewport_refresh_tile_x( x_px )])
+         ((_retroflat_viewport_refresh_tile_y( y_px ) + 1) * \
+            (g_retroflat_state->viewport.screen_tile_w + 2)) + \
+               (_retroflat_viewport_refresh_tile_x( x_px ) + 1)])
 
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
@@ -1340,6 +1349,11 @@ uint8_t retroflat_viewport_focus_generic(
 #     define retroflat_viewport_world_x() retroflat_viewport_world_x_generic()
 #     define retroflat_viewport_world_y() retroflat_viewport_world_y_generic()
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
+#     define retroflat_viewport_world_tile_x() \
+         retroflat_viewport_world_tile_x_generic()
+#     define retroflat_viewport_world_tile_y() \
+         retroflat_viewport_world_tile_y_generic()
 
 /**
  * \relates RETROFLAT_VIEWPORT
@@ -2651,8 +2665,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->viewport.screen_tile_w *
       g_retroflat_state->viewport.screen_tile_h );
    g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
-      g_retroflat_state->viewport.screen_tile_w *
-      g_retroflat_state->viewport.screen_tile_h,
+      (g_retroflat_state->viewport.screen_tile_w + 2) *
+      (g_retroflat_state->viewport.screen_tile_h + 2),
       sizeof( retroflat_tile_t ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE,
       g_retroflat_state->viewport.refresh_grid_h );

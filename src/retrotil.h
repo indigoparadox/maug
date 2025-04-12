@@ -1923,15 +1923,17 @@ MERROR_RETVAL retrotile_topdown_draw(
     *       screen pixel X/Y from those? For performance?
     */
    for(
-      y = ((retroflat_viewport_world_y() >> 4) << 4) ;
-      y < (int)retroflat_viewport_world_y() + (int)retroflat_viewport_screen_h()
-      ; y += RETROFLAT_TILE_H
+      y = ((retroflat_viewport_world_y() >>
+         RETROFLAT_TILE_H_BITS) << RETROFLAT_TILE_H_BITS) ;
+      y < (int)retroflat_viewport_world_y() +
+         (int)retroflat_viewport_screen_h() ;
+      y += RETROFLAT_TILE_H
    ) {
       for(
-         x = ((retroflat_viewport_world_x() >> 4) << 4) ;
-         (int)retroflat_viewport_world_x() +
-            /* TODO: Why does it try to overdraw? */
-            (int)retroflat_viewport_screen_w() - RETROFLAT_TILE_W > x ;
+         x = ((retroflat_viewport_world_x() >>
+            RETROFLAT_TILE_W_BITS) << RETROFLAT_TILE_W_BITS) ;
+         x < (int)retroflat_viewport_world_x() +
+            (int)retroflat_viewport_screen_w() ;
          x += RETROFLAT_TILE_W
       ) {
          /* Limit to tiles that exist in the world. */
