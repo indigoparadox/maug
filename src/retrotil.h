@@ -671,6 +671,16 @@ MERROR_RETVAL retrotile_parser_parse_token(
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parser_arg;
    retroflat_tile_t* tiles = NULL;
 
+   /* Try the custom parser. */
+   if(
+      NULL != parser->custom_token_cb &&
+      /* MERROR_PREEMPT is dealt with in cleanup. */
+      MERROR_OK != (retval = parser->custom_token_cb(
+         token, token_sz, parser_arg ))
+   ) {
+      goto cleanup;
+   }
+
    if( MJSON_PSTATE_LIST == mjson_parser_pstate( &(parser->jparser) ) ) {
       /* We're parsing a list. What lists do we care about? */
 
@@ -821,7 +831,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
             "name", parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX
          ) ) {
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
-            retroflat_assign_asset_path( parser->tilemap_name, token );
+            maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
          }
 
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
@@ -1001,7 +1011,7 @@ MERROR_RETVAL retrotile_parse_json_file(
                sizeof( struct RETROTILE_TILE_DEF ) );
          }
       } else {
-         debug_printf( RETROTILE_TRACE_LVL, "(tilemap mode)" );
+         debug_printf( RETROTILE_TRACE_LVL, "(tilemap pass %u)", parser->pass );
          parser->mode = RETROTILE_PARSER_MODE_MAP;
 
          parser->jparser.close_list = retrotile_json_close_list;
