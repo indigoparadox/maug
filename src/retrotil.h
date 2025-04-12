@@ -142,9 +142,9 @@ struct RETROTILE_LAYER {
  */
 struct RETROTILE_COORDS {
    /* \brief X position in tilemap tiles. */
-   size_t x;
+   uint16_t x;
    /* \brief Y position in tilemap tiles. */
-   size_t y;
+   uint16_t y;
 };
 
 /**
@@ -236,6 +236,7 @@ struct RETROTILE_PARSER {
    size_t layer_tile_iter;
    /*! \brief The name of the last property key/value pair parsed. */
    char last_prop_name[RETROTILE_PROP_NAME_SZ_MAX + 1];
+   size_t last_prop_name_sz;
    /*! \brief The name to give to the new tilemap. */
    char tilemap_name[RETROTILE_NAME_SZ_MAX + 1];
    size_t pass_layer_iter;
@@ -823,12 +824,13 @@ MERROR_RETVAL retrotile_parser_parse_token(
          maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
          maug_strncpy(
             parser->last_prop_name, token, RETROTILE_PROP_NAME_SZ_MAX );
+         parser->last_prop_name_sz = token_sz;
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
 
       } else if( MTILESTATE_PROP_VAL == parser->mstate ) {
          /* We're dealing with properties of the tilemap. */
          if( 0 == strncmp(
-            "name", parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX
+            parser->last_prop_name, "name", parser->last_prop_name_sz
          ) ) {
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
             maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
