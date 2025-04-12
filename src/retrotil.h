@@ -1930,7 +1930,8 @@ MERROR_RETVAL retrotile_topdown_draw(
       for(
          x = ((retroflat_viewport_world_x() >> 4) << 4) ;
          (int)retroflat_viewport_world_x() +
-            (int)retroflat_viewport_screen_w() > x ;
+            /* TODO: Why does it try to overdraw? */
+            (int)retroflat_viewport_screen_w() - RETROFLAT_TILE_W > x ;
          x += RETROFLAT_TILE_W
       ) {
          /* Limit to tiles that exist in the world. */
@@ -1963,6 +1964,11 @@ MERROR_RETVAL retrotile_topdown_draw(
          }
          retroflat_viewport_set_refresh( x, y, tile_id );
          retroflat_viewport_unlock_refresh();
+         /* Noisy!
+         debug_printf( RETROTILE_TRACE_LVL, "redrawing tile: %u, %u",
+            x - retroflat_viewport_world_x(),
+            y - retroflat_viewport_world_y() );
+         */
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #ifdef RETROGXC_PRESENT
