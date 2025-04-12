@@ -1222,7 +1222,7 @@ struct RETROFLAT_VIEWPORT {
 
 #  define retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px ) \
    g_retroflat_state->viewport.screen_x = (x_px); \
-   g_retroflat_state->viewport.screen_x = (y_px); \
+   g_retroflat_state->viewport.screen_y = (y_px); \
    g_retroflat_state->viewport.screen_tile_w = \
       /* Allocate 1 extra tile on each side for smooth scrolling. */ \
       (((w_px) / RETROFLAT_TILE_W) + 2); \
@@ -1299,10 +1299,12 @@ uint8_t retroflat_viewport_focus_generic(
    size_t x1, size_t y1, size_t range, size_t speed );
 
 #  define retroflat_viewport_screen_x_generic( world_x ) \
-   ((world_x) - retroflat_viewport_world_x())
+   (g_retroflat_state->viewport.screen_x + \
+      ((world_x) - retroflat_viewport_world_x()))
 
 #  define retroflat_viewport_screen_y_generic( world_y ) \
-   ((world_y) - retroflat_viewport_world_y())
+   (g_retroflat_state->viewport.screen_y + \
+      ((world_y) - retroflat_viewport_world_y()))
 
 #endif /* !DOCUMENTATION */
 
