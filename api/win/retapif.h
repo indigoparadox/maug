@@ -811,6 +811,7 @@ MERROR_RETVAL retroflat_loop(
          retval = msg.wParam;
          debug_printf( 1, "WM_QUIT received, retval: %d", retval );
       }
+      retroflat_heartbeat_update();
    } while( WM_QUIT != msg.message && 0 < msg_retval );
 
 cleanup:

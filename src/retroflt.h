@@ -1503,6 +1503,42 @@ uint8_t retroflat_viewport_focus_generic(
 
 /*! \} */
 
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Set parameters for the RETROFLAT_STATE::heartbeat_frame.
+ * \param len Number of ms between updates to RETROFLAT_STATE::heartbeat_frame.
+ * \param max Value of RETROFLAT_STATE::heartbeat_frame on which to reset to 0.
+ */
+#define retroflat_heartbeat_set( len, max ) \
+   g_retroflat_state->heartbeat_max = max; \
+   g_retroflat_state->heartbeat_len = len;
+
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Get current value of RETROFLAT_STATE::heartbeat_frame
+ */
+#define retroflat_heartbeat() (g_retroflat_state->heartbeat_frame)
+
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Check and update RETROFLAT_STATE::heartbeat_frame. This should be
+ *        called in the API HAL on every iteration of the main loop (this is
+ *        done automatically in the generic main loop).
+ */
+#define retroflat_heartbeat_update() \
+   /* Update the heartbeat animation frame. */ \
+   if( g_retroflat_state->heartbeat_next <= retroflat_get_ms() ) { \
+      g_retroflat_state->heartbeat_frame++; \
+      if( \
+         g_retroflat_state->heartbeat_frame >= \
+            g_retroflat_state->heartbeat_max \
+      ) { \
+         g_retroflat_state->heartbeat_frame = 0; \
+      } \
+      g_retroflat_state->heartbeat_next = \
+         retroflat_get_ms() + g_retroflat_state->heartbeat_len; \
+   }
+
 /*! \brief Global singleton containing state for the current platform. */
 struct RETROFLAT_STATE {
    void*                   loop_data;
@@ -1573,6 +1609,25 @@ defined( RETROVDP_C )
    /* TODO: Put these in a platform-specific struct of some kind to maintain
     *       consistent state struct size for VDP?
     */
+
+   retroflat_ms_t heartbeat_next;
+   /**
+    * \brief Number of ms to stay on current value of
+    *        RETROFLAT_STATE::heartbeat_frame before incrementing. Modify with
+    *        retroflat_heartbeat_set().
+    */
+   uint16_t heartbeat_len;
+   /**
+    * \brief Simple iteration loop that can be used to time e.g. perpetual
+    *        sprite animations. Modify parameters with
+    *        retroflat_heartbeat_set().
+    */
+   uint8_t heartbeat_frame;
+   /**
+    * \brief When RETROFLAT_STATE::heartbeat_frame reaches this value, it will
+    *        reset to 0.
+    */
+   uint8_t heartbeat_max;
 
    retroflat_loop_iter  loop_iter;
    retroflat_loop_iter  frame_iter;
@@ -2018,6 +2073,9 @@ MERROR_RETVAL retroflat_loop_generic(
          /* Sleep/low power for a bit. */
          continue;
       }
+
+      retroflat_heartbeat_update();
+
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
@@ -2442,6 +2500,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
    maug_mzero( g_retroflat_state, sizeof( struct RETROFLAT_STATE ) );
+
+   retroflat_heartbeat_set( 1000, 2 );
 
 #  ifndef RETROFLAT_NO_CLI
 

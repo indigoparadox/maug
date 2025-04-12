@@ -9,6 +9,7 @@ void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
+   retroflat_heartbeat_update();
    if( NULL != g_retroflat_state->loop_iter ) {
       g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
    }
