@@ -1966,13 +1966,16 @@ MERROR_RETVAL retrotile_topdown_draw(
             retroflat_viewport_unlock_refresh();
             continue;
          }
-         retroflat_viewport_set_refresh( x, y, tile_id );
-         retroflat_viewport_unlock_refresh();
-         /* Noisy!
+         /* Noisy! */
+         /*
          debug_printf( RETROTILE_TRACE_LVL, "redrawing tile: %u, %u",
             x - retroflat_viewport_world_x(),
             y - retroflat_viewport_world_y() );
          */
+         retroflat_viewport_set_refresh(
+            x - retroflat_viewport_world_x(),
+            y - retroflat_viewport_world_y(), tile_id );
+         retroflat_viewport_unlock_refresh();
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #ifdef RETROGXC_PRESENT
