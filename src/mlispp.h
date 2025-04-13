@@ -77,6 +77,9 @@ MERROR_RETVAL mlisp_ast_dump(
 
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c );
 
+MERROR_RETVAL mlisp_parse_file(
+   struct MLISP_PARSER* parser, retroflat_asset_path ai_path );
+
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
 
 MERROR_RETVAL mlisp_exec_init(
@@ -540,6 +543,42 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
 cleanup:
 
    parser->base.last_c = c;
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mlisp_parse_file(
+   struct MLISP_PARSER* parser, retroflat_asset_path ai_path
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MFILE_CADDY ai_file;
+   char c;
+   size_t i = 0;
+
+   debug_printf( MLISP_TRACE_LVL, "loading mlisp AST..." );
+
+   retval = mfile_open_read( ai_path, &ai_file );
+   maug_cleanup_if_not_ok();
+
+   retval = mlisp_parser_init( parser );
+   maug_cleanup_if_not_ok();
+
+   for( i = 0 ; mfile_get_sz( &ai_file ) > i ; i++ ) {
+      retval = ai_file.read_int( &ai_file, (uint8_t*)&c, 1, 0 );
+      maug_cleanup_if_not_ok();
+      retval = mlisp_parse_c( parser, c );
+      maug_cleanup_if_not_ok();
+   }
+   mlisp_ast_dump( parser, 0, 0, 0 );
+   if( 0 < parser->base.pstate_sz ) {
+      error_printf( "invalid parser state!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+cleanup:
 
    return retval;
 }

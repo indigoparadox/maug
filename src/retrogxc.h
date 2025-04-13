@@ -6,6 +6,16 @@
 
 /* TODO: Unified asset type that automatically uses RetroGXC if present and
  *       directly loads assets to handles if not.
+ *
+ *       *or*
+ *
+ *       Loader function that passes back a pointer to the cached object
+ *       to be used with the normal functions associated with it.
+ */
+
+/* TODO: The loaders here pass path to file-loading functions. What they
+ *       *should* do is open those paths into mfiles on their own, so that
+ *       a shim can be inserted to force loading from arrays in memory.
  */
 
 #define RETROGXC_PRESENT 1
