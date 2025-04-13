@@ -3185,8 +3185,6 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
    extern int                  g_retroflat_cmd_show;
 #     endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#  include <uprintf.h>
-
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES)) \
    && !defined( MAUG_NO_AUTO_C )
 #     include <retrofp.h>
