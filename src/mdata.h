@@ -19,6 +19,16 @@
  * \{
  */
 
+/**
+ * \relates MDATA_VECTOR
+ * \brief Flag for MDATA_VECTOR::flags indicating that vector may uses reference
+ *        counting for locking.
+ *
+ * Such a mobile may be locked multiple times, but then must be unlocked an
+ * equal number of times to unlock.
+ */
+#define MDATA_VECTOR_FLAG_REFCOUNT 0x01
+
 #ifndef MDATA_VECTOR_INIT_SZ
 /**
  * \relates MDATA_VECTOR
@@ -77,6 +87,7 @@ struct MDATA_STRPOOL {
  *          with wrapper macros and convenience functions.
  */
 struct MDATA_VECTOR {
+   uint8_t flags;
    /*! \brief Handle for allocated items (unlocked). */
    MAUG_MHANDLE data_h;
    /*! \brief Handle for allocated items (locked). */
@@ -92,6 +103,8 @@ struct MDATA_VECTOR {
     * \warning Attempting to store items with a different size will fail!
     */
    size_t item_sz;
+   /*! \brief Lock count, if MDATA_VECTOR_FLAG_REFCOUNT is enabled. */
+   ssize_t locks;
 };
 
 /*! \} */ /* mdata_vector */
@@ -226,9 +239,18 @@ MERROR_RETVAL mdata_table_get_void(
  *          label! (This is fine for mdata_vector_unlock(), however.)
  */
 #define mdata_vector_lock( v ) \
-   maug_mlock( (v)->data_h, (v)->data_bytes ); \
-   maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
-   debug_printf( MDATA_TRACE_LVL, "locked vector " #v );
+   if( \
+      mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
+      0 < (v)->locks \
+   ) { \
+      (v)->locks++; \
+      debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
+         (v)->locks ); \
+   } else { \
+      maug_mlock( (v)->data_h, (v)->data_bytes ); \
+      maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
+      debug_printf( MDATA_TRACE_LVL, "locked vector " #v ); \
+   }
 
 /**
  * \relates MDATA_VECTOR
@@ -236,7 +258,15 @@ MERROR_RETVAL mdata_table_get_void(
  * \note mdata_vector_unlock() may be called after the cleanup label.
  */
 #define mdata_vector_unlock( v ) \
-   if( NULL != (v)->data_bytes ) { \
+   if( \
+      mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
+      0 < (v)->locks \
+   ) { \
+      (v)->locks--; \
+      debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
+         (v)->locks ); \
+   } \
+   if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
       debug_printf( MDATA_TRACE_LVL, "unlocked vector " #v ); \
    }
@@ -287,6 +317,10 @@ MERROR_RETVAL mdata_table_get_void(
 
 #define _mdata_vector_item_ptr( v, idx ) \
    (&((v)->data_bytes[((idx) * ((v)->item_sz))]))
+
+#define mdata_vector_set_flag( v, flag ) (v)->flags |= (flag)
+
+#define mdata_vector_get_flag( v, flag ) ((flag) == ((v)->flags & (flag)))
 
 /*! \} */ /* mdata_vector */
 
