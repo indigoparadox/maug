@@ -101,6 +101,8 @@ MERROR_RETVAL mlisp_env_set(
 MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
+void mlisp_exec_free( struct MLISP_EXEC_STATE* exec );
+
 #define _MLISP_TYPE_TABLE_PUSH_PROTO( idx, ctype, name, const_name, fmt ) \
    MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
       struct MLISP_EXEC_STATE* exec, ctype i );
