@@ -62,6 +62,7 @@
 
 #define RETROTILE_CLASS_TILE    0
 #define RETROTILE_CLASS_MOBILE  1
+#define RETROTILE_CLASS_WARP    1
 
 /**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
@@ -636,6 +637,13 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             debug_printf( RETROTILE_TRACE_LVL,
                "set tile " SIZE_T_FMT " type: mobile (%u)",
                parser->tileset_id_cur, tile_def->tile_class );
+
+         } else if( 0 == strncmp( "warp", token, token_sz ) ) {
+            tile_def->tile_class = RETROTILE_CLASS_WARP;
+            debug_printf( RETROTILE_TRACE_LVL,
+               "set tile " SIZE_T_FMT " type: warp (%u)",
+               parser->tileset_id_cur, tile_def->tile_class );
+
          } else {
             tile_def->tile_class = RETROTILE_CLASS_TILE;
             debug_printf( RETROTILE_TRACE_LVL,
