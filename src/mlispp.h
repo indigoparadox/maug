@@ -78,7 +78,7 @@ MERROR_RETVAL mlisp_ast_dump(
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c );
 
 MERROR_RETVAL mlisp_parse_file(
-   struct MLISP_PARSER* parser, retroflat_asset_path ai_path );
+   struct MLISP_PARSER* parser, const retroflat_asset_path ai_path );
 
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
 
@@ -550,7 +550,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL mlisp_parse_file(
-   struct MLISP_PARSER* parser, retroflat_asset_path ai_path
+   struct MLISP_PARSER* parser, const retroflat_asset_path ai_path
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFILE_CADDY ai_file;
