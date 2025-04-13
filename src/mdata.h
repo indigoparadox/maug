@@ -495,8 +495,9 @@ cleanup:
 /* === */
 
 void mdata_strpool_free( struct MDATA_STRPOOL* strpool ) {
-   assert( (MAUG_MHANDLE)NULL != strpool->str_h );
-   maug_mfree( strpool->str_h );
+   if( (MAUG_MHANDLE)NULL != strpool->str_h ) {
+      maug_mfree( strpool->str_h );
+   }
 }
 
 /* === */
