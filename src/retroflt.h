@@ -1227,6 +1227,8 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.screen_h_remainder)
 
 #  define retroflat_viewport_set_world_generic( w, h ) \
+   debug_printf( 1, "setting viewport size to %d x %d...", \
+      (int16_t)(w), (int16_t)(h) ); \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
@@ -3103,7 +3105,8 @@ uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
    /* Keep the viewport in the world arena. */
    if(
       0 <= new_world_x &&
-      g_retroflat_state->viewport.world_w >= new_world_x + retroflat_screen_w()
+      g_retroflat_state->viewport.world_w >= new_world_x +
+         g_retroflat_state->viewport.screen_w
    ) {
       g_retroflat_state->viewport.world_x += x;
       g_retroflat_state->viewport.world_tile_x += x >> RETROFLAT_TILE_W_BITS;
@@ -3121,7 +3124,8 @@ uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
    /* Keep the viewport in the world arena. */
    if(
       0 <= new_world_y &&
-      g_retroflat_state->viewport.world_h >= new_world_y + retroflat_screen_h()
+      g_retroflat_state->viewport.world_h >= new_world_y +
+         g_retroflat_state->viewport.screen_h
    ) {
       g_retroflat_state->viewport.world_y += y;
       g_retroflat_state->viewport.world_tile_y += y >> RETROFLAT_TILE_H_BITS;
