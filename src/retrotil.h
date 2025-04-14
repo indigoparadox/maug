@@ -64,7 +64,7 @@ typedef int16_t retrotile_coord_t;
 
 #define RETROTILE_CLASS_TILE    0
 #define RETROTILE_CLASS_MOBILE  1
-#define RETROTILE_CLASS_WARP    1
+#define RETROTILE_CLASS_WARP    2
 
 /**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
