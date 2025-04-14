@@ -82,9 +82,6 @@ MERROR_RETVAL mlisp_parse_file(
 
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
 
-MERROR_RETVAL mlisp_exec_init(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
-
 void mlisp_parser_free( struct MLISP_PARSER* parser );
 
 /*! \} */ /* mlisp */
@@ -625,6 +622,7 @@ cleanup:
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
    mdata_strpool_free( &(parser->strpool) );
    mdata_vector_free( &(parser->ast) );
+   mdata_vector_free( &(parser->env) );
 }
 
 #else

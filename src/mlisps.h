@@ -23,10 +23,21 @@
 #endif /* !MLISP_AST_IDX_CHILDREN_MAX */
 
 /**
+ * \relates MLISP_EXEC_STATE
  * \brief Flag for MLISP_EXEC_STATE::flags indicating next token is a term to
  *        be defined.
  */
 #define MLISP_EXEC_FLAG_DEF_TERM   0x02
+
+/**
+ * \relates MLISP_EXEC_STATE
+ * \brief Flag for MLISP_EXEC_STATE::flags indicating defines and calls should
+ *        reference MLISP_PARSER::env instead of MLISP_EXEC_STATE::env.
+ *
+ * This allows multiple MLISP_EXEC_STATE objects to share a common set of
+ * definitions.
+ */
+#define MLISP_EXEC_FLAG_SHARED_ENV 0x04
 
 /**
  * \addtogroup mlisp_types MLISP Types
@@ -107,6 +118,7 @@ struct MLISP_AST_NODE {
 };
 
 struct MLISP_EXEC_STATE {
+   /*! \brief Flags which dictate the behavior of this object. */
    uint8_t flags;
    /*! \brief The number of times each node has been visited ever. */
    struct MDATA_VECTOR per_node_visit_ct;
@@ -114,7 +126,7 @@ struct MLISP_EXEC_STATE {
    /*! \brief A stack of data values resulting from evaluating statements. */
    struct MDATA_VECTOR stack;
    /**
-    * \brief Environment in which statements are defined.
+    * \brief Environment in which statements are defined if ::MLISP_
     *
     * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
     * denote env definitions that are actually args for the current lambda.
@@ -136,6 +148,11 @@ struct MLISP_PARSER {
    struct MPARSER base;
    struct MDATA_STRPOOL strpool;
    struct MDATA_VECTOR ast;
+   /**
+    * \brief Definitions to use if ::MLISP_EXEC_FLAG_DEF_TERM is defined on the
+    *        accompanying MLISP_EXEC_STATE::flags.
+    */
+   struct MDATA_VECTOR env;
    ssize_t ast_node_iter;
 };
 
