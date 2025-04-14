@@ -12,6 +12,8 @@
  * \file retrotil.h
  */
 
+typedef int16_t retrotile_coord_t;
+
 #ifndef RETROTILE_NAME_SZ_MAX
 /*! \brief Maximum number of chars in a RETROTILE::name. */
 #  define RETROTILE_NAME_SZ_MAX 10
@@ -123,6 +125,9 @@ struct RETROTILE_TILE_DEF {
    size_t x;
    size_t y;
    uint16_t tile_class;
+   char warp_dest[RETROTILE_NAME_SZ_MAX + 1];
+   retrotile_coord_t warp_x;
+   retrotile_coord_t warp_y;
 #ifdef RETROGXC_PRESENT
    ssize_t image_cache_id;
 #else
@@ -136,8 +141,6 @@ struct RETROTILE_LAYER {
    size_t sz;
    uint16_t layer_class;
 };
-
-typedef int16_t retrotile_coord_t;
 
 /**
  * \brief This is not currently used for anything, but is provided as a
@@ -632,13 +635,13 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          assert( NULL != tile_def );
          assert( 0 == tile_def->tile_class );
 
-         if( 0 == strncmp( "mobile", token, token_sz ) ) {
+         if( 0 == strncmp( "mobile", token, 7 ) ) {
             tile_def->tile_class = RETROTILE_CLASS_MOBILE;
             debug_printf( RETROTILE_TRACE_LVL,
                "set tile " SIZE_T_FMT " type: mobile (%u)",
                parser->tileset_id_cur, tile_def->tile_class );
 
-         } else if( 0 == strncmp( "warp", token, token_sz ) ) {
+         } else if( 0 == strncmp( "warp", token, 5 ) ) {
             tile_def->tile_class = RETROTILE_CLASS_WARP;
             debug_printf( RETROTILE_TRACE_LVL,
                "set tile " SIZE_T_FMT " type: warp (%u)",
@@ -660,7 +663,38 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
 
    } else if( MTILESTATE_TILES_PROP_VAL == parser->mstate ) {
-      /* This should be handled in the custom token parser callback. */
+      /* This would be ideal to be handled in the custom token parser callback.
+       */
+
+      if( 1 == parser->pass ) {
+         mdata_vector_lock( parser->p_tile_defs );
+         tile_def = mdata_vector_get(
+            parser->p_tile_defs, parser->tileset_id_cur,
+            struct RETROTILE_TILE_DEF );
+         assert( NULL != tile_def );
+         assert( 0 == tile_def->tile_class );
+
+         if( 0 == strncmp( "warp_dest", parser->last_prop_name, 10 ) ) {
+            maug_mzero( tile_def->warp_dest, RETROTILE_NAME_SZ_MAX );
+            maug_strncpy( tile_def->warp_dest, token, RETROTILE_NAME_SZ_MAX );
+            debug_printf( 1, "set tile " SIZE_T_FMT " warp_dest: %s",
+               parser->tileset_id_cur, tile_def->warp_dest );
+
+         } else if( 0 == strncmp( "warp_x", parser->last_prop_name, 7 ) ) {
+            tile_def->warp_x = maug_atos32( token, token_sz );
+            debug_printf( 1, "set tile " SIZE_T_FMT " warp_x: %d",
+               parser->tileset_id_cur, tile_def->warp_x );
+
+         } else if( 0 == strncmp( "warp_y", parser->last_prop_name, 7 ) ) {
+            maug_strncpy( tile_def->warp_dest, token, RETROTILE_NAME_SZ_MAX );
+            tile_def->warp_y = maug_atos32( token, token_sz );
+            debug_printf( 1, "set tile " SIZE_T_FMT " warp_y: %d",
+               parser->tileset_id_cur, tile_def->warp_y );
+
+         }
+      }
+
+      maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
    }
 
@@ -822,7 +856,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
 
       } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
-         if( 0 == strncmp( "mobile", token, token_sz ) ) {
+         if( 0 == strncmp( "mobile", token, 7 ) ) {
             debug_printf( RETROTILE_TRACE_LVL,
                "layer " SIZE_T_FMT " type: mobile",
                parser->pass_layer_iter );
@@ -844,13 +878,12 @@ MERROR_RETVAL retrotile_parser_parse_token(
 
       } else if( MTILESTATE_PROP_VAL == parser->mstate ) {
          /* We're dealing with properties of the tilemap. */
-         if( 0 == strncmp(
-            parser->last_prop_name, "name", parser->last_prop_name_sz
-         ) ) {
+         if( 0 == strncmp( parser->last_prop_name, "name", 5 ) ) {
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
             maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
          }
 
+         maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
       }
       goto cleanup;
