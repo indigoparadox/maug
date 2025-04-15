@@ -1233,6 +1233,7 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_h) = h;
 
 #  define retroflat_viewport_set_world_pos_generic( x, y ) \
+   debug_printf( 1, "setting viewport world pos to %d, %d...", x, y ); \
    (g_retroflat_state->viewport.world_x) = x; \
    (g_retroflat_state->viewport.world_y) = y; \
    (g_retroflat_state->viewport.world_tile_x) = (x) >> RETROFLAT_TILE_W_BITS; \

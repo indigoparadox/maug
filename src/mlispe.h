@@ -75,6 +75,9 @@ MERROR_RETVAL mlisp_stack_pop(
 
 /*! \} */ /* mlisp_stack */
 
+MERROR_RETVAL mlisp_env_dump(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
 /**
  * \brief Get a node from the environment denoted by a string in the strpool.
  * \param parser 

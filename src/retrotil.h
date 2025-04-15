@@ -672,7 +672,6 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             parser->p_tile_defs, parser->tileset_id_cur,
             struct RETROTILE_TILE_DEF );
          assert( NULL != tile_def );
-         assert( 0 == tile_def->tile_class );
 
          if( 0 == strncmp( "warp_dest", parser->last_prop_name, 10 ) ) {
             maug_mzero( tile_def->warp_dest, RETROTILE_NAME_SZ_MAX );
@@ -686,7 +685,6 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur, tile_def->warp_x );
 
          } else if( 0 == strncmp( "warp_y", parser->last_prop_name, 7 ) ) {
-            maug_strncpy( tile_def->warp_dest, token, RETROTILE_NAME_SZ_MAX );
             tile_def->warp_y = maug_atos32( token, token_sz );
             debug_printf( 1, "set tile " SIZE_T_FMT " warp_y: %d",
                parser->tileset_id_cur, tile_def->warp_y );
@@ -1928,9 +1926,12 @@ MERROR_RETVAL retrotile_clear_refresh( int16_t y_max ) {
    int16_t x = 0,
       y = 0;
 
+   debug_printf( 1, "clearing %d vertical viewport pixels (%d rows)...",
+      y_max, y_max / RETROFLAT_TILE_H );
+
    retroflat_viewport_lock_refresh();
    for( y = 0 ; y_max > y ; y += RETROFLAT_TILE_H ) {
-      for( x = 0 ; retroflat_screen_w() > x ; x += RETROFLAT_TILE_W ) {
+      for( x = 0 ; retroflat_viewport_screen_w() > x ; x += RETROFLAT_TILE_W ) {
          retroflat_viewport_set_refresh( x, y, -1 );
       }
    }
@@ -1995,6 +1996,12 @@ MERROR_RETVAL retrotile_topdown_draw(
          tile_id = retrotile_get_tile( t, layer, x_tile, y_tile );
          t_def = mdata_vector_get(
             t_defs, tile_id - t->tileset_fgid, struct RETROTILE_TILE_DEF );
+         if( NULL == t_def ) {
+            error_printf(
+               "invalid tile ID: %d (- " SIZE_T_FMT " = " SIZE_T_FMT ")",
+               tile_id, t->tileset_fgid, tile_id - t->tileset_fgid );
+            continue;
+         }
          assert( NULL != t_def );
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
