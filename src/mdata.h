@@ -247,6 +247,7 @@ MERROR_RETVAL mdata_table_get_void(
       debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
          (v)->locks ); \
    } else { \
+      assert( NULL != (v)->data_h && NULL == (v)->data_bytes ); \
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
       maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
       debug_printf( MDATA_TRACE_LVL, "locked vector " #v ); \
@@ -267,6 +268,7 @@ MERROR_RETVAL mdata_table_get_void(
          (v)->locks ); \
    } \
    if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
+      assert( NULL == (v)->data_h && NULL != (v)->data_bytes ); \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
       debug_printf( MDATA_TRACE_LVL, "unlocked vector " #v ); \
    }
@@ -507,6 +509,7 @@ MERROR_RETVAL mdata_strpool_alloc(
       debug_printf(
          MDATA_TRACE_LVL, "creating string table of " SIZE_T_FMT " chars...",
          alloc_sz );
+      assert( NULL == strpool->str_h );
       strpool->str_h = maug_malloc( alloc_sz, 1 );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
       strpool->str_sz_max = alloc_sz;
@@ -664,6 +667,7 @@ MERROR_RETVAL mdata_vector_copy(
       MDATA_TRACE_LVL,
       "copying " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
       v_src->ct_max, v_src->item_sz );
+   assert( NULL == v_dest->data_h );
    v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
 
@@ -708,6 +712,7 @@ MERROR_RETVAL mdata_vector_alloc(
          MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
          v->ct_max, item_sz );
+      assert( NULL == v->data_h );
       v->data_h = maug_malloc( v->ct_max, item_sz );
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );

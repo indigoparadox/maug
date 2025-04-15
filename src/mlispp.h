@@ -586,6 +586,8 @@ MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
 
+   assert( NULL == parser->env.data_h );
+
    debug_printf( MLISP_TRACE_LVL,
       "initializing mlisp parser (" SIZE_T_FMT " bytes)...",
       sizeof( struct MLISP_PARSER ) );
@@ -620,9 +622,13 @@ cleanup:
 /* === */
 
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+         "destroying parser (ast: " SIZE_T_FMT ", env: " SIZE_T_FMT ")...",
+         mdata_vector_ct( &(parser->ast) ), mdata_vector_ct( &(parser->env) ) );
    mdata_strpool_free( &(parser->strpool) );
    mdata_vector_free( &(parser->ast) );
    mdata_vector_free( &(parser->env) );
+   debug_printf( MLISP_PARSE_TRACE_LVL, "parser destroyed!" );
 }
 
 #else
