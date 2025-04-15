@@ -117,11 +117,24 @@ struct MLISP_AST_NODE {
    size_t ast_idx_children_sz;
 };
 
+/**
+ * \brief Current execution state to associate with a MLISP_PARSER.
+ *
+ * \note In general, this library uses nested locks because MLISP_STACK_NODE and
+ *       MLISP_ENV_NODE do not have MDATA_VECTOR structs attached, so there's
+ *       no danger of a MDATA_VECTOR being reallocated out from beneath another.
+ */
 struct MLISP_EXEC_STATE {
    /*! \brief Flags which dictate the behavior of this object. */
    uint8_t flags;
    /*! \brief The number of times each node has been visited ever. */
    struct MDATA_VECTOR per_node_visit_ct;
+   /**
+    * \brief The hild index that will be visited on next visit of each node.
+    *
+    * This is tracked per MLISP_AST_NODE, so each node has its own "program
+    * counter." This facilitates things like tail call optimization.
+    */
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
    struct MDATA_VECTOR stack;
