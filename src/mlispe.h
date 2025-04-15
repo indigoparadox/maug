@@ -323,10 +323,12 @@ MERROR_RETVAL mlisp_env_dump(
    assert( NULL != env->data_h );
    assert( NULL != parser->strpool.str_h );
    mdata_strpool_lock( &(parser->strpool), strpool );
+   assert( NULL != strpool );
    mdata_vector_lock( env );
    while( i < mdata_vector_ct( env ) ) {
       assert( mdata_vector_is_locked( env ) );
       e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+      assert( NULL != e );
 
       if( MLISP_ENV_FLAG_BUILTIN == (MLISP_ENV_FLAG_BUILTIN & e->flags) ) {
          /* Skip builtins. */
@@ -800,6 +802,8 @@ static MERROR_RETVAL _mlisp_env_cb_cmp(
    int a_int,
       b_int;
    int* cur_int = NULL;
+
+   /* XXX: If we put a mutable variable first, it gets modified? */
 
 #  define _MLISP_TYPE_TABLE_CMP( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == tmp.type ) { \
