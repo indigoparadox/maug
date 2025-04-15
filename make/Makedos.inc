@@ -116,7 +116,7 @@ obj/dos_bios/%.o: %.c | $$(MAUG_DEPS_BIOS)
 		$$(CFLAGS_OPT_WATCOM_BIOS) \
 		-fo=$$@ $$(<:%.c=%)
 
-CLEAN_TARGETS += $(1)b.exe
+CLEAN_TARGETS += $(1)b.exe $(1)b.map
 
 endef
 
