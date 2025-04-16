@@ -1893,6 +1893,12 @@ MERROR_RETVAL mlisp_step_lambda(
       env = &(exec->env);
    }
 
+   if( MERROR_OK != mlisp_check_state( parser, exec ) ) {
+      error_printf( "mlisp not ready!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
    /* Autolock vectors used below. */
    /* TODO: Should this be a reusable macro? */
    if( !mdata_vector_is_locked( env ) ) {
@@ -2122,6 +2128,7 @@ void mlisp_exec_free( struct MLISP_EXEC_STATE* exec ) {
    mdata_vector_free( &(exec->stack) );
    mdata_vector_free( &(exec->env) );
    mdata_vector_free( &(exec->lambda_trace) );
+   exec->flags = 0;
    debug_printf( MLISP_EXEC_TRACE_LVL, "exec destroyed!" );
 }
 
