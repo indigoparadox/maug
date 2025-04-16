@@ -1855,6 +1855,10 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
       goto cleanup;
    }
 
+   if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
+      goto cleanup;
+   }
+
    assert( !retrogui_is_locked( gui ) );
    mdata_vector_lock( &(gui->ctls) );
 
