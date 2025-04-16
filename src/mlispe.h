@@ -101,6 +101,9 @@ MERROR_RETVAL mlisp_env_set(
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
+MERROR_RETVAL mlisp_check_state(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
 /**
  * \brief Iterate the current exec_state() starting from the next MLISP_AST_NODE
  *        to be executed according to the tree of
@@ -1752,6 +1755,49 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mlisp_check_state(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   struct MDATA_VECTOR* env = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Prepare env for mlisp_env_get() below. */
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
+      error_printf( "no valid AST present; could not exec!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   /*
+   if( NULL == env->data_bytes ) {
+      error_printf( "no valid env present; could not exec!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+   */
+
+   if(
+      MLISP_EXEC_FLAG_INITIALIZED != (exec->flags & MLISP_EXEC_FLAG_INITIALIZED)
+   ) {
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
@@ -1777,13 +1823,8 @@ MERROR_RETVAL mlisp_step(
    mdata_vector_lock( &(exec->per_node_visit_ct) );
    mdata_vector_lock( &(parser->ast) );
 
-   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
-      error_printf( "no valid AST present; could not exec!" );
-      retval = MERROR_EXEC;
-      goto cleanup;
-   }
-
-   exec->flags = 0;
+   /* Disable transient flags. */
+   exec->flags &= MLISP_EXEC_FLAG_TRANSIENT_MASK;
    assert( 0 == mdata_vector_ct( &(exec->lambda_trace) ) );
 
 #ifdef MLISP_DEBUG_TRACE
@@ -1930,7 +1971,7 @@ MERROR_RETVAL mlisp_exec_init(
    exec->flags = flags;
 
    /* Setup lambda visit stack so it can be locked on first step. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->lambda_trace), &zero, sizeof( size_t ) );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
@@ -1959,8 +2000,11 @@ MERROR_RETVAL mlisp_exec_init(
    maug_cleanup_if_not_ok();
 
    /* Create the node PCs. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->per_node_child_idx), &zero, sizeof( size_t ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
    maug_cleanup_if_not_ok();
 
    /* Make sure there's an exec child node for every AST node. */
@@ -1968,13 +2012,20 @@ MERROR_RETVAL mlisp_exec_init(
       mdata_vector_ct( &(exec->per_node_child_idx) ) <= 
       mdata_vector_ct( &(parser->ast) )
    ) {
-      retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
+      append_retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
          sizeof( size_t ) );
+      if( 0 > append_retval ) {
+         retval = mdata_retval( append_retval );
+      }
+      maug_cleanup_if_not_ok();
    }
 
    /* Create the node visit counters. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->per_node_visit_ct), &zero, sizeof( size_t ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
    maug_cleanup_if_not_ok();
 
    /* Make sure there's an exec visit count for every AST node. */
@@ -1982,9 +2033,15 @@ MERROR_RETVAL mlisp_exec_init(
       mdata_vector_ct( &(exec->per_node_visit_ct) ) <= 
       mdata_vector_ct( &(parser->ast) )
    ) {
-      retval = mdata_vector_append( &(exec->per_node_visit_ct), &zero,
+      append_retval = mdata_vector_append( &(exec->per_node_visit_ct), &zero,
          sizeof( size_t ) );
+      if( 0 > append_retval ) {
+         retval = mdata_retval( append_retval );
+      }
+      maug_cleanup_if_not_ok();
    }
+
+   exec->flags |= MLISP_EXEC_FLAG_INITIALIZED;
 
    /* Setup initial env. */
 

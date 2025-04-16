@@ -24,10 +24,17 @@
 
 /**
  * \relates MLISP_EXEC_STATE
+ * \brief Mask for MLISP_EXEC_STATE::flags to block off flags that persist
+ *        between steps.
+ */
+#define MLISP_EXEC_FLAG_TRANSIENT_MASK 0x0f
+
+/**
+ * \relates MLISP_EXEC_STATE
  * \brief Flag for MLISP_EXEC_STATE::flags indicating next token is a term to
  *        be defined.
  */
-#define MLISP_EXEC_FLAG_DEF_TERM   0x02
+#define MLISP_EXEC_FLAG_DEF_TERM   0x20
 
 /**
  * \relates MLISP_EXEC_STATE
@@ -37,7 +44,9 @@
  * This allows multiple MLISP_EXEC_STATE objects to share a common set of
  * definitions.
  */
-#define MLISP_EXEC_FLAG_SHARED_ENV 0x04
+#define MLISP_EXEC_FLAG_SHARED_ENV 0x40
+
+#define MLISP_EXEC_FLAG_INITIALIZED   0x08
 
 /**
  * \addtogroup mlisp_types MLISP Types
