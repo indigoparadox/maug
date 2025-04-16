@@ -1758,10 +1758,11 @@ cleanup:
 MERROR_RETVAL mlisp_check_state(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
-   struct MDATA_VECTOR* env = NULL;
+   /* struct MDATA_VECTOR* env = NULL; */
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Prepare env for mlisp_env_get() below. */
+   /*
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
    ) {
@@ -1769,6 +1770,7 @@ MERROR_RETVAL mlisp_check_state(
    } else {
       env = &(exec->env);
    }
+   */
 
    if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
       error_printf( "no valid AST present; could not exec!" );

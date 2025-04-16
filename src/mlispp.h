@@ -622,7 +622,7 @@ cleanup:
 /* === */
 
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
-   debug_printf( MLISP_EXEC_TRACE_LVL,
+   debug_printf( MLISP_TRACE_LVL,
          "destroying parser (ast: " SIZE_T_FMT ", env: " SIZE_T_FMT ")...",
          mdata_vector_ct( &(parser->ast) ), mdata_vector_ct( &(parser->env) ) );
    mdata_strpool_free( &(parser->strpool) );
