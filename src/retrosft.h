@@ -449,7 +449,10 @@ void retrosoft_string(
       /* Fonts start at character after space. */
       glyph_idx = str[i] - ' ';
 
-#if defined( RETROFLAT_API_SDL2 ) && !defined( RETROSOFT_PRELOAD_COLORS )
+#if defined( RETROFLAT_API_SDL2 ) && \
+   !defined( RETROSOFT_PRELOAD_COLORS ) && \
+   !defined( RETROFLAT_OPENGL )
+
       /* If we're not caching the colors, use SDL2 features if available to
        * tint the glyph before blitting it. */
       SDL_SetSurfaceColorMod(
