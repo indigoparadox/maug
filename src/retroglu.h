@@ -450,6 +450,10 @@ MERROR_RETVAL retroglu_blit_bitmap(
    size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
    int16_t instance );
 
+void retroglu_px(
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags );
+
 #ifdef RETROGLU_C
 
 #  define RETROFLAT_COLOR_TABLE_GL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
