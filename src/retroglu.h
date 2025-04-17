@@ -175,7 +175,7 @@ struct RETROGLU_PROJ_ARGS {
 void retroglu_init_scene( uint8_t flags );
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
 
-void retroglu_draw_poly( struct RETROGLU_OBJ* obj );
+void retroglu_draw_poly( struct RETRO3DP_OBJ* obj );
 
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
@@ -346,7 +346,7 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    glMatrixMode( GL_MODELVIEW );
 }
 
-void retroglu_draw_poly( struct RETROGLU_OBJ* obj ) {
+void retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
    int i = 0;
    int j = 0;
 
