@@ -10,6 +10,7 @@
 /**
  * \addtogroup maug_retroglu RetroGLU API
  * \brief Library of tools for working with RetroFlat and OpenGL.
+ * \warning This API was a quick and dirty helper for OpenGL and is deprecated.
  * \{
  *
  * \file retroglu.h
