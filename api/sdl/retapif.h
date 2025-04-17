@@ -161,7 +161,9 @@ MERROR_RETVAL retroflat_init_platform(
    /* Setup color palettes. */
 #     ifdef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+            g_retroflat_state->palette[idx][0] = r; \
+            g_retroflat_state->palette[idx][1] = g; \
+            g_retroflat_state->palette[idx][2] = b;
 #     else
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
@@ -358,8 +360,10 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_draw_lock( bmp );
-
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+      retval = retro3d_texture_lock( bmp );
+   }
+ 
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -435,7 +439,16 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_draw_release( bmp );
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      /* SDL has its own OpenGL flip functions.*/
+#     if defined( RETROFLAT_API_SDL1 )
+      SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapWindow( g_retroflat_state->platform.window );
+#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+   } else {
+      retval = retro3d_texture_release( bmp );
+   }
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -541,7 +554,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_load_bitmap( filename_path, bmp_out, flags );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -639,7 +653,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_create( w, h, bmp_out, flags );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -690,7 +705,8 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_destroy_bitmap( bmp );
+   assert( NULL != bmp );
+   retro3d_texture_destroy( bmp );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -742,8 +758,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = 
-      retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   assert( NULL != target );
+   retval = retro3d_texture_blit(
+      target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -823,7 +840,8 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_px( target, color_idx, x, y, flags );
+   assert( NULL != target );
+   retro3d_texture_px( target, color_idx, x, y, flags );
 
 #  elif defined( RETROFLAT_API_SDL1 )
 

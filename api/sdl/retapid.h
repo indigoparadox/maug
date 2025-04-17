@@ -6,11 +6,6 @@
 
 #define RETROFLAT_SOFT_VIEWPORT
 
-#  if defined( RETROFLAT_OPENGL )
-#     include <GL/gl.h>
-#     include <GL/glu.h>
-#  endif /* RETROFLAT_OPENGL */
-
 #  include <time.h> /* For srand() */
 
 #  if defined( RETROFLAT_OS_WASM )
@@ -210,7 +205,7 @@ struct RETROFLAT_BITMAP {
 
    /* SDL Colors */
 #  ifdef RETROFLAT_OPENGL
-typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
+typedef float RETROFLAT_COLOR_DEF[3];
 #else
 typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */

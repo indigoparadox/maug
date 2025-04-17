@@ -228,7 +228,13 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 /* === */
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
-   return retroglu_draw_release( bmp );
+   MERROR_RETVAL retval = MERROR_OK;
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      glutSwapBuffers();
+   } else {
+      retval = retro3d_texture_release( bmp );
+   }
+   return MERROR_OK;
 }
 
 /* === */
@@ -246,7 +252,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_load_bitmap( filename_path, bmp_out, flags );
 
 cleanup:
 
@@ -262,7 +269,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   return retroglu_create_bitmap( w, h, bmp_out, flags );
+   return retro3d_texture_create( w, h, bmp_out, flags );
 }
 
 /* === */
@@ -282,8 +289,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   retval = 
-      retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   retval = retro3d_texture_blit(
+      target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
    return retval;
 }

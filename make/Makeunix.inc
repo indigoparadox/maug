@@ -31,10 +31,18 @@ ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
 $(error could not find pkg-config for gl!)
 endif
 
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/opengl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/opengl
 CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
 LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
 CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
 LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
+
+endif
+ifeq ("$(SMALL3DLIB)","1")
+
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
 
 endif
 

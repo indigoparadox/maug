@@ -387,16 +387,6 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_LITERAL_PATH   0x02
 
-#ifndef RETROFLAT_NO_STRING
-/**
- * \brief Flag for retroflat_string() and retroflat_string_sz() to print
- *        text as outline-only.
- * \todo This has not yet been implemented and is present for backward
- *       compatibility.
- */
-#define RETROFLAT_FLAGS_OUTLINE  0x04
-#endif /* !RETROFLAT_NO_STRING */
-
 /**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
  *
@@ -1653,6 +1643,9 @@ defined( RETROVDP_C )
    void* on_resize_data;
 
 #  if defined( RETROFLAT_OPENGL )
+   /* TODO: Collapse this into normal palette and keep 3D palette stuff in
+    *       retapi3.h!
+    */
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
 
@@ -2029,11 +2022,12 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
-#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#  if defined( RETROFLAT_3D ) && !defined( MAUG_NO_AUTO_C )
+#     define RETRO3D_C
+#     include <retro3d.h>
+#     include <retapi3.h>
 #     define RETRO3DP_C
 #     include <retro3dp.h>
-#     define RETROGLU_C
-#     include <retroglu.h>
 #     define RETROFP_C
 #     include <retrofp.h>
 #     define RETROSFT_C
@@ -2685,10 +2679,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  if defined( RETROFLAT_OPENGL )
    retval = retrosoft_init();
    maug_cleanup_if_not_ok();
-#     ifndef RETROFLAT_NO_STRING
-   retval = retroglu_init_glyph_tex();
-   maug_cleanup_if_not_ok();
-#     endif /* !RETROFLAT_NO_STRING */
 #  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_VDP
@@ -2777,11 +2767,6 @@ defined( RETROFLAT_OPENGL )
    debug_printf( 1, "calling retrosoft shutdown..." );
    retrosoft_shutdown();
 #  endif /* RETROFLAT_SOFT_SHAPES */
-
-#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_NO_STRING )
-   debug_printf( 1, "destroying GL glyphs..." );
-   retroglu_destroy_glyph_tex();
-#  endif /* RETROFLAT_OPENGL */
 
    /* === Platform-Specific Shutdown === */
 
@@ -2877,219 +2862,6 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 }
 
 #endif
-
-/* === */
-
-#ifndef RETROFLAT_NO_STRING
-
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-#     define retroflat_win_create_font( flags, font_str ) \
-         CreateFont( 10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, \
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, \
-            DEFAULT_QUALITY, DEFAULT_PITCH, \
-            (NULL == font_str || '\0' == font_str[0] ? "Arial" : font_str) );
-
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
-) {
-#  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-#  elif defined( RETROFLAT_API_ALLEGRO )
-   FONT* font_data = NULL;
-   int font_loaded = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   SIZE sz;
-   HFONT font;
-   HFONT old_font;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-
-   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
-
-#  elif defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
-   if( NULL == font_str || '\0' == font_str[0] ) {
-      font_data = font;
-   } else {
-      /* TODO: Cache loaded fonts for later use. */
-      font_data = load_font( font_str, NULL, NULL );
-   }
-   if( NULL == font_data ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Unable to load font: %s", font_str );
-      goto cleanup;
-   }
-
-   *w_out = text_length( font_data, str );
-   *h_out = text_height( font_data );
-   
-cleanup:
-
-   if( font_loaded && NULL != font_data ) {
-      destroy_font( font_data );
-   }
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-   assert( retroflat_bitmap_locked( target ) );
-
-   font = retroflat_win_create_font( flags, font_str );
-   old_font = SelectObject( target->hdc_b, font );
-
-   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
-   *w_out = sz.cx;
-   *h_out = sz.cy;
-
-/* cleanup: */
-
-   SelectObject( target->hdc_b, old_font );
-
-#  else
-#     pragma message( "warning: string sz not implemented" )
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-}
-
-/* === */
-
-void retroflat_string(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int16_t x_orig, int16_t y_orig,
-   uint8_t flags
-) {
-#  if defined( RETROFLAT_OPENGL )
-   float aspect_ratio = 0,
-      screen_x = 0,
-      screen_y = 0;
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-#  elif defined( RETROFLAT_API_ALLEGRO )
-   FONT* font_data = NULL;
-   int font_loaded = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   RECT rect;
-   SIZE sz;
-   HFONT font;
-   HFONT old_font;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   if( RETROFLAT_COLOR_NULL == color ) {
-      return;
-   }
-
-#  if !defined( RETROFLAT_OPENGL )
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* !RETROFLAT_OPENGL */
-
-   if( 0 == str_sz ) {
-      str_sz = maug_strlen( str );
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   if( NULL == target || retroflat_screen_buffer() == target ) {
-      /* Push new overlay projection parms before we create a new overlay. */
-      retroglu_push_overlay( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
-
-      retroglu_string(
-         screen_x, screen_y, 0, 
-         g_retroflat_state->palette[color], str, str_sz, font_str, flags );
-
-      retroglu_pop_overlay();
-   } else {
-      /* Assume drawing surface is already configured inside a push_overlay()
-       * call and draw to its texture. */
-      retrosoft_string(
-         target, color, str, str_sz, font_str, x_orig, y_orig, flags );
-   }
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-
-   retrosoft_string(
-      target, color, str, str_sz, font_str, x_orig, y_orig, flags );
-
-#  elif defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
-   if( NULL == font_str || '\0' == font_str[0] ) {
-      font_data = font;
-   } else {
-      /* TODO: Cache loaded fonts for later use. */
-      font_data = load_font( font_str, NULL, NULL );
-   }
-   if( NULL == font_data ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Unable to load font: %s", font_str );
-      goto cleanup;
-   }
-
-   textout_ex( target->b, font_data, str, x_orig, y_orig, color, -1 );
-
-cleanup:
-   if( font_loaded && NULL != font_data ) {
-      destroy_font( font_data );
-   }
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   /* DrawText will draw gibberish even if the string is null-terminated! */
-   str_sz = maug_strlen( str );
-
-   memset( &sz, '\0', sizeof( SIZE ) );
-
-   font = retroflat_win_create_font( flags, font_str );
-   old_font = SelectObject( target->hdc_b, font );
-
-   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
-   rect.left = x_orig;
-   rect.top = y_orig;
-   rect.right = (x_orig + sz.cx);
-   rect.bottom = (y_orig + sz.cy);
-
-   SetTextColor( target->hdc_b, g_retroflat_state->palette[color] );
-   SetBkMode( target->hdc_b, TRANSPARENT );
-
-   DrawText( target->hdc_b, str, str_sz, &rect, 0 );
-
-/* cleanup: */
-
-   SelectObject( target->hdc_b, old_font );
-
-   SetBkMode( target->hdc_b, OPAQUE );
-   SetTextColor( target->hdc_b,
-      g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
-
-#  else
-#     pragma message( "warning: string not implemented" )
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-}
-
-#endif /* !RETROFLAT_NO_STRING */
 
 /* === */
 
@@ -3201,8 +2973,8 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#     include <retro3d.h>
 #     include <retro3dp.h>
-#     include <retroglu.h>
 #     include <retrofp.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_OPENGL */

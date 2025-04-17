@@ -977,7 +977,12 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_draw_release( bmp );
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      /* Windows has its own OpenGL flip function.*/
+      SwapBuffers( g_retroflat_state->platform.hdc_win );
+   } else {
+      retval = retro3d_texture_release( bmp );
+   }
 
 #  else
 
@@ -1061,7 +1066,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_load_bitmap( filename_path, bmp_out, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
@@ -1225,7 +1231,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+   retval = retro3d_texture_create( w, h, bmp_out, flags );
 
 #  else
 
@@ -1351,7 +1357,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_destroy_bitmap( bmp );
+   retro3d_texture_destroy( bmp );
 
 #  else
 
@@ -1404,7 +1410,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   retval = retro3d_texture_blit(
+      target, src, s_x, s_y, d_x, d_y, w, h, instance );
 
 #  else
 
