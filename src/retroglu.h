@@ -175,7 +175,7 @@ struct RETROGLU_PROJ_ARGS {
 void retroglu_init_scene( uint8_t flags );
 void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
 
-void retroglu_draw_poly( struct RETRO3DP_OBJ* obj );
+MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj );
 
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
@@ -346,48 +346,94 @@ void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
    glMatrixMode( GL_MODELVIEW );
 }
 
-void retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
+MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
+   MERROR_RETVAL retval = MERROR_OK;
    int i = 0;
    int j = 0;
+   struct RETRO3DP_MATERIAL* m = NULL;
+   struct RETRO3DP_FACE* f = NULL;
+   struct RETRO3DP_VERTEX* v = NULL;
+
+   debug_printf( RETROGLU_TRACE_LVL, "drawing poly..." );
 
    glBegin( GL_TRIANGLES );
-   for( i = 0 ; obj->faces_sz > i ; i++ ) {
-   
-      /* TODO: Handle material on NDS. */
-      glMaterialfv( GL_FRONT, GL_DIFFUSE,
-         obj->materials[obj->faces[i].material_idx].diffuse );
-         /*
-      glMaterialfv( GL_FRONT, GL_AMBIENT,
-         obj->materials[faces[i].material_idx].ambient );
-         */
-      glMaterialfv( GL_FRONT, GL_SPECULAR,
-         obj->materials[obj->faces[i].material_idx].specular );
-      glMaterialfv( GL_FRONT, GL_EMISSION,
-         obj->materials[obj->faces[i].material_idx].emissive );
+   debug_printf( RETROGLU_TRACE_LVL, "locking faces..." );
+   mdata_vector_lock( &(obj->faces) );
+   debug_printf( RETROGLU_TRACE_LVL, "locking materials..." );
+   mdata_vector_lock( &(obj->materials) );
+   debug_printf( RETROGLU_TRACE_LVL, "locking vertices..." );
+   mdata_vector_lock( &(obj->vertices) );
+   debug_printf( RETROGLU_TRACE_LVL, "locking normals..." );
+   mdata_vector_lock( &(obj->vnormals) );
+   for( i = 0 ; mdata_vector_ct( &(obj->faces) ) > i ; i++ ) {
+      debug_printf( RETROGLU_TRACE_LVL,
+         "getting face %d of " SIZE_T_FMT "...",
+         i, mdata_vector_ct( &(obj->faces) ) );
+      f = mdata_vector_get( &(obj->faces), i, struct RETRO3DP_FACE );
+      assert( NULL != f );
+      if( 0 < mdata_vector_ct( &(obj->materials) ) ) {
+         debug_printf(
+            RETROGLU_TRACE_LVL, "getting material %d of " SIZE_T_FMT "...",
+            f->material_idx, mdata_vector_ct( &(obj->materials) ) );
+         m = mdata_vector_get(
+            &(obj->materials), f->material_idx, struct RETRO3DP_MATERIAL );
+         assert( NULL != m );
+      
+         /* TODO: Handle material on NDS. */
+         glMaterialfv( GL_FRONT, GL_DIFFUSE, m->diffuse );
+            /*
+         glMaterialfv( GL_FRONT, GL_AMBIENT,
+            obj->materials[faces[i].material_idx].ambient );
+            */
+         glMaterialfv( GL_FRONT, GL_SPECULAR, m->specular );
+         glMaterialfv( GL_FRONT, GL_EMISSION, m->emissive );
 
-      glColor3fv( obj->materials[obj->faces[i].material_idx].diffuse );
+         glColor3fv( m->diffuse );
 
-      /* Use a specific macro here that can be overridden for e.g. the NDS. */
-      glShininessf( GL_FRONT, GL_SHININESS, 
-         obj->materials[obj->faces[i].material_idx].specular_exp );
+         /* Use a specific macro here that can be overridden for e.g. the NDS.
+          */
+         glShininessf( GL_FRONT, GL_SHININESS, m->specular_exp );
+      }
 
-      for( j = 0 ; obj->faces[i].vertex_idxs_sz > j ; j++ ) {
-         assert( 0 < obj->faces[i].vertex_idxs[j] );
-         assert( 3 == obj->faces[i].vertex_idxs_sz );
+      for( j = 0 ; f->vertex_idxs_sz > j ; j++ ) {
+         assert( 0 < f->vertex_idxs[j] );
+         assert( 3 == f->vertex_idxs_sz );
 
-         glNormal3f(
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].x,
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].y,
-            obj->vnormals[obj->faces[i].vnormal_idxs[j] - 1].z );
+         if( 0 < mdata_vector_ct( &(obj->vnormals) ) ) {
+            debug_printf( RETROGLU_TRACE_LVL,
+               "getting normal %d of " SIZE_T_FMT "...",
+               j, mdata_vector_ct( &(obj->vnormals) ) );
+            v = mdata_vector_get(
+               &(obj->vnormals), f->vnormal_idxs[j] - 1,
+               struct RETRO3DP_VERTEX );
+            assert( NULL != v );
 
-         glVertex3f(
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].x,
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].y,
-            obj->vertices[obj->faces[i].vertex_idxs[j] - 1].z );
+            glNormal3f( v->x, v->y, v->z );
+         }
+
+         debug_printf( RETROGLU_TRACE_LVL,
+            "getting vertex %d of " SIZE_T_FMT "...",
+            j, mdata_vector_ct( &(obj->vertices) ) );
+         v = mdata_vector_get(
+            &(obj->vertices), f->vertex_idxs[j] - 1, struct RETRO3DP_VERTEX );
+         assert( NULL != v );
+         glVertex3f( v->x, v->y, v->z );
       }
 
    }
+
+   debug_printf( RETROGLU_TRACE_LVL, "drawing complete!" );
+
+cleanup:
+
+   mdata_vector_unlock( &(obj->vnormals) );
+   mdata_vector_unlock( &(obj->faces) );
+   mdata_vector_unlock( &(obj->materials) );
+   mdata_vector_unlock( &(obj->vertices) );
+
    glEnd();
+
+   return retval;
 }
 
 void retroglu_set_tile_clip(
