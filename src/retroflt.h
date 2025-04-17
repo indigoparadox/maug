@@ -2030,6 +2030,8 @@ MERROR_RETVAL retroflat_build_filename_path(
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#     define RETRO3DP_C
+#     include <retro3dp.h>
 #     define RETROGLU_C
 #     include <retroglu.h>
 #     define RETROFP_C
@@ -3199,6 +3201,7 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
+#     include <retro3dp.h>
 #     include <retroglu.h>
 #     include <retrofp.h>
 #     include <retrosft.h>
