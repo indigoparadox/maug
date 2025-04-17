@@ -16,6 +16,35 @@ MAUG_CONST float gc_retro3d_color_table[][3] = { \
 RETROFLAT_COLOR_TABLE( RETRO3D_COLOR_TABLE )
 };
 
+struct RETROFLAT_BITMAP g_bmp_wtf;
+
+MERROR_RETVAL retro3d_platform_init() {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( 1, "setting up texture palette..." );
+#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+         g_retroflat_state->tex_palette[idx][0] = r; \
+         g_retroflat_state->tex_palette[idx][1] = g; \
+         g_retroflat_state->tex_palette[idx][2] = b;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
+
+   /* TODO: Why do we need to do this or nothing shows up? */
+   retroflat_create_bitmap( 16, 16, &g_bmp_wtf, 0 );
+   retroflat_draw_lock( &g_bmp_wtf );
+   retroflat_draw_release( &g_bmp_wtf );
+
+   return retval;
+}
+
+/* === */
+
+void retro3d_platform_shutdown() {
+   /* Destroy weird texture we need to create so things show up. */
+   retroflat_destroy_bitmap( &g_bmp_wtf );
+}
+
+/* === */
+
 void retro3d_scene_init() {
    /* Scale down up so glVertex3i operates on 100-basis. */
    glPushMatrix();

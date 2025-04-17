@@ -2,6 +2,10 @@
 #ifndef RETRO3D_H
 #define RETRO3D_H
 
+MERROR_RETVAL retro3d_platform_init();
+
+void retro3d_platform_shutdown();
+
 void retro3d_scene_init();
 
 void retro3d_scene_complete();

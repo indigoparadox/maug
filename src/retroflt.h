@@ -2206,6 +2206,10 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 /* === */
 
+#ifdef RETROFLAT_3D
+#  include <retro3d.h>
+#endif /* RETROFLAT_3D */
+
 /* TODO: Migrate all platform-specific parts below to retapif.h. */
 #include <retapif.h>
 
@@ -2628,15 +2632,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
-#  ifdef RETROFLAT_OPENGL
-   debug_printf( 1, "setting up texture palette..." );
-#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         g_retroflat_state->tex_palette[idx][0] = r; \
-         g_retroflat_state->tex_palette[idx][1] = g; \
-         g_retroflat_state->tex_palette[idx][2] = b;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
-#  endif /* RETROFLAT_OPENGL */
-
    /* == Platform-Specific Init == */
 
    retval = retroflat_init_platform( argc, argv, args );
@@ -2670,16 +2665,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_null_alloc( MAUG_MHANDLE,
       g_retroflat_state->viewport.refresh_grid_h );
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
-
-#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )
-   retval = retrosoft_init();
-   maug_cleanup_if_not_ok();
-#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
-
-#  if defined( RETROFLAT_OPENGL )
-   retval = retrosoft_init();
-   maug_cleanup_if_not_ok();
-#  endif /* RETROFLAT_OPENGL */
 
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )
@@ -2716,6 +2701,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 skip_vdp:
 
 #  endif /* RETROFLAT_VDP */
+
+#  ifdef RETROFLAT_3D
+   retro3d_platform_init();
+#  endif /* RETROFLAT_3D */
 
 #  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_OPENGL )
    retroflat_draw_lock( NULL );
@@ -2762,13 +2751,9 @@ void retroflat_shutdown( int retval ) {
    }
 #  endif /* RETROFLAT_VDP */
 
-#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
-defined( RETROFLAT_OPENGL )
-   debug_printf( 1, "calling retrosoft shutdown..." );
-   retrosoft_shutdown();
-#  endif /* RETROFLAT_SOFT_SHAPES */
-
    /* === Platform-Specific Shutdown === */
+
+   retro3d_platform_shutdown();
 
    retroflat_shutdown_platform( retval );
 
@@ -2973,7 +2958,6 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
-#     include <retro3d.h>
 #     include <retro3dp.h>
 #     include <retrofp.h>
 #     include <retrosft.h>
