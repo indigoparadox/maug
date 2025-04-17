@@ -126,11 +126,19 @@ struct RETRO3DP_OBJ {
 #define retro3dp_append_token( parser, c ) \
    mparser_append_token( "retro3dp", &((parser)->base), c )
 
-#define retro3dp_pstate_push( parser, new_pstate ) \
+#ifdef MPARSER_TRACE_NAMES
+#  define retro3dp_pstate_push( parser, new_pstate ) \
       if( 0 < (parser)->base.pstate_sz ) { \
          mparser_pstate_pop( "retro3dp", &((parser)->base), NULL ); \
       } \
       mparser_pstate_push( "retro3dp", &((parser)->base), new_pstate, NULL );
+#else
+#  define retro3dp_pstate_push( parser, new_pstate ) \
+      if( 0 < (parser)->base.pstate_sz ) { \
+         mparser_pstate_pop( "retro3dp", &((parser)->base) ); \
+      } \
+      mparser_pstate_push( "retro3dp", &((parser)->base), new_pstate );
+#endif /* MPARSER_TRACE_NAMES */
 
 #define retro3dp_pstate( parser ) \
    mparser_pstate( &((parser)->base) )
