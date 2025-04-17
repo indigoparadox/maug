@@ -127,15 +127,20 @@ struct RETRO3DP_OBJ {
    uint16_t materials_sz;
 };
 
-/**
- * \brief Change the parser state.
- * \param Pointer to the ::RETRO3DP_PARSER to modify.
- * \param new_state \ref maug_retro3dp_obj_fsm_states to set the parser to.
- */
-#define retro3dp_parser_state( parser, new_state ) \
-   debug_printf( \
-      RETRO3DP_TRACE_LVL, "changing parser to state: %d", new_state ); \
-   (parser)->state = new_state;
+#define retro3dp_append_token( parser, c ) \
+   mparser_append_token( "retro3dp", &((parser)->base), c )
+
+#define retro3dp_pstate_push( parser, new_pstate ) \
+      if( 0 < (parser)->base.pstate_sz ) { \
+         mparser_pstate_pop( "retro3dp", &((parser)->base), NULL ); \
+      } \
+      mparser_pstate_push( "retro3dp", &((parser)->base), new_pstate, NULL );
+
+#define retro3dp_pstate( parser ) \
+   mparser_pstate( &((parser)->base) )
+
+#define retro3dp_reset_token( parser ) \
+   mparser_reset_token( "retro3dp", &((parser)->base) )
 
 /**
  * \brief Table of OBJ file tokens understood by the parser.
@@ -167,11 +172,9 @@ typedef int (*retro3dp_mtl_cb)(
  *        with object information.
  */
 struct RETRO3DP_PARSER {
+   struct MPARSER base;
    struct RETRO3DP_OBJ* obj;
-   int state;
    int material_idx;
-   char token[RETRO3DP_PARSER_TOKEN_SZ_MAX];
-   size_t token_sz;
    retro3dp_mtl_cb load_mtl;
    void* load_mtl_data;
 };
@@ -207,23 +210,23 @@ MERROR_RETVAL retro3dp_parse_obj_file(
 #ifdef RETRO3DP_C
 
 int retro3dp_token_vertice( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_VERTEX_X );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_VERTEX_X );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_vnormal( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_VNORMAL_X );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_VNORMAL_X );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_face( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_FACE_VERTEX );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_FACE_VERTEX );
    parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz = 0;
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_usemtl( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_FACE_MATERIAL );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_FACE_MATERIAL );
    return RETROFLAT_OK;
 }
 
@@ -236,37 +239,37 @@ int retro3dp_token_newmtl( struct RETRO3DP_PARSER* parser ) {
    parser->obj->materials[parser->obj->materials_sz].specular_exp = 0;
    parser->obj->materials_sz++;
    assert( parser->obj->materials_sz <= RETRO3DP_MATERIALS_SZ_MAX );
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MATERIAL_NAME );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MATERIAL_NAME );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_mtllib( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MATERIAL_LIB );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MATERIAL_LIB );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_kd( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MTL_KD_R );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MTL_KD_R );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_ka( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MTL_KA_R );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MTL_KA_R );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_ks( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MTL_KS_R );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MTL_KS_R );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_ke( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MTL_KE_R );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MTL_KE_R );
    return RETROFLAT_OK;
 }
 
 int retro3dp_token_ns( struct RETRO3DP_PARSER* parser ) {
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_MTL_NS );
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_MTL_NS );
    return RETROFLAT_OK;
 }
 
@@ -292,8 +295,8 @@ void retro3dp_parse_init(
    parser->load_mtl_data = load_mtl_data;
    parser->obj = obj;
    assert( NULL != parser->obj );
-   retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
-   parser->token_sz = 0;
+   retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
+   retro3dp_reset_token( parser );
 }
 
 #define RETRO3DP_TOKENS_VF( f ) \
@@ -318,45 +321,47 @@ void retro3dp_parse_init(
    f( "mtl Ns", MTL_NS, materials, materials_sz-1, specular_exp, NONE )
 
 #define RETRO3DP_TOKEN_PARSE_VF( desc, cond, array, sz, val, state_next ) \
-   } else if( RETRO3DP_PARSER_STATE_ ## cond == parser->state ) { \
+   } else if( RETRO3DP_PARSER_STATE_ ## cond == retro3dp_pstate( parser ) ) { \
       /* TODO: Maug replacement for C99 crutch. */ \
-      parser->obj->array[parser->obj->sz].val = strtod( parser->token, NULL ); \
+      parser->obj->array[parser->obj->sz].val = \
+         strtod( parser->base.token, NULL ); \
       debug_printf( RETRO3DP_TRACE_LVL, "vertex %d " desc ": %f", \
          parser->obj->sz, parser->obj->array[parser->obj->sz].val ); \
-      retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_ ## state_next );
+      retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_ ## state_next );
 
 MERROR_RETVAL
 retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
    int i = 0;
    MERROR_RETVAL retval = RETROFLAT_OK;
 
-   if( 0 == parser->token_sz ) {
+   if( 0 == parser->base.token_sz ) {
       /* Empty token. */
       goto cleanup;
    }
 
    /* NULL-terminate token. */
-   parser->token[parser->token_sz] = '\0';
+   /* parser->base.token[parser->token_sz] = '\0'; */
 
-   debug_printf( RETRO3DP_TRACE_LVL, "token: %s", parser->token );
+   debug_printf( RETRO3DP_TRACE_LVL, "token: %s", parser->base.token );
 
-   if( RETRO3DP_PARSER_STATE_MATERIAL_LIB == parser->state ) {
+   if( RETRO3DP_PARSER_STATE_MATERIAL_LIB == retro3dp_pstate( parser ) ) {
 
       debug_printf(
-         RETRO3DP_TRACE_LVL, "parsing material lib: %s", parser->token );
-      retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
+         RETRO3DP_TRACE_LVL, "parsing material lib: %s", parser->base.token );
+      retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
       assert( NULL != parser->load_mtl );
-      return parser->load_mtl( parser->token, parser, parser->load_mtl_data );
+      return parser->load_mtl(
+         parser->base.token, parser, parser->load_mtl_data );
 
    RETRO3DP_TOKENS_VF( RETRO3DP_TOKEN_PARSE_VF )
 
       /* TODO: Handle W. */
 
-   } else if( RETRO3DP_PARSER_STATE_FACE_VERTEX == parser->state ) {
+   } else if( RETRO3DP_PARSER_STATE_FACE_VERTEX == retro3dp_pstate( parser ) ) {
       /* Parsing face vertex index. */
       parser->obj->faces[parser->obj->faces_sz].vertex_idxs[
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
-            atoi( parser->token );
+            maug_atos32( parser->base.token, parser->base.token_sz );
 
       debug_printf( RETRO3DP_TRACE_LVL, "face %d, vertex %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
@@ -369,12 +374,12 @@ retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
        * Same for index incr.
        */
 
-   } else if( RETRO3DP_PARSER_STATE_FACE_NORMAL == parser->state ) {
+   } else if( RETRO3DP_PARSER_STATE_FACE_NORMAL == retro3dp_pstate( parser ) ) {
 
       /* Parsing face normal index. */
       parser->obj->faces[parser->obj->faces_sz].vnormal_idxs[
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
-            atoi( parser->token );
+            maug_atos32( parser->base.token, parser->base.token_sz );
 
       debug_printf( RETRO3DP_TRACE_LVL, "face %d, normal %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
@@ -387,12 +392,12 @@ retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
        * Same for index incr.
        */
 
-   } else if( RETRO3DP_PARSER_STATE_FACE_TEXTURE == parser->state ) {
+   } else if( RETRO3DP_PARSER_STATE_FACE_TEXTURE == retro3dp_pstate( parser ) ) {
 
       /* Parsing face texture index. */
       parser->obj->faces[parser->obj->faces_sz].vtexture_idxs[
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz] =
-            atoi( parser->token );
+            maug_atos32( parser->base.token, parser->base.token_sz );
 
       debug_printf( RETRO3DP_TRACE_LVL, "face %d, texture %d: %d",
          parser->obj->faces_sz, parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz,
@@ -406,15 +411,15 @@ retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
        */
 
  
-   } else if( RETRO3DP_PARSER_STATE_FACE_MATERIAL == parser->state ) {
+   } else if( RETRO3DP_PARSER_STATE_FACE_MATERIAL == retro3dp_pstate( parser ) ) {
 
       /* Find the material index and assign it to the parser. */
       for( i = 0 ; parser->obj->materials_sz > i ; i++ ) {
          debug_printf(
             RETRO3DP_TRACE_LVL,
-            "%s vs %s", parser->obj->materials[i].name, parser->token );
+            "%s vs %s", parser->obj->materials[i].name, parser->base.token );
          if( 0 == strncmp(
-            parser->obj->materials[i].name, parser->token,
+            parser->obj->materials[i].name, parser->base.token,
             RETRO3DP_MATERIAL_NAME_SZ_MAX
          ) ) {
             debug_printf( RETRO3DP_TRACE_LVL, "using material: \"%s\" (%d)",
@@ -423,27 +428,26 @@ retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
             break;
          }
       }
-      retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
+      retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
 
-   } else if( RETRO3DP_PARSER_STATE_MATERIAL_NAME == parser->state ) {
+   } else if( RETRO3DP_PARSER_STATE_MATERIAL_NAME == retro3dp_pstate( parser ) ) {
 
       debug_printf(
          RETRO3DP_TRACE_LVL, "adding material: \"%s\" at idx: %d",
-         parser->token, parser->obj->materials_sz - 1 );
+         parser->base.token, parser->obj->materials_sz - 1 );
       maug_strncpy(
          parser->obj->materials[parser->obj->materials_sz - 1].name,
-         parser->token,
+         parser->base.token,
          RETRO3DP_MATERIAL_NAME_SZ_MAX );
-      retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
+      retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
 
    } else {
       /* Check against generic tokens. */
       while( '\0' != g_retro3dp_token_strings[i][0] ) {
          if(
-            parser->token_sz == maug_strlen( g_retro3dp_token_strings[i] ) &&
             0 == strncmp(
-               parser->token, g_retro3dp_token_strings[i],
-               parser->token_sz )
+               parser->base.token, g_retro3dp_token_strings[i],
+               strlen( g_retro3dp_token_strings[i] ) + 1 )
          ) {
             retval = g_retro3dp_token_callbacks[i]( parser );
             goto cleanup;
@@ -455,22 +459,9 @@ retro3dp_parse_token( struct RETRO3DP_PARSER* parser ) {
 cleanup:
 
    /* Reset token. */
-   parser->token_sz = 0;
+   retro3dp_reset_token( parser );
 
    return retval;
-}
-
-MERROR_RETVAL 
-retro3dp_append_token( struct RETRO3DP_PARSER* parser, unsigned char c ) {
-   parser->token[parser->token_sz++] = c;
-
-   /* Protect against token overflow. */
-   if( parser->token_sz >= RETRO3DP_PARSER_TOKEN_SZ_MAX ) {
-      debug_printf( RETRO3DP_TRACE_LVL, "token out of bounds!" );
-      return RETRO3DP_PARSER_ERROR;
-   }
-
-   return RETROFLAT_OK;
 }
 
 MERROR_RETVAL
@@ -478,7 +469,7 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
 
    if(
-      RETRO3DP_PARSER_STATE_COMMENT == parser->state && '\r' != c && '\n' != c
+      RETRO3DP_PARSER_STATE_COMMENT == retro3dp_pstate( parser ) && '\r' != c && '\n' != c
    ) {
       /* We're inside of a comment. */
       return RETROFLAT_OK;
@@ -487,24 +478,24 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
    switch( c ) {
    case '#':
       /* Start of a comment. */
-      retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_COMMENT );
+      retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_COMMENT );
       break;
 
    case '\r':
    case '\n':
       /* New line! End of a comment or token. */
-      if( RETRO3DP_PARSER_STATE_COMMENT == parser->state ) {
-         retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
+      if( RETRO3DP_PARSER_STATE_COMMENT == retro3dp_pstate( parser ) ) {
+         retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
          return RETROFLAT_OK;
 
       } else if(
-         RETRO3DP_PARSER_STATE_FACE_VERTEX == parser->state ||
-         RETRO3DP_PARSER_STATE_FACE_TEXTURE == parser->state ||
-         RETRO3DP_PARSER_STATE_FACE_NORMAL == parser->state
+         RETRO3DP_PARSER_STATE_FACE_VERTEX == retro3dp_pstate( parser ) ||
+         RETRO3DP_PARSER_STATE_FACE_TEXTURE == retro3dp_pstate( parser ) ||
+         RETRO3DP_PARSER_STATE_FACE_NORMAL == retro3dp_pstate( parser )
       ) {
          /* End of face. */
          retval = retro3dp_parse_token( parser );
-         retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_NONE );
+         retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_NONE );
 
          /* Use current parser material. */
          parser->obj->faces[parser->obj->faces_sz].material_idx = 
@@ -516,7 +507,7 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
          assert( parser->obj->faces_sz <= RETRO3DP_FACES_SZ_MAX );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_VNORMAL_Z == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_VNORMAL_Z == retro3dp_pstate( parser ) ) {
 
          retval = retro3dp_parse_token( parser );
          /* End of vertex. */
@@ -524,7 +515,7 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
          assert( parser->obj->vnormals_sz <= RETRO3DP_VERTICES_SZ_MAX );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_VERTEX_Z == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_VERTEX_Z == retro3dp_pstate( parser ) ) {
 
          retval = retro3dp_parse_token( parser );
          /* End of vertex. */
@@ -539,22 +530,22 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
    case '\t':
    case ' ':
       /* Whitespace. Inside of a comment or time for a new token. */
-      if( RETRO3DP_PARSER_STATE_COMMENT == parser->state ) {
+      if( RETRO3DP_PARSER_STATE_COMMENT == retro3dp_pstate( parser ) ) {
          /* Do nothing on spaces in comments. */
          return RETROFLAT_OK;
 
       } else if(
-         RETRO3DP_PARSER_STATE_FACE_VERTEX == parser->state ||
-         RETRO3DP_PARSER_STATE_FACE_TEXTURE == parser->state ||
-         RETRO3DP_PARSER_STATE_FACE_NORMAL == parser->state
+         RETRO3DP_PARSER_STATE_FACE_VERTEX == retro3dp_pstate( parser ) ||
+         RETRO3DP_PARSER_STATE_FACE_TEXTURE == retro3dp_pstate( parser ) ||
+         RETRO3DP_PARSER_STATE_FACE_NORMAL == retro3dp_pstate( parser )
       ) {
          /* A space means we're moving on to the next vertex! */
          retval = retro3dp_parse_token( parser );
          parser->obj->faces[parser->obj->faces_sz].vertex_idxs_sz++;
-         retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_FACE_VERTEX );
+         retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_FACE_VERTEX );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_VNORMAL_Z == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_VNORMAL_Z == retro3dp_pstate( parser ) ) {
 
          retval = retro3dp_parse_token( parser );
          /* End of vertex. */
@@ -562,7 +553,7 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
          assert( parser->obj->vnormals_sz <= RETRO3DP_VERTICES_SZ_MAX );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_VERTEX_Z == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_VERTEX_Z == retro3dp_pstate( parser ) ) {
 
          retval = retro3dp_parse_token( parser );
          /* End of vertex. */
@@ -570,7 +561,7 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
          assert( parser->obj->vertices_sz <= RETRO3DP_VERTICES_SZ_MAX );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_MTL_KD_B == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_MTL_KD_B == retro3dp_pstate( parser ) ) {
          retval = retro3dp_parse_token( parser );
          /* This tuple has a space after blue, so maybe alpha? */
          /* TODO: Set alpha state. */
@@ -581,19 +572,19 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c ) {
       }
 
    case '/':
-      if( RETRO3DP_PARSER_STATE_FACE_VERTEX == parser->state ) {
+      if( RETRO3DP_PARSER_STATE_FACE_VERTEX == retro3dp_pstate( parser ) ) {
          retval = retro3dp_parse_token( parser );
-         retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_FACE_TEXTURE );
+         retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_FACE_TEXTURE );
          return retval;
 
-      } else if( RETRO3DP_PARSER_STATE_FACE_TEXTURE == parser->state ) {
+      } else if( RETRO3DP_PARSER_STATE_FACE_TEXTURE == retro3dp_pstate( parser ) ) {
          retval = retro3dp_parse_token( parser );
-         retro3dp_parser_state( parser, RETRO3DP_PARSER_STATE_FACE_NORMAL );
+         retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_FACE_NORMAL );
          return retval;
       }
       
       /* v/vt/vn/??? */
-      assert( RETRO3DP_PARSER_STATE_FACE_NORMAL != parser->state );
+      assert( RETRO3DP_PARSER_STATE_FACE_NORMAL != retro3dp_pstate( parser ) );
 
       /* If not part of a face, fall through to default append. */
       return retro3dp_append_token( parser, c );
