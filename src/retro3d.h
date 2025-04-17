@@ -12,7 +12,7 @@ void retro3d_scene_rotate( int x, int y, int z );
 
 void retro3d_vx( int x, int y, int z, int s, int t );
 
-void retro3d_tri_begin( uint8_t flags );
+void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags );
 
 void retro3d_tri_end();
 
@@ -25,6 +25,15 @@ void retro3d_tri_end();
 #define RETRO3D_TRI_FLAG_NORMAL_NEG 0x04
 
 #ifdef RETRO3D_C
+
+#define RETRO3D_COLOR_TABLE( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+   { (float)((float)r * 1.0f / 255.0f), \
+     (float)((float)g * 1.0f / 255.0f), \
+     (float)((float)b * 1.0f / 255.0f) },
+
+MAUG_CONST float gc_retro3d_color_table[][3] = { \
+RETROFLAT_COLOR_TABLE( RETRO3D_COLOR_TABLE )
+};
 
 void retro3d_scene_init() {
    /* Scale down up so glVertex3i operates on 100-basis. */
@@ -69,7 +78,7 @@ void retro3d_vx( int x, int y, int z, int s, int t ) {
 
 /* === */
 
-void retro3d_tri_begin( uint8_t flags ) {
+void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags ) {
    int normal_val = 1;
    if( RETRO3D_TRI_FLAG_NORMAL_NEG == (RETRO3D_TRI_FLAG_NORMAL_NEG & flags) ) {
       normal_val *= -1;
@@ -84,6 +93,9 @@ void retro3d_tri_begin( uint8_t flags ) {
       RETRO3D_TRI_FLAG_NORMAL_Z == (RETRO3D_TRI_FLAG_NORMAL_Z & flags)
    ) {
       glNormal3i( 0, 0, normal_val );
+   }
+   if( RETROFLAT_COLOR_NULL != color ) {
+      glColor3fv( gc_retro3d_color_table[color] );
    }
    glBegin( GL_TRIANGLES );
 }
