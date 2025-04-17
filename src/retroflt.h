@@ -891,7 +891,13 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#ifdef RETROFLAT_OPENGL
+#if defined( RETROFLAT_OPENGL ) || defined( DOCUMENTATION )
+
+/**
+ * \addtogroup maug_retro3d_util
+ * \{
+ */
+
 struct RETROFLAT_GLTEX {
    MAUG_MHANDLE bytes_h;
    uint8_t* bytes;
@@ -902,6 +908,9 @@ struct RETROFLAT_GLTEX {
    size_t w;
    size_t h;
 };
+
+/*! \} */ /* maug_retro3d_util */
+
 #endif /* RETROFLAT_OPENGL */
 
 struct RETROFLAT_ARGS;
@@ -2026,6 +2035,7 @@ MERROR_RETVAL retroflat_build_filename_path(
 #  if defined( RETROFLAT_3D ) && !defined( MAUG_NO_AUTO_C )
 #     define RETRO3D_C
 #     include <retro3d.h>
+#     include <retro3du.h>
 #     include <retapi3.h>
 #     define RETRO3DP_C
 #     include <retro3dp.h>
@@ -2209,6 +2219,7 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 #ifdef RETROFLAT_3D
 #  include <retro3d.h>
+#  include <retro3du.h>
 #endif /* RETROFLAT_3D */
 
 /* TODO: Migrate all platform-specific parts below to retapif.h. */
