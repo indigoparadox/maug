@@ -95,14 +95,14 @@ struct RETRO3DP_FACE {
 };
 
 struct RETRO3DP_VERTEX {
-   float x;
-   float y;
-   float z;
+   int16_t x;
+   int16_t y;
+   int16_t z;
 };
 
 struct RETRO3DP_VTEXTURE {
-   float u;
-   float v;
+   int16_t u;
+   int16_t v;
 };
 
 #define RETRO3DP_VERTICES_SZ_MAX 1024
@@ -242,6 +242,7 @@ int retro3dp_token_newmtl( struct RETRO3DP_PARSER* parser ) {
    ssize_t append_retval = 0;
    struct RETRO3DP_MATERIAL m;
    /* Set default lighting alpha to non-transparent. */
+   maug_mzero( &m, sizeof( struct RETRO3DP_MATERIAL ) );
    m.ambient[3] = 1.0f;
    m.diffuse[3] = 1.0f;
    m.specular[3] = 1.0f;
@@ -311,36 +312,48 @@ void retro3dp_parse_init(
 
 /* TODO: Get rid of sz_diff. */
 #define RETRO3DP_TOKENS_VF( f ) \
-   f( "X",        VERTEX_X,   VERTEX,   vertices, 0, x, VERTEX_Y ) \
-   f( "Y",        VERTEX_Y,   VERTEX,   vertices, 0, y, VERTEX_Z ) \
-   f( "Z",        VERTEX_Z,   VERTEX,   vertices, 0, z, NONE ) \
-   f( "normal X", VNORMAL_X,  VERTEX,   vnormals, 0, x, VNORMAL_Y ) \
-   f( "normal Y", VNORMAL_Y,  VERTEX,   vnormals, 0, y, VNORMAL_Z ) \
-   f( "normal Z", VNORMAL_Z,  VERTEX,   vnormals, 0, z, NONE ) \
-   f( "mtl Kd R", MTL_KD_R,   MATERIAL, materials, 1, diffuse[0], MTL_KD_G ) \
-   f( "mtl Kd G", MTL_KD_G,   MATERIAL, materials, 1, diffuse[1], MTL_KD_B ) \
-   f( "mtl Kd B", MTL_KD_B,   MATERIAL, materials, 1, diffuse[2], NONE ) \
-   f( "mtl Ka R", MTL_KA_R,   MATERIAL, materials, 1, ambient[0], MTL_KA_G ) \
-   f( "mtl Ka G", MTL_KA_G,   MATERIAL, materials, 1, ambient[1], MTL_KA_B ) \
-   f( "mtl Ka B", MTL_KA_B,   MATERIAL, materials, 1, ambient[2], NONE ) \
-   f( "mtl Ks R", MTL_KS_R,   MATERIAL, materials, 1, specular[0], MTL_KS_G ) \
-   f( "mtl Ks G", MTL_KS_G,   MATERIAL, materials, 1, specular[1], MTL_KS_B ) \
-   f( "mtl Ks B", MTL_KS_B,   MATERIAL, materials, 1, specular[2], NONE ) \
-   f( "mtl Ke R", MTL_KE_R,   MATERIAL, materials, 1, emissive[0], MTL_KE_G ) \
-   f( "mtl Ke G", MTL_KE_G,   MATERIAL, materials, 1, emissive[1], MTL_KE_B ) \
-   f( "mtl Ke B", MTL_KE_B,   MATERIAL, materials, 1, emissive[2], NONE ) \
-   f( "mtl Ns",   MTL_NS,     MATERIAL, materials, 1, specular_exp, NONE )
+   f( X,        VERTEX_X,   VERTEX,   vertices,  "%d", x, VERTEX_Y ) \
+   f( Y,        VERTEX_Y,   VERTEX,   vertices,  "%d", y, VERTEX_Z ) \
+   f( Z,        VERTEX_Z,   VERTEX,   vertices,  "%d", z, NONE ) \
+   f( normal X, VNORMAL_X,  VERTEX,   vnormals,  "%d", x, VNORMAL_Y ) \
+   f( normal Y, VNORMAL_Y,  VERTEX,   vnormals,  "%d", y, VNORMAL_Z ) \
+   f( normal Z, VNORMAL_Z,  VERTEX,   vnormals,  "%d", z, NONE ) \
+   f( mtlKdR,   MTL_KD_R,   MATERIAL, materials, "%f", diffuse[0], MTL_KD_G ) \
+   f( mtlKdG,   MTL_KD_G,   MATERIAL, materials, "%f", diffuse[1], MTL_KD_B ) \
+   f( mtlKdB,   MTL_KD_B,   MATERIAL, materials, "%f", diffuse[2], NONE ) \
+   f( mtlKaR,   MTL_KA_R,   MATERIAL, materials, "%f", ambient[0], MTL_KA_G ) \
+   f( mtlKaG,   MTL_KA_G,   MATERIAL, materials, "%f", ambient[1], MTL_KA_B ) \
+   f( mtlKaB,   MTL_KA_B,   MATERIAL, materials, "%f", ambient[2], NONE ) \
+   f( mtlKsR,   MTL_KS_R,   MATERIAL, materials, "%f", specular[0], MTL_KS_G ) \
+   f( mtlKsG,   MTL_KS_G,   MATERIAL, materials, "%f", specular[1], MTL_KS_B ) \
+   f( mtlKsB,   MTL_KS_B,   MATERIAL, materials, "%f", specular[2], NONE ) \
+   f( mtlKeR,   MTL_KE_R,   MATERIAL, materials, "%f", emissive[0], MTL_KE_G ) \
+   f( mtlKeG,   MTL_KE_G,   MATERIAL, materials, "%f", emissive[1], MTL_KE_B ) \
+   f( mtlKeB,   MTL_KE_B,   MATERIAL, materials, "%f", emissive[2], NONE ) \
+   f( mtlNs,    MTL_NS,     MATERIAL, materials, "%f", specular_exp, NONE )
 
-#define RETRO3DP_TOKEN_PARSE_VF( desc, cond, vt, array, sz_diff, val, next ) \
+#define RETRO3DP_TOKEN_PARSE_VF( desc, cond, vt, array, fmt, val, next ) \
    } else if( RETRO3DP_PARSER_STATE_ ## cond == retro3dp_pstate( parser ) ) { \
       idx = mdata_vector_ct( &(parser->obj->array) ) - 1 /* - (sz_diff) */; \
       mdata_vector_lock( &(parser->obj->array) ); \
-      /* TODO: Maug replacement for C99 crutch. */ \
       vt = mdata_vector_get( \
          &(parser->obj->array), idx, struct RETRO3DP_ ## vt ); \
       assert( NULL != vt ); \
-      vt->val = strtod( parser->base.token, NULL ); \
-      debug_printf( RETRO3DP_TRACE_LVL, #vt " " SSIZE_T_FMT " " desc ": %f", \
+      /* This seems kinda hacky but it works! Use the fmt string so materials
+       * get an unscaled float value while vertices get a scaled integer. */ \
+      if( 'f' == fmt[1] ) { \
+         /* TODO: Maug replacement for C99 crutch. */ \
+         vt->val = strtod( parser->base.token, NULL ); \
+      } else { \
+         /* Vertices get a scaled integer to allow for precision, but the
+          * renderer should be aware of this! (Typically with a
+          * glScale( 0.001 ) or equivalent. */ \
+         /* TODO: Maug replacement for C99 crutch. */ \
+         vt->val = (int16_t)(1000.0f * \
+            ((float)strtod( parser->base.token, NULL ))); \
+      } \
+      debug_printf( \
+         RETRO3DP_TRACE_LVL, #vt " " SSIZE_T_FMT " " #desc ": " fmt, \
          idx, vt->val ); \
       mdata_vector_unlock( &(parser->obj->array) ); \
       retro3dp_pstate_push( parser, RETRO3DP_PARSER_STATE_ ## next );
@@ -363,7 +376,7 @@ retro3dp_parse_obj_token( struct RETRO3DP_PARSER* parser ) {
    /* NULL-terminate token. */
    /* parser->base.token[parser->token_sz] = '\0'; */
 
-   debug_printf( RETRO3DP_TRACE_LVL, "token: %s", parser->base.token );
+   /* debug_printf( RETRO3DP_TRACE_LVL, "token: %s", parser->base.token ); */
 
    if( RETRO3DP_PARSER_STATE_MATERIAL_LIB == retro3dp_pstate( parser ) ) {
 

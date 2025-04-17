@@ -356,6 +356,10 @@ MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
 
    debug_printf( RETROGLU_TRACE_LVL, "drawing poly..." );
 
+   /* Compensate for parsed integer model. */
+   glPushMatrix();
+   glScalef( 0.001, 0.001, 0.001 );
+
    glBegin( GL_TRIANGLES );
    debug_printf( RETROGLU_TRACE_LVL, "locking faces..." );
    mdata_vector_lock( &(obj->faces) );
@@ -408,7 +412,7 @@ MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
                struct RETRO3DP_VERTEX );
             assert( NULL != v );
 
-            glNormal3f( v->x, v->y, v->z );
+            glNormal3i( v->x, v->y, v->z );
          }
 
          debug_printf( RETROGLU_TRACE_LVL,
@@ -417,7 +421,7 @@ MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
          v = mdata_vector_get(
             &(obj->vertices), f->vertex_idxs[j] - 1, struct RETRO3DP_VERTEX );
          assert( NULL != v );
-         glVertex3f( v->x, v->y, v->z );
+         glVertex3i( v->x, v->y, v->z );
       }
 
    }
@@ -432,6 +436,8 @@ cleanup:
    mdata_vector_unlock( &(obj->vertices) );
 
    glEnd();
+
+   glPopMatrix();
 
    return retval;
 }
