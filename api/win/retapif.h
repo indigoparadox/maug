@@ -485,15 +485,11 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* Setup color palettes. */
    /* TODO: For WinG, try to make the indexes match system palette? */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RGB( r, g, b );
-#     endif /* RETROFLAT_OPENGL */
-
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
+#     endif /* RETROFLAT_OPENGL */
 
    /* TODO: Detect screen colors. */
    g_retroflat_state->screen_colors = 16;
@@ -920,7 +916,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_draw_lock( bmp );
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+      retval = retro3d_texture_lock( bmp );
+   }
 
 #  else
 
@@ -1499,7 +1497,7 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_px( target, color_idx, x, y, flags );
+   retro3d_texture_px( target, color_idx, x, y, flags );
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 

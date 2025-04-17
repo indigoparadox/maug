@@ -74,10 +74,6 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* == GLUT == */
 
-#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
-
    /* We cap out at 16 colors. */
    g_retroflat_state->screen_colors = 16;
 
@@ -221,8 +217,12 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
-   return retroglu_draw_lock( bmp );
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+      retval = retro3d_texture_lock( bmp );
+   }
+   return retval;
 }
 
 /* === */
@@ -275,7 +275,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-   retroglu_destroy_bitmap( bmp );
+   assert( NULL != bmp );
+   retro3d_texture_destroy( bmp );
 }
 
 /* === */
@@ -311,7 +312,8 @@ void retroflat_px(
 
    retroflat_constrain_px( x, y, target, return );
 
-   retroglu_px( target, color_idx, x, y, flags );
+   assert( NULL != target );
+   retro3d_texture_px( target, color_idx, x, y, flags );
 }
 
 /* === */

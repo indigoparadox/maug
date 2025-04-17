@@ -21,7 +21,16 @@ struct RETROFLAT_BITMAP g_bmp_wtf;
 MERROR_RETVAL retro3d_platform_init() {
    MERROR_RETVAL retval = MERROR_OK;
 
+   /*
+#     define RETROFLAT_COLOR_TABLE_OGL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
+        g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_OGL )
+   */
+
    debug_printf( 1, "setting up texture palette..." );
+   /* Use the color indexes defined by retroflat for our internal OpenGL-only
+    * color palette.
+    */
 #     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
          g_retroflat_state->tex_palette[idx][0] = r; \
          g_retroflat_state->tex_palette[idx][1] = g; \

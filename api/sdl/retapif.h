@@ -71,16 +71,13 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* !RETROFLAT_OS_WIN */
 
    /* Setup color palettes. */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
-#     endif /* RETROFLAT_OPENGL */
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+#     endif /* RETROFLAT_OPENGL */
 
 #     ifdef RETROFLAT_OPENGL
    
@@ -159,18 +156,13 @@ MERROR_RETVAL retroflat_init_platform(
    }
 
    /* Setup color palettes. */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx][0] = r; \
-            g_retroflat_state->palette[idx][1] = g; \
-            g_retroflat_state->palette[idx][2] = b;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
-#     endif /* RETROFLAT_OPENGL */
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+#     endif /* !RETROFLAT_OPENGL */
 
    /* Create the main window. */
    g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
@@ -355,7 +347,7 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
 #  if defined( RETROFLAT_OPENGL )

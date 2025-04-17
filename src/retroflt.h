@@ -1554,9 +1554,10 @@ struct RETROFLAT_STATE {
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
-   /* TODO: Make indirect palette optional per-platform. */
+#ifndef RETROFLAT_3D
    /*! \brief Index of available colors, initialized on platform init. */
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
+#endif /* !RETROFLAT_3D */
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -2956,6 +2957,10 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #     include <retrofp.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
+
+#  ifdef RETROFLAT_3D
+#     include <retro3d.h>
+#  endif /* RETROFLAT_3D */
 
 #  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
 #     include <retro3dp.h>
