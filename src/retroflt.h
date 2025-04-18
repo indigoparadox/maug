@@ -2216,11 +2216,6 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 /* === */
 
-#ifdef RETROFLAT_3D
-#  include <retro3d.h>
-#  include <retro3du.h>
-#endif /* RETROFLAT_3D */
-
 /* TODO: Migrate all platform-specific parts below to retapif.h. */
 #include <retapif.h>
 
@@ -2974,6 +2969,7 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  ifdef RETROFLAT_3D
 #     include <retro3dp.h>
 #     include <retro3d.h>
+#     include <retro3du.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_3D */
 
