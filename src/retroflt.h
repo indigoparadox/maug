@@ -891,7 +891,7 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_3D ) || defined( DOCUMENTATION )
+#if defined( RETROFLAT_OPENGL ) || defined( DOCUMENTATION )
 
 /**
  * \addtogroup maug_retro3d_util
@@ -911,7 +911,7 @@ struct RETROFLAT_GLTEX {
 
 /*! \} */ /* maug_retro3d_util */
 
-#endif /* RETROFLAT_3D || DOCUMENTATION */
+#endif /* RETROFLAT_OPENGL || DOCUMENTATION */
 
 struct RETROFLAT_ARGS;
 
@@ -1563,10 +1563,10 @@ struct RETROFLAT_STATE {
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
-#ifndef RETROFLAT_3D
+#ifndef RETROFLAT_OPENGL
    /*! \brief Index of available colors, initialized on platform init. */
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
-#endif /* !RETROFLAT_3D */
+#endif /* !RETROFLAT_OPENGL */
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -1652,12 +1652,12 @@ defined( RETROVDP_C )
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
-#  if defined( RETROFLAT_3D )
+#  if defined( RETROFLAT_OPENGL )
    /* TODO: Collapse this into normal palette and keep 3D palette stuff in
     *       retapi3.h!
     */
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
-#  endif /* RETROFLAT_3D */
+#  endif /* RETROFLAT_OPENGL */
 
    struct RETROFLAT_PLATFORM platform;
 
@@ -1816,7 +1816,7 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags );
 
 #ifdef RETROFLAT_SOFT_SHAPES
-#  ifdef RETROFLAT_3D
+#  ifdef RETROFLAT_OPENGL
 /* Make sure we're not passing NULL to openGL texture drawers... they can't
  * handle that!
  */
