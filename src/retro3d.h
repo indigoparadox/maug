@@ -32,6 +32,8 @@ struct RETRO3D_PROJ_ARGS {
 
 #define RETRO3D_TEX_FLAG_DESTROY 0x02
 
+#define RETRO3D_TEX_FLAG_DEACTIVATE 0x04
+
 #define RETRO3D_PROJ_ORTHO 0
 
 #define RETRO3D_PROJ_FRUSTUM 1
@@ -62,6 +64,9 @@ void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags );
 void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags );
 
 void retro3d_tri_end();
+
+MERROR_RETVAL retro3d_texture_activate(
+   struct RETROFLAT_BITMAP* bmp, uint8_t flags );
 
 /**
  * \brief Perform engine-specific refresh actions on the texture.

@@ -244,6 +244,45 @@ void retro3d_tri_end() {
 
 /* === */
 
+MERROR_RETVAL retro3d_texture_activate(
+   struct RETROFLAT_BITMAP* bmp, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
+      debug_printf( RETRO3D_TRACE_LVL, "binding texture %d...", bmp->tex.id );
+      glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+      retval = retro3d_check_errors( "texture bind" );
+      maug_cleanup_if_not_ok();
+#  else
+      maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
+      maug_cleanup_if_null_lock( uint8_t*, bmp->tex.bytes );
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      retval = retro3d_check_errors( "texture select" );
+      maug_cleanup_if_not_ok();
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
+      glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+      glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+#  ifndef RETROGLU_NO_TEXTURE_LISTS
+   } else {
+      debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", bmp->tex.id );
+      glBindTexture( GL_TEXTURE_2D, 0 );
+      retval = retro3d_check_errors( "texture unbind" );
+      maug_cleanup_if_not_ok();
+      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retro3d_texture_platform_refresh(
    struct RETROFLAT_BITMAP* bmp, uint8_t flags
 ) {
@@ -251,18 +290,33 @@ MERROR_RETVAL retro3d_texture_platform_refresh(
 
 #  ifndef RETRO3D_NO_TEXTURE_LISTS
    if( RETRO3D_TEX_FLAG_DESTROY == (RETRO3D_TEX_FLAG_DESTROY & flags) ) {
+      debug_printf( RETRO3D_TRACE_LVL, "destroying texture %d...",
+         bmp->tex.id );
       glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
+      retval = retro3d_check_errors( "texture delete" );
+      maug_cleanup_if_not_ok();
    }
 
    /* Update stored texture if it exists. */
    if( RETRO3D_TEX_FLAG_GENERATE == (RETRO3D_TEX_FLAG_GENERATE & flags) ) {
+      debug_printf( RETRO3D_TRACE_LVL, "generating texture ID..." );
       glGenTextures( 1, (GLuint*)&(bmp->tex.id) );
+      retval = retro3d_check_errors( "texture bind" );
+      maug_cleanup_if_not_ok();
+      debug_printf( RETRO3D_TRACE_LVL, "generated texture ID: %d",
+         bmp->tex.id );
    }
    glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+   retval = retro3d_check_errors( "texture select" );
+   maug_cleanup_if_not_ok();
    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+   retval = retro3d_check_errors( "texture unbind" );
+   maug_cleanup_if_not_ok();
    glBindTexture( GL_TEXTURE_2D, 0 );
 #  endif /* !RETRO3D_NO_TEXTURE_LISTS */
+
+cleanup:
 
    return retval;
 }
