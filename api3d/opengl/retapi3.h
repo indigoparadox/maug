@@ -108,6 +108,25 @@ MERROR_RETVAL retro3d_platform_init() {
    retroflat_draw_lock( &g_bmp_wtf );
    retroflat_draw_release( &g_bmp_wtf );
 
+#ifdef MAUG_OS_NDS
+   glMaterialShinyness();
+   glPolyFmt( POLY_ALPHA( 15 ) | POLY_CULL_BACK  | POLY_FORMAT_LIGHT0 );
+#else
+   glEnable( GL_CULL_FACE );
+   glShadeModel( GL_SMOOTH );
+
+   /* Setup texture transparency. */
+   glEnable( GL_TEXTURE_2D );
+   glEnable( GL_BLEND );
+   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+   /* Setup depth buffer so triangles in back are hidden. */
+   glEnable( GL_DEPTH_TEST );
+   glDepthMask( GL_TRUE );
+   glDepthFunc( GL_LESS );
+   glDepthRange( 0.0f, 1.0f );
+#endif /* !MAUG_OS_NDS */
+
    return retval;
 }
 

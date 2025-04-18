@@ -160,8 +160,6 @@ struct RETROGLU_TILE {
 #define retroglu_set_sprite_color( sprite, color_in ) \
    memcpy( (sprite)->color, (color_in), 3 * sizeof( float ) )
 
-void retroglu_init_scene( uint8_t flags );
-
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
    uint32_t px, uint32_t py, uint32_t pw, uint32_t ph, uint8_t flags );
@@ -243,29 +241,6 @@ void retroglu_px(
       (float)((float)b * 1.0f / 255.0f) };
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GL )
-
-void retroglu_init_scene( uint8_t flags ) {
-   debug_printf( RETROGLU_TRACE_LVL, "initializing..." );
-
-#ifdef MAUG_OS_NDS
-   glMaterialShinyness();
-   glPolyFmt( POLY_ALPHA( 15 ) | POLY_CULL_BACK  | POLY_FORMAT_LIGHT0 );
-#else
-   glEnable( GL_CULL_FACE );
-   glShadeModel( GL_SMOOTH );
-
-   /* Setup texture transparency. */
-   glEnable( GL_TEXTURE_2D );
-   glEnable( GL_BLEND );
-   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-   /* Setup depth buffer so triangles in back are hidden. */
-   glEnable( GL_DEPTH_TEST );
-   glDepthMask( GL_TRUE );
-   glDepthFunc( GL_LESS );
-   glDepthRange( 0.0f, 1.0f );
-#endif /* !MAUG_OS_NDS */
-}
 
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
