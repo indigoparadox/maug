@@ -60,7 +60,7 @@ mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut,
  */
 mfix_t mfix_div( mfix_t dividend, int divisor );
 
-mfix_t mfix_mult( mfix_t m1, int m2 );
+mfix_t mfix_mult( mfix_t m1, mfix_t m2 );
 
 #ifdef MFIX_C
 
@@ -254,8 +254,8 @@ mfix_t mfix_div( mfix_t dividend, int divisor ) {
 
 /* === */
 
-mfix_t mfix_mult( mfix_t m1, int m2 ) {
-   return (mfix_t)((m1) * ((float)(m2) / 1000.f));
+mfix_t mfix_mult( mfix_t m1, mfix_t m2 ) {
+   return (mfix_t)(((m1) * (m2)) / 1000.0f);
 }
 
 #else

@@ -39,7 +39,7 @@ CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
 LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
 
 endif
-ifeq ("$(SMALL3DLIB)","1")
+ifeq ("$(SMALL3DL)","1")
 
 CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
 CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
