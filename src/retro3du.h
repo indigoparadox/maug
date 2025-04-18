@@ -49,6 +49,8 @@ void retro3d_texture_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags );
 
+MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model );
+
 /*! \} */ /* maug_retro3d_util */
 
 /*! \} */ /* maug_retro3d */
@@ -79,18 +81,18 @@ MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_BITMAP* bmp ) {
    assert( NULL != bmp && &(g_retroflat_state->buffer) != bmp );
    assert( retroflat_bitmap_locked( bmp ) );
 
-#ifndef RETROGLU_NO_TEXTURES
+#ifndef RETRO3D_NO_TEXTURES
    bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
-#  ifndef RETROGLU_NO_TEXTURE_LISTS
+#  ifndef RETRO3D_NO_TEXTURE_LISTS
    assert( 0 < bmp->tex.id );
    assert( NULL != bmp->tex.bytes );
 
    retval = retro3d_texture_platform_refresh( bmp, 0 );
-#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
+#  endif /* !RETRO3D_NO_TEXTURE_LISTS */
 
    /* Unlock texture bitmap. */
    maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
-#endif /* !RETROGLU_NO_TEXTURES */
+#endif /* !RETRO3D_NO_TEXTURES */
 
    return retval;
 }
@@ -101,7 +103,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    const char* filename_path, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#ifndef RETROGLU_NO_TEXTURES
+#ifndef RETRO3D_NO_TEXTURES
    mfile_t bmp_file;
    struct MFMT_STRUCT_BMPFILE header_bmp;
    MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
@@ -241,7 +243,7 @@ cleanup:
 
    mfile_close( &bmp_file );
 
-#endif /* !RETROGLU_NO_TEXTURES */
+#endif /* !RETRO3D_NO_TEXTURES */
 
    return retval;
 }
@@ -286,7 +288,7 @@ MERROR_RETVAL retro3d_texture_create(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#ifdef RETROGLU_NO_TEXTURES
+#ifdef RETRO3D_NO_TEXTURES
    error_printf( "textures not enabled!" );
    retval = MERROR_GUI;
 #else
@@ -326,7 +328,7 @@ cleanup:
       maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
    }
 
-#endif /* !RETROGLU_NO_TEXTURES */
+#endif /* !RETRO3D_NO_TEXTURES */
 
    return retval;
 }
@@ -334,7 +336,7 @@ cleanup:
 /* === */
 
 void retro3d_texture_destroy( struct RETROFLAT_BITMAP* bmp ) {
-#ifndef RETROGLU_NO_TEXTURES
+#ifndef RETRO3D_NO_TEXTURES
    debug_printf( 1, "destroying bitmap..." );
 
    if( NULL != bmp->tex.bytes ) {
@@ -350,7 +352,7 @@ void retro3d_texture_destroy( struct RETROFLAT_BITMAP* bmp ) {
          "destroying bitmap texture: " UPRINTF_U32_FMT, bmp->tex.id );
       retro3d_texture_platform_refresh( bmp, RETRO3D_TEX_FLAG_DESTROY );
    }
-#endif /* !RETROGLU_NO_TEXTURES */
+#endif /* !RETRO3D_NO_TEXTURES */
 }
 
 /* === */
@@ -383,6 +385,114 @@ void retro3d_texture_px(
    /* Set pixel as opaque. */
    target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
 }
+
+/* === */
+
+MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int i = 0;
+   int j = 0;
+   struct RETRO3DP_MATERIAL* m = NULL;
+   struct RETRO3DP_FACE* f = NULL;
+   struct RETRO3DP_VERTEX* v = NULL;
+
+   debug_printf( RETRO3D_TRACE_LVL, "drawing poly..." );
+
+#if 0
+   /* Compensate for parsed integer model. */
+   glPushMatrix();
+
+   glBegin( GL_TRIANGLES );
+#endif
+
+   debug_printf( RETRO3D_TRACE_LVL, "locking faces..." );
+   mdata_vector_lock( &(model->faces) );
+   debug_printf( RETRO3D_TRACE_LVL, "locking materials..." );
+   mdata_vector_lock( &(model->materials) );
+   debug_printf( RETRO3D_TRACE_LVL, "locking vertices..." );
+   mdata_vector_lock( &(model->vertices) );
+   debug_printf( RETRO3D_TRACE_LVL, "locking normals..." );
+   mdata_vector_lock( &(model->vnormals) );
+   for( i = 0 ; mdata_vector_ct( &(model->faces) ) > i ; i++ ) {
+      debug_printf( RETRO3D_TRACE_LVL,
+         "getting face %d of " SIZE_T_FMT "...",
+         i, mdata_vector_ct( &(model->faces) ) );
+      f = mdata_vector_get( &(model->faces), i, struct RETRO3DP_FACE );
+      assert( NULL != f );
+      if( 0 < mdata_vector_ct( &(model->materials) ) ) {
+         debug_printf(
+            RETRO3D_TRACE_LVL, "getting material %d of " SIZE_T_FMT "...",
+            f->material_idx, mdata_vector_ct( &(model->materials) ) );
+         m = mdata_vector_get(
+            &(model->materials), f->material_idx, struct RETRO3DP_MATERIAL );
+         assert( NULL != m );
+      
+#if 0
+         /* TODO: Handle material on NDS. */
+         glMaterialfv( GL_FRONT, GL_DIFFUSE, m->diffuse );
+            /*
+         glMaterialfv( GL_FRONT, GL_AMBIENT,
+            model->materials[faces[i].material_idx].ambient );
+            */
+         glMaterialfv( GL_FRONT, GL_SPECULAR, m->specular );
+         glMaterialfv( GL_FRONT, GL_EMISSION, m->emissive );
+
+         glColor3fv( m->diffuse );
+         /* Use a specific macro here that can be overridden for e.g. the NDS.
+          */
+         glShininessf( GL_FRONT, GL_SHININESS, m->specular_exp );
+#endif
+      }
+
+      assert( 0 < f->vertex_idxs[j] );
+      assert( 3 == f->vertex_idxs_sz );
+      retro3d_tri_begin( RETROFLAT_COLOR_NULL, 0 );
+      for( j = 0 ; f->vertex_idxs_sz > j ; j++ ) {
+
+         /*
+         if( 0 < mdata_vector_ct( &(model->vnormals) ) ) {
+            debug_printf( RETRO3D_TRACE_LVL,
+               "getting normal %d of " SIZE_T_FMT "...",
+               j, mdata_vector_ct( &(model->vnormals) ) );
+            v = mdata_vector_get(
+               &(model->vnormals), f->vnormal_idxs[j] - 1,
+               struct RETRO3DP_VERTEX );
+            assert( NULL != v );
+
+            glNormal3i( v->x, v->y, v->z );
+         }
+         */
+
+         debug_printf( RETRO3D_TRACE_LVL,
+            "getting vertex %d of " SIZE_T_FMT "...",
+            j, mdata_vector_ct( &(model->vertices) ) );
+         v = mdata_vector_get(
+            &(model->vertices), f->vertex_idxs[j] - 1, struct RETRO3DP_VERTEX );
+         assert( NULL != v );
+         /* glVertex3i( v->x, v->y, v->z ); */
+      }
+
+      retro3d_tri_end();
+   }
+
+   debug_printf( RETRO3D_TRACE_LVL, "drawing complete!" );
+
+cleanup:
+
+   mdata_vector_unlock( &(model->vnormals) );
+   mdata_vector_unlock( &(model->faces) );
+   mdata_vector_unlock( &(model->materials) );
+   mdata_vector_unlock( &(model->vertices) );
+
+   /*
+   glEnd();
+
+   glPopMatrix();
+   */
+
+   return retval;
+}
+
 
 #endif /* RETRO3D_C */
 

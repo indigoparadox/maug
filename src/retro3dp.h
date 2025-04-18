@@ -110,7 +110,7 @@ struct RETRO3DP_VTEXTURE {
 #define RETRO3DP_MATERIALS_SZ_MAX 1024
 
 /* TODO: Switch these to mdata_vector structs. */
-struct RETRO3DP_OBJ {
+struct RETRO3DP_MODEL {
    uint8_t flags;
    struct MDATA_VECTOR vertices;
    struct MDATA_VECTOR vnormals;
@@ -177,7 +177,7 @@ typedef int (*retro3dp_mtl_cb)(
  */
 struct RETRO3DP_PARSER {
    struct MPARSER base;
-   struct RETRO3DP_OBJ* obj;
+   struct RETRO3DP_MODEL* obj;
    int material_idx;
    retro3dp_mtl_cb load_mtl;
    void* load_mtl_data;
@@ -192,7 +192,7 @@ typedef int (*retro3dp_token_cb)( struct RETRO3DP_PARSER* parser );
  *          parser!
  */
 void retro3dp_parse_init(
-   struct RETRO3DP_PARSER* parser, struct RETRO3DP_OBJ* obj,
+   struct RETRO3DP_PARSER* parser, struct RETRO3DP_MODEL* obj,
    retro3dp_mtl_cb load_mtl, void* load_mtl_data
 );
 
@@ -207,9 +207,9 @@ retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c );
 
 MERROR_RETVAL retro3dp_parse_obj_file(
    const char* filename, struct RETRO3DP_PARSER* parser,
-   struct RETRO3DP_OBJ* obj );
+   struct RETRO3DP_MODEL* obj );
 
-void retro3dp_destroy_obj( struct RETRO3DP_OBJ* obj );
+void retro3dp_destroy_obj( struct RETRO3DP_MODEL* obj );
 
 /*! \} */ /* maug_retro3dp_obj_fsm */
 
@@ -307,7 +307,7 @@ retro3dp_token_cb g_retro3dp_token_callbacks[] = {
 };
 
 void retro3dp_parse_init(
-   struct RETRO3DP_PARSER* parser, struct RETRO3DP_OBJ* obj,
+   struct RETRO3DP_PARSER* parser, struct RETRO3DP_MODEL* obj,
    retro3dp_mtl_cb load_mtl, void* load_mtl_data
 ) {
    parser->load_mtl = load_mtl;
@@ -677,7 +677,7 @@ cleanup:
 
 MERROR_RETVAL retro3dp_parse_obj_file(
    const char* filename, struct RETRO3DP_PARSER* parser,
-   struct RETRO3DP_OBJ* obj
+   struct RETRO3DP_MODEL* obj
 ) {
    int auto_parser = 0; /* Did we provision parser? */
    char filename_path[RETROFLAT_PATH_MAX + 1];
@@ -740,7 +740,7 @@ cleanup:
 
 /* === */
 
-void retro3dp_destroy_obj( struct RETRO3DP_OBJ* obj ) {
+void retro3dp_destroy_obj( struct RETRO3DP_MODEL* obj ) {
    debug_printf( RETRO3DP_TRACE_LVL, "destroying object..." );
    mdata_vector_free( &(obj->vertices) );
    mdata_vector_free( &(obj->vtextures) );

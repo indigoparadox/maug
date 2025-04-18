@@ -6,6 +6,19 @@
  * \addtogroup maug_retro3d Retro3D API
  */
 
+#ifndef RETRO3D_TRACE_LVL
+#  define RETRO3D_TRACE_LVL 0
+#endif /* RETRO3D_TRACE_LVL */
+
+struct RETRO3D_PROJ_ARGS {
+   uint8_t proj;
+   float rzoom;
+   float near_plane;
+   float far_plane;
+   size_t screen_px_w;
+   size_t screen_px_h;
+};
+
 /**
  * \file retro3d.h
  * \brief Lower-level retargetable 3D engine wrapper.
@@ -19,6 +32,12 @@
 
 #define RETRO3D_TEX_FLAG_DESTROY 0x02
 
+#define RETRO3D_PROJ_ORTHO 0
+
+#define RETRO3D_PROJ_FRUSTUM 1
+
+void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args );
+
 MERROR_RETVAL retro3d_platform_init();
 
 void retro3d_platform_shutdown();
@@ -27,14 +46,16 @@ void retro3d_scene_init();
 
 void retro3d_scene_complete();
 
-void retro3d_scene_translate( int x, int y, int z );
+void retro3d_scene_translate( mfix_t x, mfix_t y, mfix_t z );
 
-void retro3d_scene_rotate( int x, int y, int z );
+void retro3d_scene_scale( mfix_t x, mfix_t y, mfix_t z );
+
+void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z );
 
 /**
  * \brief Create a vertex at the designated location.
  */
-void retro3d_vx( int x, int y, int z, int s, int t );
+void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t );
 
 void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags );
 

@@ -56,6 +56,8 @@
 #  define SEG_FAR
 #endif /* MAUG_OS_DOS_REAL */
 
+#include <mfix.h>
+
 #ifdef MAUG_C
 #  define UPRINTF_C
 #endif /* MAUG_C */

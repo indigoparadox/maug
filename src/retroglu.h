@@ -84,18 +84,6 @@ struct RETROGLU_TILE {
 
 /*! \} */ /* maug_retroglu_sprite */
 
-#define RETROGLU_PROJ_ORTHO 0
-#define RETROGLU_PROJ_FRUSTUM 1
-
-struct RETROGLU_PROJ_ARGS {
-   uint8_t proj;
-   float rzoom;
-   float near_plane;
-   float far_plane;
-   size_t screen_px_w;
-   size_t screen_px_h;
-};
-
 #ifdef RETROFLAT_API_LIBNDS
 #  define retroglu_enable_lightning()
 #  define retroglu_disable_lightning()
@@ -173,9 +161,6 @@ struct RETROGLU_PROJ_ARGS {
    memcpy( (sprite)->color, (color_in), 3 * sizeof( float ) )
 
 void retroglu_init_scene( uint8_t flags );
-void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args );
-
-MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj );
 
 void retroglu_set_tile_clip(
    struct RETROGLU_TILE* tile,
@@ -280,166 +265,6 @@ void retroglu_init_scene( uint8_t flags ) {
    glDepthFunc( GL_LESS );
    glDepthRange( 0.0f, 1.0f );
 #endif /* !MAUG_OS_NDS */
-}
-
-void retroglu_init_projection( struct RETROGLU_PROJ_ARGS* args ) {
-   float aspect_ratio = 0;
-
-   if( 0 == args->screen_px_w ) {
-      debug_printf( 1,
-         "using assumed screen width: " SIZE_T_FMT, retroflat_screen_w() );
-      args->screen_px_w = retroflat_screen_w();
-   } else {
-      debug_printf( 1,
-         "using specified screen width: " SIZE_T_FMT, retroflat_screen_w() );
-   }
-   if( 0 == args->screen_px_h ) {
-      debug_printf( 1,
-         "using assumed screen height: " SIZE_T_FMT, retroflat_screen_h() );
-      args->screen_px_h = retroflat_screen_h();
-   } else {
-      debug_printf( 1,
-         "using specified screen height: " SIZE_T_FMT, retroflat_screen_h() );
-   }
-
-   /* Setup projection. */
-#ifdef MAUG_OS_NDS
-   glViewport( 0, 0, 255, 191 );
-#else
-   glViewport(
-      0, 0, (uint32_t)(args->screen_px_w), (uint32_t)(args->screen_px_h) );
-#endif
-   aspect_ratio = (float)(args->screen_px_w) / (float)(args->screen_px_h);
-
-   /* Switch to projection matrix for setup. */
-   glMatrixMode( GL_PROJECTION );
-
-   /* Zero everything out. */
-   glLoadIdentity();
-
-   /* Near plane can't be zero for frustum! */
-   assert( 0 != args->near_plane );
-
-   switch( args->proj ) {
-   case RETROGLU_PROJ_FRUSTUM:
-      /* This is really tweaky, and when it breaks, polygons seem to get drawn
-         * out of order? Still experimenting/researching. */
-      debug_printf( RETROGLU_TRACE_LVL, "aspect ratio: %f", aspect_ratio );
-      glFrustum(
-         /* The smaller these are, the closer it lets us get to the camera? */
-         -1.0f * args->rzoom * aspect_ratio, args->rzoom * aspect_ratio,
-         -1.0f * args->rzoom, args->rzoom,
-         args->near_plane, args->far_plane );
-      break;
-
-   case RETROGLU_PROJ_ORTHO:
-      /* This is much simpler/more forgiving than frustum. */
-      glOrtho(
-         -1.0f * args->rzoom * aspect_ratio,
-         args->rzoom * aspect_ratio,
-         -1.0f * args->rzoom, args->rzoom,
-         args->near_plane, args->far_plane );
-      break;
-   }
-
-   /* Revert to model matrix for later instructions (out of this scope). */
-   glMatrixMode( GL_MODELVIEW );
-}
-
-MERROR_RETVAL retroglu_draw_poly( struct RETRO3DP_OBJ* obj ) {
-   MERROR_RETVAL retval = MERROR_OK;
-   int i = 0;
-   int j = 0;
-   struct RETRO3DP_MATERIAL* m = NULL;
-   struct RETRO3DP_FACE* f = NULL;
-   struct RETRO3DP_VERTEX* v = NULL;
-
-   debug_printf( RETROGLU_TRACE_LVL, "drawing poly..." );
-
-   /* Compensate for parsed integer model. */
-   glPushMatrix();
-   glScalef( 0.001, 0.001, 0.001 );
-
-   glBegin( GL_TRIANGLES );
-   debug_printf( RETROGLU_TRACE_LVL, "locking faces..." );
-   mdata_vector_lock( &(obj->faces) );
-   debug_printf( RETROGLU_TRACE_LVL, "locking materials..." );
-   mdata_vector_lock( &(obj->materials) );
-   debug_printf( RETROGLU_TRACE_LVL, "locking vertices..." );
-   mdata_vector_lock( &(obj->vertices) );
-   debug_printf( RETROGLU_TRACE_LVL, "locking normals..." );
-   mdata_vector_lock( &(obj->vnormals) );
-   for( i = 0 ; mdata_vector_ct( &(obj->faces) ) > i ; i++ ) {
-      debug_printf( RETROGLU_TRACE_LVL,
-         "getting face %d of " SIZE_T_FMT "...",
-         i, mdata_vector_ct( &(obj->faces) ) );
-      f = mdata_vector_get( &(obj->faces), i, struct RETRO3DP_FACE );
-      assert( NULL != f );
-      if( 0 < mdata_vector_ct( &(obj->materials) ) ) {
-         debug_printf(
-            RETROGLU_TRACE_LVL, "getting material %d of " SIZE_T_FMT "...",
-            f->material_idx, mdata_vector_ct( &(obj->materials) ) );
-         m = mdata_vector_get(
-            &(obj->materials), f->material_idx, struct RETRO3DP_MATERIAL );
-         assert( NULL != m );
-      
-         /* TODO: Handle material on NDS. */
-         glMaterialfv( GL_FRONT, GL_DIFFUSE, m->diffuse );
-            /*
-         glMaterialfv( GL_FRONT, GL_AMBIENT,
-            obj->materials[faces[i].material_idx].ambient );
-            */
-         glMaterialfv( GL_FRONT, GL_SPECULAR, m->specular );
-         glMaterialfv( GL_FRONT, GL_EMISSION, m->emissive );
-
-         glColor3fv( m->diffuse );
-
-         /* Use a specific macro here that can be overridden for e.g. the NDS.
-          */
-         glShininessf( GL_FRONT, GL_SHININESS, m->specular_exp );
-      }
-
-      for( j = 0 ; f->vertex_idxs_sz > j ; j++ ) {
-         assert( 0 < f->vertex_idxs[j] );
-         assert( 3 == f->vertex_idxs_sz );
-
-         if( 0 < mdata_vector_ct( &(obj->vnormals) ) ) {
-            debug_printf( RETROGLU_TRACE_LVL,
-               "getting normal %d of " SIZE_T_FMT "...",
-               j, mdata_vector_ct( &(obj->vnormals) ) );
-            v = mdata_vector_get(
-               &(obj->vnormals), f->vnormal_idxs[j] - 1,
-               struct RETRO3DP_VERTEX );
-            assert( NULL != v );
-
-            glNormal3i( v->x, v->y, v->z );
-         }
-
-         debug_printf( RETROGLU_TRACE_LVL,
-            "getting vertex %d of " SIZE_T_FMT "...",
-            j, mdata_vector_ct( &(obj->vertices) ) );
-         v = mdata_vector_get(
-            &(obj->vertices), f->vertex_idxs[j] - 1, struct RETRO3DP_VERTEX );
-         assert( NULL != v );
-         glVertex3i( v->x, v->y, v->z );
-      }
-
-   }
-
-   debug_printf( RETROGLU_TRACE_LVL, "drawing complete!" );
-
-cleanup:
-
-   mdata_vector_unlock( &(obj->vnormals) );
-   mdata_vector_unlock( &(obj->faces) );
-   mdata_vector_unlock( &(obj->materials) );
-   mdata_vector_unlock( &(obj->vertices) );
-
-   glEnd();
-
-   glPopMatrix();
-
-   return retval;
 }
 
 void retroglu_set_tile_clip(

@@ -891,7 +891,7 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_OPENGL ) || defined( DOCUMENTATION )
+#if defined( RETROFLAT_3D ) || defined( DOCUMENTATION )
 
 /**
  * \addtogroup maug_retro3d_util
@@ -911,7 +911,7 @@ struct RETROFLAT_GLTEX {
 
 /*! \} */ /* maug_retro3d_util */
 
-#endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_3D || DOCUMENTATION */
 
 struct RETROFLAT_ARGS;
 
@@ -1652,12 +1652,12 @@ defined( RETROVDP_C )
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
-#  if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_3D )
    /* TODO: Collapse this into normal palette and keep 3D palette stuff in
     *       retapi3.h!
     */
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_3D */
 
    struct RETROFLAT_PLATFORM platform;
 
@@ -1816,7 +1816,7 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags );
 
 #ifdef RETROFLAT_SOFT_SHAPES
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_3D
 /* Make sure we're not passing NULL to openGL texture drawers... they can't
  * handle that!
  */
@@ -1831,7 +1831,7 @@ void retroflat_px(
       retrosoft_rect( t, c, x, y, w, h, f )
 #     define retroflat_ellipse( t, c, x, y, w, h, f ) \
       retrosoft_ellipse( t, c, x, y, w, h, f )
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_3D */
 #else
 
 /**
@@ -2032,18 +2032,20 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
-#  if defined( RETROFLAT_3D ) && !defined( MAUG_NO_AUTO_C )
-#     define RETRO3D_C
+#  if defined( RETROFLAT_3D )
+#     if !defined( MAUG_NO_AUTO_C )
+#        define RETRO3D_C
+#        define RETRO3DP_C
+#        define RETROFP_C
+#        define RETROSFT_C
+#     endif /* MAUG_NO_AUTO_C */
+#     include <retro3dp.h>
 #     include <retro3d.h>
 #     include <retro3du.h>
 #     include <retapi3.h>
-#     define RETRO3DP_C
-#     include <retro3dp.h>
-#     define RETROFP_C
 #     include <retrofp.h>
-#     define RETROSFT_C
 #     include <retrosft.h>
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_3D */
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
@@ -2718,7 +2720,7 @@ skip_vdp:
    retro3d_platform_init();
 #  endif /* RETROFLAT_3D */
 
-#  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_OPENGL )
+#  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_3D )
    retroflat_draw_lock( NULL );
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, 0, 0,
@@ -2970,14 +2972,11 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  ifdef RETROFLAT_3D
-#     include <retro3d.h>
-#  endif /* RETROFLAT_3D */
-
-#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
 #     include <retro3dp.h>
+#     include <retro3d.h>
 #     include <retrofp.h>
 #     include <retrosft.h>
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_3D */
 
 #endif /* RETROFLT_C */
 
