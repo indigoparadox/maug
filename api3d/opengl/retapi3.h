@@ -18,6 +18,8 @@ RETROFLAT_COLOR_TABLE( RETRO3D_COLOR_TABLE )
 
 struct RETROFLAT_BITMAP g_bmp_wtf;
 
+static int gs_tri_vxs_drawn = -1;
+
 void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
    float aspect_ratio = 0;
 
@@ -183,6 +185,9 @@ void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z ) {
 /* === */
 
 void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t ) {
+   assert( 0 <= gs_tri_vxs_drawn );
+   assert( 3 > gs_tri_vxs_drawn );
+   debug_printf( RETRO3D_TRACE_LVL, "vertex: %d, %d, %d", x, y, z );
    glTexCoord2i( s, t );
    glVertex3i( x, y, z );
 }
@@ -190,7 +195,23 @@ void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t ) {
 /* === */
 
 void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags ) {
+   const float* fcolor = NULL;
+
+   if( RETROFLAT_COLOR_NULL != color ) {
+      fcolor = gc_retro3d_color_table[color];
+      retro3d_tri_begin_rgb( fcolor[0], fcolor[1], fcolor[2], flags );
+   } else {
+      retro3d_tri_begin_rgb( -1.0f, -1.0f, -1.0f, flags );
+   }
+}
+
+/* === */
+
+void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
    int normal_val = 1;
+   assert( 0 > gs_tri_vxs_drawn );
+   gs_tri_vxs_drawn = 0;
+   debug_printf( RETRO3D_TRACE_LVL, "triangle start!" );
    if( RETRO3D_TRI_FLAG_NORMAL_NEG == (RETRO3D_TRI_FLAG_NORMAL_NEG & flags) ) {
       normal_val *= -1;
    }
@@ -205,8 +226,8 @@ void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags ) {
    ) {
       glNormal3i( 0, 0, normal_val );
    }
-   if( RETROFLAT_COLOR_NULL != color ) {
-      glColor3fv( gc_retro3d_color_table[color] );
+   if( 0 <= r ) {
+      glColor3f( r, g, b );
    }
    glBegin( GL_TRIANGLES );
 }
@@ -214,6 +235,10 @@ void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags ) {
 /* === */
 
 void retro3d_tri_end() {
+   assert( 0 <= gs_tri_vxs_drawn );
+   assert( 3 > gs_tri_vxs_drawn );
+   debug_printf( RETRO3D_TRACE_LVL, "triangle end!" );
+   gs_tri_vxs_drawn = -1;
    glEnd();
 }
 

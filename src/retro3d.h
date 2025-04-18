@@ -59,6 +59,8 @@ void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t );
 
 void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags );
 
+void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags );
+
 void retro3d_tri_end();
 
 /**

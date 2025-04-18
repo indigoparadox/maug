@@ -446,7 +446,7 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model ) {
 
       assert( 0 < f->vertex_idxs_sz );
       assert( 3 == f->vertex_idxs_sz );
-      retro3d_tri_begin( RETROFLAT_COLOR_NULL, 0 );
+      retro3d_tri_begin_rgb( m->diffuse[0], m->diffuse[1], m->diffuse[2], 0 );
       for( j = 0 ; f->vertex_idxs_sz > j ; j++ ) {
 
          /*
@@ -470,6 +470,7 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model ) {
             &(model->vertices), f->vertex_idxs[j] - 1, struct RETRO3DP_VERTEX );
          assert( NULL != v );
          /* glVertex3i( v->x, v->y, v->z ); */
+         retro3d_vx( v->x, v->y, v->z, 0, 0 );
       }
 
       retro3d_tri_end();
