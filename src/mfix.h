@@ -58,6 +58,8 @@ mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut,
  */
 mfix_t mfix_div( mfix_t dividend, int divisor );
 
+mfix_t mfix_mult( mfix_t m1, int m2 );
+
 #ifdef MFIX_C
 
 MAUG_CONST mfix_t SEG_MCONST gc_mfix_cos[MFIX_LUT_CT] = {
@@ -246,6 +248,12 @@ mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut, mfix_t num ) {
 mfix_t mfix_div( mfix_t dividend, int divisor ) {
    /* TODO: Range checks. */
    return dividend / divisor;
+}
+
+/* === */
+
+mfix_t mfix_mult( mfix_t m1, int m2 ) {
+   return (mfix_t)((m1) * ((float)(m2) / 1000.f));
 }
 
 #else
