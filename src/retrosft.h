@@ -224,24 +224,24 @@ void retrosoft_ellipse(
 
    do {
       /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
-      for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
+      for( i = 100 ; 2 * MFIX_PI + 100 > i ; i += 100 ) {
          i_prev = i - 100;
 
-         px_x1 = x + (w / 2) + retrofp_cos( i_prev, w / 2 );
-         px_y1 = y + (h / 2) + retrofp_sin( i_prev, h / 2 );
-         px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
-         px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
+         px_x1 =
+            /* Offset circle center by X. */
+            x + (w / 2) + 
+            /* Get Cartesian coord by multiplying polar coord by radius. */
+            /* (Note that we convert to i *after* multiplication so the number
+             * is big enough that the precision no longer matters! */
+            mfix_to_i( mfix_cos( i_prev ) * w / 2 );
 
-         /*
-         if(
-            retroflat_bitmap_w( target ) <= px_x1 ||
-            retroflat_bitmap_h( target ) <= px_y1 ||
-            retroflat_bitmap_w( target ) <= px_x2 ||
-            retroflat_bitmap_h( target ) <= px_y2
-         ) {
-            continue;
-         }
-         */
+         px_y1 = y + (h / 2) + mfix_to_i( mfix_sin( i_prev ) * (h / 2) );
+         px_x2 = x + (w / 2) + mfix_to_i( mfix_cos( i ) * (w / 2) );
+         px_y2 = y + (h / 2) + mfix_to_i( mfix_sin( i ) * (h / 2) );
+
+         /* We don't do bounds checks since the low-level API should handle
+          * those! Performance!
+          */
 
          retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
       }

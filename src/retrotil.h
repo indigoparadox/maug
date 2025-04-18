@@ -12,6 +12,8 @@
  * \file retrotil.h
  */
 
+#define RETROTILE_PRESENT
+
 typedef int16_t retrotile_coord_t;
 
 #ifndef RETROTILE_NAME_SZ_MAX

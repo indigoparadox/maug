@@ -2026,8 +2026,6 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )) \
    && !defined( MAUG_NO_AUTO_C )
-#     define RETROFP_C
-#     include <retrofp.h>
 #     define RETROSFT_C
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
@@ -2043,7 +2041,6 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retro3d.h>
 #     include <retro3du.h>
 #     include <retapi3.h>
-#     include <retrofp.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_3D */
 
@@ -2769,7 +2766,9 @@ void retroflat_shutdown( int retval ) {
 
    /* === Platform-Specific Shutdown === */
 
+#ifdef RETROFLAT_3D
    retro3d_platform_shutdown();
+#endif /* RETROFLAT_3D */
 
    retroflat_shutdown_platform( retval );
 
@@ -2969,14 +2968,12 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES)) \
    && !defined( MAUG_NO_AUTO_C )
-#     include <retrofp.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
 
 #  ifdef RETROFLAT_3D
 #     include <retro3dp.h>
 #     include <retro3d.h>
-#     include <retrofp.h>
 #     include <retrosft.h>
 #  endif /* RETROFLAT_3D */
 
