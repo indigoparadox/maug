@@ -44,19 +44,20 @@ typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
 
 struct RETROFLAT_BITMAP {
+#  ifdef RETROFLAT_3D
+   struct RETROFLAT_3DTEX tex;
+#  else
    size_t sz;
    uint8_t flags;
    SDL_Surface* surface;
-#  ifdef RETROFLAT_API_SDL1
+#     ifdef RETROFLAT_API_SDL1
    /* SDL1 autolock counter. */
    ssize_t autolock_refs;
-#  else
+#     else
    /* SDL2 texture pointers. */
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#  endif /* RETROFLAT_API_SDL1 */
-#  ifdef RETROFLAT_OPENGL
-   struct RETROFLAT_GLTEX tex;
+#     endif /* RETROFLAT_API_SDL1 */
 #  endif /* RETROFLAT_OPENGL */
 };
 
@@ -136,6 +137,12 @@ struct RETROFLAT_BITMAP {
          (NULL == (bmp) || \
             (NULL == (bmp)->tex.bytes_h && NULL == (bmp)->tex.bytes) ? \
             g_retroflat_state->screen_v_h : ((bmp)->tex.h))
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
+
+#  elif defined( RETROFLAT_API_SDL1 )
+#     define retroflat_bitmap_locked( bmp ) \
+         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+
 #  else
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
@@ -143,15 +150,10 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_h( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
-#  endif /* RETROFLAT_OPENGL */
-#  ifdef RETROFLAT_OPENGL
-#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
-#  elif defined( RETROFLAT_API_SDL1 )
-#     define retroflat_bitmap_locked( bmp ) \
-         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
-#  else
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
-#  endif
+
+#  endif /* RETROFLAT_OPENGL */
+
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 

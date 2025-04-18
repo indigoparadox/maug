@@ -74,7 +74,7 @@ MERROR_RETVAL retro3d_texture_activate(
  *          need to be called directly by programs using this library!
  */
 MERROR_RETVAL retro3d_texture_platform_refresh(
-   struct RETROFLAT_BITMAP* bmp, uint8_t flags );
+   struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
 MERROR_RETVAL retro3d_check_errors( const char* desc );
 

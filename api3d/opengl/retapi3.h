@@ -284,15 +284,14 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retro3d_texture_platform_refresh(
-   struct RETROFLAT_BITMAP* bmp, uint8_t flags
+   struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
 #  ifndef RETRO3D_NO_TEXTURE_LISTS
    if( RETRO3D_TEX_FLAG_DESTROY == (RETRO3D_TEX_FLAG_DESTROY & flags) ) {
-      debug_printf( RETRO3D_TRACE_LVL, "destroying texture %d...",
-         bmp->tex.id );
-      glDeleteTextures( 1, (GLuint*)&(bmp->tex.id) );
+      debug_printf( RETRO3D_TRACE_LVL, "destroying texture %d...", tex->id );
+      glDeleteTextures( 1, (GLuint*)&(tex->id) );
       retval = retro3d_check_errors( "texture delete" );
       maug_cleanup_if_not_ok();
    }
@@ -300,17 +299,17 @@ MERROR_RETVAL retro3d_texture_platform_refresh(
    /* Update stored texture if it exists. */
    if( RETRO3D_TEX_FLAG_GENERATE == (RETRO3D_TEX_FLAG_GENERATE & flags) ) {
       debug_printf( RETRO3D_TRACE_LVL, "generating texture ID..." );
-      glGenTextures( 1, (GLuint*)&(bmp->tex.id) );
+      glGenTextures( 1, (GLuint*)&(tex->id) );
       retval = retro3d_check_errors( "texture bind" );
       maug_cleanup_if_not_ok();
       debug_printf( RETRO3D_TRACE_LVL, "generated texture ID: %d",
-         bmp->tex.id );
+         tex->id );
    }
-   glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+   glBindTexture( GL_TEXTURE_2D, tex->id );
    retval = retro3d_check_errors( "texture select" );
    maug_cleanup_if_not_ok();
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
-      GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, tex->w, tex->h, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, tex->bytes ); 
    retval = retro3d_check_errors( "texture unbind" );
    maug_cleanup_if_not_ok();
    glBindTexture( GL_TEXTURE_2D, 0 );

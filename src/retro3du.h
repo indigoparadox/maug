@@ -20,36 +20,38 @@
 /**
  * \brief Lock a texture for modification.
  */
-MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_BITMAP* bmp );
+MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_3DTEX* tex );
 
 /**
  * \brief Unlock a locked texture.
  * \warning This must be called before a texture is used!
  */
-MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_BITMAP* bmp );
+MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_3DTEX* tex );
 
 void retro3d_texture_px(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   struct RETROFLAT_3DTEX* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_load_bitmap(
-   const char* filename_path, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   const char* filename_path, struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_blit(
-   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   struct RETROFLAT_3DTEX* target, struct RETROFLAT_3DTEX* src,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
    int16_t instance );
 
 MERROR_RETVAL retro3d_texture_create(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   size_t w, size_t h, struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
-void retro3d_texture_destroy( struct RETROFLAT_BITMAP* bmp );
+void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex );
 
 void retro3d_texture_px(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   struct RETROFLAT_3DTEX* tex, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags );
 
 MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model );
+
+#define retro3d_texture_locked( tex ) (NULL != (tex)->bytes)
 
 /*! \} */ /* maug_retro3d_util */
 
@@ -57,14 +59,14 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model );
 
 #ifdef RETRO3D_C
 
-MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_3DTEX* tex ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
 
-   assert( NULL != bmp && &(g_retroflat_state->buffer) != bmp );
-   assert( !retroflat_bitmap_locked( bmp ) );
+   assert( NULL != tex );
+   assert( !retro3d_texture_locked( tex ) );
 
-   bmp->flags |= RETROFLAT_FLAGS_LOCK;
-   maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   tex->flags |= RETROFLAT_FLAGS_LOCK;
+   maug_mlock( tex->bytes_h, tex->bytes );
 
    return retval;
 }
@@ -75,23 +77,23 @@ MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_BITMAP* bmp ) {
  *       as possible, to eliminate redundancy.
  */
 
-MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_3DTEX* tex ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   assert( NULL != bmp && &(g_retroflat_state->buffer) != bmp );
-   assert( retroflat_bitmap_locked( bmp ) );
+   assert( NULL != tex );
+   assert( retro3d_texture_locked( tex ) );
 
 #ifndef RETRO3D_NO_TEXTURES
-   bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+   tex->flags &= ~RETROFLAT_FLAGS_LOCK;
 #  ifndef RETRO3D_NO_TEXTURE_LISTS
-   assert( 0 < bmp->tex.id );
-   assert( NULL != bmp->tex.bytes );
+   assert( 0 < tex->id );
+   assert( NULL != tex->bytes );
 
-   retval = retro3d_texture_platform_refresh( bmp, 0 );
+   retval = retro3d_texture_platform_refresh( tex, 0 );
 #  endif /* !RETRO3D_NO_TEXTURE_LISTS */
 
    /* Unlock texture bitmap. */
-   maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   maug_munlock( tex->bytes_h, tex->bytes );
 #endif /* !RETRO3D_NO_TEXTURES */
 
    return retval;
@@ -100,7 +102,7 @@ MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_BITMAP* bmp ) {
 /* === */
 
 MERROR_RETVAL retro3d_texture_load_bitmap(
-   const char* filename_path, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   const char* filename_path, struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 #ifndef RETRO3D_NO_TEXTURES
@@ -135,10 +137,10 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    assert( 0 < mfile_get_sz( &bmp_file ) );
 
    /* Setup bitmap options from header. */
-   bmp_out->tex.w = header_bmp.info.width;
-   bmp_out->tex.h = header_bmp.info.height;
-   bmp_out->tex.sz = bmp_out->tex.w * bmp_out->tex.h * 4;
-   bmp_out->tex.bpp = 24;
+   tex->w = header_bmp.info.width;
+   tex->h = header_bmp.info.height;
+   tex->sz = tex->w * tex->h * 4;
+   tex->bpp = 24;
 
    /* Allocate a space for the bitmap palette. */
    bmp_palette_h = maug_malloc( 4, header_bmp.info.palette_ncolors );
@@ -170,12 +172,12 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
 
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->tex.w, bmp_out->tex.h );
-   bmp_out->tex.bytes_h = maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
+      tex->w, tex->h );
+   tex->bytes_h = maug_malloc( tex->w * tex->h, 4 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, tex->bytes_h );
 
-   maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
-   maug_cleanup_if_null_alloc( uint8_t*, bmp_out->tex.bytes );
+   maug_mlock( tex->bytes_h, tex->bytes );
+   maug_cleanup_if_null_alloc( uint8_t*, tex->bytes );
 
    /* Unpack palletized bitmap into BGRA with color key. */
    for( i = 0 ; bmp_px_sz > i ; i++ ) {
@@ -200,9 +202,9 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
       bmp_g = (bmp_color >> 8) & 0xff;
       bmp_b = bmp_color & 0xff;
 
-      bmp_out->tex.bytes[i * 4] = bmp_r;
-      bmp_out->tex.bytes[(i * 4) + 1] = bmp_g;
-      bmp_out->tex.bytes[(i * 4) + 2] = bmp_b;
+      tex->bytes[i * 4] = bmp_r;
+      tex->bytes[(i * 4) + 1] = bmp_g;
+      tex->bytes[(i * 4) + 2] = bmp_b;
       if(
          RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) &&
          RETROFLAT_TXP_R == bmp_r &&
@@ -210,19 +212,18 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
          RETROFLAT_TXP_B == bmp_b
       ) {
          /* Transparent pixel found. */
-         bmp_out->tex.bytes[(i * 4) + 3] = 0x00;
+         tex->bytes[(i * 4) + 3] = 0x00;
       } else {
-         bmp_out->tex.bytes[(i * 4) + 3] = 0xff;
+         tex->bytes[(i * 4) + 3] = 0xff;
       }
    }
 
-   retval = retro3d_texture_platform_refresh(
-      bmp_out, RETRO3D_TEX_FLAG_GENERATE );
+   retval = retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_GENERATE );
 
 cleanup:
 
-   if( NULL != bmp_out->tex.bytes ) {
-      maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   if( NULL != tex->bytes ) {
+      maug_munlock( tex->bytes_h, tex->bytes );
    }
 
    if( NULL != bmp_px ) {
@@ -251,7 +252,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retro3d_texture_blit(
-   struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
+   struct RETROFLAT_3DTEX* target, struct RETROFLAT_3DTEX* src,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
@@ -260,23 +261,23 @@ MERROR_RETVAL retro3d_texture_blit(
 
    /* TODO: Check memcpy, etc? */
 
-   assert( NULL != target && retroflat_screen_buffer() != target );
+   assert( NULL != target );
 
    /* Blit to texture. */
 
-   assert( NULL != target->tex.bytes );
+   assert( NULL != target->bytes );
 
    /* TODO: Some kind of source-autolock? */
-   assert( !retroflat_bitmap_locked( src ) );
-   maug_mlock( src->tex.bytes_h, src->tex.bytes );
+   assert( !retro3d_texture_locked( src ) );
+   maug_mlock( target->bytes_h, src->bytes );
    for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
       /* TODO: Handle transparency! */
       memcpy(
-         &(target->tex.bytes[(((y_iter * target->tex.w) + d_x) * 4)]),
-         &(src->tex.bytes[(((y_iter * src->tex.w) + s_x) * 4)]),
+         &(target->bytes[(((y_iter * target->w) + d_x) * 4)]),
+         &(src->bytes[(((y_iter * src->w) + s_x) * 4)]),
          w * 4 );
    }
-   maug_munlock( src->tex.bytes_h, src->tex.bytes );
+   maug_munlock( src->bytes_h, src->bytes );
 
    return retval;
 }
@@ -284,7 +285,7 @@ MERROR_RETVAL retro3d_texture_blit(
 /* === */
 
 MERROR_RETVAL retro3d_texture_create(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   size_t w, size_t h, struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -303,29 +304,28 @@ MERROR_RETVAL retro3d_texture_create(
          SIZE_T_FMT "). This may not work on Win32!", h );
    }
 
-   bmp_out->tex.w = w;
-   bmp_out->tex.h = h;
+   tex->w = w;
+   tex->h = h;
    /* TODO: Overflow checking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
-      bmp_out->tex.w, bmp_out->tex.h );
-   bmp_out->tex.bytes_h =
-      maug_malloc( bmp_out->tex.w * bmp_out->tex.h, 4 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_out->tex.bytes_h );
+      tex->w, tex->h );
+   tex->bytes_h =
+      maug_malloc( tex->w * tex->h, 4 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, tex->bytes_h );
 
-   maug_mlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
-   maug_cleanup_if_null_lock( uint8_t*, bmp_out->tex.bytes );
+   maug_mlock( tex->bytes_h, tex->bytes );
+   maug_cleanup_if_null_lock( uint8_t*, tex->bytes );
 
    /* TODO: Overflow checking. */
    maug_mzero(
-      bmp_out->tex.bytes,
-      bmp_out->tex.w * bmp_out->tex.h * sizeof( uint32_t ) );
+      tex->bytes,
+      tex->w * tex->h * sizeof( uint32_t ) );
 
-   retval = retro3d_texture_platform_refresh(
-      bmp_out, RETRO3D_TEX_FLAG_GENERATE );
+   retval = retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_GENERATE );
 
 cleanup:
-   if( NULL != bmp_out->tex.bytes ) {
-      maug_munlock( bmp_out->tex.bytes_h, bmp_out->tex.bytes );
+   if( NULL != tex->bytes ) {
+      maug_munlock( tex->bytes_h, tex->bytes );
    }
 
 #endif /* !RETRO3D_NO_TEXTURES */
@@ -335,22 +335,22 @@ cleanup:
 
 /* === */
 
-void retro3d_texture_destroy( struct RETROFLAT_BITMAP* bmp ) {
+void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex ) {
 #ifndef RETRO3D_NO_TEXTURES
    debug_printf( 1, "destroying bitmap..." );
 
-   if( NULL != bmp->tex.bytes ) {
-      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+   if( retro3d_texture_locked( tex ) ) {
+      maug_munlock( tex->bytes_h, tex->bytes );
    }
    
-   if( NULL != bmp->tex.bytes_h ) {
-      maug_mfree( bmp->tex.bytes_h );
+   if( NULL != tex->bytes_h ) {
+      maug_mfree( tex->bytes_h );
    }
 
-   if( 0 < bmp->tex.id ) {
+   if( 0 < tex->id ) {
       debug_printf( 0, 
-         "destroying bitmap texture: " UPRINTF_U32_FMT, bmp->tex.id );
-      retro3d_texture_platform_refresh( bmp, RETRO3D_TEX_FLAG_DESTROY );
+         "destroying bitmap texture: " UPRINTF_U32_FMT, tex->id );
+      retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_DESTROY );
    }
 #endif /* !RETRO3D_NO_TEXTURES */
 }
@@ -358,32 +358,30 @@ void retro3d_texture_destroy( struct RETROFLAT_BITMAP* bmp ) {
 /* === */
 
 void retro3d_texture_px(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   struct RETROFLAT_3DTEX* tex, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO ==
-         (RETROFLAT_FLAGS_BITMAP_RO & target->flags) ||
-      target->tex.w <= x ||
-      target->tex.h <= y
+      tex->w <= x || tex->h <= y || RETROFLAT_FLAGS_BITMAP_RO ==
+         (RETROFLAT_FLAGS_BITMAP_RO & tex->flags)
    ) {
       return;
    }
 
-   assert( NULL != target->tex.bytes );
-   /* assert( retroflat_bitmap_locked( target ) ); */
+   assert( NULL != tex->bytes );
+   /* assert( retro3d_texture_locked( target ) ); */
 
    /* Draw pixel colors from texture palette. */
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 0] =
+   tex->bytes[(((y * tex->w) + x) * 4) + 0] =
       g_retroflat_state->tex_palette[color_idx][0];
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 1] =
+   tex->bytes[(((y * tex->w) + x) * 4) + 1] =
       g_retroflat_state->tex_palette[color_idx][1];
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 2] =
+   tex->bytes[(((y * tex->w) + x) * 4) + 2] =
       g_retroflat_state->tex_palette[color_idx][2];
 
    /* Set pixel as opaque. */
-   target->tex.bytes[(((y * target->tex.w) + x) * 4) + 3] = 0xff;
+   tex->bytes[(((y * tex->w) + x) * 4) + 3] = 0xff;
 }
 
 /* === */

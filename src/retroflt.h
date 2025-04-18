@@ -891,14 +891,15 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_OPENGL ) || defined( DOCUMENTATION )
+#if defined( RETROFLAT_3D ) || defined( DOCUMENTATION )
 
 /**
  * \addtogroup maug_retro3d_util
  * \{
  */
 
-struct RETROFLAT_GLTEX {
+struct RETROFLAT_3DTEX {
+   uint8_t flags;
    MAUG_MHANDLE bytes_h;
    uint8_t* bytes;
    uint32_t bpp;
@@ -911,7 +912,7 @@ struct RETROFLAT_GLTEX {
 
 /*! \} */ /* maug_retro3d_util */
 
-#endif /* RETROFLAT_OPENGL || DOCUMENTATION */
+#endif /* RETROFLAT_3D || DOCUMENTATION */
 
 struct RETROFLAT_ARGS;
 
@@ -1555,18 +1556,25 @@ uint8_t retroflat_viewport_focus_generic(
          retroflat_get_ms() + g_retroflat_state->heartbeat_len; \
    }
 
-/*! \brief Global singleton containing state for the current platform. */
+/**
+ * \brief Global singleton containing state for the current platform.
+ * 
+ * The first few members are size and offset info that the VDP can use to work
+ * with STATE structs from different kinds of binaries without crashing.
+ */
 struct RETROFLAT_STATE {
+   /* TODO: Set this up in the initialization function! */
+   /* TODO: We probably need more of these. */
+   size_t                  sz;
+   size_t                  offset_pal;
+   size_t                  offset_tex_pal;
+
    void*                   loop_data;
    MERROR_RETVAL           retval;
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
-#ifndef RETROFLAT_OPENGL
-   /*! \brief Index of available colors, initialized on platform init. */
-   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
-#endif /* !RETROFLAT_OPENGL */
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -1646,20 +1654,26 @@ defined( RETROVDP_C )
     */
    uint8_t heartbeat_max;
 
-   retroflat_loop_iter  loop_iter;
-   retroflat_loop_iter  frame_iter;
-
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
-#  if defined( RETROFLAT_OPENGL )
-   /* TODO: Collapse this into normal palette and keep 3D palette stuff in
-    *       retapi3.h!
+#ifndef RETROFLAT_OPENGL
+   /*! \brief Index of available colors, initialized on platform init. */
+   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
+#endif /* !RETROFLAT_OPENGL */
+
+   retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
+
+   struct RETROFLAT_PLATFORM platform;
+
+#  if defined( RETROFLAT_3D )
+   /* This allows native colors to be used for things like glColor3fv while
+    * these colors are used to manipulate textures passed through
+    * retroflat_bitmap_*()
     */
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
-
-   struct RETROFLAT_PLATFORM platform;
 
 #ifndef NO_RETROSND
    struct RETROFLAT_SOUND sound;
