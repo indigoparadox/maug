@@ -35,11 +35,7 @@ typedef int16_t RETROFLAT_IN_KEY;
 typedef float MAUG_CONST* RETROFLAT_COLOR_DEF;
 
 struct RETROFLAT_BITMAP {
-   size_t sz;
-   uint8_t flags;
-   struct RETROFLAT_GLTEX tex;
-   ssize_t w;
-   ssize_t h;
+   struct RETROFLAT_3DTEX tex;
 };
 
 #  if !defined( RETROFLAT_SOFT_SHAPES )

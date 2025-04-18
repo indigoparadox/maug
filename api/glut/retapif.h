@@ -220,7 +220,7 @@ uint32_t retroflat_get_rand() {
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
    if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
-      retval = retro3d_texture_lock( bmp );
+      retval = retro3d_texture_lock( &(bmp->tex) );
    }
    return retval;
 }
@@ -232,9 +232,9 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
       glutSwapBuffers();
    } else {
-      retval = retro3d_texture_release( bmp );
+      retval = retro3d_texture_release( &(bmp->tex) );
    }
-   return MERROR_OK;
+   return retval;
 }
 
 /* === */
@@ -246,6 +246,11 @@ MERROR_RETVAL retroflat_load_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( NULL != bmp_out );
+
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
       filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
@@ -253,7 +258,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
    assert( NULL != bmp_out );
-   retval = retro3d_texture_load_bitmap( filename_path, bmp_out, flags );
+   retval = retro3d_texture_load_bitmap(
+      filename_path, &(bmp_out->tex), flags );
 
 cleanup:
 
@@ -265,18 +271,26 @@ cleanup:
 MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
+
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
-
-   return retro3d_texture_create( w, h, bmp_out, flags );
+   return retro3d_texture_create( w, h, &(bmp_out->tex), flags );
 }
 
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    assert( NULL != bmp );
-   retro3d_texture_destroy( bmp );
+
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
+   retro3d_texture_destroy( &(bmp->tex) );
 }
 
 /* === */
@@ -290,8 +304,12 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
    retval = retro3d_texture_blit(
-      target, src, s_x, s_y, d_x, d_y, w, h, instance );
+      &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
 
    return retval;
 }
@@ -306,6 +324,10 @@ void retroflat_px(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
@@ -313,7 +335,7 @@ void retroflat_px(
    retroflat_constrain_px( x, y, target, return );
 
    assert( NULL != target );
-   retro3d_texture_px( target, color_idx, x, y, flags );
+   retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
 }
 
 /* === */
