@@ -2503,6 +2503,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
    assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
 
+   debug_printf( 1, "retroflat: MFIX_PRECISION: %f", MFIX_PRECISION );
+
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
 

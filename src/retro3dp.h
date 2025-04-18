@@ -357,7 +357,7 @@ void retro3dp_parse_init(
           * renderer should be aware of this! (Typically with a
           * glScale( 0.001 ) or equivalent. */ \
          /* TODO: Maug replacement for C99 crutch. */ \
-         vt->val = (int16_t)(1000.0f * \
+         vt->val = (int16_t)((float)(MFIX_PRECISION) * \
             ((float)strtod( parser->base.token, NULL ))); \
       } \
       debug_printf( \

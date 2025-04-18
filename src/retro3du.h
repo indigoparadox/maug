@@ -444,7 +444,7 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model ) {
 #endif
       }
 
-      assert( 0 < f->vertex_idxs[j] );
+      assert( 0 < f->vertex_idxs_sz );
       assert( 3 == f->vertex_idxs_sz );
       retro3d_tri_begin( RETROFLAT_COLOR_NULL, 0 );
       for( j = 0 ; f->vertex_idxs_sz > j ; j++ ) {

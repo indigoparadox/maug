@@ -123,7 +123,7 @@ void retro3d_platform_shutdown() {
 void retro3d_scene_init() {
    /* Scale down up so glVertex3i operates on 100-basis. */
    glPushMatrix();
-   glScalef( 0.01, 0.01, 0.01 );
+   glScalef( MFIX_PRECISION_DIV, MFIX_PRECISION_DIV, MFIX_PRECISION_DIV );
    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
