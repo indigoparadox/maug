@@ -9,30 +9,37 @@
 #  define RETROSOFT_TRACE_LVL 0
 #endif /* RETROSOFT_TRACE_LVL */
 
+/**
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_line(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
+/**
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags );
 
+/**
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
+/**
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_ellipse(
    struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
-
-void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
-
-void retrosoft_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
-   uint8_t flags );
 
 #ifdef RETROSFT_C
 

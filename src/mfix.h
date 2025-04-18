@@ -22,7 +22,7 @@
 #define MFIX_PRECISION_DIV (1.0f / (MFIX_PRECISION))
 
 /*! \brief Fixed-point representation of Pi (3.141). */
-#define MFIX_PI (int)((float)(M_PI) * (float)(MFIX_PRECISION))
+#define MFIX_PI (int)((float)(3.14159274101257324219f) * (float)(MFIX_PRECISION))
 
 #define MFIX_LUT_CT 63
 

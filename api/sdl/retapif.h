@@ -549,6 +549,10 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  ifdef RETROFLAT_OPENGL
 
    assert( NULL != bmp_out );
@@ -647,6 +651,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != bmp_out );
@@ -703,6 +711,10 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != bmp );
@@ -744,6 +756,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
 
    assert( NULL != src );
+
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
 
 #if 0
    /* SDL not setup for hardware scrolling. */
@@ -830,10 +846,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == 
-         (RETROFLAT_FLAGS_BITMAP_RO & target->tex.flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
@@ -910,6 +923,10 @@ void retroflat_rect(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != target );
@@ -967,6 +984,10 @@ void retroflat_line(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
@@ -1012,10 +1033,7 @@ void retroflat_ellipse(
       return;
    }
 
-   if(
-      NULL != target &&
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 

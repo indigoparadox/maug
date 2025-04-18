@@ -910,7 +910,15 @@ struct RETROFLAT_3DTEX {
    size_t h;
 };
 
+#define retroflat_bitmap_has_flags( bmp, f ) \
+   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
+
 /*! \} */ /* maug_retro3d_util */
+
+#else
+
+#define retroflat_bitmap_has_flags( bmp, f ) \
+   (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
 
 #endif /* RETROFLAT_3D || DOCUMENTATION */
 
