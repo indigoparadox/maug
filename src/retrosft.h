@@ -160,13 +160,12 @@ void retrosoft_line(
 
    /* TODO: Handle thickness. */
 
-      /*
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
-   */
-
-   assert( NULL != target );
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
@@ -214,12 +213,12 @@ void retrosoft_rect(
    int x_iter = 0,
       y_iter = 0;
 
-   /*
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
-   */
-   assert( NULL != target );
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
@@ -268,12 +267,12 @@ void retrosoft_ellipse(
 
    /* TODO: Filled ellipse. */
 
-   /*
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
-   */
-   assert( NULL != target );
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
