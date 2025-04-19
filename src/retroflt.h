@@ -641,10 +641,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_DEFAULT_SCREEN_H 200
 #endif /* RETROFLAT_DEFAULT_SCREEN_H */
 
-#ifndef RETROFLAT_GL_Z
-#  define RETROFLAT_GL_Z -0.001
-#endif /* !RETROFLAT_GL_Z */
-
 #define retroflat_on_resize( w, h ) \
    g_retroflat_state->screen_w = w; \
    g_retroflat_state->screen_h = h;
@@ -928,6 +924,9 @@ struct RETROFLAT_3DTEX {
 #define retroflat_2d_load_bitmap( ... ) \
    retro3d_texture_load_bitmap( __VA_ARGS__ )
 
+#define retroflat_2d_create_bitmap( ... ) \
+   retro3d_texture_create( __VA_ARGS__ )
+
 #define retroflat_2d_destroy_bitmap( ... ) \
    retro3d_texture_destroy( __VA_ARGS__ )
 
@@ -948,10 +947,20 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
 
+#define retroflat_2d_create_bitmap( ... ) retroflat_create_bitmap( __VA_ARGS__ )
+
 #define retroflat_2d_destroy_bitmap( ... ) \
    retroflat_destroy_bitmap( __VA_ARGS__ )
 
 #endif /* RETROFLAT_3D || DOCUMENTATION */
+
+/**
+ * \brief Type used for surface pixel coordinates.
+ *
+ * \todo Make this signed when most of the library uses it. Right now, it
+ *       causes too many issues with passed references.
+ */
+typedef size_t retroflat_pxxy_t;
 
 struct RETROFLAT_ARGS;
 

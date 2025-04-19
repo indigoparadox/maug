@@ -125,10 +125,10 @@ typedef size_t retrogui_idc_t;
 struct RETROGUI_CTL_BASE {
    uint8_t type;
    retrogui_idc_t idc;
-   size_t x;
-   size_t y;
-   size_t w;
-   size_t h;
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+   retroflat_pxxy_t w;
+   retroflat_pxxy_t h;
    RETROFLAT_COLOR bg_color;
    RETROFLAT_COLOR fg_color;
 #if defined( RETROGUI_NATIVE_WIN )
@@ -162,14 +162,15 @@ union RETROGUI_CTL {
 
 /*! \} */ /* maug_retrogui_ctl */
 
-typedef void (*retrogui_xy_cb)( size_t* x, size_t* y, void* data );
+typedef void (*retrogui_xy_cb)(
+   retroflat_pxxy_t* x, retroflat_pxxy_t* y, void* data );
 
 struct RETROGUI {
    uint8_t flags;
-   size_t x;
-   size_t y;
-   size_t w;
-   size_t h;
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+   retroflat_pxxy_t w;
+   retroflat_pxxy_t h;
    RETROFLAT_COLOR bg_color;
    retrogui_idc_t idc_prev;
    struct MDATA_VECTOR ctls;
@@ -201,11 +202,13 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui );
 
 MERROR_RETVAL retrogui_sz_ctl(
    struct RETROGUI* gui, retrogui_idc_t idc,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h );
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h );
 
 MERROR_RETVAL retrogui_pos_ctl(
    struct RETROGUI* gui, retrogui_idc_t idc,
-   size_t x, size_t y, size_t w, size_t h );
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h );
 
 MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl );
@@ -288,14 +291,16 @@ static MERROR_RETVAL retrogui_push_NONE( union RETROGUI_CTL* ctl ) {
 
 static MERROR_RETVAL retrogui_sz_NONE(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    return MERROR_OK;
 }
 
 static MERROR_RETVAL retrogui_pos_NONE(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    return MERROR_OK;
 }
@@ -319,8 +324,8 @@ static retrogui_idc_t retrogui_click_LISTBOX(
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
-      j = 0,
-      w = 0,
+      j = 0;
+   retroflat_pxxy_t w = 0,
       h = 0;
 
 #  if defined( RETROGUI_NATIVE_WIN )
@@ -345,7 +350,7 @@ static retrogui_idc_t retrogui_click_LISTBOX(
 #endif /* RETROGXC_PRESENT */
 
       if(
-         (size_t)(input_evt->mouse_y) < 
+         (retroflat_pxxy_t)(input_evt->mouse_y) < 
          ctl->base.y + ((j + 1) * (h + RETROGUI_PADDING))
       ) {
          ctl->LISTBOX.sel_idx = j;
@@ -388,8 +393,8 @@ static void retrogui_redraw_LISTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    size_t i = 0,
-      j = 0,
-      w = 0,
+      j = 0;
+   retroflat_pxxy_t w = 0,
       h = 0;
    
    assert( NULL == ctl->LISTBOX.list );
@@ -572,7 +577,8 @@ cleanup:
 
 static MERROR_RETVAL retrogui_sz_LISTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -581,7 +587,8 @@ static MERROR_RETVAL retrogui_sz_LISTBOX(
 
 static MERROR_RETVAL retrogui_pos_LISTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -646,7 +653,7 @@ static retrogui_idc_t retrogui_key_BUTTON(
 static void retrogui_redraw_BUTTON(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
-   size_t w = 0,
+   retroflat_pxxy_t w = 0,
       h = 0,
       text_offset = 0;
 
@@ -762,7 +769,8 @@ cleanup:
 
 static MERROR_RETVAL retrogui_sz_BUTTON(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -805,7 +813,8 @@ cleanup:
 
 static MERROR_RETVAL retrogui_pos_BUTTON(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -1059,7 +1068,8 @@ cleanup:
 
 static MERROR_RETVAL retrogui_sz_TEXTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -1068,7 +1078,8 @@ static MERROR_RETVAL retrogui_sz_TEXTBOX(
 
 static MERROR_RETVAL retrogui_pos_TEXTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -1187,7 +1198,8 @@ cleanup:
 
 static MERROR_RETVAL retrogui_sz_LABEL(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -1196,7 +1208,8 @@ static MERROR_RETVAL retrogui_sz_LABEL(
 
 static MERROR_RETVAL retrogui_pos_LABEL(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
    /* TODO */
@@ -1249,7 +1262,8 @@ static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
 
 static MERROR_RETVAL _retrogui_sz_ctl(
    struct RETROGUI* gui, retrogui_idc_t idc,
-   size_t* p_w, size_t* p_h, size_t max_w, size_t max_h
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
@@ -1292,8 +1306,8 @@ retrogui_idc_t retrogui_poll_ctls(
    struct RETROGUI* gui, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
-   size_t i = 0,
-      mouse_x = 0,
+   size_t i = 0;
+   retroflat_pxxy_t mouse_x = 0,
       mouse_y = 0;
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    union RETROGUI_CTL* ctl = NULL;

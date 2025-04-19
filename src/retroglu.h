@@ -100,40 +100,6 @@ struct RETROGLU_TILE {
  */
 
 /**
- * \brief Push current projection modelview and prepare useful parameters for
- *        drawing a textured overlay.
- */
-#define retroglu_push_overlay( x, y, x_f, y_f, aspect_f ) \
-   /* Switch to projection setup. */ \
-   glMatrixMode( GL_PROJECTION ); \
-   glPushMatrix(); \
-   /* Lighting makes overlay text hard to see. */ \
-   retroglu_disable_lightning(); \
-   /* Use ortho for overlay. */ \
-   glLoadIdentity(); \
-   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h(); \
-   /* Switch to ortho projection proportional to screen size. */ \
-   glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f ); \
-   /* -1 to 1 is 2! */ \
-   aspect_f *= 2.0f; \
-   /* Assuming width > height for aspect ratio. */ \
-   x_f = ((x) * aspect_f / retroflat_screen_w()) - (aspect_f / 2); \
-   /* Vertical coords also need to be inverted because OpenGL. */ \
-   y_f = 1.0f - ((y) * 2.0f / retroflat_screen_h()); \
-
-/**
- * \brief Convert width/height in pixels to proportional float values for
- *        OpenGL.
- * \param w Width of an overlay in pixels (read-only int).
- * \param h Height of an overlay in pixels (read-only int).
- * \param w_f Float to assign proportional width of the overlay.
- * \param h_f Float to assign proportional height of the overlay.
- */
-#define retroglu_whf( w, h, w_f, h_f, aspect_f ) \
-   w_f = ((w) * aspect_f / retroflat_screen_w()); \
-   h_f = ((h) * 2.0f / retroflat_screen_h());
-
-/**
  * \brief Restore projection modelview previously pushed using retroglu_push().
  */
 #define retroglu_pop_overlay() \

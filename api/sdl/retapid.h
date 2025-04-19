@@ -53,12 +53,13 @@ struct RETROFLAT_BITMAP {
 #     ifdef RETROFLAT_API_SDL1
    /* SDL1 autolock counter. */
    ssize_t autolock_refs;
-#     else
+#     endif /* RETROFLAT_API_SDL1 */
+#  endif /* RETROFLAT_OPENGL */
+#  ifdef RETROFLAT_API_SDL2
    /* SDL2 texture pointers. */
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#     endif /* RETROFLAT_API_SDL1 */
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_API_SDL2 */
 };
 
 #  define RETROFLAT_KEY_UP	SDLK_UP

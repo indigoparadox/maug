@@ -19,7 +19,7 @@ struct RETROWIN3D {
    size_t x;
    size_t y;
    struct RETROGUI* gui;
-   struct RETROFLAT_BITMAP gui_bmp;
+   retroflat_blit_t gui_bmp;
 };
 
 MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win );
@@ -50,28 +50,7 @@ MERROR_RETVAL retro3dw_destroy_win(
 #ifdef RETROW3D_C
 
 MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
-   float aspect_ratio = 0,
-      screen_x = 0,
-      screen_y = 0,
-      gui_w_f = 0,
-      gui_h_f = 0;
    MERROR_RETVAL retval = MERROR_OK;
-
-   assert( 0 < win->gui_bmp.tex.id );
-
-    /* Prepare projection to draw the overlay on the top of the screen.
-     * Do this before any possible failure, so that the retroglu_pop_overlay()
-     * in cleanup: is always needed!
-     */
-   retroglu_push_overlay(
-      win->gui->x, win->gui->y, screen_x, screen_y, aspect_ratio );
-   retval = retroglu_check_errors( "overlay push" );
-   maug_cleanup_if_not_ok();
-
-   retroglu_whf( win->gui->w, win->gui->h, gui_w_f, gui_h_f, aspect_ratio );
-
-   retroflat_draw_lock( &(win->gui_bmp) );
-   maug_cleanup_if_null_lock( uint8_t*, win->gui_bmp.tex.bytes );
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui->draw_bmp = &(win->gui_bmp);
@@ -81,61 +60,14 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
     */
    win->gui->x = 0;
    win->gui->y = 0;
-   retrogui_redraw_ctls( win->gui );
+   retval = retrogui_redraw_ctls( win->gui );
    win->gui->x = win->x;
    win->gui->y = win->y;
-
-   /* Set a white background for the overlay poly. */
-   glColor3fv( RETROGLU_COLOR_WHITE );
-   retval = retroglu_check_errors( "overlay color" );
    maug_cleanup_if_not_ok();
 
-   /* debug_printf( 1, "overlay texture: %d x %d (%p)",
-      win->gui_bmp.tex.w, win->gui_bmp.tex.h,
-      win->gui_bmp.tex.bytes ); */
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-      win->gui_bmp.tex.w, win->gui_bmp.tex.h, 0,
-      GL_RGBA, GL_UNSIGNED_BYTE,
-      win->gui_bmp.tex.bytes );
-
-   retval = retroglu_check_errors( "overlay texture" );
-   maug_cleanup_if_not_ok();
-
-   /* Make the background transparency work. */
-   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-   glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-
-   /* Break up overlay into multiple triangles with offset textures. */
-
-   glBegin( GL_TRIANGLES );
-
-      glTexCoord2f( 0, 0 );
-      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-      glTexCoord2f( 0, 1 );
-      glVertex3f( screen_x,            screen_y - gui_h_f, RETROFLAT_GL_Z );
-      glTexCoord2f( 1, 1 );
-      glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
-
-      glTexCoord2f( 1, 1 );
-      glVertex3f( screen_x + gui_w_f, screen_y - gui_h_f, RETROFLAT_GL_Z );
-      glTexCoord2f( 1, 0 );
-      glVertex3f( screen_x + gui_w_f, screen_y,            RETROFLAT_GL_Z );
-      glTexCoord2f( 0, 0 );
-      glVertex3f( screen_x,            screen_y,            RETROFLAT_GL_Z );
-   
-   glEnd();
-
-   /* Clear texture after drawing. */
-   glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, 0,
-      GL_RGBA, GL_UNSIGNED_BYTE, NULL ); 
+   retval = retro3d_draw_window( &(win->gui_bmp), win->gui->x, win->gui->y );
 
 cleanup:
-
-   /* This can be called even if not needed. */
-   retroflat_draw_release( &(win->gui_bmp) );
-
-   retroglu_pop_overlay();
 
    return retval;
 }
@@ -218,7 +150,7 @@ cleanup:
 void retro3dw_free_win( struct RETROWIN3D* win ) {
 
    if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
-      retroflat_destroy_bitmap( &(win->gui_bmp) );
+      retroflat_2d_destroy_bitmap( &(win->gui_bmp) );
       win->gui->draw_bmp = NULL;
    }
 
@@ -270,7 +202,7 @@ MERROR_RETVAL retro3dw_push_win(
       maug_cleanup_if_not_ok();
    }
 
-   retval = retroflat_create_bitmap( w, h, &(win.gui_bmp), 0 );
+   retval = retroflat_2d_create_bitmap( w, h, &(win.gui_bmp), 0 );
    maug_cleanup_if_not_ok();
 
    win.flags |= RETROWIN3D_FLAG_INIT_BMP;

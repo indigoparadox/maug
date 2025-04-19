@@ -496,7 +496,6 @@ cleanup:
    return retval;
 }
 
-
 #endif /* RETRO3D_C */
 
 #endif /* !RETRO3DU_H */

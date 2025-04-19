@@ -65,6 +65,13 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags );
 
 void retro3d_tri_end();
 
+/**
+ * \brief Draw a bitmap 2D "window" in ortho view proportionally on screen.
+ *        (e.g. for displaying a UI.)
+ */
+MERROR_RETVAL retro3d_draw_window(
+   struct RETROFLAT_3DTEX* win, retroflat_pxxy_t x, retroflat_pxxy_t y );
+
 MERROR_RETVAL retro3d_texture_activate(
    struct RETROFLAT_3DTEX* tex, uint8_t flags );
 

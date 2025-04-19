@@ -2,6 +2,10 @@
 #ifndef RETAPI3_H
 #define RETAPI3_H
 
+#ifndef RETROFLAT_GL_Z
+#  define RETROGL_WIN_Z -0.001
+#endif /* !RETROFLAT_GL_Z */
+
 #  if defined( RETROFLAT_OPENGL )
 #     include <GL/gl.h>
 #     include <GL/glu.h>
@@ -244,13 +248,86 @@ void retro3d_tri_end() {
 
 /* === */
 
+MERROR_RETVAL retro3d_draw_window(
+   struct RETROFLAT_3DTEX* win, retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   float aspect_f = 0,
+      w_prop = 0,
+      h_prop = 0,
+      x_prop = 0,
+      y_prop = 0;
+
+#  ifndef RETROGL_NO_TEXTURE_LISTS
+   assert( 0 < win->id );
+#  endif /* !RETROGL_NO_TEXTURE_LISTS */
+
+   /* Switch to projection setup. */
+   glMatrixMode( GL_PROJECTION );
+   glPushMatrix();
+
+   /* Use ortho for overlay. */
+   glLoadIdentity();
+   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h();
+   
+   /* Switch to ortho projection proportional to screen size. */
+   glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f );
+   
+   /* -1 to 1 is 2! */
+   aspect_f *= 2.0f;
+   
+   /* Assuming width > height for aspect ratio. */
+   x_prop = ((x_px) * aspect_f / retroflat_screen_w()) - (aspect_f / 2);
+
+   /* Vertical coords also need to be inverted because OpenGL. */
+   y_prop = 1.0f - ((y_px) * 2.0f / retroflat_screen_h());
+
+   w_prop = ((win->w) * aspect_f / retroflat_screen_w()); \
+   h_prop = ((win->h) * 2.0f / retroflat_screen_h());
+
+   retro3d_check_errors( "dump" );
+   retval = retro3d_texture_activate( win, 0 );
+   maug_cleanup_if_not_ok();
+
+   glBegin( GL_TRIANGLES );
+
+      glTexCoord2f( 0, 0 );
+      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
+      glTexCoord2f( 0, 1 );
+      glVertex3f( x_prop,            y_prop - h_prop,   RETROGL_WIN_Z );
+      glTexCoord2f( 1, 1 );
+      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
+
+      glTexCoord2f( 1, 1 );
+      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
+      glTexCoord2f( 1, 0 );
+      glVertex3f( x_prop + w_prop,   y_prop,            RETROGL_WIN_Z );
+      glTexCoord2f( 0, 0 );
+      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
+   
+   glEnd();
+
+   retro3d_check_errors( "dump" );
+   retval = retro3d_texture_activate( win, RETRO3D_TEX_FLAG_DEACTIVATE );
+   maug_cleanup_if_not_ok();
+
+cleanup:
+
+   glPopMatrix();
+   glMatrixMode( GL_MODELVIEW );
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retro3d_texture_activate(
    struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
-#  ifndef RETROGLU_NO_TEXTURE_LISTS
+#  ifndef RETROGL_NO_TEXTURE_LISTS
       debug_printf( RETRO3D_TRACE_LVL, "binding texture %d...", tex->id );
       glBindTexture( GL_TEXTURE_2D, tex->id );
       retval = retro3d_check_errors( "texture bind" );
@@ -262,18 +339,18 @@ MERROR_RETVAL retro3d_texture_activate(
          GL_RGBA, GL_UNSIGNED_BYTE, tex->bytes ); 
       retval = retro3d_check_errors( "texture select" );
       maug_cleanup_if_not_ok();
-#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
+#  endif /* !RETROGL_NO_TEXTURE_LISTS */
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-#  ifndef RETROGLU_NO_TEXTURE_LISTS
+#  ifndef RETROGL_NO_TEXTURE_LISTS
    } else {
       debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", tex->id );
       glBindTexture( GL_TEXTURE_2D, 0 );
       retval = retro3d_check_errors( "texture unbind" );
       maug_cleanup_if_not_ok();
       maug_munlock( tex->bytes_h, tex->bytes );
-#  endif /* !RETROGLU_NO_TEXTURE_LISTS */
+#  endif /* !RETROGL_NO_TEXTURE_LISTS */
    }
 
 cleanup:
