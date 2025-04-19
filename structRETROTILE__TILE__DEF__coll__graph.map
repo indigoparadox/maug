@@ -1,0 +1,5 @@
+<map id="RETROTILE_TILE_DEF" name="RETROTILE_TILE_DEF">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,94,166,120"/>
+<area shape="rect" id="Node000002" href="$structRETROFLAT__BITMAP.html" title="Platform&#45;specific bitmap structure. retroflat_bitmap_ok() can be used on a pointer to it to determine..." alt="" coords="8,5,163,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="88,47,88,94,83,94,83,47"/>
+</map>

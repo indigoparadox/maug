@@ -1,0 +1,5 @@
+<map id="RetroFlat Bitmap API" name="RetroFlat Bitmap API">
+<area shape="rect" id="Node000002" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="40,5,140,31"/>
+<area shape="rect" id="Node000001" title="Tools for loading bitmaps from disk and drawing them on&#45;screen." alt="" coords="223,31,366,56"/>
+<area shape="rect" id="Node000003" href="$group__maug__retroflt__dir__2d.html" title="Wrappers to call appropriate 2D surface functions for bitmaps or textures, depending on if the engine..." alt="" coords="5,55,175,80"/>
+</map>
