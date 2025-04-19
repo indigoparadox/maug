@@ -71,6 +71,9 @@
 #  define RETRO3DP_MATERIAL_LIB_SZ_MAX 32
 #endif /* !RETRO3DP_MATERIAL_LIB_SZ_MAX */
 
+#define retro3dp_model_loaded( model ) \
+   (0 < mdata_vector_ct( &((model)->vertices) ))
+
 struct RETRO3DP_MATERIAL {
    float ambient[4];
    float diffuse[4];

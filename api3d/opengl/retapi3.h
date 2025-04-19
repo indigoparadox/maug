@@ -90,6 +90,29 @@ void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
 
 /* === */
 
+void retro3d_scene_init_bg(
+   RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density
+) {
+   if( 0 < fog_draw_dist ) {
+      /* Setup fog. */
+      /* TODO: Move fog into retro3d APIs. */
+      glFogf( GL_FOG_MODE, GL_EXP );
+      glFogfv( GL_FOG_COLOR, gc_retro3d_color_table[color] );
+      glFogf( GL_FOG_DENSITY, 0.3f );
+      glFogf( GL_FOG_START, mfix_to_f( fog_draw_dist ) - 1.0f );
+      glFogf( GL_FOG_END, mfix_to_f( fog_draw_dist ) );
+      glEnable( GL_FOG );
+      debug_printf( 3, "fog enabled!" );
+   }
+
+   glClearColor(
+      gc_retro3d_color_table[color][0],
+      gc_retro3d_color_table[color][1],
+      gc_retro3d_color_table[color][2], 0.0f );
+}
+
+/* === */
+
 MERROR_RETVAL retro3d_platform_init() {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -149,7 +172,6 @@ void retro3d_scene_init() {
    /* Scale down up so glVertex3i operates on 100-basis. */
    glPushMatrix();
    glScalef( MFIX_PRECISION_DIV, MFIX_PRECISION_DIV, MFIX_PRECISION_DIV );
-   glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
@@ -158,6 +180,18 @@ void retro3d_scene_init() {
 void retro3d_scene_complete() {
    glPopMatrix();
    glFlush();
+}
+
+/* === */
+
+void retro3d_scene_open_node() {
+   glPushMatrix();
+}
+
+/* === */
+
+void retro3d_scene_close_node() {
+   glPopMatrix();
 }
 
 /* === */
@@ -176,13 +210,13 @@ void retro3d_scene_scale( mfix_t x, mfix_t y, mfix_t z ) {
 
 void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z ) {
    if( 0 < x ) {
-      glRotatef( x, 1.0f, 0.0f, 0.0f );
+      glRotatef( mfix_to_f( x ), 1.0f, 0.0f, 0.0f );
    }
    if( 0 < y ) {
-      glRotatef( y, 0.0f, 1.0f, 0.0f );
+      glRotatef( mfix_to_f( y ), 0.0f, 1.0f, 0.0f );
    }
    if( 0 < z ) {
-      glRotatef( z, 0.0f, 0.0f, 1.0f );
+      glRotatef( mfix_to_f( z ), 0.0f, 0.0f, 1.0f );
    }
 }
 

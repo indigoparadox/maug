@@ -128,8 +128,18 @@ struct RETROTILE_TILE_DEF {
    size_t y;
    uint16_t tile_class;
    char warp_dest[RETROTILE_NAME_SZ_MAX + 1];
+   /**
+    * \brief Field indicating how many degrees the tile should always be
+    *        rotated before drawin on-screen. Useful for engine drawing
+    *        routines.
+    */
+   mfix_t static_rotation;
    retrotile_coord_t warp_x;
    retrotile_coord_t warp_y;
+#ifdef RETROFLAT_3D
+   /* TODO: Work this into retrogxc? */
+   struct RETRO3DP_MODEL model;
+#endif /* RETROFLAT_3D */
 #ifdef RETROGXC_PRESENT
    ssize_t image_cache_id;
 #else
@@ -299,6 +309,15 @@ struct RETROTILE_PARSER {
 
 MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
+
+/**
+ * \brief Convert a less-or-equal-to-two-character string to a direction in
+ *        degrees.
+ *
+ * This function is useful for converting a prerendered isometric tileset to
+ * modifications for a realtime-rendered ::RETRO3DP_MODEL.
+ */
+mfix_t retrotile_static_rotation_from_dir( const char* dir );
 
 /**
  * \brief Parse the JSON file at the given path into a heap-allocated tilemap
@@ -966,6 +985,37 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
    }
 
    return MERROR_OK;
+}
+
+/* === */
+
+mfix_t retrotile_static_rotation_from_dir( const char* dir ) {
+   mfix_t static_rotate_out = 0;
+
+   if( NULL == dir ) {
+      return 0;
+   }
+
+   /* Translate dir into rotation value. */
+   if( 0 == strncmp( dir, "NW", 2 ) ) {
+      static_rotate_out = mfix_from_f( 90.0f );
+   } else if( 0 == strncmp( dir, "SW", 2 ) ) {
+      static_rotate_out = mfix_from_f( 180.0f ); 
+   } else if( 0 == strncmp( dir, "SE", 2 ) ) {
+      static_rotate_out = mfix_from_f( 270.0f );
+
+   } else if( 0 == strncmp( dir, "W", 1 ) ) {
+      static_rotate_out = mfix_from_f( 90.0f );
+   } else if( 0 == strncmp( dir, "S", 1 ) ) {
+      static_rotate_out = mfix_from_f( 180.0f );
+   } else if( 0 == strncmp( dir, "E", 1 ) ) {
+      static_rotate_out = mfix_from_f( 270.0f );
+
+   } else {
+      static_rotate_out = 0;
+   }
+
+   return static_rotate_out;
 }
 
 /* === */

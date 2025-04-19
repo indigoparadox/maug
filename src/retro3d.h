@@ -40,6 +40,9 @@ struct RETRO3D_PROJ_ARGS {
 
 void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args );
 
+void retro3d_scene_init_bg(
+   RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density );
+
 MERROR_RETVAL retro3d_platform_init();
 
 void retro3d_platform_shutdown();
@@ -47,6 +50,10 @@ void retro3d_platform_shutdown();
 void retro3d_scene_init();
 
 void retro3d_scene_complete();
+
+void retro3d_scene_open_node();
+
+void retro3d_scene_close_node();
 
 void retro3d_scene_translate( mfix_t x, mfix_t y, mfix_t z );
 

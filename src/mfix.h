@@ -32,6 +32,8 @@ typedef int32_t mfix_t;
 
 #define mfix_from_i( n ) ((mfix_t)((n) * MFIX_PRECISION))
 
+#define mfix_to_f( n ) (float)((mfix_t)((float)(n) / MFIX_PRECISION))
+
 #define mfix_to_i( n ) ((mfix_t)((n) / MFIX_PRECISION))
 
 #ifdef MFIX_DEBUG
