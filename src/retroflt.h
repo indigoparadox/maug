@@ -889,6 +889,13 @@ typedef int8_t retroflat_dir8_t;
 
 #if defined( RETROFLAT_3D ) || defined( DOCUMENTATION )
 
+/*! \addtogroup maug_retroflt_bitmap */
+
+#define retroflat_bitmap_has_flags( bmp, f ) \
+   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
+
+/*! \} */ /* maug_retroflt_bitmap */
+
 /**
  * \addtogroup maug_retro3d_util
  * \{
@@ -906,12 +913,25 @@ struct RETROFLAT_3DTEX {
    size_t h;
 };
 
-#define retroflat_bitmap_has_flags( bmp, f ) \
-   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
+/*! \} */ /* maug_retro3d_util */
 
 /**
- * \brief Wrapper macro to call appropriate 2D surface blitter for pixels,
- *        depending on if the engine is in 2D or 3D mode.
+ * \addtogroup maug_retroflt_dir_2d RetroFlat 2D Wrapper API
+ * \brief Wrappers to call appropriate 2D surface functions for bitmaps or
+ *        textures, depending on if the engine is in 2D or 3D mode.
+ *
+ * This wrapper system is necessary so that high-level internal library 
+ * functions (e.g. retrosoft, retrofont, or retroani) are able to continue
+ * functioning on textures in 3D mode.
+ *
+ * Formerly, this was accomplished by shunts inside of the lower-level
+ * \ref maug_retroflt_drawing, but these shunts were removed in order to
+ * facilitate platform-agnostic software-only 3D (and they were messy).
+ * \{
+ */
+
+/**
+ * \brief Wrapper macro to call appropriate 2D surface blitter for pixels.
  */
 #define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
 
@@ -929,8 +949,6 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_destroy_bitmap( ... ) \
    retro3d_texture_destroy( __VA_ARGS__ )
-
-/*! \} */ /* maug_retro3d_util */
 
 #else
 
