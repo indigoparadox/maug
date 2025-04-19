@@ -106,9 +106,9 @@ MERROR_RETVAL retro3d_platform_init() {
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
 
    /* TODO: Why do we need to do this or nothing shows up? */
-   retroflat_create_bitmap( 16, 16, &g_bmp_wtf, 0 );
-   retroflat_draw_lock( &g_bmp_wtf );
-   retroflat_draw_release( &g_bmp_wtf );
+   retro3d_texture_create( 16, 16, &(g_bmp_wtf.tex), 0 );
+   retro3d_texture_lock( &(g_bmp_wtf.tex) );
+   retro3d_texture_release( &(g_bmp_wtf.tex) );
 
 #ifdef MAUG_OS_NDS
    glMaterialShinyness();
@@ -245,21 +245,21 @@ void retro3d_tri_end() {
 /* === */
 
 MERROR_RETVAL retro3d_texture_activate(
-   struct RETROFLAT_BITMAP* bmp, uint8_t flags
+   struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
 #  ifndef RETROGLU_NO_TEXTURE_LISTS
-      debug_printf( RETRO3D_TRACE_LVL, "binding texture %d...", bmp->tex.id );
-      glBindTexture( GL_TEXTURE_2D, bmp->tex.id );
+      debug_printf( RETRO3D_TRACE_LVL, "binding texture %d...", tex->id );
+      glBindTexture( GL_TEXTURE_2D, tex->id );
       retval = retro3d_check_errors( "texture bind" );
       maug_cleanup_if_not_ok();
 #  else
-      maug_mlock( bmp->tex.bytes_h, bmp->tex.bytes );
-      maug_cleanup_if_null_lock( uint8_t*, bmp->tex.bytes );
-      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, bmp->tex.w, bmp->tex.h, 0,
-         GL_RGBA, GL_UNSIGNED_BYTE, bmp->tex.bytes ); 
+      maug_mlock( tex->bytes_h, tex->bytes );
+      maug_cleanup_if_null_lock( uint8_t*, tex->bytes );
+      glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, tex->w, tex->h, 0,
+         GL_RGBA, GL_UNSIGNED_BYTE, tex->bytes ); 
       retval = retro3d_check_errors( "texture select" );
       maug_cleanup_if_not_ok();
 #  endif /* !RETROGLU_NO_TEXTURE_LISTS */
@@ -268,11 +268,11 @@ MERROR_RETVAL retro3d_texture_activate(
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 #  ifndef RETROGLU_NO_TEXTURE_LISTS
    } else {
-      debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", bmp->tex.id );
+      debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", tex->id );
       glBindTexture( GL_TEXTURE_2D, 0 );
       retval = retro3d_check_errors( "texture unbind" );
       maug_cleanup_if_not_ok();
-      maug_munlock( bmp->tex.bytes_h, bmp->tex.bytes );
+      maug_munlock( tex->bytes_h, tex->bytes );
 #  endif /* !RETROGLU_NO_TEXTURE_LISTS */
    }
 

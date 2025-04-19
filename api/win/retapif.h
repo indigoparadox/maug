@@ -922,6 +922,8 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL != bmp ) {
       retval = retro3d_texture_lock( &(bmp->tex) );
+   } else {
+      debug_printf( API_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
 
 #  else
@@ -983,7 +985,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* Windows has its own OpenGL flip function.*/
       SwapBuffers( g_retroflat_state->platform.hdc_win );
    } else {
-      retval = retro3d_texture_release( &(bmp->tex) );
+      debug_printf( API_TRACE_LVL, "called retroflat_draw_release()!" );
    }
 
 #  else
@@ -1069,8 +1071,11 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  ifdef RETROFLAT_OPENGL
 
    assert( NULL != bmp_out );
+   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   /*
    retval = retro3d_texture_load_bitmap(
       filename_path, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
@@ -1232,7 +1237,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   /*
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
+   */
 
 #  else
 
@@ -1364,7 +1372,10 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   /*
    retro3d_texture_destroy( &(bmp->tex) );
+   */
 
 #  else
 
@@ -1421,8 +1432,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   /*
    retval = retro3d_texture_blit(
       &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
+   */
 
 #  else
 
@@ -1508,7 +1522,10 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   /*
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
+   */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 

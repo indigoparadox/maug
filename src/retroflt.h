@@ -924,6 +924,10 @@ struct RETROFLAT_3DTEX {
 
 struct RETROFLAT_ARGS;
 
+#ifndef API_TRACE_LVL
+#  define API_TRACE_LVL 0
+#endif /* !API_TRACE_LVL */
+
 #ifndef NO_RETROSND
 
 /**
@@ -2046,7 +2050,8 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 /* === */
 
-#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )) \
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
+         defined( RETROFLAT_3D )) \
    && !defined( MAUG_NO_AUTO_C )
 #     define RETROSFT_C
 #     include <retrosft.h>
@@ -2057,13 +2062,11 @@ MERROR_RETVAL retroflat_build_filename_path(
 #        define RETRO3D_C
 #        define RETRO3DP_C
 #        define RETROFP_C
-#        define RETROSFT_C
 #     endif /* MAUG_NO_AUTO_C */
 #     include <retro3dp.h>
 #     include <retro3d.h>
 #     include <retro3du.h>
 #     include <retapi3.h>
-#     include <retrosft.h>
 #  endif /* RETROFLAT_3D */
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
@@ -2504,6 +2507,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_COMMIT_HASH */
 
    debug_printf( 1, "retroflat: initializing..." );
+
+#ifdef RETROFLAT_3D
+   g_retrosoft_px = retro3d_texture_px;
+#else
+   g_retrosoft_px = retroflat_px;
+#endif /* RETROFLAT_3D */
 
    /* System sanity checks. */
    assert( 2 <= sizeof( MERROR_RETVAL ) );

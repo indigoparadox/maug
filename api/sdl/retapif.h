@@ -550,14 +550,17 @@ MERROR_RETVAL retroflat_load_bitmap(
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
    if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
+      return retval;
    }
 
 #  ifdef RETROFLAT_OPENGL
 
+   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   /*
    assert( NULL != bmp_out );
    retval = retro3d_texture_load_bitmap(
       filename_path, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -652,13 +655,16 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
+      return retval;
    }
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   /*
    assert( NULL != bmp_out );
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -717,8 +723,11 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   /*
    assert( NULL != bmp );
    retro3d_texture_destroy( &(bmp->tex) );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -758,7 +767,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != src );
 
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
+      return retval;
    }
 
 #if 0
@@ -774,9 +783,12 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   /*
    assert( NULL != target );
    retval = retro3d_texture_blit(
       &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -854,8 +866,11 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   /*
    assert( NULL != target );
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -929,10 +944,13 @@ void retroflat_rect(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
+#if 0
    assert( NULL != target );
 
    /* Draw the rect onto the given 2D texture. */
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
+#endif
 
 #  else
 
@@ -990,11 +1008,14 @@ void retroflat_line(
 
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+#if 0
    if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Draw line in ortho. */
    } else {
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
    }
+#endif
 
 #  elif defined( RETROFLAT_API_SDL2 )
 

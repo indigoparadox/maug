@@ -6,6 +6,10 @@
  * \addtogroup maug_retro3d
  */
 
+#define retro3d_texture_w( tex ) ((tex)->w)
+
+#define retro3d_texture_h( tex ) ((tex)->h)
+
 /**
  * \addtogroup maug_retro3d_util Retro3D API Utilities
  * \{

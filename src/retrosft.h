@@ -2,6 +2,21 @@
 #ifndef RETROSFT_H
 #define RETROSFT_H
 
+/**
+ * \addtogroup maug_retrosft RetroFlat Soft Shapes API
+ * \brief Tools for drawing shape primatives.
+ *
+ * This library is also used in conjunction with retro3D, in order to
+ * manipulate texture bitmaps.
+ *
+ * \{
+ */
+
+/**
+ * \file retrosft.h
+ * \brief Tools for drawing shape primatives.
+ */
+
 #define RETROFLAT_LINE_X 0
 #define RETROFLAT_LINE_Y 1
 
@@ -9,39 +24,62 @@
 #  define RETROSOFT_TRACE_LVL 0
 #endif /* RETROSOFT_TRACE_LVL */
 
+#ifdef RETROFLAT_3D
+typedef struct RETROFLAT_3DTEX retrosoft_target_t;
+#else
+typedef struct RETROFLAT_BITMAP retrosoft_target_t;
+#endif
+
 /**
+ * \brief Type of callback function used to produce pixels on a surface.
+ *
+ * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
+ * on whether this is a 3D or 2D engine.
+ */
+typedef void (*retrosoft_px_cb)(
+   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags );
+
+/**
+ * \brief Draw a line from x1, y1 to x2, y2.
  * \warning This function does not check if supplied bitmaps are read-only!
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retrosoft_target_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
 /**
+ * \brief Draw a rectangle at the given coordinates, with the given dimensions.
  * \warning This function does not check if supplied bitmaps are read-only!
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags );
 
 /**
+ * \brief Draw an ellipsoid at the given coordinates, with the given dimensions.
+ * \todo Right now this uses integer polar coordinates; it needs to be redone
+ *       to use the Midpoint circle algorithm or similar.
  * \warning This function does not check if supplied bitmaps are read-only!
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retrosoft_target_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
-/**
- * \warning This function does not check if supplied bitmaps are read-only!
- *          Such checks should be performed by wrapper functions calling it!
- */
-void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, uint8_t flags );
+/*! \} */ /* maug_retrosft */
 
 #ifdef RETROSFT_C
+
+/**
+ * \brief Directly addressable callback to produce pixels on a surface.
+ *
+ * This is assigned in retroflat_init(), as that is when all of the _px()
+ * callback functions are defined and available.
+ */
+retrosoft_px_cb g_retrosoft_px;
 
 /* === */
 
@@ -107,7 +145,7 @@ void retrosoft_line_strategy(
    defined( RETROFLAT_SOFT_LINES )
 
 void retrosoft_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retrosoft_target_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 
@@ -122,9 +160,13 @@ void retrosoft_line(
 
    /* TODO: Handle thickness. */
 
+      /*
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+   */
+
+   assert( NULL != target );
 
    retroflat_px_lock( target );
 
@@ -144,7 +186,7 @@ void retrosoft_line(
          (size_t)iter[RETROFLAT_LINE_Y] < (size_t)retroflat_screen_h()
       ) {
       */
-      retroflat_px(
+      g_retrosoft_px(
          target, color,
          iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
       /* } */
@@ -166,15 +208,18 @@ void retrosoft_line(
 /* === */
 
 void retrosoft_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int x_iter = 0,
       y_iter = 0;
 
+   /*
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+   */
+   assert( NULL != target );
 
    retroflat_px_lock( target );
 
@@ -183,7 +228,7 @@ void retrosoft_rect(
       for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
          for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
             /* TODO: Optimize filling 4-byte sequences! */
-            retroflat_px( target, color_idx, x_iter, y_iter, 0 );
+            g_retrosoft_px( target, color_idx, x_iter, y_iter, 0 );
          }
       }
 
@@ -209,7 +254,7 @@ void retrosoft_rect(
 /* === */
 
 void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retrosoft_target_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int32_t i = 0,
@@ -223,9 +268,12 @@ void retrosoft_ellipse(
 
    /* TODO: Filled ellipse. */
 
+   /*
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+   */
+   assert( NULL != target );
 
    retroflat_px_lock( target );
 
@@ -250,7 +298,7 @@ void retrosoft_ellipse(
           * those! Performance!
           */
 
-         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+         retrosoft_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
       }
 
       /* Keep shrinking and filling if required. */
@@ -286,6 +334,8 @@ void retrosoft_ellipse(
 }
 
 #else
+
+extern retrosoft_px_cb g_retrosoft_px;
 
 #endif /* RETROSFT_C */
 
