@@ -128,7 +128,7 @@ MERROR_RETVAL retrocon_input(
    retrogui_idc_t* p_idc_out, struct MDATA_VECTOR* win_stack );
 
 MERROR_RETVAL retrocon_display(
-   struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp );
+   struct RETROCON* con, retroflat_blit_t* gui_bmp );
 
 void retrocon_shutdown( struct RETROCON* con );
 
@@ -402,7 +402,7 @@ MERROR_RETVAL retrocon_input(
          (con)->gui.flags |= RETROGUI_FLAGS_DIRTY;
 
 #  ifdef RETROFLAT_OPENGL
-         retval = retro3dw_push_win(
+         retval = retrowin_push_win(
             &((con)->gui), win_stack,
             *p_idc_out, NULL, (con)->gui.x, (con)->gui.y,
             (con)->gui.w, (con)->gui.h, 0 );
@@ -416,7 +416,7 @@ MERROR_RETVAL retrocon_input(
 
 #  ifdef RETROFLAT_OPENGL
          
-         retro3dw_destroy_win( win_stack, *p_idc_out );
+         retrowin_destroy_win( win_stack, *p_idc_out );
 #  endif /* RETROFLAT_OPENGL */
          debug_printf( RETROCON_TRACE_LVL, "console closed!" );
 
@@ -525,7 +525,7 @@ cleanup:
 }
 
 MERROR_RETVAL retrocon_display(
-   struct RETROCON* con, struct RETROFLAT_BITMAP* gui_bmp
+   struct RETROCON* con, retroflat_blit_t* gui_bmp
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
