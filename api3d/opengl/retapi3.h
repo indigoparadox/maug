@@ -262,14 +262,20 @@ MERROR_RETVAL retro3d_draw_window(
    assert( 0 < win->id );
 #  endif /* !RETROGL_NO_TEXTURE_LISTS */
 
+   assert( 0 < win->w );
+   assert( 0 < win->h );
+   
+   glPushMatrix();
+   glLoadIdentity();
+
    /* Switch to projection setup. */
    glMatrixMode( GL_PROJECTION );
    glPushMatrix();
 
    /* Use ortho for overlay. */
    glLoadIdentity();
-   aspect_f = (float)retroflat_screen_w() / (float)retroflat_screen_h();
-   
+   aspect_f = (float)(retroflat_screen_w()) / (float)(retroflat_screen_h());
+
    /* Switch to ortho projection proportional to screen size. */
    glOrtho( -1.0f * aspect_f, aspect_f, -1.0f, 1.0f, 0, 10.0f );
    
@@ -288,6 +294,8 @@ MERROR_RETVAL retro3d_draw_window(
    retro3d_check_errors( "dump" );
    retval = retro3d_texture_activate( win, 0 );
    maug_cleanup_if_not_ok();
+
+   glColor3f( 1.0f, 1.0f, 1.0f );
 
    glBegin( GL_TRIANGLES );
 
@@ -315,6 +323,8 @@ cleanup:
 
    glPopMatrix();
    glMatrixMode( GL_MODELVIEW );
+
+   glPopMatrix();
 
    return retval;
 }
