@@ -1581,8 +1581,11 @@ void retroflat_rect(
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
    /* Draw the rect onto the given 2D texture. */
+   /*
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
+   */
 
 #  else
 
@@ -1634,7 +1637,10 @@ void retroflat_line(
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+   /*
    retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+   */
 
 #  else
 
@@ -1688,7 +1694,10 @@ void retroflat_ellipse(
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_ellipse()!" );
+   /*
    retrosoft_ellipse( target, color, x, y, w, h, flags );
+   */
 
 #  else
 

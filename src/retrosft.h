@@ -234,7 +234,7 @@ void retrosoft_rect(
 
    } else {
 
-#ifdef RETROFLAT_SOFT_LINES
+#if defined( RETROFLAT_SOFT_LINES ) || defined( RETROFLAT_3D )
       retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
       retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
       retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
