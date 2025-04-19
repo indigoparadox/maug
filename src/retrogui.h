@@ -174,7 +174,7 @@ struct RETROGUI {
    retrogui_idc_t idc_prev;
    struct MDATA_VECTOR ctls;
    retrogui_idc_t focus;
-   struct RETROFLAT_BITMAP* draw_bmp;
+   retroflat_blit_t* draw_bmp;
 #ifdef RETROGXC_PRESENT
    ssize_t font_idx;
 #else
@@ -403,7 +403,7 @@ static void retrogui_redraw_LISTBOX(
       goto cleanup;
    }
    
-   retroflat_rect( gui->draw_bmp, ctl->base.bg_color,
+   retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
@@ -1438,7 +1438,7 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       RETROFLAT_COLOR_BLACK != gui->bg_color &&
       0 < gui->w && 0 < gui->h
    ) {
-      retroflat_rect( gui->draw_bmp,
+      retroflat_2d_rect( gui->draw_bmp,
          gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_FLAGS_FILL );
    }
 

@@ -2,6 +2,10 @@
 #ifndef RETROSFT_H
 #define RETROSFT_H
 
+#ifndef RETROSOFT_PRESENT
+#  error "RETROSOFT_PRESENT must be defined in order to use retrosoft!"
+#endif /* !RETROSOFT_PRESENT */
+
 /**
  * \addtogroup maug_retrosft RetroFlat Soft Shapes API
  * \brief Tools for drawing shape primatives.
@@ -24,29 +28,13 @@
 #  define RETROSOFT_TRACE_LVL 0
 #endif /* RETROSOFT_TRACE_LVL */
 
-#ifdef RETROFLAT_3D
-typedef struct RETROFLAT_3DTEX retrosoft_target_t;
-#else
-typedef struct RETROFLAT_BITMAP retrosoft_target_t;
-#endif
-
-/**
- * \brief Type of callback function used to produce pixels on a surface.
- *
- * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
- * on whether this is a 3D or 2D engine.
- */
-typedef void (*retrosoft_px_cb)(
-   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags );
-
 /**
  * \brief Draw a line from x1, y1 to x2, y2.
  * \warning This function does not check if supplied bitmaps are read-only!
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_line(
-   retrosoft_target_t* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
 /**
@@ -55,7 +43,7 @@ void retrosoft_line(
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_rect(
-   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags );
 
 /**
@@ -66,20 +54,12 @@ void retrosoft_rect(
  *          Such checks should be performed by wrapper functions calling it!
  */
 void retrosoft_ellipse(
-   retrosoft_target_t* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
 /*! \} */ /* maug_retrosft */
 
 #ifdef RETROSFT_C
-
-/**
- * \brief Directly addressable callback to produce pixels on a surface.
- *
- * This is assigned in retroflat_init(), as that is when all of the _px()
- * callback functions are defined and available.
- */
-retrosoft_px_cb g_retrosoft_px;
 
 /* === */
 
@@ -145,7 +125,7 @@ void retrosoft_line_strategy(
    defined( RETROFLAT_SOFT_LINES )
 
 void retrosoft_line(
-   retrosoft_target_t* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 
@@ -185,7 +165,7 @@ void retrosoft_line(
          (size_t)iter[RETROFLAT_LINE_Y] < (size_t)retroflat_screen_h()
       ) {
       */
-      g_retrosoft_px(
+      retroflat_2d_px(
          target, color,
          iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
       /* } */
@@ -207,7 +187,7 @@ void retrosoft_line(
 /* === */
 
 void retrosoft_rect(
-   retrosoft_target_t* target, const RETROFLAT_COLOR color_idx,
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int x_iter = 0,
@@ -227,7 +207,7 @@ void retrosoft_rect(
       for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
          for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
             /* TODO: Optimize filling 4-byte sequences! */
-            g_retrosoft_px( target, color_idx, x_iter, y_iter, 0 );
+            retroflat_2d_px( target, color_idx, x_iter, y_iter, 0 );
          }
       }
 
@@ -253,7 +233,7 @@ void retrosoft_rect(
 /* === */
 
 void retrosoft_ellipse(
-   retrosoft_target_t* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int32_t i = 0,
@@ -331,10 +311,6 @@ void retrosoft_ellipse(
 
    retroflat_px_release( target );
 }
-
-#else
-
-extern retrosoft_px_cb g_retrosoft_px;
 
 #endif /* RETROSFT_C */
 

@@ -144,7 +144,7 @@ struct RETROANI {
    uint16_t flags;
    /*! \brief Data specific to particular animation playing. */
    int8_t tile[RETROANI_TILE_SZ];
-   retrosoft_target_t* target;
+   retroflat_blit_t* target;
    uint32_t next_frame_ms;
    uint16_t mspf;
 };
@@ -681,30 +681,30 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
                   -1 == a->tile[idx] &&
                   RETROANI_FLAG_CLEANUP == (RETROANI_FLAG_CLEANUP & a->flags)
                ) {
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x, p_y, 0 );
 
                } else if( 0 < a->tile[idx] && RETROANI_TYPE_SNOW == a->type ) {
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_WHITE, p_x, p_y, 0 );
 #ifndef NO_SNOW_OUTLINE
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x - 1, p_y, 0 );
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x + 1, p_y, 0 );
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x, p_y - 1, 0 );
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x, p_y + 1, 0 );
 #endif /* !NO_SNOW_OUTLINE */
 
                } else if( 90 < a->tile[idx] ) {
-                  g_retrosoft_px(
+                  retroflat_2d_px(
                      a->target, RETROANI_TEMP_HIGH(), p_x, p_y, 0 );
                } else if( 60 < a->tile[idx] ) {
-                  g_retrosoft_px( a->target, RETROANI_TEMP_MED(), p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, RETROANI_TEMP_MED(), p_x, p_y, 0 );
                } else if( 30 < a->tile[idx] ) {
-                  g_retrosoft_px( a->target, RETROANI_TEMP_LOW(), p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, RETROANI_TEMP_LOW(), p_x, p_y, 0 );
                }
             }
          }

@@ -913,12 +913,43 @@ struct RETROFLAT_3DTEX {
 #define retroflat_bitmap_has_flags( bmp, f ) \
    (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
 
+/**
+ * \brief Wrapper macro to call appropriate 2D surface blitter for pixels,
+ *        depending on if the engine is in 2D or 3D mode.
+ */
+#define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
+
+#define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
+
+#define retroflat_2d_w( ... ) retro3d_texture_w( __VA_ARGS__ )
+
+#define retroflat_2d_blit( ... ) retro3d_texture_blit( __VA_ARGS__ )
+
+#define retroflat_2d_load_bitmap( ... ) \
+   retro3d_texture_load_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_destroy_bitmap( ... ) \
+   retro3d_texture_destroy( __VA_ARGS__ )
+
 /*! \} */ /* maug_retro3d_util */
 
 #else
 
 #define retroflat_bitmap_has_flags( bmp, f ) \
    (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
+
+#define retroflat_2d_px( ... ) retroflat_px( __VA_ARGS__ )
+
+#define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
+
+#define retroflat_2d_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
+
+#define retroflat_2d_blit( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_destroy_bitmap( ... ) \
+   retroflat_destroy_bitmap( __VA_ARGS__ )
 
 #endif /* RETROFLAT_3D || DOCUMENTATION */
 
@@ -1044,6 +1075,22 @@ void retrosnd_shutdown();
 #include <retapid.h>
 
 typedef maug_ms_t retroflat_ms_t;
+
+#ifdef RETROFLAT_3D
+typedef struct RETROFLAT_3DTEX retroflat_blit_t;
+#else
+typedef struct RETROFLAT_BITMAP retroflat_blit_t;
+#endif
+
+/**
+ * \brief Type of callback function used to produce pixels on a surface.
+ *
+ * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
+ * on whether this is a 3D or 2D engine.
+ */
+typedef void (*retroflat_px_cb)(
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags );
 
 /* === Structures === */
 
@@ -2051,11 +2098,13 @@ MERROR_RETVAL retroflat_build_filename_path(
 /* === */
 
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
-         defined( RETROFLAT_3D )) \
-   && !defined( MAUG_NO_AUTO_C )
-#     define RETROSFT_C
-#     include <retrosft.h>
-#  endif /* RETROFLAT_SOFT_SHAPES */
+   defined( RETROFLAT_3D ))
+/* RETROSOFT_PRESENT is different from RETROFLAT_SOFT_SHAPES in that it only
+ * indicates that the retrosoft library is loaded, not that it is the default
+ * for drawing primatives!
+ */
+#     define RETROSOFT_PRESENT
+#  endif
 
 #  if defined( RETROFLAT_3D )
 #     if !defined( MAUG_NO_AUTO_C )
@@ -2068,6 +2117,14 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retro3du.h>
 #     include <retapi3.h>
 #  endif /* RETROFLAT_3D */
+
+#  ifdef RETROSOFT_PRESENT
+#     if !defined( MAUG_NO_AUTO_C )
+#        define RETROSFT_C
+#     endif /* !MAUG_NO_AUTO_C */
+#     define RETROSOFT_PRESENT
+#     include <retrosft.h>
+#  endif /* RETROFLAT_SOFT_SHAPES */
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
@@ -2507,12 +2564,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 #  endif /* RETROFLAT_COMMIT_HASH */
 
    debug_printf( 1, "retroflat: initializing..." );
-
-#ifdef RETROFLAT_3D
-   g_retrosoft_px = retro3d_texture_px;
-#else
-   g_retrosoft_px = retroflat_px;
-#endif /* RETROFLAT_3D */
 
    /* System sanity checks. */
    assert( 2 <= sizeof( MERROR_RETVAL ) );
@@ -2992,17 +3043,28 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
    extern int                  g_retroflat_cmd_show;
 #     endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES)) \
-   && !defined( MAUG_NO_AUTO_C )
-#     include <retrosft.h>
-#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
+   defined( RETROFLAT_3D ))
+#     define RETROSOFT_PRESENT
+#  endif
 
 #  ifdef RETROFLAT_3D
 #     include <retro3dp.h>
 #     include <retro3d.h>
 #     include <retro3du.h>
-#     include <retrosft.h>
 #  endif /* RETROFLAT_3D */
+
+#  ifdef RETROSOFT_PRESENT
+#     include <retrosft.h>
+#  endif /* RETROFLAT_SOFT_SHAPES */
+
+/**
+ * \brief Directly addressable callback to produce pixels on a surface.
+ *
+ * This is assigned in retroflat_init(), as that is when all of the _px()
+ * callback functions are defined and available.
+ */
+extern retroflat_px_cb g_retroflat_px;
 
 #endif /* RETROFLT_C */
 
