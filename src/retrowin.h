@@ -52,9 +52,7 @@ MERROR_RETVAL retro3dw_destroy_win(
 MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO: Use _2d_ macros to make this work in 2D or 3D mode. */
-
-   retro3d_texture_lock( &(win->gui_bmp) );
+   retroflat_2d_lock_bitmap( &(win->gui_bmp) );
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui->draw_bmp = &(win->gui_bmp);
@@ -69,9 +67,9 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    win->gui->y = win->y;
    maug_cleanup_if_not_ok();
 
-   retro3d_texture_release( &(win->gui_bmp) );
+   retroflat_2d_release_bitmap( &(win->gui_bmp) );
 
-   retval = retro3d_draw_window( &(win->gui_bmp), win->gui->x, win->gui->y );
+   retval = retroflat_2d_blit_win( &(win->gui_bmp), win->gui->x, win->gui->y );
 
 cleanup:
 

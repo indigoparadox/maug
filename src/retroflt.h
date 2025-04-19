@@ -941,6 +941,15 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_blit( ... ) retro3d_texture_blit( __VA_ARGS__ )
 
+#define retroflat_2d_blit_win( src, d_x, d_y ) \
+   retro3d_draw_window( src, d_x, d_y )
+
+#define retroflat_2d_lock_bitmap( ... ) \
+   retro3d_texture_lock( __VA_ARGS__ )
+
+#define retroflat_2d_release_bitmap( ... ) \
+   retro3d_texture_release( __VA_ARGS__ )
+
 #define retroflat_2d_load_bitmap( ... ) \
    retro3d_texture_load_bitmap( __VA_ARGS__ )
 
@@ -961,7 +970,17 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
 
-#define retroflat_2d_blit( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
+#define retroflat_2d_blit_win( src, d_x, d_y ) \
+   retroflat_blit_bitmap( NULL, &((src)->win), 0, 0, d_x, d_y, \
+      (win)->gui->w, (win)->gui->h, 0 )
+
+#define retroflat_2d_blit_bitmap( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_lock_bitmap( ... ) \
+   retroflat_draw_lock( __VA_ARGS__ )
+
+#define retroflat_2d_release_bitmap( ... ) \
+   retroflat_draw_release( __VA_ARGS__ )
 
 #define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
 
