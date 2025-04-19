@@ -26,7 +26,7 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win );
 
 MERROR_RETVAL retro3dw_redraw_win_stack( struct MDATA_VECTOR* win_stack );
 
-retrogui_idc_t retro3dw_poll_win_stack( 
+retrogui_idc_t retro3dw_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
@@ -52,6 +52,8 @@ MERROR_RETVAL retro3dw_destroy_win(
 MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   retro3d_texture_lock( &(win->gui_bmp) );
+
    /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui->draw_bmp = &(win->gui_bmp);
    /* This is a bit of a hack... Set X/Y to 0 so that we draw at the top
@@ -65,6 +67,8 @@ MERROR_RETVAL retro3dw_redraw_win( struct RETROWIN3D* win ) {
    win->gui->y = win->y;
    maug_cleanup_if_not_ok();
 
+   retro3d_texture_release( &(win->gui_bmp) );
+
    retval = retro3d_draw_window( &(win->gui_bmp), win->gui->x, win->gui->y );
 
 cleanup:
@@ -72,10 +76,16 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL retro3dw_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    struct RETROWIN3D* win = NULL;
+
+   if( 0 == mdata_vector_ct( win_stack ) ) {
+      goto cleanup;
+   }
 
    assert( !mdata_vector_is_locked( win_stack ) );
    mdata_vector_lock( win_stack );
@@ -104,7 +114,9 @@ cleanup:
    return retval;
 }
 
-retrogui_idc_t retro3dw_poll_win_stack( 
+/* === */
+
+retrogui_idc_t retro3dw_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
@@ -147,6 +159,8 @@ cleanup:
    return idc_out;
 }
 
+/* === */
+
 void retro3dw_free_win( struct RETROWIN3D* win ) {
 
    if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
@@ -168,6 +182,8 @@ void retro3dw_free_win( struct RETROWIN3D* win ) {
 
    maug_mzero( win, sizeof( struct RETROWIN3D ) );
 }
+
+/* === */
 
 MERROR_RETVAL retro3dw_push_win(
    struct RETROGUI* gui, struct MDATA_VECTOR* win_stack,
@@ -198,7 +214,11 @@ MERROR_RETVAL retro3dw_push_win(
 
       /* TODO: Parse font height from filename and only load printable glyphs. */
       /* TODO: Use cache if available. */
+#ifdef RETROGXC_PRESENT
+      retval = retrogxc_load_font( font_filename, 0, 33, 93 );
+#else
       retval = retrofont_load( font_filename, &(win.gui->font_h), 0, 33, 93 );
+#endif /* RETROGXC_PRESENT */
       maug_cleanup_if_not_ok();
    }
 
@@ -240,6 +260,8 @@ cleanup:
 
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL retro3dw_destroy_win(
    struct MDATA_VECTOR* win_stack, size_t idc

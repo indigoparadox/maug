@@ -67,10 +67,14 @@ MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_3DTEX* tex ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
 
    assert( NULL != tex );
+   assert( NULL == tex->bytes );
+   assert( NULL != tex->bytes_h );
    assert( !retro3d_texture_locked( tex ) );
 
    tex->flags |= RETROFLAT_FLAGS_LOCK;
    maug_mlock( tex->bytes_h, tex->bytes );
+
+   assert( retro3d_texture_locked( tex ) );
 
    return retval;
 }
@@ -153,7 +157,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    maug_mlock( bmp_palette_h, bmp_palette );
    maug_cleanup_if_null_alloc( uint32_t*, bmp_palette );
 
-   retval = mfmt_read_bmp_palette( 
+   retval = mfmt_read_bmp_palette(
       (struct MFMT_STRUCT*)&header_bmp,
       bmp_palette, 4 * header_bmp.info.palette_ncolors,
       &bmp_file, 54 /* TODO */, mfile_get_sz( &bmp_file ) - 54, bmp_flags );
@@ -167,7 +171,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    maug_mlock( bmp_px_h, bmp_px );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
 
-   retval = mfmt_read_bmp_px( 
+   retval = mfmt_read_bmp_px(
       (struct MFMT_STRUCT*)&header_bmp,
       bmp_px, bmp_px_sz,
       &bmp_file, header_bmp.px_offset,
@@ -346,13 +350,13 @@ void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex ) {
    if( retro3d_texture_locked( tex ) ) {
       maug_munlock( tex->bytes_h, tex->bytes );
    }
-   
+
    if( NULL != tex->bytes_h ) {
       maug_mfree( tex->bytes_h );
    }
 
    if( 0 < tex->id ) {
-      debug_printf( 0, 
+      debug_printf( 0,
          "destroying bitmap texture: " UPRINTF_U32_FMT, tex->id );
       retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_DESTROY );
    }
@@ -373,7 +377,7 @@ void retro3d_texture_px(
       return;
    }
 
-   assert( NULL != tex->bytes );
+   //assert( NULL != tex->bytes );
    /* assert( retro3d_texture_locked( target ) ); */
 
    /* Draw pixel colors from texture palette. */
@@ -428,7 +432,7 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model ) {
          m = mdata_vector_get(
             &(model->materials), f->material_idx, struct RETRO3DP_MATERIAL );
          assert( NULL != m );
-      
+
 #if 0
          /* TODO: Handle material on NDS. */
          glMaterialfv( GL_FRONT, GL_DIFFUSE, m->diffuse );

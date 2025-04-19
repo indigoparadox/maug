@@ -328,11 +328,15 @@ MERROR_RETVAL retro3d_texture_activate(
 
    if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
 #  ifndef RETROGL_NO_TEXTURE_LISTS
+      /* Texture lists are available and should be updated by
+       * retro3d_texture_platform_refresh(), so just select the texture ID.
+       */
       debug_printf( RETRO3D_TRACE_LVL, "binding texture %d...", tex->id );
       glBindTexture( GL_TEXTURE_2D, tex->id );
       retval = retro3d_check_errors( "texture bind" );
       maug_cleanup_if_not_ok();
 #  else
+      /* Texture lists are NOT available, so lock the texture and assign it. */
       maug_mlock( tex->bytes_h, tex->bytes );
       maug_cleanup_if_null_lock( uint8_t*, tex->bytes );
       glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, tex->w, tex->h, 0,
@@ -343,12 +347,17 @@ MERROR_RETVAL retro3d_texture_activate(
       glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-#  ifndef RETROGL_NO_TEXTURE_LISTS
+
    } else {
+#  ifndef RETROGL_NO_TEXTURE_LISTS
+      /* Texture lists are available, so bind the 0 texture. */
       debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", tex->id );
       glBindTexture( GL_TEXTURE_2D, 0 );
       retval = retro3d_check_errors( "texture unbind" );
       maug_cleanup_if_not_ok();
+#else
+      /* Texture lists are NOT available. */
+      /* TODO: Disable texture? */
       maug_munlock( tex->bytes_h, tex->bytes );
 #  endif /* !RETROGL_NO_TEXTURE_LISTS */
    }
