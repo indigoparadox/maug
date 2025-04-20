@@ -283,7 +283,8 @@ MERROR_RETVAL retrowin_push_win(
       maug_cleanup_if_not_ok();
    }
 
-   retval = retroflat_2d_create_bitmap( w, h, &(win.gui_bmp), 0 );
+   retval = retroflat_2d_create_bitmap(
+      w, h, &(win.gui_bmp), RETROFLAT_FLAGS_OPAQUE );
    maug_cleanup_if_not_ok();
 
    win.flags |= RETROWIN_FLAG_INIT_BMP;

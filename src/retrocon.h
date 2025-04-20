@@ -190,7 +190,6 @@ MERROR_RETVAL retrocon_init(
 
    con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
    con->lbuffer_color = RETROFLAT_COLOR_BLACK;
-   con->gui.bg_color = RETROFLAT_COLOR_WHITE;
    con->gui.x = x;
    con->gui.y = y;
    con->gui.w = w;
@@ -382,11 +381,9 @@ MERROR_RETVAL retrocon_input(
 
 #  if defined( RETROTILE_PRESENT ) && !defined( RETROFLAT_NO_VIEWPORT_REFRESH )
          /* Mark all tiles as dirty when console is opened/closed. */
-         /*
          retroflat_viewport_lock_refresh();
-         retval = retrotile_clear_refresh( retroflat_screen_h() );
+         retval = retrotile_clear_refresh( retroflat_viewport_screen_h() );
          retroflat_viewport_unlock_refresh();
-         */
 #  endif /* RETROTILE_PRESENT && !RETROFLAT_NO_VIEWPORT_REFRESH */
 
          /* Return, in case the caller needs to do something with this. */

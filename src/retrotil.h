@@ -426,7 +426,7 @@ MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
    const char* tilemap_name );
 
-MERROR_RETVAL retrotile_clear_refresh( int16_t y_max );
+MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max );
 
 MERROR_RETVAL retrotile_topdown_draw(
    struct RETROFLAT_BITMAP* target,
@@ -1972,7 +1972,7 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL retrotile_clear_refresh( int16_t y_max ) {
+MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max ) {
    MERROR_RETVAL retval = MERROR_OK;
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    int16_t x = 0,
