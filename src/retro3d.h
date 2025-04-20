@@ -77,10 +77,9 @@ void retro3d_tri_end();
  *        (e.g. for displaying a UI.)
  */
 MERROR_RETVAL retro3d_draw_window(
-   struct RETROFLAT_3DTEX* win, retroflat_pxxy_t x, retroflat_pxxy_t y );
+   retroflat_blit_t* win, retroflat_pxxy_t x, retroflat_pxxy_t y );
 
-MERROR_RETVAL retro3d_texture_activate(
-   struct RETROFLAT_3DTEX* tex, uint8_t flags );
+MERROR_RETVAL retro3d_texture_activate( retroflat_blit_t* tex, uint8_t flags );
 
 /**
  * \brief Perform engine-specific refresh actions on the texture.
@@ -88,7 +87,7 @@ MERROR_RETVAL retro3d_texture_activate(
  *          need to be called directly by programs using this library!
  */
 MERROR_RETVAL retro3d_texture_platform_refresh(
-   struct RETROFLAT_3DTEX* tex, uint8_t flags );
+   retroflat_blit_t* tex, uint8_t flags );
 
 MERROR_RETVAL retro3d_check_errors( const char* desc );
 

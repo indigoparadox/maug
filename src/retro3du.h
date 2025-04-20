@@ -21,6 +21,8 @@
  *        primatives defined in retro3d.h.
  */
 
+#ifdef RETROFLAT_BMP_TEX
+
 /**
  * \brief Lock a texture for modification.
  */
@@ -53,6 +55,8 @@ void retro3d_texture_px(
    struct RETROFLAT_3DTEX* tex, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags );
 
+#endif /* RETROFLAT_BMP_TEX */
+
 MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model );
 
 #define retro3d_texture_locked( tex ) (NULL != (tex)->bytes)
@@ -62,6 +66,8 @@ MERROR_RETVAL retro3d_draw_model( struct RETRO3DP_MODEL* model );
 /*! \} */ /* maug_retro3d */
 
 #ifdef RETRO3D_C
+
+#ifdef RETROFLAT_BMP_TEX
 
 MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_3DTEX* tex ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
@@ -395,6 +401,8 @@ void retro3d_texture_px(
    /* Set pixel as opaque. */
    tex->bytes[(((y * tex->w) + x) * 4) + 3] = 0xff;
 }
+
+#endif /* RETROFLAT_BMP_TEX */
 
 /* === */
 

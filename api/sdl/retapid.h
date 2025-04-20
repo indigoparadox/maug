@@ -44,7 +44,7 @@ typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
 
 struct RETROFLAT_BITMAP {
-#  ifdef RETROFLAT_3D
+#  ifdef RETROFLAT_BMP_TEX
    struct RETROFLAT_3DTEX tex;
 #  else
    size_t sz;

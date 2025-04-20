@@ -284,7 +284,7 @@ void retro3d_tri_end() {
 /* === */
 
 MERROR_RETVAL retro3d_draw_window(
-   struct RETROFLAT_3DTEX* win, retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
+   retroflat_blit_t* win, retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    float aspect_f = 0,
@@ -366,9 +366,7 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL retro3d_texture_activate(
-   struct RETROFLAT_3DTEX* tex, uint8_t flags
-) {
+MERROR_RETVAL retro3d_texture_activate( retroflat_blit_t* tex, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
@@ -415,7 +413,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retro3d_texture_platform_refresh(
-   struct RETROFLAT_3DTEX* tex, uint8_t flags
+   retroflat_blit_t* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 

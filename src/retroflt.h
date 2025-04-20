@@ -7,6 +7,10 @@
  * \{
  */
 
+#ifdef RETROFLAT_OPENGL
+#  define RETROFLAT_BMP_TEX
+#endif /* RETROFLAT_OPENGL */
+
 /**
  * \brief Value for an individual tile in a ::RETROTILE_LAYER.
  * 
@@ -887,7 +891,7 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_3D ) || defined( DOCUMENTATION )
+#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
 
 /*! \addtogroup maug_retroflt_bitmap */
 
@@ -943,7 +947,7 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_h( ... ) retro3d_texture_h( __VA_ARGS__ )
 
-#define retroflat_2d_blit( ... ) retro3d_texture_blit( __VA_ARGS__ )
+#define retroflat_2d_blit_bitmap( ... ) retro3d_texture_blit( __VA_ARGS__ )
 
 #define retroflat_2d_blit_win( src, d_x, d_y ) \
    retro3d_draw_window( src, d_x, d_y )
@@ -979,7 +983,7 @@ struct RETROFLAT_3DTEX {
 #define retroflat_2d_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
 
 #define retroflat_2d_blit_win( src, d_x, d_y ) \
-   retroflat_blit_bitmap( NULL, &((src)->win), 0, 0, d_x, d_y, \
+   retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \
       (win)->gui->w, (win)->gui->h, 0 )
 
 #define retroflat_2d_blit_bitmap( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
@@ -1130,7 +1134,7 @@ void retrosnd_shutdown();
 
 typedef maug_ms_t retroflat_ms_t;
 
-#ifdef RETROFLAT_3D
+#ifdef RETROFLAT_BMP_TEX
 typedef struct RETROFLAT_3DTEX retroflat_blit_t;
 #else
 typedef struct RETROFLAT_BITMAP retroflat_blit_t;
