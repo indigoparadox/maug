@@ -140,10 +140,6 @@ struct RETROFLAT_BITMAP {
             g_retroflat_state->screen_v_h : ((bmp)->tex.h))
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
 
-#  elif defined( RETROFLAT_API_SDL1 )
-#     define retroflat_bitmap_locked( bmp ) \
-         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
-
 #  else
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
@@ -151,7 +147,14 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_h( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
-#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
+
+#     if defined( RETROFLAT_API_SDL1 )
+#        define retroflat_bitmap_locked( bmp ) \
+            (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+
+#     elif defined( RETROFLAT_API_SDL2 )
+#        define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
+#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
 #  endif /* RETROFLAT_OPENGL */
 

@@ -64,7 +64,7 @@
 #ifdef MAUG_C
 #  define MFIX_C
 #endif /* MAUG_C */
-#  include <mfix.h>
+#include <mfix.h>
 
 #ifdef MAUG_C
 #  define MDATA_C
