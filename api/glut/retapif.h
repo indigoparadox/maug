@@ -9,6 +9,7 @@ void
 #endif /* RETROFLAT_OS_OS2 */
 retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
+   retroflat_heartbeat_update();
    if( NULL != g_retroflat_state->loop_iter ) {
       g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
    }
@@ -73,9 +74,8 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* == GLUT == */
 
-#     define RETROFLAT_COLOR_TABLE_GLUT( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-         g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_GLUT )
+   /* We cap out at 16 colors. */
+   g_retroflat_state->screen_colors = 16;
 
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
@@ -217,14 +217,28 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
-   return retroglu_draw_lock( bmp );
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   /*
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+      retval = retro3d_texture_lock( &(bmp->tex) );
+   }
+   */
+   return retval;
 }
 
 /* === */
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
-   return retroglu_draw_release( bmp );
+   MERROR_RETVAL retval = MERROR_OK;
+   if( NULL == bmp ) {
+      glutSwapBuffers();
+   } else {
+      /*
+      retval = retro3d_texture_release( &(bmp->tex) );
+      */
+   }
+   return retval;
 }
 
 /* === */
@@ -235,14 +249,23 @@ MERROR_RETVAL retroflat_load_bitmap(
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
 
+   /*
    assert( NULL != bmp_out );
+
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
       filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_load_bitmap(
+      filename_path, &(bmp_out->tex), flags );
+   */
 
 cleanup:
 
@@ -254,17 +277,33 @@ cleanup:
 MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /*
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+   retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
+   */
 
-   return retroglu_create_bitmap( w, h, bmp_out, flags );
+   return retval;
 }
 
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-   retroglu_destroy_bitmap( bmp );
+   assert( NULL != bmp );
+
+   /*
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
+   retro3d_texture_destroy( &(bmp->tex) );
+   */
 }
 
 /* === */
@@ -276,10 +315,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   /*
    assert( NULL != src );
 
-   retval = 
-      retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
+   retval = retro3d_texture_blit(
+      &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
+   */
 
    return retval;
 }
@@ -290,7 +335,12 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
+   /*
    if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
+
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
@@ -300,7 +350,9 @@ void retroflat_px(
 
    retroflat_constrain_px( x, y, target, return );
 
-   retroglu_px( target, color_idx, x, y, flags );
+   assert( NULL != target );
+   retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
+   */
 }
 
 /* === */

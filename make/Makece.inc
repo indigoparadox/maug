@@ -43,6 +43,10 @@ endef
 
 define TGT_CECL_WINCE_SH3
 
+ifeq ("$$(WCE20DEV)","")
+$$(error $$$$WCE20DEV not defined!)
+endif
+
 CFLAGS_CECL_WINCE_SH3 += /D "SH3" /D "_SH3_"
 
 # /D "RETROFLAT_XPM" /D "MVFS_ENABLED" /I "obj/mvfs" /I "obj/retroxpm" 
@@ -51,7 +55,7 @@ CFLAGS_OPT_SH3 := $$(subst -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR),/D "$$(MVFS_DEFINE
 
 LDFLAGS_CECL_WINCE_SH3 += /LIBPATH:$(WCE20DEV)/LIB/wce200/HPC/wcesh/ /machine:SH3
 
-$(eval $(call TGT_ICO_WINCE,$(1),$$(OBJDIR_CECL_WINCE_SH3)))
+$$(eval $$(call TGT_ICO_WINCE,$(1),$$(OBJDIR_CECL_WINCE_SH3)))
 
 $$(OBJDIR_CECL_WINCE_SH3)/$(1).res: $$(OBJDIR_CECL_WINCE_SH3)/$(1).rc
 	wine $(WCE20DEV)/BIN/RC.EXE /l 0x409 /r /d "SH3" /d "_SH3_" /d "_WIN32_WCE" /d "UNICODE" /fo $$@ $$<
@@ -81,6 +85,10 @@ endef
 # ---
 
 define TGT_CECL_WINCE_MIPS
+
+ifeq ("$$(WCE20DEV)","")
+$$(error $$$$WCE20DEV not defined!)
+endif
 
 CFLAGS_CECL_WINCE_MIPS += /D "MIPS" /D "_MIPS_" /QMRWCE
 
@@ -119,6 +127,10 @@ endef
 # ---
 
 define TGT_CECL_WINCE_X86
+
+ifeq ("$$(WCE20DEV)","")
+$$(error $$$$WCE20DEV not defined!)
+endif
 
 CFLAGS_CECL_WINCE_X86 += /D "_WINDOWS" /D "UNDER_NT" /D "_WIN32_WCE_EMULATION" /D "_X86_" /D "_UNICODE" /D "WIN32"
 

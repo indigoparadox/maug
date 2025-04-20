@@ -2,6 +2,25 @@
 #ifndef RETROSFT_H
 #define RETROSFT_H
 
+#ifndef RETROSOFT_PRESENT
+#  error "RETROSOFT_PRESENT must be defined in order to use retrosoft!"
+#endif /* !RETROSOFT_PRESENT */
+
+/**
+ * \addtogroup maug_retrosft RetroFlat Soft Shapes API
+ * \brief Tools for drawing shape primatives.
+ *
+ * This library is also used in conjunction with retro3D, in order to
+ * manipulate texture bitmaps.
+ *
+ * \{
+ */
+
+/**
+ * \file retrosft.h
+ * \brief Tools for drawing shape primatives.
+ */
+
 #define RETROFLAT_LINE_X 0
 #define RETROFLAT_LINE_Y 1
 
@@ -9,162 +28,38 @@
 #  define RETROSOFT_TRACE_LVL 0
 #endif /* RETROSOFT_TRACE_LVL */
 
-MERROR_RETVAL retrosoft_load_glyph(
-   RETROFLAT_COLOR color,
-   size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp );
-
-MERROR_RETVAL retrosoft_init();
-
-void retrosoft_shutdown();
-
+/**
+ * \brief Draw a line from x1, y1 to x2, y2.
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags );
 
+/**
+ * \brief Draw a rectangle at the given coordinates, with the given dimensions.
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags );
 
+/**
+ * \brief Draw an ellipsoid at the given coordinates, with the given dimensions.
+ * \todo Right now this uses integer polar coordinates; it needs to be redone
+ *       to use the Midpoint circle algorithm or similar.
+ * \warning This function does not check if supplied bitmaps are read-only!
+ *          Such checks should be performed by wrapper functions calling it!
+ */
 void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags );
 
-void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   int x, int y, int w, int h, uint8_t flags );
-
-void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
-
-void retrosoft_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
-   uint8_t flags );
+/*! \} */ /* maug_retrosft */
 
 #ifdef RETROSFT_C
-
-#  include "mfont8x8.h"
-
-#  ifndef RETROFLAT_NO_STRING
-/* TODO: Create another depth for each color. */
-static struct RETROFLAT_BITMAP
-gc_font_bmps[RETROFLAT_COLORS_SZ][RETROSOFT_SETS_COUNT][RETROSOFT_GLYPHS_COUNT];
-#  endif /* !RETROFLAT_NO_STRING */
-
-/* === */
-
-#  ifndef RETROFLAT_NO_STRING
-
-MERROR_RETVAL retrosoft_load_glyph(
-   RETROFLAT_COLOR color,
-   size_t set_idx, size_t glyph_idx, struct RETROFLAT_BITMAP* bmp
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   int x = 0,
-      y = 0;
-   const char* glyph_dots = gc_font8x8[set_idx][glyph_idx];
-   
-   /* Create a transparent bitmap to draw on. */
-   retval = retroflat_create_bitmap(
-      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, bmp, 0 );
-   maug_cleanup_if_not_ok();
-
-   /* Normally draw lock is called from the main loop, but we're making an
-    * off-screen bitmap, here!
-    */
-   retroflat_draw_lock( bmp );
-   retroflat_px_lock( bmp );
-
-   /* Draw the glyph onto the bitmap. */
-   for( y = 0 ; RETROSOFT_GLYPH_H_SZ > y ; y++ ) {
-      for( x = 0 ; RETROSOFT_GLYPH_W_SZ > x ; x++ ) {
-         if( 1 == ((glyph_dots[y] >> x) & 0x01) ) {
-            retroflat_px( bmp, color, x, y, 0 );
-         }
-      }
-   }
-
-   retroflat_px_release( bmp );
-   retroflat_draw_release( bmp );
-
-   /*
-   retroflat_rect(
-      bmp, RETROFLAT_COLOR_RED, 0, 0, 
-      RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, RETROFLAT_FLAGS_FILL );
-   */
-
-cleanup:
-
-   return retval;
-}
-
-#  endif /* !RETROFLAT_NO_STRING */
-
-/* === */
-
-MERROR_RETVAL retrosoft_init() {
-   MERROR_RETVAL retval = MERROR_OK;
-#  ifndef RETROFLAT_NO_STRING
-   size_t i = 0,
-      j = 0;
-   RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
-
-#     ifdef RETROSOFT_PRELOAD_COLORS
-   for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
-      debug_printf( RETROSOFT_TRACE_LVL,
-         "loading glyphs in %s...", gc_retroflat_color_names[h] );
-#     endif /* RETROSOFT_PRELOAD_COLORS */
-   for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
-         for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
-            debug_printf( RETROSOFT_TRACE_LVL,
-               "loading glyph " SIZE_T_FMT "...", j );
-            retval = retrosoft_load_glyph( h, i, j, &(gc_font_bmps[h][i][j]) );
-            maug_cleanup_if_not_ok();
-         }
-      }
-#     ifdef RETROSOFT_PRELOAD_COLORS
-   }
-#     endif /* RETROSOFT_PRELOAD_COLORS */
-
-cleanup:
-
-#  endif /* !RETROFLAT_NO_STRING */
-
-   /* TODO: Unload loaded bitmaps if retval not OK. */
-
-   return retval;
-}
-
-/* === */
-
-void retrosoft_shutdown() {
-#  ifndef RETROFLAT_NO_STRING
-   size_t i = 0,
-      j = 0;
-   RETROFLAT_COLOR h = RETROFLAT_COLOR_WHITE;
-#  endif /* !RETROFLAT_NO_STRING */
-
-   debug_printf( RETROSOFT_TRACE_LVL, "retrosoft shutdown called..." );
-
-#  ifndef RETROFLAT_NO_STRING
-
-#ifdef RETROSOFT_PRELOAD_COLORS
-   for( h = 0 ; RETROFLAT_COLORS_SZ > h ; h++ ) {
-#endif /* RETROSOFT_PRELOAD_COLORS */
-      for( i = 0 ; RETROSOFT_SETS_COUNT > i ; i++ ) {
-         for( j = 0 ; RETROSOFT_GLYPHS_COUNT > j ; j++ ) {
-            debug_printf( RETROSOFT_TRACE_LVL,
-               "destroying glyph " SIZE_T_FMT "...", j );
-            retroflat_destroy_bitmap( &(gc_font_bmps[h][i][j]) );
-         }
-      }
-#ifdef RETROSOFT_PRELOAD_COLORS
-   }
-#endif /* RETROSOFT_PRELOAD_COLORS */
-
-#  endif /* !RETROFLAT_NO_STRING */
-}
 
 /* === */
 
@@ -230,7 +125,7 @@ void retrosoft_line_strategy(
    defined( RETROFLAT_SOFT_LINES )
 
 void retrosoft_line(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x1, int y1, int x2, int y2, uint8_t flags
 ) {
 
@@ -245,9 +140,12 @@ void retrosoft_line(
 
    /* TODO: Handle thickness. */
 
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
@@ -267,7 +165,7 @@ void retrosoft_line(
          (size_t)iter[RETROFLAT_LINE_Y] < (size_t)retroflat_screen_h()
       ) {
       */
-      retroflat_px(
+      retroflat_2d_px(
          target, color,
          iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
       /* } */
@@ -289,15 +187,18 @@ void retrosoft_line(
 /* === */
 
 void retrosoft_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int x_iter = 0,
       y_iter = 0;
 
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
@@ -306,13 +207,13 @@ void retrosoft_rect(
       for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
          for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
             /* TODO: Optimize filling 4-byte sequences! */
-            retroflat_px( target, color_idx, x_iter, y_iter, 0 );
+            retroflat_2d_px( target, color_idx, x_iter, y_iter, 0 );
          }
       }
 
    } else {
 
-#ifdef RETROFLAT_SOFT_LINES
+#if defined( RETROFLAT_SOFT_LINES ) || defined( RETROFLAT_3D )
       retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
       retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
       retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
@@ -332,7 +233,7 @@ void retrosoft_rect(
 /* === */
 
 void retrosoft_ellipse(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    int x, int y, int w, int h, uint8_t flags
 ) {
    int32_t i = 0,
@@ -346,34 +247,37 @@ void retrosoft_ellipse(
 
    /* TODO: Filled ellipse. */
 
+#ifndef RETROFLAT_3D
+   /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+#endif /* !RETROFLAT_3D */
 
    retroflat_px_lock( target );
 
    do {
       /* For the soft_lut, input numbers are * 1000... so 0.1 becomes 100. */
-      for( i = 100 ; 2 * RETROFP_PI + 100 > i ; i += 100 ) {
+      for( i = 100 ; 2 * MFIX_PI + 100 > i ; i += 100 ) {
          i_prev = i - 100;
 
-         px_x1 = x + (w / 2) + retrofp_cos( i_prev, w / 2 );
-         px_y1 = y + (h / 2) + retrofp_sin( i_prev, h / 2 );
-         px_x2 = x + (w / 2) + retrofp_cos( i, w / 2 );
-         px_y2 = y + (h / 2) + retrofp_sin( i, h / 2 );
+         px_x1 =
+            /* Offset circle center by X. */
+            x + (w / 2) + 
+            /* Get Cartesian coord by multiplying polar coord by radius. */
+            /* (Note that we convert to i *after* multiplication so the number
+             * is big enough that the precision no longer matters! */
+            mfix_to_i( mfix_cos( i_prev ) * w / 2 );
 
-         /*
-         if(
-            retroflat_bitmap_w( target ) <= px_x1 ||
-            retroflat_bitmap_h( target ) <= px_y1 ||
-            retroflat_bitmap_w( target ) <= px_x2 ||
-            retroflat_bitmap_h( target ) <= px_y2
-         ) {
-            continue;
-         }
-         */
+         px_y1 = y + (h / 2) + mfix_to_i( mfix_sin( i_prev ) * (h / 2) );
+         px_x2 = x + (w / 2) + mfix_to_i( mfix_cos( i ) * (w / 2) );
+         px_y2 = y + (h / 2) + mfix_to_i( mfix_sin( i ) * (h / 2) );
 
-         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+         /* We don't do bounds checks since the low-level API should handle
+          * those! Performance!
+          */
+
+         retrosoft_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
       }
 
       /* Keep shrinking and filling if required. */
@@ -407,81 +311,6 @@ void retrosoft_ellipse(
 
    retroflat_px_release( target );
 }
-
-#  ifndef RETROFLAT_NO_STRING
-
-/* === */
-
-void retrosoft_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
-) {
-   /* TODO: Put a little more effort into sizing. */
-   if( 0 == str_sz ) {
-      str_sz = maug_strlen( str );
-   }
-
-   *w_out = RETROSOFT_GLYPH_W_SZ * str_sz;
-   *h_out = RETROSOFT_GLYPH_H_SZ;
-}
-
-/* === */
-
-void retrosoft_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz, const char* font_str, int x_orig, int y_orig,
-   uint8_t flags
-) {
-   size_t i = 0,
-      glyph_idx = 0;
-   int x = x_orig;
-
-   if( 0 == str_sz ) {
-      str_sz = maug_strlen( str );
-   }
-
-   for( i = 0 ; str_sz > i ; i++ ) {
-      /* Terminate prematurely at null. */
-      if( '\0' == str[i] ) {
-         break;
-      }
-
-      /* Fonts start at character after space. */
-      glyph_idx = str[i] - ' ';
-
-#if defined( RETROFLAT_API_SDL2 ) && !defined( RETROSOFT_PRELOAD_COLORS )
-      /* If we're not caching the colors, use SDL2 features if available to
-       * tint the glyph before blitting it. */
-      SDL_SetSurfaceColorMod(
-         gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].surface,
-         g_retroflat_state->palette[color].r,
-         g_retroflat_state->palette[color].g,
-         g_retroflat_state->palette[color].b );
-      SDL_DestroyTexture(
-         gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].texture );
-      gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].texture =
-         SDL_CreateTextureFromSurface(
-            g_retroflat_state->buffer.renderer,
-            gc_font_bmps[RETROFLAT_COLOR_WHITE][0][glyph_idx].surface );
-#endif /* RETROFLAT_API_SDL2 && !RETROSOFT_PRELOAD_COLORS */
-
-      retroflat_blit_bitmap(
-         target, &(gc_font_bmps[
-#ifdef RETROSOFT_PRELOAD_COLORS
-         color
-#else
-         RETROFLAT_COLOR_WHITE
-#endif /* !RETROSOFT_PRELOAD_COLORS */
-         ][0][glyph_idx]), 0, 0, x, y_orig,
-         RETROSOFT_GLYPH_W_SZ, RETROSOFT_GLYPH_H_SZ, RETROFLAT_INSTANCE_NULL );
-
-      x += 8;
-   }
-}
-
-#  endif /* !RETROFLAT_NO_STRING */
-
-#else
 
 #endif /* RETROSFT_C */
 

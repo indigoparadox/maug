@@ -22,6 +22,9 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_OPENGL */
 #  endif /* RETROFLAT_API_SDL1 */
 
+   /* TODO: Add some flexibility for simulating lower-color platforms. */
+   g_retroflat_state->screen_colors = 16;
+
 #  if defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -68,16 +71,13 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* !RETROFLAT_OS_WIN */
 
    /* Setup color palettes. */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
-#     endif /* RETROFLAT_OPENGL */
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+#     endif /* RETROFLAT_OPENGL */
 
 #     ifdef RETROFLAT_OPENGL
    
@@ -117,7 +117,10 @@ MERROR_RETVAL retroflat_init_platform(
    SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
 #     endif /* RETROFLAT_SDL_ICO */
 
-   g_retroflat_state->buffer.surface = SDL_SetVideoMode(
+#     ifndef RETROFLAT_OPENGL
+   g_retroflat_state->buffer.surface = 
+#     endif /* !RETROFLAT_OPENGL */
+   SDL_SetVideoMode(
       g_retroflat_state->screen_w, g_retroflat_state->screen_h,
       info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
@@ -125,9 +128,11 @@ MERROR_RETVAL retroflat_init_platform(
       | SDL_OPENGL
 #     endif /* RETROFLAT_OPENGL */
    );
+#     ifndef RETROFLAT_OPENGL
    maug_cleanup_if_null(
       SDL_Surface*, g_retroflat_state->buffer.surface,
       RETROFLAT_ERROR_GRAPHICS );
+#     endif /* !RETROFLAT_OPENGL */
 
    /* Setup key repeat. */
    if(
@@ -156,16 +161,13 @@ MERROR_RETVAL retroflat_init_platform(
    }
 
    /* Setup color palettes. */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
-#     endif /* RETROFLAT_OPENGL */
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+#     endif /* !RETROFLAT_OPENGL */
 
    /* Create the main window. */
    g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
@@ -350,13 +352,15 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_draw_lock( bmp );
-
+   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+      retval = retro3d_texture_lock( &(bmp->tex) );
+   }
+ 
 #  elif defined( RETROFLAT_API_SDL1 )
 
    /* == SDL1 == */
@@ -432,7 +436,16 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_draw_release( bmp );
+   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+      /* SDL has its own OpenGL flip functions.*/
+#     if defined( RETROFLAT_API_SDL1 )
+      SDL_GL_SwapBuffers();
+#     elif defined( RETROFLAT_API_SDL2 )
+      SDL_GL_SwapWindow( g_retroflat_state->platform.window );
+#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+   } else {
+      retval = retro3d_texture_release( &(bmp->tex) );
+   }
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -536,9 +549,18 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return retval;
+   }
+
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   /*
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_load_bitmap(
+      filename_path, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -632,13 +654,21 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return retval;
+   }
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   /*
+   assert( NULL != bmp_out );
+   retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* == SDL1 == */
 
@@ -654,6 +684,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 cleanup:
 #  elif defined( RETROFLAT_API_SDL2 )
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* == SDL2 == */
 
@@ -685,9 +717,17 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_destroy_bitmap( bmp );
+   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   /*
+   assert( NULL != bmp );
+   retro3d_texture_destroy( &(bmp->tex) );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -726,6 +766,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return retval;
+   }
+
 #if 0
    /* SDL not setup for hardware scrolling. */
    if(
@@ -739,8 +783,12 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = 
-      retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   /*
+   assert( NULL != target );
+   retval = retro3d_texture_blit(
+      &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
 
@@ -810,9 +858,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
@@ -820,7 +866,11 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_px( target, color_idx, x, y, flags );
+   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   /*
+   assert( NULL != target );
+   retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
+   */
 
 #  elif defined( RETROFLAT_API_SDL1 )
 
@@ -888,12 +938,19 @@ void retroflat_rect(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
+#if 0
    assert( NULL != target );
 
    /* Draw the rect onto the given 2D texture. */
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
+#endif
 
 #  else
 
@@ -945,13 +1002,20 @@ void retroflat_line(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
+   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+#if 0
    if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Draw line in ortho. */
    } else {
       retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
    }
+#endif
 
 #  elif defined( RETROFLAT_API_SDL2 )
 
@@ -990,10 +1054,7 @@ void retroflat_ellipse(
       return;
    }
 
-   if(
-      NULL != target &&
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 

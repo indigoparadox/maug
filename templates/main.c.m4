@@ -5,9 +5,6 @@ divert(0)
 `#'define MAUG_C
 `#'include <maug.h>
 
-`#'define RETROFLT_C
-`#'include <retroflt.h>
-
 struct dataa(TEMPLATE) {
    int init;
 };

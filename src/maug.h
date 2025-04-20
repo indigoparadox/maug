@@ -62,6 +62,11 @@
 #include <uprintf.h>
 
 #ifdef MAUG_C
+#  define MFIX_C
+#endif /* MAUG_C */
+#include <mfix.h>
+
+#ifdef MAUG_C
 #  define MDATA_C
 #endif /* MAUG_C */
 #include <mdata.h>

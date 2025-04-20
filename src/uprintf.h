@@ -327,8 +327,22 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base );
 
 int maug_ztoa( size_t num, char* dest, int dest_sz, int base );
 
+/**
+ * This function does not support base detection e.g. by 0x prefix or h suffix.
+ * 
+ * \warning This function will do its best to pull a valid number, and should
+ *          be used with that in mind. It should not be used to gather numbers
+ *          that will be used to size buffers, for example!
+ */
 uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base );
 
+/**
+ * This function does not support base detection e.g. by 0x prefix or h suffix.
+ *
+ * \warning This function will do its best to pull a valid number, and should
+ *          be used with that in mind. It should not be used to gather numbers
+ *          that will be used to size buffers, for example!
+ */
 int32_t maug_atos32( const char* buffer, size_t buffer_sz );
 
 float maug_atof( const char* buffer, size_t buffer_sz );
@@ -531,10 +545,10 @@ uint32_t maug_atou32( const char* buffer, size_t buffer_sz, uint8_t base ) {
    }
 
    for( i = 0 ; buffer_sz > i ; i++ ) {
-      if( 'a' <= buffer[i] ) {
+      if( base > 10 && 'a' <= buffer[i] ) {
          u32_out *= base;
          u32_out += (buffer[i] - 'a') + 10;
-      } else if( 'A' <= buffer[i] ) {
+      } else if( base > 10 && 'A' <= buffer[i] ) {
          u32_out *= base;
          u32_out += (buffer[i] - 'A') + 10;
       } else if( '0' <= buffer[i] ) {

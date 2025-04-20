@@ -75,6 +75,9 @@ MERROR_RETVAL mlisp_stack_pop(
 
 /*! \} */ /* mlisp_stack */
 
+MERROR_RETVAL mlisp_env_dump(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
 /**
  * \brief Get a node from the environment denoted by a string in the strpool.
  * \param parser 
@@ -98,8 +101,36 @@ MERROR_RETVAL mlisp_env_set(
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
+MERROR_RETVAL mlisp_check_state(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
+/**
+ * \brief Iterate the current exec_state() starting from the next MLISP_AST_NODE
+ *        to be executed according to the tree of
+ *        MLISP_EXEC_STATE::per_node_child_idx values.
+ */
 MERROR_RETVAL mlisp_step(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
+/**
+ * \brief Iterate the current exec_state() starting from the lambda named.
+ *
+ * This should be called repeatedly in place of mlisp_step() until
+ * MERROR_PREEMPT is no longer returned so that the lambda is able to complete
+ * its execution.
+ *
+ * \warning The script should be run normally with mlisp_step() until it
+ *          returns MERROR_EXEC, so that lambdas defined by the script are
+ *          present in the env to be stepped from!
+ */
+MERROR_RETVAL mlisp_step_lambda(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   const char* lambda );
+
+MERROR_RETVAL mlisp_exec_init(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags );
+
+void mlisp_exec_free( struct MLISP_EXEC_STATE* exec );
 
 #define _MLISP_TYPE_TABLE_PUSH_PROTO( idx, ctype, name, const_name, fmt ) \
    MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
@@ -191,6 +222,8 @@ MERROR_RETVAL mlisp_stack_dump(
 
 cleanup:
 
+   assert( NULL == strpool );
+
    return retval;
 }
 
@@ -274,6 +307,7 @@ MERROR_RETVAL mlisp_env_dump(
    size_t i = 0;
    char* strpool = NULL;
    struct MLISP_ENV_NODE* e = NULL;
+   struct MDATA_VECTOR* env = NULL;
 
 #  define _MLISP_TYPE_TABLE_DUMPE( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == e->type ) { \
@@ -282,11 +316,22 @@ MERROR_RETVAL mlisp_env_dump(
                " \"%s\" (" #const_name "): " fmt, \
             i, &(strpool[e->name_strpool_idx]), e->value.name ); \
 
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+   assert( NULL != env->data_h );
+   assert( NULL != parser->strpool.str_h );
    mdata_strpool_lock( &(parser->strpool), strpool );
-   mdata_vector_lock( &(exec->env) );
-   while( i < mdata_vector_ct( &(exec->env) ) ) {
-      assert( mdata_vector_is_locked( &(exec->env) ) );
-      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+   assert( NULL != strpool );
+   mdata_vector_lock( env );
+   while( i < mdata_vector_ct( env ) ) {
+      assert( mdata_vector_is_locked( env ) );
+      e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+      assert( NULL != e );
 
       if( MLISP_ENV_FLAG_BUILTIN == (MLISP_ENV_FLAG_BUILTIN & e->flags) ) {
          /* Skip builtins. */
@@ -331,12 +376,63 @@ MERROR_RETVAL mlisp_env_dump(
       }
       i++;
    }
-   mdata_vector_unlock( &(exec->env) );
+   mdata_vector_unlock( env );
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
 cleanup:
 
    return retval;
+}
+
+/* === */
+
+struct MLISP_ENV_NODE* mlisp_env_get(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, const char* key
+) {
+   struct MLISP_ENV_NODE* node_out = NULL;
+   struct MLISP_ENV_NODE* node_test = NULL;
+   ssize_t i = 0;
+   struct MDATA_VECTOR* env = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+   char* strpool;
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+   i = mdata_vector_ct( env ) - 1;
+
+   /* This requires env be locked before entrance! */
+   assert( mdata_vector_is_locked( env ) );
+
+   mdata_strpool_lock( &(parser->strpool), strpool );
+
+   while( 0 <= i ) {
+      assert( mdata_vector_is_locked( env ) );
+      node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+      if( 0 == strncmp(
+         &(strpool[node_test->name_strpool_idx]), key, strlen( key )
+      ) ) {
+         node_out = node_test;
+         break;
+      }
+      i--;
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      node_out = NULL;
+   }
+
+   if( NULL != strpool ) {
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+   }
+
+   return node_out;
 }
 
 /* === */
@@ -347,13 +443,24 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
 ) {
    struct MLISP_ENV_NODE* node_out = NULL;
    struct MLISP_ENV_NODE* node_test = NULL;
-   ssize_t i = mdata_vector_ct( &(exec->env) ) - 1;
+   ssize_t i = 0;
+   struct MDATA_VECTOR* env = NULL;
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+   i = mdata_vector_ct( env ) - 1;
 
    /* This requires env be locked before entrance! */
+   assert( mdata_vector_is_locked( env ) );
 
    while( 0 <= i ) {
-      assert( mdata_vector_is_locked( &(exec->env) ) );
-      node_test = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      assert( mdata_vector_is_locked( env ) );
+      node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
       if( 0 == strncmp(
          &(strpool[node_test->name_strpool_idx]),
          &(strpool[token_strpool_idx]),
@@ -378,17 +485,31 @@ MERROR_RETVAL mlisp_env_unset(
    ssize_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
    char* strpool = NULL;
+   struct MDATA_VECTOR* env = NULL;
 
-   assert( !mdata_vector_is_locked( &(exec->env) ) );
-   mdata_vector_lock( &(exec->env) );
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   assert( !mdata_vector_is_locked( env ) );
+   mdata_vector_lock( env );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
 
-   /* Search for the given token in the env. */
-   for( i = mdata_vector_ct( &(exec->env) ) - 1 ; 0 <= i ; i-- ) {
-      assert( mdata_vector_is_locked( &(exec->env) ) );
-      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+   debug_printf( MLISP_TRACE_LVL, "attempting to undefine %s...", token );
 
+   /* Search for the given token in the env. */
+   for( i = mdata_vector_ct( env ) - 1 ; 0 <= i ; i-- ) {
+      assert( mdata_vector_is_locked( env ) );
+      e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+
+      /* TODO: This could be problematic if MLISP_EXEC_FLAG_SHARED_ENV is
+       *       enabled...
+       */
       if( MLISP_TYPE_ARGS_E == e->type ) {
          debug_printf( MLISP_EXEC_TRACE_LVL,
             "reached end of env stack frame: " SSIZE_T_FMT, i );
@@ -405,17 +526,17 @@ MERROR_RETVAL mlisp_env_unset(
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "found token %s: %s (" SSIZE_T_FMT "), removing...",
          token, &(strpool[e->name_strpool_idx]), i );
-      mdata_vector_unlock( &(exec->env) );
+      mdata_vector_unlock( env );
 
-      retval = mdata_vector_remove( &(exec->env), i );
-      mdata_vector_lock( &(exec->env) );
+      retval = mdata_vector_remove( env, i );
+      mdata_vector_lock( env );
       goto cleanup;
    }
 
 cleanup:
 
-   assert( mdata_vector_is_locked( &(exec->env) ) );
-   mdata_vector_unlock( &(exec->env) );
+   assert( mdata_vector_is_locked( env ) );
+   mdata_vector_unlock( env );
 
    mdata_strpool_unlock( &(parser->strpool), strpool );
 
@@ -432,6 +553,19 @@ MERROR_RETVAL mlisp_env_set(
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_ENV_NODE e;
    ssize_t new_idx_out = -1;
+   struct MDATA_VECTOR* env = NULL;
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      debug_printf( MLISP_EXEC_TRACE_LVL, "using parser env..." );
+      env = &(parser->env);
+   } else {
+      debug_printf( MLISP_EXEC_TRACE_LVL, "using exec env..." );
+      env = &(exec->env);
+   }
+
+   assert( NULL != env );
 
    if( 0 == token_sz ) {
       token_sz = maug_strlen( token );
@@ -441,6 +575,7 @@ MERROR_RETVAL mlisp_env_set(
    /* TODO: Find previous env nodes with same token and change. */
 
    retval = mlisp_env_unset( parser, exec, token, token_sz );
+   assert( 0 == retval );
    maug_cleanup_if_not_ok();
 
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt ) \
@@ -509,7 +644,10 @@ MERROR_RETVAL mlisp_env_set(
 
    /* Add the node to the env. */
    new_idx_out = mdata_vector_append(
-      &(exec->env), &e, sizeof( struct MLISP_ENV_NODE ) );
+      env, &e, sizeof( struct MLISP_ENV_NODE ) );
+   assert( 0 < mdata_vector_ct( env ) );
+   debug_printf( MLISP_EXEC_TRACE_LVL, "env %p has " SIZE_T_FMT " nodes",
+      env, mdata_vector_ct( env ) );
    if( 0 > new_idx_out ) {
       retval = mdata_retval( new_idx_out );
    }
@@ -526,24 +664,34 @@ cleanup:
 /* === */
 
 static ssize_t _mlisp_env_get_env_frame(
-   struct MLISP_EXEC_STATE* exec, struct MLISP_ENV_NODE* e_out
+   struct MLISP_EXEC_STATE* exec, struct MLISP_PARSER* parser,
+   struct MLISP_ENV_NODE* e_out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t ret_idx = 0;
    struct MLISP_ENV_NODE* e = NULL;
    ssize_t i = 0;
    uint8_t autolock = 0;
+   struct MDATA_VECTOR* env = NULL;
 
-   if( !mdata_vector_is_locked( &(exec->env) ) ) {
-      mdata_vector_lock( &(exec->env) );
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   if( !mdata_vector_is_locked( env ) ) {
+      mdata_vector_lock( env );
       autolock = 1;
    }
 
-   for( i = mdata_vector_ct( &(exec->env) ) - 1; 0 <= i ; i-- ) {
+   for( i = mdata_vector_ct( env ) - 1; 0 <= i ; i-- ) {
       /* debug_printf( MLISP_EXEC_TRACE_LVL,
          "getting frame (trying " SSIZE_T_FMT "...)", i ); */
-      assert( mdata_vector_is_locked( &(exec->env) ) );
-      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      assert( mdata_vector_is_locked( env ) );
+      e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
       assert( NULL != e );
 
       if( MLISP_TYPE_ARGS_S != e->type ) {
@@ -566,7 +714,7 @@ static ssize_t _mlisp_env_get_env_frame(
 cleanup:
 
    if( autolock ) {
-      mdata_vector_unlock( &(exec->env) );
+      mdata_vector_unlock( env );
    }
  
    if( MERROR_OK != retval ) {
@@ -578,53 +726,64 @@ cleanup:
 
 /* === */
 
-static ssize_t _mlisp_env_prune_args( struct MLISP_EXEC_STATE* exec ) {
+static ssize_t _mlisp_env_prune_args(
+   struct MLISP_EXEC_STATE* exec, struct MLISP_PARSER* parser
+) {
    ssize_t ret_idx = 0;
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
    size_t removed = 0;
+   struct MDATA_VECTOR* env = NULL;
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
 
    /* This function modifies the env, so existing locks might break. */
-   assert( !mdata_vector_is_locked( &(exec->env) ) );
+   assert( !mdata_vector_is_locked( env ) );
 
-   assert( 0 < mdata_vector_ct( &(exec->env) ) );
+   assert( 0 < mdata_vector_ct( env ) );
 
-   mdata_vector_lock( &(exec->env) );
+   mdata_vector_lock( env );
 
    /* Get the most recent start frame in the env. */
-   i = _mlisp_env_get_env_frame( exec, NULL );
+   i = _mlisp_env_get_env_frame( exec, parser, NULL );
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "pruning env args starting from env frame " SSIZE_T_FMT "...", i );
-   e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+   e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
    assert( NULL != e );
 
    while( MLISP_TYPE_ARGS_E != e->type ) {
-      mdata_vector_unlock( &(exec->env) );
-      retval = mdata_vector_remove( &(exec->env), i );
+      mdata_vector_unlock( env );
+      retval = mdata_vector_remove( env, i );
       maug_cleanup_if_not_ok();
-      mdata_vector_lock( &(exec->env) );
+      mdata_vector_lock( env );
 
       /* Refresh e based on what i *now* points to. */
-      assert( mdata_vector_is_locked( &(exec->env) ) );
-      e = mdata_vector_get( &(exec->env), i, struct MLISP_ENV_NODE );
+      assert( mdata_vector_is_locked( env ) );
+      e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
       assert( NULL != e );
 
       removed++;
    }
 
    /* Remove the actual terminal separator. */
-   mdata_vector_unlock( &(exec->env) );
-   retval = mdata_vector_remove( &(exec->env), i );
+   mdata_vector_unlock( env );
+   retval = mdata_vector_remove( env, i );
    maug_cleanup_if_not_ok();
-   mdata_vector_lock( &(exec->env) );
+   mdata_vector_lock( env );
 
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "removed " SIZE_T_FMT " args!", removed );
 
 cleanup:
 
-   mdata_vector_unlock( &(exec->env) );
+   mdata_vector_unlock( env );
 
    if( MERROR_OK != retval ) {
       ret_idx = retval * -1;
@@ -646,6 +805,8 @@ static MERROR_RETVAL _mlisp_env_cb_cmp(
    int a_int,
       b_int;
    int* cur_int = NULL;
+
+   /* XXX: If we put a mutable variable first, it gets modified? */
 
 #  define _MLISP_TYPE_TABLE_CMP( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == tmp.type ) { \
@@ -980,7 +1141,7 @@ static MERROR_RETVAL _mlisp_env_cb_ano(
       }
    }
 
-   _mlisp_stack_push_mlisp_bool_t( exec, val_out );
+   retval = _mlisp_stack_push_mlisp_bool_t( exec, val_out );
 
 cleanup:
 
@@ -1019,6 +1180,8 @@ static MERROR_RETVAL _mlisp_preempt(
       n_idx, *p_child_idx );
 
 cleanup:
+
+   assert( NULL == strpool );
 
    return retval;
 }
@@ -1214,15 +1377,24 @@ static MERROR_RETVAL _mlisp_reset_lambda(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t ret_idx = 0;
+   struct MDATA_VECTOR* env = NULL;
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
 
    debug_printf( MLISP_EXEC_TRACE_LVL,
       "resetting lambda " SIZE_T_FMT "...", n_idx );
 
    assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-   assert( !mdata_vector_is_locked( &(exec->env) ) );
+   assert( !mdata_vector_is_locked( env ) );
 
    /* Clear off lambda stack args. */
-   ret_idx = _mlisp_env_prune_args( exec );
+   ret_idx = _mlisp_env_prune_args( exec, parser );
    if( 0 > ret_idx ) {
       retval = ret_idx * -1;
    }
@@ -1238,6 +1410,7 @@ cleanup:
 
 /* === */
 
+/* This is internal-only and should only be called from _mlisp_step_iter()! */
 static MERROR_RETVAL _mlisp_step_lambda(
    struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
@@ -1405,9 +1578,19 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
    char* strpool = NULL;
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_ENV_NODE* p_e = NULL;
+   struct MDATA_VECTOR* env = NULL;
 
-   if( !mdata_vector_is_locked( &(exec->env) ) ) {
-      mdata_vector_lock( &(exec->env) );
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   if( !mdata_vector_is_locked( env ) ) {
+      assert( env->data_h != NULL );
+      mdata_vector_lock( env );
       autolock = 1;
    }
 
@@ -1450,7 +1633,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
 cleanup:
 
    if( autolock ) {
-      mdata_vector_unlock( &(exec->env) );
+      mdata_vector_unlock( env );
    }
 
    mdata_strpool_unlock( &(parser->strpool), strpool );
@@ -1489,7 +1672,8 @@ static MERROR_RETVAL _mlisp_step_iter(
       1 == *p_visit_ct
    ) {
       /* Push a stack frame on first visit. */
-      _mlisp_stack_push_mlisp_begin_t( exec, n_idx );
+      retval = _mlisp_stack_push_mlisp_begin_t( exec, n_idx );
+      maug_cleanup_if_not_ok();
    }
 
    if(
@@ -1524,7 +1708,8 @@ static MERROR_RETVAL _mlisp_step_iter(
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt ) \
    } else if( MLISP_TYPE_ ## const_name == e.type ) { \
-      _mlisp_stack_push_ ## ctype( exec, e.value.name );
+      retval = _mlisp_stack_push_ ## ctype( exec, e.value.name ); \
+      maug_cleanup_if_not_ok();
 
    if( MLISP_EXEC_FLAG_DEF_TERM == (MLISP_EXEC_FLAG_DEF_TERM & exec->flags) ) {
       /* Avoid a deadlock when *re*-assigning terms caused by term being
@@ -1533,7 +1718,8 @@ static MERROR_RETVAL _mlisp_step_iter(
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "special case! pushing literal to define: " SSIZE_T_FMT,
          n->token_idx );
-      _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+      retval = _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+      maug_cleanup_if_not_ok();
    } else if( MLISP_TYPE_BEGIN == e.type ) {
       /* Cleanup the stack that's been pushed by children since this BEGIN's
        * initial visit.
@@ -1558,7 +1744,53 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
-      _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+      retval = _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+      maug_cleanup_if_not_ok();
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mlisp_check_state(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   /* struct MDATA_VECTOR* env = NULL; */
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* Prepare env for mlisp_env_get() below. */
+   /*
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+   */
+
+   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
+      error_printf( "no valid AST present; could not exec!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   /*
+   if( NULL == env->data_bytes ) {
+      error_printf( "no valid env present; could not exec!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+   */
+
+   if(
+      MLISP_EXEC_FLAG_INITIALIZED != (exec->flags & MLISP_EXEC_FLAG_INITIALIZED)
+   ) {
+      retval = MERROR_EXEC;
+      goto cleanup;
    }
 
 cleanup:
@@ -1593,13 +1825,8 @@ MERROR_RETVAL mlisp_step(
    mdata_vector_lock( &(exec->per_node_visit_ct) );
    mdata_vector_lock( &(parser->ast) );
 
-   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
-      error_printf( "no valid AST present; could not exec!" );
-      retval = MERROR_EXEC;
-      goto cleanup;
-   }
-
-   exec->flags = 0;
+   /* Disable transient flags. */
+   exec->flags &= MLISP_EXEC_FLAG_TRANSIENT_MASK;
    assert( 0 == mdata_vector_ct( &(exec->lambda_trace) ) );
 
 #ifdef MLISP_DEBUG_TRACE
@@ -1649,17 +1876,110 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mlisp_step_lambda(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   const char* lambda
+) {
+   struct MLISP_ENV_NODE* e = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t autolock = 0;
+   struct MDATA_VECTOR* env = NULL;
+   mlisp_lambda_t lambda_idx = 0;
+
+   /* Prepare env for mlisp_env_get() below. */
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   if( MERROR_OK != mlisp_check_state( parser, exec ) ) {
+      error_printf( "mlisp not ready!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   /* Autolock vectors used below. */
+   /* TODO: Should this be a reusable macro? */
+   if( !mdata_vector_is_locked( env ) ) {
+      assert( env->data_h != NULL );
+      mdata_vector_lock( env );
+      autolock |= 0x01;
+   }
+   if( !mdata_vector_is_locked( &(exec->per_node_child_idx) ) ) {
+      mdata_vector_lock( &(exec->per_node_child_idx) );
+      autolock |= 0x02;
+   }
+   if( !mdata_vector_is_locked( &(exec->per_node_visit_ct) ) ) {
+      mdata_vector_lock( &(exec->per_node_visit_ct) );
+      autolock |= 0x04;
+   }
+   if( !mdata_vector_is_locked( &(parser->ast) ) ) {
+      mdata_vector_lock( &(parser->ast) );
+      autolock |= 0x08;
+   }
+
+   /* Find the AST node for the lambda. */
+   e = mlisp_env_get( parser, exec, lambda );
+   if( NULL == e ) {
+      error_printf( "lambda \"%s\" not found!", lambda );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+   lambda_idx = e->value.lambda;
+
+   /* Autounlock just env so _mlisp_step_lambda() works. */
+   /* TODO: We shouldn't need to do this if we reuse the multiple autolock...
+    */
+   if( 0x01 == (0x01 & autolock) ) {
+      mdata_vector_unlock( env );
+      autolock &= ~0x01;
+   }
+
+   debug_printf( MLISP_EXEC_TRACE_LVL, "lambda \"%s\" is AST node idx %ld",
+      lambda, lambda_idx );
+
+   /* Jump execution to the lambda on next iter. */
+   retval = _mlisp_step_lambda( parser, lambda_idx, exec );
+
+cleanup:
+
+   /* See autolocks above. */
+   if( 0x01 == (0x01 & autolock) ) {
+      mdata_vector_unlock( env );
+   }
+   if( 0x02 == (0x02 & autolock) ) {
+      mdata_vector_unlock( &(exec->per_node_child_idx) );
+   }
+   if( 0x04 == (0x04 & autolock) ) {
+      mdata_vector_unlock( &(exec->per_node_visit_ct) );
+   }
+   if( 0x08 == (0x08 & autolock) ) {
+      mdata_vector_unlock( &(parser->ast) );
+   }
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_exec_init(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
    size_t zero = 0;
 
+   assert( 0 == exec->flags );
+
    maug_mzero( exec, sizeof( struct MLISP_EXEC_STATE ) );
 
+   exec->flags = flags;
+
    /* Setup lambda visit stack so it can be locked on first step. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->lambda_trace), &zero, sizeof( size_t ) );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
@@ -1667,16 +1987,32 @@ MERROR_RETVAL mlisp_exec_init(
    maug_cleanup_if_not_ok();
    mdata_vector_remove_last( &(exec->lambda_trace) );
 
-   append_retval = mdata_vector_alloc(
-      &(exec->env), sizeof( struct MLISP_ENV_NODE ), MDATA_VECTOR_INIT_SZ );
+   /* TODO: MLISP_EXEC_FLAG_SHARED_ENV might not be such a great idea, since
+    *       it could let lambdas clobber each others stack frames on env.
+    *       Maybe make sure those stack frames are obeyed by lambda caller idx?
+    */
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      append_retval = mdata_vector_alloc(
+         &(parser->env), sizeof( struct MLISP_ENV_NODE ),
+         MDATA_VECTOR_INIT_SZ );
+   } else {
+      append_retval = mdata_vector_alloc(
+         &(exec->env), sizeof( struct MLISP_ENV_NODE ), MDATA_VECTOR_INIT_SZ );
+   }
+   /* TODO: Cleanup partially allocated object. */
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
    }
    maug_cleanup_if_not_ok();
 
    /* Create the node PCs. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->per_node_child_idx), &zero, sizeof( size_t ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
    maug_cleanup_if_not_ok();
 
    /* Make sure there's an exec child node for every AST node. */
@@ -1684,13 +2020,20 @@ MERROR_RETVAL mlisp_exec_init(
       mdata_vector_ct( &(exec->per_node_child_idx) ) <= 
       mdata_vector_ct( &(parser->ast) )
    ) {
-      retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
+      append_retval = mdata_vector_append( &(exec->per_node_child_idx), &zero,
          sizeof( size_t ) );
+      if( 0 > append_retval ) {
+         retval = mdata_retval( append_retval );
+      }
+      maug_cleanup_if_not_ok();
    }
 
    /* Create the node visit counters. */
-   retval = mdata_vector_append(
+   append_retval = mdata_vector_append(
       &(exec->per_node_visit_ct), &zero, sizeof( size_t ) );
+   if( 0 > append_retval ) {
+      retval = mdata_retval( append_retval );
+   }
    maug_cleanup_if_not_ok();
 
    /* Make sure there's an exec visit count for every AST node. */
@@ -1698,11 +2041,25 @@ MERROR_RETVAL mlisp_exec_init(
       mdata_vector_ct( &(exec->per_node_visit_ct) ) <= 
       mdata_vector_ct( &(parser->ast) )
    ) {
-      retval = mdata_vector_append( &(exec->per_node_visit_ct), &zero,
+      append_retval = mdata_vector_append( &(exec->per_node_visit_ct), &zero,
          sizeof( size_t ) );
+      if( 0 > append_retval ) {
+         retval = mdata_retval( append_retval );
+      }
+      maug_cleanup_if_not_ok();
    }
 
+   exec->flags |= MLISP_EXEC_FLAG_INITIALIZED;
+
    /* Setup initial env. */
+
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & flags) &&
+      0 < mdata_vector_ct( &(parser->env) )
+   ) {
+      debug_printf( MLISP_EXEC_TRACE_LVL, "skipping initialized environment!" );
+      goto cleanup;
+   }
 
    retval = mlisp_env_set(
       parser, exec, "and", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
@@ -1765,11 +2122,16 @@ cleanup:
 /* === */
 
 void mlisp_exec_free( struct MLISP_EXEC_STATE* exec ) {
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+         "destroying exec (stack: " SIZE_T_FMT ", env: " SIZE_T_FMT ")...",
+         mdata_vector_ct( &(exec->stack) ), mdata_vector_ct( &(exec->env) ) );
    mdata_vector_free( &(exec->per_node_child_idx) );
    mdata_vector_free( &(exec->per_node_visit_ct) );
    mdata_vector_free( &(exec->stack) );
    mdata_vector_free( &(exec->env) );
    mdata_vector_free( &(exec->lambda_trace) );
+   exec->flags = 0;
+   debug_printf( MLISP_EXEC_TRACE_LVL, "exec destroyed!" );
 }
 
 #else

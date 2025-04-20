@@ -3,6 +3,24 @@
 #define RETROFLT_H
 
 /**
+ * \addtogroup retrotile
+ * \{
+ */
+
+#ifdef RETROFLAT_OPENGL
+#  define RETROFLAT_BMP_TEX
+#endif /* RETROFLAT_OPENGL */
+
+/**
+ * \brief Value for an individual tile in a ::RETROTILE_LAYER.
+ * 
+ * This is defined early on so that it can be used in some other modules.
+ */
+typedef int16_t retroflat_tile_t;
+
+/*! \} */
+
+/**
  * \addtogroup maug_retroflt RetroFlat API
  * \brief Abstraction layer header for retro systems.
  * \{
@@ -373,16 +391,6 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_FLAGS_LITERAL_PATH   0x02
 
-#ifndef RETROFLAT_NO_STRING
-/**
- * \brief Flag for retroflat_string() and retroflat_string_sz() to print
- *        text as outline-only.
- * \todo This has not yet been implemented and is present for backward
- *       compatibility.
- */
-#define RETROFLAT_FLAGS_OUTLINE  0x04
-#endif /* !RETROFLAT_NO_STRING */
-
 /**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
  *
@@ -390,12 +398,6 @@ typedef int8_t RETROFLAT_COLOR;
  * is screen-backed.
  */
 #define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
-
-/**
- * \brief Flag for args->flags, indicating that a viewport tile refresh grid
- *        should be allocated and used.
- */
-#define RETROFLAT_FLAGS_VIEWPORT_REFRESH  0x20
 
 /*! \} */ /* maug_retroflt_drawing */
 
@@ -643,10 +645,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_DEFAULT_SCREEN_H 200
 #endif /* RETROFLAT_DEFAULT_SCREEN_H */
 
-#ifndef RETROFLAT_GL_Z
-#  define RETROFLAT_GL_Z -0.001
-#endif /* !RETROFLAT_GL_Z */
-
 #define retroflat_on_resize( w, h ) \
    g_retroflat_state->screen_w = w; \
    g_retroflat_state->screen_h = h;
@@ -782,6 +780,15 @@ typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
  */
 #define retroflat_cmp_asset_path( a, b ) strncmp( a, b, RETROFLAT_PATH_MAX )
 
+#define retroflat_assign_asset_path( tgt, src ) \
+   maug_strncpy( tgt, src, RETROFLAT_PATH_MAX )
+
+#define retroflat_assign_asset_trim_ext( tgt, src ) \
+   maug_snprintf( tgt, RETROFLAT_PATH_MAX, "%s", src ); \
+   if( NULL != strrchr( tgt, '.' ) ) { \
+      *(strrchr( tgt, '.' )) = '\0'; \
+   }
+
 /*! \} */ /* maug_retroflt_assets */
 
 /**
@@ -860,11 +867,17 @@ struct RETROFLAT_INPUT {
  * \{
  */
 
+typedef int8_t retroflat_dir4_t;
+
+typedef int8_t retroflat_dir8_t;
+
+#define RETROFLAT_DIR4_NONE  (-1)
 #define RETROFLAT_DIR4_NORTH  0
 #define RETROFLAT_DIR4_EAST   1
 #define RETROFLAT_DIR4_SOUTH  2
 #define RETROFLAT_DIR4_WEST   3
 
+#define RETROFLAT_DIR8_NONE   (-1)
 #define RETROFLAT_DIR8_NORTH  0
 #define RETROFLAT_DIR8_EAST   2
 #define RETROFLAT_DIR8_SOUTH  4
@@ -878,8 +891,22 @@ struct RETROFLAT_INPUT {
 
 /*! \} */ /* maug_retroflt_dir */
 
-#ifdef RETROFLAT_OPENGL
-struct RETROFLAT_GLTEX {
+#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
+
+/*! \addtogroup maug_retroflt_bitmap */
+
+#define retroflat_bitmap_has_flags( bmp, f ) \
+   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
+
+/*! \} */ /* maug_retroflt_bitmap */
+
+/**
+ * \addtogroup maug_retro3d_util
+ * \{
+ */
+
+struct RETROFLAT_3DTEX {
+   uint8_t flags;
    MAUG_MHANDLE bytes_h;
    uint8_t* bytes;
    uint32_t bpp;
@@ -889,9 +916,106 @@ struct RETROFLAT_GLTEX {
    size_t w;
    size_t h;
 };
-#endif /* RETROFLAT_OPENGL */
+
+/*! \} */ /* maug_retro3d_util */
+
+/**
+ * \addtogroup maug_retroflt_dir_2d RetroFlat 2D Wrapper API
+ * \brief Wrappers to call appropriate 2D surface functions for bitmaps or
+ *        textures, depending on if the engine is in 2D or 3D mode.
+ *
+ * This wrapper system is necessary so that high-level internal library 
+ * functions (e.g. retrosoft, retrofont, or retroani) are able to continue
+ * functioning on textures in 3D mode.
+ *
+ * Formerly, this was accomplished by shunts inside of the lower-level
+ * \ref maug_retroflt_drawing, but these shunts were removed in order to
+ * facilitate platform-agnostic software-only 3D (and they were messy).
+ * \{
+ */
+
+/**
+ * \brief Wrapper macro to call appropriate 2D surface blitter for pixels.
+ */
+#define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
+
+#define retroflat_2d_line( ... ) retrosoft_line( __VA_ARGS__ )
+
+#define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
+
+#define retroflat_2d_bitmap_w( ... ) retro3d_texture_w( __VA_ARGS__ )
+
+#define retroflat_2d_bitmap_h( ... ) retro3d_texture_h( __VA_ARGS__ )
+
+#define retroflat_2d_blit_bitmap( ... ) retro3d_texture_blit( __VA_ARGS__ )
+
+#define retroflat_2d_blit_win( src, d_x, d_y ) \
+   retro3d_draw_window( src, d_x, d_y )
+
+#define retroflat_2d_lock_bitmap( ... ) \
+   retro3d_texture_lock( __VA_ARGS__ )
+
+#define retroflat_2d_release_bitmap( ... ) \
+   retro3d_texture_release( __VA_ARGS__ )
+
+#define retroflat_2d_load_bitmap( ... ) \
+   retro3d_texture_load_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_create_bitmap( ... ) \
+   retro3d_texture_create( __VA_ARGS__ )
+
+#define retroflat_2d_destroy_bitmap( ... ) \
+   retro3d_texture_destroy( __VA_ARGS__ )
+
+#else
+
+#define retroflat_bitmap_has_flags( bmp, f ) \
+   (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
+
+#define retroflat_2d_px( ... ) retroflat_px( __VA_ARGS__ )
+
+#define retroflat_2d_line( ... ) retroflat_line( __VA_ARGS__ )
+
+#define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
+
+#define retroflat_2d_bitmap_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
+
+#define retroflat_2d_bitmap_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
+
+#define retroflat_2d_blit_win( src, d_x, d_y ) \
+   retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \
+      (win)->gui->w, (win)->gui->h, 0 )
+
+#define retroflat_2d_blit_bitmap( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_lock_bitmap( ... ) \
+   retroflat_draw_lock( __VA_ARGS__ )
+
+#define retroflat_2d_release_bitmap( ... ) \
+   retroflat_draw_release( __VA_ARGS__ )
+
+#define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_create_bitmap( ... ) retroflat_create_bitmap( __VA_ARGS__ )
+
+#define retroflat_2d_destroy_bitmap( ... ) \
+   retroflat_destroy_bitmap( __VA_ARGS__ )
+
+#endif /* RETROFLAT_3D || DOCUMENTATION */
+
+/**
+ * \brief Type used for surface pixel coordinates.
+ *
+ * \todo Make this signed when most of the library uses it. Right now, it
+ *       causes too many issues with passed references.
+ */
+typedef size_t retroflat_pxxy_t;
 
 struct RETROFLAT_ARGS;
+
+#ifndef API_TRACE_LVL
+#  define API_TRACE_LVL 0
+#endif /* !API_TRACE_LVL */
 
 #ifndef NO_RETROSND
 
@@ -1010,6 +1134,22 @@ void retrosnd_shutdown();
 
 typedef maug_ms_t retroflat_ms_t;
 
+#ifdef RETROFLAT_BMP_TEX
+typedef struct RETROFLAT_3DTEX retroflat_blit_t;
+#else
+typedef struct RETROFLAT_BITMAP retroflat_blit_t;
+#endif
+
+/**
+ * \brief Type of callback function used to produce pixels on a surface.
+ *
+ * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
+ * on whether this is a 3D or 2D engine.
+ */
+typedef void (*retroflat_px_cb)(
+   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
+   size_t x, size_t y, uint8_t flags );
+
 /* === Structures === */
 
 /*! \brief Struct containing configuration values for a RetroFlat program. */
@@ -1055,25 +1195,115 @@ struct RETROFLAT_ARGS {
  * \addtogroup maug_retroflt_viewport RetroFlat Viewport API
  * \brief A flexible API to facilitate tile-based views using hardware
  *        acceleration where available.
+ *
+ * If no hardware acceleration is available on the platform, then the platform
+ * API header should define RETROFLAT_SOFT_VIEWPORT to enable the _generic
+ * functions and suffixes for this functionality.
  * \{
  */
 
-typedef int16_t retroflat_tile_t;
-
+/**
+ * \brief The viewport data struct.
+ * \warning Many of the fields in this struct are calculated based on each
+ *          other, and so updates should only be made through
+ *          retroflat_viewport_set_pos_size()!
+ */
 struct RETROFLAT_VIEWPORT {
-   /*! \brief X position of the viewport in real screen memory in pixels. */
+   /**
+    * \brief X position of the viewport in real screen memory in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_x() and
+    *        set through retroflat_viewport_set_pos_size().
+    * */
    int16_t screen_x;
-   /*! \brief Y position of the viewport in real screen memory in pixels. */
+   /**
+    * \brief Y position of the viewport in real screen memory in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_y() and
+    *        set through retroflat_viewport_set_pos_size()
+    * */
    int16_t screen_y;
+   /**
+    * \brief The X offset, in pixels, of the viewport on the world tilemap.
+    *        Should only be retrieved through retroflat_viewport_world_x() and
+    *        set through retroflat_viewport_set_world_pos().
+    */
    int16_t world_x;
+   /**
+    * \brief The Y offset, in pixels, of the viewport on the world tilemap.
+    *        Should only be retrieved through retroflat_viewport_world_y() and
+    *        set through retroflat_viewport_set_world_pos().
+    */
    int16_t world_y;
+   /**
+    * \brief The width of the entire world tilemap in pixels.
+    *        Should only be retrieved through retroflat_viewport_world_w() and
+    *        set through retroflat_viewport_set_world().
+    */
    int16_t world_w;
+   /**
+    * \brief The height of the entire world tilemap in pixels.
+    *        Should only be retrieved through retroflat_viewport_world_h() and
+    *        set through retroflat_viewport_set_world().
+    */
    int16_t world_h;
+   /**
+    * \brief Viewport width in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_w() and
+    *        set through retroflat_viewport_set_pos_size().
+    */
+   uint16_t screen_w;
+   /**
+    * \brief Viewport height in pixels.
+    *        Should only be retrieved through retroflat_viewport_screen_w() and
+    *        set through retroflat_viewport_set_pos_size().
+    */
+   uint16_t screen_h;
+   /**
+    * \brief Difference between viewport width and screen width in pixels.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_w_remainder() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
+   uint16_t screen_w_remainder;
+   /**
+    * \brief Difference between viewport height and screen height in pixels.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_h_remainder() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
+   uint16_t screen_h_remainder;
+   /**
+    * \brief The number of tiles across that fit in the viewport.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_tile_w() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    int16_t screen_tile_w;
+   /**
+    * \brief The number of tiles high that fit in the viewport.
+    *        Should only be retrieved through
+    *        retroflat_viewport_screen_tile_h() and
+    *        calculated through retroflat_viewport_set_pos_size().
+    */
    int16_t screen_tile_h;
+   int16_t world_tile_x;
+   int16_t world_tile_y;
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    MAUG_MHANDLE refresh_grid_h;
+   /**
+    * \brief A grid of tile values representing the last-drawn values on-screen.
+    *
+    * If the value for a tile in this grid matches the value about to be drawn,
+    * the draw will be skipped. This increases performance a LOT on systems with
+    * slow video memory access.
+    *
+    * This functionality may be disabled by defining the macro
+    * RETROFLAT_NO_VIEWPORT_REFRESH on build.
+    */
    retroflat_tile_t* refresh_grid;
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 };
+
+#  define retroflat_screen_colors() (g_retroflat_state->screen_colors)
 
 #ifndef DOCUMENTATION
 
@@ -1082,6 +1312,12 @@ struct RETROFLAT_VIEWPORT {
 
 #  define retroflat_viewport_world_y_generic() \
    (g_retroflat_state->viewport.world_y)
+
+#  define retroflat_viewport_world_tile_x_generic() \
+   (g_retroflat_state->viewport.world_tile_x)
+
+#  define retroflat_viewport_world_tile_y_generic() \
+   (g_retroflat_state->viewport.world_tile_y)
 
 #  define retroflat_viewport_world_w_generic() \
    (g_retroflat_state->viewport.world_w)
@@ -1095,13 +1331,51 @@ struct RETROFLAT_VIEWPORT {
 #  define retroflat_viewport_screen_tile_h_generic() \
    (g_retroflat_state->viewport.screen_tile_h)
 
+#  define retroflat_viewport_screen_w_generic() \
+   (g_retroflat_state->viewport.screen_w)
+
+#  define retroflat_viewport_screen_h_generic() \
+   (g_retroflat_state->viewport.screen_h)
+
+#  define retroflat_viewport_screen_w_remainder_generic() \
+   (g_retroflat_state->viewport.screen_w_remainder)
+
+#  define retroflat_viewport_screen_h_remainder_generic() \
+   (g_retroflat_state->viewport.screen_h_remainder)
+
 #  define retroflat_viewport_set_world_generic( w, h ) \
+   debug_printf( 1, "setting viewport size to %d x %d...", \
+      (int16_t)(w), (int16_t)(h) ); \
    (g_retroflat_state->viewport.world_w) = w; \
    (g_retroflat_state->viewport.world_h) = h;
 
 #  define retroflat_viewport_set_world_pos_generic( x, y ) \
+   debug_printf( 1, "setting viewport world pos to %d, %d...", x, y ); \
    (g_retroflat_state->viewport.world_x) = x; \
-   (g_retroflat_state->viewport.world_y) = y;
+   (g_retroflat_state->viewport.world_y) = y; \
+   (g_retroflat_state->viewport.world_tile_x) = (x) >> RETROFLAT_TILE_W_BITS; \
+   (g_retroflat_state->viewport.world_tile_y) = (y) >> RETROFLAT_TILE_H_BITS;
+
+#  define retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px ) \
+   g_retroflat_state->viewport.screen_x = (x_px); \
+   g_retroflat_state->viewport.screen_y = (y_px); \
+   g_retroflat_state->viewport.screen_tile_w = \
+      ((w_px) / RETROFLAT_TILE_W); \
+   g_retroflat_state->viewport.screen_tile_h = \
+      ((h_px) / RETROFLAT_TILE_H); \
+   /* We're not adding the extra room here since this won't be used for
+   * indexing or allocation but rather pixel detection.
+   */ \
+   g_retroflat_state->viewport.screen_w = \
+      ((w_px) / RETROFLAT_TILE_W) * RETROFLAT_TILE_W; \
+   g_retroflat_state->viewport.screen_h = \
+      ((h_px) / RETROFLAT_TILE_H) * RETROFLAT_TILE_H; \
+   g_retroflat_state->viewport.screen_w_remainder = \
+      (x_px) + (w_px) - g_retroflat_state->viewport.screen_w; \
+   g_retroflat_state->viewport.screen_h_remainder = \
+      (y_px) + (h_px) - g_retroflat_state->viewport.screen_h;
+
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
 
 #  define retroflat_viewport_lock_refresh_generic() \
    if( NULL == g_retroflat_state->viewport.refresh_grid ) { \
@@ -1138,17 +1412,19 @@ struct RETROFLAT_VIEWPORT {
       assert( 0 <= (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS) ); \
       g_retroflat_state->viewport.refresh_grid[ \
          /* Add +1 tile to make off-screen "-1" tile positive. */ \
-         (_retroflat_viewport_refresh_tile_y( y_px ) * \
-            g_retroflat_state->viewport.screen_tile_w) + \
-               _retroflat_viewport_refresh_tile_x( x_px )] = tid; \
+         ((_retroflat_viewport_refresh_tile_y( y_px ) + 1) * \
+            (g_retroflat_state->viewport.screen_tile_w + 2)) + \
+               (_retroflat_viewport_refresh_tile_x( x_px ) + 1)] = tid; \
    }
 
 #  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
       ((tile_id) != \
       g_retroflat_state->viewport.refresh_grid[ \
-         (_retroflat_viewport_refresh_tile_y( y_px ) * \
-            g_retroflat_state->viewport.screen_tile_w) + \
-               _retroflat_viewport_refresh_tile_x( x_px )])
+         ((_retroflat_viewport_refresh_tile_y( y_px ) + 1) * \
+            (g_retroflat_state->viewport.screen_tile_w + 2)) + \
+               (_retroflat_viewport_refresh_tile_x( x_px ) + 1)])
+
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 uint8_t retroflat_viewport_move_x_generic( int16_t x );
 
@@ -1158,48 +1434,107 @@ uint8_t retroflat_viewport_focus_generic(
    size_t x1, size_t y1, size_t range, size_t speed );
 
 #  define retroflat_viewport_screen_x_generic( world_x ) \
-   ((world_x) - retroflat_viewport_world_x())
+   (g_retroflat_state->viewport.screen_x + \
+      ((world_x) - retroflat_viewport_world_x()))
 
 #  define retroflat_viewport_screen_y_generic( world_y ) \
-   ((world_y) - retroflat_viewport_world_y())
+   (g_retroflat_state->viewport.screen_y + \
+      ((world_y) - retroflat_viewport_world_y()))
 
 #endif /* !DOCUMENTATION */
 
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
 
-#  ifdef RETROFLAT_VIEWPORT_ADAPT
-      /* Clamp world coordinates to tile borders to allow refresh grid to
-       * function properly.
+#  ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+      /* These clamp world coordinates to tile borders to allow refresh grid to
+       * function properly (smooth-scrolling tiles will always be in motion).
        */
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current viewport X position in the world in pixels.
+ */
 #     define retroflat_viewport_world_x() \
          ((retroflat_viewport_world_x_generic() \
             >> RETROFLAT_TILE_W_BITS) << RETROFLAT_TILE_W_BITS)
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current viewport Y position in the world in pixels.
+ */
 #     define retroflat_viewport_world_y() \
          ((retroflat_viewport_world_y_generic() \
             >> RETROFLAT_TILE_H_BITS) << RETROFLAT_TILE_H_BITS)
 #  else
-/*! \brief Return the current viewport X position in the world in pixels. */
 #     define retroflat_viewport_world_x() retroflat_viewport_world_x_generic()
-
-/*! \brief Return the current viewport Y position in the world in pixels. */
 #     define retroflat_viewport_world_y() retroflat_viewport_world_y_generic()
-#endif /* RETROFLAT_VIEWPORT_ADAPT */
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
-/*! \brief Return the current width of the world in pixels. */
+#     define retroflat_viewport_world_tile_x() \
+         retroflat_viewport_world_tile_x_generic()
+#     define retroflat_viewport_world_tile_y() \
+         retroflat_viewport_world_tile_y_generic()
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current width of the world in pixels.
+ */
 #  define retroflat_viewport_world_w() \
    retroflat_viewport_world_w_generic()
 
-/*! \brief Return the current height of the world in pixels. */
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current height of the world in pixels.
+ */
 #  define retroflat_viewport_world_h() \
    retroflat_viewport_world_h_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current width of the world in tiles.
+ */
 #  define retroflat_viewport_screen_tile_w() \
    retroflat_viewport_screen_tile_w_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the current height of the world in tiles.
+ */
 #  define retroflat_viewport_screen_tile_h() \
    retroflat_viewport_screen_tile_h_generic()
 
 /**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the width of the viewport in pixels.
+ */
+#  define retroflat_viewport_screen_w() \
+   retroflat_viewport_screen_w_generic()
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the height of the viewport in pixels.
+ */
+#  define retroflat_viewport_screen_h() \
+   retroflat_viewport_screen_h_generic()
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the difference in pixels between the viewport X + width and the
+ *        screen width.
+ */
+#  define retroflat_viewport_screen_w_remainder() \
+   retroflat_viewport_screen_w_remainder_generic()
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Return the difference in pixels between the viewport Y + height and
+ *        the screen height.
+ */
+#  define retroflat_viewport_screen_h_remainder() \
+   retroflat_viewport_screen_h_remainder_generic()
+
+/**
+ * \relates RETROFLAT_VIEWPORT
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.
  * \param w The width of the world in pixels (tile_width * map_tile_width).
@@ -1208,17 +1543,58 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_set_world( w, h ) \
    retroflat_viewport_set_world_generic( w, h )
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the position of the viewport in the world in pixels.
+ */
 #  define retroflat_viewport_set_world_pos( x, y ) \
    retroflat_viewport_set_world_pos_generic( x, y )
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the pixel width and height of the viewport, as well as some other
+ *        dependent values frequently used in screen updates.
+ */
+#  define retroflat_viewport_set_pos_size( x_px, y_px, w_px, h_px ) \
+   retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px )
+
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Lock access to RETROFLAT_VIEWPORT::refresh_grid in memory.
+ *
+ * This should be called before making references to the refresh grid e.g. with
+ * retroflat_viewport_tile_is_stale().
+ */
 #  define retroflat_viewport_lock_refresh() \
    retroflat_viewport_lock_refresh_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Unlock access to RETROFLAT_VIEWPORT::refresh_grid in memory.
+ *
+ * This should be called when references to the refresh grid are no longer in
+ * use and may be invalidated by the system.
+ */
 #  define retroflat_viewport_unlock_refresh() \
    retroflat_viewport_unlock_refresh_generic()
 
+/**
+ * \relates RETROFLAT_VIEWPORT
+ * \brief Set the tile at the given *screen* pixel coordinates to the given
+ *        tile ID.
+ *
+ * If these coordinates are from the world, they should subtract
+ * retroflat_viewport_screen_x()/retroflat_viewport_screen_y() first!
+ *
+ * When the viewport is redrawn, e.g. with retrotile_topdown_draw(), it will
+ * not redraw this tile if the tile ID is still the same.
+ */
 #  define retroflat_viewport_set_refresh( x, y, tid ) \
    retroflat_viewport_set_refresh_generic( x, y, tid )
+
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 /**
  * \brief Move the viewport in a direction or combination thereof so that
@@ -1261,17 +1637,61 @@ uint8_t retroflat_viewport_focus_generic(
 
 /*! \} */
 
-/*! \brief Global singleton containing state for the current platform. */
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Set parameters for the RETROFLAT_STATE::heartbeat_frame.
+ * \param len Number of ms between updates to RETROFLAT_STATE::heartbeat_frame.
+ * \param max Value of RETROFLAT_STATE::heartbeat_frame on which to reset to 0.
+ */
+#define retroflat_heartbeat_set( len, max ) \
+   g_retroflat_state->heartbeat_max = max; \
+   g_retroflat_state->heartbeat_len = len;
+
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Get current value of RETROFLAT_STATE::heartbeat_frame
+ */
+#define retroflat_heartbeat() (g_retroflat_state->heartbeat_frame)
+
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Check and update RETROFLAT_STATE::heartbeat_frame. This should be
+ *        called in the API HAL on every iteration of the main loop (this is
+ *        done automatically in the generic main loop).
+ */
+#define retroflat_heartbeat_update() \
+   /* Update the heartbeat animation frame. */ \
+   if( g_retroflat_state->heartbeat_next <= retroflat_get_ms() ) { \
+      g_retroflat_state->heartbeat_frame++; \
+      if( \
+         g_retroflat_state->heartbeat_frame >= \
+            g_retroflat_state->heartbeat_max \
+      ) { \
+         g_retroflat_state->heartbeat_frame = 0; \
+      } \
+      g_retroflat_state->heartbeat_next = \
+         retroflat_get_ms() + g_retroflat_state->heartbeat_len; \
+   }
+
+/**
+ * \brief Global singleton containing state for the current platform.
+ * 
+ * The first few members are size and offset info that the VDP can use to work
+ * with STATE structs from different kinds of binaries without crashing.
+ */
 struct RETROFLAT_STATE {
+   /* TODO: Set this up in the initialization function! */
+   /* TODO: We probably need more of these. */
+   size_t                  sz;
+   size_t                  offset_pal;
+   size_t                  offset_tex_pal;
+
    void*                   loop_data;
    MERROR_RETVAL           retval;
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
    char                    config_path[RETROFLAT_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
-   /* TODO: Make indirect palette optional per-platform. */
-   /*! \brief Index of available colors, initialized on platform init. */
-   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
 
@@ -1321,6 +1741,8 @@ defined( RETROVDP_C )
    size_t               screen_w;
    /*! \brief The screen height as seen by the system, after scaling. */
    size_t               screen_h;
+   /*! \brief The number of colors the screen is capable of displaying. */
+   size_t               screen_colors;
 
    /* WARNING: The VDP requires the state specifier to be the same size
     *          as the one it was compiled for! Do not modify above here!
@@ -1330,17 +1752,45 @@ defined( RETROVDP_C )
     *       consistent state struct size for VDP?
     */
 
-   retroflat_loop_iter  loop_iter;
-   retroflat_loop_iter  frame_iter;
+   retroflat_ms_t heartbeat_next;
+   /**
+    * \brief Number of ms to stay on current value of
+    *        RETROFLAT_STATE::heartbeat_frame before incrementing. Modify with
+    *        retroflat_heartbeat_set().
+    */
+   uint16_t heartbeat_len;
+   /**
+    * \brief Simple iteration loop that can be used to time e.g. perpetual
+    *        sprite animations. Modify parameters with
+    *        retroflat_heartbeat_set().
+    */
+   uint8_t heartbeat_frame;
+   /**
+    * \brief When RETROFLAT_STATE::heartbeat_frame reaches this value, it will
+    *        reset to 0.
+    */
+   uint8_t heartbeat_max;
 
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
-#  if defined( RETROFLAT_OPENGL )
-   uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
-#  endif /* RETROFLAT_OPENGL */
+#ifndef RETROFLAT_OPENGL
+   /*! \brief Index of available colors, initialized on platform init. */
+   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
+#endif /* !RETROFLAT_OPENGL */
+
+   retroflat_loop_iter  loop_iter;
+   retroflat_loop_iter  frame_iter;
 
    struct RETROFLAT_PLATFORM platform;
+
+#  if defined( RETROFLAT_3D )
+   /* This allows native colors to be used for things like glColor3fv while
+    * these colors are used to manipulate textures passed through
+    * retroflat_bitmap_*()
+    */
+   uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
+#  endif /* RETROFLAT_OPENGL */
 
 #ifndef NO_RETROSND
    struct RETROFLAT_SOUND sound;
@@ -1512,7 +1962,7 @@ void retroflat_px(
       retrosoft_rect( t, c, x, y, w, h, f )
 #     define retroflat_ellipse( t, c, x, y, w, h, f ) \
       retrosoft_ellipse( t, c, x, y, w, h, f )
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_3D */
 #else
 
 /**
@@ -1705,22 +2155,34 @@ MERROR_RETVAL retroflat_build_filename_path(
 
 /* === */
 
-#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )) \
-   && !defined( MAUG_NO_AUTO_C )
-#     define RETROFP_C
-#     include <retrofp.h>
-#     define RETROSFT_C
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
+   defined( RETROFLAT_3D ))
+/* RETROSOFT_PRESENT is different from RETROFLAT_SOFT_SHAPES in that it only
+ * indicates that the retrosoft library is loaded, not that it is the default
+ * for drawing primatives!
+ */
+#     define RETROSOFT_PRESENT
+#  endif
+
+#  if defined( RETROFLAT_3D )
+#     if !defined( MAUG_NO_AUTO_C )
+#        define RETRO3D_C
+#        define RETRO3DP_C
+#        define RETROFP_C
+#     endif /* MAUG_NO_AUTO_C */
+#     include <retro3dp.h>
+#     include <retro3d.h>
+#     include <retro3du.h>
+#     include <retapi3.h>
+#  endif /* RETROFLAT_3D */
+
+#  ifdef RETROSOFT_PRESENT
+#     if !defined( MAUG_NO_AUTO_C )
+#        define RETROSFT_C
+#     endif /* !MAUG_NO_AUTO_C */
+#     define RETROSOFT_PRESENT
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
-
-#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
-#     define RETROGLU_C
-#     include <retroglu.h>
-#     define RETROFP_C
-#     include <retrofp.h>
-#     define RETROSFT_C
-#     include <retrosft.h>
-#  endif /* RETROFLAT_OPENGL */
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
@@ -1774,6 +2236,9 @@ MERROR_RETVAL retroflat_loop_generic(
          /* Sleep/low power for a bit. */
          continue;
       }
+
+      retroflat_heartbeat_update();
+
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
@@ -2159,6 +2624,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: initializing..." );
 
    /* System sanity checks. */
+   assert( 2 <= sizeof( MERROR_RETVAL ) );
    assert( 4 == sizeof( uint32_t ) );
    assert( 4 == sizeof( int32_t ) );
    assert( 2 == sizeof( uint16_t ) );
@@ -2168,6 +2634,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( NULL != args );
    assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
    assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
+
+   debug_printf( 1, "retroflat: MFIX_PRECISION: %f", MFIX_PRECISION );
 
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
       sizeof( struct RETROFLAT_STATE ) );
@@ -2197,6 +2665,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
    maug_mzero( g_retroflat_state, sizeof( struct RETROFLAT_STATE ) );
+
+   retroflat_heartbeat_set( 1000, 2 );
 
 #  ifndef RETROFLAT_NO_CLI
 
@@ -2310,61 +2780,39 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
-#  ifdef RETROFLAT_OPENGL
-   debug_printf( 1, "setting up texture palette..." );
-#     define RETROFLAT_COLOR_TABLE_TEX( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         g_retroflat_state->tex_palette[idx][0] = r; \
-         g_retroflat_state->tex_palette[idx][1] = g; \
-         g_retroflat_state->tex_palette[idx][2] = b;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TEX )
-#  endif /* RETROFLAT_OPENGL */
-
    /* == Platform-Specific Init == */
 
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
+
+   debug_printf( 3, "screen initialized with: " SIZE_T_FMT "x" SIZE_T_FMT
+      " pixels with " SIZE_T_FMT " colors",
+      retroflat_screen_w(), retroflat_screen_h(), retroflat_screen_colors() );
 
    /* Setup the refresh grid, if requested, only after screen space has been
     * determined by the platform!
     */
    assert( 0 < retroflat_screen_w() );
    assert( 0 < retroflat_screen_h() );
-   if(
-      RETROFLAT_FLAGS_VIEWPORT_REFRESH ==
-      (RETROFLAT_FLAGS_VIEWPORT_REFRESH & args->flags)
-   ) {
-      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_VIEWPORT_REFRESH;
+   assert( 0 < retroflat_screen_colors() );
 
-      g_retroflat_state->viewport.screen_tile_w = 
-         /* Allocate 1 extra tile on each side for smooth scrolling. */
-         ((retroflat_screen_w() / RETROFLAT_TILE_W) + 2);
-      g_retroflat_state->viewport.screen_tile_h = 
-         ((retroflat_screen_h() / RETROFLAT_TILE_H) + 2);
+   /* This is intended as a default and can be modified by calling this macro
+    * again later.
+    */
+   retroflat_viewport_set_pos_size(
+      0, 0, retroflat_screen_w(), retroflat_screen_h() );
 
-      debug_printf( 1, "allocating refresh grid (%d tiles...)",
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h );
-      g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
-         g_retroflat_state->viewport.screen_tile_w *
-         g_retroflat_state->viewport.screen_tile_h,
-         sizeof( retroflat_tile_t ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE,
-         g_retroflat_state->viewport.refresh_grid_h );
-   }
-
-#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES )
-   retval = retrosoft_init();
-   maug_cleanup_if_not_ok();
-#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
-
-#  if defined( RETROFLAT_OPENGL )
-   retval = retrosoft_init();
-   maug_cleanup_if_not_ok();
-#     ifndef RETROFLAT_NO_STRING
-   retval = retroglu_init_glyph_tex();
-   maug_cleanup_if_not_ok();
-#     endif /* !RETROFLAT_NO_STRING */
-#  endif /* RETROFLAT_OPENGL */
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
+   debug_printf( 1, "allocating refresh grid (%d tiles...)",
+      g_retroflat_state->viewport.screen_tile_w *
+      g_retroflat_state->viewport.screen_tile_h );
+   g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
+      (g_retroflat_state->viewport.screen_tile_w + 2) *
+      (g_retroflat_state->viewport.screen_tile_h + 2),
+      sizeof( retroflat_tile_t ) );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE,
+      g_retroflat_state->viewport.refresh_grid_h );
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )
@@ -2402,7 +2850,11 @@ skip_vdp:
 
 #  endif /* RETROFLAT_VDP */
 
-#  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_OPENGL )
+#  ifdef RETROFLAT_3D
+   retro3d_platform_init();
+#  endif /* RETROFLAT_3D */
+
+#  if !defined( RETROFLAT_NO_BLANK_INIT ) && !defined( RETROFLAT_3D )
    retroflat_draw_lock( NULL );
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, 0, 0,
@@ -2422,9 +2874,11 @@ void retroflat_shutdown( int retval ) {
 
    debug_printf( 1, "retroflat shutdown called..." );
 
+#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h ) {
       maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
    }
+#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
@@ -2445,18 +2899,11 @@ void retroflat_shutdown( int retval ) {
    }
 #  endif /* RETROFLAT_VDP */
 
-#  if defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
-defined( RETROFLAT_OPENGL )
-   debug_printf( 1, "calling retrosoft shutdown..." );
-   retrosoft_shutdown();
-#  endif /* RETROFLAT_SOFT_SHAPES */
-
-#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_NO_STRING )
-   debug_printf( 1, "destroying GL glyphs..." );
-   retroglu_destroy_glyph_tex();
-#  endif /* RETROFLAT_OPENGL */
-
    /* === Platform-Specific Shutdown === */
+
+#ifdef RETROFLAT_3D
+   retro3d_platform_shutdown();
+#endif /* RETROFLAT_3D */
 
    retroflat_shutdown_platform( retval );
 
@@ -2553,219 +3000,6 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 
 /* === */
 
-#ifndef RETROFLAT_NO_STRING
-
-#  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-#     define retroflat_win_create_font( flags, font_str ) \
-         CreateFont( 10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, \
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, \
-            DEFAULT_QUALITY, DEFAULT_PITCH, \
-            (NULL == font_str || '\0' == font_str[0] ? "Arial" : font_str) );
-
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags
-) {
-#  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-#  elif defined( RETROFLAT_API_ALLEGRO )
-   FONT* font_data = NULL;
-   int font_loaded = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   SIZE sz;
-   HFONT font;
-   HFONT old_font;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-
-   retrosoft_string_sz( target, str, str_sz, font_str, w_out, h_out, flags );
-
-#  elif defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
-   if( NULL == font_str || '\0' == font_str[0] ) {
-      font_data = font;
-   } else {
-      /* TODO: Cache loaded fonts for later use. */
-      font_data = load_font( font_str, NULL, NULL );
-   }
-   if( NULL == font_data ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Unable to load font: %s", font_str );
-      goto cleanup;
-   }
-
-   *w_out = text_length( font_data, str );
-   *h_out = text_height( font_data );
-   
-cleanup:
-
-   if( font_loaded && NULL != font_data ) {
-      destroy_font( font_data );
-   }
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-   assert( retroflat_bitmap_locked( target ) );
-
-   font = retroflat_win_create_font( flags, font_str );
-   old_font = SelectObject( target->hdc_b, font );
-
-   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
-   *w_out = sz.cx;
-   *h_out = sz.cy;
-
-/* cleanup: */
-
-   SelectObject( target->hdc_b, old_font );
-
-#  else
-#     pragma message( "warning: string sz not implemented" )
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-}
-
-/* === */
-
-void retroflat_string(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int16_t x_orig, int16_t y_orig,
-   uint8_t flags
-) {
-#  if defined( RETROFLAT_OPENGL )
-   float aspect_ratio = 0,
-      screen_x = 0,
-      screen_y = 0;
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-#  elif defined( RETROFLAT_API_ALLEGRO )
-   FONT* font_data = NULL;
-   int font_loaded = 0;
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   RECT rect;
-   SIZE sz;
-   HFONT font;
-   HFONT old_font;
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   if( RETROFLAT_COLOR_NULL == color ) {
-      return;
-   }
-
-#  if !defined( RETROFLAT_OPENGL )
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* !RETROFLAT_OPENGL */
-
-   if( 0 == str_sz ) {
-      str_sz = maug_strlen( str );
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   if( NULL == target || retroflat_screen_buffer() == target ) {
-      /* Push new overlay projection parms before we create a new overlay. */
-      retroglu_push_overlay( x_orig, y_orig, screen_x, screen_y, aspect_ratio );
-
-      retroglu_string(
-         screen_x, screen_y, 0, 
-         g_retroflat_state->palette[color], str, str_sz, font_str, flags );
-
-      retroglu_pop_overlay();
-   } else {
-      /* Assume drawing surface is already configured inside a push_overlay()
-       * call and draw to its texture. */
-      retrosoft_string(
-         target, color, str, str_sz, font_str, x_orig, y_orig, flags );
-   }
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
-
-   retrosoft_string(
-      target, color, str, str_sz, font_str, x_orig, y_orig, flags );
-
-#  elif defined( RETROFLAT_API_ALLEGRO )
-
-   /* == Allegro == */
-
-   if( NULL == font_str || '\0' == font_str[0] ) {
-      font_data = font;
-   } else {
-      /* TODO: Cache loaded fonts for later use. */
-      font_data = load_font( font_str, NULL, NULL );
-   }
-   if( NULL == font_data ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Unable to load font: %s", font_str );
-      goto cleanup;
-   }
-
-   textout_ex( target->b, font_data, str, x_orig, y_orig, color, -1 );
-
-cleanup:
-   if( font_loaded && NULL != font_data ) {
-      destroy_font( font_data );
-   }
-
-#  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-
-   /* == Win16/Win32 == */
-
-   assert( (HBITMAP)NULL != target->b );
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   /* DrawText will draw gibberish even if the string is null-terminated! */
-   str_sz = maug_strlen( str );
-
-   memset( &sz, '\0', sizeof( SIZE ) );
-
-   font = retroflat_win_create_font( flags, font_str );
-   old_font = SelectObject( target->hdc_b, font );
-
-   GetTextExtentPoint( target->hdc_b, str, str_sz, &sz );
-   rect.left = x_orig;
-   rect.top = y_orig;
-   rect.right = (x_orig + sz.cx);
-   rect.bottom = (y_orig + sz.cy);
-
-   SetTextColor( target->hdc_b, g_retroflat_state->palette[color] );
-   SetBkMode( target->hdc_b, TRANSPARENT );
-
-   DrawText( target->hdc_b, str, str_sz, &rect, 0 );
-
-/* cleanup: */
-
-   SelectObject( target->hdc_b, old_font );
-
-   SetBkMode( target->hdc_b, OPAQUE );
-   SetTextColor( target->hdc_b,
-      g_retroflat_state->palette[RETROFLAT_COLOR_BLACK] );
-
-#  else
-#     pragma message( "warning: string not implemented" )
-#  endif /* RETROFLAT_API_ALLEGRO || RETROFLAT_API_SDL2 || RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-}
-
-#endif /* !RETROFLAT_NO_STRING */
-
-/* === */
-
 void retroflat_set_proc_resize(
    retroflat_proc_resize_t on_resize_in, void* data_in
 ) {
@@ -2778,14 +3012,14 @@ void retroflat_set_proc_resize(
 uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
    int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
 
-   g_retroflat_state->viewport.screen_x += x;
-
    /* Keep the viewport in the world arena. */
    if(
-      0 < new_world_x &&
-      g_retroflat_state->viewport.world_w > new_world_x + retroflat_screen_w()
+      0 <= new_world_x &&
+      g_retroflat_state->viewport.world_w >= new_world_x +
+         g_retroflat_state->viewport.screen_w
    ) {
       g_retroflat_state->viewport.world_x += x;
+      g_retroflat_state->viewport.world_tile_x += x >> RETROFLAT_TILE_W_BITS;
       return 1;
    }
 
@@ -2797,14 +3031,14 @@ uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
 uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
    int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
 
-   g_retroflat_state->viewport.screen_y += y;
-
    /* Keep the viewport in the world arena. */
    if(
-      0 < new_world_y &&
-      g_retroflat_state->viewport.world_h > new_world_y + retroflat_screen_h()
+      0 <= new_world_y &&
+      g_retroflat_state->viewport.world_h >= new_world_y +
+         g_retroflat_state->viewport.screen_h
    ) {
       g_retroflat_state->viewport.world_y += y;
+      g_retroflat_state->viewport.world_tile_y += y >> RETROFLAT_TILE_H_BITS;
       return 1;
    }
 
@@ -2867,19 +3101,28 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
    extern int                  g_retroflat_cmd_show;
 #     endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
 
-#  include <uprintf.h>
+#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
+   defined( RETROFLAT_3D ))
+#     define RETROSOFT_PRESENT
+#  endif
 
-#  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES)) \
-   && !defined( MAUG_NO_AUTO_C )
-#     include <retrofp.h>
-#     include <retrosft.h>
-#  endif /* RETROFLAT_SOFT_SHAPES || RETROFLAT_SOFT_LINES */
+#  ifdef RETROFLAT_3D
+#     include <retro3dp.h>
+#     include <retro3d.h>
+#     include <retro3du.h>
+#  endif /* RETROFLAT_3D */
 
-#  if defined( RETROFLAT_OPENGL ) && !defined( MAUG_NO_AUTO_C )
-#     include <retroglu.h>
-#     include <retrofp.h>
+#  ifdef RETROSOFT_PRESENT
 #     include <retrosft.h>
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_SOFT_SHAPES */
+
+/**
+ * \brief Directly addressable callback to produce pixels on a surface.
+ *
+ * This is assigned in retroflat_init(), as that is when all of the _px()
+ * callback functions are defined and available.
+ */
+extern retroflat_px_cb g_retroflat_px;
 
 #endif /* RETROFLT_C */
 

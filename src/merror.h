@@ -20,6 +20,12 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_OK       0x0000
 
+/**
+ * \brief Application-specific error.
+ *
+ * If this error is passed, an additional code may use the 0xFF00 bits to
+ * provide more information.
+ */
 #define MERROR_USR      0x0001
 
 #define MERROR_OVERFLOW 0x0002

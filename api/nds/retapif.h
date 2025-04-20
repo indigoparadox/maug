@@ -288,6 +288,8 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->buffer.w = 256;
    g_retroflat_state->buffer.h = 192;
 
+   g_retroflat_state->screen_colors = 16;
+
    powerOn( POWER_ALL );
 
 #  ifdef RETROFLAT_OPENGL

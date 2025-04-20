@@ -40,17 +40,17 @@ MERROR_RETVAL retrofont_load(
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
 
 void retrofont_blit_glyph(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags );
 
 void retrofont_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags );
 
 MERROR_RETVAL retrofont_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
@@ -273,7 +273,7 @@ cleanup:
 }
 
 void retrofont_blit_glyph(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
@@ -307,7 +307,7 @@ void retrofont_blit_glyph(
                !_retrofont_px_is_clear( x_iter, y_iter - 1 ))
             ) {
                /* Draw outline pixel. */
-               retroflat_px( 
+               retroflat_2d_px( 
                   target, RETROFLAT_COLOR_DARKBLUE,
                   x + x_iter, y + y_iter, 0 );
             }
@@ -317,7 +317,7 @@ void retrofont_blit_glyph(
 
          } else {
             /* Draw normal color pixel. */
-            retroflat_px( target, color, x + x_iter, y + y_iter, 0 );
+            retroflat_2d_px( target, color, x + x_iter, y + y_iter, 0 );
 
             prev_px_was_clear = 0;
          }
@@ -326,7 +326,7 @@ void retrofont_blit_glyph(
 }
 
 void retrofont_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags
@@ -401,7 +401,7 @@ cleanup:
 }
 
 MERROR_RETVAL retrofont_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags
 ) {

@@ -14,6 +14,8 @@ int                  g_retroflat_cmd_show;
 struct RETROFLAT_WING_MODULE g_w;
 #     endif /* RETROFLAT_WING */
 
+struct RETROFLAT_BITMAP g_buffer;
+
 /* === */
 
 #ifndef MAUG_NO_CLI
@@ -339,9 +341,11 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_DESTROY:
+#ifndef RETROFLAT_OPENGL
          if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             DeleteObject( g_retroflat_state->buffer.b );
          }
+#endif /* !RETROFLAT_OPENGL */
          PostQuitMessage( 0 );
          break;
 
@@ -485,15 +489,14 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* Setup color palettes. */
    /* TODO: For WinG, try to make the indexes match system palette? */
-#     ifdef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            g_retroflat_state->palette[idx] = RETROGLU_COLOR_ ## name_u;
-#     else
+#     ifndef RETROFLAT_OPENGL
 #        define RETROFLAT_COLOR_TABLE_WIN( idx, name_l, name_u, r, g, b, cgac, cgad ) \
             g_retroflat_state->palette[idx] = RGB( r, g, b );
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
 #     endif /* RETROFLAT_OPENGL */
 
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN )
+   /* TODO: Detect screen colors. */
+   g_retroflat_state->screen_colors = 16;
 
 #     ifdef RETROFLAT_WING
    debug_printf( 3, "attempting to link WinG..." );
@@ -710,6 +713,7 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
          g_retroflat_state->platform.window, RETROFLAT_WIN_LOOP_TIMER_ID );
    }
 
+#     ifndef RETROFLAT_OPENGL
    if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
       /* Return the default object into the HDC. */
       SelectObject(
@@ -722,7 +726,6 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
       retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
    }
 
-#     ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRRM )
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENRM )
 #     endif /* !RETROFLAT_OPENGL */
@@ -808,6 +811,7 @@ MERROR_RETVAL retroflat_loop(
          retval = msg.wParam;
          debug_printf( 1, "WM_QUIT received, retval: %d", retval );
       }
+      retroflat_heartbeat_update();
    } while( WM_QUIT != msg.message && 0 < msg_retval );
 
 cleanup:
@@ -916,7 +920,11 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_draw_lock( bmp );
+   if( NULL != bmp ) {
+      retval = retro3d_texture_lock( &(bmp->tex) );
+   } else {
+      debug_printf( API_TRACE_LVL, "called retroflat_draw_lock()!" );
+   }
 
 #  else
 
@@ -973,7 +981,12 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_draw_release( bmp );
+   if( NULL == bmp ) {
+      /* Windows has its own OpenGL flip function.*/
+      SwapBuffers( g_retroflat_state->platform.hdc_win );
+   } else {
+      debug_printf( API_TRACE_LVL, "called retroflat_draw_release()!" );
+   }
 
 #  else
 
@@ -1057,7 +1070,12 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
+   assert( NULL != bmp_out );
+   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   /*
+   retval = retro3d_texture_load_bitmap(
+      filename_path, &(bmp_out->tex), flags );
+   */
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
@@ -1217,13 +1235,16 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
-
 #  if defined( RETROFLAT_OPENGL )
 
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
+   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   /*
+   retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
+   */
 
 #  else
+
+   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* == Win16 / Win32 == */
 
@@ -1345,9 +1366,16 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_destroy_bitmap( bmp );
+   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   /*
+   retro3d_texture_destroy( &(bmp->tex) );
+   */
 
 #  else
 
@@ -1380,7 +1408,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance
 ) {
-   int retval = 0;
+   MERROR_RETVAL retval = 0;
 #  ifndef RETROFLAT_OPENGL
    int locked_src_internal = 0;
 #  endif /* RETROFLAT_OPENGL */
@@ -1398,9 +1426,17 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 #endif
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return MERROR_GUI;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h, instance );
+   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   /*
+   retval = retro3d_texture_blit(
+      &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
+   */
 
 #  else
 
@@ -1408,17 +1444,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
-
-#     ifdef RETROFLAT_VIEWPORT_ADAPT
-      if( 0 > instance ) {
-         /* Check tile refresh buffer. */
-         retroflat_viewport_lock_refresh();
-         if( !retroflat_viewport_tile_is_stale( d_x, d_y, instance * -1 ) ) {
-            goto cleanup;
-         }
-         retroflat_viewport_unlock_refresh();
-      }
-#     endif /* RETROFLAT_VIEWPORT_ADAPT */
    }
 
    assert( (HBITMAP)NULL != target->b );
@@ -1485,21 +1510,22 @@ void retroflat_px(
       return;
    }
 
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
-      return;
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
    }
 
    retroflat_constrain_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
-   retroglu_px( target, color_idx, x, y, flags );
+   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   /*
+   retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
+   */
 
 #  elif defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
 
@@ -1547,12 +1573,19 @@ void retroflat_rect(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
    /* Draw the rect onto the given 2D texture. */
+   /*
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
+   */
 
 #  else
 
@@ -1560,12 +1593,6 @@ void retroflat_rect(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
-   }
-
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
-      return;
    }
 
    assert( (HBITMAP)NULL != target->b );
@@ -1602,11 +1629,18 @@ void retroflat_line(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+   /*
    retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
+   */
 
 #  else
 
@@ -1614,12 +1648,6 @@ void retroflat_line(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
-   }
-
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
-      return;
    }
 
    assert( (HBITMAP)NULL != target->b );
@@ -1658,11 +1686,18 @@ void retroflat_ellipse(
       return;
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    assert( NULL != target );
 
+   debug_printf( API_TRACE_LVL, "called retroflat_ellipse()!" );
+   /*
    retrosoft_ellipse( target, color, x, y, w, h, flags );
+   */
 
 #  else
 
@@ -1670,12 +1705,6 @@ void retroflat_ellipse(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
-   }
-
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
-      return;
    }
 
    assert( (HBITMAP)NULL != target->b );

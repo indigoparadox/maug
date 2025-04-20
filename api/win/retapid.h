@@ -102,6 +102,9 @@ struct RETROFLAT_BMI {
 };
 
 struct RETROFLAT_BITMAP {
+#  ifdef RETROFLAT_OPENGL
+   struct RETROFLAT_3DTEX tex;
+#  else
    size_t sz;
    uint8_t flags;
    HBITMAP b;
@@ -116,10 +119,8 @@ struct RETROFLAT_BITMAP {
 	uint8_t* bits;
 #  endif /* RETROFLAT_API_WIN16 */
    ssize_t autolock_refs;
-#  ifdef RETROFLAT_OPENGL
-   struct RETROFLAT_GLTEX tex;
-#  endif /* RETROFLAT_OPENGL */
    struct RETROFLAT_BMI bmi;
+#  endif /* RETROFLAT_OPENGL */
 };
 
 #  ifdef MAUG_NO_CLI
@@ -228,6 +229,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
          (NULL == (bmp) ? \
             g_retroflat_state->screen_v_h : ((bmp)->tex.h))
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
+
 #  else
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) ? \
@@ -236,6 +238,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
          (NULL == (bmp) ? \
             g_retroflat_state->screen_v_h : ((bmp)->bmi.header.biHeight))
 #     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
+
 #  endif /* RETROFLAT_OPENGL */
 /* TODO: Adapt this for the OPENGL test above? */
 #  define retroflat_bitmap_ok( bitmap ) ((HBITMAP)NULL != (bitmap)->b)

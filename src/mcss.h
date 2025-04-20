@@ -261,9 +261,9 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mcss_prop_names[i][0] ) {
       if(
-         parser->base.token_sz == maug_strlen( gc_mcss_prop_names[i] ) &&
          0 == strncmp(
-            gc_mcss_prop_names[i], parser->base.token, parser->base.token_sz )
+            gc_mcss_prop_names[i], parser->base.token,
+            strlen( gc_mcss_prop_names[i] ) + 1 )
       ) {
          debug_printf( MCSS_TRACE_LVL,
             "selected style (" SSIZE_T_FMT ") property: %s",
@@ -298,7 +298,8 @@ MERROR_RETVAL mcss_style_position(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_position_names[i], parser->base.token, parser->base.token_sz )
+            gc_mcss_position_names[i], parser->base.token,
+            strlen( gc_mcss_position_names[i] ) + 1 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_position_names[i] );
@@ -331,7 +332,8 @@ MERROR_RETVAL mcss_style_display(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_display_names[i], parser->base.token, parser->base.token_sz )
+            gc_mcss_display_names[i], parser->base.token,
+            strlen( gc_mcss_display_names[i] ) + 1 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_display_names[i] );
@@ -364,7 +366,8 @@ MERROR_RETVAL mcss_style_color(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
          0 == strncmp(
-            gc_mcss_color_names[i], parser->base.token, parser->base.token_sz )
+            gc_mcss_color_names[i], parser->base.token,
+            strlen( gc_mcss_color_names[i] ) + 1 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "set %s: %s",
             prop_name, gc_mcss_color_names[i] );

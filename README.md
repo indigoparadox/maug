@@ -18,6 +18,20 @@ Current maug-based projects may be found under [The maug topic on GitHub](https:
 
 **TODO**: Platform-specific compiler setup.
 
+### Nintendo DS
+
+At the present, the Nintendo DS port will only build with a devkitpro toolchain circa 2022. This can be found at https://wii.leseratte10.de/devkitPro/ and some packages that work at minimum are:
+
+- devkitARM r56
+- libnds 1.8.1-2
+- default\_arm7 0.7.4-4
+- other-stuff/grit 0.9.2
+- other-stuff/ndstool 2.1.2
+
+And 1.2.0 of the linker scripts at https://github.com/devkitPro/devkitarm-crtls/releases/tag/v1.2.0 (these can just be installed with `make`/`make install`.
+
+Work is in progress to update this, but the cause isn't obvious and time is in short supply these days!
+
 ## Design Constraints
 
 Maug has the following design goals and constraints:
@@ -28,7 +42,7 @@ Maug has the following design goals and constraints:
 - Standard library calls are allowed, so long as they are universally
   available even in very old C89 compilers.
 
-**TODO**: Describe layer architecture.
+In addition, where modules may full functions or pull constants from is limited by the layer architecture described in **Modules**, below.
 
 ## Roadmap
 
@@ -53,6 +67,16 @@ Maug has the following design goals and constraints:
 - Implement timing/blit mode setting options on all platforms.
 
 ## Modules
+
+In principle, the library is split into the following parts:
+
+| Layer         | Location         | 
+|---------------|------------------|
+| retro*        | `src/retro*.h`   |
+| retroflat API | `api/retapi*.h`  |
+| maug          | `src/m*.h`       |
+
+Each layer relies on functionality provided by the layers below it. This means that a function in `retroglu.h` or `retroflt.h` in the `src/` directory may call a function provided by `api/dosbios/retapif.h` or `src/maug.h`, but a function in `src/maug.h` may not call a function from `src/retroflt.h`.
 
 ### Makefiles
 

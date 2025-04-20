@@ -25,13 +25,27 @@ ifneq ("$(BUILD)","RELEASE")
 endif
 
 ifeq ("$(OPENGL)","1")
-	CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
-	LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
-	CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
-	LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
+
+# Easier to understand error messages.
+ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
+$(error could not find pkg-config for gl!)
 endif
 
-OBJDIR_GCC_UNIX_SDL=obj/gcc-$(shell uname -s)-sdl$(SDL_VER_UNIX)
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/opengl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/opengl
+CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
+LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
+CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
+LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
+
+endif
+ifeq ("$(SMALL3DL)","1")
+
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
+
+endif
+
 OBJDIR_GCC_UNIX_ALLEGRO=obj/gcc-$(shell uname -s)-allegro
 OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
 
@@ -46,8 +60,15 @@ $(2)/ico/sdl_ico.bmp:
 	$$(MD) "$$(dir $$@)"
 	if [ -f "$(1).bmp" ]; then cp "$(1).bmp" "$$@"; else cp "$$(MAUG_ROOT)/maug16.bmp" "$$@"; fi
 
+ifeq ($$(XXD),)
+XXD := $$(shell which xxd)
+ifeq ($$(XXD),)
+$$(error xxd is not installed!)
+endif
+endif
+
 $(2)/ico/sdl_ico.h: $(2)/ico/sdl_ico.bmp
-	xxd -i $$< | sed 's/obj_.*_sdl/obj_ico_sdl/g' > $$@
+	$$(XXD) -i $$< | sed 's/obj_.*_sdl/obj_ico_sdl/g' > $$@
 
 endef
 
@@ -63,29 +84,59 @@ endef
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXSDL
 
-ifeq ("$(CFLAGS_GCC_UNIX_SDL)","")
-	CFLAGS_GCC_UNIX_SDL := -DRETROFLAT_SDL_ICO -I$(OBJDIR_GCC_UNIX_SDL)/ico
-endif
+# = Determine Prerequisites =
 
-CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sdl
-
+# Set this before OBJDIR_GCC_UNIX_SDL is set below.
 ifeq ("$$(VDP)","1")
 	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
 	#LDFLAGS_GCC_UNIX_SDL += -ldl
 	SDL_VER_UNIX := 1
 endif
 
+# Set this before OBJDIR_GCC_UNIX_SDL is set below.
 ifeq ("$$(SDL_VER_UNIX)","1")
-	CFLAGS_GCC_UNIX_SDL += \
-		-DRETROFLAT_API_SDL1 $$(shell pkg-config sdl SDL_mixer --cflags) -DRETROSND_API_SDL1
-	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl SDL_mixer --libs)
-else
-	CFLAGS_GCC_UNIX_SDL += \
-		-DRETROFLAT_API_SDL2 $$(shell pkg-config sdl2 SDL2_mixer --cflags) -DRETROSND_API_SDL2
-	LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
+$$(error could not find pkg-config for SDL 1.2!)
+endif
+ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
+$$(error could not find pkg-config for SDL_mixer 1.2!)
 endif
 
-$(eval $(call TGT_ICO_UNIX_SDL,$(1),$$(OBJDIR_GCC_UNIX_SDL)))
+# Actually setup flags.
+CFLAGS_GCC_UNIX_SDL += \
+	-DRETROFLAT_API_SDL1 $$(shell pkg-config sdl SDL_mixer --cflags) -DRETROSND_API_SDL1
+LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl SDL_mixer --libs)
+
+else
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
+$$(error could not find pkg-config for SDL 2!)
+endif
+ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
+$$(error could not find pkg-config for SDL_mixer 2!)
+endif
+
+# Actually setup flags.
+CFLAGS_GCC_UNIX_SDL += \
+	-DRETROFLAT_API_SDL2 $$(shell pkg-config sdl2 SDL2_mixer --cflags) -DRETROSND_API_SDL2
+LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
+
+# Set a default so this isn't empty.
+SDL_VER_UNIX := 2
+endif
+
+OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
+CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/sdl
+CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
+
+# = Make Icons =
+
+$$(eval $$(call TGT_ICO_UNIX_SDL,$(1),$$(OBJDIR_GCC_UNIX_SDL)))
+
+# = Actual Build Targets =
 
 $(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
@@ -110,6 +161,11 @@ endef
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXALE
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config allegro --libs 2>/dev/null)","")
+$$(error could not find pkg-config for allegro!)
+endif
 
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) -I$(MAUG_ROOT)/api/allegro
@@ -140,6 +196,11 @@ endef
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXGLUT
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
+$$(error could not find pkg-config for gl!)
+endif
 
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut -DRETROSND_API_ALSA
 

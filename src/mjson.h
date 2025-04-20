@@ -7,10 +7,8 @@
    f( MJSON_PSTATE_OBJECT_KEY, 1 ) \
    f( MJSON_PSTATE_OBJECT_VAL, 2 ) \
    f( MJSON_PSTATE_STRING, 3 ) \
-   f( MJSON_PSTATE_LIST, 4 )
-
-typedef MERROR_RETVAL
-(*mjson_parse_token_cb)( const char* token, size_t token_sz, void* arg );
+   f( MJSON_PSTATE_LIST, 4 ) \
+   f( MJSON_PSTATE_ESCAPE, 5 )
 
 typedef MERROR_RETVAL (*mjson_parse_close_cb)( void* arg );
 
@@ -18,7 +16,7 @@ typedef MERROR_RETVAL (*mjson_parse_c_cb)( void* arg );
 
 struct MJSON_PARSER {
    struct MPARSER base;
-   mjson_parse_token_cb token_parser;
+   mparser_parse_token_cb token_parser;
    void* token_parser_arg;
    mjson_parse_close_cb close_list;
    void* close_list_arg;
@@ -242,6 +240,56 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       }
       break;
 
+   /* Handle escaped characters. */
+
+   case '\\':
+      if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
+         /* A backslash in a string means escape! */
+         retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_ESCAPE );
+         maug_cleanup_if_not_ok();
+
+      } else if( MJSON_PSTATE_ESCAPE == mjson_parser_pstate( parser ) ) {
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
+
+         /* Pop the escape status. */
+         mjson_parser_pstate_pop( parser );
+
+      } else {
+         mjson_parser_invalid_c( parser, c, retval );
+      }
+      break;
+
+   case '/':
+      /* Tiled escapes these... */
+      if( MJSON_PSTATE_ESCAPE == mjson_parser_pstate( parser ) ) {
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
+
+         /* Pop the escape status. */
+         mjson_parser_pstate_pop( parser );
+
+      } else {
+         /* Not sure what an unescaped slash would be...? */
+         mjson_parser_invalid_c( parser, c, retval );
+      }
+      break;
+
+   case 'n':
+      if( MJSON_PSTATE_ESCAPE == mjson_parser_pstate( parser ) ) {
+         /* Newline! */
+         retval = mjson_parser_append_token( parser, '\n' );
+         maug_cleanup_if_not_ok();
+
+         /* Pop the escape status. */
+         mjson_parser_pstate_pop( parser );
+      } else {
+         /* Regular 'n' */
+         retval = mjson_parser_append_token( parser, c );
+         maug_cleanup_if_not_ok();
+      }
+      break;
+ 
    default:
       retval = mjson_parser_append_token( parser, c );
       maug_cleanup_if_not_ok();

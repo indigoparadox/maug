@@ -36,6 +36,9 @@ typedef MERROR_RETVAL (*mparser_cb)( void* parser, char c );
 typedef MERROR_RETVAL (*mparser_wait_cb_t)(
    MERROR_RETVAL retval_in, void* parser, void* data );
 
+typedef MERROR_RETVAL
+(*mparser_parse_token_cb)( const char* token, size_t token_sz, void* arg );
+
 struct MPARSER {
    mparser_pstate_t pstate[MPARSER_STACK_SZ_MAX];
    size_t pstate_sz;

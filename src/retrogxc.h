@@ -6,6 +6,16 @@
 
 /* TODO: Unified asset type that automatically uses RetroGXC if present and
  *       directly loads assets to handles if not.
+ *
+ *       *or*
+ *
+ *       Loader function that passes back a pointer to the cached object
+ *       to be used with the normal functions associated with it.
+ */
+
+/* TODO: The loaders here pass path to file-loading functions. What they
+ *       *should* do is open those paths into mfiles on their own, so that
+ *       a shim can be inserted to force loading from arrays in memory.
  */
 
 #define RETROGXC_PRESENT 1
@@ -75,18 +85,18 @@ int16_t retrogxc_load_asset(
    uint8_t flags );
 
 MERROR_RETVAL retrogxc_blit_bitmap(
-   struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
+   retroflat_blit_t* target, size_t bitmap_idx,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y,
    size_t w, size_t h, int16_t instance );
 
 MERROR_RETVAL retrogxc_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
    size_t font_idx, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags );
 
 MERROR_RETVAL retrogxc_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   retroflat_blit_t* target, const char* str, size_t str_sz,
    size_t font_idx, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
@@ -116,7 +126,7 @@ MERROR_RETVAL retrogxc_init() {
 void retrogxc_clear_cache() {
    size_t dropped_count = 0;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   retroflat_blit_t* bitmap = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
    mdata_vector_lock( &gs_retrogxc_bitmaps );
@@ -131,7 +141,7 @@ void retrogxc_clear_cache() {
       case RETROGXC_ASSET_TYPE_BITMAP:
          maug_mlock( asset->handle, bitmap );
          if( NULL != bitmap ) {
-            retroflat_destroy_bitmap( bitmap );
+            retroflat_2d_destroy_bitmap( bitmap );
          }
          maug_munlock( asset->handle, bitmap );
          maug_mfree( asset->handle );
@@ -174,18 +184,18 @@ RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
    uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   retroflat_blit_t* bitmap = NULL;
 
    assert( (MAUG_MHANDLE)NULL == *handle_p );
 
-   *handle_p = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   *handle_p = maug_malloc( 1, sizeof( retroflat_blit_t ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
 
    maug_mlock( *handle_p, bitmap );
-   maug_cleanup_if_null_alloc( struct RETROFLAT_BITMAP*, bitmap );
+   maug_cleanup_if_null_alloc( retroflat_blit_t*, bitmap );
 
    /* Load requested bitmap into the cache. */
-   retval = retroflat_load_bitmap( res_p, bitmap, flags );
+   retval = retroflat_2d_load_bitmap( res_p, bitmap, flags );
    maug_cleanup_if_not_ok();
 
 cleanup:
@@ -213,15 +223,15 @@ RETROGXC_ASSET_TYPE retrogxc_loader_xpm(
    uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   retroflat_blit_t* bitmap = NULL;
 
    assert( (MAUG_MHANDLE)NULL == *handle_p );
 
-   *handle_p = maug_malloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
+   *handle_p = maug_malloc( 1, sizeof( retroflat_blit_t ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
 
    maug_mlock( *handle_p, bitmap );
-   maug_cleanup_if_null_alloc( struct RETROFLAT_BITMAP*, bitmap );
+   maug_cleanup_if_null_alloc( retroflat_blit_t*, bitmap );
 
    /* Load requested bitmap into the cache. */
    retval = retroflat_load_xpm( res_p, bitmap, flags );
@@ -324,7 +334,7 @@ just_load_asset:
    asset_type = l( res_p, &asset_new.handle, data, flags );
    if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
       asset_new.type = asset_type;
-      maug_strncpy( asset_new.id, res_p, RETROFLAT_ASSETS_PATH_MAX );
+      retroflat_assign_asset_path( asset_new.id, res_p );
       idx = mdata_vector_append(
          &gs_retrogxc_bitmaps, &asset_new,
          sizeof( struct RETROFLAT_CACHE_ASSET ) );
@@ -352,13 +362,15 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogxc_blit_bitmap(
-   struct RETROFLAT_BITMAP* target, size_t bitmap_idx,
+   retroflat_blit_t* target, size_t bitmap_idx,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y,
    size_t w, size_t h, int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   retroflat_blit_t* bitmap = NULL;
+
+   assert( NULL != gs_retrogxc_bitmaps.data_h );
 
    mdata_vector_lock( &gs_retrogxc_bitmaps );
 
@@ -381,7 +393,7 @@ MERROR_RETVAL retrogxc_blit_bitmap(
 
    maug_mlock( asset->handle, bitmap );
 
-   retval = retroflat_blit_bitmap(
+   retval = retroflat_2d_blit_bitmap(
       target, bitmap, s_x, s_y, d_x, d_y, w, h, instance );
 
 cleanup:
@@ -400,7 +412,7 @@ cleanup:
 MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
-   struct RETROFLAT_BITMAP* bitmap = NULL;
+   retroflat_blit_t* bitmap = NULL;
    size_t w_out = 0;
 
    mdata_vector_lock( &gs_retrogxc_bitmaps );
@@ -424,7 +436,7 @@ MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
 
    maug_mlock( asset->handle, bitmap );
 
-   w_out = retroflat_bitmap_w( bitmap );
+   w_out = retroflat_2d_bitmap_w( bitmap );
 
 cleanup:
 
@@ -464,7 +476,7 @@ int16_t retrogxc_load_font(
 /* === */
 
 MERROR_RETVAL retrogxc_string(
-   struct RETROFLAT_BITMAP* target, RETROFLAT_COLOR color,
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
    size_t font_idx, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags
@@ -504,7 +516,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogxc_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
+   retroflat_blit_t* target, const char* str, size_t str_sz,
    size_t font_idx, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags
 ) {

@@ -23,10 +23,30 @@
 #endif /* !MLISP_AST_IDX_CHILDREN_MAX */
 
 /**
+ * \relates MLISP_EXEC_STATE
+ * \brief Mask for MLISP_EXEC_STATE::flags to block off flags that persist
+ *        between steps.
+ */
+#define MLISP_EXEC_FLAG_TRANSIENT_MASK 0x0f
+
+/**
+ * \relates MLISP_EXEC_STATE
  * \brief Flag for MLISP_EXEC_STATE::flags indicating next token is a term to
  *        be defined.
  */
-#define MLISP_EXEC_FLAG_DEF_TERM   0x02
+#define MLISP_EXEC_FLAG_DEF_TERM   0x20
+
+/**
+ * \relates MLISP_EXEC_STATE
+ * \brief Flag for MLISP_EXEC_STATE::flags indicating defines and calls should
+ *        reference MLISP_PARSER::env instead of MLISP_EXEC_STATE::env.
+ *
+ * This allows multiple MLISP_EXEC_STATE objects to share a common set of
+ * definitions.
+ */
+#define MLISP_EXEC_FLAG_SHARED_ENV 0x40
+
+#define MLISP_EXEC_FLAG_INITIALIZED   0x08
 
 /**
  * \addtogroup mlisp_types MLISP Types
@@ -106,15 +126,29 @@ struct MLISP_AST_NODE {
    size_t ast_idx_children_sz;
 };
 
+/**
+ * \brief Current execution state to associate with a MLISP_PARSER.
+ *
+ * \note In general, this library uses nested locks because MLISP_STACK_NODE and
+ *       MLISP_ENV_NODE do not have MDATA_VECTOR structs attached, so there's
+ *       no danger of a MDATA_VECTOR being reallocated out from beneath another.
+ */
 struct MLISP_EXEC_STATE {
+   /*! \brief Flags which dictate the behavior of this object. */
    uint8_t flags;
    /*! \brief The number of times each node has been visited ever. */
    struct MDATA_VECTOR per_node_visit_ct;
+   /**
+    * \brief The hild index that will be visited on next visit of each node.
+    *
+    * This is tracked per MLISP_AST_NODE, so each node has its own "program
+    * counter." This facilitates things like tail call optimization.
+    */
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
    struct MDATA_VECTOR stack;
    /**
-    * \brief Environment in which statements are defined.
+    * \brief Environment in which statements are defined if ::MLISP_
     *
     * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
     * denote env definitions that are actually args for the current lambda.
@@ -136,6 +170,11 @@ struct MLISP_PARSER {
    struct MPARSER base;
    struct MDATA_STRPOOL strpool;
    struct MDATA_VECTOR ast;
+   /**
+    * \brief Definitions to use if ::MLISP_EXEC_FLAG_DEF_TERM is defined on the
+    *        accompanying MLISP_EXEC_STATE::flags.
+    */
+   struct MDATA_VECTOR env;
    ssize_t ast_node_iter;
 };
 

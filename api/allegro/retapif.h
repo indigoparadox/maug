@@ -63,6 +63,9 @@ MERROR_RETVAL retroflat_init_platform(
    install_int( retroflat_on_ms_tick, 1 );
 #     endif /* RETROFLAT_OS_DOS */
 
+   /* TODO: More fine-grained color depth handling. */
+   g_retroflat_state->screen_colors = 16;
+
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
    if(

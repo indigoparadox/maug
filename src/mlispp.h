@@ -77,10 +77,10 @@ MERROR_RETVAL mlisp_ast_dump(
 
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c );
 
-MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
+MERROR_RETVAL mlisp_parse_file(
+   struct MLISP_PARSER* parser, const retroflat_asset_path ai_path );
 
-MERROR_RETVAL mlisp_exec_init(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser );
 
 void mlisp_parser_free( struct MLISP_PARSER* parser );
 
@@ -546,9 +546,47 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mlisp_parse_file(
+   struct MLISP_PARSER* parser, const retroflat_asset_path ai_path
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MFILE_CADDY ai_file;
+   char c;
+   size_t i = 0;
+
+   debug_printf( MLISP_TRACE_LVL, "loading mlisp AST..." );
+
+   retval = mfile_open_read( ai_path, &ai_file );
+   maug_cleanup_if_not_ok();
+
+   retval = mlisp_parser_init( parser );
+   maug_cleanup_if_not_ok();
+
+   for( i = 0 ; mfile_get_sz( &ai_file ) > i ; i++ ) {
+      retval = ai_file.read_int( &ai_file, (uint8_t*)&c, 1, 0 );
+      maug_cleanup_if_not_ok();
+      retval = mlisp_parse_c( parser, c );
+      maug_cleanup_if_not_ok();
+   }
+   mlisp_ast_dump( parser, 0, 0, 0 );
+   if( 0 < parser->base.pstate_sz ) {
+      error_printf( "invalid parser state!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
+
+   assert( NULL == parser->env.data_h );
 
    debug_printf( MLISP_TRACE_LVL,
       "initializing mlisp parser (" SIZE_T_FMT " bytes)...",
@@ -584,8 +622,13 @@ cleanup:
 /* === */
 
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
+   debug_printf( MLISP_TRACE_LVL,
+         "destroying parser (ast: " SIZE_T_FMT ", env: " SIZE_T_FMT ")...",
+         mdata_vector_ct( &(parser->ast) ), mdata_vector_ct( &(parser->env) ) );
    mdata_strpool_free( &(parser->strpool) );
    mdata_vector_free( &(parser->ast) );
+   mdata_vector_free( &(parser->env) );
+   debug_printf( MLISP_PARSE_TRACE_LVL, "parser destroyed!" );
 }
 
 #else

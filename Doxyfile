@@ -800,6 +800,7 @@ INPUT                  = \
    src/retrocon.h \
    src/retrosnd.h \
    src/marge.h \
+   src/mdata.h \
    src/mplug.h \
    src/mfile.h \
    src/mfmt.h \

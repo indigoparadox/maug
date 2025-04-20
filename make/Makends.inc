@@ -17,7 +17,9 @@ endif
 
 # Setup CFLAGS_GCC_NDS
 
-DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD
+# Disable the keyboard and viewport/refresh functions, since the NDS doesn't
+# have those.
+DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DRETROFLAT_NO_VIEWPORT_REFRESH
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
 
 CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
@@ -86,6 +88,13 @@ endef
 
 define BMPTONDS
 
+ifeq ($$(IM_IDENTIFY),)
+IM_IDENTIFY := $$(shell which identify)
+ifeq ($$(IM_IDENTIFY),)
+$$(error imagemagick identify is not installed!)
+endif
+endif
+
 NDSASSET_C_FILE += $$(NDSASSET_H_DIR)/ndsasset.c
 NDSASSET_H_FILE += $$(NDSASSET_H_DIR)/ndsasset.h
 
@@ -105,7 +114,8 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 		$$(NDSASSET_C_FILE)
 
 	for f in $$^; do \
-		$$(GRIT) $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa -o $$(NDSASSET_H_FILE); \
+		$$(GRIT) $$$$f -gB8 -Mh2 -Mw2 -gT000000 -ftc -fa \
+			-o $$(NDSASSET_H_FILE); \
 	done
 
 	# === Index Names ===
@@ -165,7 +175,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 	echo "const size_t gc_ndsassets_tiles_widths[] = {" >> $$(NDSASSET_C_FILE)
 
 	for f in $$^; do \
-		echo "	`identify -format "%w" "$$$$f"`," >> \
+		echo "	`$$(IM_IDENTIFY) -format "%w" "$$$$f"`," >> \
 			$$(NDSASSET_C_FILE); \
 	done
 
@@ -176,7 +186,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 	echo "const size_t gc_ndsassets_tiles_heights[] = {" >> $$(NDSASSET_C_FILE)
 
 	for f in $$^; do \
-		echo "	`identify -format "%h" "$$$$f"`," >> \
+		echo "	`$$(IM_IDENTIFY) -format "%h" "$$$$f"`," >> \
 			$$(NDSASSET_C_FILE); \
 	done
 
