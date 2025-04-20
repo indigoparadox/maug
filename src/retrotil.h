@@ -1978,7 +1978,9 @@ MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max ) {
    int16_t x = 0,
       y = 0;
 
-   debug_printf( 1, "clearing %d vertical viewport pixels (%d rows)...",
+   debug_printf( 1,
+      "clearing " SIZE_T_FMT " vertical viewport pixels (" SIZE_T_FMT
+         " rows)...",
       y_max, y_max / RETROFLAT_TILE_H );
 
    retroflat_viewport_lock_refresh();
