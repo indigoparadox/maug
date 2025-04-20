@@ -67,46 +67,46 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win ) {
       case RETROWIN_BORDER_GRAY:
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_GRAY, 0, 0,
-            retroflat_2d_w( win->gui->draw_bmp ),
-            retroflat_2d_h( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ),
             RETROFLAT_FLAGS_FILL );
 
          /* Draw the border. */
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_BLACK, 0, 0,
-            retroflat_2d_w( win->gui->draw_bmp ),
-            retroflat_2d_h( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ),
             0 );
          retroflat_2d_line(
             win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-            1, 1, retroflat_2d_w( win->gui->draw_bmp ) - 2, 1, 0 );
+            1, 1, retroflat_2d_bitmap_w( win->gui->draw_bmp ) - 2, 1, 0 );
          retroflat_2d_line(
             win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-            1, 2, 1, retroflat_2d_h( win->gui->draw_bmp ) - 3, 0 );
+            1, 2, 1, retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 3, 0 );
          break;
 
       case RETROWIN_BORDER_BLUE:
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_BLUE, 0, 0,
-            retroflat_2d_w( win->gui->draw_bmp ),
-            retroflat_2d_h( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ),
             RETROFLAT_FLAGS_FILL );
 
          /* Draw the border. */
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_BLACK, 2, 2,
-            retroflat_2d_w( win->gui->draw_bmp ) - 4,
-            retroflat_2d_h( win->gui->draw_bmp ) - 4,
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ) - 4,
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 4,
             0 );
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_WHITE, 1, 1,
-            retroflat_2d_w( win->gui->draw_bmp ) - 2,
-            retroflat_2d_h( win->gui->draw_bmp ) - 2,
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ) - 2,
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 2,
             0 );
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_BLACK, 0, 0,
-            retroflat_2d_w( win->gui->draw_bmp ),
-            retroflat_2d_h( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_w( win->gui->draw_bmp ),
+            retroflat_2d_bitmap_h( win->gui->draw_bmp ),
             0 );
          break;
       }

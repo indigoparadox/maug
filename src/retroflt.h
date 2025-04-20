@@ -943,9 +943,9 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
 
-#define retroflat_2d_w( ... ) retro3d_texture_w( __VA_ARGS__ )
+#define retroflat_2d_bitmap_w( ... ) retro3d_texture_w( __VA_ARGS__ )
 
-#define retroflat_2d_h( ... ) retro3d_texture_h( __VA_ARGS__ )
+#define retroflat_2d_bitmap_h( ... ) retro3d_texture_h( __VA_ARGS__ )
 
 #define retroflat_2d_blit_bitmap( ... ) retro3d_texture_blit( __VA_ARGS__ )
 
@@ -978,9 +978,9 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
 
-#define retroflat_2d_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
+#define retroflat_2d_bitmap_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
 
-#define retroflat_2d_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
+#define retroflat_2d_bitmap_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
 
 #define retroflat_2d_blit_win( src, d_x, d_y ) \
    retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \

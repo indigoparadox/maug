@@ -436,7 +436,7 @@ MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
 
    maug_mlock( asset->handle, bitmap );
 
-   w_out = retroflat_2d_w( bitmap );
+   w_out = retroflat_2d_bitmap_w( bitmap );
 
 cleanup:
 
