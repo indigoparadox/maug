@@ -283,6 +283,35 @@ void retro3d_tri_end() {
 
 /* === */
 
+static void retro3d_draw_window_sect(
+   float x_prop, float y_prop, float w_prop, float h_prop,
+   float tex_x, float tex_y, float tex_w, float tex_h
+) {
+   glBegin( GL_TRIANGLES );
+
+      glTexCoord2f( tex_x,          tex_y );
+      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
+      
+      glTexCoord2f( tex_x,          tex_y + tex_h );
+      glVertex3f( x_prop,            y_prop - h_prop,   RETROGL_WIN_Z );
+      
+      glTexCoord2f( tex_x + tex_w,  tex_y + tex_h );
+      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
+
+      glTexCoord2f( tex_x + tex_w,  tex_y + tex_h );
+      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
+      
+      glTexCoord2f( tex_x + tex_w,  tex_y );
+      glVertex3f( x_prop + w_prop,   y_prop,            RETROGL_WIN_Z );
+
+      glTexCoord2f( tex_x,          tex_y );
+      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
+   
+   glEnd();
+}
+
+/* === */
+
 MERROR_RETVAL retro3d_draw_window(
    retroflat_blit_t* win, retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
 ) {
@@ -291,7 +320,10 @@ MERROR_RETVAL retro3d_draw_window(
       w_prop = 0,
       h_prop = 0,
       x_prop = 0,
-      y_prop = 0;
+      y_prop = 0,
+      coord_iter = 0,
+      tex_iter = 0,
+      tex_inc = 0;
 
 #  ifndef RETROGL_NO_TEXTURE_LISTS
    assert( 0 < win->id );
@@ -332,23 +364,29 @@ MERROR_RETVAL retro3d_draw_window(
 
    glColor3f( 1.0f, 1.0f, 1.0f );
 
-   glBegin( GL_TRIANGLES );
+   if( w_prop > h_prop ) {
+      /* Draw window texture panels horizontally. */
+      tex_inc = h_prop / w_prop;
 
-      glTexCoord2f( 0, 0 );
-      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
-      glTexCoord2f( 0, 1 );
-      glVertex3f( x_prop,            y_prop - h_prop,   RETROGL_WIN_Z );
-      glTexCoord2f( 1, 1 );
-      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
+      /* Add short side to iter on each loop! */
+      for( coord_iter = 0 ; w_prop > coord_iter ; coord_iter += h_prop ) {
+         retro3d_draw_window_sect(
+            x_prop + coord_iter, y_prop, h_prop, h_prop,
+            tex_iter, 0, tex_inc, 1 );
+         tex_iter += tex_inc;
+      }
+   } else {
+      /* Draw window texture panels vertically. */
+      tex_inc = w_prop / h_prop;
 
-      glTexCoord2f( 1, 1 );
-      glVertex3f( x_prop + w_prop,   y_prop - h_prop,   RETROGL_WIN_Z );
-      glTexCoord2f( 1, 0 );
-      glVertex3f( x_prop + w_prop,   y_prop,            RETROGL_WIN_Z );
-      glTexCoord2f( 0, 0 );
-      glVertex3f( x_prop,            y_prop,            RETROGL_WIN_Z );
-   
-   glEnd();
+      /* Add short side to iter on each loop! */
+      for( coord_iter = 0 ; h_prop > coord_iter ; coord_iter += w_prop ) {
+         retro3d_draw_window_sect(
+            x_prop, y_prop + coord_iter, w_prop, w_prop,
+            0, tex_iter, 1, tex_inc );
+         tex_iter += tex_inc;
+      }
+   }
 
    retro3d_check_errors( "dump" );
    retval = retro3d_texture_activate( win, RETRO3D_TEX_FLAG_DEACTIVATE );
