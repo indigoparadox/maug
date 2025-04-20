@@ -2,24 +2,25 @@
 #ifndef RETROW3D_H
 #define RETROW3D_H
 
-#ifndef RETROWIN3D_TRACE_LVL
-#  define RETROWIN3D_TRACE_LVL 0
-#endif /* !RETROWIN3D_TRACE_LVL */
+#ifndef RETROWIN_TRACE_LVL
+#  define RETROWIN_TRACE_LVL 0
+#endif /* !RETROWIN_TRACE_LVL */
 
-#define RETROWIN3D_FLAG_INIT_GUI          0x01
+#define RETROWIN_FLAG_INIT_GUI          0x10
 
-#define RETROWIN3D_FLAG_INIT_BMP          0x02
+#define RETROWIN_FLAG_INIT_BMP          0x20
+
+#define RETROWIN_FLAG_BORDER_NONE              0x00
+#define RETROWIN_FLAG_BORDER_GRAY              0x01
+#define RETROWIN_FLAG_BORDER_BLUE              0x02
 
 #define retrowin_win_is_active( win ) \
-   (RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & (win)->flags))
+   (RETROWIN_FLAG_INIT_BMP == (RETROWIN_FLAG_INIT_BMP & (win)->flags))
 
-#define RETROWIN_BORDER_NONE              0x00
-#define RETROWIN_BORDER_GRAY              0x01
-#define RETROWIN_BORDER_BLUE              0x02
+#define RETROWIN_FLAG_BORDER_MASK              0x03
 
-struct RETROWIN3D {
+struct RETROWIN {
    uint8_t flags;
-   uint8_t border;
    size_t idc;
    size_t x;
    size_t y;
@@ -27,7 +28,7 @@ struct RETROWIN3D {
    retroflat_blit_t gui_bmp;
 };
 
-MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win );
+MERROR_RETVAL retrowin_redraw_win( struct RETROWIN* win );
 
 MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack );
 
@@ -35,7 +36,7 @@ retrogui_idc_t retrowin_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
-void retrowin_free_win( struct RETROWIN3D* win );
+void retrowin_free_win( struct RETROWIN* win );
 
 /**
  * \brief Create a new window.
@@ -54,7 +55,7 @@ MERROR_RETVAL retrowin_destroy_win(
 
 #ifdef RETROW3D_C
 
-MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win ) {
+MERROR_RETVAL retrowin_redraw_win( struct RETROWIN* win ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    retroflat_2d_lock_bitmap( &(win->gui_bmp) );
@@ -63,8 +64,8 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win ) {
    win->gui->draw_bmp = &(win->gui_bmp);
 
    if( RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui->flags) ) {
-      switch( win->border ) {
-      case RETROWIN_BORDER_GRAY:
+      switch( RETROWIN_FLAG_BORDER_MASK & win->flags ) {
+      case RETROWIN_FLAG_BORDER_GRAY:
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_GRAY, 0, 0,
             retroflat_2d_bitmap_w( win->gui->draw_bmp ),
@@ -85,7 +86,7 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win ) {
             1, 2, 1, retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 3, 0 );
          break;
 
-      case RETROWIN_BORDER_BLUE:
+      case RETROWIN_FLAG_BORDER_BLUE:
          retroflat_2d_rect(
             win->gui->draw_bmp, RETROFLAT_COLOR_BLUE, 0, 0,
             retroflat_2d_bitmap_w( win->gui->draw_bmp ),
@@ -137,7 +138,7 @@ cleanup:
 MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
-   struct RETROWIN3D* win = NULL;
+   struct RETROWIN* win = NULL;
 
    if( 0 == mdata_vector_ct( win_stack ) ) {
       goto cleanup;
@@ -147,14 +148,14 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
    mdata_vector_lock( win_stack );
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
-      win = mdata_vector_get( win_stack, i, struct RETROWIN3D );
+      win = mdata_vector_get( win_stack, i, struct RETROWIN );
       assert( NULL != win );
 
       if( !retrowin_win_is_active( win ) ) {
          continue;
       }
 
-      debug_printf( RETROWIN3D_TRACE_LVL, "redrawing window: " SIZE_T_FMT,
+      debug_printf( RETROWIN_TRACE_LVL, "redrawing window: " SIZE_T_FMT,
          win->idc );
 
       retrogui_lock( win->gui );
@@ -179,19 +180,19 @@ retrogui_idc_t retrowin_poll_win_stack(
    size_t i = 0;
    retrogui_idc_t idc_out = 0;
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROWIN3D* win = NULL;
+   struct RETROWIN* win = NULL;
 
    assert( !mdata_vector_is_locked( win_stack ) );
    mdata_vector_lock( win_stack );
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
-      win = mdata_vector_get( win_stack, i, struct RETROWIN3D );
+      win = mdata_vector_get( win_stack, i, struct RETROWIN );
       assert( NULL != win );
       if( idc_active != win->idc || !retrowin_win_is_active( win ) ) {
          continue;
       }
 
-      debug_printf( RETROWIN3D_TRACE_LVL, "polling window: " SIZE_T_FMT,
+      debug_printf( RETROWIN_TRACE_LVL, "polling window: " SIZE_T_FMT,
          win->idc );
 
       retrogui_lock( win->gui );
@@ -217,14 +218,14 @@ cleanup:
 
 /* === */
 
-void retrowin_free_win( struct RETROWIN3D* win ) {
+void retrowin_free_win( struct RETROWIN* win ) {
 
-   if( RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & win->flags) ) {
+   if( RETROWIN_FLAG_INIT_BMP == (RETROWIN_FLAG_INIT_BMP & win->flags) ) {
       retroflat_2d_destroy_bitmap( &(win->gui_bmp) );
       win->gui->draw_bmp = NULL;
    }
 
-   if( RETROWIN3D_FLAG_INIT_GUI == (RETROWIN3D_FLAG_INIT_GUI & win->flags) ) {
+   if( RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & win->flags) ) {
 #ifndef RETROGXC_PRESENT
       if( (MAUG_MHANDLE)NULL != win->gui->font_h ) {
          maug_mfree( win->gui->font_h );
@@ -236,7 +237,7 @@ void retrowin_free_win( struct RETROWIN3D* win ) {
       free( win->gui );
    }
 
-   maug_mzero( win, sizeof( struct RETROWIN3D ) );
+   maug_mzero( win, sizeof( struct RETROWIN ) );
 }
 
 /* === */
@@ -247,12 +248,11 @@ MERROR_RETVAL retrowin_push_win(
    size_t x, size_t y, size_t w, size_t h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROWIN3D win;
+   struct RETROWIN win;
    ssize_t append_retval = 0;
+   ssize_t font_retval = 0;
 
-   /* TODO: Implement background image. */
-
-   maug_mzero( &win, sizeof( struct RETROWIN3D ) );
+   maug_mzero( &win, sizeof( struct RETROWIN ) );
 
    win.flags = 0;
 
@@ -266,12 +266,17 @@ MERROR_RETVAL retrowin_push_win(
       retval = retrogui_init( win.gui );
       maug_cleanup_if_not_ok();
 
-      win.flags |= RETROWIN3D_FLAG_INIT_GUI;
+      win.flags |= RETROWIN_FLAG_INIT_GUI;
 
       /* TODO: Parse font height from filename and only load printable glyphs. */
       /* TODO: Use cache if available. */
 #ifdef RETROGXC_PRESENT
-      retval = retrogxc_load_font( font_filename, 0, 33, 93 );
+      font_retval = retrogxc_load_font( font_filename, 0, 33, 93 );
+      if( 0 > font_retval ) {
+         retval = font_retval * -1;
+         goto cleanup;
+      }
+      win.gui->font_idx = font_retval;
 #else
       retval = retrofont_load( font_filename, &(win.gui->font_h), 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
@@ -281,7 +286,7 @@ MERROR_RETVAL retrowin_push_win(
    retval = retroflat_2d_create_bitmap( w, h, &(win.gui_bmp), 0 );
    maug_cleanup_if_not_ok();
 
-   win.flags |= RETROWIN3D_FLAG_INIT_BMP;
+   win.flags |= RETROWIN_FLAG_INIT_BMP;
 
    win.gui->w = w;
    win.gui->h = h;
@@ -295,13 +300,13 @@ MERROR_RETVAL retrowin_push_win(
    win.idc = idc;
    win.flags |= flags;
 
-   debug_printf( RETROWIN3D_TRACE_LVL,
+   debug_printf( RETROWIN_TRACE_LVL,
       "pushed window: " SIZE_T_FMT ": " SIZE_T_FMT "x" SIZE_T_FMT
       " @ " SIZE_T_FMT ", " SIZE_T_FMT,
       win.idc, win.gui->w, win.gui->h, win.gui->x, win.gui->y );
 
    append_retval = mdata_vector_append(
-      win_stack, &win, sizeof( struct RETROWIN3D ) );
+      win_stack, &win, sizeof( struct RETROWIN ) );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
       goto cleanup;
@@ -324,22 +329,22 @@ MERROR_RETVAL retrowin_destroy_win(
 ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
-   struct RETROWIN3D* win = NULL;
+   struct RETROWIN* win = NULL;
 
-   debug_printf( RETROWIN3D_TRACE_LVL,
+   debug_printf( RETROWIN_TRACE_LVL,
       "attempting to destroy window: " SIZE_T_FMT, idc );
 
    assert( !mdata_vector_is_locked( win_stack ) );
    mdata_vector_lock( win_stack );
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
-      win = mdata_vector_get( win_stack, i, struct RETROWIN3D );
+      win = mdata_vector_get( win_stack, i, struct RETROWIN );
       assert( NULL != win );
       if( idc != win->idc || !retrowin_win_is_active( win ) ) {
          continue;
       }
 
-      debug_printf( RETROWIN3D_TRACE_LVL, "freeing window: " SIZE_T_FMT,
+      debug_printf( RETROWIN_TRACE_LVL, "freeing window: " SIZE_T_FMT,
          win->idc );
 
       retrowin_free_win( win );
