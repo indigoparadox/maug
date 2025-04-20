@@ -225,8 +225,9 @@ void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z ) {
 void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t ) {
    assert( 0 <= gs_tri_vxs_drawn );
    assert( 3 > gs_tri_vxs_drawn );
-   debug_printf( RETRO3D_TRACE_LVL, "vertex: %d, %d, %d", x, y, z );
-   glTexCoord2i( s, t );
+   debug_printf( RETRO3D_TRACE_LVL, "vertex: %d, %d, %d; tex: %f, %f", x, y, z,
+      mfix_to_f( s ), mfix_to_f( t ) );
+   glTexCoord2f( mfix_to_f( s ), mfix_to_f( t ) );
    glVertex3i( x, y, z );
 }
 

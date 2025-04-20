@@ -37,7 +37,7 @@ void retro3d_texture_px(
    size_t x, size_t y, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_load_bitmap(
-   const char* filename_path, struct RETROFLAT_3DTEX* tex, uint8_t flags );
+   const char* asset_name, struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_blit(
    struct RETROFLAT_3DTEX* target, struct RETROFLAT_3DTEX* src,
@@ -110,10 +110,10 @@ MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_3DTEX* tex ) {
 /* === */
 
 MERROR_RETVAL retro3d_texture_load_bitmap(
-   const char* filename_path, struct RETROFLAT_3DTEX* tex, uint8_t flags
+   const char* asset_name, struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#ifndef RETRO3D_NO_TEXTURES
+   char filename_path[RETROFLAT_PATH_MAX + 1];
    mfile_t bmp_file;
    struct MFMT_STRUCT_BMPFILE header_bmp;
    MAUG_MHANDLE bmp_palette_h = (MAUG_MHANDLE)NULL;
@@ -128,6 +128,12 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
       bmp_color_idx = 0,
       bmp_flags = 0;
    off_t i = 0;
+
+   /* Add asset prefix and extension as appropriate. */
+   retval = retroflat_build_filename_path(
+      asset_name, filename_path, RETROFLAT_PATH_MAX + 1, flags );
+   maug_cleanup_if_not_ok();
+   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
    retval = mfile_open_read( filename_path, &bmp_file );
    maug_cleanup_if_not_ok();
@@ -251,8 +257,6 @@ cleanup:
    }
 
    mfile_close( &bmp_file );
-
-#endif /* !RETRO3D_NO_TEXTURES */
 
    return retval;
 }
