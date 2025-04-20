@@ -199,11 +199,23 @@ struct RETROFLAT_PLATFORM {
 #  define retroflat_viewport_world_h() \
    retroflat_viewport_world_h_generic()
 
+#  define retroflat_viewport_screen_w() \
+   retroflat_viewport_screen_w_generic()
+
+#  define retroflat_viewport_screen_h() \
+   retroflat_viewport_screen_h_generic()
+
 #  define retroflat_viewport_screen_tile_w() \
    retroflat_viewport_screen_tile_w_generic()
 
 #  define retroflat_viewport_screen_tile_h() \
    retroflat_viewport_screen_tile_h_generic()
+
+#  define retroflat_viewport_world_tile_x() \
+   retroflat_viewport_world_tile_x_generic()
+
+#  define retroflat_viewport_world_tile_y() \
+   retroflat_viewport_world_tile_y_generic()
 
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
@@ -225,6 +237,9 @@ struct RETROFLAT_PLATFORM {
 
 #  define retroflat_viewport_set_refresh( x, y, tid ) \
    retroflat_viewport_set_refresh_generic( x, y, tid )
+
+#  define retroflat_viewport_set_pos_size( x_px, y_px, w_px, h_px ) \
+   retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px )
 
 uint8_t retroflat_viewport_move_x( int16_t x );
 

@@ -315,7 +315,7 @@ MERROR_RETVAL retrowin_push_win(
 
    if( w != h ) {
       error_printf(
-         "non-square window created; some systems may have trouble!" )
+         "non-square window created; some systems may have trouble!" );
    }
 
 cleanup:
