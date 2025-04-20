@@ -13,8 +13,13 @@
 #define retrowin_win_is_active( win ) \
    (RETROWIN3D_FLAG_INIT_BMP == (RETROWIN3D_FLAG_INIT_BMP & (win)->flags))
 
+#define RETROWIN_BORDER_NONE              0x00
+#define RETROWIN_BORDER_GRAY              0x01
+#define RETROWIN_BORDER_BLUE              0x02
+
 struct RETROWIN3D {
    uint8_t flags;
+   uint8_t border;
    size_t idc;
    size_t x;
    size_t y;
@@ -56,6 +61,36 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN3D* win ) {
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
    win->gui->draw_bmp = &(win->gui_bmp);
+
+   if( RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui->flags) ) {
+      switch( win->border ) {
+      case RETROWIN_BORDER_BLUE:
+         retroflat_2d_rect(
+            win->gui->draw_bmp, RETROFLAT_COLOR_BLUE, 0, 0,
+            retroflat_2d_w( win->gui->draw_bmp ),
+            retroflat_2d_h( win->gui->draw_bmp ),
+            RETROFLAT_FLAGS_FILL );
+
+         /* Draw the border. */
+         retroflat_2d_rect(
+            win->gui->draw_bmp, RETROFLAT_COLOR_BLACK, 2, 2,
+            retroflat_2d_w( win->gui->draw_bmp ) - 4,
+            retroflat_2d_h( win->gui->draw_bmp ) - 4,
+            0 );
+         retroflat_2d_rect(
+            win->gui->draw_bmp, RETROFLAT_COLOR_WHITE, 1, 1,
+            retroflat_2d_w( win->gui->draw_bmp ) - 2,
+            retroflat_2d_h( win->gui->draw_bmp ) - 2,
+            0 );
+         retroflat_2d_rect(
+            win->gui->draw_bmp, RETROFLAT_COLOR_BLACK, 0, 0,
+            retroflat_2d_w( win->gui->draw_bmp ),
+            retroflat_2d_h( win->gui->draw_bmp ),
+            0 );
+         break;
+      }
+   }
+
    /* This is a bit of a hack... Set X/Y to 0 so that we draw at the top
     * of the bitmap that will be used as a texture. Reset it below so input
     * detection works!
