@@ -935,6 +935,8 @@ struct RETROFLAT_3DTEX {
  */
 #define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
 
+#define retroflat_2d_line( ... ) retrosoft_line( __VA_ARGS__ )
+
 #define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
 
 #define retroflat_2d_w( ... ) retro3d_texture_w( __VA_ARGS__ )
@@ -967,6 +969,8 @@ struct RETROFLAT_3DTEX {
    (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
 
 #define retroflat_2d_px( ... ) retroflat_px( __VA_ARGS__ )
+
+#define retroflat_2d_line( ... ) retroflat_line( __VA_ARGS__ )
 
 #define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
 

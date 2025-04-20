@@ -425,7 +425,7 @@ static void retrogui_redraw_LISTBOX(
 #endif /* RETROGXC_PRESENT */
       if( j == ctl->LISTBOX.sel_idx ) {
          /* TODO: Configurable selection colors. */
-         retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
+         retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
             gui->x + ctl->base.x,
             gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
@@ -657,19 +657,20 @@ static void retrogui_redraw_BUTTON(
       h = 0,
       text_offset = 0;
 
-   retroflat_rect( gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+   retroflat_2d_rect(
+      gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, 0 );
 
    if( 0 < ctl->BUTTON.push_frames ) {
-      retroflat_line(
+      retroflat_2d_line(
          gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 1,
          gui->x + ctl->base.x + ctl->base.w - 2, gui->y + ctl->base.y + 1, 0 );
-      retroflat_line(
+      retroflat_2d_line(
          gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 2,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + ctl->base.h - 3, 0 );
@@ -679,11 +680,11 @@ static void retrogui_redraw_BUTTON(
       text_offset = 1;
    } else {
       /* Button is not pushed. */
-      retroflat_line(
+      retroflat_2d_line(
          gui->draw_bmp, RETROFLAT_COLOR_WHITE,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 1,
          gui->x + ctl->base.x + ctl->base.w - 2, gui->y + ctl->base.y + 1, 0 );
-      retroflat_line(
+      retroflat_2d_line(
          gui->draw_bmp, RETROFLAT_COLOR_WHITE,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + 2,
          gui->x + ctl->base.x + 1, gui->y + ctl->base.y + ctl->base.h - 3, 0 );
@@ -952,29 +953,29 @@ static void retrogui_redraw_TEXTBOX(
    /* Do nothing. */
 #  else
 
-   retroflat_rect( gui->draw_bmp, ctl->base.bg_color,
+   retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    /* Draw chiselled inset border. */
 
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y + ctl->base.h - 1,
       ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_DARKGRAY,
        gui->x + ctl->base.x + ctl->base.w - 1,
        gui->y + ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
@@ -1006,7 +1007,7 @@ cleanup:
    }
 
    /* TODO: Get cursor color from GUI. */
-   retroflat_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
+   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLUE,
       gui->x + ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
       gui->y + ctl->base.y + RETROGUI_PADDING,
       8, 8,
