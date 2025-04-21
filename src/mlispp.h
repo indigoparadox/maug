@@ -459,6 +459,15 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
       }
       break;
 
+   case '"':
+      /* TODO: Handle escaped mode. */
+      if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
+         mlisp_parser_pstate_pop( parser );
+      } else {
+         mlisp_parser_pstate_push( parser, MLISP_PSTATE_STRING );
+      }
+      break;
+
    case '(':
       if(
          MLISP_PSTATE_NONE == mlisp_parser_pstate( parser ) ||
