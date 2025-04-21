@@ -70,6 +70,12 @@
    parser->token_parser( \
       (parser)->token, (parser)->token_sz, (parser)->token_parser_arg )
 
+/**
+ * \brief Macro to check if a parser contains a valid AST ready to be
+ *        executed.
+ */
+#define mlisp_check_ast( parser ) (0 < mdata_vector_ct( &((parser)->ast) ))
+
 MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_PARSER* parser, size_t ast_node_idx, size_t depth, char ab );
 
