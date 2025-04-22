@@ -798,7 +798,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
    /* == SDL == */
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
+#     if !defined( RETROFLAT_API_SDL1 )
       is_screen = 1;
+#     endif /* !RETROFLAT_API_SDL1 */
       target = retroflat_screen_buffer();
    }
 
