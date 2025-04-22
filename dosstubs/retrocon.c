@@ -8,6 +8,7 @@
 #     include <retrogxc.h>
 #  endif
 #  include <retrogui.h>
+#  include <retrowin.h>
 #  define RETROCON_C
 #  include <retrocon.h>
 #endif /* !RETROFLAT_NO_RETROCON */
