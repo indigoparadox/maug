@@ -1270,6 +1270,8 @@ static void retrogui_redraw_IMAGE(
    if( 0 > ctl->IMAGE.image_cache_id ) {
       return;
    }
+   debug_printf( RETROGUI_TRACE_LVL, "redrawing image ctl " SIZE_T_FMT "...",
+      ctl->base.idc );
    retrogxc_blit_bitmap(
       gui->draw_bmp,
       ctl->IMAGE.image_cache_id,

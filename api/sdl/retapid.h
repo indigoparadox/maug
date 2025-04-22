@@ -8,6 +8,10 @@
 
 #  include <time.h> /* For srand() */
 
+#  ifndef RETROFLAT_SDL_BPP
+#     define RETROFLAT_SDL_BPP 32
+#  endif /* !RETROFLAT_SDL_BPP */
+
 #  if defined( RETROFLAT_OS_WASM )
 #     include <emscripten.h>
 #  endif /* RETROFLAT_OS_WASM */

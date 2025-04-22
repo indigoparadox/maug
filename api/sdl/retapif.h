@@ -189,8 +189,8 @@ MERROR_RETVAL retroflat_init_platform(
    /* Create the buffer texture. */
    g_retroflat_state->buffer.texture =
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
-      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+         g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
    /* TODO: This doesn't seem to do anything. */
    if(
@@ -510,7 +510,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    /* It's a bitmap. */
 
    /* Scrap the software renderer. */
-   SDL_RenderPresent( bmp->renderer );
+   /* SDL_RenderPresent( bmp->renderer ); */
    SDL_DestroyRenderer( bmp->renderer );
    bmp->renderer = NULL;
 
@@ -673,7 +673,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* == SDL1 == */
 
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
-      32, 0, 0, 0, 0 );
+      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -692,7 +692,7 @@ cleanup:
    /* Create surface. */
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       /* TODO: Are these masks right? */
-      32, 0, 0, 0, 0 );
+      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -762,6 +762,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  elif defined( RETROFLAT_API_SDL2 ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
+   SDL_Texture* tmp_tex = NULL;
+   int is_screen = 0,
+       tmp_autolock = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
 
    assert( NULL != src );
@@ -794,7 +797,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    /* == SDL == */
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
+      is_screen = 1;
       target = retroflat_screen_buffer();
    }
 
@@ -810,6 +814,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #     ifdef RETROFLAT_API_SDL1
    assert( 0 == src->autolock_refs );
    assert( 0 == target->autolock_refs );
+
    retval = 
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
    if( 0 != retval ) {
@@ -819,8 +824,34 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #     else
 
    assert( retroflat_bitmap_locked( target ) );
+   
+   if( is_screen ) {
+      tmp_tex = src->texture;
+   } else {
+      if( !retroflat_bitmap_locked( src ) ) {
+         tmp_autolock = 1;
+         retroflat_draw_lock( src );
+      }
+      /* This little roundabout song-and-dance allows us to copy from a surface
+       * updated by a software renderer (off-screen bitmap) onto another
+       * software renderer (off-screen bitmap) without getting the dreaded
+       * "Texture was not created with this renderer" error.
+       */
+      tmp_tex = SDL_CreateTexture(
+         target->renderer,
+         SDL_GetWindowPixelFormat( g_retroflat_state->platform.window ),
+         SDL_TEXTUREACCESS_STREAMING,
+         retroflat_bitmap_w( src ),
+         retroflat_bitmap_h( src ) );
+      SDL_UpdateTexture(
+         tmp_tex, NULL, src->surface->pixels, src->surface->pitch );
+      if( tmp_autolock ) {
+         retroflat_draw_release( src );
+      }
+   }
+
    retval = SDL_RenderCopy(
-      target->renderer, src->texture, &src_rect, &dest_rect );
+      target->renderer, tmp_tex, &src_rect, &dest_rect );
    if( 0 != retval ) {
       error_printf( "could not blit surface: %s", SDL_GetError() );
       retval = MERROR_GUI;
@@ -1234,8 +1265,8 @@ void retroflat_resize_v() {
    /* Create the buffer texture. */
    g_retroflat_state->buffer.texture =
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
-      SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+         g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
 #  endif /* RETROFLAT_API_SDL2 */
 }
