@@ -108,17 +108,18 @@ typedef size_t retrogui_idc_t;
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
-   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; )
+   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
+   f( 4, IMAGE, struct RETROFLAT_BITMAP image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; )
 
 #ifdef RETROGUI_NO_TEXTBOX
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f )
 #else
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f ) \
-   f( 4, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
+   f( 5, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
 #endif /* RETROGUI_NO_TEXTBOX */
 
 #if 0
-   f( 5, SCROLLBAR, size_t min; size_t max; size_t value; )
+   f( 6, SCROLLBAR, size_t min; size_t max; size_t value; )
 #endif
 
 /*! \brief Fields common to ALL ::RETROGUI_CTL types. */
@@ -231,6 +232,9 @@ MERROR_RETVAL retrogui_set_ctl_text(
 MERROR_RETVAL retrogui_set_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
    const char* fmt, ... );
+
+MERROR_RETVAL retrogui_set_ctl_image(
+   struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags );
 
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
@@ -1235,6 +1239,128 @@ static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
    return retval;
 }
 
+/* === Control: IMAGE === */
+
+static retrogui_idc_t retrogui_click_IMAGE(
+   struct RETROGUI* gui,
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   return RETROGUI_IDC_NONE;
+}
+
+static retrogui_idc_t retrogui_key_IMAGE(
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   return RETROGUI_IDC_NONE;
+}
+
+static void retrogui_redraw_IMAGE(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl
+) {
+#  if defined( RETROGUI_NATIVE_WIN )
+   /* Do nothing. */
+#  else
+#     ifdef RETROGXC_PRESENT
+   MERROR_RETVAL retval = MERROR_OK;
+#     endif /* RETROGXC_PRESENT */
+
+#     ifdef RETROGXC_PRESENT
+   if( 0 > ctl->IMAGE.image_cache_id ) {
+      return;
+   }
+   retrogxc_blit_bitmap(
+      gui->draw_bmp,
+      ctl->IMAGE.image_cache_id,
+#     else
+   if( !retroflat_2d_bitmap_ok( &(gui->draw_mp) ) ) {
+      return;
+   }
+   retroflat_2d_blit_bitmap(
+      gui->draw_bmp,
+      &(ctl->IMAGE.image),
+#     endif /* RETROGXC_PRESENT */
+      ctl->IMAGE.src_x, ctl->IMAGE.src_y,
+      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
+      ctl->IMAGE.instance );
+
+   assert( MERROR_OK == retval );
+
+#  endif
+
+   return;
+}
+
+static MERROR_RETVAL retrogui_push_IMAGE( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROGUI_NATIVE_WIN )
+
+   /* TODO */
+
+#  else
+
+   debug_printf( RETROGUI_TRACE_LVL, "pushing IMAGE control..." );
+
+   /* TODO: Copy non-cached image. */
+
+   /* ctl->IMAGE.cache_idx = NULL; */
+#  endif
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_sz_IMAGE(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+#     ifdef RETROGXC_PRESENT
+   retval = retrogxc_bitmap_wh( ctl->IMAGE.image_cache_id, p_w, p_h );
+   maug_cleanup_if_not_ok();
+#     else
+   if( !retroflat_bitmap_ok( &(ctl->IMAGE.image) ) ) {
+      error_printf( "image not assigned!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   *p_w = retroflat_2d_bitmap_w( &(ctl->IMAGE.image) );
+   *p_h = retroflat_2d_bitmap_h( &(ctl->IMAGE.image) );
+#     endif /* RETROGXC_PRESENT */
+
+cleanup:
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_IMAGE(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
+) {
+   MERROR_RETVAL retval = MERROR_GUI;
+   /* TODO */
+   return retval;
+}
+
+static void retrogui_free_IMAGE( union RETROGUI_CTL* ctl ) {
+#  ifndef RETROGXC_PRESENT
+   retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
+#  endif /* RETROGXC_PRESENT */
+}
+
+static MERROR_RETVAL retrogui_init_IMAGE( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "initializing IMAGE " SIZE_T_FMT "...", ctl->base.idc );
+
+   return retval;
+}
+
 /* === Static Internal Functions === */
 
 static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
@@ -1556,7 +1682,10 @@ MERROR_RETVAL retrogui_push_ctl(
    debug_printf( RETROGUI_TRACE_LVL,
       "gui->ctls_ct: " SIZE_T_FMT, mdata_vector_ct( &(gui->ctls) ) );
 
-   if( RETROFLAT_COLOR_NULL == ctl->base.bg_color ) {
+   if(
+      RETROGUI_CTL_TYPE_IMAGE != ctl->base.type &&
+      RETROFLAT_COLOR_NULL == ctl->base.bg_color
+   ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
          "invalid background color specified for control " SIZE_T_FMT "!",
          ctl->base.idc );
@@ -1565,7 +1694,10 @@ MERROR_RETVAL retrogui_push_ctl(
 
    }
 
-   if( RETROFLAT_COLOR_NULL == ctl->base.fg_color ) {
+   if(
+      RETROGUI_CTL_TYPE_IMAGE != ctl->base.type &&
+      RETROFLAT_COLOR_NULL == ctl->base.fg_color
+   ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
          "invalid foreground color specified for control " SIZE_T_FMT "!",
          ctl->base.idc );
@@ -1834,6 +1966,52 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL retrogui_set_ctl_image(
+   struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL* ctl = NULL;
+
+   assert( !retrogui_is_locked( gui ) );
+   mdata_vector_lock( &(gui->ctls) );
+
+   assert( NULL != path );
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "setting control " SIZE_T_FMT " image to: %s", idc, path );
+
+   /* Figure out the control to update. */
+   ctl = _retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Perform the actual update. */
+   if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
+#  ifdef RETROGXC_PRESENT
+      ctl->IMAGE.image_cache_id = retrogxc_load_bitmap(
+         path, RETROFLAT_FLAGS_LITERAL_PATH );
+#  else
+      retroflat_2d_load_bitmap(
+         &(ctl->IMAGE.image), asset_path, RETROFLAT_FLAGS_LITERAL_PATH );
+#  endif /* RETROGXC_PRESENT */
+   } else {
+      error_printf( "invalid control type! no image!" );
+      goto cleanup;
+   }
+
+   /* New text! Redraw! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
+cleanup:
+
+   mdata_vector_unlock( &(gui->ctls) );
+
+   return retval;
+}
+
+
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc
 ) {
@@ -1856,6 +2034,12 @@ MERROR_RETVAL retrogui_init_ctl(
    if( 0 ) {
    RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_INITS )
    }
+
+#  ifdef RETROGXC_PRESENT
+   if( RETROGUI_CTL_TYPE_IMAGE == type ) {
+      ctl->IMAGE.image_cache_id = -1;
+   }
+#  endif /* !RETROGXC_PRESENT */
 
    return retval;
 }

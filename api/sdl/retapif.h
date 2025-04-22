@@ -516,8 +516,8 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* Scrap the old texture and recreate it from the updated surface. */
    /* The renderer should be a software renderer pointing to the surface,
-      * created in retroflat_lock() above.
-      */
+    * created in retroflat_lock() above.
+    */
    assert( NULL != bmp->texture );
    SDL_DestroyTexture( bmp->texture );
    bmp->texture = SDL_CreateTextureFromSurface(

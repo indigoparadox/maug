@@ -100,7 +100,8 @@ MERROR_RETVAL retrogxc_string_sz(
    size_t font_idx, size_t max_w, size_t max_h,
    size_t* out_w_p, size_t* out_h_p, uint8_t flags );
 
-MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx );
+MERROR_RETVAL retrogxc_bitmap_wh(
+   size_t bitmap_idx, retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h );
 
 #ifdef RETROGXC_C
 
@@ -409,11 +410,12 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
+MERROR_RETVAL retrogxc_bitmap_wh(
+   size_t bitmap_idx, retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h
+) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
    retroflat_blit_t* bitmap = NULL;
-   size_t w_out = 0;
 
    mdata_vector_lock( &gs_retrogxc_bitmaps );
 
@@ -436,7 +438,13 @@ MERROR_RETVAL retrogxc_bitmap_w( size_t bitmap_idx ) {
 
    maug_mlock( asset->handle, bitmap );
 
-   w_out = retroflat_2d_bitmap_w( bitmap );
+   if( NULL != p_w ) {
+      *p_w = retroflat_2d_bitmap_w( bitmap );
+   }
+
+   if( NULL != p_h ) {
+      *p_h = retroflat_2d_bitmap_h( bitmap );
+   }
 
 cleanup:
 
@@ -444,13 +452,9 @@ cleanup:
       maug_munlock( asset->handle, bitmap );
    }
 
-   if( MERROR_OK != retval ) {
-      w_out = 0;
-   }
-
    mdata_vector_unlock( &gs_retrogxc_bitmaps );
 
-   return w_out;
+   return retval;
 }
 
 /* === */
