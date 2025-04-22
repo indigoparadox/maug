@@ -1489,6 +1489,10 @@ static MERROR_RETVAL _mlisp_step_lambda(
       /* Pop stack into args in the env. */
       retval = _mlisp_step_lambda_args(
          parser, n->ast_idx_children[*p_lambda_child_idx], exec );
+      if( MERROR_OK != retval && MERROR_PREEMPT != retval ) {
+         /* Something bad happened! */
+         goto cleanup;
+      }
 
       if( MERROR_OK == retval ) {
          /* Set *after-arg* delimiter in env after last arg. */
@@ -1772,7 +1776,7 @@ MERROR_RETVAL mlisp_check_state(
    }
    */
 
-   if( 0 == mdata_vector_ct( &(parser->ast) ) ) {
+   if( !mlisp_check_ast( parser  ) ) {
       error_printf( "no valid AST present; could not exec!" );
       retval = MERROR_EXEC;
       goto cleanup;
