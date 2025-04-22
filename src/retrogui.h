@@ -1917,17 +1917,24 @@ MERROR_RETVAL retrogui_set_ctl_text(
    buffer_h = maug_malloc( 1, buffer_sz + 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
 
+   assert( 0 < buffer_sz );
+
    maug_mlock( buffer_h, buffer );
    maug_cleanup_if_null_lock( char*, buffer );
    maug_mzero( buffer, buffer_sz + 1 );
 
-   assert( NULL != fmt );
    assert( NULL != buffer );
-   assert( 0 < buffer_sz );
 
-   va_start( args, fmt );
-   maug_vsnprintf( buffer, buffer_sz, fmt, args );
-   va_end( args );
+   if( NULL == fmt ) {
+      /* Zero the buffer. */
+      maug_mzero( buffer, buffer_sz + 1);
+
+   } else {
+      /* Format the buffer. */
+      va_start( args, fmt );
+      maug_vsnprintf( buffer, buffer_sz, fmt, args );
+      va_end( args );
+   }
 
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_BUTTON == ctl->base.type ) {
@@ -1977,8 +1984,6 @@ MERROR_RETVAL retrogui_set_ctl_image(
    assert( !retrogui_is_locked( gui ) );
    mdata_vector_lock( &(gui->ctls) );
 
-   assert( NULL != path );
-
    debug_printf( RETROGUI_TRACE_LVL,
       "setting control " SIZE_T_FMT " image to: %s", idc, path );
 
@@ -1991,13 +1996,21 @@ MERROR_RETVAL retrogui_set_ctl_image(
 
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
+      if( NULL != path ) {
 #  ifdef RETROGXC_PRESENT
-      ctl->IMAGE.image_cache_id = retrogxc_load_bitmap(
-         path, RETROFLAT_FLAGS_LITERAL_PATH );
+         ctl->IMAGE.image_cache_id = retrogxc_load_bitmap(
+            path, RETROFLAT_FLAGS_LITERAL_PATH );
 #  else
-      retroflat_2d_load_bitmap(
-         &(ctl->IMAGE.image), asset_path, RETROFLAT_FLAGS_LITERAL_PATH );
+         retroflat_2d_load_bitmap(
+            &(ctl->IMAGE.image), asset_path, RETROFLAT_FLAGS_LITERAL_PATH );
 #  endif /* RETROGXC_PRESENT */
+      } else {
+#  ifdef RETROGXC_PRESENT
+         ctl->IMAGE.image_cache_id = -1;
+#  else
+         retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
+#  endif /* RETROGXC_PRESENT */
+      }
    } else {
       error_printf( "invalid control type! no image!" );
       goto cleanup;
