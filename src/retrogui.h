@@ -15,6 +15,8 @@
 /*! \brief RETROGUI::flags indicating controls should be redrawn. */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
+#define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
+
 #ifndef RETROGUI_TRACE_LVL
 #  define RETROGUI_TRACE_LVL 0
 #endif /* !RETROGUI_TRACE_LVL */
@@ -109,13 +111,14 @@ typedef size_t retrogui_idc_t;
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
    f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
-   f( 4, IMAGE, struct RETROFLAT_BITMAP image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; )
+   f( 4, IMAGE, struct RETROFLAT_BITMAP image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
+   f( 5, FILLBAR, uint8_t flags; size_t cur; size_t max; )
 
 #ifdef RETROGUI_NO_TEXTBOX
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f )
 #else
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f ) \
-   f( 5, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
+   f( 6, TEXTBOX, MAUG_MHANDLE text_h; char* text; size_t text_sz; size_t text_sz_max; size_t text_cur; int16_t blink_frames; )
 #endif /* RETROGUI_NO_TEXTBOX */
 
 #if 0
@@ -1362,6 +1365,126 @@ static MERROR_RETVAL retrogui_init_IMAGE( union RETROGUI_CTL* ctl ) {
 
    return retval;
 }
+
+/* === Control: FILLBAR === */
+
+static retrogui_idc_t retrogui_click_FILLBAR( 
+   struct RETROGUI* gui,
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
+
+   if( 0 < ctl->BUTTON.push_frames ) {
+      goto cleanup;
+   }
+
+   /* Set the last button clicked. */
+   idc_out = ctl->base.idc;
+
+   /* Set the frames to show the pushed-in view. */
+   /* TODO: Use a constant, here. */
+   ctl->BUTTON.push_frames = 3;
+
+cleanup:
+
+   return idc_out;
+}
+
+static retrogui_idc_t retrogui_key_FILLBAR( 
+   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROFLAT_INPUT* input_evt
+) {
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
+
+   /* Set the last button clicked. */
+   /* TODO: Only set out on ENTER/SPACE. */
+   /* idc_out = ctl->base.idc; */
+
+   return idc_out;
+}
+
+static void retrogui_redraw_FILLBAR(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl
+) {
+
+   retroflat_2d_rect(
+      gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
+      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+
+   return;
+}
+
+static MERROR_RETVAL retrogui_push_FILLBAR( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROGUI_NATIVE_WIN )
+
+   /* TODO */
+
+#  endif
+
+cleanup:
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_sz_FILLBAR(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( NULL != ctl );
+
+   /* TODO */
+
+cleanup:
+
+   return retval;
+}
+
+static MERROR_RETVAL retrogui_pos_FILLBAR(
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  if defined( RETROGUI_NATIVE_WIN )
+   /* TODO */
+#  else
+   assert( NULL != ctl );
+
+   ctl->base.x = x;
+   ctl->base.y = y;
+   if( 0 < w ) {
+      ctl->base.w = w;
+   }
+   if( 0 < h ) {
+      ctl->base.h = h;
+   }
+#  endif /* RETROGUI_NATIVE_WIN */
+
+   return retval;
+}
+
+static void retrogui_free_FILLBAR( union RETROGUI_CTL* ctl ) {
+}
+
+static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "initializing fillbar " SIZE_T_FMT "...", ctl->base.idc );
+
+   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   ctl->base.bg_color = RETROFLAT_COLOR_GRAY;
+
+   return retval;
+}
+
 
 /* === Static Internal Functions === */
 

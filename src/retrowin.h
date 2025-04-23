@@ -32,6 +32,11 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN* win );
 
 MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack );
 
+/**
+ * \brief Force all windows on the stack to redraw.
+ */
+MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack );
+
 retrogui_idc_t retrowin_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
@@ -50,6 +55,11 @@ MERROR_RETVAL retrowin_push_win(
    size_t idc, const char* font_filename,
    size_t x, size_t y, size_t w, size_t h, uint8_t flags );
 
+/**
+ * \brief Destroy the given window's resources and remove it from the window
+ *        stack.
+ * \param idc Identifier (NOT index) of the window to destroy.
+ */
 MERROR_RETVAL retrowin_destroy_win(
    struct MDATA_VECTOR* win_stack, size_t idc );
 
@@ -64,6 +74,8 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN* win ) {
    win->gui->draw_bmp = &(win->gui_bmp);
 
    if( RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui->flags) ) {
+      debug_printf( 1, "redrawing window " SIZE_T_FMT "...", win->idc );
+
       switch( RETROWIN_FLAG_BORDER_MASK & win->flags ) {
       case RETROWIN_FLAG_BORDER_GRAY:
          retroflat_2d_rect(
@@ -162,6 +174,38 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
       retval = retrowin_redraw_win( win );
       retrogui_unlock( win->gui );
       maug_cleanup_if_not_ok();
+   }
+
+cleanup:
+
+   mdata_vector_unlock( win_stack );
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   struct RETROWIN* win = NULL;
+
+   if( 0 == mdata_vector_ct( win_stack ) ) {
+      goto cleanup;
+   }
+
+   assert( !mdata_vector_is_locked( win_stack ) );
+   mdata_vector_lock( win_stack );
+
+   for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
+      win = mdata_vector_get( win_stack, i, struct RETROWIN );
+      assert( NULL != win );
+
+      if( !retrowin_win_is_active( win ) ) {
+         continue;
+      }
+
+      win->gui->flags |= RETROGUI_FLAGS_DIRTY;
    }
 
 cleanup:
@@ -331,6 +375,7 @@ MERROR_RETVAL retrowin_destroy_win(
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN* win = NULL;
+   ssize_t i_free = -1;
 
    debug_printf( RETROWIN_TRACE_LVL,
       "attempting to destroy window: " SIZE_T_FMT, idc );
@@ -341,7 +386,14 @@ MERROR_RETVAL retrowin_destroy_win(
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
       win = mdata_vector_get( win_stack, i, struct RETROWIN );
       assert( NULL != win );
-      if( idc != win->idc || !retrowin_win_is_active( win ) ) {
+      if( idc != win->idc ) {
+         continue;
+      }
+
+      if( !retrowin_win_is_active( win ) ) {
+         debug_printf( RETROWIN_TRACE_LVL,
+            "window IDC " SIZE_T_FMT " found, but not active! (flags: 0x%02x)",
+            idc, win->flags );
          continue;
       }
 
@@ -350,7 +402,16 @@ MERROR_RETVAL retrowin_destroy_win(
 
       retrowin_free_win( win );
 
+      i_free = i;
+
       break;
+   }
+
+   /* Remove the window from the vector if asked to. */
+   if( 0 <= i_free ) {
+      mdata_vector_unlock( win_stack );
+      mdata_vector_remove( win_stack, i_free );
+      mdata_vector_lock( win_stack );
    }
 
 cleanup:
