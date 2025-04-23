@@ -6,6 +6,9 @@
  * \addtogroup maug_retro3d
  */
 
+#define retro3d_texture_ok( bitmap ) \
+   (NULL != (bitmap)->bytes_h || NULL != (bitmap)->bytes)
+
 #define retro3d_texture_w( tex ) ((tex)->w)
 
 #define retro3d_texture_h( tex ) ((tex)->h)

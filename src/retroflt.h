@@ -943,6 +943,8 @@ struct RETROFLAT_3DTEX {
 
 #define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
 
+#define retroflat_2d_bitmap_ok( ... ) retro3d_texture_ok( __VA_ARGS__ )
+
 #define retroflat_2d_bitmap_w( ... ) retro3d_texture_w( __VA_ARGS__ )
 
 #define retroflat_2d_bitmap_h( ... ) retro3d_texture_h( __VA_ARGS__ )
@@ -977,6 +979,8 @@ struct RETROFLAT_3DTEX {
 #define retroflat_2d_line( ... ) retroflat_line( __VA_ARGS__ )
 
 #define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
+
+#define retroflat_2d_bitmap_ok( ... ) retroflat_bitmap_ok( __VA_ARGS__ )
 
 #define retroflat_2d_bitmap_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
 

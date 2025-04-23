@@ -294,7 +294,9 @@ MERROR_RETVAL retrowin_push_win(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN win;
    ssize_t append_retval = 0;
+#ifdef RETROGXC_PRESENT
    ssize_t font_retval = 0;
+#endif /* RETROGXC_PRESENT */
 
    maug_mzero( &win, sizeof( struct RETROWIN ) );
 

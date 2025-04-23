@@ -111,7 +111,7 @@ typedef size_t retrogui_idc_t;
    f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
    f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
-   f( 4, IMAGE, struct RETROFLAT_BITMAP image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
+   f( 4, IMAGE, retroflat_blit_t image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
    f( 5, FILLBAR, uint8_t flags; size_t cur; size_t max; )
 
 #ifdef RETROGUI_NO_TEXTBOX
@@ -1279,7 +1279,7 @@ static void retrogui_redraw_IMAGE(
       gui->draw_bmp,
       ctl->IMAGE.image_cache_id,
 #     else
-   if( !retroflat_2d_bitmap_ok( &(gui->draw_mp) ) ) {
+   if( !retroflat_2d_bitmap_ok( gui->draw_bmp ) ) {
       return;
    }
    retroflat_2d_blit_bitmap(
@@ -1289,9 +1289,6 @@ static void retrogui_redraw_IMAGE(
       ctl->IMAGE.src_x, ctl->IMAGE.src_y,
       gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       ctl->IMAGE.instance );
-
-   assert( MERROR_OK == retval );
-
 #  endif
 
    return;
@@ -1326,7 +1323,7 @@ static MERROR_RETVAL retrogui_sz_IMAGE(
    retval = retrogxc_bitmap_wh( ctl->IMAGE.image_cache_id, p_w, p_h );
    maug_cleanup_if_not_ok();
 #     else
-   if( !retroflat_bitmap_ok( &(ctl->IMAGE.image) ) ) {
+   if( !retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) ) {
       error_printf( "image not assigned!" );
       retval = MERROR_GUI;
       goto cleanup;
@@ -2125,7 +2122,7 @@ MERROR_RETVAL retrogui_set_ctl_image(
             path, RETROFLAT_FLAGS_LITERAL_PATH );
 #  else
          retroflat_2d_load_bitmap(
-            &(ctl->IMAGE.image), asset_path, RETROFLAT_FLAGS_LITERAL_PATH );
+            path, &(ctl->IMAGE.image), RETROFLAT_FLAGS_LITERAL_PATH );
 #  endif /* RETROGXC_PRESENT */
       } else {
 #  ifdef RETROGXC_PRESENT

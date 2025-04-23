@@ -132,7 +132,6 @@ struct RETROFLAT_BITMAP {
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
-#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #  ifdef RETROFLAT_OPENGL
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || \
@@ -145,6 +144,7 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
 
 #  else
+#     define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_w : (size_t)((bmp)->surface->w))
