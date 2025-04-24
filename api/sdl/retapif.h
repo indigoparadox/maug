@@ -1158,6 +1158,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    assert( NULL != input );
 
+   maug_mzero( &event, sizeof( SDL_Event ) );
+
    input->key_flags = 0;
 
    /* Always get mouse state, e.g. for hover detection. */
@@ -1170,6 +1172,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    switch( event.type ) {
    case SDL_QUIT:
       /* Handle SDL window close. */
+      debug_printf( 1, "quit event!" );
       retroflat_quit( 0 );
       break;
 
