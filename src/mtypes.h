@@ -20,6 +20,8 @@ typedef Int32 int32_t;
 
 typedef UInt32 maug_ms_t;
 
+#define MS_FMT "%lu"
+
 #elif defined( MAUG_OS_WIN )
 
 typedef signed char int8_t;
@@ -31,6 +33,8 @@ typedef unsigned long uint32_t;
 
 typedef unsigned long maug_ms_t;
 
+#define MS_FMT "%lu"
+
 #	if defined( RETROFLAT_API_WINCE )
 typedef unsigned long off_t;
 #	endif /* RETROFLAT_API_WINCE */
@@ -41,8 +45,10 @@ typedef unsigned long off_t;
 
 #  if defined( MAUG_OS_DOS_REAL )
 typedef uint16_t maug_ms_t;
+#define MS_FMT "%u"
 #  else
 typedef uint32_t maug_ms_t;
+#define MS_FMT "%u"
 #  endif /* MAUG_OS_DOS_REAL */
 
 #endif /* MAUG_OS_* */

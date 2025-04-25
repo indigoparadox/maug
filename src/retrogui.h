@@ -1694,6 +1694,10 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       return MERROR_OK;
    }
 
+   if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
+      return MERROR_OK;
+   }
+
    assert( !retrogui_is_locked( gui ) );
    mdata_vector_lock( &(gui->ctls) );
 
