@@ -255,7 +255,8 @@ static LRESULT CALLBACK WndProc(
             if( !g_w.WinGStretchBlt(
                hdc_paint,
                0, 0,
-               g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+               g_retroflat_state->screen_w,
+               g_retroflat_state->screen_h,
                g_retroflat_state->buffer.hdc_b,
                0, 0,
                g_retroflat_state->screen_w,
@@ -274,7 +275,8 @@ static LRESULT CALLBACK WndProc(
          StretchBlt(
             hdc_paint,
             0, 0,
-            g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+            g_retroflat_state->screen_w,
+            g_retroflat_state->screen_h,
             g_retroflat_state->buffer.hdc_b,
             0, 0,
             g_retroflat_state->screen_v_w,
@@ -336,8 +338,10 @@ static LRESULT CALLBACK WndProc(
       case WM_RBUTTONDOWN:
 #endif /* !RETROFLAT_API_WINCE */
          g_retroflat_state->platform.last_mouse = wParam;
-         g_retroflat_state->platform.last_mouse_x = GET_X_LPARAM( lParam );
-         g_retroflat_state->platform.last_mouse_y = GET_Y_LPARAM( lParam );
+         g_retroflat_state->platform.last_mouse_x =
+            GET_X_LPARAM( lParam ) / g_retroflat_state->scale;
+         g_retroflat_state->platform.last_mouse_y =
+            GET_Y_LPARAM( lParam ) / g_retroflat_state->scale;
          break;
 
       case WM_DESTROY:
@@ -541,8 +545,8 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_WING */
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = g_retroflat_state->screen_w;
-   wr.bottom = g_retroflat_state->screen_h;
+   wr.right = g_retroflat_state->screen_w * g_retroflat_state->scale;
+   wr.bottom = g_retroflat_state->screen_h * g_retroflat_state->scale;
 #     ifndef RETROFLAT_API_WINCE
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */

@@ -433,11 +433,6 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
 
 /**
- * \brief Only supported on some platforms: Attempt to scale screen by 2X.
- */
-#define RETROFLAT_FLAGS_SCALE2X 0x10
-
-/**
  * \brief Do not execute any more inter-frame loops until next frame.
  */
 #define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
@@ -1698,6 +1693,7 @@ struct RETROFLAT_STATE {
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+   int scale;
 
 #  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION ) || \
 defined( RETROVDP_C )
@@ -2509,6 +2505,17 @@ cleanup:
 
 #  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
 
+static MERROR_RETVAL retroflat_cli_rfs(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   if( 0 < arg_c ) {
+      g_retroflat_state->scale = atoi( arg );
+      debug_printf( 3, "screen scale set to: %d",
+         g_retroflat_state->scale );
+   }
+   return MERROR_OK;
+}
+
 static MERROR_RETVAL retroflat_cli_rfx(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
@@ -2702,6 +2709,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfm, args );
    maug_cleanup_if_not_ok();
 #     elif !defined( RETROFLAT_NO_CLI_SZ )
+   /* Set default. */
+   g_retroflat_state->scale = 1;
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfs", MAUG_CLI_SIGIL_SZ + 4,
+      "Set screen scale factor.", 0,
+      (maug_cli_cb)retroflat_cli_rfs, args );
+   maug_cleanup_if_not_ok();
    retval = maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen X position.", 0,
       (maug_cli_cb)retroflat_cli_rfx, args );
@@ -2769,19 +2782,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Setup intended screen size. */
-   /* TODO: Handle window resizing someday! */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   if(
-      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
-   ) {
-      debug_printf( 1, "setting window scale to 2x..." );
-      g_retroflat_state->screen_w = args->screen_w * 2;
-      g_retroflat_state->screen_h = args->screen_h * 2;
-   } else {
-      g_retroflat_state->screen_w = args->screen_w;
-      g_retroflat_state->screen_h = args->screen_h;
-   }
+   g_retroflat_state->screen_w = args->screen_w;
+   g_retroflat_state->screen_h = args->screen_h;
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
    /* == Platform-Specific Init == */

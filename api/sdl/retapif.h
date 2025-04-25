@@ -2,9 +2,7 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-#ifndef SDL_WINDOW_SCALE
-#  define SDL_WINDOW_SCALE 1
-#endif /* SDL_WINDOW_SCALE */
+/* === */
 
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
@@ -24,6 +22,8 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* TODO: Add some flexibility for simulating lower-color platforms. */
    g_retroflat_state->screen_colors = 16;
+
+   /* == Platform-Specific Init == */
 
 #  if defined( RETROFLAT_API_SDL1 )
 
@@ -172,8 +172,8 @@ MERROR_RETVAL retroflat_init_platform(
    /* Create the main window. */
    g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      args->screen_w * SDL_WINDOW_SCALE,
-      args->screen_h * SDL_WINDOW_SCALE, RETROFLAT_WIN_FLAGS );
+      args->screen_w * g_retroflat_state->scale,
+      args->screen_h * g_retroflat_state->scale, RETROFLAT_WIN_FLAGS );
    maug_cleanup_if_null(
       SDL_Window*, g_retroflat_state->platform.window,
       RETROFLAT_ERROR_GRAPHICS );
@@ -191,14 +191,6 @@ MERROR_RETVAL retroflat_init_platform(
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
          SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
          g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-
-   /* TODO: This doesn't seem to do anything. */
-   if(
-      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
-   ) {
-      debug_printf( 1, "setting SDL window scale to 2x..." );
-      SDL_RenderSetScale( g_retroflat_state->buffer.renderer, 2.0f, 2.0f );
-   }
 
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
@@ -1164,8 +1156,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* Always get mouse state, e.g. for hover detection. */
    SDL_GetMouseState( &mouse_x, &mouse_y );
-   input->mouse_x = mouse_x / SDL_WINDOW_SCALE;
-   input->mouse_y = mouse_y / SDL_WINDOW_SCALE;
+   input->mouse_x = mouse_x / g_retroflat_state->scale;
+   input->mouse_y = mouse_y / g_retroflat_state->scale;
 
    SDL_PollEvent( &event );
 
@@ -1212,8 +1204,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
       /* Begin dragging. */
 
-      input->mouse_x = event.button.x / SDL_WINDOW_SCALE;
-      input->mouse_y = event.button.y / SDL_WINDOW_SCALE;
+      input->mouse_x = event.button.x / g_retroflat_state->scale;
+      input->mouse_y = event.button.y / g_retroflat_state->scale;
 
       /* Differentiate which button was clicked. */
       if( SDL_BUTTON_LEFT == event.button.button ) {

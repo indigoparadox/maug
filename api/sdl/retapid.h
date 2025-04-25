@@ -221,10 +221,10 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */
 
 struct RETROFLAT_PLATFORM {
+   int                  mouse_state;
 #  ifndef RETROFLAT_API_SDL1
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */
-   int                  mouse_state;
 };
 
 #ifndef NO_RETROSND
