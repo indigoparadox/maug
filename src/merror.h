@@ -51,6 +51,10 @@ typedef int MERROR_RETVAL;
 
 /*! \} */ /* maug_error_retvals */
 
+#define merror_sz_to_retval( sz ) ((sz) * -1)
+
+#define merror_retval_to_sz( retval ) ((retval) * -1)
+
 #define maug_cleanup_if_null_msg( type, ptr, err, msg ) \
    if( (type)NULL == ptr ) { \
       error_printf( msg ); \
