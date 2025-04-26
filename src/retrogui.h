@@ -2294,6 +2294,8 @@ retrogui_idc_t retrogui_focus_next( struct RETROGUI* gui ) {
 
 cleanup:
 
+   assert( MERROR_OK == retval );
+
    mdata_vector_unlock( &(gui->ctls) );
 
    debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " SIZE_T_FMT, idc_out );
@@ -2335,6 +2337,8 @@ retrogui_idc_t retrogui_focus_prev( struct RETROGUI* gui ) {
    }
 
 cleanup:
+
+   assert( MERROR_OK == retval );
 
    mdata_vector_unlock( &(gui->ctls) );
 

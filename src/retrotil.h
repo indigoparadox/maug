@@ -439,13 +439,10 @@ MERROR_RETVAL retrotile_topdown_draw(
 /* TODO: Function names should be verb_noun! */
 
 #define retrotile_parser_mstate( parser, new_mstate ) \
-   parser->mstate = new_mstate;
-
-#if 0
+   parser->mstate = new_mstate; \
    debug_printf( \
       RETROTILE_TRACE_LVL, "parser mstate: %s", \
          retrotile_mstate_name( parser->mstate ) );
-#endif
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
       MAUG_CONST uint8_t SEG_MCONST name = idx;
