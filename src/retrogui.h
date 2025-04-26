@@ -1577,6 +1577,10 @@ retrogui_idc_t retrogui_poll_ctls(
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
+   if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
+      return RETROGUI_IDC_NONE;
+   }
+
    assert( !retrogui_is_locked( gui ) );
    mdata_vector_lock( &(gui->ctls) );
 
