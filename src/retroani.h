@@ -45,9 +45,6 @@
 #define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 6, FRAMES )
 /* f( 5, STRING ) */
 
-/*! \brief Return from animate_create() indicating a problem. */
-#define RETROANI_ERROR -1
-
 #define RETROANI_TEMP_LOW()    RETROFLAT_COLOR_RED
 #define RETROANI_TEMP_MED()    RETROFLAT_COLOR_YELLOW
 #define RETROANI_TEMP_HIGH()   RETROFLAT_COLOR_WHITE
@@ -168,10 +165,10 @@ void retroani_set_string(
  * \param y Top origin of animation on screen in pixels.
  * \param w Width of animation on screen in pixels.
  * \param h Height of animation on screen in pixels.
- * \return Internal index of newly created animation or ::RETROANI_ERROR.
+ * \return Internal index of newly created animation or \ref maug_error.
  */
-int8_t retroani_create(
-   struct RETROANI* ani_stack, size_t ani_stack_sz,
+ssize_t retroani_create(
+   struct MDATA_VECTOR* ani_stack,
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h );
 
 /**
@@ -183,31 +180,31 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig );
  * \brief Should be called during every frame to overlay animations on screen.
  * \param flags Bitfield indicating which animations to animate/draw.
  */
-void retroani_frame( struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags );
+MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags );
 
 /**
  * \brief Pause all animations with the given flags without deleting them.
  * \param flags Bitfield indicating which animations to pause.
  */
-void retroani_pause( struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags );
+MERROR_RETVAL retroani_pause( struct MDATA_VECTOR* ani_stack, uint16_t flags );
 
 /**
  * \brief Resume all animations with the given flags that have been paused with
  *        retroani_pause().
  * \param flags Bitfield indicating which animations to resume.
  */
-void retroani_resume( struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags );
+MERROR_RETVAL retroani_resume( struct MDATA_VECTOR* ani_stack, uint16_t flags );
 
 /**
  * \brief Stop the animation with the given internal index.
  * \param idx Index to stop as returned from retroani_create().
  */
-void retroani_stop( struct RETROANI* ani_stack, size_t ani_stack_sz, int8_t idx );
+MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani, size_t idx );
 
 /**
  * \brief Stop all currently running animations on screen.
  */
-void retroani_stop_all( struct RETROANI* ani_stack, size_t ani_stack_sz );
+MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack );
 
 #define RETROANI_CB_TABLE_DRAW_PROTOTYPES( idx, name ) \
    void retroani_draw_ ## name( struct RETROANI* );
@@ -611,35 +608,27 @@ void retroani_set_string(
 
 /* === */
 
-int8_t retroani_create(
-   struct RETROANI* ani_stack, size_t ani_stack_sz,
+ssize_t retroani_create(
+   struct MDATA_VECTOR* ani_stack,
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
 ) {
-   int8_t idx_out = RETROANI_ERROR;
+   ssize_t idx_out = -1;
    size_t i = 0;
+   struct RETROANI ani_new;
 
-   for( i = 0 ; ani_stack_sz > i ; i++ ) {
-      if( !(ani_stack[i].flags & RETROANI_FLAG_ACTIVE) ) {
-         idx_out = i;
-         break;
-      }
-   }
+   ani_new.flags = RETROANI_FLAG_ACTIVE | flags;
+   ani_new.x = x;
+   ani_new.y = y;
+   ani_new.w = w;
+   ani_new.h = h;
+   ani_new.type = type;
+   ani_new.target = NULL;
+   ani_new.next_frame_ms = 0;
+   ani_new.mspf = RETROANI_DEFAUL_MSPF;
+   maug_mzero( ani_new.tile, RETROANI_TILE_SZ );
 
-   if( 0 > idx_out ) {
-      error_printf( "animation table is full!" );
-      goto cleanup;
-   }
-
-   ani_stack[i].flags = RETROANI_FLAG_ACTIVE | flags;
-   ani_stack[i].x = x;
-   ani_stack[i].y = y;
-   ani_stack[i].w = w;
-   ani_stack[i].h = h;
-   ani_stack[i].type = type;
-   ani_stack[i].target = NULL;
-   ani_stack[i].next_frame_ms = 0;
-   ani_stack[i].mspf = RETROANI_DEFAUL_MSPF;
-   maug_mzero( &(ani_stack[i].tile), RETROANI_TILE_SZ );
+   idx_out = mdata_vector_append(
+      ani_stack, &ani_new, sizeof( struct RETROANI ) );
 
 cleanup:
    return idx_out;
@@ -716,74 +705,138 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 
 /* === */
 
-void retroani_frame(
-   struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
-) {
+MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    uint32_t now_ms = 0;
+   struct RETROANI* ani = NULL;
+
+   if( 0 == mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OK;
+   }
 
    now_ms = retroflat_get_ms();
 
-   for( i = 0 ; ani_stack_sz > i ; i++ ) {
+   mdata_vector_lock( ani_stack );
+   for( i = 0 ; mdata_vector_ct( ani_stack ) > i ; i++ ) {
+      ani = mdata_vector_get( ani_stack, i, struct RETROANI );
+      assert( NULL != ani );
       if(
-         RETROANI_FLAG_ACTIVE != 
-            (ani_stack[i].flags & RETROANI_FLAG_ACTIVE) ||
-         RETROANI_FLAG_PAUSED ==
-            (ani_stack[i].flags & RETROANI_FLAG_PAUSED) ||
-         flags != (flags & ani_stack[i].flags) ||
-            now_ms < ani_stack[i].next_frame_ms
+         RETROANI_FLAG_PAUSED == (ani->flags & RETROANI_FLAG_PAUSED) ||
+         flags != (flags & ani->flags) ||
+         now_ms < ani->next_frame_ms
       ) {
          continue;
       }
-      gc_animate_draw[ani_stack[i].type]( &(ani_stack[i]) );
-      ani_stack[i].next_frame_ms = now_ms + ani_stack[i].mspf;
+      gc_animate_draw[ani->type]( ani );
+      ani->next_frame_ms = now_ms + ani->mspf;
    }
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
 
-void retroani_pause(
-   struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
-) {
+MERROR_RETVAL retroani_pause( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
+   struct RETROANI* ani = NULL;
 
-   for( i = 0 ; ani_stack_sz > i ; i++ ) {
-      if( flags == (ani_stack[i].flags & flags) ) {
-         ani_stack[i].flags |= RETROANI_FLAG_PAUSED;
+   if( 0 == mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OK;
+   }
+
+   mdata_vector_lock( ani_stack );
+   for( i = 0 ; mdata_vector_ct( ani_stack ) > i ; i++ ) {
+      ani = mdata_vector_get( ani_stack, i, struct RETROANI );
+      assert( NULL != ani );
+      if( flags == (ani->flags & flags) ) {
+         ani->flags |= RETROANI_FLAG_PAUSED;
       }
    }
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
 
 /* === */
 
-void retroani_resume(
-   struct RETROANI* ani_stack, size_t ani_stack_sz, uint16_t flags
+MERROR_RETVAL retroani_resume(
+   struct MDATA_VECTOR* ani_stack, uint16_t flags
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
+   struct RETROANI* ani = NULL;
 
-   for( i = 0 ; ani_stack_sz > i ; i++ ) {
-      if( flags == (ani_stack[i].flags & flags) ) {
-         ani_stack[i].flags &= ~RETROANI_FLAG_PAUSED;
+   if( 0 == mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OK;
+   }
+
+   mdata_vector_lock( ani_stack );
+   for( i = 0 ; mdata_vector_ct( ani_stack ) > i ; i++ ) {
+      ani = mdata_vector_get( ani_stack, i, struct RETROANI );
+      assert( NULL != ani );
+      if( flags == (ani->flags & flags) ) {
+         ani->flags &= ~RETROANI_FLAG_PAUSED;
       }
    }
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
 
 /* === */
 
-void retroani_stop(
-   struct RETROANI* ani_stack, size_t ani_stack_sz, int8_t idx
-) {
-   maug_mzero( &(ani_stack[idx]), sizeof( struct RETROANI ) );
+MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani_stack, size_t idx ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROANI* ani = NULL;
+
+   if(
+      0 == mdata_vector_ct( ani_stack ) || mdata_vector_ct( ani_stack ) <= idx
+   ) {
+      return MERROR_OVERFLOW;
+   }
+
+   mdata_vector_lock( ani_stack );
+   ani = mdata_vector_get( ani_stack, idx, struct RETROANI );
+   assert( NULL != ani );
+   maug_mzero( ani, sizeof( struct RETROANI ) );
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
 
 /* === */
 
-void retroani_stop_all(
-   struct RETROANI* ani_stack, size_t ani_stack_sz
-) {
+MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   for( i = 0 ; ani_stack_sz > i ; i++ ) {
-      retroani_stop( ani_stack, ani_stack_sz, i );
+   if( 0 == mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OK;
    }
+
+   for( i = 0 ; mdata_vector_ct( ani_stack ) > i ; i++ ) {
+      retval = retroani_stop( ani_stack, i );
+      maug_cleanup_if_not_ok();
+   }
+
+   mdata_vector_free( ani_stack );
+
+cleanup:
+
+   return retval;
 }
 
 #else
