@@ -530,9 +530,16 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+#  if !defined( RETROFLAT_OPENGL )
    SDL_Surface* tmp_surface = NULL;
-#  endif
+#  endif /* !RETROFLAT_OPENGL */
+#  if defined( RETROFLAT_API_SDL2 )
+   /* Need these to do the brute-force pixel conversion below. */
+   int color_idx = 0,
+      x = 0,
+      y = 0;
+   RETROFLAT_COLOR_DEF* color = NULL;
+#  endif /* RETROFLAT_API_SDL2 */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -600,20 +607,51 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->renderer = NULL;
    
-   bmp_out->surface = SDL_LoadBMP( filename_path );
-   if( NULL == bmp_out->surface ) {
+   tmp_surface = SDL_LoadBMP( filename_path );
+   if( NULL == tmp_surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_BITMAP;
       goto cleanup;
    }
 
+   /* Create a screen-format bitmap to hold the final bitmap. */
+
+   bmp_out->surface = SDL_CreateRGBSurface( 0, tmp_surface->w, tmp_surface->h,
+      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   if( NULL == bmp_out->surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "SDL unable to create screen bitmap: %s", SDL_GetError() );
+      retval = RETROFLAT_ERROR_BITMAP;
+      goto cleanup;
+   }
+
+   /* Perform this brute-force pixel conversion to convert the 16-color
+    * indexed image to depth that can be readily converted to a textre.
+    */
+   /* TODO: Break this out to its own helper function? */
+   SDL_LockSurface( bmp_out->surface );
+   for( y = 0 ; tmp_surface->h > y ; y++ ) {
+      for( x = 0 ; tmp_surface->w > x ; x++ ) {
+         color_idx = ((uint8_t*)(tmp_surface->pixels))[y * tmp_surface->w + x];
+         color = &(g_retroflat_state->palette[color_idx]);
+         ((uint32_t*)(bmp_out->surface->pixels))[y * tmp_surface->w + x] =
+            SDL_MapRGB(
+               bmp_out->surface->format, color->r, color->g, color->b );
+      }
+   }
+   SDL_UnlockSurface( bmp_out->surface );
+
+   SDL_FreeSurface( tmp_surface );
+
+   /* Setup color-keying if not opaque. */
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
    }
 
+   /* Create a texture from the surface. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
