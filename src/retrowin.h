@@ -45,6 +45,8 @@ retrogui_idc_t retrowin_poll_win_stack(
 
 void retrowin_free_win( struct RETROWIN* win );
 
+ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
+
 /**
  * \brief Create a new window.
  * \param gui Pointer to a preinitialized ::RETROGUI or NULL if the window
@@ -305,6 +307,45 @@ void retrowin_free_win( struct RETROWIN* win ) {
 
 /* === */
 
+ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack ) {
+   ssize_t idx_out = -1;
+   int autolock = 0;
+   size_t i = 0;
+   struct RETROWIN* win = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( 0 == mdata_vector_ct( win_stack ) ) {
+      goto cleanup;
+   }
+
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock = 1;
+   }
+
+   for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
+      win = mdata_vector_get( win_stack, i, struct RETROWIN );
+      if( idc == win->idc ) {
+         idx_out = i;
+         goto cleanup;
+      }
+   }
+
+cleanup:
+
+   if( autolock ) {
+      mdata_vector_unlock( win_stack );
+   }
+
+   if( MERROR_OK != retval ) {
+      idx_out = merror_retval_to_sz( retval );
+   }
+
+   return idx_out;
+}
+
+/* === */
+
 ssize_t retrowin_push_win(
    struct RETROGUI* gui, struct MDATA_VECTOR* win_stack,
    size_t idc, const char* font_filename,
@@ -316,6 +357,12 @@ ssize_t retrowin_push_win(
    ssize_t font_retval = 0;
 #endif /* RETROGXC_PRESENT */
    ssize_t idx_out = -1;
+
+   idx_out = retrowin_get_by_idc( idc, win_stack );
+   if( 0 <= idx_out ) {
+      error_printf( "window IDC " SIZE_T_FMT " already exists!", idc );
+      goto cleanup;
+   }
 
    maug_mzero( &win, sizeof( struct RETROWIN ) );
 
