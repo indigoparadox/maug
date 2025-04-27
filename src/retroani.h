@@ -42,8 +42,7 @@
  *
  * \}
  */
-#define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 6, FRAMES )
-/* f( 5, STRING ) */
+#define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 6, FRAMES ) f( 5, STRING )
 
 #define RETROANI_TEMP_LOW()    RETROFLAT_COLOR_RED
 #define RETROANI_TEMP_MED()    RETROFLAT_COLOR_YELLOW
@@ -51,30 +50,30 @@
 
 /**
  * \addtogroup unilayer_animate_flags Unilayer Animation Flags
- * \brief Flags to control ::ANIMATION behavior.
+ * \brief Flags to control ::RETROANI behavior.
  *
  * \{
  */
 
 /**
- * \relates ANIMATION
- * \brief ::ANIMATION::flags indicating animation is active and playing.
+ * \relates RETROANI
+ * \brief ::RETROANI::flags indicating animation is active and playing.
  */
 #define RETROANI_FLAG_ACTIVE   0x0001
 /**
- * \relates ANIMATION
- * \brief ::ANIMATION::flags indicating animation has been initialized.
+ * \relates RETROANI
+ * \brief ::RETROANI::flags indicating animation has been initialized.
  */
 #define RETROANI_FLAG_INIT     0x0002
 /**
- * \relates ANIMATION
- * \brief ::ANIMATION::flags indicating animation should black out previous
+ * \relates RETROANI
+ * \brief ::RETROANI::flags indicating animation should black out previous
  *        frame's non-black pixels.
  */
 #define RETROANI_FLAG_CLEANUP  0x0004
 /**
- * \relates ANIMATION
- * \brief ::ANIMATION::flags indicating animation has been temporarily paused
+ * \relates RETROANI
+ * \brief ::RETROANI::flags indicating animation has been temporarily paused
  *        and should not update or draw on-screen.
  */
 #define RETROANI_FLAG_PAUSED   0x0008
@@ -103,7 +102,7 @@
 #define RETROANI_CLOUD_WISP_LEN 8
 
 #if 0
-/*! \brief Used with FRAMES ::ANIMATION::type ANIMATION::data to list frames to
+/*! \brief Used with FRAMES ::RETROANI::type RETROANI::data to list frames to
  *         play. */
 /* TODO: Implementation. */
 struct RETROANI_FRAME {
@@ -142,21 +141,26 @@ struct RETROANI {
    /*! \brief Data specific to particular animation playing. */
    int8_t tile[RETROANI_TILE_SZ];
    retroflat_blit_t* target;
-   uint32_t next_frame_ms;
+   retroflat_ms_t next_frame_ms;
+#ifdef RETROGXC_PRESENT
+   ssize_t font_idx;
+#else
+   MAUG_MHANDLE font_h;
+#endif /* RETROGXC_PRESENT */
    uint16_t mspf;
 };
 
 /*! \brief Callback to call on active animations for every frame. */
 typedef void (*RETROANI_CB)( struct RETROANI* a );
 
-#if 0
 /**
  * \brief Setup string animation.
  */
-void retroani_set_string(
-   struct RETROANI* ani_stack, size_t ani_stack_sz,
-   int8_t a_idx, char* str_in, uint8_t str_sz_in, uint8_t color_idx_in );
-#endif
+MERROR_RETVAL retroani_set_string(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx,
+   const char* str_in, size_t str_sz_in,
+   const retroflat_asset_path font_name_in,
+   RETROFLAT_COLOR color_idx_in );
 
 /**
  * \brief Create a new animation in the global animations list.
@@ -540,26 +544,29 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
 
 /* === */
 
-#if 0
-/* TODO: Fix color stuff to use retroflat. */
-void retroani_draw_STRING( struct RETROANI* a ) {
-   int8_t* y_offset = (int8_t*)&(a->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
-   uint8_t str_sz = (uint8_t)(a->tile[RETROANI_TEXT_HEADER_STR_SZ]),
-      color_idx = (uint8_t)(a->tile[RETROANI_TEXT_HEADER_COLOR_IDX]),
-      * y_count = (uint8_t*)&(a->tile[RETROANI_TEXT_HEADER_Y_COUNT]);
-   char* str = (char*)&(a->tile[RETROANI_TEXT_HEADER_STR]);
-   RETROFLAT_COLOR color;
+void retroani_draw_STRING( struct RETROANI* ani ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int8_t* y_offset = NULL;
+   uint8_t* str_sz = NULL,
+      * color_idx = NULL,
+      * y_count = NULL;
+   char* str = NULL;
 
-#ifdef DEPTH_VGA
-   assert( color_idx <= 16 );
+   y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
+   y_count = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_COUNT]);
+   str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
+   str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
+   color_idx = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_COLOR_IDX]);
+
+   /* Draw the animation text. */
+#ifdef RETROGXC_PRESENT
+   retrogxc_string(
+      ani->target, *color_idx, str, *str_sz, ani->font_idx,
 #else
-   assert( color_idx <= 3 );
-#endif /* DEPTH_VGA */
-
-   /* Select the color and draw the animation text. */
-   color = gc_animation_colors[color_idx];
-   graphics_string_at(
-      str, str_sz, a->x, a->y + a->h - (*y_offset), color, 0 );
+   retrofont_string(
+      ani->target, *color_idx, str, *str_sz, ani->font_h,
+#endif /* RETROGXC_PRESENT */
+      ani->x, ani->y + ani->h - (*y_offset), ani->w, ani->h, 0 );
 
    /* Frame advancement delay. */
    if( *y_count < 2 ) {
@@ -570,12 +577,11 @@ void retroani_draw_STRING( struct RETROANI* a ) {
    }
 
    /* Move the text up half a line until it would leave the animation. */
-   *y_offset += (FONT_H / 2);
+   *y_offset += (10 / 2); /* TODO: Dynamic font height. */
    if( *y_offset > RETROANI_TILE_H ) {
-      a->flags &= ~RETROANI_FLAG_ACTIVE;
+      ani->flags &= ~RETROANI_FLAG_ACTIVE;
    }
 }
-#endif
 
 /* === */
 
@@ -583,28 +589,53 @@ void retroani_draw_FRAMES( struct RETROANI* a ) {
    /* TODO */
 }
 
-#if 0
-void retroani_set_string(
-   struct RETROANI* ani_stack, size_t ani_stack_sz,
-   int8_t a_idx, char* str_in, uint8_t str_sz_in, uint8_t color_idx_in
+/* === */
+
+MERROR_RETVAL retroani_set_string(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx,
+   const char* str_in, size_t str_sz_in,
+   const retroflat_asset_path font_name_in,
+   RETROFLAT_COLOR color_idx_in
 ) {
-   struct RETROANI* a = &(ani_stack[a_idx]);
-   int8_t* y_offset = (int8_t*)&(a->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
-   uint8_t* str_sz = (uint8_t*)&(a->tile[RETROANI_TEXT_HEADER_STR_SZ]),
-      * color_idx = (uint8_t*)&(a->tile[RETROANI_TEXT_HEADER_COLOR_IDX]);
-   char* str = (char*)&(a->tile[RETROANI_TEXT_HEADER_STR]);
+   MERROR_RETVAL retval = MERROR_OK;
+   int8_t* y_offset = NULL;
+   uint8_t* str_sz = NULL,
+      * color_idx = NULL;
+   char* str = NULL;
+   struct RETROANI* ani = NULL;
 
    assert( 0 <= a_idx );
-   assert( ani_stack_sz > a_idx );
-   assert( RETROANI_TEXT_MAX_SZ > *str_sz );
-   assert( RETROANI_TYPE_STRING == a->type );
+   assert( mdata_vector_ct( ani_stack ) > a_idx );
 
-   maug_memcopy( str, str_in, str_sz_in );
+   mdata_vector_lock( ani_stack );
+   ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
+   assert( NULL != ani );
+
+   y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
+   str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
+   str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
+   color_idx = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_COLOR_IDX]);
+
+   assert( RETROANI_TEXT_MAX_SZ > *str_sz );
+   assert( RETROANI_TYPE_STRING == ani->type );
+ 
+#ifdef RETROGXC_PRESENT
+   ani->font_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
+#else
+   retval = retrofont_load( font_name_in, &(ani->font_h), 0, 33, 93 );
+#endif /* RETROGXC_PRESENT */
+
+   maug_strncpy( str, str_in, RETROANI_TEXT_MAX_SZ - 1 );
    *str_sz = str_sz_in;
    *color_idx = color_idx_in;
-   *y_offset = FONT_H;
+   *y_offset = 10; /* TODO: Get font height dynamically. */
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
-#endif
 
 /* === */
 
@@ -613,7 +644,6 @@ ssize_t retroani_create(
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
 ) {
    ssize_t idx_out = -1;
-   size_t i = 0;
    struct RETROANI ani_new;
 
    ani_new.flags = RETROANI_FLAG_ACTIVE | flags;
