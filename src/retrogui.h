@@ -12,6 +12,18 @@
 #  error "retrofont not present!"
 #endif /* !RETROFONT_PRESENT */
 
+#ifndef RETROGUI_KEY_ACTIVATE
+#  define RETROGUI_KEY_ACTIVATE RETROFLAT_KEY_SPACE
+#endif /* !RETROGUI_KEY_ACTIVATE */
+
+#ifndef RETROGUI_KEY_NEXT
+#  define RETROGUI_KEY_NEXT RETROFLAT_KEY_DOWN
+#endif /* !RETROGUI_KEY_NEXT */
+
+#ifndef RETROGUI_KEY_PREV
+#  define RETROGUI_KEY_PREV RETROFLAT_KEY_UP
+#endif /* !RETROGUI_KEY_PREV */
+
 /*! \brief RETROGUI::flags indicating controls should be redrawn. */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
@@ -243,15 +255,20 @@ MERROR_RETVAL retrogui_set_ctl_image(
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
 
-retrogui_idc_t retrogui_focus_next( struct RETROGUI* gui );
-
-retrogui_idc_t retrogui_focus_prev( struct RETROGUI* gui );
+retrogui_idc_t retrogui_focus_iter(
+   struct RETROGUI* gui, size_t start, ssize_t incr );
 
 MERROR_RETVAL retrogui_init( struct RETROGUI* gui );
 
 MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc );
 
 MERROR_RETVAL retrogui_free( struct RETROGUI* gui );
+
+#define retrogui_focus_next( gui ) \
+   retrogui_focus_iter( gui, 0, 1 )
+
+#define retrogui_focus_prev( gui ) \
+   retrogui_focus_iter( gui, mdata_vector_ct( &((gui)->ctls) ) - 1, -1 )
 
 #ifdef RETROGUI_C
 
@@ -1516,8 +1533,8 @@ static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
    }
 
    if( NULL == ctl ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Could not find GUI item: " SIZE_T_FMT, idc );
+      debug_printf( RETROGUI_TRACE_LVL,
+         "could not find GUI item IDC " SIZE_T_FMT, idc );
    }
 
    return ctl;
@@ -1626,11 +1643,38 @@ retrogui_idc_t retrogui_poll_ctls(
    if( 0 == *p_input ) {
       goto reset_debounce;
 
+   } else if( RETROGUI_KEY_ACTIVATE == *p_input ) {
+
+      if( 0 <= gui->focus ) {
+         idc_out = gui->focus;
+         gui->focus = -1;
+         gui->flags |= RETROGUI_FLAGS_DIRTY;
+      }
+
+ 
+   } else if( RETROGUI_KEY_NEXT == *p_input ) {
+      retrogui_focus_next( gui );
+
+      debug_printf( RETROGUI_TRACE_LVL, "next: " SSIZE_T_FMT, gui->focus );
+
+      /* Cleanup after the menu. */
+      *p_input = 0;
+
+   } else if( RETROGUI_KEY_PREV == *p_input ) {
+      retrogui_focus_prev( gui );
+
+      debug_printf( RETROGUI_TRACE_LVL, "prev: " SSIZE_T_FMT, gui->focus );
+
+      /* Cleanup after the menu. */
+      *p_input = 0;
+
 #     ifndef RETROGUI_NO_MOUSE
    } else if(
       RETROFLAT_MOUSE_B_LEFT == *p_input ||
       RETROFLAT_MOUSE_B_RIGHT == *p_input
    ) {
+      /* Handle mouse input. */
+
       /* Remove all focus before testing if a new control has focus. */
       gui->focus = RETROGUI_IDC_NONE;
 
@@ -2266,86 +2310,75 @@ cleanup:
 
 /* === */
 
-retrogui_idc_t retrogui_focus_next( struct RETROGUI* gui ) {
-   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
-   union RETROGUI_CTL* ctl = NULL;
-   MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
-   ssize_t i_before = -1;
-
-   if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
-      goto cleanup;
-   }
-
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
-
-   for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
-      ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
-      if( RETROGUI_IDC_NONE == gui->focus || i_before >= 0 ) {
-         idc_out = ctl->base.idc;
-         gui->focus = idc_out;
-         goto cleanup;
-      } else if( ctl->base.idc == gui->focus ) {
-         i_before = i;
-      }
-   }
-
-   if( i_before >= 0 ) {
-      idc_out = 
-         mdata_vector_get( &(gui->ctls), 0, union RETROGUI_CTL )->base.idc;
-      gui->focus = idc_out;
-   }
-
-cleanup:
-
-   assert( MERROR_OK == retval );
-
-   mdata_vector_unlock( &(gui->ctls) );
-
-   debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " SIZE_T_FMT, idc_out );
-
-   return idc_out;
-}
-
-/* === */
-
-retrogui_idc_t retrogui_focus_prev( struct RETROGUI* gui ) {
+retrogui_idc_t retrogui_focus_iter(
+   struct RETROGUI* gui, size_t start, ssize_t incr
+) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
    ssize_t i_before = -1;
+   int autolock = 0;
 
    if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
       goto cleanup;
    }
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
-   for( i = mdata_vector_ct( &(gui->ctls) ) - 1 ; 0 <= i ; i-- ) {
+   /* Find the currently selected IDC. */
+   for(
+      i = start ; mdata_vector_ct( &(gui->ctls) ) > i && 0 <= i ; i += incr
+   ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
-      if( RETROGUI_IDC_NONE == gui->focus || i_before >= 0 ) {
+      if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+         continue;
+      } else if( RETROGUI_IDC_NONE == gui->focus || 0 <= i_before ) {
+         /* We're primed to set the new focus, so do that and finish. */
          idc_out = ctl->base.idc;
          gui->focus = idc_out;
          goto cleanup;
+
       } else if( ctl->base.idc == gui->focus ) {
+         /* We've found the current focus, so prime to select the new focus. */
          i_before = i;
       }
    }
 
-   if( i_before >= 0 ) {
+   /* We didn't select a focus in the loop above, so we must be wrapping around!
+    */
+
+   /* Select the next IDC. */
+   if( 0 > i ) {
+      /* Wrap around to last item. */
       idc_out = mdata_vector_get( &(gui->ctls),
          mdata_vector_ct( &(gui->ctls) ) - 1, union RETROGUI_CTL )->base.idc;
       gui->focus = idc_out;
+
+   } else if( mdata_vector_ct( &(gui->ctls) ) <= i ) {
+      /* Wrap around to first item. */
+      idc_out =
+         mdata_vector_get( &(gui->ctls), 0, union RETROGUI_CTL )->base.idc;
+      gui->focus = idc_out;
+
+   } else {
+      error_printf( "invalid focus: " SSIZE_T_FMT, i );
+
    }
 
 cleanup:
 
+   /* New focus! Dirty! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
    assert( MERROR_OK == retval );
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " SIZE_T_FMT, idc_out );
 

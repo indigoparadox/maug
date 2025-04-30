@@ -448,12 +448,15 @@ MERROR_RETVAL retrowin_destroy_win(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN* win = NULL;
    ssize_t i_free = -1;
+   int autolock = 0;
 
    debug_printf( RETROWIN_TRACE_LVL,
       "attempting to destroy window: " SIZE_T_FMT, idc );
 
-   assert( !mdata_vector_is_locked( win_stack ) );
-   mdata_vector_lock( win_stack );
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock = 1;
+   }
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
       win = mdata_vector_get( win_stack, i, struct RETROWIN );
@@ -481,14 +484,20 @@ MERROR_RETVAL retrowin_destroy_win(
 
    /* Remove the window from the vector if asked to. */
    if( 0 <= i_free ) {
-      mdata_vector_unlock( win_stack );
+      if( autolock ) {
+         mdata_vector_unlock( win_stack );
+      }
       mdata_vector_remove( win_stack, i_free );
-      mdata_vector_lock( win_stack );
+      if( autolock ) {
+         mdata_vector_lock( win_stack );
+      }
    }
 
 cleanup:
 
-   mdata_vector_unlock( win_stack );
+   if( autolock ) {
+      mdata_vector_unlock( win_stack );
+   }
 
    return retval;
 }

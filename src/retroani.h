@@ -660,7 +660,6 @@ ssize_t retroani_create(
    idx_out = mdata_vector_append(
       ani_stack, &ani_new, sizeof( struct RETROANI ) );
 
-cleanup:
    return idx_out;
 }
 
