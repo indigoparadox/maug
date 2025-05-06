@@ -64,10 +64,12 @@ typedef int16_t retrotile_coord_t;
  */
 #define RETROTILE_PARSER_MODE_DEFS   1
 
-#define RETROTILE_CLASS_TILE    0
-#define RETROTILE_CLASS_MOBILE  1
-#define RETROTILE_CLASS_WARP    2
-#define RETROTILE_CLASS_ITEM    3
+#define RETROTILE_CLASS_TABLE( f ) \
+   f( TILE,    tile,    0 ) \
+   f( MOBILE,  mobile,  1 ) \
+   f( WARP,    warp,    2 ) \
+   f( ITEM,    item,    3 ) \
+   f( CROP,    crop,    4 )
 
 /**
  * \addtogroup \retrotile_defs RetroTile Tile Definitions
@@ -493,6 +495,11 @@ static MAUG_CONST uint8_t SEG_MCONST gc_retrotile_mstate_modes[] = {
    0
 };
 
+#  define RETROTILE_CLASS_TABLE_CONSTS( A, a, i ) \
+      MAUG_CONST uint8_t SEG_MCONST RETROTILE_CLASS_ ## A = i;
+
+RETROTILE_CLASS_TABLE( RETROTILE_CLASS_TABLE_CONSTS )
+
 /* === */
 
 static void retrotile_parser_match_token(
@@ -663,24 +670,15 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          assert( NULL != tile_def );
          assert( 0 == tile_def->tile_class );
 
-         if( 0 == strncmp( "mobile", token, 7 ) ) {
-            tile_def->tile_class = RETROTILE_CLASS_MOBILE;
-            debug_printf( RETROTILE_TRACE_LVL,
-               "set tile " SIZE_T_FMT " type: mobile (%u)",
-               parser->tileset_id_cur, tile_def->tile_class );
+         #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
+            } else if( 0 == strncmp( #a, token, strlen( #a ) + 1 ) ) { \
+               tile_def->tile_class = RETROTILE_CLASS_ ## A; \
+               debug_printf( RETROTILE_TRACE_LVL, \
+                  "set tile " SIZE_T_FMT " type: " #a " (%u)", \
+                  parser->tileset_id_cur, tile_def->tile_class );
 
-         } else if( 0 == strncmp( "warp", token, 5 ) ) {
-            tile_def->tile_class = RETROTILE_CLASS_WARP;
-            debug_printf( RETROTILE_TRACE_LVL,
-               "set tile " SIZE_T_FMT " type: warp (%u)",
-               parser->tileset_id_cur, tile_def->tile_class );
-
-         } else if( 0 == strncmp( "item", token, 5 ) ) {
-            tile_def->tile_class = RETROTILE_CLASS_ITEM;
-            debug_printf( RETROTILE_TRACE_LVL,
-               "set tile " SIZE_T_FMT " type: item (%u)",
-               parser->tileset_id_cur, tile_def->tile_class );
-
+         if( 0 ) {
+         RETROTILE_CLASS_TABLE( RETROTILE_CLASS_TABLE_SET )
          } else {
             tile_def->tile_class = RETROTILE_CLASS_TILE;
             debug_printf( RETROTILE_TRACE_LVL,
@@ -907,6 +905,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
 
       } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
+         /* TODO: Use the class table to create layers for e.g. crops, items. */
          if( 0 == strncmp( "mobile", token, 7 ) ) {
             debug_printf( RETROTILE_TRACE_LVL,
                "layer " SIZE_T_FMT " type: mobile",
@@ -2151,6 +2150,12 @@ cleanup:
       extern MAUG_CONST uint8_t SEG_MCONST name;
 
 RETROTILE_PARSER_MSTATE_TABLE( RETROTILE_PARSER_MSTATE_TABLE_CONST )
+
+#  define RETROTILE_CLASS_TABLE_CONSTS( A, a, i ) \
+      extern MAUG_CONST uint8_t SEG_MCONST RETROTILE_CLASS_ ## A;
+
+RETROTILE_CLASS_TABLE( RETROTILE_CLASS_TABLE_CONSTS )
+
 
 #endif /* RETROTIL_C */
 
