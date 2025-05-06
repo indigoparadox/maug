@@ -310,7 +310,10 @@ struct RETROTILE_PARSER {
    f( MTILESTATE_LAYER_CLASS,       21, "class",      15 /* LAYER */    , 0 ) \
    f( MTILESTATE_TILES_CLASS,       22, "type",       6  /* TILES */    , 1 ) \
    f( MTILESTATE_NAME,              23, "name",       0                 , 1 ) \
-   f( MTILESTATE_WANGSETS,          24, "wangsets",   0                 , 1 )
+   f( MTILESTATE_WANGSETS,          24, "wangsets",   0                 , 1 ) \
+   f( MTILESTATE_TPROP,             25, "properties", 0  /* NONE */     , 1 ) \
+   f( MTILESTATE_TPROP_NAME,        26, "name",       25 /* PROP */     , 1 ) \
+   f( MTILESTATE_TPROP_VAL,         27, "value",      25 /* PROP */     , 1 )
 
 /* TODO: Mine wangsets for slowdown values, etc. */
 
@@ -732,6 +735,18 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          RETROTILE_TRACE_LVL, "tileset name: %s", parser->tileset_name );
 
       retrotile_parser_mstate( parser, 0 );
+
+   } else if( MTILESTATE_TPROP_NAME == parser->mstate ) {
+      maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
+      maug_strncpy(
+         parser->last_prop_name, token, RETROTILE_PROP_NAME_SZ_MAX );
+      parser->last_prop_name_sz = token_sz;
+      retrotile_parser_mstate( parser, MTILESTATE_TPROP );
+
+   } else if( MTILESTATE_TPROP_VAL == parser->mstate ) {
+      /* This should be handled in the custom_cb above! */
+      maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
+      retrotile_parser_mstate( parser, MTILESTATE_TPROP );
    }
 
 cleanup:
@@ -961,6 +976,9 @@ MERROR_RETVAL retrotile_json_close_list( void* parg ) {
       retrotile_parser_mstate( parser, MTILESTATE_NONE );
 
    } else if( MTILESTATE_PROP == parser->mstate ) {
+      retrotile_parser_mstate( parser, MTILESTATE_NONE );
+
+   } else if( MTILESTATE_TPROP == parser->mstate ) {
       retrotile_parser_mstate( parser, MTILESTATE_NONE );
    }
 
