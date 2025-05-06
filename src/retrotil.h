@@ -172,7 +172,8 @@ struct RETROTILE_COORDS {
  * \warning Only tile layers are supported!
  */
 struct RETROTILE {
-   char name[RETROTILE_NAME_SZ_MAX];
+   char name[RETROTILE_NAME_SZ_MAX + 1];
+   char tileset[RETROTILE_NAME_SZ_MAX + 1];
    /*! \brief Size of the tilemap in bytes (including this struct header). */
    uint32_t sz;
    /*! \brief Number of tile layers in this tilemap. */
@@ -259,6 +260,7 @@ struct RETROTILE_PARSER {
    size_t last_prop_name_sz;
    /*! \brief The name to give to the new tilemap. */
    char tilemap_name[RETROTILE_NAME_SZ_MAX + 1];
+   char tileset_name[RETROTILE_NAME_SZ_MAX + 1];
    size_t pass_layer_iter;
    /**
     * \brief Highest tileset ID on first pass and next ID to be assigned
@@ -306,7 +308,11 @@ struct RETROTILE_PARSER {
    f( MTILESTATE_PROP_NAME,         19, "name",       18 /* PROP */     , 0 ) \
    f( MTILESTATE_PROP_VAL,          20, "value",      18 /* PROP */     , 0 ) \
    f( MTILESTATE_LAYER_CLASS,       21, "class",      15 /* LAYER */    , 0 ) \
-   f( MTILESTATE_TILES_CLASS,       22, "type",       6  /* TILES */    , 1 )
+   f( MTILESTATE_TILES_CLASS,       22, "type",       6  /* TILES */    , 1 ) \
+   f( MTILESTATE_NAME,              23, "name",       0                 , 1 ) \
+   f( MTILESTATE_WANGSETS,          24, "wangsets",   0                 , 1 )
+
+/* TODO: Mine wangsets for slowdown values, etc. */
 
 MERROR_RETVAL
 retrotile_parse_json_c( struct RETROTILE_PARSER* parser, char c );
@@ -425,7 +431,7 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
 
 MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
-   const char* tilemap_name );
+   const char* tilemap_name, const char* tileset_name );
 
 MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max );
 
@@ -719,6 +725,13 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 
       maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
+
+   } else if( MTILESTATE_NAME == parser->mstate ) {
+      maug_strncpy( parser->tileset_name, token, RETROTILE_NAME_SZ_MAX );
+      debug_printf(
+         RETROTILE_TRACE_LVL, "tileset name: %s", parser->tileset_name );
+
+      retrotile_parser_mstate( parser, 0 );
    }
 
 cleanup:
@@ -1142,7 +1155,8 @@ MERROR_RETVAL retrotile_parse_json_file(
             /* Allocate tiles for the new layers. */
             retval = retrotile_alloc(
                p_tilemap_h, parser->tiles_w, parser->tiles_h,
-               parser->pass_layer_iter, parser->tilemap_name );
+               parser->pass_layer_iter, parser->tilemap_name,
+               parser->tileset_name );
             maug_cleanup_if_not_ok();
             maug_mlock( *p_tilemap_h, parser->t );
          }
@@ -1926,7 +1940,7 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
 
 MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
-   const char* tilemap_name
+   const char* tilemap_name, const char* tileset_name
 ) {
    struct RETROTILE_LAYER* layer_iter = NULL;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1956,6 +1970,8 @@ MERROR_RETVAL retrotile_alloc(
    tilemap->tile_scale = RETROTILE_TILE_SCALE_DEFAULT;
 
    maug_strncpy( tilemap->name, tilemap_name, RETROTILE_NAME_SZ_MAX );
+
+   maug_strncpy( tilemap->tileset, tileset_name, RETROTILE_NAME_SZ_MAX );
 
    for( i = 0 ; layers_count > i ; i++ ) {
       layer_iter = retrotile_get_layer_p( tilemap, i );
