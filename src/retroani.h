@@ -111,9 +111,6 @@ struct RETROANI_FRAME {
 };
 #endif
 
-#define retroani_set_target( ani_stack, ani_idx, bitmap ) \
-   ani_stack[ani_idx].target = bitmap;
-
 #define retroani_set_mspf( ani_stack, ani_idx, mspf ) \
    ani_stack[ani_idx].mspf = mspf;
 
@@ -152,6 +149,9 @@ struct RETROANI {
 
 /*! \brief Callback to call on active animations for every frame. */
 typedef void (*RETROANI_CB)( struct RETROANI* a );
+
+MERROR_RETVAL retroani_set_target(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target );
 
 /**
  * \brief Setup string animation.
@@ -587,6 +587,29 @@ void retroani_draw_STRING( struct RETROANI* ani ) {
 
 void retroani_draw_FRAMES( struct RETROANI* a ) {
    /* TODO */
+}
+
+/* === */
+
+MERROR_RETVAL retroani_set_target(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROANI* ani = NULL;
+
+   assert( mdata_vector_ct( ani_stack ) > a_idx );
+
+   mdata_vector_lock( ani_stack );
+   ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
+   assert( NULL != ani );
+
+   ani->target = target;
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
 }
 
 /* === */
