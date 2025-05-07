@@ -191,6 +191,9 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
          maug_cleanup_if_not_ok();
       }
 
+      /* Always blit the finished window to the screen, to compensate for e.g.
+       * the implicit screen-clearing of the engine loop.
+       */
       retval = retroflat_2d_blit_win(
          &(win->gui_bmp), win->gui->x, win->gui->y );
    }
