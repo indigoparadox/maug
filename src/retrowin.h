@@ -151,8 +151,6 @@ MERROR_RETVAL retrowin_redraw_win( struct RETROWIN* win ) {
 
    retroflat_2d_release_bitmap( &(win->gui_bmp) );
 
-   retval = retroflat_2d_blit_win( &(win->gui_bmp), win->gui->x, win->gui->y );
-
 cleanup:
 
    return retval;
@@ -180,17 +178,21 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
          continue;
       }
 
-      if( RETROGUI_FLAGS_DIRTY != (RETROGUI_FLAGS_DIRTY & win->gui->flags) ) {
-         continue;
+      /* OpenGL tends to call glClear on every frame, so always redraw! */
+      if( RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui->flags) ) {
+         debug_printf( RETROWIN_TRACE_LVL,
+            "redrawing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT,
+            i, win->idc );
+
+         /* Redraw the window bitmap, including controls. */
+         retrogui_lock( win->gui );
+         retval = retrowin_redraw_win( win );
+         retrogui_unlock( win->gui );
+         maug_cleanup_if_not_ok();
       }
 
-      debug_printf( RETROWIN_TRACE_LVL,
-         "redrawing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT, i, win->idc );
-
-      retrogui_lock( win->gui );
-      retval = retrowin_redraw_win( win );
-      retrogui_unlock( win->gui );
-      maug_cleanup_if_not_ok();
+      retval = retroflat_2d_blit_win(
+         &(win->gui_bmp), win->gui->x, win->gui->y );
    }
 
 cleanup:

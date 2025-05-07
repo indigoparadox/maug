@@ -100,7 +100,7 @@
    maug_munlock( dest_ctl. field ## _h, str_tmp );
 
 /*! \brief Unique identifying constant number for controls. */
-typedef size_t retrogui_idc_t;
+typedef ssize_t retrogui_idc_t;
 
 #define RETROGUI_IDC_NONE 0
 
@@ -233,7 +233,7 @@ MERROR_RETVAL retrogui_push_ctl(
 MERROR_RETVAL retrogui_get_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, char* buffer, size_t buffer_sz );
 
-ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, size_t idc );
+ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc );
 
 #ifndef RETROGUI_NO_TEXTBOX
 
@@ -1754,7 +1754,9 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
    size_t i = 0;
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
+   int autolock = 0;
 
+   /* OpenGL tends to call glClear on every frame, so always redraw! */
    if( RETROGUI_FLAGS_DIRTY != (RETROGUI_FLAGS_DIRTY & gui->flags) ) {
       /* Shortcut! */
       return MERROR_OK;
@@ -1764,8 +1766,10 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       return MERROR_OK;
    }
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    if(
       RETROFLAT_COLOR_BLACK != gui->bg_color &&
@@ -1790,7 +1794,9 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
 
 cleanup:
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    return retval;
 }
@@ -1803,9 +1809,12 @@ MERROR_RETVAL retrogui_pos_ctl(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
+   int autolock = 0;
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    debug_printf( RETROGUI_TRACE_LVL,
       "moving control " SIZE_T_FMT " to: " SIZE_T_FMT ", " SIZE_T_FMT,
@@ -1839,7 +1848,9 @@ MERROR_RETVAL retrogui_pos_ctl(
 
 cleanup:
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    return retval;
 
@@ -1851,6 +1862,7 @@ MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int autolock = 0;
 
    assert( 0 < ctl->base.idc );
 
@@ -1864,14 +1876,6 @@ MERROR_RETVAL retrogui_push_ctl(
       retval = MERROR_GUI;
       goto cleanup;
    }
-
-   assert( !retrogui_is_locked( gui ) );
-   /*
-   if( retrogui_is_locked( gui ) ) {
-      error_printf( "GUI is locked!" );
-      goto cleanup;
-   }
-   */
 
    /* TODO: Hunt for control IDC and fail if duplicate found! */
 
@@ -1914,7 +1918,10 @@ MERROR_RETVAL retrogui_push_ctl(
    /* Now that append is done, lock the vector and grab a pointer to our
     * newly-pushed control to run some fixups on.
     */
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    /* TODO: More elegant way to grab index. */
    ctl = mdata_vector_get_last( &(gui->ctls),
@@ -1950,7 +1957,9 @@ MERROR_RETVAL retrogui_push_ctl(
 
 cleanup:
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    return retval;
 }
@@ -2008,9 +2017,12 @@ MERROR_RETVAL retrogui_get_ctl_text(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
+   int autolock = 0;
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
@@ -2051,7 +2063,9 @@ cleanup:
       }
    }
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    return retval;
 }
@@ -2064,9 +2078,11 @@ ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
    ssize_t idx = -1;
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
+   int autolock = 0;
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+   }
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
@@ -2083,7 +2099,9 @@ ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
 
 cleanup:
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    if( MERROR_OK != retval ) {
       idx = -1 * retval;
@@ -2188,9 +2206,12 @@ MERROR_RETVAL retrogui_set_ctl_image(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
+   int autolock = 0;
 
-   assert( !retrogui_is_locked( gui ) );
-   mdata_vector_lock( &(gui->ctls) );
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    debug_printf( RETROGUI_TRACE_LVL,
       "setting control " SIZE_T_FMT " image to: %s", idc, path );
@@ -2229,7 +2250,9 @@ MERROR_RETVAL retrogui_set_ctl_image(
 
 cleanup:
 
-   mdata_vector_unlock( &(gui->ctls) );
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
 
    return retval;
 }
@@ -2374,7 +2397,9 @@ cleanup:
    /* New focus! Dirty! */
    gui->flags |= RETROGUI_FLAGS_DIRTY;
 
-   assert( MERROR_OK == retval );
+   if( MERROR_OK != retval ) {
+      idc_out = merror_retval_to_sz( retval );
+   }
 
    if( autolock ) {
       mdata_vector_unlock( &(gui->ctls) );
