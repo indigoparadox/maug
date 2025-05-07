@@ -93,7 +93,7 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
    while( p_c - 1 > font_name ) {
       /* Start at the char before the '.' and work backwords until a '-'. */
       p_c--;
-      if( '-' == *p_c ) {
+      if( '-' == *p_c || '_' == *p_c ) {
          break;
       }
 
@@ -110,7 +110,8 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
 
    glyph_h = atoi( glyph_h_buf );
 
-   debug_printf( 1, "detected glyph height: " SIZE_T_FMT, glyph_h );
+   debug_printf(
+      RETROFONT_TRACE_LVL, "detected glyph height: " SIZE_T_FMT, glyph_h );
 
    return glyph_h;
 }

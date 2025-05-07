@@ -639,6 +639,8 @@ cleanup:
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
+   } else {
+      debug_printf( MFILE_TRACE_LVL, "opened file: %s", filename );
    }
 
    fstat( in_file, &st );
@@ -714,6 +716,8 @@ cleanup:
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
+   } else {
+      debug_printf( MFILE_TRACE_LVL, "opened file: %s", filename );
    }
 
 #     ifdef MAUG_NO_STAT
