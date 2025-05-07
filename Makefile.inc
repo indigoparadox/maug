@@ -108,3 +108,25 @@ include maug/make/Makends.inc
 include maug/make/Makeos2.inc
 include maug/make/Makeplug.inc
 
+# ---
+
+define TGTISO
+
+# Easier to understand error messages.
+ifeq ("$$(shell which mkisofs 2>/dev/null)","")
+$$(error could not find mkisofs!)
+endif
+
+$(1).dst: $$(BINS)
+	mkdir -v -p $$@
+	cp -v -R $$^ $$@
+	cp -v -R $(2) $$@
+
+$(1).iso: $(1).dst
+	mkisofs -J -o $$@ $$<
+
+CLEAN_TARGETS += $(1).dst $(1).iso
+
+endef
+
+
