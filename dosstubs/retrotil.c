@@ -4,6 +4,9 @@
 #  include <maug.h>
 #  include <mjson.h>
 #  include <retroflt.h>
+#  ifndef RETROFLAT_NO_RETROGXC
+#     include <retrogxc.h>
+#  endif
 #  define RETROTIL_C
 #  include <retrotil.h>
 #  include <retropth.h>

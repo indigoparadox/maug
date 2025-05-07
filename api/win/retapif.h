@@ -875,6 +875,8 @@ void retroflat_message(
    MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
 #  endif /* MAUG_WCHAR */
 
+   error_printf( "message: %s", msg_out );
+
    va_end( vargs );
 }
 
@@ -1450,8 +1452,17 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
-   assert( (HBITMAP)NULL != target->b );
-   assert( (HBITMAP)NULL != src->b );
+   if( (HBITMAP)NULL == target->b ) {
+      error_printf( "invalid bitmap blit target!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   if( (HBITMAP)NULL == src->b ) {
+      error_printf( "invalid bitmap blit source!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
 
    retroflat_internal_autolock_bitmap( src, locked_src_internal );
    assert( retroflat_bitmap_locked( target ) );

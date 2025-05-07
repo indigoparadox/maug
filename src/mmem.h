@@ -41,6 +41,9 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_strlen( str ) strlen( str )
 
+#  define maug_is_locked( handle, ptr ) \
+      (NULL == (handle) && NULL != (ptr))
+
 #else
 
 typedef void* MAUG_MHANDLE;
@@ -72,6 +75,9 @@ typedef void* MAUG_MHANDLE;
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
 #  define maug_strlen( str ) strlen( str )
+
+#  define maug_is_locked( handle, ptr ) \
+      (NULL == (handle) && NULL != (ptr))
 
 #endif
 

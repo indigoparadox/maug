@@ -247,7 +247,11 @@ MERROR_RETVAL mdata_table_get_void(
       debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
          (v)->locks ); \
    } else { \
-      assert( NULL != (v)->data_h && NULL == (v)->data_bytes ); \
+      if( maug_is_locked( (v)->data_h, (v)->data_bytes ) ) { \
+         error_printf( "attempting to double-lock vector!" ); \
+         retval = MERROR_OVERFLOW; \
+         goto cleanup; \
+      } \
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
       maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
       debug_printf( MDATA_TRACE_LVL, "locked vector " #v ); \
