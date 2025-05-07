@@ -438,6 +438,10 @@ MERROR_RETVAL retrotile_alloc(
    MAUG_MHANDLE* p_tilemap_h, size_t w, size_t h, size_t layers_count,
    const char* tilemap_name, const char* tileset_name );
 
+void retrotile_format_asset_path(
+   retroflat_asset_path path_out, const char* afile,
+   struct RETROTILE_PARSER* parser );
+
 MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max );
 
 MERROR_RETVAL retrotile_topdown_draw(
@@ -2005,6 +2009,18 @@ cleanup:
    }
 
    return retval;
+}
+
+/* === */
+
+void retrotile_format_asset_path(
+   retroflat_asset_path path_out, const char* afile,
+   struct RETROTILE_PARSER* parser
+) {
+   /* Load the portrait. */
+   maug_mzero( path_out, RETROFLAT_ASSETS_PATH_MAX + 1 );
+   maug_snprintf( path_out, RETROFLAT_ASSETS_PATH_MAX, "%s/%s",
+      parser->dirname, afile );
 }
 
 /* === */
