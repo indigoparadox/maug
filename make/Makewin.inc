@@ -80,12 +80,6 @@ ifeq ("$(SCREENSAVER)","1")
 	CFLAGS_GCC64_WIN += -DRETROFLAT_SCREENSAVER
 endif
 
-ifeq ("$(OPENGL)","1")
-	LDFLAGS_WATCOM386_WIN += libr opengl32
-	LDFLAGS_GCC_WIN += -lopengl32
-	LDFLAGS_GCC64_WIN += -lopengl32
-endif
-
 ifeq ("$(WING)","1")
 	CFLAGS_WATCOM_WIN += -DRETROFLAT_WING
 	CFLAGS_WATCOM386_WIN += -DRETROFLAT_WING
@@ -95,6 +89,14 @@ ifeq ("$(OPENGL)","1")
 CFLAGS_WATCOM386_WIN += -I$(MAUG_ROOT)/api3d/opengl
 CFLAGS_GCC_WIN += -I$(MAUG_ROOT)/api3d/opengl
 CFLAGS_GCC64_WIN += -I$(MAUG_ROOT)/api3d/opengl
+LDFLAGS_WATCOM386_WIN += libr opengl32
+LDFLAGS_GCC_WIN += -lopengl32
+LDFLAGS_GCC64_WIN += -lopengl32
+endif
+
+ifeq ("$(DIRECT3D)","1")
+CFLAGS_WATCOM386_WIN += -I$(MAUG_ROOT)/api3d/direct3d -I$(WATCOM)/h/nt/directx
+LDFLAGS_WATCOM386_WIN += libr ddraw
 endif
 
 CFLAGS_GCC_WIN_WIN32 := -DRETROFLAT_API_WIN32

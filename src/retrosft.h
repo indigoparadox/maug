@@ -121,6 +121,7 @@ void retrosoft_line_strategy(
 }
 
 #if defined( RETROFLAT_OPENGL ) || \
+   defined( RETROFLAT_DIRECT3D ) || \
    defined( RETROFLAT_API_PC_BIOS ) || \
    defined( RETROFLAT_SOFT_LINES )
 

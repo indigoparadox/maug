@@ -2,29 +2,12 @@
 #ifndef RETAPI3_H
 #define RETAPI3_H
 
-#define S3L_MODEL_MAX 1000
+#include <ddraw.h>
+#include <d3d.h>
 
-#define S3L_PIXEL_FUNCTION retro3d_small3dl_pixel
-#define S3L_MAX_PIXELS (1024 * 768)
-
-#include <small3dlib.h>
-
-struct small3d_model {
-   S3L_Unit vertices[S3L_MODEL_MAX * 3];
-   S3L_Index triangles[S3L_MODEL_MAX];
-   S3L_Unit uvs[S3L_MODEL_MAX];
-   S3L_Index uvfaces[S3L_MODEL_MAX];
-   size_t vertex_ct;
-   size_t triangle_ct;
-};
-
-struct small3d_model* gs_current_model;
-
-void retro3d_small3dl_pixel( S3L_PixelInfo* px ) {
-
-}
-
-/* === */
+LPDIRECT3D3 lpD3D = NULL;
+LPDIRECT3DDEVICE3 lpD3DDevice = NULL;
+LPDIRECT3DVIEWPORT3 lpViewport = NULL;
 
 void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
 }
@@ -87,9 +70,6 @@ void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z ) {
 /* === */
 
 void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t ) {
-   gs_current_model->vertices[gs_current_model->vertex_ct++] = x;
-   gs_current_model->vertices[gs_current_model->vertex_ct++] = y;
-   gs_current_model->vertices[gs_current_model->vertex_ct++] = z;
 }
 
 /* === */

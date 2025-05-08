@@ -1947,22 +1947,10 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags );
 
 #ifdef RETROFLAT_SOFT_SHAPES
-#  ifdef RETROFLAT_OPENGL
-/* Make sure we're not passing NULL to openGL texture drawers... they can't
- * handle that!
- */
-#     define retroflat_rect( t, c, x, y, w, h, f ) \
-      assert( NULL != t ); \
-      retrosoft_rect( t, c, x, y, w, h, f );
-#     define retroflat_ellipse( t, c, x, y, w, h, f ) \
-      assert( NULL != t ); \
-      retrosoft_ellipse( t, c, x, y, w, h, f )
-#  else
-#     define retroflat_rect( t, c, x, y, w, h, f ) \
-      retrosoft_rect( t, c, x, y, w, h, f )
-#     define retroflat_ellipse( t, c, x, y, w, h, f ) \
-      retrosoft_ellipse( t, c, x, y, w, h, f )
-#  endif /* RETROFLAT_3D */
+#  define retroflat_rect( t, c, x, y, w, h, f ) \
+   retrosoft_rect( t, c, x, y, w, h, f )
+#  define retroflat_ellipse( t, c, x, y, w, h, f ) \
+   retrosoft_ellipse( t, c, x, y, w, h, f )
 #else
 
 /**
