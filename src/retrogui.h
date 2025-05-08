@@ -124,7 +124,7 @@ typedef ssize_t retrogui_idc_t;
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
    f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
    f( 4, IMAGE, retroflat_blit_t image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
-   f( 5, FILLBAR, uint8_t flags; size_t cur; size_t max; )
+   f( 5, FILLBAR, uint8_t flags; uint16_t cur; uint16_t max; )
 
 #ifdef RETROGUI_NO_TEXTBOX
 #  define RETROGUI_CTL_TABLE( f ) RETROGUI_CTL_TABLE_BASE( f )
@@ -251,6 +251,10 @@ MERROR_RETVAL retrogui_set_ctl_text(
 
 MERROR_RETVAL retrogui_set_ctl_image(
    struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags );
+
+MERROR_RETVAL retrogui_set_ctl_level(
+   struct RETROGUI* gui, retrogui_idc_t idc, uint16_t level, uint16_t max,
+   uint8_t flags );
 
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
@@ -1296,9 +1300,6 @@ static void retrogui_redraw_IMAGE(
 #  if defined( RETROGUI_NATIVE_WIN )
    /* Do nothing. */
 #  else
-#     ifdef RETROGXC_PRESENT
-   MERROR_RETVAL retval = MERROR_OK;
-#     endif /* RETROGXC_PRESENT */
 
 #     ifdef RETROGXC_PRESENT
    if( 0 > ctl->IMAGE.image_cache_id ) {
@@ -1404,19 +1405,6 @@ static retrogui_idc_t retrogui_click_FILLBAR(
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
-   if( 0 < ctl->BUTTON.push_frames ) {
-      goto cleanup;
-   }
-
-   /* Set the last button clicked. */
-   idc_out = ctl->base.idc;
-
-   /* Set the frames to show the pushed-in view. */
-   /* TODO: Use a constant, here. */
-   ctl->BUTTON.push_frames = 3;
-
-cleanup:
-
    return idc_out;
 }
 
@@ -1426,20 +1414,27 @@ static retrogui_idc_t retrogui_key_FILLBAR(
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
-   /* Set the last button clicked. */
-   /* TODO: Only set out on ENTER/SPACE. */
-   /* idc_out = ctl->base.idc; */
-
    return idc_out;
 }
 
 static void retrogui_redraw_FILLBAR(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
+   retroflat_pxxy_t fill_w = 0;
+
+   if( 0 == ctl->FILLBAR.cur ) {
+      fill_w = 0;
+   } else {
+      fill_w = ctl->base.w * ctl->FILLBAR.max / ctl->FILLBAR.cur;
+   }
 
    retroflat_2d_rect(
-      gui->draw_bmp, ctl->base.bg_color, ctl->base.x, ctl->base.y,
-      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+      gui->draw_bmp, ctl->base.bg_color, ctl->base.x + fill_w, ctl->base.y,
+      ctl->base.w - fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+
+   retroflat_2d_rect(
+      gui->draw_bmp, ctl->base.fg_color, ctl->base.x, ctl->base.y,
+      fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    return;
 }
@@ -1449,11 +1444,9 @@ static MERROR_RETVAL retrogui_push_FILLBAR( union RETROGUI_CTL* ctl ) {
 
 #  if defined( RETROGUI_NATIVE_WIN )
 
-   /* TODO */
+   /* TODO: Native fillbar implementation. */
 
 #  endif
-
-cleanup:
 
    return retval;
 }
@@ -1467,9 +1460,7 @@ static MERROR_RETVAL retrogui_sz_FILLBAR(
 
    assert( NULL != ctl );
 
-   /* TODO */
-
-cleanup:
+   /* TODO? */
 
    return retval;
 }
@@ -2246,6 +2237,54 @@ MERROR_RETVAL retrogui_set_ctl_image(
    }
 
    /* New text! Redraw! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
+cleanup:
+
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrogui_set_ctl_level(
+   struct RETROGUI* gui, retrogui_idc_t idc, uint16_t level, uint16_t max,
+   uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL* ctl = NULL;
+   int autolock = 0;
+
+   if( !retrogui_is_locked( gui ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "setting control " SIZE_T_FMT " level to: %u", idc, level  );
+
+   /* Figure out the control to update. */
+   ctl = _retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Perform the actual update. */
+   if( RETROGUI_CTL_TYPE_FILLBAR == ctl->base.type ) {
+      ctl->FILLBAR.cur = level;
+      if( 0 < max ) {
+         ctl->FILLBAR.max = max;
+      }
+   } else {
+      error_printf( "invalid control type! no level!" );
+      goto cleanup;
+   }
+
+   /* New level! Redraw! */
    gui->flags |= RETROGUI_FLAGS_DIRTY;
 
 cleanup:
