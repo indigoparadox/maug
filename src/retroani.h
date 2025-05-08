@@ -114,6 +114,17 @@ struct RETROANI_FRAME {
 #define retroani_set_mspf( ani_stack, ani_idx, mspf ) \
    ani_stack[ani_idx].mspf = mspf;
 
+struct RETROANI_HOLE {
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+   retroflat_pxxy_t w;
+   retroflat_pxxy_t h;
+};
+
+#ifndef RETROANI_HOLE_CT_MAX
+#  define RETROANI_HOLE_CT_MAX 4
+#endif /* !RETROANI_HOLE_CT_MAX */
+
 /*! \brief Internal representation of an animation. Do not call directly; use
  *         retroani_create() instead.
  */
@@ -145,6 +156,7 @@ struct RETROANI {
    MAUG_MHANDLE font_h;
 #endif /* RETROGXC_PRESENT */
    uint16_t mspf;
+   struct RETROANI_HOLE hole;
 };
 
 /*! \brief Callback to call on active animations for every frame. */
@@ -161,6 +173,14 @@ MERROR_RETVAL retroani_set_string(
    const char* str_in, size_t str_sz_in,
    const retroflat_asset_path font_name_in,
    RETROFLAT_COLOR color_idx_in );
+
+/**
+ * \brief Punch a "hole" in all animations with the given flags.
+ */
+MERROR_RETVAL retroani_set_hole(
+   struct MDATA_VECTOR* ani_stack, uint16_t flags,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h );
 
 /**
  * \brief Create a new animation in the global animations list.
@@ -545,7 +565,6 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
 /* === */
 
 void retroani_draw_STRING( struct RETROANI* ani ) {
-   MERROR_RETVAL retval = MERROR_OK;
    int8_t* y_offset = NULL;
    uint8_t* str_sz = NULL,
       * color_idx = NULL,
@@ -662,6 +681,42 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL retroani_set_hole(
+   struct MDATA_VECTOR* ani_stack, uint16_t flags,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   struct RETROANI* ani = NULL;
+
+   if( 0 == mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OK;
+   }
+
+   mdata_vector_lock( ani_stack );
+   for( i = 0 ; mdata_vector_ct( ani_stack ) > i ; i++ ) {
+      ani = mdata_vector_get( ani_stack, i, struct RETROANI );
+      assert( NULL != ani );
+      if( flags != (flags & ani->flags) ) {
+         continue;
+      }
+      ani->hole.x = x;
+      ani->hole.y = y;
+      ani->hole.w = w;
+      ani->hole.h = h;
+   }
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
+
+}
+
+/* === */
+
 ssize_t retroani_create(
    struct MDATA_VECTOR* ani_stack,
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
@@ -693,17 +748,31 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
       /* Address of the current pixel rel to top-left corner of tile. */
       x = 0,
       y = 0;
-   int16_t
-      idx = 0,
+   int16_t idx = 0;
+   retroflat_pxxy_t
       /* Address of the current tile's top-left corner rel to animation. */
       t_x = 0,
       t_y = 0,
       /* Address of the current pixel rel to screen. */
       p_x = 0,
-      p_y = 0;
+      p_y = 0,
+      h_on = 0,
+      h_l = 0,
+      h_r = 0,
+      h_t = 0,
+      h_b = 0;
 
    /* Lock the target buffer for per-pixel manipulation. */
    retroflat_px_lock( a->target );
+
+   /* Setup the animation "hole" if defined. */
+   if( 0 < a->hole.w && 0 < a->hole.h ) {
+      h_on = 1;
+      h_l = a->hole.x;
+      h_r = a->hole.x + a->hole.w;
+      h_t = a->hole.y;
+      h_b = a->hole.y + a->hole.h;
+   }
 
    /* Iterate over every tile covered by the animation's screen area. */
    for( t_y = y_orig ; a->h > t_y ; t_y += RETROANI_TILE_H ) {
@@ -717,6 +786,11 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 
                p_x = a->x + t_x + x;
                p_y = a->y + t_y + y;
+
+               if( h_on && p_x > h_l && p_x < h_r && p_y > h_t && p_y < h_b ) {
+                  /* We're inside an active animation "hole". */
+                  continue;
+               }
 
                if(
                   -1 == a->tile[idx] &&
