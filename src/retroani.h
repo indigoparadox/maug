@@ -44,10 +44,6 @@
  */
 #define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 6, FRAMES ) f( 5, STRING )
 
-#define RETROANI_TEMP_LOW()    RETROFLAT_COLOR_RED
-#define RETROANI_TEMP_MED()    RETROFLAT_COLOR_YELLOW
-#define RETROANI_TEMP_HIGH()   RETROFLAT_COLOR_WHITE
-
 /**
  * \addtogroup unilayer_animate_flags Unilayer Animation Flags
  * \brief Flags to control ::RETROANI behavior.
@@ -121,6 +117,10 @@ struct RETROANI_HOLE {
    retroflat_pxxy_t h;
 };
 
+#ifndef RETROANI_COLOR_CT_MAX
+#  define RETROANI_COLOR_CT_MAX 4
+#endif /* !RETROANI_COLOR_CT_MAX */
+
 #ifndef RETROANI_HOLE_CT_MAX
 #  define RETROANI_HOLE_CT_MAX 4
 #endif /* !RETROANI_HOLE_CT_MAX */
@@ -157,6 +157,7 @@ struct RETROANI {
 #endif /* RETROGXC_PRESENT */
    uint16_t mspf;
    struct RETROANI_HOLE hole;
+   RETROFLAT_COLOR colors[RETROANI_COLOR_CT_MAX];
 };
 
 /*! \brief Callback to call on active animations for every frame. */
@@ -181,6 +182,11 @@ MERROR_RETVAL retroani_set_hole(
    struct MDATA_VECTOR* ani_stack, uint16_t flags,
    retroflat_pxxy_t x, retroflat_pxxy_t y,
    retroflat_pxxy_t w, retroflat_pxxy_t h );
+
+MERROR_RETVAL retroani_set_colors(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx,
+   RETROFLAT_COLOR c1, RETROFLAT_COLOR c2, RETROFLAT_COLOR c3,
+   RETROFLAT_COLOR c4 );
 
 /**
  * \brief Create a new animation in the global animations list.
@@ -717,6 +723,36 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL retroani_set_colors(
+   struct MDATA_VECTOR* ani_stack, size_t a_idx,
+   RETROFLAT_COLOR c1, RETROFLAT_COLOR c2, RETROFLAT_COLOR c3,
+   RETROFLAT_COLOR c4
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROANI* ani = NULL;
+
+   if( a_idx >= mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OVERFLOW;
+   }
+
+   mdata_vector_lock( ani_stack );
+   ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
+   assert( NULL != ani );
+
+   ani->colors[0] = c1;
+   ani->colors[1] = c2;
+   ani->colors[2] = c3;
+   ani->colors[3] = c4;
+
+cleanup:
+
+   mdata_vector_unlock( ani_stack );
+
+   return retval;
+}
+
+/* === */
+
 ssize_t retroani_create(
    struct MDATA_VECTOR* ani_stack,
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
@@ -734,6 +770,14 @@ ssize_t retroani_create(
    ani_new.next_frame_ms = 0;
    ani_new.mspf = RETROANI_DEFAUL_MSPF;
    maug_mzero( ani_new.tile, RETROANI_TILE_SZ );
+
+   if( RETROANI_TYPE_FIRE == type ) {
+      ani_new.colors[0] = RETROFLAT_COLOR_RED;
+      ani_new.colors[1] = RETROFLAT_COLOR_YELLOW;
+      ani_new.colors[2] = RETROFLAT_COLOR_WHITE;
+   } else if( RETROANI_TYPE_SNOW == type ) {
+      ani_new.colors[0] = RETROFLAT_COLOR_WHITE;
+   }
 
    idx_out = mdata_vector_append(
       ani_stack, &ani_new, sizeof( struct RETROANI ) );
@@ -800,8 +844,7 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
                      a->target, RETROFLAT_COLOR_BLACK, p_x, p_y, 0 );
 
                } else if( 0 < a->tile[idx] && RETROANI_TYPE_SNOW == a->type ) {
-                  retroflat_2d_px(
-                     a->target, RETROFLAT_COLOR_WHITE, p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, a->colors[0], p_x, p_y, 0 );
 #ifndef NO_SNOW_OUTLINE
                   retroflat_2d_px(
                      a->target, RETROFLAT_COLOR_BLACK, p_x - 1, p_y, 0 );
@@ -814,12 +857,11 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 #endif /* !NO_SNOW_OUTLINE */
 
                } else if( 90 < a->tile[idx] ) {
-                  retroflat_2d_px(
-                     a->target, RETROANI_TEMP_HIGH(), p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, a->colors[2], p_x, p_y, 0 );
                } else if( 60 < a->tile[idx] ) {
-                  retroflat_2d_px( a->target, RETROANI_TEMP_MED(), p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, a->colors[1], p_x, p_y, 0 );
                } else if( 30 < a->tile[idx] ) {
-                  retroflat_2d_px( a->target, RETROANI_TEMP_LOW(), p_x, p_y, 0 );
+                  retroflat_2d_px( a->target, a->colors[0], p_x, p_y, 0 );
                }
             }
          }
