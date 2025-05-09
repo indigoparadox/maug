@@ -2217,12 +2217,10 @@ MERROR_RETVAL retrogui_set_ctl_image(
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
       if( NULL != path ) {
-#  ifdef RETROGXC_PRESENT
-         ctl->IMAGE.image_cache_id = retrogxc_load_bitmap(
-            path, RETROFLAT_FLAGS_LITERAL_PATH );
+#  if defined( RETROGXC_PRESENT )
+         ctl->IMAGE.image_cache_id = retrogxc_load_bitmap( path, 0 );
 #  else
-         retroflat_2d_load_bitmap(
-            path, &(ctl->IMAGE.image), RETROFLAT_FLAGS_LITERAL_PATH );
+         retroflat_2d_load_bitmap( path, &(ctl->IMAGE.image), 0 );
 #  endif /* RETROGXC_PRESENT */
       } else {
 #  ifdef RETROGXC_PRESENT

@@ -52,8 +52,8 @@ else
 	CFLAGS_GCC64 += -DDEBUG -Wall -g -pg
 	LDFLAGS_GCC += -g -pg
 	LDFLAGS_GCC64 += -g -pg
-	CFLAGS_EMCC += -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD) -Wall
-	LDFLAGS_EMCC += --profiling-functions
+	CFLAGS_EMCC += -g -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD) -Wall
+	LDFLAGS_EMCC += -g --profiling-functions
 	LDFLAGS_WATCOM386 += debug all
 	CFLAGS_CECL += /W1 /MLd
 endif

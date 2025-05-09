@@ -768,7 +768,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 /**
  * \brief Path/name used to load an asset from disk.
  */
-typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
+typedef char retroflat_asset_path[RETROFLAT_PATH_MAX + 1];
 
 /**
  * \brief Compare two asset paths. Return 0 if they're the same.
@@ -2679,6 +2679,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    retroflat_heartbeat_set( 1000, 2 );
 
+   /* Set default, so that this is never zero, to avoid division by zero. */
+   g_retroflat_state->scale = 1;
+
 #  ifndef RETROFLAT_NO_CLI
 
    debug_printf( 1, "retroflat: parsing args..." );
@@ -2709,8 +2712,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfm, args );
    maug_cleanup_if_not_ok();
 #     elif !defined( RETROFLAT_NO_CLI_SZ )
-   /* Set default. */
-   g_retroflat_state->scale = 1;
    retval = maug_add_arg( MAUG_CLI_SIGIL "rfs", MAUG_CLI_SIGIL_SZ + 4,
       "Set screen scale factor.", 0,
       (maug_cli_cb)retroflat_cli_rfs, args );
