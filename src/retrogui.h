@@ -1425,7 +1425,7 @@ static void retrogui_redraw_FILLBAR(
    if( 0 == ctl->FILLBAR.cur ) {
       fill_w = 0;
    } else {
-      fill_w = ctl->base.w * ctl->FILLBAR.max / ctl->FILLBAR.cur;
+      fill_w = ctl->base.w * ctl->FILLBAR.cur / ctl->FILLBAR.max;
    }
 
    retroflat_2d_rect(
