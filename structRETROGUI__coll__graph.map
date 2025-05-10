@@ -1,0 +1,7 @@
+<map id="RETROGUI" name="RETROGUI">
+<area shape="rect" id="Node000001" title=" " alt="" coords="107,94,196,120"/>
+<area shape="rect" id="Node000002" href="$structMDATA__VECTOR.html" title="A vector of uniformly&#45;sized objects, stored contiguously." alt="" coords="5,5,133,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,41,142,92,138,95,89,44"/>
+<area shape="rect" id="Node000003" href="$structRETROFLAT__BITMAP.html" title="Platform&#45;specific bitmap structure. retroflat_bitmap_ok() can be used on a pointer to it to determine..." alt="" coords="157,5,312,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,44,165,95,161,92,210,41"/>
+</map>

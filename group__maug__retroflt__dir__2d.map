@@ -1,0 +1,10 @@
+<map id="RetroFlat 2D Wrapper API" name="RetroFlat 2D Wrapper API">
+<area shape="rect" id="Node000005" href="$group__maug__retroflt__bitmap.html" title="Tools for loading bitmaps from disk and drawing them on&#45;screen." alt="" coords="228,5,371,31"/>
+<area shape="rect" id="Node000008" href="$group__maug__retroflt__dir.html" title="Macros and constants for definition cardinal directions in screen and world space." alt="" coords="223,55,376,80"/>
+<area shape="rect" id="Node000001" title="Wrappers to call appropriate 2D surface functions for bitmaps or textures, depending on if the engine..." alt="" coords="5,153,175,179"/>
+<area shape="rect" id="Node000006" href="$group__maug__retroflt__drawing.html" title="Functions for drawing primitives on&#45;screen." alt="" coords="225,104,374,130"/>
+<area shape="rect" id="Node000007" href="$group__maug__retroflt__input.html" title="Functions and constants for polling and interpreting user input." alt="" coords="234,153,365,179"/>
+<area shape="rect" id="Node000004" href="$group__maug__retroflt__vdp.html" title="Video Display Processor tools for modifying display output." alt="" coords="235,203,364,228"/>
+<area shape="rect" id="Node000003" href="$group__maug__retroflt__viewport.html" title="A flexible API to facilitate tile&#45;based views using hardware acceleration where available." alt="" coords="223,252,376,278"/>
+<area shape="rect" id="Node000002" href="$group__maug__retrosnd.html" title="Abstraction layer header for sound on retro systems." alt="" coords="242,301,356,327"/>
+</map>

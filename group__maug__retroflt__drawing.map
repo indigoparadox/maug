@@ -1,0 +1,6 @@
+<map id="RetroFlat Drawing API" name="RetroFlat Drawing API">
+<area shape="rect" id="Node000002" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="40,5,140,31"/>
+<area shape="rect" id="Node000001" title="Functions for drawing primitives on&#45;screen." alt="" coords="223,31,372,56"/>
+<area shape="rect" id="Node000004" href="$group__maug__retroflt__color.html" title="Color definitions RetroFlat is aware of, for use with the RetroFlat Drawing API." alt="" coords="420,31,534,56"/>
+<area shape="rect" id="Node000003" href="$group__maug__retroflt__dir__2d.html" title="Wrappers to call appropriate 2D surface functions for bitmaps or textures, depending on if the engine..." alt="" coords="5,55,175,80"/>
+</map>
