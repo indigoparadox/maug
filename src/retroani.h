@@ -42,7 +42,7 @@
  *
  * \}
  */
-#define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 6, FRAMES ) f( 5, STRING )
+#define RETROANI_CB_TABLE( f ) f( 0, CIRCLE ) f( 1, RECTANGLE ) f( 2, FIRE ) f( 3, SNOW ) f( 4, CLOUDS ) f( 5, FRAMES ) f( 6, STRING )
 
 /**
  * \addtogroup unilayer_animate_flags Unilayer Animation Flags
@@ -51,11 +51,6 @@
  * \{
  */
 
-/**
- * \relates RETROANI
- * \brief ::RETROANI::flags indicating animation is active and playing.
- */
-#define RETROANI_FLAG_ACTIVE   0x0001
 /**
  * \relates RETROANI
  * \brief ::RETROANI::flags indicating animation has been initialized.
@@ -78,9 +73,7 @@
 
 /*! \} */
 
-#define RETROANI_TILE_W 16
-#define RETROANI_TILE_H 16
-#define RETROANI_TILE_SZ (RETROANI_TILE_W * RETROANI_TILE_H)
+#define RETROANI_TILE_SZ (RETROFLAT_TILE_W * RETROFLAT_TILE_H)
 
 #define RETROANI_FIRE_COOLING_MAX 35
 #define RETROANI_FIRE_COOLING_MIN 25
@@ -89,10 +82,8 @@
 #define RETROANI_FIRE_HEAT_RANGE 40
 
 #define RETROANI_TEXT_HEADER_Y_OFFSET   0
-#define RETROANI_TEXT_HEADER_Y_COUNT    1
-#define RETROANI_TEXT_HEADER_STR_SZ     2
-#define RETROANI_TEXT_HEADER_COLOR_IDX  3
-#define RETROANI_TEXT_HEADER_STR        4
+#define RETROANI_TEXT_HEADER_STR_SZ     1
+#define RETROANI_TEXT_HEADER_STR        2
 #define RETROANI_TEXT_MAX_SZ            (RETROANI_TILE_SZ - RETROANI_TEXT_HEADER_STR)
 
 #define RETROANI_CLOUD_WISP_LEN 8
@@ -161,7 +152,7 @@ struct RETROANI {
 };
 
 /*! \brief Callback to call on active animations for every frame. */
-typedef void (*RETROANI_CB)( struct RETROANI* a );
+typedef MERROR_RETVAL (*RETROANI_CB)( struct RETROANI* a );
 
 MERROR_RETVAL retroani_set_target(
    struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target );
@@ -237,7 +228,7 @@ MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani, size_t idx );
 MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack );
 
 #define RETROANI_CB_TABLE_DRAW_PROTOTYPES( idx, name ) \
-   void retroani_draw_ ## name( struct RETROANI* );
+   MERROR_RETVAL retroani_draw_ ## name( struct RETROANI* );
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_DRAW_PROTOTYPES )
 
@@ -276,15 +267,17 @@ static const RETROFLAT_COLOR gc_animation_colors[] = {
 };
 #endif
 
-void retroani_draw_RECTANGLE( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_RECTANGLE( struct RETROANI* a ) {
    /* TODO */
+   return MERROR_OK;
 }
 
-void retroani_draw_CIRCLE( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_CIRCLE( struct RETROANI* a ) {
    /* TODO */
+   return MERROR_OK;
 }
 
-void retroani_draw_FIRE( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_FIRE( struct RETROANI* a ) {
    int8_t x = 0,
       next_x = 0,
       y = 0;
@@ -294,8 +287,8 @@ void retroani_draw_FIRE( struct RETROANI* a ) {
 
    if( !(a->flags & RETROANI_FLAG_INIT) ) {
       /* Setup initial "heat line" from which fire is drawn. */
-      for( x = 0 ; RETROANI_TILE_W > x ; x++ ) {
-         idx = ((RETROANI_TILE_H - 1) * RETROANI_TILE_W) + x;
+      for( x = 0 ; RETROFLAT_TILE_W > x ; x++ ) {
+         idx = ((RETROFLAT_TILE_H - 1) * RETROFLAT_TILE_W) + x;
          /* a->tile[idx] = graphics_get_random( 70, 101 ); */
          a->tile[idx] = RETROANI_FIRE_HEAT_INIT +
             retroflat_get_rand() % RETROANI_FIRE_HEAT_RANGE;
@@ -305,21 +298,21 @@ void retroani_draw_FIRE( struct RETROANI* a ) {
       a->flags |= RETROANI_FLAG_INIT;
    }
 
-   for( y = 0 ; RETROANI_TILE_H - 1 > y ; y++ ) {
+   for( y = 0 ; RETROFLAT_TILE_H - 1 > y ; y++ ) {
       /* debug_printf( 3, "%d, %d: %d", 0, y, data[(y * a->w)] ); */
-      for( x = 0 ; RETROANI_TILE_W > x ; x++ ) {
-         idx = (y * RETROANI_TILE_W) + x;
+      for( x = 0 ; RETROFLAT_TILE_W > x ; x++ ) {
+         idx = (y * RETROFLAT_TILE_W) + x;
 
          /* Make sure we don't overflow the buffer. */
          /* next_x = x + graphics_get_random( -1, 3 ); */
          next_x = (x - 1) + retroflat_get_rand() % 3;
          if( 0 > next_x ) {
-            next_x = RETROANI_TILE_W - 1;
-         } else if( RETROANI_TILE_W <= next_x ) {
+            next_x = RETROFLAT_TILE_W - 1;
+         } else if( RETROFLAT_TILE_W <= next_x ) {
             next_x = 0;
          }
 
-         next_idx = ((y + 1) * RETROANI_TILE_W) + next_x;
+         next_idx = ((y + 1) * RETROFLAT_TILE_W) + next_x;
 
          /* Make sure integers don't rollover. */
          if( RETROANI_FIRE_COOLING_MAX + 3 >= a->tile[next_idx] ) {
@@ -342,13 +335,14 @@ void retroani_draw_FIRE( struct RETROANI* a ) {
    }
 
    /* Only tesselate the bottom row. */
-   retroani_tesselate( a, a->h - RETROANI_TILE_H );
+   retroani_tesselate( a, a->h - RETROFLAT_TILE_H );
 
+   return MERROR_OK;
 }
 
 /* === */
 
-void retroani_draw_SNOW( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_SNOW( struct RETROANI* a ) {
    int16_t
       x = 0,
       y = 0,
@@ -357,17 +351,17 @@ void retroani_draw_SNOW( struct RETROANI* a ) {
 
    if( !(a->flags & RETROANI_FLAG_INIT) ) {
       /* Create initial snowflakes along the left side of the tile. */
-      for( y = 0 ; RETROANI_TILE_H > y ; y += 4 ) {
-         idx = (y * RETROANI_TILE_W);
+      for( y = 0 ; RETROFLAT_TILE_H > y ; y += 4 ) {
+         idx = (y * RETROFLAT_TILE_W);
          a->tile[idx] = 1;
       }
 
       a->flags |= RETROANI_FLAG_INIT;
    }
  
-   for( y = RETROANI_TILE_H - 1 ; 0 <= y ; y-- ) {
-      for( x = RETROANI_TILE_W - 1 ; 0 <= x ; x-- ) {
-         idx = (y * RETROANI_TILE_W) + x;
+   for( y = RETROFLAT_TILE_H - 1 ; 0 <= y ; y-- ) {
+      for( x = RETROFLAT_TILE_W - 1 ; 0 <= x ; x-- ) {
+         idx = (y * RETROFLAT_TILE_W) + x;
 
          if( -1 == a->tile[idx] ) {
             /* Presume hiding was done. */
@@ -379,8 +373,8 @@ void retroani_draw_SNOW( struct RETROANI* a ) {
 
             do {
                /* Move the snowflake down and maybe to the right. */
-               /* = idx + RETROANI_TILE_W + graphics_get_random( 0, 3 ); */
-               new_idx = idx + RETROANI_TILE_W + (retroflat_get_rand() % 3);
+               /* = idx + RETROFLAT_TILE_W + graphics_get_random( 0, 3 ); */
+               new_idx = idx + RETROFLAT_TILE_W + (retroflat_get_rand() % 3);
 
                   /* Wrap the snowflake if it moves off-tile. */
                if( new_idx >= RETROANI_TILE_SZ ) {
@@ -397,11 +391,13 @@ void retroani_draw_SNOW( struct RETROANI* a ) {
    }
 
    retroani_tesselate( a, 0 );
+
+   return MERROR_OK;
 }
 
 /* === */
 
-void retroani_draw_CLOUDS( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_CLOUDS( struct RETROANI* a ) {
    int8_t row_start_idx = 0,
       row_start_last = 0,
       row_col_end_buffer = 0, /* Last pixel wrapped off row end. */
@@ -415,23 +411,23 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
 
    if( !(a->flags & RETROANI_FLAG_INIT) ) {
       /* Create initial cloud lines along the left side of the tile. */
-      for( y = 0 ; RETROANI_TILE_H > y ; y++ ) {
+      for( y = 0 ; RETROFLAT_TILE_H > y ; y++ ) {
          
          /* Get new non-repeating offset for each row. */
          do {
-            /* = graphics_get_random( 0, RETROANI_TILE_W / 4 ); */
-            row_start_idx = retroflat_get_rand() % (RETROANI_TILE_W / 4 );
+            /* = graphics_get_random( 0, RETROFLAT_TILE_W / 4 ); */
+            row_start_idx = retroflat_get_rand() % (RETROFLAT_TILE_W / 4 );
          } while( row_start_idx == row_start_last );
 
          /* Draw the row's initial state. */
-         for( x = 0 ; RETROANI_TILE_W > x ; x++ ) {
+         for( x = 0 ; RETROFLAT_TILE_W > x ; x++ ) {
             if(
                RETROANI_FLAG_CLOUDS_ROTATE !=
                (RETROANI_FLAG_CLOUDS_ROTATE & a->flags)
             ) {
-               idx = (y * RETROANI_TILE_W) + x;
+               idx = (y * RETROFLAT_TILE_W) + x;
             } else {
-               idx = (x * RETROANI_TILE_W) + y;
+               idx = (x * RETROFLAT_TILE_W) + y;
             }
             if(
                x > row_start_idx && x < row_start_idx + RETROANI_CLOUD_WISP_LEN
@@ -456,7 +452,7 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
       RETROANI_FLAG_CLOUDS_ROTATE ==
       (RETROANI_FLAG_CLOUDS_ROTATE & a->flags)
    ) {
-      for( y = RETROANI_TILE_H - 1 ; 0 <= y ; y-- ) {
+      for( y = RETROFLAT_TILE_H - 1 ; 0 <= y ; y-- ) {
 
          * Do we advance this wisp on this iteration? Not always. */
          row_col_offset = graphics_get_random( 0, 30 );
@@ -465,10 +461,10 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
          }
 
          /* Iterate each row. */
-         row_col_idx = (y * RETROANI_TILE_W);
-         row_col_end_buffer = a->tile[row_col_idx + (RETROANI_TILE_W - 1)];
+         row_col_idx = (y * RETROFLAT_TILE_W);
+         row_col_end_buffer = a->tile[row_col_idx + (RETROFLAT_TILE_W - 1)];
 
-         for( x = RETROANI_TILE_W - 1 ; 0 <= x ; x-- ) {
+         for( x = RETROFLAT_TILE_W - 1 ; 0 <= x ; x-- ) {
             idx = row_col_idx + x;
 
             if( 0 == x ) {
@@ -484,7 +480,7 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
 
    } else {
 
-      for( x = RETROANI_TILE_W - 1 ; 0 <= x ; x-- ) {
+      for( x = RETROFLAT_TILE_W - 1 ; 0 <= x ; x-- ) {
 
          /* Do we advance this wisp on this iteration? Not always. */
          row_col_offset = graphics_get_random( 0, 30 );
@@ -493,10 +489,10 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
          }
 
          /* Iterate each row. */
-         for( y = RETROANI_TILE_H - 1 ; 0 <= y ; y-- ) {
-            idx = (y * RETROANI_TILE_W) + x;
-            row_col_end_buffer = a->tile[((RETROANI_TILE_H - 1) * y) + x];
-            prev_idx = idx - RETROANI_TILE_W;
+         for( y = RETROFLAT_TILE_H - 1 ; 0 <= y ; y-- ) {
+            idx = (y * RETROFLAT_TILE_W) + x;
+            row_col_end_buffer = a->tile[((RETROFLAT_TILE_H - 1) * y) + x];
+            prev_idx = idx - RETROFLAT_TILE_W;
 
             if( 0 == y ) {
                /* Wrap-around. */
@@ -512,7 +508,7 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
    }
 #endif
 
-   for( y = RETROANI_TILE_H - 1 ; 0 <= y ; y-- ) {
+   for( y = RETROFLAT_TILE_H - 1 ; 0 <= y ; y-- ) {
 
       /* TODO: Adapt this for rotated orientation... somewhat more complicated.
        */
@@ -530,21 +526,21 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
       }
 
       /* Iterate each row. */
-      for( x = RETROANI_TILE_W - 1 ; 0 <= x ; x-- ) {
+      for( x = RETROFLAT_TILE_W - 1 ; 0 <= x ; x-- ) {
 
-         idx = (y * RETROANI_TILE_W) + x;
+         idx = (y * RETROFLAT_TILE_W) + x;
          if(
             RETROANI_FLAG_CLOUDS_ROTATE ==
             (RETROANI_FLAG_CLOUDS_ROTATE & a->flags)
          ) {
             row_col_end_buffer = 
                /* Grab the pixel in this column off the bottom. */
-               a->tile[((RETROANI_TILE_H - 1) * RETROANI_TILE_W) + x];
-            prev_idx = idx - RETROANI_TILE_W;
+               a->tile[((RETROFLAT_TILE_H - 1) * RETROFLAT_TILE_W) + x];
+            prev_idx = idx - RETROFLAT_TILE_W;
          } else {
             row_col_end_buffer =
                /* Grab the pixel in this row off the right. */
-               a->tile[(y * RETROANI_TILE_W) + (RETROANI_TILE_W - 1)];
+               a->tile[(y * RETROFLAT_TILE_W) + (RETROFLAT_TILE_W - 1)];
             prev_idx = idx - 1;
          }
 
@@ -566,52 +562,54 @@ void retroani_draw_CLOUDS( struct RETROANI* a ) {
 
    retroani_tesselate( a, 0 );
 
+   return MERROR_OK;
 }
 
 /* === */
 
-void retroani_draw_STRING( struct RETROANI* ani ) {
-   int8_t* y_offset = NULL;
-   uint8_t* str_sz = NULL,
-      * color_idx = NULL,
-      * y_count = NULL;
+MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
+   int8_t* p_y_offset = NULL;
+   uint8_t* p_str_sz = NULL;
    char* str = NULL;
+   size_t str_height = 0;
 
-   y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
-   y_count = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_COUNT]);
+   p_y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
-   str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
-   color_idx = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_COLOR_IDX]);
+   p_str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]);
+
+   if( *p_y_offset > RETROFLAT_TILE_H ) {
+      return MERROR_EXEC;
+   }
 
    /* Draw the animation text. */
 #ifdef RETROGXC_PRESENT
+   retrogxc_string_sz(
+      ani->target, str, *p_str_sz,
+      ani->font_idx, ani->w, ani->h, NULL, &str_height, 0 );
    retrogxc_string(
-      ani->target, *color_idx, str, *str_sz, ani->font_idx,
+      ani->target, ani->colors[0], str, *p_str_sz, ani->font_idx,
 #else
+   retrofont_string_sz(
+      ani->target, str, *p_str_sz,
+      ani->font_h, ani->w, ani->h, NULL, &str_height, 0 );
    retrofont_string(
-      ani->target, *color_idx, str, *str_sz, ani->font_h,
+      ani->target, ani->colors[0], str, *p_str_sz, ani->font_h,
 #endif /* RETROGXC_PRESENT */
-      ani->x, ani->y + ani->h - (*y_offset), ani->w, ani->h, 0 );
+      ani->x, ani->y + ani->h - (*p_y_offset), ani->w, ani->h, 0 );
 
-   /* Frame advancement delay. */
-   if( *y_count < 2 ) {
-      (*y_count)++;
-      return;
-   } else {
-      *y_count = 0;
+   if( 0 == retroflat_heartbeat() ) {
+      /* Move the text up half a line until it would leave the animation. */
+      *p_y_offset += str_height;
    }
 
-   /* Move the text up half a line until it would leave the animation. */
-   *y_offset += (10 / 2); /* TODO: Dynamic font height. */
-   if( *y_offset > RETROANI_TILE_H ) {
-      ani->flags &= ~RETROANI_FLAG_ACTIVE;
-   }
+   return MERROR_OK;
 }
 
 /* === */
 
-void retroani_draw_FRAMES( struct RETROANI* a ) {
+MERROR_RETVAL retroani_draw_FRAMES( struct RETROANI* a ) {
    /* TODO */
+   return MERROR_OK;
 }
 
 /* === */
@@ -646,11 +644,11 @@ MERROR_RETVAL retroani_set_string(
    RETROFLAT_COLOR color_idx_in
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int8_t* y_offset = NULL;
-   uint8_t* str_sz = NULL,
-      * color_idx = NULL;
+   int8_t* p_y_offset = NULL;
+   uint8_t* p_str_sz = NULL;
    char* str = NULL;
    struct RETROANI* ani = NULL;
+   size_t str_height = 0;
 
    assert( 0 <= a_idx );
    assert( mdata_vector_ct( ani_stack ) > a_idx );
@@ -659,24 +657,29 @@ MERROR_RETVAL retroani_set_string(
    ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
    assert( NULL != ani );
 
-   y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
+   p_y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
-   str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
-   color_idx = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_COLOR_IDX]);
+   p_str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
 
-   assert( RETROANI_TEXT_MAX_SZ > *str_sz );
+   assert( RETROANI_TEXT_MAX_SZ > *p_str_sz );
    assert( RETROANI_TYPE_STRING == ani->type );
  
 #ifdef RETROGXC_PRESENT
    ani->font_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
+   retrogxc_string_sz(
+      ani->target, str, str_sz_in,
+      ani->font_idx, ani->w, ani->h, NULL, &str_height, 0 );
 #else
+   retrofont_string_sz(
+      ani->target, str, *p_str_sz,
+      ani->font_h, ani->w, ani->h, NULL, &str_height, 0 );
    retval = retrofont_load( font_name_in, &(ani->font_h), 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
 
    maug_strncpy( str, str_in, RETROANI_TEXT_MAX_SZ - 1 );
-   *str_sz = str_sz_in;
-   *color_idx = color_idx_in;
-   *y_offset = 10; /* TODO: Get font height dynamically. */
+   *p_str_sz = str_sz_in;
+   ani->colors[0] = color_idx_in;
+   *p_y_offset = str_height;
 
 cleanup:
 
@@ -760,7 +763,7 @@ ssize_t retroani_create(
    ssize_t idx_out = -1;
    struct RETROANI ani_new;
 
-   ani_new.flags = RETROANI_FLAG_ACTIVE | flags;
+   ani_new.flags = flags;
    ani_new.x = x;
    ani_new.y = y;
    ani_new.w = w;
@@ -777,6 +780,8 @@ ssize_t retroani_create(
       ani_new.colors[2] = RETROFLAT_COLOR_WHITE;
    } else if( RETROANI_TYPE_SNOW == type ) {
       ani_new.colors[0] = RETROFLAT_COLOR_WHITE;
+   } else if( RETROANI_TYPE_STRING == type ) {
+      ani_new.colors[0] = RETROFLAT_COLOR_BLACK;
    }
 
    idx_out = mdata_vector_append(
@@ -819,12 +824,12 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
    }
 
    /* Iterate over every tile covered by the animation's screen area. */
-   for( t_y = y_orig ; a->h > t_y ; t_y += RETROANI_TILE_H ) {
-      for( t_x = 0 ; a->w > t_x ; t_x += RETROANI_TILE_W ) {
+   for( t_y = y_orig ; a->h > t_y ; t_y += RETROFLAT_TILE_H ) {
+      for( t_x = 0 ; a->w > t_x ; t_x += RETROFLAT_TILE_W ) {
          /* Iterate over every pixel of the animation grid. */
-         for( y = 0 ; RETROANI_TILE_H > y ; y++ ) {
-            for( x = 0 ; RETROANI_TILE_W > x ; x++ ) {
-               idx = (y * RETROANI_TILE_W) + x;
+         for( y = 0 ; RETROFLAT_TILE_H > y ; y++ ) {
+            for( x = 0 ; RETROFLAT_TILE_W > x ; x++ ) {
+               idx = (y * RETROFLAT_TILE_W) + x;
 
                /* TODO: Try to trim animation to its area. */
 
@@ -875,7 +880,7 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 
 MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
+   ssize_t i = 0; /* So i can be -1 if we delete the first ani. */
    uint32_t now_ms = 0;
    struct RETROANI* ani = NULL;
 
@@ -896,8 +901,13 @@ MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
       ) {
          continue;
       }
-      gc_animate_draw[ani->type]( ani );
       ani->next_frame_ms = now_ms + ani->mspf;
+      if( MERROR_EXEC == gc_animate_draw[ani->type]( ani ) ) {
+         mdata_vector_unlock( ani_stack );
+         mdata_vector_remove( ani_stack, i );
+         mdata_vector_lock( ani_stack );
+         i--; /* Back up once, since this was deleted. */
+      }
    }
 
 cleanup:

@@ -52,7 +52,7 @@ void retrofont_string(
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags );
+   size_t* p_out_w, size_t* p_out_h, uint8_t flags );
 
 /**
  * \brief Get a pointer to the glyph with the given index in the given font.
@@ -404,10 +404,11 @@ cleanup:
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags
+   size_t* p_out_w, size_t* p_out_h, uint8_t flags
 ) {
    size_t x_iter = 0;
    size_t i = 0;
+   size_t out_h = 0; /* Only used if p_out_h is NULL. */
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFONT* font = NULL;
 
@@ -415,6 +416,10 @@ MERROR_RETVAL retrofont_string_sz(
       error_printf( "NULL font specified!" );
       retval = MERROR_GUI;
       goto cleanup;
+   }
+
+   if( NULL == p_out_h ) {
+      p_out_h = &out_h;
    }
 
    if( 0 == str_sz ) {
@@ -433,19 +438,19 @@ MERROR_RETVAL retrofont_string_sz(
       /* Handle forced newline. */
       if( '\r' == str[i] || '\n' == str[i] ) {
          x_iter = 0;
-         *out_h_p += font->glyph_h;
+         *p_out_h += font->glyph_h;
          continue;
       }
 
       x_iter += font->glyph_w;
 
-      if( *out_w_p <= x_iter ) {
-         *out_w_p = x_iter;
+      if( NULL != p_out_w && *p_out_w <= x_iter ) {
+         *p_out_w = x_iter;
       }
       if( 0 < max_w && max_w < x_iter + font->glyph_w ) {
          x_iter = 0;
-         *out_h_p += font->glyph_h;
-         if( 0 < max_h && *out_h_p + font->glyph_h >= max_h && i < str_sz ) {
+         *p_out_h += font->glyph_h;
+         if( 0 < max_h && *p_out_h + font->glyph_h >= max_h && i < str_sz ) {
             error_printf( "string will not fit!" );
 
             /* Do not quit; just make a note and keep going. */
@@ -455,8 +460,10 @@ MERROR_RETVAL retrofont_string_sz(
    }
 
    /* Add the height of the last line. */
-   *out_h_p += font->glyph_h;
-   *out_w_p += 1;
+   *p_out_h += font->glyph_h;
+   if( NULL != p_out_w ) {
+      *p_out_w += 1;
+   }
 
 cleanup:
 
