@@ -1301,7 +1301,7 @@ static void retrogui_redraw_IMAGE(
    /* Do nothing. */
 #  else
 
-#     ifdef RETROGXC_PRESENT
+#     if defined( RETROGXC_PRESENT )
    if( 0 > ctl->IMAGE.image_cache_id ) {
       return;
    }
