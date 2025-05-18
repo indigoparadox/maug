@@ -7,6 +7,8 @@
  * \brief RetroFlat platform definition header.
  */
 
+typedef int16_t RETROFLAT_IN_KEY;
+
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{

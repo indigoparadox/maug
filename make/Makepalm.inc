@@ -7,7 +7,17 @@ LD_PALM := m68k-palmos-gcc
 
 OBJDIR_PALM := obj/palmos
 
-CFLAGS_PALM += -I "$(MAUG_ROOT)/src" -I "$(MAUG_ROOT)/api/palm" -DRETROFLAT_OS_PALM -DRETROFLAT_API_PALM -DRETROFLAT_NO_CLI -DNO_RETROSND -DMAUG_NO_ASSERT
+INCLUDES_PALM := \
+   -I $(PALMSDK)/sdk-3.5/include \
+   -I $(PALMSDK)/sdk-3.5/include/Libraries/ \
+   -I $(PALMSDK)/sdk-3.5/include/Dynamic/ \
+   -I $(PALMSDK)/sdk-3.5/include/Core/ \
+   -I $(PALMSDK)/sdk-3.5/include/Core/UI/ \
+   -I $(PALMSDK)/sdk-3.5/include/Core/System/ \
+   -I $(PALMSDK)/sdk-3.5/include/Core/Hardware/ \
+   -I $(PALMSDK)/sdk-3.5/include/Core/International/ 
+
+CFLAGS_PALM += -I "$(MAUG_ROOT)/src" -I "$(MAUG_ROOT)/api/palm" $(INCLUDES_PALM) -DRETROFLAT_OS_PALM -DRETROFLAT_API_PALM -DRETROFLAT_NO_CLI -DNO_RETROSND -DMAUG_NO_ASSERT -DRETROCON_DISABLE
 
 LDFLAGS_PALM +=
 

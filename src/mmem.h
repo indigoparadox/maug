@@ -13,6 +13,10 @@
 /* TODO */
 #  pragma message( "warning: not implemented!" )
 
+typedef MemHandle MEMORY_HANDLE;
+typedef MemPtr MEMORY_PTR;
+typedef const MemPtr CONST_MEMORY_PTR;
+
 #elif defined( MAUG_OS_DOS_REAL )
 
 typedef void* MAUG_MHANDLE;

@@ -1301,7 +1301,7 @@ static void retrogui_redraw_IMAGE(
    /* Do nothing. */
 #  else
 
-#     if defined( RETROGXC_PRESENT )
+#     ifdef RETROGXC_PRESENT
    if( 0 > ctl->IMAGE.image_cache_id ) {
       return;
    }
@@ -1311,6 +1311,10 @@ static void retrogui_redraw_IMAGE(
    retrogxc_blit_bitmap(
       gui->draw_bmp,
       ctl->IMAGE.image_cache_id,
+      ctl->IMAGE.src_x, ctl->IMAGE.src_y,
+      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
+      ctl->IMAGE.instance );
+
 #     else
    if( !retroflat_2d_bitmap_ok( gui->draw_bmp ) ) {
       return;
@@ -1318,11 +1322,12 @@ static void retrogui_redraw_IMAGE(
    retroflat_2d_blit_bitmap(
       gui->draw_bmp,
       &(ctl->IMAGE.image),
-#     endif /* RETROGXC_PRESENT */
       ctl->IMAGE.src_x, ctl->IMAGE.src_y,
       gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       ctl->IMAGE.instance );
-#  endif
+
+#     endif /* RETROGXC_PRESENT */
+#  endif /* RETROGUI_NATIVE_WIN */
 
    return;
 }

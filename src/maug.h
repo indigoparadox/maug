@@ -6,6 +6,18 @@
 #  include <mlegacy.h>
 #endif /* !MAUG_NO_LEGACY */
 
+#ifdef MAUG_OS_PALM
+/* Like, *everything* depends on this, including all the weird Palm types. */
+#  include <PalmOS.h>
+
+/* PalmOS doesn't work with const. */
+#  define MAUG_CONST
+#else
+
+#  define MAUG_CONST const
+
+#endif /* MAUG_OS_PALM */
+
 #include <mtypes.h>
 
 #if !defined( MAUG_NO_STDLIB )
@@ -14,13 +26,6 @@
 #  include <string.h> /* strlen(), strchr(), strrchr(), strncpy() */
 #endif /* !MAUG_NO_STDLIB */
 #include <stdarg.h>
-
-#ifdef MAUG_OS_PALM
-/* PalmOS doesn't work with const. */
-#  define MAUG_CONST
-#else
-#  define MAUG_CONST const
-#endif /* MAUG_OS_PALM */
 
 #if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 )) && \
    defined( MAUG_DOS_MEM_L ) && \

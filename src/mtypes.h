@@ -20,6 +20,9 @@ typedef Int32 int32_t;
 
 typedef UInt32 maug_ms_t;
 
+typedef Int32 ssize_t;
+typedef UInt32 off_t;
+
 #define MS_FMT "%lu"
 
 #elif defined( MAUG_OS_WIN )

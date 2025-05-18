@@ -12,6 +12,8 @@
 #  define MAUG_OS_DOS
 #elif defined( RETROFLAT_OS_DOS_REAL )
 #  define MAUG_OS_DOS_REAL
+#elif defined( RETROFLAT_OS_PALM )
+#  define MAUG_OS_PALM
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef RETROFLAT_NO_CLI
