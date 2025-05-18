@@ -31,8 +31,8 @@ ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
 $(error could not find pkg-config for gl!)
 endif
 
-CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/opengl
-CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/opengl
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
 LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
 CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
@@ -41,8 +41,8 @@ LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
 endif
 ifeq ("$(SMALL3DL)","1")
 
-CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
-CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/small3dl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/small3dl
 
 endif
 
@@ -129,7 +129,8 @@ SDL_VER_UNIX := 2
 endif
 
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
-CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/sdl
+CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
+	-I$(MAUG_ROOT)/api/input/sdl
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
 # = Make Icons =
@@ -168,7 +169,8 @@ $$(error could not find pkg-config for allegro!)
 endif
 
 CFLAGS_GCC_UNIX_ALLEGRO := \
-	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) -I$(MAUG_ROOT)/api/allegro
+	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
 
@@ -202,7 +204,9 @@ ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
 $$(error could not find pkg-config for gl!)
 endif
 
-CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut -DRETROSND_API_ALSA
+CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/retro2d/glut \
+	-DRETROSND_API_ALSA
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
 
