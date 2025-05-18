@@ -9,16 +9,19 @@
 #ifdef MAUG_OS_PALM
 /* Like, *everything* depends on this, including all the weird Palm types. */
 #  include <PalmOS.h>
-
-/* PalmOS doesn't work with const. */
-#  define MAUG_CONST
-#else
-
-#  define MAUG_CONST const
-
 #endif /* MAUG_OS_PALM */
 
 #include <mtypes.h>
+
+#ifdef MAUG_OS_PALM
+/* PalmOS doesn't work with const. */
+#  define MAUG_CONST
+
+/* Platform-specific memory API override. */
+#  include <retapim.h>
+#else
+#  define MAUG_CONST const
+#endif /* MAUG_OS_PALM */
 
 #if !defined( MAUG_NO_STDLIB )
 #  include <stdio.h>
@@ -45,6 +48,9 @@
 
 #include <merror.h>
 
+/* This can be overridden by platform-specific API memory API overrides at
+ * the beginning of this header.
+ */
 #ifdef MAUG_C
 #  define MMEM_C
 #endif /* MAUG_C */
