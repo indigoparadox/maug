@@ -32,7 +32,8 @@ C_MAUG_STUBS := $(wildcard maug/dosstubs/*.c)
 define TGTDOSALE
 
 CFLAGS_WATCOM386_DOS_ALLEGRO += \
-	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/allegro
+	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/retro2d/allegro \
+	-I$(MAUG_ROOT)/api/input/allegro
 
 LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
@@ -57,7 +58,8 @@ endef
 
 define TGTDOSGAL
 
-CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/allegro
+CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO \
+	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro)
 
 LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
 
@@ -81,7 +83,8 @@ endef
 
 define TGTDOSBIOS
 
-CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/dosbios
+CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/retro2d/dosbios \
+	-I$(MAUG_ROOT)/api/input/dosbios
 
 # Strip out options to bake-in resources, as they make the exe too big!
 
