@@ -39,6 +39,10 @@ ifeq ("$(OPENGL)","1")
 endif
 endif
 
+ifneq ("$(INLINE_SZ)","")
+	CFLAGS_WATCOM386 += -oe=$(INLINE_SZ)
+endif
+
 ifeq ("$(CC_GCC_MINGW)","")
 	CC_GCC_MINGW = i686-w64-mingw32-gcc
 endif
