@@ -1016,7 +1016,7 @@ struct RETROFLAT_ARGS;
 #  define API_TRACE_LVL 0
 #endif /* !API_TRACE_LVL */
 
-#ifndef NO_RETROSND
+#ifndef RETROFLAT_NO_SOUND
 
 /**
  * \addtogroup maug_retrosnd RetroSound API
@@ -1119,7 +1119,21 @@ void retrosnd_shutdown();
 
 /*! \} */ /* maug_retrosnd */
 
-#endif /* !NO_RETROSND */
+#endif /* !RETROFLAT_NO_SOUND */
+
+/* === Platform-specific APIs === */
+
+/* The first call to these headers should just establish definitions (macros, defines, prototypes,
+ * typedefs, etc). The later call below should then define function bodies.
+ */
+#ifndef RETROFLAT_NO_SOUND
+#  include <retapis.h>
+#endif /* !RETROFLAT_NO_SOUND */
+#include <retapii.h>
+
+/* === End platform-specific APIs === */
+
+
 
 /* === OS-Specific Includes and Defines === */
 
@@ -1150,6 +1164,8 @@ typedef void (*retroflat_px_cb)(
    size_t x, size_t y, uint8_t flags );
 
 /* === Structures === */
+
+/* TODO: Break the args into API-specific headers. */
 
 /*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
@@ -1792,9 +1808,9 @@ defined( RETROVDP_C )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
 
-#ifndef NO_RETROSND
+#  ifndef RETROFLAT_NO_SOUND
    struct RETROFLAT_SOUND sound;
-#endif /* !NO_RETROSND */
+#  endif /* !RETROFLAT_NO_SOUND */
 };
 
 /* === Translation Module === */
@@ -2183,6 +2199,12 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     define RETROSOFT_PRESENT
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
+
+#  ifndef RETROFLAT_NO_SOUND
+#  include <retapis.h>
+#  endif /* !RETROFLAT_NO_SOUND */
+
+#  include <retapii.h>
 
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
@@ -3124,6 +3146,10 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #  ifdef RETROSOFT_PRESENT
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
+
+/* Second retapis.h include for function bodies not needed. */
+
+/* Second retapii.h include for function bodies not needed. */
 
 /**
  * \brief Directly addressable callback to produce pixels on a surface.

@@ -20,9 +20,6 @@
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
 #     include <SDL_getenv.h>
 #  endif /* RETROFLAT_API_SDL1 */
-#  ifndef NO_RETROSND
-#     include <SDL_mixer.h>
-#  endif /* !NO_RETROSND */
 
 #  if !defined( RETROFLAT_SOFT_SHAPES )
 #     define RETROFLAT_SOFT_SHAPES
@@ -40,12 +37,6 @@
 #  else
 #     error "rvdp .so undefined!"
 #  endif
-
-#ifdef RETROFLAT_API_SDL2
-typedef int32_t RETROFLAT_IN_KEY;
-#else
-typedef int16_t RETROFLAT_IN_KEY;
-#endif /* RETROFLAT_API_SDL2 */
 
 struct RETROFLAT_BITMAP {
 #  ifdef RETROFLAT_BMP_TEX
@@ -226,16 +217,6 @@ struct RETROFLAT_PLATFORM {
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */
 };
-
-#ifndef NO_RETROSND
-
-struct RETROFLAT_SOUND {
-   uint8_t flags;
-   Mix_Music* music;
-   int audio_open;
-};
-
-#endif /* !NO_RETROSND */
 
 #endif /* !RETPLTD_H */
 
