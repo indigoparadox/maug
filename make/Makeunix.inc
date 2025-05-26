@@ -93,6 +93,10 @@ ifeq ("$$(VDP)","1")
 	SDL_VER_UNIX := 1
 endif
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl
+endif
+
 # Set this before OBJDIR_GCC_UNIX_SDL is set below.
 ifeq ("$$(SDL_VER_UNIX)","1")
 
@@ -174,6 +178,10 @@ CFLAGS_GCC_UNIX_ALLEGRO := \
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+endif
+
 $(1).ale: \
 $$(addprefix $$(OBJDIR_GCC_UNIX_ALLEGRO)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
@@ -205,10 +213,14 @@ $$(error could not find pkg-config for gl!)
 endif
 
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
-	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/retro2d/glut \
+	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
 	-DRETROSND_API_ALSA
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/sound/null
+endif
 
 $(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \

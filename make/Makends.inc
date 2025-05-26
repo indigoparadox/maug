@@ -63,6 +63,10 @@ MAUG_DEPS_NDS += $$(MVFS_H_DIR)/mvfs.h
 endif
 endif
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_NDS += -I$(MAUG_ROOT)/api/sound/nds
+endif
+
 $(1).nds: obj/nds-libnds/$(1).elf
 	$$(NDSTOOL) -c "$$@" -9 "$$<" -b "$(2)" "$(1);$(1);$(1)"
 

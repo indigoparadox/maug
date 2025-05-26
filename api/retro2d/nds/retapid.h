@@ -83,8 +83,6 @@ typedef int GLint;
 #  define RETROFLAT_NDS_BG_TILE_H_PX 8
 #  define RETROFLAT_NDS_BG_W_TILES 32
 
-typedef int16_t RETROFLAT_IN_KEY;
-
 #define RETROFLAT_MS_FMT "%lu"
 
 /* Inline pass to generic loop. */
@@ -107,38 +105,6 @@ struct RETROFLAT_BITMAP {
 };
 
 typedef int RETROFLAT_COLOR_DEF;
-
-#  ifdef RETROFLAT_NDS_WASD
-#     define RETROFLAT_KEY_A           KEY_LEFT
-#     define RETROFLAT_KEY_D           KEY_RIGHT
-#     define RETROFLAT_KEY_W           KEY_UP
-#     define RETROFLAT_KEY_S           KEY_DOWN
-#     define RETROFLAT_KEY_Q           KEY_L
-#     define RETROFLAT_KEY_E           KEY_R
-#  else
-#     define RETROFLAT_KEY_LEFT        KEY_LEFT
-#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#     define RETROFLAT_KEY_UP          KEY_UP
-#     define RETROFLAT_KEY_DOWN        KEY_DOWN
-#     define RETROFLAT_KEY_INSERT      KEY_R
-#     define RETROFLAT_KEY_DELETE      KEY_L
-#  endif /* RETROFLAT_NDS_WASD */
-#  define RETROFLAT_KEY_ENTER       KEY_START
-#  define RETROFLAT_KEY_SPACE       KEY_A
-#  define RETROFLAT_KEY_ESC         KEY_B
-#  define RETROFLAT_MOUSE_B_LEFT    (-1)
-#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
-
-#define retroflat_nds_buttons( f ) \
-   f( KEY_LEFT ) \
-   f( KEY_RIGHT ) \
-   f( KEY_UP ) \
-   f( KEY_DOWN ) \
-   f( KEY_START ) \
-   f( KEY_A ) \
-   f( KEY_B ) \
-   f( KEY_L ) \
-   f( KEY_R )
 
 /* TODO */
 #  define retroflat_bitmap_locked( bmp ) (0)
@@ -258,15 +224,6 @@ uint8_t retroflat_viewport_focus(
  */
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
-
-#ifndef NO_RETROSND
-
-struct RETROFLAT_SOUND {
-   uint8_t flags;
-   uint8_t channels[RETROSND_CHANNEL_CT];
-};
-
-#endif /* !NO_RETROSND */
 
 #endif /* !RETPLTD_H */
 

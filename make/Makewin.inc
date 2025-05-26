@@ -39,6 +39,10 @@ ifeq ("$(OPENGL)","1")
 endif
 endif
 
+ifneq ("$(INLINE_SZ)","")
+	CFLAGS_WATCOM386 += -oe=$(INLINE_SZ)
+endif
+
 ifeq ("$(CC_GCC_MINGW)","")
 	CC_GCC_MINGW = i686-w64-mingw32-gcc
 endif
@@ -160,6 +164,10 @@ ifeq ("$$(VDP)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/sound/win
+endif
+
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN32)))
 
 $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).res: $$(OBJDIR_WATCOM386_WIN_WIN32)/$(1).rc
@@ -197,6 +205,10 @@ CFLAGS_WATCOM386_WIN_GLUT := \
 	-i=$(MAUG_ROOT)/api/retro2d/glut -i=$(MAUG_ROOT)/api/input/glut
 
 LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM386_WIN_GLUT += -i=$(MAUG_ROOT)/api/sound/null
+endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_GLUT)))
 
@@ -238,6 +250,10 @@ CFLAGS_WATCOM386_WIN_SDL += \
 
 LDFLAGS_WATCOM386_WIN_SDL += system nt_win libr {SDL SDLmain}
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM386_WIN_SDL += -i=$(MAUG_ROOT)/api/sound/sdl
+endif
+
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_SDL)))
 
 # TODO: Import icon for use in SDL window.
@@ -276,6 +292,10 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i="$(MAUG_ROOT)/api/input/win"
 
 LDFLAGS_WATCOM_WIN_WIN16 += system windows
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win
+endif
 
 # Strip out options to bake-in resources, as they make the exe too big!
 
@@ -327,6 +347,10 @@ CFLAGS_WATCOM386_WIN_WIN16 += \
 
 LDFLAGS_WATCOM386_WIN_WIN16 += system win386
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM386_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win
+endif
+
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN16)))
 
 # No resource compiler stanza because that's handled by the rex > exe xform
@@ -371,6 +395,10 @@ ifeq ("$$(VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win
+endif
+
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN32)))
 
 $$(OBJDIR_GCC_WIN_WIN32)/$(1).res: $$(OBJDIR_GCC_WIN_WIN32)/$(1).rc
@@ -408,6 +436,10 @@ endif
 
 ifeq ("$$(OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
+endif
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC64_WIN_WIN32)))
