@@ -5,6 +5,11 @@ define(`dexea', `$1d.exe')
 divert(0)
 `#' vim: ft=make noexpandtab
 
+RETROFLAT_NO_SOUND := 0
+RETROFLAT_NO_CLI := 0
+RETROFLAT_NO_CLI_SZ := 0
+RETROFLAT_NO_VIEWPORT_REFRESH := 0
+
 C_FILES := src/main.c
 
 include maug/Makefile.inc
