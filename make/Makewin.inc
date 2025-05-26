@@ -34,7 +34,7 @@ ifeq ("$(BUILD)","RELEASE")
 	CFLAGS_GCC_WIN += -O2
 	CFLAGS_GCC64_WIN += -O2
 	CFLAGS_WATCOM386 += -ol+ -ok -oi -oh -or
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 	CFLAGS_WATCOM386 += -ob -on
 endif
 endif
@@ -84,7 +84,7 @@ ifeq ("$(SCREENSAVER)","1")
 	CFLAGS_GCC64_WIN += -DRETROFLAT_SCREENSAVER
 endif
 
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 	LDFLAGS_WATCOM386_WIN += libr opengl32
 	LDFLAGS_GCC_WIN += -lopengl32
 	LDFLAGS_GCC64_WIN += -lopengl32
@@ -95,7 +95,7 @@ ifeq ("$(WING)","1")
 	CFLAGS_WATCOM386_WIN += -DRETROFLAT_WING
 endif
 
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 CFLAGS_WATCOM386_WIN += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC_WIN += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC64_WIN += -I$(MAUG_ROOT)/api/retro3d/opengl
@@ -150,7 +150,7 @@ CFLAGS_WATCOM386_WIN_WIN32 += \
 	-mf -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i="$(MAUG_ROOT)/api/input/win"
 
-ifeq ("$$(OPENGL)","1")
+ifeq ("$$(RETROFLAT_OPENGL)","1")
 	# OpenGL stuff is pentium-optimized.
 	CFLAGS_WATCOM386_WIN_WIN32 += -5r -fp5
 else
@@ -160,7 +160,7 @@ endif
 
 LDFLAGS_WATCOM386_WIN_WIN32 += system nt_win
 
-ifeq ("$$(VDP)","1")
+ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
@@ -391,7 +391,7 @@ define TGT_GCC_WIN_WIN32
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I"$(MAUG_ROOT)/api/input/win"
 
-ifeq ("$$(VDP)","1")
+ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
@@ -430,11 +430,11 @@ define TGT_GCC64_WIN_WIN32
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I"$(MAUG_ROOT)/api/input/win"
 
-ifeq ("$$(VDP)","1")
+ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
-ifeq ("$$(OPENGL)","1")
+ifeq ("$$(RETROFLAT_OPENGL)","1")
 	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
 endif
 

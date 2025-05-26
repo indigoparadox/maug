@@ -24,7 +24,7 @@ ifneq ("$(BUILD)","RELEASE")
 	LDFLAGS_GCC64_UNIX += $(GCC_FSAN)
 endif
 
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 
 # Easier to understand error messages.
 ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
@@ -77,7 +77,7 @@ endef
 # Target: UNIX OS/SDL API
 # Variables:
 # - SDL_VER_UNIX
-# - OPENGL
+# - RETROFLAT_OPENGL
 # Parameters:
 # 1. Target name. Will have ".sdl" appended to it.
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
@@ -87,7 +87,7 @@ define TGTUNIXSDL
 # = Determine Prerequisites =
 
 # Set this before OBJDIR_GCC_UNIX_SDL is set below.
-ifeq ("$$(VDP)","1")
+ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
 	#LDFLAGS_GCC_UNIX_SDL += -ldl
 	SDL_VER_UNIX := 1

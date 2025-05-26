@@ -5,10 +5,9 @@ define(`dexea', `$1d.exe')
 divert(0)
 `#' vim: ft=make noexpandtab
 
-RETROFLAT_NO_SOUND := 0
-RETROFLAT_NO_CLI := 0
-RETROFLAT_NO_CLI_SZ := 0
-RETROFLAT_NO_VIEWPORT_REFRESH := 0
+RETROFLAT_SOUND := 1
+RETROFLAT_VDP := 1
+RETROFLAT_OPENGL := 0
 
 C_FILES := src/main.c
 
