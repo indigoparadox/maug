@@ -113,7 +113,7 @@ endif
 CFLAGS_WATCOM_DOS_BIOS += \
 	-bt=dos -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_BIOS
 
-LDFLAGS_WATCOM_DOS_BIOS += system dos option stack=8k
+LDFLAGS_WATCOM_DOS_BIOS += system dos option stack=8k option eliminate
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/sound/dosbios
