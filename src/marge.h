@@ -238,6 +238,7 @@ MERROR_RETVAL maug_add_arg(
 
    /* Sanity checking and sizing. */
    if( MAUG_CLI_ARG_LIST_SZ_MAX - 1 <= slot_idx ) {
+      error_printf( "too many CLI arguments specified!" );
       return MERROR_OVERFLOW;
    }
 
