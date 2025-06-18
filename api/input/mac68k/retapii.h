@@ -83,10 +83,6 @@ typedef int16_t RETROFLAT_IN_KEY;
 #  define RETROFLAT_MOUSE_B_LEFT    -1
 #  define RETROFLAT_MOUSE_B_RIGHT   -2
 
-
-#  define RETROFLAT_MOUSE_B_LEFT    0
-#  define RETROFLAT_MOUSE_B_RIGHT   0
-
 /*! \} */ /* maug_retroflt_keydefs */
 
 /*! \} */ /* maug_retroflt_input */
