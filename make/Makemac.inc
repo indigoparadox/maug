@@ -11,7 +11,8 @@ OBJDIR_GCC_MAC_M68K=obj/gcc-mac-mac68k
 CFLAGS_GCC_MAC_M68K := \
 	-DRETROFLAT_API_MAC \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k
-LDFLAGS_GCC_MAC_M68K :=
+# TODO: Make math link optional.
+LDFLAGS_GCC_MAC_M68K := -lm
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_MAC_M68K += -I$(MAUG_ROOT)/api/sound/null

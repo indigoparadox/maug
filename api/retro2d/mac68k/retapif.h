@@ -6,8 +6,28 @@ static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   Rect r = { 0, 0, 0, 0 };
 
-   /* TODO */
+   InitGraf( &qd.thePort );
+   InitFonts();
+   InitWindows();
+   InitMenus();
+   InitCursor();
+   TEInit();
+   InitDialogs( NULL );
+
+   /* Create the window. */
+   /* TODO: Set X/Y from args? */
+   SetRect( &r, 50, 50, args->screen_w, args->screen_h );
+   g_retroflat_state->platform.win = NewWindow(
+      /* TODO: Translate title to Pascal string. */
+      nil, &r, args->title, true, documentProc, (WindowPtr)-1, false, 0 );
+   if( nil == g_retroflat_state->platform.win ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+cleanup:
 
    return retval;
 }
@@ -24,9 +44,41 @@ MERROR_RETVAL retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   EventRecord e;
 
-   /* Just skip to the generic loop. */
-   retval = retroflat_loop_generic( frame_iter, loop_iter, data );
+   /* Set these to be called from WndProc later. */
+   g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
+   g_retroflat_state->loop_data = (void*)data;
+   g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
+
+   if(
+      RETROFLAT_FLAGS_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+   ) {
+      /* Main loop is already running, so we're just changing the iter call
+       * and leaving!
+       */
+      debug_printf( 1, "main loop already running!" );
+      goto cleanup;
+   }
+
+   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+
+   /* Handle Windows messages until quit. */
+   do {
+      SystemTask();
+      if( !GetNextEvent( everyEvent, &e ) ) {
+         Delay( 5, NULL );
+         continue;
+      }
+
+      retroflat_heartbeat_update();
+   } while(
+      RETROFLAT_FLAGS_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+   );
+
+cleanup:
 
    /* This should be set by retroflat_quit(). */
    return retval;
@@ -69,12 +121,14 @@ void retroflat_set_title( const char* format, ... ) {
 
 retroflat_ms_t retroflat_get_ms() {
    /* TODO */
+   return TickCount();
 }
 
 /* === */
 
 uint32_t retroflat_get_rand() {
    /* TODO */
+   return Random();
 }
 
 /* === */
@@ -82,13 +136,8 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_draw_lock( bmp );
-#  else
-
-   /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+   /* TODO: Stow old port to be retrieved on release. */
+   SetPort( g_retroflat_state->platform.win );
 
    return retval;
 }
@@ -98,13 +147,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#  ifdef RETROFLAT_OPENGL
-   retval = retroglu_draw_release( bmp );
-#  else
-
-   /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+   /* TODO: Re-set old port stowed in lock. */
 
    return retval;
 }
@@ -124,13 +167,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-#  ifdef RETROFLAT_OPENGL
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
 
 cleanup:
 
@@ -148,13 +185,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -162,13 +193,9 @@ MERROR_RETVAL retroflat_create_bitmap(
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_destroy_bitmap( bmp );
-#  else
 
    /* TODO */
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -180,21 +207,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#  ifndef RETROFLAT_OPENGL
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* RETROFLAT_OPENGL */
-
    assert( NULL != src );
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -219,16 +234,11 @@ void retroflat_px(
       return;
    }
 
+   /* TODO: Do we need this with Quickdraw? */
    retroflat_constrain_px( x, y, target, return );
 
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_px( target, color_idx, x, y, flags );
-#  else
-
    /* TODO */
-#  pragma message( "warning: px not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -242,23 +252,11 @@ void retroflat_rect(
       return;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   /* Draw the rect onto the given 2D texture. */
-   retrosoft_rect( target, color_idx, x, y, w, h, flags );
-
-#  else
-
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
 
    /* TODO */
-#  pragma message( "warning: rect not implemented" )
-
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */

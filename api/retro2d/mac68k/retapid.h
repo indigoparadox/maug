@@ -7,9 +7,18 @@
  * \brief RetroFlat platform definition header.
  */
 
+#include <Quickdraw.h>
+#include <Dialogs.h>
+#include <Fonts.h>
+
 #define RETROPLAT_PRESENT 1
 
+/* TODO: Implement Quickdraw viewport. */
 #define RETROFLAT_SOFT_VIEWPORT
+
+#  ifdef RETROFLAT_OPENGL
+#     error "opengl support not implemented for PC BIOS"
+#  endif /* RETROFLAT_OPENGL */
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -85,6 +94,7 @@ typedef int RETROFLAT_COLOR_DEF;
 struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
+   WindowPtr win;
 };
 
 #endif /* !RETPLTD_H */
