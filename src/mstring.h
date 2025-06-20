@@ -108,6 +108,9 @@ void maug_vsnprintf(
 
 void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
 
+MERROR_RETVAL maug_str_c2p(
+   const char* str_in, char* str_out, size_t str_out_sz );
+
 /* TODO: void maug_strtou32( const char* str, */
 
 /*! \} */ /* maug_mstring */
@@ -636,6 +639,31 @@ void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... ) {
    va_start( vargs, fmt );
    maug_vsnprintf( buffer, buffer_sz, fmt, vargs );
    va_end( vargs );
+}
+
+/* === */
+
+MERROR_RETVAL maug_str_c2p(
+   const char* str_in, char* str_out, size_t str_out_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t str_sz = 0;
+   char* str_out_buf = &(str_out[1]);
+   int8_t* p_str_out_buf_sz = (int8_t*)&(str_out[0]);
+
+   str_sz = strlen( str_in );
+
+   if( str_sz >= str_out_sz - 1 || 127 < str_sz ) {
+      error_printf( "input string too long!" );
+      retval = MERROR_OVERFLOW;
+   }
+
+   *p_str_out_buf_sz = str_sz;
+
+   /* -1 for the size at the beginning. */
+   strncpy( str_out_buf, str_in, str_out_sz - 1 );
+
+   return retval;
 }
 
 #endif /* MSTRING_C */
