@@ -886,126 +886,6 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
-
-/*! \addtogroup maug_retroflt_bitmap */
-
-#define retroflat_bitmap_has_flags( bmp, f ) \
-   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
-
-/*! \} */ /* maug_retroflt_bitmap */
-
-/**
- * \addtogroup maug_retro3d_util
- * \{
- */
-
-struct RETROFLAT_3DTEX {
-   uint8_t flags;
-   MAUG_MHANDLE bytes_h;
-   uint8_t* bytes;
-   uint32_t bpp;
-   uint32_t sz;
-   uint8_t* px;
-   uint32_t id;
-   size_t w;
-   size_t h;
-};
-
-/*! \} */ /* maug_retro3d_util */
-
-/**
- * \addtogroup maug_retroflt_dir_2d RetroFlat 2D Wrapper API
- * \brief Wrappers to call appropriate 2D surface functions for bitmaps or
- *        textures, depending on if the engine is in 2D or 3D mode.
- *
- * This wrapper system is necessary so that high-level internal library 
- * functions (e.g. retrosoft, retrofont, or retroani) are able to continue
- * functioning on textures in 3D mode.
- *
- * Formerly, this was accomplished by shunts inside of the lower-level
- * \ref maug_retroflt_drawing, but these shunts were removed in order to
- * facilitate platform-agnostic software-only 3D (and they were messy).
- * \{
- */
-
-/* TODO: These need to become function pointers or similar, to work with
- *       Windows CE.
- */
-
-/**
- * \brief Wrapper macro to call appropriate 2D surface blitter for pixels.
- */
-#define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
-
-#define retroflat_2d_line( ... ) retrosoft_line( __VA_ARGS__ )
-
-#define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_ok( ... ) retro3d_texture_ok( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_w( ... ) retro3d_texture_w( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_h( ... ) retro3d_texture_h( __VA_ARGS__ )
-
-#define retroflat_2d_blit_bitmap( ... ) retro3d_texture_blit( __VA_ARGS__ )
-
-#define retroflat_2d_blit_win( src, d_x, d_y ) \
-   retro3d_draw_window( src, d_x, d_y )
-
-#define retroflat_2d_lock_bitmap( ... ) \
-   retro3d_texture_lock( __VA_ARGS__ )
-
-#define retroflat_2d_release_bitmap( ... ) \
-   retro3d_texture_release( __VA_ARGS__ )
-
-#define retroflat_2d_load_bitmap( ... ) \
-   retro3d_texture_load_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_create_bitmap( ... ) \
-   retro3d_texture_create( __VA_ARGS__ )
-
-#define retroflat_2d_destroy_bitmap( ... ) \
-   retro3d_texture_destroy( __VA_ARGS__ )
-
-#else
-
-#define retroflat_bitmap_has_flags( bmp, f ) \
-   (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
-
-#define retroflat_2d_px( ... ) retroflat_px( __VA_ARGS__ )
-
-#define retroflat_2d_line( ... ) retroflat_line( __VA_ARGS__ )
-
-#define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_ok( ... ) retroflat_bitmap_ok( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
-
-#define retroflat_2d_blit_win( src, d_x, d_y ) \
-   retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \
-      (win)->gui->w, (win)->gui->h, 0 )
-
-#define retroflat_2d_blit_bitmap( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_lock_bitmap( ... ) \
-   retroflat_draw_lock( __VA_ARGS__ )
-
-#define retroflat_2d_release_bitmap( ... ) \
-   retroflat_draw_release( __VA_ARGS__ )
-
-#define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_create_bitmap( ... ) retroflat_create_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_destroy_bitmap( ... ) \
-   retroflat_destroy_bitmap( __VA_ARGS__ )
-
-#endif /* RETROFLAT_3D || DOCUMENTATION */
-
 /**
  * \brief Type used for surface pixel coordinates.
  *
@@ -1151,21 +1031,7 @@ void retrosnd_shutdown();
 
 typedef maug_ms_t retroflat_ms_t;
 
-#ifdef RETROFLAT_BMP_TEX
-typedef struct RETROFLAT_3DTEX retroflat_blit_t;
-#else
-typedef struct RETROFLAT_BITMAP retroflat_blit_t;
-#endif
-
-/**
- * \brief Type of callback function used to produce pixels on a surface.
- *
- * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
- * on whether this is a 3D or 2D engine.
- */
-typedef void (*retroflat_px_cb)(
-   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags );
+#include "retrom2d.h"
 
 /* === Structures === */
 
@@ -2672,6 +2538,31 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
    assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
 
+   /* Initialize 2D callbacks depending on if we're in 2D or 3D mode.
+    * Please see retrom2d.h for more information.
+    */
+#     if defined( RETROFLAT_BMP_TEX )
+   retroflat_2d_px = retro3d_texture_px;
+   retroflat_2d_line = retrosoft_line;
+   retroflat_2d_rect = retrosoft_rect;
+   retroflat_2d_blit_bitmap = retro3d_texture_blit;
+   retroflat_2d_load_bitmap = retro3d_texture_load_bitmap;
+   retroflat_2d_create_bitmap = retro3d_texture_create;
+#     else
+   retroflat_2d_px = retroflat_px;
+#        ifdef RETROFLAT_SOFT_SHAPES
+   /* TODO: Work retrosoft routines to use retroflat_blit_t */
+   retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+#        else
+   retroflat_2d_line = retroflat_line;
+   retroflat_2d_rect = retroflat_rect;
+#        endif /* RETROFLAT_SOFT_SHAPES */
+   retroflat_2d_blit_bitmap = retroflat_blit_bitmap;
+   retroflat_2d_load_bitmap = retroflat_load_bitmap;
+   retroflat_2d_create_bitmap = retroflat_create_bitmap;
+#     endif /* RETROFLAT_BMP_TEX */
+
    debug_printf( 1, "retroflat: MFIX_PRECISION: %f", MFIX_PRECISION );
 
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
@@ -3154,14 +3045,6 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 /* Second retapis.h include for function bodies not needed. */
 
 /* Second retapii.h include for function bodies not needed. */
-
-/**
- * \brief Directly addressable callback to produce pixels on a surface.
- *
- * This is assigned in retroflat_init(), as that is when all of the _px()
- * callback functions are defined and available.
- */
-extern retroflat_px_cb g_retroflat_px;
 
 #endif /* RETROFLT_C */
 
