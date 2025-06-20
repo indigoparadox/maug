@@ -15,7 +15,7 @@ OBJDIR_CECL_WINCE_MIPS := obj/cecl-wince-mips
 
 OBJDIR_CECL_WINCE_X86 := obj/cecl-wince-x86
 
-CFLAGS_CECL_WINCE += /nologo /GX- /D "_WIN32_WCE" /D "UNICODE" /I "$(WCE20DEV)/INCLUDE" /I "$(MAUG_ROOT)/api/retro2d/win" /I "$(MAUG_ROOT)/api/input/win" /I "$(MAUG_ROOT)/api/file/win" /I "$(MAUG_ROOT)/api/log/fallback" /D "RETROFLAT_OS_WIN" /D "RETROFLAT_API_WINCE" /D "MAUG_ANCIENT_C" /D "RETROFLAT_NO_CLI" /D "RETROFLAT_NO_STRING" /D "MAUG_NO_STDLIB" /D "MAUG_WCHAR" /D "NO_RETROSND" $(INCLUDES_VS)
+CFLAGS_CECL_WINCE += /nologo /GX- /D "_WIN32_WCE" /D "UNICODE" /I "$(WCE20DEV)/INCLUDE" /I "$(MAUG_ROOT)/api/retro2d/win" /I "$(MAUG_ROOT)/api/input/win" /I "$(MAUG_ROOT)/api/file/win" /I "$(MAUG_ROOT)/api/log/fallback" /D "RETROFLAT_OS_WIN" /D "RETROFLAT_API_WINCE" /D "MAUG_ANCIENT_C" /D "RETROFLAT_NO_CLI" /D "RETROFLAT_NO_STRING" /D "MAUG_NO_STDLIB" /D "MAUG_WCHAR" /D "RETROFLAT_NO_SOUND" $(INCLUDES_VS)
 
 LDFLAGS_CECL_WINCE += commctrl.lib coredll.lib /nologo /subsystem:windowsce
 
