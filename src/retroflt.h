@@ -1026,6 +1026,27 @@ void retrosnd_shutdown();
 #  define MAUG_WINDOWS_H
 #endif /* !MAUG_WINDOWS_H */
 
+#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
+
+/**
+ * \addtogroup maug_retro3d_util
+ * \{
+ */
+
+struct RETROFLAT_3DTEX {
+   uint8_t flags;
+   MAUG_MHANDLE bytes_h;
+   uint8_t* bytes;
+   uint32_t bpp;
+   uint32_t sz;
+   uint8_t* px;
+   uint32_t id;
+   size_t w;
+   size_t h;
+};
+
+#endif /* RETROFLAT_BMP_TEX */
+
 /* TODO: Migrate all platform-specific parts below to retapid.h. */
 #include <retapid.h>
 
