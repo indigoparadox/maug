@@ -26,7 +26,8 @@ ifneq ("$$(EMCC_CONFIG)","")
 endif
 
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
-	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl -s USE_OGG=1
+	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl -s USE_OGG=1 \
+	-I$(MAUG_ROOT)/api/file/unix
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl
