@@ -57,6 +57,11 @@
 #endif /* MAUG_OS_DOS_REAL */
 
 #ifdef MAUG_C
+#  define MSTRING_C
+#endif /* MAUG_C */
+#include <mstring.h>
+
+#ifdef MAUG_C
 #  define UPRINTF_C
 #endif /* MAUG_C */
 #include <uprintf.h>

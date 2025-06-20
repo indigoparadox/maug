@@ -929,6 +929,10 @@ struct RETROFLAT_3DTEX {
  * \{
  */
 
+/* TODO: These need to become function pointers or similar, to work with
+ *       Windows CE.
+ */
+
 /**
  * \brief Wrapper macro to call appropriate 2D surface blitter for pixels.
  */
