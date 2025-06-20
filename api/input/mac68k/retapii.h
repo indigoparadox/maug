@@ -97,6 +97,11 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    input->key_flags = 0;
 
    /* TODO */
+   switch( g_retroflat_state->platform.event.what ) {
+   case keyDown:
+      retroflat_quit( 0 );
+      break;
+   }
 
    return key_out;
 }

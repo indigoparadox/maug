@@ -7,6 +7,7 @@ static MERROR_RETVAL retroflat_init_platform(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    Rect r = { 0, 0, 0, 0 };
+   unsigned char title_buf[128];
 
    InitGraf( &qd.thePort );
    InitFonts();
@@ -16,12 +17,14 @@ static MERROR_RETVAL retroflat_init_platform(
    TEInit();
    InitDialogs( NULL );
 
+   retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
+   maug_cleanup_if_not_ok();
+
    /* Create the window. */
    /* TODO: Set X/Y from args? */
    SetRect( &r, 50, 50, args->screen_w, args->screen_h );
    g_retroflat_state->platform.win = NewWindow(
-      /* TODO: Translate title to Pascal string. */
-      nil, &r, args->title, true, documentProc, (WindowPtr)-1, false, 0 );
+      nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
    if( nil == g_retroflat_state->platform.win ) {
       retval = MERROR_GUI;
       goto cleanup;
@@ -36,6 +39,7 @@ cleanup:
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* TODO */
+   FlushEvents( everyEvent, -1 );
 }
 
 /* === */
@@ -44,7 +48,8 @@ MERROR_RETVAL retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   EventRecord e;
+   retroflat_ms_t next = 0,
+      now = 0;
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -67,12 +72,45 @@ MERROR_RETVAL retroflat_loop(
    /* Handle Windows messages until quit. */
    do {
       SystemTask();
-      if( !GetNextEvent( everyEvent, &e ) ) {
+      GetNextEvent( everyEvent, &(g_retroflat_state->platform.event) );
+
+      if(
+         /* Not waiting for the next frame? */
+         RETROFLAT_FLAGS_WAIT_FOR_FPS !=
+         (RETROFLAT_FLAGS_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
+         /* Inter-frame loop present? */
+         NULL != g_retroflat_state->loop_iter
+      ) {
+         /* Run the loop iter as many times as possible. */
+         g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
+      }
+      if(
+         RETROFLAT_FLAGS_UNLOCK_FPS !=
+         (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
+         retroflat_get_ms() < next
+      ) {
+         /* Sleep/low power for a bit. */
          Delay( 5, NULL );
          continue;
       }
 
       retroflat_heartbeat_update();
+
+      if( NULL != g_retroflat_state->frame_iter ) {
+         /* Run the frame iterator once per FPS tick. */
+         g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
+      }
+      /* Reset wait-for-frame flag AFTER frame callback. */
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_WAIT_FOR_FPS;
+      now = retroflat_get_ms();
+      if( now + retroflat_fps_next() > now ) {
+         next = now + retroflat_fps_next();
+      } else {
+         /* Rollover protection. */
+         /* TODO: Add difference from now/next to 0 here. */
+         next = 0;
+      }
+
    } while(
       RETROFLAT_FLAGS_RUNNING ==
       (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)

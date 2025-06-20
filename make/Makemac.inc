@@ -1,7 +1,12 @@
 
 # vim: ft=make noexpandtab
 
-CC_MAC68K := /usr/m68k-apple-macos/bin/m68k-apple-macos-gcc
+ifndef RETRO68
+RETRO68 := $(subst bin/m68k-apple-macos-gcc,,$(shell which m68k-apple-macos-gcc))
+RINCLUDES := $(RETRO68)RIncludes
+endif
+
+CC_MAC68K := $(RETRO68)bin/m68k-apple-macos-gcc
 
 # Target: Mac System 7 API (68k)
 define TGTMAC68K
@@ -18,7 +23,15 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_MAC_M68K += -I$(MAUG_ROOT)/api/sound/null
 endif
 
+$$(OBJDIR_GCC_MAC_M68K)/$(1).APPL \
+$$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
 $(1).m68k.dsk: \
+$$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin
+	Rez -I$(RINCLUDES) --copy "$$<" "$(RINCLUDES)/Retro68APPL.r" \
+		-t "APPL" -c "????" -o $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
+		--cc $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL --cc $(1).m68k.dsk
+
+$$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin: \
 $$(addprefix $$(OBJDIR_GCC_MAC_M68K)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_MAC68K) -o $$@ $$^ \
 		$$(subst -pg,,$$(subst -g,,$$(LDLAGS_GCC))) \
@@ -33,5 +46,4 @@ $$(OBJDIR_GCC_MAC_M68K)/%.o: %.c | $$(MAUG_DEPS)
 CLEAN_TARGETS += $(1).m68k.dsk
 
 endef
-
 

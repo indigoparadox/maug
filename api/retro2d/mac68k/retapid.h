@@ -95,6 +95,7 @@ struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    WindowPtr win;
+   EventRecord event;
 };
 
 #endif /* !RETPLTD_H */
