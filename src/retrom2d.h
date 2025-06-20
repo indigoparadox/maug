@@ -17,7 +17,9 @@
  * \{
  */
 
-#ifdef RETROFLAT_BMP_TEX
+/*! \} */ /* maug_retro3d_util */
+
+#if defined( RETROFLAT_BMP_TEX )
 typedef struct RETROFLAT_3DTEX retroflat_blit_t;
 #else
 typedef struct RETROFLAT_BITMAP retroflat_blit_t;
@@ -84,25 +86,6 @@ retroflat_create_bitmap_cb retroflat_2d_create_bitmap RETROFLT_CB_INIT;
 #if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
 
 /**
- * \addtogroup maug_retro3d_util
- * \{
- */
-
-struct RETROFLAT_3DTEX {
-   uint8_t flags;
-   MAUG_MHANDLE bytes_h;
-   uint8_t* bytes;
-   uint32_t bpp;
-   uint32_t sz;
-   uint8_t* px;
-   uint32_t id;
-   size_t w;
-   size_t h;
-};
-
-/*! \} */ /* maug_retro3d_util */
-
-/**
  * \addtogroup maug_retroflt_bitmap
  * \{
  */
@@ -111,11 +94,11 @@ struct RETROFLAT_3DTEX {
 
 /*! \} */ /* maug_retroflt_bitmap */
 
-#  define retroflat_2d_bitmap_ok( b ) retroflat_bitmap_ok( b )
+#  define retroflat_2d_bitmap_ok( b ) retro3d_texture_ok( b )
 
-#  define retroflat_2d_bitmap_w( b ) retroflat_bitmap_w( b )
+#  define retroflat_2d_bitmap_w( b ) retro3d_texture_w( b )
 
-#  define retroflat_2d_bitmap_h( b ) retroflat_bitmap_h( b )
+#  define retroflat_2d_bitmap_h( b ) retro3d_texture_h( b )
 
 #  define retroflat_2d_lock_bitmap( b ) retro3d_texture_lock( b )
 
