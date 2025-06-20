@@ -16,6 +16,10 @@
 
 typedef int16_t retrotile_coord_t;
 
+#ifndef RETROTILE_TRACE_CHARS
+#  define RETROTILE_TRACE_CHARS 0
+#endif /* !RETROTILE_TRACE_TOKENS */
+
 #ifndef RETROTILE_NAME_SZ_MAX
 /*! \brief Maximum number of chars in a RETROTILE::name. */
 #  define RETROTILE_NAME_SZ_MAX 10
@@ -503,8 +507,7 @@ MERROR_RETVAL retrotile_topdown_draw(
 #define retrotile_parser_mstate( parser, new_mstate ) \
    parser->mstate = new_mstate; \
    debug_printf( \
-      RETROTILE_TRACE_LVL, "parser mstate: %s", \
-         retrotile_mstate_name( parser->mstate ) );
+      RETROTILE_TRACE_LVL, "parser mstate: %d", parser->mstate );
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
       MAUG_CONST uint8_t SEG_MCONST name = idx;
@@ -1275,6 +1278,7 @@ MERROR_RETVAL retrotile_parse_json_file(
 
       while( mfile_has_bytes( &buffer ) ) {
          buffer.read_int( &buffer, (uint8_t*)&c, 1, 0 );
+         debug_printf( RETROTILE_TRACE_CHARS, "%c", c );
          retval = mjson_parse_c( &(parser->jparser), c );
          if( MERROR_OK != retval ) {
             error_printf( "error parsing JSON!" );
