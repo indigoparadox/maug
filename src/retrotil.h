@@ -1579,7 +1579,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    avg = 
       retrotile_gen_diamond_square_avg( corners_x, corners_y, t, layer );
 
-   debug_printf( 1, "avg :%d", avg );
+   debug_printf( RETROTILE_TRACE_LVL, "avg: " S32_FMT, avg );
 
    tile_iter = &(retrotile_get_tile(
       t, layer,
@@ -2032,8 +2032,8 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
    uint8_t* tilemap_buf = (uint8_t*)tilemap;
 
    if( 0 == tilemap->layers_count || layer_idx >= tilemap->layers_count ) {
-      error_printf( "invalid layer " UPRINTF_U32_FMT
-         " requested (of " UPRINTF_U32_FMT ")!",
+      error_printf( "invalid layer " U32_FMT
+         " requested (of " U32_FMT ")!",
          layer_idx, tilemap->layers_count );
       return NULL;
    }

@@ -452,15 +452,15 @@ MERROR_RETVAL maug_tok_int(
    size_t idx, const char* line, size_t line_sz, int16_t* out
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char out_str[UPRINTF_S16_DIGITS + 1];
+   char out_str[S16_DIGITS + 1];
 
-   maug_mzero( out_str, UPRINTF_S16_DIGITS + 1 );
+   maug_mzero( out_str, S16_DIGITS + 1 );
 
    retval = maug_tok_str(
-      idx, line, line_sz, out_str, UPRINTF_S16_DIGITS + 1 );
+      idx, line, line_sz, out_str, S16_DIGITS + 1 );
    maug_cleanup_if_not_ok();
    
-   *out = maug_atos32( out_str, UPRINTF_S16_DIGITS );
+   *out = maug_atos32( out_str, S16_DIGITS );
 
 cleanup:
 
