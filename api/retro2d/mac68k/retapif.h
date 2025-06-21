@@ -65,6 +65,9 @@ MERROR_RETVAL retroflat_loop(
    retroflat_ms_t next = 0,
       now = 0;
    EventRecord event;
+#ifdef RETROFLAT_CYCLES
+   int cycles_to_die = RETROFLAT_CYCLES;
+#endif /* RETROFLAT_CYCLES */
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -88,6 +91,10 @@ MERROR_RETVAL retroflat_loop(
    do {
       SystemTask();
       GetNextEvent( everyEvent, &event );
+
+#ifdef RETROFLAT_CYCLES
+      cycles_to_die--;
+#endif /* RETROFLAT_CYCLES */
 
       /* Grab the keycode for later if applicable. */
       switch( event.what ) {
@@ -135,6 +142,9 @@ MERROR_RETVAL retroflat_loop(
       }
 
    } while(
+#ifdef RETROFLAT_CYCLES
+      0 < cycles_to_die &&
+#endif /* RETROFLAT_CYCLES */
       RETROFLAT_FLAGS_RUNNING ==
       (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
    );
