@@ -97,17 +97,30 @@ void maug_str_upper( char* line, size_t line_sz );
 
 void maug_str_lower( char* line, size_t line_sz );
 
+/**
+ * \brief Split a string into substring tokens by index.
+ * \param idx Index of the string separated by sep.
+ * \param line String of text to split by separators in sep.
+ * \param line_sz Length of line, or 0 to use strlen().
+ * \param out Pointer to buffer to write token specified by idx to.
+ * \param sep Null-terminated string of separators to split by.
+ * \return MERROR_OK if token was found or MERROR_OVERFLOW if EOL was found.
+ */
 MERROR_RETVAL maug_tok_str(
-   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz );
+   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz,
+   char* sep );
 
 MERROR_RETVAL maug_tok_int(
-   size_t idx, const char* line, size_t line_sz, int16_t* out );
+   size_t idx, const char* line, size_t line_sz, int16_t* out, char* sep );
 
 void maug_vsnprintf(
    char* buffer, int buffer_sz, const char* fmt, va_list vargs );
 
 void maug_snprintf( char* buffer, int buffer_sz, const char* fmt, ... );
 
+/**
+ * \brief Convert a C string to a pascal string.
+ */
 MERROR_RETVAL maug_str_c2p(
    const char* str_in, char* str_out, size_t str_out_sz );
 
@@ -401,12 +414,15 @@ void maug_str_lower( char* line, size_t line_sz ) {
 /* === */
 
 MERROR_RETVAL maug_tok_str(
-   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz
+   size_t idx, const char* line, size_t line_sz, char* out, size_t out_sz,
+   char* sep
 ) {
    MERROR_RETVAL retval = MERROR_OVERFLOW;
    size_t idx_iter = 0;
    size_t i_out = 0;
    size_t i_in = 0;
+   size_t i_tok = 0;
+   uint8_t sep_match = 0;
 
    if( 0 == line_sz ) {
       line_sz = maug_strlen( line );
@@ -414,7 +430,20 @@ MERROR_RETVAL maug_tok_str(
    }
 
    for( i_in = 0 ; line_sz >= i_in ; i_in++ ) {
-      if( '\n' == line[i_in] || ' ' == line[i_in] || '\0' == line[i_in] ) {
+      /* Try to match the separator. */
+      sep_match = 0;
+      if( '\0' == line[i_in] ) {
+         sep_match = 1;
+      } else {
+         for( i_tok = 0 ; strlen( sep ) > i_tok ; i_tok++ ) {
+            if( sep[i_tok] == line[i_in] ) {
+               sep_match = 1;
+               break;
+            }
+         }
+      }
+
+      if( sep_match ) {
          /* TODO: Filter out multi-whitespace. */
          idx_iter++;
          if( idx_iter > idx ) {
@@ -449,7 +478,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL maug_tok_int(
-   size_t idx, const char* line, size_t line_sz, int16_t* out
+   size_t idx, const char* line, size_t line_sz, int16_t* out, char* sep
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char out_str[S16_DIGITS + 1];
@@ -457,7 +486,7 @@ MERROR_RETVAL maug_tok_int(
    maug_mzero( out_str, S16_DIGITS + 1 );
 
    retval = maug_tok_str(
-      idx, line, line_sz, out_str, S16_DIGITS + 1 );
+      idx, line, line_sz, out_str, S16_DIGITS + 1, sep );
    maug_cleanup_if_not_ok();
    
    *out = maug_atos32( out_str, S16_DIGITS );

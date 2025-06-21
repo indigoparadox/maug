@@ -70,13 +70,13 @@ xpm_found:
 
    /* Load XPM and draw it to a new bitmap. */
 
-   retval = maug_tok_int( 0, gc_xpm_data[xpm_idx][0], 0, &bmp_w );
+   retval = maug_tok_int( 0, gc_xpm_data[xpm_idx][0], 0, &bmp_w, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 1, gc_xpm_data[xpm_idx][0], 0, &bmp_h );
+   retval = maug_tok_int( 1, gc_xpm_data[xpm_idx][0], 0, &bmp_h, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 2, gc_xpm_data[xpm_idx][0], 0, &bmp_colors );
+   retval = maug_tok_int( 2, gc_xpm_data[xpm_idx][0], 0, &bmp_colors, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 3, gc_xpm_data[xpm_idx][0], 0, &bmp_bypp );
+   retval = maug_tok_int( 3, gc_xpm_data[xpm_idx][0], 0, &bmp_bypp, "\n " );
    maug_cleanup_if_not_ok();
 
    debug_printf( RETROXPM_TRACE_LVL,
