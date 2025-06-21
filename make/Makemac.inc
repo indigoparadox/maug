@@ -37,6 +37,14 @@ $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin
 	Rez -I$(RINCLUDES) --copy "$$<" "$(RINCLUDES)/Retro68APPL.r" \
 		-t "APPL" -c "????" -o $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
 		--cc $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL --cc $(1).m68k.dsk
+	if [ -n "$(2)" ]; then \
+		hmount $(1).m68k.dsk && \
+		for f in $(2); do \
+			md="`dirname "$$$${f}" | sed 's|/|:|g'`"; \
+			mf="`echo "$$$${f}" | sed 's|/|:|g'`"; \
+			hmkdir :$$$${md} ; \
+			hcopy $$$$f :$$$$mf ; \
+		done; humount $(1).m68k.dsk; fi
 
 $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin: \
 $$(addprefix $$(OBJDIR_GCC_MAC_M68K)/,$$(subst .c,.o,$$(C_FILES)))
