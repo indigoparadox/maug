@@ -64,7 +64,6 @@ MERROR_RETVAL retroflat_loop(
    MERROR_RETVAL retval = MERROR_OK;
    retroflat_ms_t next = 0,
       now = 0;
-   int die_at = 10;
    EventRecord event;
 
    /* Set these to be called from WndProc later. */
@@ -135,10 +134,7 @@ MERROR_RETVAL retroflat_loop(
          next = 0;
       }
 
-      die_at--;
-
    } while(
-      0 < die_at &&
       RETROFLAT_FLAGS_RUNNING ==
       (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
    );
