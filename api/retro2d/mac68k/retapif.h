@@ -2,6 +2,17 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
+   if( 0 == color_idx ) {
+      ForeColor( blackColor );
+   } else {
+      if( RETROFLAT_COLOR_WHITE != color_idx ) {
+         debug_printf( 1, "alert! high color used: %d", color_idx );
+      }
+      ForeColor( whiteColor );
+   }
+}
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -192,6 +203,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO: Stow old port to be retrieved on release. */
    SetPort( g_retroflat_state->platform.win );
+   PenSize( 1, 1 );
 
    return retval;
 }
@@ -288,11 +300,10 @@ void retroflat_px(
       return;
    }
 
-   /* TODO: Do we need this with Quickdraw? */
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_mac_bwcolor( color_idx );
 
-   /* TODO */
-
+   MoveTo( x, y );
+   LineTo( x + 1, y );
 }
 
 /* === */
@@ -301,6 +312,7 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
+   Rect r = { x, y, h, w };
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -310,7 +322,13 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
+   retroflat_mac_bwcolor( color_idx );
+
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      PaintRect( &r );
+   } else {
+      FrameRect( &r );
+   }
 }
 
 /* === */
@@ -324,47 +342,39 @@ void retroflat_line(
       return;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
-
-#  else
-
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
-#  pragma message( "warning: line not implemented" )
+   retroflat_mac_bwcolor( color_idx );
 
-#  endif /* RETROFLAT_OPENGL */
+   MoveTo( x1, y1 );
+   LineTo( x2, y2 );
 }
 
 /* === */
 
 void retroflat_ellipse(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
+   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
+   Rect r = { x, y, h, w };
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   retrosoft_ellipse( target, color, x, y, w, h, flags );
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
-#  pragma message( "warning: ellipse not implemented" )
+   retroflat_mac_bwcolor( color_idx );
 
-#  endif /* RETROFLAT_OPENGL */
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+      PaintOval( &r );
+   } else {
+      FrameOval( &r );
+   }
 }
 
 /* === */
