@@ -176,10 +176,12 @@ void retroflat_message(
    retval = maug_str_c2p( msg_out, (char*)msg_buf, 128 );
    maug_cleanup_if_not_ok_msg( "message string too long!" );
 
+   /*
    dialog = NewDialog(
       nil, &r, msg_buf, TRUE, dBoxProc, (WindowPtr)-1, FALSE, 0, nil );
    ModalDialog( nil, &item );
    DisposeDialog( dialog );
+   */
 
 cleanup:
 

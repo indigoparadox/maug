@@ -370,7 +370,7 @@ void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex ) {
 
    if( 0 < tex->id ) {
       debug_printf( 0,
-         "destroying bitmap texture: " UPRINTF_U32_FMT, tex->id );
+         "destroying bitmap texture: " U32_FMT, tex->id );
       retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_DESTROY );
    }
 #endif /* !RETRO3D_NO_TEXTURES */

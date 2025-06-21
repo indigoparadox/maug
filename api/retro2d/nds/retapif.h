@@ -715,7 +715,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    uint32_t b = 0;
 
    debug_printf( RETROFLAT_PLATFORM_TRACE_LVL,
-      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+      "setting texture palette #%u to " X32_FMT "...",
       idx, rgb );
 
 #  ifdef RETROFLAT_OPENGL

@@ -673,7 +673,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    uint8_t byte_buffer = 0;
 
    debug_printf( 1,
-      "setting texture palette #%u to " UPRINTF_X32_FMT "...",
+      "setting texture palette #%u to " X32_FMT "...",
       idx, rgb );
 
    /* Set VGA mask register. */
