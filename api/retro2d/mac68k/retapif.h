@@ -92,7 +92,7 @@ MERROR_RETVAL retroflat_loop(
       /* Grab the keycode for later if applicable. */
       switch( event.what ) {
       case keyDown:
-         g_retroflat_state->platform.key_code = 
+         g_retroflat_state->input.key_code = 
             (event.message & keyCodeMask) >> 8;
          break;
       }

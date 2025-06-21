@@ -2,6 +2,11 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   uint8_t flags;
+   uint8_t key_code;
+};
+
 typedef int16_t RETROFLAT_IN_KEY;
 
 /**
@@ -97,9 +102,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    input->key_flags = 0;
 
    /* TODO */
-   if( 0xff != g_retroflat_state->platform.key_code ) {
-      key_out = g_retroflat_state->platform.key_code;
-      g_retroflat_state->platform.key_code = 0xff;
+   if( 0xff != g_retroflat_state->input.key_code ) {
+      key_out = g_retroflat_state->input.key_code;
+      g_retroflat_state->input.key_code = 0xff;
       debug_printf( 1, "key: 0x%02x", key_out );
    }
 

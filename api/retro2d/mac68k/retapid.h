@@ -94,11 +94,13 @@ typedef int RETROFLAT_COLOR_DEF;
 
 /*! \} */ /* maug_retroflt_drawing */
 
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
 struct RETROFLAT_PLATFORM {
-   /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    WindowPtr win;
-   uint8_t key_code;
 };
 
 #endif /* !RETPLTD_H */
