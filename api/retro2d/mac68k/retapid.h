@@ -66,7 +66,10 @@ struct RETROFLAT_BITMAP {
  * \brief This should be called in order to quit a program using RetroFlat.
  * \param retval The return value to pass back to the operating system.
  */
-#  define retroflat_quit( retval_in )
+#  define retroflat_quit( retval_in ) \
+      debug_printf( 1, "quit called, retval: %d", retval_in ); \
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retroflat_state->retval = retval_in;
 
 /*! \brief Defined for backward-compatibility with Allegro. */
 #  define END_OF_MAIN()
@@ -95,7 +98,7 @@ struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    WindowPtr win;
-   EventRecord event;
+   uint8_t key_code;
 };
 
 #endif /* !RETPLTD_H */

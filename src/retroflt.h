@@ -2739,9 +2739,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup the refresh grid, if requested, only after screen space has been
     * determined by the platform!
     */
-   assert( 0 < retroflat_screen_w() );
-   assert( 0 < retroflat_screen_h() );
-   assert( 0 < retroflat_screen_colors() );
+   maug_cleanup_if_eq( 0, retroflat_screen_w(), "%d", MERROR_GUI );
+   maug_cleanup_if_eq( 0, retroflat_screen_h(), "%d", MERROR_GUI );
+   maug_cleanup_if_eq( 0, retroflat_screen_colors(), "%d", MERROR_GUI );
 
    /* This is intended as a default and can be modified by calling this macro
     * again later.

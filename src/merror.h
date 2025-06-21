@@ -86,6 +86,12 @@ typedef int MERROR_RETVAL;
       goto cleanup; \
    }
 
+#define maug_cleanup_if_not_ok_msg( msg ) \
+   if( MERROR_OK != retval ) { \
+      error_printf( msg ); \
+      goto cleanup; \
+   }
+
 #define maug_cleanup_if_lt( a, b, fmt, err ) \
    if( (a) < (b) ) { \
       error_printf( fmt " is less than " fmt "!", a, b ); \
@@ -105,6 +111,13 @@ typedef int MERROR_RETVAL;
 
 #define maug_cleanup_if_ge_overflow( a, b ) \
    maug_cleanup_if_ge( a, (size_t)(b), SIZE_T_FMT, MERROR_OVERFLOW )
+
+#define maug_cleanup_if_eq( a, b, fmt, err ) \
+   if( (a) == (b) ) { \
+      error_printf( #a " " fmt " is equal to " #b " " fmt "!", a, b ); \
+      retval = err; \
+      goto cleanup; \
+   }
 
 /*! \} */ /* maug_error */
 

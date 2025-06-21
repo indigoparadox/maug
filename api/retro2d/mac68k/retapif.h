@@ -18,7 +18,9 @@ static MERROR_RETVAL retroflat_init_platform(
    InitDialogs( NULL );
 
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
-   maug_cleanup_if_not_ok();
+   maug_cleanup_if_not_ok_msg( "title string too long!" );
+
+   g_retroflat_state->screen_colors = 2;
 
    /* Create the window. */
    /* TODO: Set X/Y from args? */
@@ -26,6 +28,7 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.win = NewWindow(
       nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
    if( nil == g_retroflat_state->platform.win ) {
+      error_printf( "unable to create window!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -50,6 +53,8 @@ MERROR_RETVAL retroflat_loop(
    MERROR_RETVAL retval = MERROR_OK;
    retroflat_ms_t next = 0,
       now = 0;
+   int die_at = 10;
+   EventRecord event;
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -72,7 +77,15 @@ MERROR_RETVAL retroflat_loop(
    /* Handle Windows messages until quit. */
    do {
       SystemTask();
-      GetNextEvent( everyEvent, &(g_retroflat_state->platform.event) );
+      GetNextEvent( everyEvent, &event );
+
+      /* Grab the keycode for later if applicable. */
+      switch( event.what ) {
+      case keyDown:
+         g_retroflat_state->platform.key_code = 
+            (event.message & keyCodeMask) >> 8;
+         break;
+      }
 
       if(
          /* Not waiting for the next frame? */
@@ -90,7 +103,7 @@ MERROR_RETVAL retroflat_loop(
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
-         Delay( 5, NULL );
+         Delay( 1, NULL );
          continue;
       }
 
@@ -111,7 +124,10 @@ MERROR_RETVAL retroflat_loop(
          next = 0;
       }
 
+      die_at--;
+
    } while(
+      0 < die_at &&
       RETROFLAT_FLAGS_RUNNING ==
       (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
    );
