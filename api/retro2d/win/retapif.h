@@ -24,7 +24,9 @@ struct RETROFLAT_BITMAP g_buffer;
 
 /* Windows screensaver (.scr) command-line arguments. */
 
-static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_p(
+   const char* arg, ssize_t argc, struct RETROFLAT_ARGS* args
+) {
 #ifdef __WIN64__
    /* 64-bit Windows has 64-bit pointers! */
    intptr_t hwnd_long = 0;
@@ -46,7 +48,9 @@ static int retroflat_cli_p( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 /* === */
 
-static int retroflat_cli_s( const char* arg, struct RETROFLAT_ARGS* args ) {
+static int retroflat_cli_s(
+   const char* arg, ssize_t argc, struct RETROFLAT_ARGS* args
+) {
    debug_printf( 3, "using screensaver mode..." );
    args->flags |= RETROFLAT_FLAGS_SCREENSAVER;
    return RETROFLAT_OK;
