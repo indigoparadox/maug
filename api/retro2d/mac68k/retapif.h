@@ -181,14 +181,14 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   /* TODO */
-   return TickCount();
+   int32_t ticks = 0;
+   ticks = TickCount();
+   return (ticks << 4) + (ticks >> 1) + (ticks >> 3);
 }
 
 /* === */
 
 uint32_t retroflat_get_rand() {
-   /* TODO */
    return Random();
 }
 
