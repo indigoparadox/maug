@@ -1,4 +1,19 @@
 
+#if !defined( RETPLTS_H_DEFS )
+#define RETPLTS_H_DEFS
+
+#  include <alsa/asoundlib.h>
+
+struct RETROFLAT_SOUND_STATE {
+   uint8_t flags;
+   snd_seq_t* seq_handle;
+   int seq_port;
+   int out_client;
+   int out_port;
+};
+
+#elif defined( RETROFLT_C )
+
 static void retrosnd_alsa_ev( snd_seq_event_t* ev ) {
    snd_seq_ev_clear( ev );
    snd_seq_ev_set_direct( ev );
@@ -8,9 +23,57 @@ static void retrosnd_alsa_ev( snd_seq_event_t* ev ) {
    snd_seq_ev_set_subs( ev );
 }
 
+/* === */
+
 static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
    snd_seq_event_output( g_retroflat_state->sound.seq_handle, ev );
    snd_seq_drain_output( g_retroflat_state->sound.seq_handle );
+}
+
+/* === */
+
+MERROR_RETVAL retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* env_var = NULL;
+   size_t i = 0;
+
+   if( 0 > arg_c ) {
+   if( 0 == args->sound.snd_client ) {
+      env_var = getenv( "MAUG_MIDI_ALSA" );
+
+      /* Return MERROR_OK since this isn't fatal and will just cause sound
+         * init to fail later.
+         */
+      maug_cleanup_if_null_msg(
+         char*, env_var, MERROR_OK, "MAUG_MIDI_ALSA variable not found!" );
+
+      debug_printf( 2, "env: MAUG_MIDI_ALSA: %s", env_var );
+
+      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
+         if( ':' == env_var[i] ) {
+            /* Split into two null-terminated strings. */
+            env_var[i] = '\0';
+         }
+      }
+
+      args->sound.snd_client = atoi( env_var );
+      args->sound.snd_port = atoi( &(env_var[i]) );
+      debug_printf( 3, "setting MIDI device to: %u:%u",
+         args->sound.snd_client, args->sound.snd_port );
+   }
+   } else if(
+      0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 )
+   ) {
+      /* The next arg must be the new var. */
+   } else {
+      /* TODO: Parse device. */
+   }
+
+cleanup:
+
+   return retval;
 }
 
 /* === */
@@ -23,8 +86,8 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    /* TODO: If the /rsl arg was specified, show a list of MIDI devices. */
    
    /* Make destination seq/port configurable. */
-   g_retroflat_state->sound.out_client = args->snd_client;
-   g_retroflat_state->sound.out_port = args->snd_port;
+   g_retroflat_state->sound.out_client = args->sound.snd_client;
+   g_retroflat_state->sound.out_port = args->sound.snd_port;
 
    retval = snd_seq_open(
       &(g_retroflat_state->sound.seq_handle), "default", SND_SEQ_OPEN_OUTPUT, 0 );
@@ -68,7 +131,7 @@ cleanup:
 /* === */
 
 void retrosnd_midi_set_sf_bank( const char* filename_in ) {
-#     pragma message( "warning: set_sf_bank not implemented" )
+#  pragma message( "warning: set_sf_bank not implemented" )
 }
 
 /* === */
@@ -173,7 +236,8 @@ void retrosnd_shutdown() {
       return;
    }
 
-
    snd_seq_close( g_retroflat_state->sound.seq_handle );
 }
+
+#endif /* !RETPLTS_H_DEFS || RETROFLT_C */
 

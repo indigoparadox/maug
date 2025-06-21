@@ -2,6 +2,11 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   uint8_t flags;
+   int                  mouse_state;
+};
+
 #ifdef RETROFLAT_API_SDL2
 typedef int32_t RETROFLAT_IN_KEY;
 #else
@@ -65,7 +70,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    case SDL_MOUSEBUTTONUP:
       /* Stop dragging. */
-      g_retroflat_state->platform.mouse_state = 0;
+      g_retroflat_state->input.mouse_state = 0;
       break;
 
    case SDL_MOUSEBUTTONDOWN:
@@ -78,10 +83,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* Differentiate which button was clicked. */
       if( SDL_BUTTON_LEFT == event.button.button ) {
          key_out = RETROFLAT_MOUSE_B_LEFT;
-         g_retroflat_state->platform.mouse_state = RETROFLAT_MOUSE_B_LEFT;
+         g_retroflat_state->input.mouse_state = RETROFLAT_MOUSE_B_LEFT;
       } else if( SDL_BUTTON_RIGHT == event.button.button ) {
          key_out = RETROFLAT_MOUSE_B_RIGHT;
-         g_retroflat_state->platform.mouse_state = RETROFLAT_MOUSE_B_RIGHT;
+         g_retroflat_state->input.mouse_state = RETROFLAT_MOUSE_B_RIGHT;
       }
 
       /* Flush key buffer to improve responsiveness. */
@@ -105,10 +110,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    default:
       /* Check for mouse dragging if mouse was previously held down. */
-      if( 0 != g_retroflat_state->platform.mouse_state ) {
+      if( 0 != g_retroflat_state->input.mouse_state ) {
          /* Update coordinates and keep dragging. */
          SDL_GetMouseState( &(input->mouse_x), &(input->mouse_y) );
-         key_out = g_retroflat_state->platform.mouse_state;
+         key_out = g_retroflat_state->input.mouse_state;
       }
       break;
    }

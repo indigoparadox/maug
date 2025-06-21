@@ -31,7 +31,7 @@ void retroflat_on_ms_tick() {
 }
 
 void retroflat_on_close_button() {
-   g_retroflat_state->platform.close_button = 1;
+   g_retroflat_state->input.close_button = 1;
 }
 END_OF_FUNCTION( retroflat_on_close_button )
 

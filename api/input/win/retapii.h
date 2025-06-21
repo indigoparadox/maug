@@ -2,6 +2,15 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   uint8_t flags;
+   int16_t              last_key;
+   uint8_t              vk_mods;
+   unsigned int         last_mouse;
+   unsigned int         last_mouse_x;
+   unsigned int         last_mouse_y;
+};
+
 typedef int16_t RETROFLAT_IN_KEY;
 
 #  ifndef VK_OEM_1
@@ -124,35 +133,35 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-   if( g_retroflat_state->platform.last_key ) {
+   if( g_retroflat_state->input.last_key ) {
       /* Return g_retroflat_state->last_key, which is set in WndProc when a
        * keypress msg is received.
        */
-      key_out = g_retroflat_state->platform.last_key;
-      input->key_flags = g_retroflat_state->platform.vk_mods;
+      key_out = g_retroflat_state->input.last_key;
+      input->key_flags = g_retroflat_state->input.vk_mods;
 
       debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
 
       /* Reset pressed key. */
-      g_retroflat_state->platform.last_key = 0;
+      g_retroflat_state->input.last_key = 0;
 
-   } else if( g_retroflat_state->platform.last_mouse ) {
+   } else if( g_retroflat_state->input.last_mouse ) {
       if(
-         MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->platform.last_mouse)
+         MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->input.last_mouse)
       ) {
-         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
-         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
+         input->mouse_x = g_retroflat_state->input.last_mouse_x;
+         input->mouse_y = g_retroflat_state->input.last_mouse_y;
          key_out = RETROFLAT_MOUSE_B_LEFT;
       } else if(
-         MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->platform.last_mouse)
+         MK_RBUTTON == (MK_RBUTTON & g_retroflat_state->input.last_mouse)
       ) {
-         input->mouse_x = g_retroflat_state->platform.last_mouse_x;
-         input->mouse_y = g_retroflat_state->platform.last_mouse_y;
+         input->mouse_x = g_retroflat_state->input.last_mouse_x;
+         input->mouse_y = g_retroflat_state->input.last_mouse_y;
          key_out = RETROFLAT_MOUSE_B_RIGHT;
       }
-      g_retroflat_state->platform.last_mouse = 0;
-      g_retroflat_state->platform.last_mouse_x = 0;
-      g_retroflat_state->platform.last_mouse_y = 0;
+      g_retroflat_state->input.last_mouse = 0;
+      g_retroflat_state->input.last_mouse_x = 0;
+      g_retroflat_state->input.last_mouse_y = 0;
    }
 
 #     ifdef RETROFLAT_SCREENSAVER

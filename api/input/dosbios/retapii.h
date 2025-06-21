@@ -2,6 +2,10 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   uint8_t flags;
+};
+
 #elif defined( RETROFLT_C )
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {

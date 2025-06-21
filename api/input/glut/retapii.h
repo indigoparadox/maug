@@ -2,6 +2,10 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   int16_t              retroflat_last_key;
+};
+
 typedef int16_t RETROFLAT_IN_KEY;
 
 #  define GLUT_SPECIAL_KEY_OFFSET 0x80
@@ -91,8 +95,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* TODO: Implement RETROFLAT_MOD_SHIFT. */
 
-   key_out = g_retroflat_state->platform.retroflat_last_key;
-   g_retroflat_state->platform.retroflat_last_key = 0;
+   key_out = g_retroflat_state->input.retroflat_last_key;
+   g_retroflat_state->input.retroflat_last_key = 0;
 
    /* TODO: Handle mouse. */
 

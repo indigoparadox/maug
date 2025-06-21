@@ -4,7 +4,11 @@
 
 #include <SDL_mixer.h>
 
-struct RETROFLAT_SOUND {
+struct RETROFLAT_SOUND_ARGS {
+   uint8_t flags;
+};
+
+struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
    Mix_Music* music;
    int audio_open;
@@ -12,10 +16,23 @@ struct RETROFLAT_SOUND {
 
 #elif defined( RETROFLT_C )
 
+MERROR_RETVAL retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO */
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   maug_mzero( &g_retroflat_state->sound, sizeof( struct RETROFLAT_SOUND ) );
+   maug_mzero(
+      &g_retroflat_state->sound, sizeof( struct RETROFLAT_SOUND_STATE ) );
 
    if( 0 > SDL_Init( SDL_INIT_AUDIO ) ) {
       error_printf( "couldn't initialize SDL audio: %s", SDL_GetError() );
