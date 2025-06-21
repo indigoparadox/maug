@@ -1080,16 +1080,9 @@ struct RETROFLAT_ARGS {
    int screen_y;
 #  endif /* RETROFLAT_NO_CLI_SZ */
    struct RETROFLAT_PLATFORM_ARGS platform;
+#  ifndef RETROFLAT_NO_SOUND
    struct RETROFLAT_SOUND_ARGS sound;
-#  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
-#  elif defined( RETROSND_API_WINMM )
-#  elif defined( RETROSND_API_PC_BIOS )
-#  elif defined( RETROSND_API_ALSA )
-   uint8_t snd_client;
-   uint8_t snd_port;
-#  else
-#     pragma message( "warning: sound args not specified" )
-#  endif /* RETROSND_API_WINMM */
+#  endif /* !RETROFLAT_NO_SOUND */
 };
 
 /**
