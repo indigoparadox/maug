@@ -211,8 +211,11 @@ typedef float RETROFLAT_COLOR_DEF[3];
 typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_OPENGL */
 
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
 struct RETROFLAT_PLATFORM {
-   int                  mouse_state;
 #  ifndef RETROFLAT_API_SDL1
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */

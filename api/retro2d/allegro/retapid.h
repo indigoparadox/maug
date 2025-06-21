@@ -68,10 +68,18 @@ typedef int RETROFLAT_COLOR_DEF;
  * so good and will cause multiple defs otherwise...
  */
 
-int retroflat_allegro_screen_w();
-int retroflat_allegro_screen_h();
-int retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp );
-int retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp );
+size_t retroflat_allegro_screen_w();
+size_t retroflat_allegro_screen_h();
+size_t retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp );
+size_t retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp );
+
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
+struct RETROFLAT_PLATFORM {
+   uint8_t flags;
+};
 
 #endif /* !RETPLTD_H */
 

@@ -67,9 +67,12 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
 #  define END_OF_MAIN()
 
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
 struct RETROFLAT_PLATFORM {
    size_t               retroflat_next;
-   int16_t              retroflat_last_key;
 };
 
 #endif /* !RETPLTD_H */

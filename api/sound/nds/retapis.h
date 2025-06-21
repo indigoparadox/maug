@@ -2,7 +2,7 @@
 #if !defined( RETPLTS_H_DEFS )
 #define RETPLTS_H_DEFS
 
-struct RETROFLAT_SOUND {
+struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
    uint8_t channels[RETROSND_CHANNEL_CT];
 };

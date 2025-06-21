@@ -4,12 +4,56 @@
 
 #  include <mmsystem.h>
 
-struct RETROFLAT_SOUND {
+struct RETROFLAT_SOUND_ARGS {
+   uint8_t flags;
+   UINT snd_dev_id;
+};
+
+struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
    HMIDIOUT mo_handle;
 };
 
 #elif defined( RETROFLT_C )
+
+MERROR_RETVAL retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* env_var = NULL;
+
+   if( 0 > arg_c ) {
+   env_var = getenv( "MAUG_MIDI_WIN" );
+
+   /* Return MERROR_OK since this isn't fatal and will just cause sound
+      * init to fail later.
+      */
+   maug_cleanup_if_null_msg(
+      char*, env_var, MERROR_OK, "MAUG_MIDI_WIN variable not found!" );
+
+   debug_printf( 2, "env: MAUG_MIDI_WIN: %s", env_var );
+
+   if( NULL != env_var ) {
+      args->sound.snd_dev_id = atoi( env_var );
+   } else {
+      args->sound.snd_dev_id = 0;
+   }
+   debug_printf( 3, "setting MIDI device to: %u", args->sound.snd_dev_id );
+   } else if(
+      0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 )
+   ) {
+      /* The next arg must be the new var. */
+   } else {
+      debug_printf( 3, "setting MIDI device to rsd arg: %s", arg );
+      args->sound.snd_dev_id = atoi( arg );
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
 
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -30,7 +74,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    /* If the /rsl arg was specified, show a list of MIDI devices. */
    if(
       RETROSND_ARGS_FLAG_LIST_DEVS ==
-      (RETROSND_ARGS_FLAG_LIST_DEVS & args->snd_flags)
+      (RETROSND_ARGS_FLAG_LIST_DEVS & args->sound.flags)
    ) {
       devs_list_buf_h = maug_malloc( 1, devs_list_buf_sz );
 
@@ -81,16 +125,19 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       error_printf( "no MIDI devices found!" );
       retval = MERROR_SND;
       goto cleanup;
-   } else if( num_devs < args->snd_dev_id ) {
-      error_printf( "invalid MIDI device index: %d", args->snd_dev_id );
+   } else if( num_devs < args->sound.snd_dev_id ) {
+      error_printf( "invalid MIDI device index: %d", args->sound.snd_dev_id );
       retval = MERROR_SND;
       goto cleanup;
    }
-   midiOutGetDevCaps( args->snd_dev_id, &midi_caps, sizeof( MIDIOUTCAPS ) );
+   midiOutGetDevCaps(
+      args->sound.snd_dev_id, &midi_caps, sizeof( MIDIOUTCAPS ) );
 
-   debug_printf( 3, "attempting to open MIDI device %u...", args->snd_dev_id );
+   debug_printf(
+      3, "attempting to open MIDI device %u...", args->sound.snd_dev_id );
    moo_retval = midiOutOpen(
-      &(g_retroflat_state->sound.mo_handle), args->snd_dev_id, 0, 0, CALLBACK_NULL );
+      &(g_retroflat_state->sound.mo_handle),
+      args->sound.snd_dev_id, 0, 0, CALLBACK_NULL );
    if( MMSYSERR_NOERROR != moo_retval ) {
       error_printf( "could not open MIDI device: %s: %d",
          midi_caps.szPname, moo_retval );

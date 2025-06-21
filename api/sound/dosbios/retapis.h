@@ -10,7 +10,13 @@
 #define RETROSND_MPU_FLAG_OUTPUT 0x40
 #define RETROSND_MPU_TIMEOUT 30
 
-struct RETROFLAT_SOUND {
+struct RETROFLAT_SOUND_ARGS {
+   uint8_t flags;
+   uint16_t snd_io_base;
+   uint8_t snd_driver;
+};
+
+struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
    uint16_t io_base;
    uint8_t io_timeout;
@@ -127,6 +133,67 @@ static void retrosnd_adlib_clear() {
 
 /* === */
 
+MERROR_RETVAL retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* env_var = NULL;
+   size_t i = 0;
+
+   if( 0 > arg_c ) {
+   if( NULL != env_var ) {
+      env_var = getenv( "MAUG_MIDI_DOS" );
+
+      /* Return MERROR_OK since this isn't fatal and will just cause sound
+         * init to fail later.
+         */
+      maug_cleanup_if_null_msg(
+         char*, env_var, MERROR_OK, "MAUG_MIDI_DOS variable not found!" );
+
+      debug_printf( 2, "env: MAUG_MIDI_DOS: %s", env_var );
+
+      /* Turn comma separator into NULL split. */
+      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
+         if( ',' == env_var[i] ) {
+            /* Split into two null-terminated strings. */
+            env_var[i] = '\0';
+         }
+      }
+
+      if( 0 == strcmp( env_var, "mpu" ) ) {
+         debug_printf( 3, "selecting MIDI driver: mpu" );
+         args->sound.snd_driver = 2;
+      } else if( 0 == strcmp( env_var, "gus" ) ) {
+         debug_printf( 3, "selecting MIDI driver: gus" );
+         args->sound.snd_driver = 4;
+      } else if( 0 == strcmp( env_var, "adlib" ) ) {
+         debug_printf( 3, "selecting MIDI driver: adlib" );
+         args->sound.snd_driver = 8;
+      }
+      /* TODO: Maug replacement for C99 crutch. */
+      args->sound.snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
+      debug_printf( 3, "setting MIDI I/O base: %u", args->sound.snd_io_base );
+   } else {
+      /* default */
+      debug_printf( 3, "default MIDI driver: adlib" );
+      args->sound.snd_driver = 8;
+      args->sound.snd_io_base = 0x388;
+   }
+   } else if(
+      0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 )
+   ) {
+      /* The next arg must be the new var. */
+   } else {
+      /* TODO: Parse device. */
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t b = 0;
@@ -140,35 +207,35 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       g_retroflat_state->sound.sf_bank_filename, '\0',
       RETROFLAT_PATH_MAX + 1 );
 
-   if( 0 == args->snd_io_base ) {
+   if( 0 == args->sound.snd_io_base ) {
       /* Select default port. */
       error_printf( "I/O base not specified!" );
-      switch( args->snd_driver ) {
+      switch( args->sound.snd_driver ) {
       case RETROSND_PC_BIOS_SPKR:
          /* TODO */
          break;
 
       case RETROSND_PC_BIOS_MPU:
          debug_printf( 3, "assuming 0x330..." );
-         args->snd_io_base = 0x330;
+         args->sound.snd_io_base = 0x330;
          break;
 
       case RETROSND_PC_BIOS_GUS:
          /* TODO: Read port from ULTRASND env variable. */
-         args->snd_io_base = 0x220;
+         args->sound.snd_io_base = 0x220;
          break;
 
       case RETROSND_PC_BIOS_ADLIB:
          /* TODO: Read port from BLASTER env variable? */
          debug_printf( 3, "assuming 0x338..." );
-         args->snd_io_base = 0x388;
+         args->sound.snd_io_base = 0x388;
          break;
       }
       return retval;
    }
 
-   g_retroflat_state->sound.io_base = args->snd_io_base;
-   g_retroflat_state->sound.driver = args->snd_driver;
+   g_retroflat_state->sound.io_base = args->sound.snd_io_base;
+   g_retroflat_state->sound.driver = args->sound.snd_driver;
    
    /* Perform actual init. */
    switch( g_retroflat_state->sound.driver ) {

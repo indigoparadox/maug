@@ -303,11 +303,11 @@ static LRESULT CALLBACK WndProc(
       case WM_KEYDOWN:
          switch( wParam ) {
          case VK_SHIFT:
-            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
+            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
             break;
 
          case VK_CONTROL:
-            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
             break;
 
          /* TODO: Alt? */
@@ -317,7 +317,7 @@ static LRESULT CALLBACK WndProc(
             TODO: Fix in win64.
             debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
             */
-            g_retroflat_state->platform.last_key = wParam | ((lParam & 0x800000) >> 8);
+            g_retroflat_state->input.last_key = wParam | ((lParam & 0x800000) >> 8);
             break;
          }
          break;
@@ -325,11 +325,11 @@ static LRESULT CALLBACK WndProc(
       case WM_KEYUP:
          switch( wParam ) {
          case VK_SHIFT:
-            g_retroflat_state->platform.vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
+            g_retroflat_state->input.vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
             break;
 
          case VK_CONTROL:
-            g_retroflat_state->platform.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
+            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
             break;
 
          /* TODO: Alt? */
@@ -341,10 +341,10 @@ static LRESULT CALLBACK WndProc(
 #ifndef RETROFLAT_API_WINCE
       case WM_RBUTTONDOWN:
 #endif /* !RETROFLAT_API_WINCE */
-         g_retroflat_state->platform.last_mouse = wParam;
-         g_retroflat_state->platform.last_mouse_x =
+         g_retroflat_state->input.last_mouse = wParam;
+         g_retroflat_state->input.last_mouse_x =
             GET_X_LPARAM( lParam ) / g_retroflat_state->scale;
-         g_retroflat_state->platform.last_mouse_y =
+         g_retroflat_state->input.last_mouse_y =
             GET_Y_LPARAM( lParam ) / g_retroflat_state->scale;
          break;
 

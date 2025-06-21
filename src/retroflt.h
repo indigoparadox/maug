@@ -1060,6 +1060,7 @@ typedef maug_ms_t retroflat_ms_t;
 
 /*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
+   uint8_t flags;
    /**
     * \brief Title to set for the main program Window if applicable on the
     *        target platform.
@@ -1067,13 +1068,9 @@ struct RETROFLAT_ARGS {
    char* title;
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
-   uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
-#  ifdef RETROFLAT_API_PC_BIOS
-   /*! \brief Desired screen or window width in pixels. */
-   uint8_t screen_mode;
-#  elif !defined( RETROFLAT_NO_CLI_SZ )
+#  if !defined( RETROFLAT_NO_CLI_SZ )
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
@@ -1081,14 +1078,12 @@ struct RETROFLAT_ARGS {
    int screen_x;
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
-#  endif /* RETROFLAT_API_PC_BIOS */
-   uint8_t snd_flags;
+#  endif /* RETROFLAT_NO_CLI_SZ */
+   struct RETROFLAT_PLATFORM_ARGS platform;
+   struct RETROFLAT_SOUND_ARGS sound;
 #  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
 #  elif defined( RETROSND_API_WINMM )
-   UINT snd_dev_id;
 #  elif defined( RETROSND_API_PC_BIOS )
-   uint16_t snd_io_base;
-   uint8_t snd_driver;
 #  elif defined( RETROSND_API_ALSA )
    uint8_t snd_client;
    uint8_t snd_port;
@@ -1699,8 +1694,10 @@ defined( RETROVDP_C )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
 
+   struct RETROFLAT_INPUT_STATE input;
+
 #  ifndef RETROFLAT_NO_SOUND
-   struct RETROFLAT_SOUND sound;
+   struct RETROFLAT_SOUND_STATE sound;
 #  endif /* !RETROFLAT_NO_SOUND */
 };
 
@@ -2285,133 +2282,9 @@ static MERROR_RETVAL retrosnd_cli_rsl(
       0 <= arg_c &&
       0 == strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
-      args->snd_flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
+      args->sound.flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
    }
    return MERROR_OK;
-}
-
-static MERROR_RETVAL retrosnd_cli_rsd(
-   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
-   char* env_var = NULL;
-   size_t i = 0;
-#     elif defined( RETROSND_API_ALSA )
-   char* env_var = NULL;
-#     elif defined( RETROSND_API_WINMM )
-   char* env_var = NULL;
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
-
-   if( 0 > arg_c ) {
-#     ifdef RETROSND_API_PC_BIOS
-   if( NULL != env_var ) {
-      env_var = getenv( "MAUG_MIDI_DOS" );
-
-      /* Return MERROR_OK since this isn't fatal and will just cause sound
-         * init to fail later.
-         */
-      maug_cleanup_if_null_msg(
-         char*, env_var, MERROR_OK, "MAUG_MIDI_DOS variable not found!" );
-
-      debug_printf( 2, "env: MAUG_MIDI_DOS: %s", env_var );
-
-      /* Turn comma separator into NULL split. */
-      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
-         if( ',' == env_var[i] ) {
-            /* Split into two null-terminated strings. */
-            env_var[i] = '\0';
-         }
-      }
-
-      if( 0 == strcmp( env_var, "mpu" ) ) {
-         debug_printf( 3, "selecting MIDI driver: mpu" );
-         args->snd_driver = 2;
-      } else if( 0 == strcmp( env_var, "gus" ) ) {
-         debug_printf( 3, "selecting MIDI driver: gus" );
-         args->snd_driver = 4;
-      } else if( 0 == strcmp( env_var, "adlib" ) ) {
-         debug_printf( 3, "selecting MIDI driver: adlib" );
-         args->snd_driver = 8;
-      }
-      /* TODO: Maug replacement for C99 crutch. */
-      args->snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
-      debug_printf( 3, "setting MIDI I/O base: %u", args->snd_io_base );
-   } else {
-      /* default */
-      debug_printf( 3, "default MIDI driver: adlib" );
-      args->snd_driver = 8;
-      args->snd_io_base = 0x388;
-   }
-
-#     elif defined( RETROSND_API_ALSA )
-   if( 0 == args->snd_client ) {
-      env_var = getenv( "MAUG_MIDI_ALSA" );
-
-      /* Return MERROR_OK since this isn't fatal and will just cause sound
-         * init to fail later.
-         */
-      maug_cleanup_if_null_msg(
-         char*, env_var, MERROR_OK, "MAUG_MIDI_ALSA variable not found!" );
-
-      debug_printf( 2, "env: MAUG_MIDI_ALSA: %s", env_var );
-
-      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
-         if( ':' == env_var[i] ) {
-            /* Split into two null-terminated strings. */
-            env_var[i] = '\0';
-         }
-      }
-
-      args->snd_client = atoi( env_var );
-      args->snd_port = atoi( &(env_var[i]) );
-      debug_printf( 3, "setting MIDI device to: %u:%u",
-         args->snd_client, args->snd_port );
-   }
-
-#     elif defined( RETROSND_API_WINMM )
-   env_var = getenv( "MAUG_MIDI_WIN" );
-
-   /* Return MERROR_OK since this isn't fatal and will just cause sound
-      * init to fail later.
-      */
-   maug_cleanup_if_null_msg(
-      char*, env_var, MERROR_OK, "MAUG_MIDI_WIN variable not found!" );
-
-   debug_printf( 2, "env: MAUG_MIDI_WIN: %s", env_var );
-
-   if( NULL != env_var ) {
-      args->snd_dev_id = atoi( env_var );
-   } else {
-      args->snd_dev_id = 0;
-   }
-   debug_printf( 3, "setting MIDI device to: %u", args->snd_dev_id );
-
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
-   } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 )
-   ) {
-      /* The next arg must be the new var. */
-   } else {
-#     ifdef RETROSND_API_PC_BIOS
-      /* TODO: Parse device. */
-#     elif defined( RETROSND_API_ALSA )
-      /* TODO: Parse device. */
-#     elif defined( RETROSND_API_WINMM )
-      debug_printf( 3, "setting MIDI device to rsd arg: %s", arg );
-      args->snd_dev_id = atoi( arg );
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
-   }
-
-#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
-cleanup:
-#     elif defined( RETROSND_API_ALSA )
-cleanup:
-#     elif defined( RETROSND_API_WINMM )
-cleanup:
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
-
-   return retval;
 }
 
 # endif /* RETROSND_ARGS */

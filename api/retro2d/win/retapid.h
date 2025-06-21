@@ -348,6 +348,10 @@ extern HBRUSH gc_retroflat_win_brushes[];
       lock_auto = 1; \
    }
 
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
 struct RETROFLAT_PLATFORM {
    HWND                 window;
    int16_t              last_idc; /* Last clicked button. */
@@ -358,11 +362,6 @@ struct RETROFLAT_PLATFORM {
 #  ifdef RETROFLAT_OPENGL
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
-   int16_t              last_key;
-   uint8_t              vk_mods;
-   unsigned int         last_mouse;
-   unsigned int         last_mouse_x;
-   unsigned int         last_mouse_y;
 };
 
 #endif /* !RETPLTD_H */
