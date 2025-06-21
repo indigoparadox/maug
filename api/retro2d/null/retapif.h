@@ -8,6 +8,7 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
 
    /* TODO */
+#  pragma message( "warning: init_platform not implemented" )
 
    return retval;
 }
@@ -16,6 +17,7 @@ static MERROR_RETVAL retroflat_init_platform(
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* TODO */
+#  pragma message( "warning: shutdown not implemented" )
 }
 
 /* === */
@@ -45,6 +47,7 @@ void retroflat_message(
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
    /* TODO */
+#  pragma message( "warning: message not implemented" )
 
    va_end( vargs );
 }
@@ -61,6 +64,7 @@ void retroflat_set_title( const char* format, ... ) {
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
    /* TODO */
+#  pragma message( "warning: set_title not implemented" )
 
    va_end( vargs );
 }
@@ -69,12 +73,14 @@ void retroflat_set_title( const char* format, ... ) {
 
 retroflat_ms_t retroflat_get_ms() {
    /* TODO */
+#  pragma message( "warning: get_ms not implemented" )
 }
 
 /* === */
 
 uint32_t retroflat_get_rand() {
    /* TODO */
+#  pragma message( "warning: get_rand not implemented" )
 }
 
 /* === */
@@ -82,13 +88,8 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_draw_lock( bmp );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+#  pragma message( "warning: draw_lock not implemented" )
 
    return retval;
 }
@@ -98,13 +99,8 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#  ifdef RETROFLAT_OPENGL
-   retval = retroglu_draw_release( bmp );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+#  pragma message( "warning: draw_release not implemented" )
 
    return retval;
 }
@@ -124,13 +120,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-#  ifdef RETROFLAT_OPENGL
-   retval = retroglu_load_bitmap( filename_path, bmp_out, flags );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+#  pragma message( "warning: load_bitmap not implemented" )
 
 cleanup:
 
@@ -148,13 +139,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_create_bitmap( w, h, bmp_out, flags );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+#  pragma message( "warning: create_bitmap not implemented" )
 
    return retval;
 }
@@ -162,13 +148,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_destroy_bitmap( bmp );
-#  else
 
    /* TODO */
+#  pragma message( "warning: destroy_bitmap not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -180,21 +163,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#  ifndef RETROFLAT_OPENGL
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-#  endif /* RETROFLAT_OPENGL */
-
    assert( NULL != src );
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_blit_bitmap( target, src, s_x, s_y, d_x, d_y, w, h );
-#  else
-
    /* TODO */
-
-#  endif /* RETROFLAT_OPENGL */
+#  pragma message( "warning: blit_bitmap not implemented" )
 
    return retval;
 }
@@ -221,14 +193,9 @@ void retroflat_px(
 
    retroflat_constrain_px( x, y, target, return );
 
-#  if defined( RETROFLAT_OPENGL )
-   retroglu_px( target, color_idx, x, y, flags );
-#  else
-
    /* TODO */
 #  pragma message( "warning: px not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -242,15 +209,6 @@ void retroflat_rect(
       return;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   /* Draw the rect onto the given 2D texture. */
-   retrosoft_rect( target, color_idx, x, y, w, h, flags );
-
-#  else
-
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
@@ -258,7 +216,6 @@ void retroflat_rect(
    /* TODO */
 #  pragma message( "warning: rect not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -272,14 +229,6 @@ void retroflat_line(
       return;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
-
-#  else
-
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
@@ -287,7 +236,6 @@ void retroflat_line(
    /* TODO */
 #  pragma message( "warning: line not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
@@ -297,13 +245,9 @@ void retroflat_ellipse(
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
 
-#  if defined( RETROFLAT_OPENGL )
-
-   assert( NULL != target );
-
-   retrosoft_ellipse( target, color, x, y, w, h, flags );
-
-#  elif defined( RETROFLAT_SOFT_SHAPES )
+   if( RETROFLAT_COLOR_NULL == color_idx ) {
+      return;
+   }
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -312,7 +256,6 @@ void retroflat_ellipse(
    /* TODO */
 #  pragma message( "warning: ellipse not implemented" )
 
-#  endif /* RETROFLAT_OPENGL */
 }
 
 /* === */
