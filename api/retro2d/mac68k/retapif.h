@@ -26,7 +26,7 @@ static MERROR_RETVAL retroflat_init_platform(
    InitMenus();
    InitCursor();
    TEInit();
-   InitDialogs( NULL );
+   InitDialogs( nil );
 
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
    maug_cleanup_if_not_ok_msg( "title string too long!" );
@@ -113,7 +113,7 @@ MERROR_RETVAL retroflat_loop(
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
-         Delay( 1, NULL );
+         Delay( 1, nil );
          continue;
       }
 
@@ -150,14 +150,28 @@ cleanup:
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ...
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
+   DialogPtr dialog;
+   int16_t item = 0;
+   unsigned char msg_buf[128];
+   /* TODO: Figure this out dynamically. */
+   Rect r = { 100, 100, 200, 300 };
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
-   /* TODO */
+   retval = maug_str_c2p( msg_out, (char*)msg_buf, 128 );
+   maug_cleanup_if_not_ok_msg( "message string too long!" );
+
+   dialog = NewDialog(
+      nil, &r, msg_buf, TRUE, dBoxProc, (WindowPtr)-1, FALSE, 0, nil );
+   ModalDialog( nil, &item );
+   DisposeDialog( dialog );
+
+cleanup:
 
    va_end( vargs );
 }
@@ -165,15 +179,22 @@ void retroflat_message(
 /* === */
 
 void retroflat_set_title( const char* format, ... ) {
+   MERROR_RETVAL retval = MERROR_OK;
    char title[RETROFLAT_TITLE_MAX + 1];
    va_list vargs;
+   unsigned char title_buf[128];
 
    /* Build the title. */
    va_start( vargs, format );
    memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
-   /* TODO */
+   retval = maug_str_c2p( title, (char*)title_buf, 128 );
+   maug_cleanup_if_not_ok_msg( "title string too long!" );
+
+   SetWTitle( g_retroflat_state->platform.win, title_buf );
+
+cleanup:
 
    va_end( vargs );
 }
