@@ -15,9 +15,16 @@ OBJDIR_GCC_MAC_M68K=obj/gcc-mac-mac68k
 
 CFLAGS_GCC_MAC_M68K := \
 	-DRETROFLAT_API_MAC \
-	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k
+	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
+	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix
 # TODO: Make math link optional.
 LDFLAGS_GCC_MAC_M68K := -lm
+
+ifneq ("$(BUILD)","RELEASE")
+ifneq ("$(MAC_FORCE_CONSOLE_LOG)","1")
+	CFLAGS_GCC_MAC_M68K += -DLOG_TO_FILE -DLOG_FILE_NAME=\"out.log\"
+endif
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_MAC_M68K += -I$(MAUG_ROOT)/api/sound/null

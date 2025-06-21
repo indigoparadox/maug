@@ -654,7 +654,7 @@ MERROR_RETVAL maug_str_c2p(
    str_sz = strlen( str_in );
 
    if( str_sz >= str_out_sz - 1 || 127 < str_sz ) {
-      error_printf( "input string too long!" );
+      /* error_printf( "input string too long!" ); */
       retval = MERROR_OVERFLOW;
    }
 
