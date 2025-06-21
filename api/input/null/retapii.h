@@ -2,6 +2,10 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+struct RETROFLAT_INPUT_STATE {
+   uint8_t flags;
+};
+
 typedef int16_t RETROFLAT_IN_KEY;
 
 /**

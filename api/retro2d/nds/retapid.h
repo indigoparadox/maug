@@ -132,6 +132,10 @@ typedef int RETROFLAT_COLOR_DEF;
    (RETROFLAT_NDS_FLAG_ ## flag == \
       (RETROFLAT_NDS_FLAG_ ## flag & g_retroflat_state->platform.flags))
 
+struct RETROFLAT_PLATFORM_ARGS {
+   uint8_t flags;
+};
+
 struct RETROFLAT_PLATFORM {
    uint8_t              flags;
    uint16_t*            sprite_frames[RETROFLAT_NDS_SPRITES_ACTIVE];

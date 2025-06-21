@@ -186,6 +186,11 @@ struct RETROFLAT_BITMAP {
 
 typedef void (__interrupt __far* retroflat_intfunc)( void );
 
+struct RETROFLAT_PLATFORM_ARGS {
+   /*! \brief Desired screen or window width in pixels. */
+   uint8_t screen_mode;
+};
+
 struct RETROFLAT_PLATFORM {
    retroflat_intfunc old_timer_interrupt;
    uint8_t old_video_mode;

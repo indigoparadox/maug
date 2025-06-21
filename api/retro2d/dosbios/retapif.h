@@ -83,8 +83,8 @@ int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
    if( 0 == strncmp( MAUG_CLI_SIGIL "rfm", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* The next arg must be the new var. */
    } else {
-      args->screen_mode = atoi( arg );
-      debug_printf( 3, "choosing screen mode: %u", args->screen_mode );
+      args->platform.screen_mode = atoi( arg );
+      debug_printf( 3, "choosing screen mode: %u", args->platform.screen_mode );
    }
    return RETROFLAT_OK;
 }
@@ -93,9 +93,9 @@ int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 static
 int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == args->screen_mode ) {
+   if( 0 == args->platform.screen_mode ) {
       /* TODO: Autodetect best available? */
-      args->screen_mode = RETROFLAT_SCREEN_MODE_VGA;
+      args->platform.screen_mode = RETROFLAT_SCREEN_MODE_VGA;
    }
    return RETROFLAT_OK;
 }
@@ -159,8 +159,8 @@ static MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.old_video_mode );
 
    /* TODO: Put all screen mode dimensions in a LUT. */
-   g_retroflat_state->platform.screen_mode = args->screen_mode;
-   switch( args->screen_mode ) {
+   g_retroflat_state->platform.screen_mode = args->platform.screen_mode;
+   switch( args->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_CGA:
       debug_printf( 3, "using CGA 320x200x4 colors" );
       g_retroflat_state->screen_colors = 4;
@@ -187,17 +187,17 @@ static MERROR_RETVAL retroflat_init_platform(
       break;
 
    default:
-      error_printf( "unsupported video mode: %d", args->screen_mode );
+      error_printf( "unsupported video mode: %d", args->platform.screen_mode );
       retval = MERROR_GUI;
       goto cleanup;
    }
 
    memset( &r, 0, sizeof( r ) );
-   r.h.al = args->screen_mode;
+   r.h.al = args->platform.screen_mode;
    int86( 0x10, &r, &r ); /* Call video interrupt. */
 
    debug_printf(
-      3, "graphics initialized (mode 0x%02x)...", args->screen_mode );
+      3, "graphics initialized (mode 0x%02x)...", args->platform.screen_mode );
 
    /* Initialize color table. */
 #     define RETROFLAT_COLOR_TABLE_CGA_COLORS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \

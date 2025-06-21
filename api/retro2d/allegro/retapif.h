@@ -4,19 +4,19 @@
 
 static volatile retroflat_ms_t g_ms = 0;
 
-int retroflat_allegro_screen_w() {
+size_t retroflat_allegro_screen_w() {
    return SCREEN_W;
 }
 
-int retroflat_allegro_screen_h() {
+size_t retroflat_allegro_screen_h() {
    return SCREEN_H;
 }
 
-int retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp ) {
+size_t retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp ) {
    return bmp->b->w;
 }
 
-int retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp ) {
+size_t retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp ) {
    return bmp->b->w;
 }
 
@@ -31,7 +31,7 @@ void retroflat_on_ms_tick() {
 }
 
 void retroflat_on_close_button() {
-   g_retroflat_state->platform.close_button = 1;
+   g_retroflat_state->input.close_button = 1;
 }
 END_OF_FUNCTION( retroflat_on_close_button )
 

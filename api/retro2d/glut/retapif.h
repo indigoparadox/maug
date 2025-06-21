@@ -61,7 +61,7 @@ retroflat_glut_key( unsigned char key, int x, int y ) {
       /* key -= 109; */
 #     endif /* RETROFLAT_OS_WIN */
    debug_printf( 0, "key: %c (0x%02x)", key, key );
-   g_retroflat_state->platform.retroflat_last_key = key;
+   g_retroflat_state->input.retroflat_last_key = key;
 }
 
 /* === */

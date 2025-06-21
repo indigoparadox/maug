@@ -2,11 +2,27 @@
 #if !defined( RETPLTS_H_DEFS )
 #define RETPLTS_H_DEFS
 
-struct RETROFLAT_SOUND {
+struct RETROFLAT_SOUND_ARGS {
+   uint8_t flags;
+};
+
+struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
 };
 
 #elif defined( RETROFLT_C )
+
+MERROR_RETVAL retrosnd_cli_rsd(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO */
+
+   return retval;
+}
+
+/* === */
 
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
