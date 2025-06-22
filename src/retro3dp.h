@@ -707,7 +707,7 @@ MERROR_RETVAL retro3dp_parse_obj_file(
       parser, obj, (retro3dp_mtl_cb)retro3dp_parse_obj_file, obj );
 
    /* Parse the obj, byte by byte. */
-   while( obj_file->has_bytes( &obj_file ) ) {
+   while( obj_file.has_bytes( &obj_file ) ) {
       retval = obj_file.read_int( &obj_file, (uint8_t*)&c, 1, 0 );
       maug_cleanup_if_not_ok();
       retval = retro3dp_parse_obj_c( parser, c );
