@@ -1158,7 +1158,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_PARSER* parser = NULL;
    char filename_path[RETROFLAT_PATH_MAX];
-   mfile_t buffer;
+   mfile_t tile_file;
    char c;
    char* filename_ext = NULL;
 
@@ -1193,7 +1193,7 @@ MERROR_RETVAL retrotile_parse_json_file(
 
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
 
-   retval = mfile_open_read( filename_path, &buffer );
+   retval = mfile_open_read( filename_path, &tile_file );
    maug_cleanup_if_not_ok();
 
    /* Parse JSON and react to state. */
@@ -1276,8 +1276,8 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->pass_layer_iter = 0;
       }
 
-      while( buffer.has_bytes( &buffer ) ) {
-         buffer.read_int( &buffer, (uint8_t*)&c, 1, 0 );
+      while( tile_file.has_bytes( &tile_file ) ) {
+         tile_file.read_int( &tile_file, (uint8_t*)&c, 1, 0 );
          debug_printf( RETROTILE_TRACE_CHARS, "%c", c );
          retval = mjson_parse_c( &(parser->jparser), c );
          if( MERROR_OK != retval ) {
@@ -1286,7 +1286,7 @@ MERROR_RETVAL retrotile_parse_json_file(
          }
       }
 
-      buffer.seek( &buffer, 0 );
+      tile_file.seek( &tile_file, 0 );
 
       filename_ext = maug_strrchr( filename, '.' );
       if( NULL == filename_ext ) {
@@ -1302,7 +1302,8 @@ MERROR_RETVAL retrotile_parse_json_file(
    }
 
    debug_printf(
-      RETROTILE_TRACE_LVL, "finished parsing %s...", filename_path );
+      RETROTILE_TRACE_LVL, "finished parsing %s, retval: %d",
+      filename_path, retval );
 
 cleanup:
 

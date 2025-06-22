@@ -80,15 +80,15 @@ cleanup:
 
 MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
    MERROR_RETVAL retval = MERROR_OK;
+   OSErr err;
 
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
-#if 0
-   if( fseek( p_file->h.file, pos, SEEK_SET ) ) {
+   err = SetFPos( p_file->h.file_ref, fsFromStart, pos );
+   if( noErr != err ) {
       error_printf( "unable to seek file!" );
       retval = MERROR_FILE;
    }
-#endif
 
    return retval;
 }
