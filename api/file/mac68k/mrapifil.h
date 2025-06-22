@@ -23,25 +23,35 @@ MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int16_t count = 1;
+   size_t buf_i = 0;
+   OSErr err;
 
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
+   assert( 0 < buf_sz );
 
-#if 0
-   ssize_t last_read = 0;
    if( MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags) ) {
       /* Shrink the buffer moving right and read into it. */
-      last_read = fread( buf, 1, buf_sz, p_file->h.file );
-      if( buf_sz > last_read ) {
-         error_printf( "unable to read from file!" );
-         retval = MERROR_FILE;
-         goto cleanup;
+      while( buf_i < buf_sz ) {
+         err = FSRead( p_file->h.file_ref, &count, &(buf[buf_i]) );
+         if( 0 == count ) {
+            error_printf( "unable to read from file!" );
+            retval = MERROR_FILE;
+            goto cleanup;
+         }
+         buf_i++;
       }
    
    } else {
       /* Move to the end of the output buffer and read backwards. */
       while( 0 < buf_sz ) {
-         last_read = fread( (buf + (buf_sz - 1)), 1, 1, p_file->h.file );
-         if( 0 >= last_read ) {
+         err = FSRead( p_file->h.file_ref, &count, &(buf[buf_sz - 1]) );
+         if( noErr != err ) {
+            error_printf( "error reading file: %d", err );
+            retval = MERROR_FILE;
+            goto cleanup;
+         }
+         if( 0 == count ) {
             error_printf( "unable to read from file!" );
             retval = MERROR_FILE;
             goto cleanup;
@@ -51,7 +61,6 @@ MERROR_RETVAL mfile_file_read_int(
    }
 
 cleanup:
-#endif
 
    return retval;
 }
@@ -79,16 +88,33 @@ MERROR_RETVAL mfile_file_read_line(
    struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t buf_i = 0;
+   OSErr err;
+   int16_t count = 1;
 
    assert( MFILE_CADDY_TYPE_FILE == p_f->type );
 
-#if 0
-   /* Trivial case; use a native function. Much faster! */
-   if( NULL == fgets( buffer, buffer_sz - 1, p_f->h.file ) ) {
-      error_printf( "error while reading line from file!" );
-      retval = MERROR_FILE;
+   while( buf_i < buffer_sz ) {
+      err = FSRead( p_f->h.file_ref, &count, &(buffer[buf_i]) );
+      if( '\n' == buffer[buf_i] ) {
+         buffer[buf_i] = '\0';
+         debug_printf( MFILE_TRACE_LVL, "read line: %s", buffer );
+         goto cleanup;
+      }
+      if( noErr != err ) {
+         error_printf( "error reading file: %d", err );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      if( 0 == count ) {
+         error_printf( "unable to read from file!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+      buf_i++;
    }
-#endif
+
+cleanup:
 
    return retval;
 }
@@ -112,7 +138,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    /* Get current working directory. */
    GetVol( vol_name, &vol_ref );
    GetWDInfo( vol_ref, &vol_ref, &iter_id, nil );
-   debug_printf( 1, "vol: %s", &(vol_name[1]) );
+   debug_printf( MFILE_TRACE_LVL, "vol: %s", &(vol_name[1]) );
 
    /* Iterate subdirectories from the current working directory by breaking
     * the path up by '/' separators.
@@ -126,7 +152,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
          dir_idx, filename, strlen( filename ), dir_name, MAUG_PATH_MAX, "/" );
 
       if( MERROR_OK == tok_retval ) {
-         debug_printf( 1, "dir: %s", dir_name );
+         debug_printf( MFILE_TRACE_LVL, "dir: %s", dir_name );
 
          /* Translate the path token into a pascal string. */
          retval = maug_str_c2p( dir_name, pas_dir_name, MAUG_PATH_MAX + 1 );
@@ -151,14 +177,14 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
          last_dir_id = iter_id;
          iter_id = pb.hFileInfo.ioDirID;
 
-         debug_printf(
-            1, "opened item: %s (id: " S32_FMT ")", dir_name, iter_id );
+         debug_printf( MFILE_TRACE_LVL,
+            "opened item: %s (id: " S32_FMT ")", dir_name, iter_id );
 
          /* Figure out if this is a subdirectory or a file that can't be
           * traversed any further.
           */
          if( !(pb.hFileInfo.ioFlAttrib & ioDirMask) ) {
-            debug_printf( 1, "item is a file!" );
+            debug_printf( MFILE_TRACE_LVL, "item is a file!" );
             break;
          }
 
@@ -183,7 +209,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
     */
    p_file->sz = pb.hFileInfo.ioFlLgLen;
 
-   debug_printf( 1, "opened file %s (sz: " OFF_T_FMT " bytes)...",
+   debug_printf( MFILE_TRACE_LVL, "opened file %s (sz: " OFF_T_FMT " bytes)...",
       filename, p_file->sz );
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
