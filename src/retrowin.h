@@ -75,7 +75,9 @@ MERROR_RETVAL retrowin_draw_border( struct RETROWIN* win ) {
    switch( RETROWIN_FLAG_BORDER_MASK & win->flags ) {
    case RETROWIN_FLAG_BORDER_GRAY:
       retroflat_2d_rect(
-         win->gui->draw_bmp, RETROFLAT_COLOR_GRAY, 0, 0,
+         win->gui->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROFLAT_COLOR_GRAY : RETROFLAT_COLOR_WHITE, 0, 0,
          retroflat_2d_bitmap_w( win->gui->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui->draw_bmp ),
          RETROFLAT_FLAGS_FILL );
@@ -86,17 +88,22 @@ MERROR_RETVAL retrowin_draw_border( struct RETROWIN* win ) {
          retroflat_2d_bitmap_w( win->gui->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui->draw_bmp ),
          0 );
-      retroflat_2d_line(
-         win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-         1, 1, retroflat_2d_bitmap_w( win->gui->draw_bmp ) - 2, 1, 0 );
-      retroflat_2d_line(
-         win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
-         1, 2, 1, retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 3, 0 );
+      if( 2 < retroflat_screen_colors() ) {
+         /* Draw highlight lines only visible in >2-color mode. */
+         retroflat_2d_line(
+            win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
+            1, 1, retroflat_2d_bitmap_w( win->gui->draw_bmp ) - 2, 1, 0 );
+         retroflat_2d_line(
+            win->gui->draw_bmp, RETROFLAT_COLOR_WHITE,
+            1, 2, 1, retroflat_2d_bitmap_h( win->gui->draw_bmp ) - 3, 0 );
+      }
       break;
 
    case RETROWIN_FLAG_BORDER_BLUE:
       retroflat_2d_rect(
-         win->gui->draw_bmp, RETROFLAT_COLOR_BLUE, 0, 0,
+         win->gui->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROFLAT_COLOR_BLUE : RETROFLAT_COLOR_BLACK, 0, 0,
          retroflat_2d_bitmap_w( win->gui->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui->draw_bmp ),
          RETROFLAT_FLAGS_FILL );
