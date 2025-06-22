@@ -13,7 +13,7 @@ union MFILE_HANDLE {
 
 #  define mfile_has_bytes( p_file ) \
       ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-         (noErr != GetFPos( (p_file)->h.file_ref, &((p_file)->h.file_pos) ) ? \
+         (noErr == GetFPos( (p_file)->h.file_ref, &((p_file)->h.file_pos) ) ? \
             (p_file)->h.file_pos : 0 ) : \
          (p_file)->mem_cursor) < (p_file)->sz)
 
@@ -23,7 +23,7 @@ MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int16_t count = 1;
+   int32_t count = 1;
    size_t buf_i = 0;
    OSErr err;
 
@@ -90,12 +90,13 @@ MERROR_RETVAL mfile_file_read_line(
    MERROR_RETVAL retval = MERROR_OK;
    size_t buf_i = 0;
    OSErr err;
-   int16_t count = 1;
+   int32_t count = 1;
 
    assert( MFILE_CADDY_TYPE_FILE == p_f->type );
 
-   while( buf_i < buffer_sz ) {
+   while( buf_i + 1 < buffer_sz ) {
       err = FSRead( p_f->h.file_ref, &count, &(buffer[buf_i]) );
+      buffer[buf_i + 1] = '\0';
       if( '\n' == buffer[buf_i] ) {
          buffer[buf_i] = '\0';
          debug_printf( MFILE_TRACE_LVL, "read line: %s", buffer );

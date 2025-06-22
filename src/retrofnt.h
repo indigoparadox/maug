@@ -159,6 +159,8 @@ MERROR_RETVAL retrofont_load(
    retval = mfile_open_read( font_name, &font_file );
    maug_cleanup_if_not_ok();
 
+   debug_printf( RETROFONT_TRACE_LVL, "font file opened, reading..." );
+
    /* Figure out font width from file and alloc just enough. */
    retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
    maug_cleanup_if_not_ok();
