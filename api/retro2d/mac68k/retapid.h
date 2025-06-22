@@ -36,14 +36,20 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   Handle bits_h;
+   Ptr bits;
+   BitMap bitmap;
+   GrafPort port;
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
-#  define retroflat_bitmap_ok( bitmap ) (1)
+#  define retroflat_bitmap_ok( bitmap ) (nil != (bmp)->bits_h)
 
-#  define retroflat_bitmap_w( bmp ) (0)
+#  define retroflat_bitmap_locked( bitmap ) (nul != (bmp)->bitmap.baseAddr)
 
-#  define retroflat_bitmap_h( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->bitmap.bounds.right)
+
+#  define retroflat_bitmap_h( bmp ) ((bmp)->bitmap.bounds.bottom)
 
 /*! \} */ /* maug_retroflt_bitmap */
 

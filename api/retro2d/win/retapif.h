@@ -1468,7 +1468,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
       goto cleanup;
    }
 
-   retroflat_internal_autolock_bitmap( src, locked_src_internal );
+   assert( !retroflat_bitmap_locked( src ) );
    assert( retroflat_bitmap_locked( target ) );
 
    if( (HBITMAP)NULL != src->mask ) {
@@ -1511,9 +1511,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 cleanup:
 
-   if( locked_src_internal ) {
-      retroflat_draw_release( src );
-   }
+   retroflat_draw_release( src );
 
 #  endif /* RETROFLAT_OPENGL */
    return retval;

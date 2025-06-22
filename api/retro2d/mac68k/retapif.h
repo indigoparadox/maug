@@ -165,11 +165,12 @@ void retroflat_message(
    MERROR_RETVAL retval = MERROR_OK;
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
+   /*
    DialogPtr dialog;
+   Rect r;
    int16_t item = 0;
+   */
    unsigned char msg_buf[128];
-   /* TODO: Figure this out dynamically. */
-   Rect r = { 100, 100, 200, 300 };
 
    memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
@@ -178,7 +179,9 @@ void retroflat_message(
    retval = maug_str_c2p( msg_out, (char*)msg_buf, 128 );
    maug_cleanup_if_not_ok_msg( "message string too long!" );
 
+   /* TODO: Figure this out dynamically. */
    /*
+   SetRect( &r, 100, 100, 300, 200 );
    dialog = NewDialog(
       nil, &r, msg_buf, TRUE, dBoxProc, (WindowPtr)-1, FALSE, 0, nil );
    ModalDialog( nil, &item );
@@ -234,7 +237,16 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO: Stow old port to be retrieved on release. */
 
-   SetPort( g_retroflat_state->platform.win );
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      SetPort( g_retroflat_state->platform.win );
+   } else {
+      HLock( bmp->bits_h );
+      bmp->bitmap.baseAddr = *(bmp->bits_h);
+      OpenPort( &(bmp->port) );
+      bmp->port.portBits = (bmp->bitmap);
+      SetPort( &(bmp->port) );
+      SetOrigin( 0, 0 );
+   }
 
    return retval;
 }
@@ -245,6 +257,15 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* TODO: Re-set old port stowed in lock. */
+
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      /* TODO */
+      SetPort( g_retroflat_state->platform.win );
+   } else {
+      bmp->bitmap.baseAddr = nil;
+      ClosePort( &(bmp->port) );
+      HUnlock( bmp->bits_h );
+   }
 
    return retval;
 }
@@ -277,12 +298,24 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int16_t width_bytes = 0;
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* TODO */
+
+   /* Get the bytes per row, rounding up to an even number of bytes. */
+   width_bytes = ((w + 15) / 16) * 2;
+
+   bmp_out->bits_h = NewHandleClear( width_bytes * h );
+   maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
+
+   SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
+   bmp_out->bitmap.rowBytes = width_bytes;
+
+cleanup:
 
    return retval;
 }
@@ -292,6 +325,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO */
+   DisposeHandle( bmp->bits_h );
 
 }
 
@@ -303,10 +337,40 @@ MERROR_RETVAL retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   Rect src_r,
+      dest_r;
+   GrafPtr target_port;
 
    assert( NULL != src );
 
    /* TODO */
+
+   /* Half-lock the source to copy from. */
+   HLock( src->bits_h );
+   src->bitmap.baseAddr = *(src->bits_h);
+   OpenPort( &(src->port) );
+   src->port.portBits = (src->bitmap);
+
+   if( NULL == target || retroflat_screen_buffer() == target ) {
+      target_port = g_retroflat_state->platform.win;
+   } else {
+      target_port = &(target->port);
+   }
+
+   /* Perform the actual blit. */
+   SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
+   SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
+   CopyBits(
+      &(src->bitmap), &(target_port->portBits),
+      &src_r, &dest_r, srcCopy, NULL );
+
+cleanup:
+   
+   if( nil != src->bitmap.baseAddr ) {
+      ClosePort( &(src->port) );
+      src->bitmap.baseAddr = nil;
+      HUnlock( src->bits_h );
+   }
 
    return retval;
 }

@@ -29,11 +29,30 @@ struct RETROFLAT_BITMAP {
    uint8_t flags;
 };
 
-/*! \brief Check to see if a bitmap is loaded. */
+/**
+ * \relates RETROFLAT_BITMAP
+ * \brief Check to see if a bitmap is loaded.
+ */
 #  define retroflat_bitmap_ok( bitmap ) (1)
 
+/**
+ * \relates RETROFLAT_BITMAP
+ * \brief Check to see if a bitmap is currently locked.
+ */
+#  define retroflat_bitmap_locked( bitmap ) (0)
+
+/**
+ * \relates RETROFLAT_BITMAP
+ * \brief Get the width of this bitmap using underlying mechanisms.
+ * \warn The bitmap must be valid!
+ */
 #  define retroflat_bitmap_w( bmp ) (0)
 
+/**
+ * \relates RETROFLAT_BITMAP
+ * \brief Get the height of this bitmap using underlying mechanisms.
+ * \warn The bitmap must be valid!
+ */
 #  define retroflat_bitmap_h( bmp ) (0)
 
 /*! \} */ /* maug_retroflt_bitmap */

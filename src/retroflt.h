@@ -1792,8 +1792,10 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
 /**
  * \brief Blit the contents of a ::RETROFLAT_BITMAP onto another
  *        ::RETROFLAT_BITMAP.
- * \param target Pointer to the ::RETROFLAT_BITMAP to blit src onto.
- * \param src Pointer to the ::RETROFLAT_BITMAP to blit onto target.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to blit src onto. This bitmap
+ *               should be locked!
+ * \param src Pointer to the ::RETROFLAT_BITMAP to blit onto target. This bitmap
+ *            must *not* be locked.
  * \param s_x Left X coordinate to blit starting from on the source bitmap.
  * \param s_y Top Y coordinate to blit starting from on the source bitmap.
  * \param d_x Left X coordinate to blit to on the target bitmap.

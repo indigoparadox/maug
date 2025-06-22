@@ -860,10 +860,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
    if( is_screen ) {
       tmp_tex = src->texture;
    } else {
-      if( !retroflat_bitmap_locked( src ) ) {
-         tmp_autolock = 1;
-         retroflat_draw_lock( src );
-      }
+      assert( !retroflat_bitmap_locked( src ) );
+      retroflat_draw_lock( src );
       /* This little roundabout song-and-dance allows us to copy from a surface
        * updated by a software renderer (off-screen bitmap) onto another
        * software renderer (off-screen bitmap) without getting the dreaded
@@ -877,9 +875,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
          retroflat_bitmap_h( src ) );
       SDL_UpdateTexture(
          tmp_tex, NULL, src->surface->pixels, src->surface->pitch );
-      if( tmp_autolock ) {
-         retroflat_draw_release( src );
-      }
+      retroflat_draw_release( src );
    }
 
    retval = SDL_RenderCopy(
