@@ -280,7 +280,7 @@ void retrofont_blit_glyph(
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
-   int16_t x_iter, y_iter, y_start, y_end, x_end;
+   int16_t x_iter, y_iter, y_start, y_end, x_end, x_pen_down = -1;
    uint8_t prev_px_was_clear = 0;
 
    debug_printf( RETROFONT_TRACE_LVL, "blit glyph: %c", c );
@@ -299,9 +299,24 @@ void retrofont_blit_glyph(
             (glyph[(y_iter)] & (1 << (font->glyph_w - (x_iter))))))
 
    for( y_iter = y_start ; y_end > y_iter ; y_iter++ ) {
+      /* Reset drawing state for new "scanline." */
       prev_px_was_clear = 1;
-      for( x_iter = 0 ; x_end > x_iter ; x_iter++ ) {
+      x_pen_down = -1;
+
+      /* Note the >= here... slightly "overscan" on X so we can close any
+       * end-terminating horizontal lines.
+       */
+      for( x_iter = 0 ; x_end >= x_iter ; x_iter++ ) {
          if( _retrofont_px_is_clear( x_iter, y_iter ) ) {
+
+            if( 0 <= x_pen_down ) {
+               /* Draw this "scanline" of the glyph in one go. */
+               retroflat_2d_line( 
+                  target, color,
+                  x + x_pen_down, y + y_iter, x + x_iter, y + y_iter, 0 );
+               x_pen_down = -1;
+            }
+
             if(
                RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) &&
                (!prev_px_was_clear ||
@@ -319,8 +334,12 @@ void retrofont_blit_glyph(
             prev_px_was_clear = 1;
 
          } else {
-            /* Draw normal color pixel. */
-            retroflat_2d_px( target, color, x + x_iter, y + y_iter, 0 );
+            /* This pixel is filled. */
+
+            if( 0 > x_pen_down ) {
+               /* Store the X coord to start drawing this "scanline." */
+               x_pen_down = x_iter;
+            }
 
             prev_px_was_clear = 0;
          }
