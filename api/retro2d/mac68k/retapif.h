@@ -3,13 +3,15 @@
 #define RETPLTF_H
 
 static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
-   if( 0 == color_idx ) {
-      ForeColor( blackColor );
+   if( RETROFLAT_COLOR_BLACK == color_idx ) {
+      PenPat( &(qd.black) );
+   } else if( RETROFLAT_COLOR_GRAY == color_idx ) {
+      PenPat( &(qd.gray) );
    } else {
       if( RETROFLAT_COLOR_WHITE != color_idx ) {
          debug_printf( 1, "alert! high color used: %d", color_idx );
       }
-      ForeColor( whiteColor );
+      PenPat( &(qd.white) );
    }
 }
 
@@ -35,7 +37,7 @@ static MERROR_RETVAL retroflat_init_platform(
 
    /* Create the window. */
    /* TODO: Set X/Y from args? */
-   SetRect( &r, 50, 50, args->screen_w, args->screen_h );
+   SetRect( &r, 50, 50, 50 + args->screen_w, 50 + args->screen_h );
    g_retroflat_state->platform.win = NewWindow(
       nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
    if( nil == g_retroflat_state->platform.win ) {
@@ -231,8 +233,8 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
    /* TODO: Stow old port to be retrieved on release. */
+
    SetPort( g_retroflat_state->platform.win );
-   PenSize( 1, 1 );
 
    return retval;
 }
@@ -331,6 +333,8 @@ void retroflat_px(
 
    retroflat_mac_bwcolor( color_idx );
 
+   PenSize( 1, 1 );
+
    MoveTo( x, y );
    LineTo( x + 1, y );
 }
@@ -341,7 +345,7 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-   Rect r = { x, y, h, w };
+   Rect r;
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -352,6 +356,9 @@ void retroflat_rect(
    }
 
    retroflat_mac_bwcolor( color_idx );
+
+   PenSize( 1, 1 );
+   SetRect( &r, x, y, x + w, y + h );
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       PaintRect( &r );
@@ -377,6 +384,8 @@ void retroflat_line(
 
    retroflat_mac_bwcolor( color_idx );
 
+   PenSize( 1, 1 );
+
    MoveTo( x1, y1 );
    LineTo( x2, y2 );
 }
@@ -387,7 +396,7 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-   Rect r = { x, y, h, w };
+   Rect r;
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -398,6 +407,9 @@ void retroflat_ellipse(
    }
 
    retroflat_mac_bwcolor( color_idx );
+
+   PenSize( 1, 1 );
+   SetRect( &r, x, y, x + w, y + h );
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       PaintOval( &r );
