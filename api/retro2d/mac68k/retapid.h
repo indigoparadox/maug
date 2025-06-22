@@ -43,9 +43,9 @@ struct RETROFLAT_BITMAP {
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
-#  define retroflat_bitmap_ok( bitmap ) (nil != (bmp)->bits_h)
+#  define retroflat_bitmap_ok( bmp ) (nil != (bmp)->bits_h)
 
-#  define retroflat_bitmap_locked( bitmap ) (nul != (bmp)->bitmap.baseAddr)
+#  define retroflat_bitmap_locked( bmp ) (nul != (bmp)->bitmap.baseAddr)
 
 #  define retroflat_bitmap_w( bmp ) ((bmp)->bitmap.bounds.right)
 
