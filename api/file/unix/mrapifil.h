@@ -14,12 +14,20 @@ union MFILE_HANDLE {
    MAUG_MHANDLE mem;
 };
 
-#  define mfile_has_bytes( p_file ) \
-      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-         (off_t)ftell( (p_file)->h.file ) : \
-         (p_file)->mem_cursor) < (p_file)->sz)
-
 #elif defined( MFILE_C )
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+   if( 0 <= ftell( (p_file)->h.file ) ) {
+      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
+         p_file->sz - (off_t)ftell( (p_file)->h.file ) );
+      return p_file->sz - (off_t)ftell( (p_file)->h.file );
+   } else {
+      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
+      return 0;
+   }
+}
+
+/* === */
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -152,6 +160,7 @@ cleanup:
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
+   p_file->has_bytes = mfile_file_has_bytes;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;

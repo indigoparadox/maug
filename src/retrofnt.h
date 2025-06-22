@@ -197,7 +197,7 @@ MERROR_RETVAL retrofont_load(
    font->glyph_h = glyph_h;
    font->glyph_sz = glyph_h * glyph_w_bytes;
 
-   while( mfile_has_bytes( &font_file ) ) {
+   while( font_file.has_bytes( &font_file ) ) {
       retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
 
       retrofont_split_glyph_line( line, line_bytes );

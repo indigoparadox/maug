@@ -58,6 +58,7 @@
 
 struct MFILE_CADDY;
 
+typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
 typedef MERROR_RETVAL (*mfile_seek_t)( struct MFILE_CADDY* p_file, off_t pos );
 typedef MERROR_RETVAL (*mfile_read_int_t)(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
@@ -79,6 +80,7 @@ struct MFILE_CADDY {
    /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
    uint8_t flags;
+   mfile_has_bytes_t has_bytes;
    mfile_seek_t seek;
    mfile_read_int_t read_int;
    mfile_read_line_t read_line;
@@ -121,6 +123,10 @@ void mfile_close( mfile_t* p_file );
 #ifdef MVFS_ENABLED
 #  include <mvfs.h>
 #endif /* MVFS_ENABLED */
+
+off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file ) {
+   return p_file->sz - p_file->mem_cursor;
+}
 
 /* === */
 
@@ -202,7 +208,7 @@ MERROR_RETVAL mfile_mem_read_line(
 
    assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
 
-   while( i < buffer_sz - 1 && mfile_has_bytes( p_f ) ) {
+   while( i < buffer_sz - 1 && p_f->has_bytes( p_f ) ) {
       /* Check for potential overflow. */
       if( i + 1 >= buffer_sz ) {
          error_printf( "overflow reading string from file!" );
@@ -285,6 +291,8 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    }
 
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
+
+   p_file->has_bytes = mfile_mem_has_bytes;
    p_file->read_int = mfile_mem_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;

@@ -6,11 +6,16 @@ union MFILE_HANDLE {
    MAUG_MHANDLE mem;
 };
 
-#  define mfile_has_bytes( p_file ) \
-      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-         0 : (p_file)->mem_cursor) < (p_file)->sz)
-
 #elif defined( MFILE_C )
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+   
+   /* TODO */
+
+   return 0;
+}
+
+/* === */
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags

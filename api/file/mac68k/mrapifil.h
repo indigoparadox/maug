@@ -7,17 +7,28 @@
 
 union MFILE_HANDLE {
    int16_t file_ref;
-   int32_t file_pos;
    MAUG_MHANDLE mem;
 };
 
-#  define mfile_has_bytes( p_file ) \
-      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-         (noErr == GetFPos( (p_file)->h.file_ref, &((p_file)->h.file_pos) ) ? \
-            (p_file)->h.file_pos : 0 ) : \
-         (p_file)->mem_cursor) < (p_file)->sz)
-
 #elif defined( MFILE_C )
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+   int32_t cursor = 0;
+   OSErr err;
+
+   err = GetFPos( p_file->h.file_ref, &cursor );
+   if( noErr != err ) {
+      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
+      return 0;
+   }
+
+   debug_printf( MFILE_TRACE_LVL, "file has " S32_FMT " bytes left...",
+      p_file->sz - cursor );
+
+   return p_file->sz - cursor;
+}
+
+/* === */
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -94,12 +105,13 @@ MERROR_RETVAL mfile_file_read_line(
 
    assert( MFILE_CADDY_TYPE_FILE == p_f->type );
 
+   maug_mzero( buffer, buffer_sz );
+
    while( buf_i + 1 < buffer_sz ) {
       err = FSRead( p_f->h.file_ref, &count, &(buffer[buf_i]) );
-      buffer[buf_i + 1] = '\0';
-      if( '\n' == buffer[buf_i] ) {
-         buffer[buf_i] = '\0';
-         debug_printf( MFILE_TRACE_LVL, "read line: %s", buffer );
+      if( '\n' == buffer[buf_i] || '\r' == buffer[buf_i] ) {
+         debug_printf( MFILE_TRACE_LVL,
+            "read line (" SIZE_T_FMT " chars): %s", buf_i, buffer );
          goto cleanup;
       }
       if( noErr != err ) {
@@ -125,7 +137,6 @@ cleanup:
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
    MERROR_RETVAL tok_retval = MERROR_OK;
-   struct stat file_stat;
    int16_t vol_ref = 0;
    size_t dir_idx = 0;
    char dir_name[MAUG_PATH_MAX + 1];
@@ -215,6 +226,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
+   p_file->has_bytes = mfile_file_has_bytes;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;

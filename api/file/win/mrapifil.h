@@ -11,12 +11,24 @@ union MFILE_HANDLE {
 #     define MFILE_READ_LINE_BUF_SZ 4096
 #  endif /* !MFILE_READ_LINE_BUF_SZ */
 
-#  define mfile_has_bytes( p_file ) \
-      ((MFILE_CADDY_TYPE_FILE == ((p_file)->type) ? \
-         (off_t)SetFilePointer( (p_file)->h.handle, 0, NULL, FILE_CURRENT ) : \
-         (p_file)->mem_cursor) < (p_file)->sz)
-
 #elif defined( MFILE_C )
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+   off_t cursor = 0;
+
+   cursor = (off_t)SetFilePointer( p_file->h.handle, 0, NULL, FILE_CURRENT );
+
+   if( 0 <= cursor ) {
+      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
+         p_file->sz - cursor );
+      return p_file->sz - cursor;
+   } else {
+      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
+      return 0;
+   }
+}
+
+/* === */
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz, uint8_t flags
@@ -169,6 +181,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
+   p_file->has_bytes = mfile_file_has_bytes;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;

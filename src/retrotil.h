@@ -1276,7 +1276,7 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->pass_layer_iter = 0;
       }
 
-      while( mfile_has_bytes( &buffer ) ) {
+      while( buffer.has_bytes( &buffer ) ) {
          buffer.read_int( &buffer, (uint8_t*)&c, 1, 0 );
          debug_printf( RETROTILE_TRACE_CHARS, "%c", c );
          retval = mjson_parse_c( &(parser->jparser), c );

@@ -42,8 +42,14 @@ $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin
 		for f in $(2); do \
 			md="`dirname "$$$${f}" | sed 's|/|:|g'`"; \
 			mf="`echo "$$$${f}" | sed 's|/|:|g'`"; \
+			if file $$$${f} | grep -q ASCII || file $$$${f} | grep -q JSON; then \
+				ma="-t"; \
+			else \
+				ma=""; \
+			fi; \
 			hmkdir :$$$${md} 2>/dev/null ; \
-			hcopy $$$$f :$$$$mf ; \
+			echo hcopy $$$$ma $$$$f :$$$$mf ; \
+			hcopy $$$$ma $$$$f :$$$$mf ; \
 		done; humount $(1).m68k.dsk; fi
 
 $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin: \
