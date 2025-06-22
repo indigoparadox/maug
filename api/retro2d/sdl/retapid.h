@@ -216,6 +216,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 };
 
 struct RETROFLAT_PLATFORM {
+   uint8_t flags;
 #  ifndef RETROFLAT_API_SDL1
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */

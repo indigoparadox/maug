@@ -57,10 +57,10 @@ typedef MERROR_RETVAL (*retroflat_blit_bitmap_cb)(
    int16_t instance );
 
 typedef MERROR_RETVAL (*retroflat_load_bitmap_cb)(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   const char* filename, retroflat_blit_t* bmp_out, uint8_t flags );
 
 typedef MERROR_RETVAL (*retroflat_create_bitmap_cb)(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   size_t w, size_t h, retroflat_blit_t* bmp_out, uint8_t flags );
 
 /**
  * \brief Directly addressable callback to produce pixels on a surface.

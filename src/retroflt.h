@@ -2,14 +2,14 @@
 #ifndef RETROFLT_H
 #define RETROFLT_H
 
+#ifdef RETROFLAT_OPENGL
+#  define RETROFLAT_BMP_TEX
+#endif /* RETROFLAT_OPENGL */
+
 /**
  * \addtogroup retrotile
  * \{
  */
-
-#ifdef RETROFLAT_OPENGL
-#  define RETROFLAT_BMP_TEX
-#endif /* RETROFLAT_OPENGL */
 
 /**
  * \brief Value for an individual tile in a ::RETROTILE_LAYER.
@@ -2266,7 +2266,7 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 #  ifndef RETROFLAT_NO_CLI
 
-#  ifdef RETROSND_ARGS
+#  if !defined( RETROFLAT_NO_SOUND ) && defined( RETROSND_ARGS )
 
 static MERROR_RETVAL retrosnd_cli_rsl(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
@@ -2280,7 +2280,7 @@ static MERROR_RETVAL retrosnd_cli_rsl(
    return MERROR_OK;
 }
 
-# endif /* RETROSND_ARGS */
+# endif /* !RETROFLAT_NO_SOUND && RETROSND_ARGS */
 
 #  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
 
@@ -2429,25 +2429,28 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
     * Please see retrom2d.h for more information.
     */
 #     if defined( RETROFLAT_BMP_TEX )
-   retroflat_2d_px = retro3d_texture_px;
-   retroflat_2d_line = retrosoft_line;
-   retroflat_2d_rect = retrosoft_rect;
-   retroflat_2d_blit_bitmap = retro3d_texture_blit;
-   retroflat_2d_load_bitmap = retro3d_texture_load_bitmap;
-   retroflat_2d_create_bitmap = retro3d_texture_create;
+   retroflat_2d_px = (retroflat_px_cb)retro3d_texture_px;
+   retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+   retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retro3d_texture_blit;
+   retroflat_2d_load_bitmap =
+      (retroflat_load_bitmap_cb)retro3d_texture_load_bitmap;
+   retroflat_2d_create_bitmap =
+      (retroflat_create_bitmap_cb)retro3d_texture_create;
 #     else
-   retroflat_2d_px = retroflat_px;
+   retroflat_2d_px = (retroflat_px_cb)retroflat_px;
 #        ifdef RETROFLAT_SOFT_SHAPES
    /* TODO: Work retrosoft routines to use retroflat_blit_t */
    retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
    retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
 #        else
-   retroflat_2d_line = retroflat_line;
-   retroflat_2d_rect = retroflat_rect;
+   retroflat_2d_line = (retroflat_line_cb)retroflat_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retroflat_rect;
 #        endif /* RETROFLAT_SOFT_SHAPES */
-   retroflat_2d_blit_bitmap = retroflat_blit_bitmap;
-   retroflat_2d_load_bitmap = retroflat_load_bitmap;
-   retroflat_2d_create_bitmap = retroflat_create_bitmap;
+   retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retroflat_blit_bitmap;
+   retroflat_2d_load_bitmap = (retroflat_load_bitmap_cb)retroflat_load_bitmap;
+   retroflat_2d_create_bitmap =
+      (retroflat_create_bitmap_cb)retroflat_create_bitmap;
 #     endif /* RETROFLAT_BMP_TEX */
 
    debug_printf( 1, "retroflat: MFIX_PRECISION: %f", MFIX_PRECISION );
@@ -2492,14 +2495,14 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* All platforms: add command-line args based on compile definitons. */
 
-#     ifdef RETROSND_ARGS
+#  if !defined( RETROFLAT_NO_SOUND ) && defined( RETROSND_ARGS )
 	retval = maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
       "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd, args );
    maug_cleanup_if_not_ok();
 	retval = maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
       "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, args );
    maug_cleanup_if_not_ok();
-#     endif /* RETROSND_ARGS */
+# endif /* !RETROFLAT_NO_SOUND && RETROSND_ARGS */
 
 #     ifdef RETROFLAT_SCREENSAVER
 	retval = maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
