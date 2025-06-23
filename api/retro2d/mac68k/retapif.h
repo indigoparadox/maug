@@ -304,14 +304,14 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   /* TODO */
-
    /* Get the bytes per row, rounding up to an even number of bytes. */
    width_bytes = ((w + 15) / 16) * 2;
 
+   /* Allocate the memory for the bitmap bits. */
    bmp_out->bits_h = NewHandleClear( width_bytes * h );
    maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
 
+   /* Setup the bitmap bounding region. */
    SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
    bmp_out->bitmap.rowBytes = width_bytes;
 
@@ -323,10 +323,7 @@ cleanup:
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-
-   /* TODO */
    DisposeHandle( bmp->bits_h );
-
 }
 
 /* === */
@@ -342,8 +339,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
    GrafPtr target_port;
 
    assert( NULL != src );
-
-   /* TODO */
 
    /* Half-lock the source to copy from. */
    HLock( src->bits_h );
