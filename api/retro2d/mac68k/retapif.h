@@ -277,6 +277,10 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
+   struct MFMT_STRUCT_BMPFILE header_bmp;
+   mfile_t bmp_file;
+   uint8_t bmp_flags = 0;
+   retroflat_pxxy_t x, y;
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -285,9 +289,37 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   /* TODO */
+   /* Open the bitmap file. */
+   retval = mfile_open_read( filename_path, &bmp_file );
+   maug_cleanup_if_not_ok();
+
+   /* TODO: mfmt file detection system. */
+   header_bmp.magic[0] = 'B';
+   header_bmp.magic[1] = 'M';
+   header_bmp.info.sz = 40;
+
+   retval = mfmt_read_bmp_header(
+      (struct MFMT_STRUCT*)&header_bmp,
+      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
+   maug_cleanup_if_not_ok();
+
+   /* Create a canvas to convert to. */
+   retval = retroflat_create_bitmap(
+      header_bmp.info.width, header_bmp.info.height, bmp_out, flags );
+   maug_cleanup_if_not_ok();
+
+   /* TODO: Blit pixel based on input bitmap? */
+   retroflat_draw_lock( bmp_out );
+   for( y = 0 ; header_bmp.info.height > y ; y++ ) {
+      for( x = 0 ; header_bmp.info.width > x ; x++ ) {
+         retroflat_px( bmp_out, RETROFLAT_COLOR_BLACK, x, y, 0 );
+      }
+   }
+   retroflat_draw_release( bmp_out );
 
 cleanup:
+
+   mfile_close( &bmp_file );
 
    return retval;
 }
