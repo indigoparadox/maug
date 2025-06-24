@@ -147,6 +147,8 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    retval = mfile_open_read( filename_path, &bmp_file );
    maug_cleanup_if_not_ok();
 
+   assert( NULL != bmp_file.read_byte );
+
    /* TODO: mfmt file detection system. */
    header_bmp.magic[0] = 'B';
    header_bmp.magic[1] = 'M';

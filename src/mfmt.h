@@ -71,7 +71,7 @@ struct MFMT_STRUCT {
 
 #define mfmt_bmp_check_header() \
    debug_printf( MFMT_TRACE_BMP_LVL, \
-      "bmp file sz: %lu, magic: %c%c", \
+      "bmp file sz: " U32_FMT ", magic: %c%c", \
       header->sz, (((char*)header)[0]), (((char*)header)[1]) ); \
    if( 40 == header->sz ) { \
       debug_printf( MFMT_TRACE_BMP_LVL, "bmp info header detected by sz" ); \

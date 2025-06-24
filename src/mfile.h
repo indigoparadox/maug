@@ -195,58 +195,16 @@ off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file ) {
 
 /* === */
 
-MERROR_RETVAL mfile_mem_read_int(
-   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
+MERROR_RETVAL mfile_mem_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
 
-   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_file->type );
-
-   /* TODO: Correct for current endianness. */
-
-   if( MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags) ) {
-      /* Shrink the buffer moving right and read into it. */
-      while( 0 < buf_sz ) {
-         /* Check for EOF. */
-         if( p_file->mem_cursor >= p_file->sz ) {
-            retval = MERROR_FILE;
-            error_printf(
-               "cursor " OFF_T_FMT " beyond end of buffer " OFF_T_FMT "!",
-               p_file->mem_cursor, p_file->sz );
-            goto cleanup;
-         }
-
-         buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
-         debug_printf( MFILE_TRACE_LVL, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
-            buf_sz - 1, p_file->mem_cursor );
-         buf_sz--;
-         p_file->mem_cursor++;
-      }
-   
-   } else {
-      /* Move to the end of the output buffer and read backwards. */
-      while( 0 < buf_sz ) {
-         /* Check for EOF. */
-         if( p_file->mem_cursor >= p_file->sz ) {
-            retval = MERROR_FILE;
-            error_printf(
-               "cursor " OFF_T_FMT " beyond end of buffer " OFF_T_FMT "!",
-               p_file->mem_cursor, p_file->sz );
-            goto cleanup;
-         }
-
-         buf[buf_sz - 1] = p_file->mem_buffer[p_file->mem_cursor];
-         debug_printf( MFILE_TRACE_LVL, "byte #" SIZE_T_FMT " = # " OFF_T_FMT,
-            buf_sz - 1, p_file->mem_cursor );
-         buf_sz--;
-         buf++;
-         p_file->mem_cursor++;
-      }
+   if( p_file->mem_cursor >= p_file->sz ) {
+      return MERROR_FILE;
    }
 
-cleanup:
+   *buf = p_file->mem_buffer[p_file->mem_cursor];
+   p_file->mem_cursor++;
 
-   return retval;
+   return MERROR_OK;
 }
 
 /* === */
@@ -314,7 +272,9 @@ MERROR_RETVAL mfile_lock_buffer(
    maug_mlock( handle, p_file->mem_buffer );
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
 
-   p_file->read_int = mfile_mem_read_int;
+   p_file->has_bytes = mfile_mem_has_bytes;
+   p_file->read_byte = mfile_mem_read_byte;
+   p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;
 
@@ -361,7 +321,7 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
 
    p_file->has_bytes = mfile_mem_has_bytes;
    p_file->read_byte = mfile_mem_read_byte;
-   p_file->read_int = mfile_mem_read_int;
+   p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;
 
