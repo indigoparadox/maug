@@ -30,45 +30,16 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 
 /* === */
 
-MERROR_RETVAL mfile_file_read_int(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz, uint8_t flags
-) {
+MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_f, uint8_t* buf ) {
    MERROR_RETVAL retval = MERROR_OK;
    DWORD last_read = 0;
    BOOL read_ok = 0;
 
-   assert( MFILE_CADDY_TYPE_FILE == p_f->type );
-
-   if(
-#ifdef MAUG_LSBF
-      MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
-#else
-      MFILE_READ_FLAG_MSBF == (MFILE_READ_FLAG_MSBF & flags)
-#endif
-   ) {
-      /* Shrink the buffer moving right and read into it. */
-      read_ok = ReadFile( p_f->h.handle, buf, buf_sz, &last_read, NULL );
-      if( !read_ok || buf_sz > last_read ) {
-         error_printf( "unable to read from file!" );
-         retval = MERROR_FILE;
-         goto cleanup;
-      }
-   
-   } else {
-      /* Move to the end of the output buffer and read backwards. */
-      while( 0 < buf_sz ) {
-         read_ok = ReadFile(
-            p_f->h.handle, (buf + (buf_sz - 1)) , 1, &last_read, NULL );
-         if( !read_ok || buf_sz > last_read ) {
-            error_printf( "unable to read from file!" );
-            retval = MERROR_FILE;
-            goto cleanup;
-         }
-         buf_sz--;
-      }
+   read_ok = ReadFile( p_f->h.handle, buf, 1, &last_read, NULL );
+   if( !read_ok || 1 > last_read ) {
+      error_printf( "unable to read from file!" );
+      retval = MERROR_FILE;
    }
-
-cleanup:
 
    return retval;
 }
@@ -188,6 +159,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
    p_file->has_bytes = mfile_file_has_bytes;
+   p_file->read_byte = mfile_file_read_byte;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;

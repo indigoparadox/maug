@@ -79,6 +79,8 @@
 struct MFILE_CADDY;
 
 typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
+typedef MERROR_RETVAL (*mfile_read_byte_t)(
+   struct MFILE_CADDY* p_file, uint8_t* buf );
 typedef MERROR_RETVAL (*mfile_seek_t)( struct MFILE_CADDY* p_file, off_t pos );
 typedef MERROR_RETVAL (*mfile_read_int_t)(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
@@ -101,12 +103,17 @@ struct MFILE_CADDY {
    uint8_t* mem_buffer;
    uint8_t flags;
    mfile_has_bytes_t has_bytes;
+   mfile_read_byte_t read_byte;
    mfile_seek_t seek;
    mfile_read_int_t read_int;
    mfile_read_line_t read_line;
 };
 
 typedef struct MFILE_CADDY mfile_t;
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file );
+ 
+MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf );
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz, uint8_t flags );
@@ -143,6 +150,44 @@ void mfile_close( mfile_t* p_file );
 #ifdef MVFS_ENABLED
 #  include <mvfs.h>
 #endif /* MVFS_ENABLED */
+
+MERROR_RETVAL mfile_file_read_int(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
+
+   if(
+#ifdef MAUG_LSBF
+      MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
+#else
+      MFILE_READ_FLAG_MSBF == (MFILE_READ_FLAG_MSBF & flags)
+#endif
+   ) {
+      /* Shrink the buffer moving right and read into it. */
+      while( 0 < buf_sz ) {
+         retval = p_file->read_byte( p_file, buf );
+         maug_cleanup_if_not_ok();
+         buf++;
+         buf_sz--;
+      }
+  
+   } else {
+      /* Move to the end of the output buffer and read backwards. */
+      while( 0 < buf_sz ) {
+         retval = p_file->read_byte( p_file, (buf + (buf_sz - 1)) );
+         maug_cleanup_if_not_ok();
+         buf_sz--;
+      }
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
 
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file ) {
    return p_file->sz - p_file->mem_cursor;
@@ -315,9 +360,11 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
 
    p_file->has_bytes = mfile_mem_has_bytes;
+   p_file->read_byte = mfile_mem_read_byte;
    p_file->read_int = mfile_mem_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;
+
    p_file->flags = MFILE_FLAG_READ_ONLY;
    p_file->mem_buffer = gc_mvfs_data[i];
    p_file->sz = *(gc_mvfs_lens[i]);
