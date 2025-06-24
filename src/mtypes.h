@@ -3,6 +3,12 @@
 #define MTYPES_H
 
 /**
+ * \file mtypes.h
+ * \brief Macros, constants, and typedefs for cross-platform consistency.
+ * \{
+ */
+
+/**
  * stdint.h is great, but it's C99 and thus not available on older platforms.
  *
  * This header attempts to provide a specific but cross-platform
@@ -12,6 +18,48 @@
 #ifdef MAUG_ANCIENT_C
 typedef int32_t ssize_t;
 #endif /* MAUG_ANCIENT_C */
+
+#if defined( __BYTE_ORDER ) && __BYTE_ORDER == __BIG_ENDIAN || \
+defined( __BYTE_ORDER__ ) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ || \
+defined( __BIG_ENDIAN__ ) || \
+defined( __ARMEB__ ) || \
+defined( __THUMBEB__ ) || \
+defined( __AARCH64EB__ ) || \
+defined( _MIBSEB ) || defined( __MIBSEB ) || defined( __MIBSEB__ ) || \
+defined( DOCUMENTATION )
+   /**
+    * \brief Macro indicating the platform is natively least-significant byte
+    *        first. On platforms that are most-significant byte first,
+    *        MAUG_MSBF will be defined, instead.
+    */
+   #define MAUG_LSBF
+
+   #define maug_lsbf_16( n ) (n)
+   #define maug_lsbf_32( n ) (n)
+   #define maug_msbf_16( n ) (((n) >> 8) | ((n) << 8))
+   #define maug_msbf_32( n ) ((((n) >> 24) & 0xff) | \
+      (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
+      (((n) << 24) & 0xff000000 ))
+
+#elif defined( __BYTE_ORDER ) && __BYTE_ORDER == __LITTLE_ENDIAN || \
+defined( __BYTE_ORDER__ ) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ || \
+defined( __LITTLE_ENDIAN__ ) || \
+defined( __ARMEL__ ) || \
+defined( __THUMBEL__ ) || \
+defined( __AARCH64EL__ ) || \
+defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ )
+   #define MAUG_MSBF
+
+   #define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))
+   #define maug_lsbf_32( n ) ((((n) >> 24) & 0xff) | \
+      (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
+      (((n) << 24) & 0xff000000 ))
+   #define maug_msbf_16( n ) (n)
+   #define maug_msbf_32( n ) (n)
+
+#else
+   #error "unable to determine byte order!"
+#endif
 
 /* Helpful type-related constants. */
 
@@ -112,6 +160,8 @@ typedef uint32_t maug_ms_t;
 #  endif /* MAUG_OS_DOS_REAL */
 
 #endif /* MAUG_OS_* */
+
+/*! \} */
 
 #endif /* !MTYPES_H */
 

@@ -50,7 +50,27 @@
 
 #define MFILE_FLAG_READ_ONLY     0x01
 
+/**
+ * \addtogroup maug_mfile_byte_order RetroFile Byte Order
+ * \brief Flags controlling byte order for read operations.
+ *
+ * If neither of these flags are specified, mfile_read_int_t() operations will
+ * default to the native byte order of the current system.
+ */
+
+/**
+ * \relates mfile_read_int_t
+ * \brief Flag for mfile_read_int_t() indicating integer should always be read
+ *        least significant byte first.
+ */
 #define MFILE_READ_FLAG_LSBF     0x01
+
+/**
+ * \relates mfile_read_int_t
+ * \brief Flag for mfile_read_int_t() indicating integer should always be read
+ *        most significant byte first.
+ */
+#define MFILE_READ_FLAG_MSBF     0x01
 
 #ifndef MFILE_TRACE_LVL
 #  define MFILE_TRACE_LVL 0
@@ -136,6 +156,8 @@ MERROR_RETVAL mfile_mem_read_int(
    MERROR_RETVAL retval = MERROR_OK;
 
    assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_file->type );
+
+   /* TODO: Correct for current endianness. */
 
    if( MFILE_READ_FLAG_LSBF != (MFILE_READ_FLAG_LSBF & flags) ) {
       /* Shrink the buffer moving right and read into it. */

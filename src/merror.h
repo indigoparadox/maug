@@ -119,6 +119,13 @@ typedef int MERROR_RETVAL;
       goto cleanup; \
    }
 
+#define maug_cleanup_if_ne( a, b, fmt, err ) \
+   if( (a) != (b) ) { \
+      error_printf( #a " " fmt " is NOT equal to " #b " " fmt "!", a, b ); \
+      retval = err; \
+      goto cleanup; \
+   }
+
 /*! \} */ /* maug_error */
 
 #endif /* MERROR_H */

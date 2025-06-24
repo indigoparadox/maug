@@ -281,6 +281,9 @@ MERROR_RETVAL retroflat_load_bitmap(
    mfile_t bmp_file;
    uint8_t bmp_flags = 0;
    retroflat_pxxy_t x, y;
+   MAUG_MHANDLE bmp_px_h = (MAUG_MHANDLE)NULL;
+   off_t bmp_px_sz = 0;
+   uint8_t* bmp_px = NULL;
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -303,6 +306,30 @@ MERROR_RETVAL retroflat_load_bitmap(
       &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
    maug_cleanup_if_not_ok();
 
+   debug_printf( 1, "retroflat: bitmap header: %ldx%ld, %d bpp",
+      header_bmp.info.width, header_bmp.info.height, header_bmp.info.bpp );
+
+   /* Allocate a space for the bitmap pixels (read as 8-bit). */
+   bmp_px_sz = header_bmp.info.width * header_bmp.info.height;
+   bmp_px_h = maug_malloc( 1, bmp_px_sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_px_h );
+
+   debug_printf( 1, "allocated temporary bitmap: " OFF_T_FMT " bytes",
+      bmp_px_sz );
+
+   maug_mlock( bmp_px_h, bmp_px );
+   maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
+
+   /* Read the bitmap pixels */
+   retval = mfmt_read_bmp_px(
+      (struct MFMT_STRUCT*)&header_bmp,
+      bmp_px, bmp_px_sz,
+      &bmp_file, header_bmp.px_offset,
+      mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
+   maug_cleanup_if_not_ok();
+
+   debug_printf( 1, "read pixels" );
+
    /* Create a canvas to convert to. */
    retval = retroflat_create_bitmap(
       header_bmp.info.width, header_bmp.info.height, bmp_out, flags );
@@ -312,12 +339,25 @@ MERROR_RETVAL retroflat_load_bitmap(
    retroflat_draw_lock( bmp_out );
    for( y = 0 ; header_bmp.info.height > y ; y++ ) {
       for( x = 0 ; header_bmp.info.width > x ; x++ ) {
-         retroflat_px( bmp_out, RETROFLAT_COLOR_BLACK, x, y, 0 );
+         debug_printf( 1, "0x%02x ", bmp_px[(y * header_bmp.info.width) + x] );
+         if( 0 == bmp_px[(y * header_bmp.info.width) + x] ) {
+            retroflat_px( bmp_out, RETROFLAT_COLOR_BLACK, x, y, 0 );
+         } else {
+            retroflat_px( bmp_out, RETROFLAT_COLOR_WHITE, x, y, 0 );
+         }
       }
    }
    retroflat_draw_release( bmp_out );
 
 cleanup:
+
+   if( NULL != bmp_px ) {
+      maug_munlock( bmp_px_h, bmp_px );
+   }
+
+   if( NULL != bmp_px_h ) {
+      maug_mfree( bmp_px_h );
+   }
 
    mfile_close( &bmp_file );
 
@@ -391,8 +431,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
       &(src->bitmap), &(target_port->portBits),
       &src_r, &dest_r, srcCopy, NULL );
 
-cleanup:
-   
    if( nil != src->bitmap.baseAddr ) {
       ClosePort( &(src->port) );
       src->bitmap.baseAddr = nil;
