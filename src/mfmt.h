@@ -71,12 +71,14 @@ struct MFMT_STRUCT {
 
 #define mfmt_bmp_check_header() \
    debug_printf( MFMT_TRACE_BMP_LVL, \
-      "bmp file magic: 0x%04x", \
-         (uint16_t)maug_msbf_16( *((uint16_t*)header) ) ); \
-   if( 40 == (uint32_t)maug_msbf_32( header->sz ) ) { \
-      debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected by sz" ); \
+      "bmp file sz: %lu, magic: %c%c", \
+      header->sz, (((char*)header)[0]), (((char*)header)[1]) ); \
+   if( 40 == header->sz ) { \
+      debug_printf( MFMT_TRACE_BMP_LVL, "bmp info header detected by sz" ); \
       header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header; \
-   } else if( 0x4d42 == (uint16_t)maug_msbf_16( *((uint16_t*)header) ) ) { \
+   } else if( \
+      'B' == (((char*)header)[0]) && 'M' == (((char*)header)[1]) \
+   ) { \
       debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected by sig" ); \
       header_bmp_file = (struct MFMT_STRUCT_BMPFILE*)header; \
       header_bmp_info = &(header_bmp_file->info); \
@@ -274,7 +276,7 @@ MERROR_RETVAL mfmt_decode_rle(
    do {
       retval = p_file_in->seek( p_file_in, file_offset + in_byte_cur++ );
       maug_cleanup_if_not_ok();
-      retval = p_file_in->read_int( p_file_in, &byte_buffer, 1, 0 );
+      retval = p_file_in->read_byte( p_file_in, &byte_buffer );
       maug_cleanup_if_not_ok();
 
       /*
@@ -639,7 +641,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
    mfmt_bmp_check_header();
   
-   if( 0 == maug_msbf_32(  header_bmp_info->height ) ) {
+   if( 0 == header_bmp_info->height ) {
       error_printf( "bitmap height is 0!" );
       retval = MERROR_FILE;
       goto cleanup;
@@ -657,7 +659,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
       goto cleanup;
    }
 
-   if( 8 < maug_msbf_16(  header_bmp_info->bpp ) ) {
+   if( 8 < header_bmp_info->bpp ) {
       error_printf( ">8BPP bitmaps not supported!" );
       retval = MERROR_FILE;
       goto cleanup;
@@ -746,7 +748,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
          /* Move on to a new byte. */
          /* TODO: Bad cursor? */
-         retval = p_file_bmp->read_int( p_file_bmp, &byte_buffer, 1, 0 );
+         retval = p_file_bmp->read_byte( p_file_bmp, &byte_buffer );
          maug_cleanup_if_not_ok();
          /*
          mfile_cread( p_file_bmp, &(byte_buffer) );

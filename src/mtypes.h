@@ -28,19 +28,19 @@ defined( __AARCH64EB__ ) || \
 defined( _MIBSEB ) || defined( __MIBSEB ) || defined( __MIBSEB__ ) || \
 defined( DOCUMENTATION )
 
-#  pragma message "platform is LSBF..."
+#  pragma message "platform is MSBF..."
 
    /**
-    * \brief Macro indicating the platform is natively least-significant byte
-    *        first. On platforms that are most-significant byte first,
+    * \brief Macro indicating the platform is natively most-significant byte
+    *        first. On platforms that are least-significant byte first,
     *        MAUG_MSBF will be defined, instead.
     */
-   #define MAUG_LSBF
+   #define MAUG_MSBF
 
-   #define maug_lsbf_16( n ) (n)
-   #define maug_lsbf_32( n ) (n)
-   #define maug_msbf_16( n ) (((n) >> 8) | ((n) << 8))
-   #define maug_msbf_32( n ) ((((n) >> 24) & 0xff) | \
+   #define maug_msbf_16( n ) (n)
+   #define maug_msbf_32( n ) (n)
+   #define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))
+   #define maug_lsbf_32( n ) ((((n) >> 24) & 0xff) | \
       (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
       (((n) << 24) & 0xff000000 ))
 
@@ -52,16 +52,16 @@ defined( __THUMBEL__ ) || \
 defined( __AARCH64EL__ ) || \
 defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ )
 
-#  pragma message "platform is MSBF..."
+#  pragma message "platform is LSBF..."
 
-   #define MAUG_MSBF
+   #define MAUG_LSBF
 
-   #define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))
-   #define maug_lsbf_32( n ) ((((n) >> 24) & 0xff) | \
+   #define maug_msbf_16( n ) (((n) >> 8) | ((n) << 8))
+   #define maug_msbf_32( n ) ((((n) >> 24) & 0xff) | \
       (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
       (((n) << 24) & 0xff000000 ))
-   #define maug_msbf_16( n ) (n)
-   #define maug_msbf_32( n ) (n)
+   #define maug_lsbf_16( n ) (n)
+   #define maug_lsbf_32( n ) (n)
 
 #else
    #error "unable to determine byte order!"

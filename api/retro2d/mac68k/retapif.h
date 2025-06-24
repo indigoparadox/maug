@@ -297,6 +297,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
 
    /* TODO: mfmt file detection system. */
+   maug_mzero( &header_bmp, sizeof( struct MFMT_STRUCT_BMPFILE ) );
    header_bmp.magic[0] = 'B';
    header_bmp.magic[1] = 'M';
    header_bmp.info.sz = 40;
