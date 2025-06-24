@@ -22,8 +22,10 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
       return 0;
    }
 
+   /*
    debug_printf( MFILE_TRACE_LVL, "file has " S32_FMT " bytes left...",
       p_file->sz - cursor );
+   */
 
    return p_file->sz - cursor;
 }
@@ -79,7 +81,7 @@ MERROR_RETVAL mfile_file_read_line(
    while( buf_i + 1 < buffer_sz ) {
       err = FSRead( p_f->h.file_ref, &count, &(buffer[buf_i]) );
       if( '\n' == buffer[buf_i] || '\r' == buffer[buf_i] ) {
-         debug_printf( MFILE_TRACE_LVL,
+         debug_printf( MFILE_TRACE_CONTENTS_LVL,
             "read line (" SIZE_T_FMT " chars): %s", buf_i, buffer );
          goto cleanup;
       }

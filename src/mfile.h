@@ -76,6 +76,10 @@
 #  define MFILE_TRACE_LVL 0
 #endif /* !MFILE_TRACE_LVL */
 
+#ifndef MFILE_TRACE_CONTENTS_LVL
+#  define MFILE_TRACE_CONTENTS_LVL 0
+#endif /* !MFILE_TRACE_CONTENTS_LVL */
+
 struct MFILE_CADDY;
 
 typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
@@ -165,6 +169,7 @@ MERROR_RETVAL mfile_file_read_int(
       MFILE_READ_FLAG_MSBF == (MFILE_READ_FLAG_MSBF & flags)
 #endif
    ) {
+      debug_printf( MFILE_TRACE_LVL, "reading integer forward" );
       /* Shrink the buffer moving right and read into it. */
       while( 0 < buf_sz ) {
          retval = p_file->read_byte( p_file, buf );
@@ -172,8 +177,9 @@ MERROR_RETVAL mfile_file_read_int(
          buf++;
          buf_sz--;
       }
-  
+ 
    } else {
+      debug_printf( MFILE_TRACE_LVL, "reading integer reversed" );
       /* Move to the end of the output buffer and read backwards. */
       while( 0 < buf_sz ) {
          retval = p_file->read_byte( p_file, (buf + (buf_sz - 1)) );
@@ -216,7 +222,7 @@ MERROR_RETVAL mfile_mem_seek( struct MFILE_CADDY* p_file, off_t pos ) {
 
    p_file->mem_cursor = pos;
 
-   debug_printf( 1,
+   debug_printf( MFILE_TRACE_LVL,
       "seeking memory buffer to position " OFF_T_FMT " (" OFF_T_FMT ")",
       pos, p_file->mem_cursor );
 
