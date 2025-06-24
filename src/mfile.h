@@ -159,7 +159,7 @@ MERROR_RETVAL mfile_mem_read_int(
 
    /* TODO: Correct for current endianness. */
 
-   if( MFILE_READ_FLAG_LSBF != (MFILE_READ_FLAG_LSBF & flags) ) {
+   if( MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags) ) {
       /* Shrink the buffer moving right and read into it. */
       while( 0 < buf_sz ) {
          /* Check for EOF. */

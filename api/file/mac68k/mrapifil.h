@@ -41,7 +41,13 @@ MERROR_RETVAL mfile_file_read_int(
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
    assert( 0 < buf_sz );
 
-   if( MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags) ) {
+   if(
+#ifdef MAUG_LSBF
+      MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
+#else
+      MFILE_READ_FLAG_MSBF == (MFILE_READ_FLAG_MSBF & flags)
+#endif
+   ) {
       /* Shrink the buffer moving right and read into it. */
       while( buf_i < buf_sz ) {
          err = FSRead( p_file->h.file_ref, &count, &(buf[buf_i]) );
