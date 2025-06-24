@@ -27,6 +27,9 @@ defined( __THUMBEB__ ) || \
 defined( __AARCH64EB__ ) || \
 defined( _MIBSEB ) || defined( __MIBSEB ) || defined( __MIBSEB__ ) || \
 defined( DOCUMENTATION )
+
+#  pragma message "platform is LSBF..."
+
    /**
     * \brief Macro indicating the platform is natively least-significant byte
     *        first. On platforms that are most-significant byte first,
@@ -48,6 +51,9 @@ defined( __ARMEL__ ) || \
 defined( __THUMBEL__ ) || \
 defined( __AARCH64EL__ ) || \
 defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ )
+
+#  pragma message "platform is MSBF..."
+
    #define MAUG_MSBF
 
    #define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))

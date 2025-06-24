@@ -71,11 +71,12 @@ struct MFMT_STRUCT {
 
 #define mfmt_bmp_check_header() \
    debug_printf( MFMT_TRACE_BMP_LVL, \
-      "bmp file magic: 0x%04x", *((uint16_t*)header) ); \
-   if( 40 == header->sz ) { \
+      "bmp file magic: 0x%04x", \
+         (uint16_t)maug_msbf_16( *((uint16_t*)header) ) ); \
+   if( 40 == (uint32_t)maug_msbf_32( header->sz ) ) { \
       debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected by sz" ); \
       header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header; \
-   } else if( 0x4d42 == *((uint16_t*)header) ) { \
+   } else if( 0x4d42 == (uint16_t)maug_msbf_16( *((uint16_t*)header) ) ) { \
       debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected by sig" ); \
       header_bmp_file = (struct MFMT_STRUCT_BMPFILE*)header; \
       header_bmp_info = &(header_bmp_file->info); \
