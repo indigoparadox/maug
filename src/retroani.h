@@ -650,7 +650,6 @@ MERROR_RETVAL retroani_set_string(
    struct RETROANI* ani = NULL;
    size_t str_height = 0;
 
-   assert( 0 <= a_idx );
    assert( mdata_vector_ct( ani_stack ) > a_idx );
 
    mdata_vector_lock( ani_stack );

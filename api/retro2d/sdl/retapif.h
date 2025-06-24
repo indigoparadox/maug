@@ -554,7 +554,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifdef RETROFLAT_OPENGL
 
-   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_load_bitmap()!" );
    /*
    assert( NULL != bmp_out );
    retval = retro3d_texture_load_bitmap(
@@ -690,7 +690,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_create_bitmap()!" );
    /*
    assert( NULL != bmp_out );
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
@@ -753,7 +753,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
    /*
    assert( NULL != bmp );
    retro3d_texture_destroy( &(bmp->tex) );
@@ -816,7 +816,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_blit_bitmap()!" );
    /*
    assert( NULL != target );
    retval = retro3d_texture_blit(
@@ -925,7 +925,7 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_px()!" );
    /*
    assert( NULL != target );
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
@@ -1003,7 +1003,7 @@ void retroflat_rect(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
 #if 0
    assert( NULL != target );
 
@@ -1067,7 +1067,7 @@ void retroflat_line(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_line()!" );
 #if 0
    if( NULL == target || retroflat_screen_buffer() == target ) {
       /* TODO: Draw line in ortho. */

@@ -35,11 +35,10 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t count = 1;
-   size_t buf_i = 0;
    OSErr err;
 
    err = FSRead( p_file->h.file_ref, &count, buf );
-   if( 0 == count ) {
+   if( 0 == count || noErr != err ) {
       error_printf( "unable to read from file!" );
       retval = MERROR_FILE;
    }

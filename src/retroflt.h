@@ -896,9 +896,9 @@ typedef size_t retroflat_pxxy_t;
 
 struct RETROFLAT_ARGS;
 
-#ifndef API_TRACE_LVL
-#  define API_TRACE_LVL 0
-#endif /* !API_TRACE_LVL */
+#ifndef RETRO2D_TRACE_LVL
+#  define RETRO2D_TRACE_LVL 0
+#endif /* !RETRO2D_TRACE_LVL */
 
 #ifndef RETROFLAT_NO_SOUND
 

@@ -933,7 +933,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL != bmp ) {
       retval = retro3d_texture_lock( &(bmp->tex) );
    } else {
-      debug_printf( API_TRACE_LVL, "called retroflat_draw_lock()!" );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
 
 #  else
@@ -995,7 +995,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* Windows has its own OpenGL flip function.*/
       SwapBuffers( g_retroflat_state->platform.hdc_win );
    } else {
-      debug_printf( API_TRACE_LVL, "called retroflat_draw_release()!" );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_release()!" );
    }
 
 #  else
@@ -1081,7 +1081,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  ifdef RETROFLAT_OPENGL
 
    assert( NULL != bmp_out );
-   debug_printf( API_TRACE_LVL, "called retroflat_load_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_load_bitmap()!" );
    /*
    retval = retro3d_texture_load_bitmap(
       filename_path, &(bmp_out->tex), flags );
@@ -1247,7 +1247,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_create_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_create_bitmap()!" );
    /*
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
    */
@@ -1382,7 +1382,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
    /*
    retro3d_texture_destroy( &(bmp->tex) );
    */
@@ -1442,7 +1442,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_blit_bitmap()!" );
    /*
    retval = retro3d_texture_blit(
       &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
@@ -1456,6 +1456,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
+   assert( !retroflat_bitmap_locked( src ) );
+   assert( retroflat_bitmap_locked( target ) );
+
+   retroflat_draw_lock( src );
+
    if( (HBITMAP)NULL == target->b ) {
       error_printf( "invalid bitmap blit target!" );
       retval = MERROR_GUI;
@@ -1467,9 +1472,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
       retval = MERROR_GUI;
       goto cleanup;
    }
-
-   assert( !retroflat_bitmap_locked( src ) );
-   assert( retroflat_bitmap_locked( target ) );
 
    if( (HBITMAP)NULL != src->mask ) {
       /* Use mask to blit transparency. */
@@ -1504,7 +1506,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
          error_printf(
             "error during blit from bitmap %p to bitmap %p",
             src, target );
-         retval = MERROR_GUI;
+         /* retval = MERROR_GUI; */
          goto cleanup;
       }
    }
@@ -1539,7 +1541,7 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
-   debug_printf( API_TRACE_LVL, "called retroflat_px()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_px()!" );
    /*
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
    */
@@ -1598,7 +1600,7 @@ void retroflat_rect(
 
    assert( NULL != target );
 
-   debug_printf( API_TRACE_LVL, "called retroflat_rect()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
    /* Draw the rect onto the given 2D texture. */
    /*
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
@@ -1654,7 +1656,7 @@ void retroflat_line(
 
    assert( NULL != target );
 
-   debug_printf( API_TRACE_LVL, "called retroflat_line()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_line()!" );
    /*
    retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
    */
@@ -1711,7 +1713,7 @@ void retroflat_ellipse(
 
    assert( NULL != target );
 
-   debug_printf( API_TRACE_LVL, "called retroflat_ellipse()!" );
+   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_ellipse()!" );
    /*
    retrosoft_ellipse( target, color, x, y, w, h, flags );
    */

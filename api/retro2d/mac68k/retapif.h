@@ -9,7 +9,8 @@ static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
       PenPat( &(qd.gray) );
    } else {
       if( RETROFLAT_COLOR_WHITE != color_idx ) {
-         debug_printf( 1, "alert! high color used: %d", color_idx );
+         debug_printf(
+            RETRO2D_TRACE_LVL, "alert! high color used: %d", color_idx );
       }
       PenPat( &(qd.white) );
    }
@@ -83,7 +84,7 @@ MERROR_RETVAL retroflat_loop(
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
        */
-      debug_printf( 1, "main loop already running!" );
+      debug_printf( RETRO2D_TRACE_LVL, "main loop already running!" );
       goto cleanup;
    }
 
@@ -290,13 +291,14 @@ MERROR_RETVAL retroflat_load_bitmap(
    retval = retroflat_build_filename_path(
       filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
    maug_cleanup_if_not_ok();
-   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
+   debug_printf(
+      RETRO2D_TRACE_LVL, "retroflat: loading bitmap: %s", filename_path );
 
    /* Open the bitmap file. */
    retval = mfile_open_read( filename_path, &bmp_file );
    maug_cleanup_if_not_ok();
 
-   /* TODO: mfmt file detection system. */
+   /* mfmt file detection system. */
    maug_mzero( &header_bmp, sizeof( struct MFMT_STRUCT_BMPFILE ) );
    header_bmp.magic[0] = 'B';
    header_bmp.magic[1] = 'M';
@@ -307,7 +309,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
    maug_cleanup_if_not_ok();
 
-   debug_printf( 1, "retroflat: bitmap header: %ldx%ld, %d bpp",
+   debug_printf( RETRO2D_TRACE_LVL, "retroflat: bitmap header: %ldx%ld, %d bpp",
       header_bmp.info.width, header_bmp.info.height, header_bmp.info.bpp );
 
    /* Allocate a space for the bitmap pixels (read as 8-bit). */
@@ -315,7 +317,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    bmp_px_h = maug_malloc( 1, bmp_px_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_px_h );
 
-   debug_printf( 1, "allocated temporary bitmap: " OFF_T_FMT " bytes",
+   debug_printf(
+      RETRO2D_TRACE_LVL, "allocated temporary bitmap: " OFF_T_FMT " bytes",
       bmp_px_sz );
 
    maug_mlock( bmp_px_h, bmp_px );
@@ -329,18 +332,19 @@ MERROR_RETVAL retroflat_load_bitmap(
       mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
 
-   debug_printf( 1, "read pixels" );
+   debug_printf( RETRO2D_TRACE_LVL, "read pixels" );
 
    /* Create a canvas to convert to. */
    retval = retroflat_create_bitmap(
       header_bmp.info.width, header_bmp.info.height, bmp_out, flags );
    maug_cleanup_if_not_ok();
 
-   /* TODO: Blit pixel based on input bitmap? */
+   /* Blit pixels based on input bitmap. Convert mfmt's 8-bit bitmap results
+    * into a true 1-bit Quickdraw bitmap.
+    */
    retroflat_draw_lock( bmp_out );
    for( y = 0 ; header_bmp.info.height > y ; y++ ) {
       for( x = 0 ; header_bmp.info.width > x ; x++ ) {
-         debug_printf( 1, "0x%02x ", bmp_px[(y * header_bmp.info.width) + x] );
          if( 0 == bmp_px[(y * header_bmp.info.width) + x] ) {
             retroflat_px( bmp_out, RETROFLAT_COLOR_BLACK, x, y, 0 );
          } else {

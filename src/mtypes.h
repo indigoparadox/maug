@@ -28,19 +28,21 @@ defined( __AARCH64EB__ ) || \
 defined( _MIBSEB ) || defined( __MIBSEB ) || defined( __MIBSEB__ ) || \
 defined( DOCUMENTATION )
 
-#  pragma message "platform is MSBF..."
+#  ifdef MAUG_END_TRACE
+#     pragma message "platform is MSBF..."
+#  endif /* MAUG_END_TRACE */
 
-   /**
-    * \brief Macro indicating the platform is natively most-significant byte
-    *        first. On platforms that are least-significant byte first,
-    *        MAUG_MSBF will be defined, instead.
-    */
-   #define MAUG_MSBF
+/**
+ * \brief Macro indicating the platform is natively most-significant byte first
+ *        On platforms that are least-significant byte first, MAUG_LSBF
+ *        will be defined, instead.
+ */
+#  define MAUG_MSBF
 
-   #define maug_msbf_16( n ) (n)
-   #define maug_msbf_32( n ) (n)
-   #define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))
-   #define maug_lsbf_32( n ) ((((n) >> 24) & 0xff) | \
+#  define maug_msbf_16( n ) (n)
+#  define maug_msbf_32( n ) (n)
+#  define maug_lsbf_16( n ) (((n) >> 8) | ((n) << 8))
+#  define maug_lsbf_32( n ) ((((n) >> 24) & 0xff) | \
       (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
       (((n) << 24) & 0xff000000 ))
 
@@ -50,18 +52,21 @@ defined( __LITTLE_ENDIAN__ ) || \
 defined( __ARMEL__ ) || \
 defined( __THUMBEL__ ) || \
 defined( __AARCH64EL__ ) || \
-defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ )
+defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ ) || \
+defined( __WATCOMC__ )
 
-#  pragma message "platform is LSBF..."
+#  ifdef MAUG_END_TRACE
+#     pragma message "platform is LSBF..."
+#  endif /* MAUG_END_TRACE */
 
-   #define MAUG_LSBF
+#  define MAUG_LSBF
 
-   #define maug_msbf_16( n ) (((n) >> 8) | ((n) << 8))
-   #define maug_msbf_32( n ) ((((n) >> 24) & 0xff) | \
+#  define maug_msbf_16( n ) (((n) >> 8) | ((n) << 8))
+#  define maug_msbf_32( n ) ((((n) >> 24) & 0xff) | \
       (((n) << 8) & 0xff0000) | (((n) >> 8) & 0xff00) | \
       (((n) << 24) & 0xff000000 ))
-   #define maug_lsbf_16( n ) (n)
-   #define maug_lsbf_32( n ) (n)
+#  define maug_lsbf_16( n ) (n)
+#  define maug_lsbf_32( n ) (n)
 
 #else
    #error "unable to determine byte order!"
