@@ -460,13 +460,13 @@ MERROR_RETVAL mfmt_read_bmp_header(
       retval = p_file_in->seek( p_file_in, file_offset + 2 );
       maug_cleanup_if_not_ok();
       retval = p_file_in->read_int( p_file_in,
-         (uint8_t*)&(header_bmp_file->file_sz), 4, 0 );
+         (uint8_t*)&(header_bmp_file->file_sz), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
 
       retval = p_file_in->seek( p_file_in, file_offset + 10 );
       maug_cleanup_if_not_ok();
       retval = p_file_in->read_int( p_file_in,
-         (uint8_t*)&(header_bmp_file->px_offset), 4, 0 );
+         (uint8_t*)&(header_bmp_file->px_offset), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
       
       debug_printf( MFMT_TRACE_BMP_LVL,
@@ -480,7 +480,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
    retval = p_file_in->seek( p_file_in, file_offset + header_offset );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&file_hdr_sz, 4, 0 );
+      (uint8_t*)&file_hdr_sz, 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
       error_printf( "invalid header size: " U32_FMT, file_hdr_sz );
@@ -504,14 +504,14 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + header_offset + MFMT_BMPINFO_OFS_WIDTH );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->width), 4, 0 );
+      (uint8_t*)&(header_bmp_info->width), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    retval = p_file_in->seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_HEIGHT );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->height), 4, 0 );
+      (uint8_t*)&(header_bmp_info->height), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    if( 0 > header_bmp_info->height ) {
@@ -524,7 +524,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + header_offset + MFMT_BMPINFO_OFS_SZ );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->img_sz), 4, 0 );
+      (uint8_t*)&(header_bmp_info->img_sz), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    /* Check that we're a palettized image. */
@@ -532,7 +532,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + header_offset + MFMT_BMPINFO_OFS_BPP );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->bpp), 2, 0 );
+      (uint8_t*)&(header_bmp_info->bpp), 2, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    if( 8 < header_bmp_info->bpp ) {
@@ -547,7 +547,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + header_offset + MFMT_BMPINFO_OFS_COMPRESSION );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->compression), 4, 0 );
+      (uint8_t*)&(header_bmp_info->compression), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    if( 
@@ -568,7 +568,7 @@ MERROR_RETVAL mfmt_read_bmp_header(
       file_offset + header_offset + MFMT_BMPINFO_OFS_PAL_SZ );
    maug_cleanup_if_not_ok();
    retval = p_file_in->read_int( p_file_in,
-      (uint8_t*)&(header_bmp_info->palette_ncolors), 4, 0 );
+      (uint8_t*)&(header_bmp_info->palette_ncolors), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    debug_printf( 2, "bitmap is " S32_FMT " x " S32_FMT
@@ -604,7 +604,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
       }
 
       retval = p_file_in->read_int( p_file_in,
-         (uint8_t*)&(palette[i]), 4, 0 );
+         (uint8_t*)&(palette[i]), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
 
       debug_printf( MFMT_TRACE_BMP_LVL,

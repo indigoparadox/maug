@@ -165,8 +165,8 @@ MERROR_RETVAL mfile_file_read_int(
    if(
 #ifdef MAUG_LSBF
       MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
-#else
-      MFILE_READ_FLAG_MSBF == (MFILE_READ_FLAG_MSBF & flags)
+#elif defined( MAUG_MSBF )
+      MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags)
 #endif
    ) {
       debug_printf( MFILE_TRACE_LVL, "reading integer forward" );
