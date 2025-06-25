@@ -18,6 +18,10 @@ include maug/Makefile.inc
 
 all: template.ale template.sdl dexea(template) wexea(template) ntexea(template) template.html
 
+# MacOS
+
+$(eval $(call TGTMAC68K,template))
+
 # Unix (Allegro)
 
 $(eval $(call TGTUNIXALE,template))
