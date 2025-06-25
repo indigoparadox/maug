@@ -22,10 +22,10 @@ typedef int16_t RETROFLAT_IN_KEY;
  * \{
  */
 
-#  define RETROFLAT_KEY_UP	         -113
-#  define RETROFLAT_KEY_DOWN	      -112
-#  define RETROFLAT_KEY_RIGHT	      -111
-#  define RETROFLAT_KEY_LEFT	      -110
+#  define RETROFLAT_KEY_UP	         0x7e
+#  define RETROFLAT_KEY_DOWN	      0x7d
+#  define RETROFLAT_KEY_RIGHT	      0x7c
+#  define RETROFLAT_KEY_LEFT	      0x7b
 #  define RETROFLAT_KEY_A	         0x00
 #  define RETROFLAT_KEY_B	         0x0b
 #  define RETROFLAT_KEY_C	         0x08
