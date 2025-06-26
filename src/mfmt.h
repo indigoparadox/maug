@@ -625,7 +625,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    int32_t x = 0,
-      y = 0;
+      y = 0,
+      width_mod_4 = 0;
    off_t i = 0,
       byte_in_idx = 0,
       byte_out_idx = 0,
@@ -698,9 +699,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
    }
 
    /* TODO: Handle padding for non-conforming images. */
-   maug_cleanup_if_ne(
-      (int32_t)0, header_bmp_info->width % 4,
-      S32_FMT, MERROR_GUI );
+   width_mod_4 = header_bmp_info->width % 4;
+   maug_cleanup_if_ne( (int32_t)0, width_mod_4, S32_FMT, MERROR_GUI );
 
    #define mfmt_read_bmp_px_out_idx() \
       (MFMT_PX_FLAG_INVERT_Y == (MFMT_PX_FLAG_INVERT_Y & flags) ? \
