@@ -16,6 +16,8 @@
 void _internal_debug_printf(
    const char* src_file, int line, int level, const char* fmt, ... );
 
+void error_printf( const char* fmt, ... );
+
 #elif defined( UPRINTF_C )
 
 void _internal_debug_printf(
@@ -45,14 +47,13 @@ void _internal_debug_printf(
    }
 }
 
-static void error_printf( const char* fmt, ... ) {
+void error_printf( const char* fmt, ... ) {
    va_list argp;
    char buffer[UPRINTF_BUFFER_SZ_MAX + 1];
 
    va_start( argp, fmt );
    vsnprintf( buffer, UPRINTF_BUFFER_SZ_MAX, fmt, argp );
    va_end( argp );
-
 
 #ifdef RETROFLAT_API_CALICO
    iprintf( "%s\n", buffer );
