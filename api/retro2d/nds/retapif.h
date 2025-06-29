@@ -16,8 +16,6 @@ const size_t gc_ndsassets_tiles_widths[] = {};
 const size_t gc_ndsassets_tiles_heights[] = {};
 #  endif /* !NDSASSET_H */
 
-static volatile uint32_t g_ms = 0;
-
 static const unsigned short _gc_retroflat_nds_pal_default[256]
 __attribute__((aligned(4))) = {
 	0x0000,0x5400,0x02A0,0x56A0,0x0015,0x5415,0x0155,0x56B5,
@@ -246,12 +244,6 @@ void _retroflat_nds_blit_tiles(
 
 /* === */
 
-static void _retroflat_nds_timer_inc() {
-   g_ms++;
-}
-
-/* === */
-
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -349,7 +341,7 @@ MERROR_RETVAL retroflat_init_platform(
 #  endif /* RETROFLAT_OPENGL */
 
 #ifdef RETROFLAT_API_CALICO
-   timerStart( 0, ClockDivider_1024, TIMER_FREQ_1024( 1000 ), _retroflat_nds_timer_inc );
+   cpuStartTiming( 0 );
    /* Setup the timer. */
 #else
    TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
@@ -391,7 +383,7 @@ void retroflat_message(
 
 retroflat_ms_t retroflat_get_ms() {
 #ifdef RETROFLAT_API_CALICO
-   return g_ms;
+   return cpuGetTiming();
 #else
    return ((TIMER1_DATA * (1 << 16)) + TIMER0_DATA) / 32;
 #endif /* RETROFLAT_API_CALICO */
