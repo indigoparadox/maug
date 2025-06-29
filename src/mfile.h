@@ -160,8 +160,6 @@ MERROR_RETVAL mfile_file_read_int(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
-
    if(
 #ifdef MAUG_LSBF
       MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
