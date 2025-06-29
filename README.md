@@ -20,7 +20,9 @@ Current maug-based projects may be found under [The maug topic on GitHub](https:
 
 ### Nintendo DS
 
-At the present, the Nintendo DS port will only build with a devkitpro toolchain circa 2022. This can be found at https://wii.leseratte10.de/devkitPro/ and some packages that work at minimum are:
+The Nintendo DS port has been modernized to run on top of the Calico RTOS, so it now requires a devkitpro toolchain post-2022.
+
+Theoretically, `-DRETROFLAT_API_CALICO` may be removed from `make/Makends.inc` to work with older toolchains. These can be found at https://wii.leseratte10.de/devkitPro/ and some packages that work at minimum are:
 
 - devkitARM r56
 - libnds 1.8.1-2
@@ -29,8 +31,6 @@ At the present, the Nintendo DS port will only build with a devkitpro toolchain 
 - other-stuff/ndstool 2.1.2
 
 And 1.2.0 of the linker scripts at https://github.com/devkitPro/devkitarm-crtls/releases/tag/v1.2.0 (these can just be installed with `make`/`make install`.
-
-Work is in progress to update this, but the cause isn't obvious and time is in short supply these days!
 
 ## Design Constraints
 
@@ -120,6 +120,7 @@ The following targets are currently available (possibly among others):
 |TGT\_CECL\_WINCE\_SH3     | Windows CE   | VC     | WinCE     |              |
 |TGT\_CECL\_WINCE\_MIPS    | Windows CE   | VC     | WinCE     |              |
 |TGT\_CECL\_WINCE\_X86     | Windows CE   | VC     | WinCE     |              |
+|TGTMAC68K                 | MacOS 6      | Retro68| Toolbox   | Monochrome   |
 
 ### retroflt
 
