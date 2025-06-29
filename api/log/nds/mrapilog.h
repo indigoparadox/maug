@@ -5,12 +5,18 @@
 #  include <nds.h>
 
 /* Use a wrapper macro to get the calling line number for a function. */
-#define debug_printf( lvl, ... ) \
-   _internal_debug_printf( __FILE__, __LINE__, lvl, __VA_ARGS__ )
+#  define debug_printf( lvl, ... ) \
+      _internal_debug_printf( __FILE__, __LINE__, lvl, __VA_ARGS__ )
+
+#  define logging_init()
+#  define logging_shutdown()
+
+void _internal_debug_printf(
+   const char* src_file, int line, int level, const char* fmt, ... );
 
 #elif defined( UPRINTF_C )
 
-static void _internal_debug_printf(
+void _internal_debug_printf(
    const char* src_file, int line, int level, const char* fmt, ...
 ) {
    va_list argp;

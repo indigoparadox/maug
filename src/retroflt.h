@@ -1050,6 +1050,15 @@ struct RETROFLAT_3DTEX {
 /* TODO: Migrate all platform-specific parts below to retapid.h. */
 #include <retapid.h>
 
+#ifndef retroflat_system_task
+/**
+ * \brief Platform-specific task that should be called on every iteration of the
+ *        generic loop. This prevents having to define a platform-specific
+ *        loop just to add a single call.
+ */
+#  define retroflat_system_task()
+#endif /* !retroflat_system_task */
+
 typedef maug_ms_t retroflat_ms_t;
 
 #include "retrom2d.h"
@@ -2123,6 +2132,8 @@ MERROR_RETVAL retroflat_loop_generic(
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
    do {
+      retroflat_system_task();
+
       if(
          /* Not waiting for the next frame? */
          RETROFLAT_FLAGS_WAIT_FOR_FPS !=

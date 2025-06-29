@@ -244,5 +244,7 @@ uint8_t retroflat_viewport_focus(
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
 
+#  define retroflat_system_task() pmMainLoop();
+
 #endif /* !RETPLTD_H */
 
