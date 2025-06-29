@@ -66,6 +66,14 @@ In addition, where modules may full functions or pull constants from is limited 
 
 - Implement timing/blit mode setting options on all platforms.
 
+- Move platform-specific struct into platform-specific translation unit.
+
+- Add switchable support for inline functions.
+
+- Turn platform-specific macros into (inline) functions.
+
+- Make API modules dynamically loadable where applicable.
+
 ## Modules
 
 In principle, the library is split into the following parts:

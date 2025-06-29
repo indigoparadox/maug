@@ -24,15 +24,15 @@ ifneq ("$(BUILD)","RELEASE")
 	LDFLAGS_GCC64_UNIX += $(GCC_FSAN)
 endif
 
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 
 # Easier to understand error messages.
 ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
 $(error could not find pkg-config for gl!)
 endif
 
-CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/opengl
-CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/opengl
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
 LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
 CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
@@ -41,8 +41,8 @@ LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
 endif
 ifeq ("$(SMALL3DL)","1")
 
-CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
-CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api3d/small3dl
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/small3dl
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/small3dl
 
 endif
 
@@ -77,7 +77,7 @@ endef
 # Target: UNIX OS/SDL API
 # Variables:
 # - SDL_VER_UNIX
-# - OPENGL
+# - RETROFLAT_OPENGL
 # Parameters:
 # 1. Target name. Will have ".sdl" appended to it.
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
@@ -87,10 +87,14 @@ define TGTUNIXSDL
 # = Determine Prerequisites =
 
 # Set this before OBJDIR_GCC_UNIX_SDL is set below.
-ifeq ("$$(VDP)","1")
+ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
 	#LDFLAGS_GCC_UNIX_SDL += -ldl
 	SDL_VER_UNIX := 1
+endif
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl
 endif
 
 # Set this before OBJDIR_GCC_UNIX_SDL is set below.
@@ -129,7 +133,9 @@ SDL_VER_UNIX := 2
 endif
 
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
-CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/sdl
+CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
+	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/file/unix \
+	-I$(MAUG_ROOT)/api/log/unix
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
 # = Make Icons =
@@ -168,9 +174,15 @@ $$(error could not find pkg-config for allegro!)
 endif
 
 CFLAGS_GCC_UNIX_ALLEGRO := \
-	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) -I$(MAUG_ROOT)/api/allegro
+	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
+	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+endif
 
 $(1).ale: \
 $$(addprefix $$(OBJDIR_GCC_UNIX_ALLEGRO)/,$$(subst .c,.o,$$(C_FILES)))
@@ -202,9 +214,16 @@ ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
 $$(error could not find pkg-config for gl!)
 endif
 
-CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) -I$(MAUG_ROOT)/api/glut -DRETROSND_API_ALSA
+CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
+	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
+	-I$(MAUG_ROOT)/api/log/unix
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/sound/null
+endif
 
 $(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \

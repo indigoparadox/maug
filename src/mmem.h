@@ -18,7 +18,7 @@
 typedef void* MAUG_MHANDLE;
 
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
-#  define maug_malloc( nmemb, sz ) (void*)malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) (void*)malloc( (sz) * (nmemb) )
 
 /**
  * \warn This does not test that reallocation was successful! Use
@@ -41,11 +41,14 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_strlen( str ) strlen( str )
 
+#  define maug_is_locked( handle, ptr ) \
+      (NULL == (handle) && NULL != (ptr))
+
 #else
 
 typedef void* MAUG_MHANDLE;
 
-#  define maug_malloc( nmemb, sz ) (void*)malloc( sz * nmemb )
+#  define maug_malloc( nmemb, sz ) (void*)malloc( (sz) * (nmemb) )
 
 /**
  * \warn This does not test that reallocation was successful! Use
@@ -72,6 +75,9 @@ typedef void* MAUG_MHANDLE;
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
 #  define maug_strlen( str ) strlen( str )
+
+#  define maug_is_locked( handle, ptr ) \
+      (NULL == (handle) && NULL != (ptr))
 
 #endif
 

@@ -6,6 +6,9 @@
  * \addtogroup maug_retro3d
  */
 
+#define retro3d_texture_ok( bitmap ) \
+   (NULL != (bitmap)->bytes_h || NULL != (bitmap)->bytes)
+
 #define retro3d_texture_w( tex ) ((tex)->w)
 
 #define retro3d_texture_h( tex ) ((tex)->h)
@@ -143,6 +146,8 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
 
    retval = mfile_open_read( filename_path, &bmp_file );
    maug_cleanup_if_not_ok();
+
+   assert( NULL != bmp_file.read_byte );
 
    /* TODO: mfmt file detection system. */
    header_bmp.magic[0] = 'B';
@@ -367,7 +372,7 @@ void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex ) {
 
    if( 0 < tex->id ) {
       debug_printf( 0,
-         "destroying bitmap texture: " UPRINTF_U32_FMT, tex->id );
+         "destroying bitmap texture: " U32_FMT, tex->id );
       retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_DESTROY );
    }
 #endif /* !RETRO3D_NO_TEXTURES */

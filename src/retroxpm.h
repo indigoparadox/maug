@@ -2,6 +2,14 @@
 #ifndef RETROXPM_H
 #define RETROXPM_H
 
+#ifdef RETROFLAT_3D
+#error "XPM loader not supported with 3D textures!"
+#endif /* RETROFLAT_3D */
+
+#ifndef RETROXPM_TRACE_LVL
+#  define RETROXPM_TRACE_LVL 0
+#endif /* !RETROXPM_TRACE_LVL */
+
 /**
  * \brief Load a compiled-in XPM image into an API-specific bitmap context.
  * \warn The XPM must have been generated from a bitmap using the rather
@@ -34,34 +42,45 @@ MERROR_RETVAL retroflat_load_xpm(
       bmp_h = 0,
       bmp_colors,
       bmp_bypp;
+   retroflat_asset_path filename_path;
+
+   retval = retroflat_build_filename_path(
+      filename, filename_path, RETROFLAT_PATH_MAX + 1, flags );
+   maug_cleanup_if_not_ok();
+
+   debug_printf( RETROXPM_TRACE_LVL,
+      "searching for xpm: %s (%s)", filename, filename_path );
 
    /* Hunt for the requested XPM in the compiled directory. */
    while( '\0' != gc_xpm_filenames[xpm_idx][0] ) {
-      if( 0 == strcmp( filename, gc_xpm_filenames[xpm_idx] ) ) {
+      if( 0 == strcmp( filename_path, gc_xpm_filenames[xpm_idx] ) ) {
          goto xpm_found;
       }
       xpm_idx++;
    }
 
+   error_printf( "xpm \"%s\" not found!", filename_path );
    retval = RETROFLAT_ERROR_BITMAP;
    goto cleanup;
 
 xpm_found:
 
-   debug_printf( 2, "found xpm: %s", gc_xpm_filenames[xpm_idx] );
+   debug_printf( RETROXPM_TRACE_LVL,
+      "found xpm: %s", gc_xpm_filenames[xpm_idx] );
 
    /* Load XPM and draw it to a new bitmap. */
 
-   retval = maug_tok_int( 0, gc_xpm_data[xpm_idx][0], 0, &bmp_w );
+   retval = maug_tok_int( 0, gc_xpm_data[xpm_idx][0], 0, &bmp_w, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 1, gc_xpm_data[xpm_idx][0], 0, &bmp_h );
+   retval = maug_tok_int( 1, gc_xpm_data[xpm_idx][0], 0, &bmp_h, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 2, gc_xpm_data[xpm_idx][0], 0, &bmp_colors );
+   retval = maug_tok_int( 2, gc_xpm_data[xpm_idx][0], 0, &bmp_colors, "\n " );
    maug_cleanup_if_not_ok();
-   retval = maug_tok_int( 3, gc_xpm_data[xpm_idx][0], 0, &bmp_bypp );
+   retval = maug_tok_int( 3, gc_xpm_data[xpm_idx][0], 0, &bmp_bypp, "\n " );
    maug_cleanup_if_not_ok();
 
-   debug_printf( 1, "bitmap has: %d colors, %d bypp", bmp_colors, bmp_bypp );
+   debug_printf( RETROXPM_TRACE_LVL,
+      "bitmap has: %d colors, %d bypp", bmp_colors, bmp_bypp );
 
    assert( 16 == bmp_colors );
    assert( 1 == bmp_bypp );

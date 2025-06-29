@@ -37,9 +37,6 @@
 #define retrogxc_load_bitmap( res_p, flags ) \
    retrogxc_load_asset( res_p, retrogxc_loader_bitmap, NULL, flags )
 
-#define retrogxc_load_xpm( res_p, flags ) \
-   retrogxc_load_asset( res_p, retrogxc_loader_xpm, NULL, flags )
-
 typedef int8_t RETROGXC_ASSET_TYPE;
 
 typedef RETROGXC_ASSET_TYPE (*retrogxc_loader)(
@@ -196,46 +193,11 @@ RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
    maug_cleanup_if_null_alloc( retroflat_blit_t*, bitmap );
 
    /* Load requested bitmap into the cache. */
-   retval = retroflat_2d_load_bitmap( res_p, bitmap, flags );
-   maug_cleanup_if_not_ok();
-
-cleanup:
-
-   if( NULL != bitmap ) {
-      maug_munlock( *handle_p, bitmap );
-   }
-
-   if( MERROR_OK == retval ) {
-      return RETROGXC_ASSET_TYPE_BITMAP;
-   } else {
-      if( NULL != *handle_p ) {
-         maug_mfree( *handle_p );
-      }
-      return RETROGXC_ASSET_TYPE_NONE;
-   }
-}
-
-/* === */
-
 #ifdef RETROFLAT_XPM
-
-RETROGXC_ASSET_TYPE retrogxc_loader_xpm(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, void* data,
-   uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   retroflat_blit_t* bitmap = NULL;
-
-   assert( (MAUG_MHANDLE)NULL == *handle_p );
-
-   *handle_p = maug_malloc( 1, sizeof( retroflat_blit_t ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
-
-   maug_mlock( *handle_p, bitmap );
-   maug_cleanup_if_null_alloc( retroflat_blit_t*, bitmap );
-
-   /* Load requested bitmap into the cache. */
    retval = retroflat_load_xpm( res_p, bitmap, flags );
+#else
+   retval = retroflat_2d_load_bitmap( res_p, bitmap, flags );
+#endif /* RETROFLAT_XPM */
    maug_cleanup_if_not_ok();
 
 cleanup:
@@ -253,8 +215,6 @@ cleanup:
       return RETROGXC_ASSET_TYPE_NONE;
    }
 }
-
-#endif /* RETROFLAT_XPM */
 
 /* === */
 

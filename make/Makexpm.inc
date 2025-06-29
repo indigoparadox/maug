@@ -32,8 +32,7 @@ $$(RETROXPM_H_DIR)/xpmasset.h: $(1)
 	# Add a directory of filenames.
 	echo "\nMAUG_CONST char* SEG_MCONST gc_xpm_filenames[] = {" >> $$@
 	for f in $$^; do \
-		b="`basename "$$$$f" .bmp`" ; \
-		echo "   \"$$$$b\"," >> $$@ ; \
+		echo "   \"$$$$f\"," >> $$@ ; \
 	done
 	echo "   \"\"\n};" >> $$@
 

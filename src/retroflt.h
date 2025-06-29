@@ -2,14 +2,14 @@
 #ifndef RETROFLT_H
 #define RETROFLT_H
 
+#ifdef RETROFLAT_OPENGL
+#  define RETROFLAT_BMP_TEX
+#endif /* RETROFLAT_OPENGL */
+
 /**
  * \addtogroup retrotile
  * \{
  */
-
-#ifdef RETROFLAT_OPENGL
-#  define RETROFLAT_BMP_TEX
-#endif /* RETROFLAT_OPENGL */
 
 /**
  * \brief Value for an individual tile in a ::RETROTILE_LAYER.
@@ -433,11 +433,6 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
 
 /**
- * \brief Only supported on some platforms: Attempt to scale screen by 2X.
- */
-#define RETROFLAT_FLAGS_SCALE2X 0x10
-
-/**
  * \brief Do not execute any more inter-frame loops until next frame.
  */
 #define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
@@ -773,7 +768,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 /**
  * \brief Path/name used to load an asset from disk.
  */
-typedef char retroflat_asset_path[RETROFLAT_PATH_MAX];
+typedef char retroflat_asset_path[RETROFLAT_PATH_MAX + 1];
 
 /**
  * \brief Compare two asset paths. Return 0 if they're the same.
@@ -891,118 +886,6 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
-#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
-
-/*! \addtogroup maug_retroflt_bitmap */
-
-#define retroflat_bitmap_has_flags( bmp, f ) \
-   (NULL != (bmp) && (f) == ((f) & (bmp)->tex.flags))
-
-/*! \} */ /* maug_retroflt_bitmap */
-
-/**
- * \addtogroup maug_retro3d_util
- * \{
- */
-
-struct RETROFLAT_3DTEX {
-   uint8_t flags;
-   MAUG_MHANDLE bytes_h;
-   uint8_t* bytes;
-   uint32_t bpp;
-   uint32_t sz;
-   uint8_t* px;
-   uint32_t id;
-   size_t w;
-   size_t h;
-};
-
-/*! \} */ /* maug_retro3d_util */
-
-/**
- * \addtogroup maug_retroflt_dir_2d RetroFlat 2D Wrapper API
- * \brief Wrappers to call appropriate 2D surface functions for bitmaps or
- *        textures, depending on if the engine is in 2D or 3D mode.
- *
- * This wrapper system is necessary so that high-level internal library 
- * functions (e.g. retrosoft, retrofont, or retroani) are able to continue
- * functioning on textures in 3D mode.
- *
- * Formerly, this was accomplished by shunts inside of the lower-level
- * \ref maug_retroflt_drawing, but these shunts were removed in order to
- * facilitate platform-agnostic software-only 3D (and they were messy).
- * \{
- */
-
-/**
- * \brief Wrapper macro to call appropriate 2D surface blitter for pixels.
- */
-#define retroflat_2d_px( ... ) retro3d_texture_px( __VA_ARGS__ )
-
-#define retroflat_2d_line( ... ) retrosoft_line( __VA_ARGS__ )
-
-#define retroflat_2d_rect( ... ) retrosoft_rect( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_w( ... ) retro3d_texture_w( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_h( ... ) retro3d_texture_h( __VA_ARGS__ )
-
-#define retroflat_2d_blit_bitmap( ... ) retro3d_texture_blit( __VA_ARGS__ )
-
-#define retroflat_2d_blit_win( src, d_x, d_y ) \
-   retro3d_draw_window( src, d_x, d_y )
-
-#define retroflat_2d_lock_bitmap( ... ) \
-   retro3d_texture_lock( __VA_ARGS__ )
-
-#define retroflat_2d_release_bitmap( ... ) \
-   retro3d_texture_release( __VA_ARGS__ )
-
-#define retroflat_2d_load_bitmap( ... ) \
-   retro3d_texture_load_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_create_bitmap( ... ) \
-   retro3d_texture_create( __VA_ARGS__ )
-
-#define retroflat_2d_destroy_bitmap( ... ) \
-   retro3d_texture_destroy( __VA_ARGS__ )
-
-#else
-
-#define retroflat_bitmap_has_flags( bmp, f ) \
-   (NULL != (bmp) && (f) == ((f) & (bmp)->flags))
-
-#define retroflat_2d_px( ... ) retroflat_px( __VA_ARGS__ )
-
-#define retroflat_2d_line( ... ) retroflat_line( __VA_ARGS__ )
-
-#define retroflat_2d_rect( ... ) retroflat_rect( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_w( ... ) retroflat_bitmap_w( __VA_ARGS__ )
-
-#define retroflat_2d_bitmap_h( ... ) retroflat_bitmap_h( __VA_ARGS__ )
-
-#define retroflat_2d_blit_win( src, d_x, d_y ) \
-   retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \
-      (win)->gui->w, (win)->gui->h, 0 )
-
-#define retroflat_2d_blit_bitmap( ... ) retroflat_blit_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_lock_bitmap( ... ) \
-   retroflat_draw_lock( __VA_ARGS__ )
-
-#define retroflat_2d_release_bitmap( ... ) \
-   retroflat_draw_release( __VA_ARGS__ )
-
-#define retroflat_2d_load_bitmap( ... ) retroflat_load_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_create_bitmap( ... ) retroflat_create_bitmap( __VA_ARGS__ )
-
-#define retroflat_2d_destroy_bitmap( ... ) \
-   retroflat_destroy_bitmap( __VA_ARGS__ )
-
-#endif /* RETROFLAT_3D || DOCUMENTATION */
-
 /**
  * \brief Type used for surface pixel coordinates.
  *
@@ -1013,11 +896,11 @@ typedef size_t retroflat_pxxy_t;
 
 struct RETROFLAT_ARGS;
 
-#ifndef API_TRACE_LVL
-#  define API_TRACE_LVL 0
-#endif /* !API_TRACE_LVL */
+#ifndef RETRO2D_TRACE_LVL
+#  define RETRO2D_TRACE_LVL 0
+#endif /* !RETRO2D_TRACE_LVL */
 
-#ifndef NO_RETROSND
+#ifndef RETROFLAT_NO_SOUND
 
 /**
  * \addtogroup maug_retrosnd RetroSound API
@@ -1120,7 +1003,21 @@ void retrosnd_shutdown();
 
 /*! \} */ /* maug_retrosnd */
 
-#endif /* !NO_RETROSND */
+#endif /* !RETROFLAT_NO_SOUND */
+
+/* === Platform-specific APIs === */
+
+/* The first call to these headers should just establish definitions (macros, defines, prototypes,
+ * typedefs, etc). The later call below should then define function bodies.
+ */
+#ifndef RETROFLAT_NO_SOUND
+#  include <retapis.h>
+#endif /* !RETROFLAT_NO_SOUND */
+#include <retapii.h>
+
+/* === End platform-specific APIs === */
+
+
 
 /* === OS-Specific Includes and Defines === */
 
@@ -1129,31 +1026,41 @@ void retrosnd_shutdown();
 #  define MAUG_WINDOWS_H
 #endif /* !MAUG_WINDOWS_H */
 
+#if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
+
+/**
+ * \addtogroup maug_retro3d_util
+ * \{
+ */
+
+struct RETROFLAT_3DTEX {
+   uint8_t flags;
+   MAUG_MHANDLE bytes_h;
+   uint8_t* bytes;
+   uint32_t bpp;
+   uint32_t sz;
+   uint8_t* px;
+   uint32_t id;
+   size_t w;
+   size_t h;
+};
+
+#endif /* RETROFLAT_BMP_TEX */
+
 /* TODO: Migrate all platform-specific parts below to retapid.h. */
 #include <retapid.h>
 
 typedef maug_ms_t retroflat_ms_t;
 
-#ifdef RETROFLAT_BMP_TEX
-typedef struct RETROFLAT_3DTEX retroflat_blit_t;
-#else
-typedef struct RETROFLAT_BITMAP retroflat_blit_t;
-#endif
-
-/**
- * \brief Type of callback function used to produce pixels on a surface.
- *
- * This is switched between ::RETROFLAT_3DTEX and ::RETROFLAT_BITMAP, depending
- * on whether this is a 3D or 2D engine.
- */
-typedef void (*retroflat_px_cb)(
-   retroflat_blit_t* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags );
+#include "retrom2d.h"
 
 /* === Structures === */
 
+/* TODO: Break the args into API-specific headers. */
+
 /*! \brief Struct containing configuration values for a RetroFlat program. */
 struct RETROFLAT_ARGS {
+   uint8_t flags;
    /**
     * \brief Title to set for the main program Window if applicable on the
     *        target platform.
@@ -1161,13 +1068,9 @@ struct RETROFLAT_ARGS {
    char* title;
    /*! \brief Relative path under which bitmap assets are stored. */
    char* assets_path;
-   uint8_t flags;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
-#  ifdef RETROFLAT_API_PC_BIOS
-   /*! \brief Desired screen or window width in pixels. */
-   uint8_t screen_mode;
-#  elif !defined( RETROFLAT_NO_CLI_SZ )
+#  if !defined( RETROFLAT_NO_CLI_SZ )
    int screen_w;
    /*! \brief Desired screen or window height in pixels. */
    int screen_h;
@@ -1175,20 +1078,11 @@ struct RETROFLAT_ARGS {
    int screen_x;
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
-#  endif /* RETROFLAT_API_PC_BIOS */
-   uint8_t snd_flags;
-#  if defined( RETROSND_API_SDL1 ) || defined( RETROSND_API_SDL2 )
-#  elif defined( RETROSND_API_WINMM )
-   UINT snd_dev_id;
-#  elif defined( RETROSND_API_PC_BIOS )
-   uint16_t snd_io_base;
-   uint8_t snd_driver;
-#  elif defined( RETROSND_API_ALSA )
-   uint8_t snd_client;
-   uint8_t snd_port;
-#  else
-#     pragma message( "warning: sound args not specified" )
-#  endif /* RETROSND_API_WINMM */
+#  endif /* RETROFLAT_NO_CLI_SZ */
+   struct RETROFLAT_PLATFORM_ARGS platform;
+#  ifndef RETROFLAT_NO_SOUND
+   struct RETROFLAT_SOUND_ARGS sound;
+#  endif /* !RETROFLAT_NO_SOUND */
 };
 
 /**
@@ -1694,6 +1588,7 @@ struct RETROFLAT_STATE {
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
+   int scale;
 
 #  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION ) || \
 defined( RETROVDP_C )
@@ -1792,9 +1687,11 @@ defined( RETROVDP_C )
    uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
 #  endif /* RETROFLAT_OPENGL */
 
-#ifndef NO_RETROSND
-   struct RETROFLAT_SOUND sound;
-#endif /* !NO_RETROSND */
+   struct RETROFLAT_INPUT_STATE input;
+
+#  ifndef RETROFLAT_NO_SOUND
+   struct RETROFLAT_SOUND_STATE sound;
+#  endif /* !RETROFLAT_NO_SOUND */
 };
 
 /* === Translation Module === */
@@ -1895,8 +1792,10 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
 /**
  * \brief Blit the contents of a ::RETROFLAT_BITMAP onto another
  *        ::RETROFLAT_BITMAP.
- * \param target Pointer to the ::RETROFLAT_BITMAP to blit src onto.
- * \param src Pointer to the ::RETROFLAT_BITMAP to blit onto target.
+ * \param target Pointer to the ::RETROFLAT_BITMAP to blit src onto. This bitmap
+ *               should be locked!
+ * \param src Pointer to the ::RETROFLAT_BITMAP to blit onto target. This bitmap
+ *            must *not* be locked.
  * \param s_x Left X coordinate to blit starting from on the source bitmap.
  * \param s_y Top Y coordinate to blit starting from on the source bitmap.
  * \param d_x Left X coordinate to blit to on the target bitmap.
@@ -2184,6 +2083,12 @@ MERROR_RETVAL retroflat_build_filename_path(
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
+#  ifndef RETROFLAT_NO_SOUND
+#  include <retapis.h>
+#  endif /* !RETROFLAT_NO_SOUND */
+
+#  include <retapii.h>
+
 #  if defined( RETROFLAT_VDP ) && defined( RETROFLAT_OS_UNIX )
 #     include <dlfcn.h>
 #  endif
@@ -2363,7 +2268,7 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 
 #  ifndef RETROFLAT_NO_CLI
 
-#  ifdef RETROSND_ARGS
+#  if !defined( RETROFLAT_NO_SOUND ) && defined( RETROSND_ARGS )
 
 static MERROR_RETVAL retrosnd_cli_rsl(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
@@ -2372,138 +2277,25 @@ static MERROR_RETVAL retrosnd_cli_rsl(
       0 <= arg_c &&
       0 == strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
-      args->snd_flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
+      args->sound.flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
    }
    return MERROR_OK;
 }
 
-static MERROR_RETVAL retrosnd_cli_rsd(
-   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
-   char* env_var = NULL;
-   size_t i = 0;
-#     elif defined( RETROSND_API_ALSA )
-   char* env_var = NULL;
-#     elif defined( RETROSND_API_WINMM )
-   char* env_var = NULL;
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
-
-   if( 0 > arg_c ) {
-#     ifdef RETROSND_API_PC_BIOS
-   if( NULL != env_var ) {
-      env_var = getenv( "MAUG_MIDI_DOS" );
-
-      /* Return MERROR_OK since this isn't fatal and will just cause sound
-         * init to fail later.
-         */
-      maug_cleanup_if_null_msg(
-         char*, env_var, MERROR_OK, "MAUG_MIDI_DOS variable not found!" );
-
-      debug_printf( 2, "env: MAUG_MIDI_DOS: %s", env_var );
-
-      /* Turn comma separator into NULL split. */
-      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
-         if( ',' == env_var[i] ) {
-            /* Split into two null-terminated strings. */
-            env_var[i] = '\0';
-         }
-      }
-
-      if( 0 == strcmp( env_var, "mpu" ) ) {
-         debug_printf( 3, "selecting MIDI driver: mpu" );
-         args->snd_driver = 2;
-      } else if( 0 == strcmp( env_var, "gus" ) ) {
-         debug_printf( 3, "selecting MIDI driver: gus" );
-         args->snd_driver = 4;
-      } else if( 0 == strcmp( env_var, "adlib" ) ) {
-         debug_printf( 3, "selecting MIDI driver: adlib" );
-         args->snd_driver = 8;
-      }
-      /* TODO: Maug replacement for C99 crutch. */
-      args->snd_io_base = strtoul( &(env_var[i]), NULL, 16 );
-      debug_printf( 3, "setting MIDI I/O base: %u", args->snd_io_base );
-   } else {
-      /* default */
-      debug_printf( 3, "default MIDI driver: adlib" );
-      args->snd_driver = 8;
-      args->snd_io_base = 0x388;
-   }
-
-#     elif defined( RETROSND_API_ALSA )
-   if( 0 == args->snd_client ) {
-      env_var = getenv( "MAUG_MIDI_ALSA" );
-
-      /* Return MERROR_OK since this isn't fatal and will just cause sound
-         * init to fail later.
-         */
-      maug_cleanup_if_null_msg(
-         char*, env_var, MERROR_OK, "MAUG_MIDI_ALSA variable not found!" );
-
-      debug_printf( 2, "env: MAUG_MIDI_ALSA: %s", env_var );
-
-      for( i = 0 ; maug_strlen( env_var ) > i ; i++ ) {
-         if( ':' == env_var[i] ) {
-            /* Split into two null-terminated strings. */
-            env_var[i] = '\0';
-         }
-      }
-
-      args->snd_client = atoi( env_var );
-      args->snd_port = atoi( &(env_var[i]) );
-      debug_printf( 3, "setting MIDI device to: %u:%u",
-         args->snd_client, args->snd_port );
-   }
-
-#     elif defined( RETROSND_API_WINMM )
-   env_var = getenv( "MAUG_MIDI_WIN" );
-
-   /* Return MERROR_OK since this isn't fatal and will just cause sound
-      * init to fail later.
-      */
-   maug_cleanup_if_null_msg(
-      char*, env_var, MERROR_OK, "MAUG_MIDI_WIN variable not found!" );
-
-   debug_printf( 2, "env: MAUG_MIDI_WIN: %s", env_var );
-
-   if( NULL != env_var ) {
-      args->snd_dev_id = atoi( env_var );
-   } else {
-      args->snd_dev_id = 0;
-   }
-   debug_printf( 3, "setting MIDI device to: %u", args->snd_dev_id );
-
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
-   } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rsd", arg, MAUG_CLI_SIGIL_SZ + 4 )
-   ) {
-      /* The next arg must be the new var. */
-   } else {
-#     ifdef RETROSND_API_PC_BIOS
-      /* TODO: Parse device. */
-#     elif defined( RETROSND_API_ALSA )
-      /* TODO: Parse device. */
-#     elif defined( RETROSND_API_WINMM )
-      debug_printf( 3, "setting MIDI device to rsd arg: %s", arg );
-      args->snd_dev_id = atoi( arg );
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA || RETROSND_API_WINMM */
-   }
-
-#     if defined( RETROSND_API_PC_BIOS ) || defined( RETROSND_API_ALSA )
-cleanup:
-#     elif defined( RETROSND_API_ALSA )
-cleanup:
-#     elif defined( RETROSND_API_WINMM )
-cleanup:
-#     endif /* RETROSND_API_PC_BIOS || RETROSND_API_ALSA */
-
-   return retval;
-}
-
-# endif /* RETROSND_ARGS */
+# endif /* !RETROFLAT_NO_SOUND && RETROSND_ARGS */
 
 #  if !defined( RETROFLAT_API_PC_BIOS ) && !defined( RETROFLAT_NO_CLI_SZ )
+
+static MERROR_RETVAL retroflat_cli_rfs(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   if( 0 < arg_c ) {
+      g_retroflat_state->scale = atoi( arg );
+      debug_printf( 3, "screen scale set to: %d",
+         g_retroflat_state->scale );
+   }
+   return MERROR_OK;
+}
 
 static MERROR_RETVAL retroflat_cli_rfx(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
@@ -2635,6 +2427,34 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
    assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
 
+   /* Initialize 2D callbacks depending on if we're in 2D or 3D mode.
+    * Please see retrom2d.h for more information.
+    */
+#     if defined( RETROFLAT_BMP_TEX )
+   retroflat_2d_px = (retroflat_px_cb)retro3d_texture_px;
+   retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+   retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retro3d_texture_blit;
+   retroflat_2d_load_bitmap =
+      (retroflat_load_bitmap_cb)retro3d_texture_load_bitmap;
+   retroflat_2d_create_bitmap =
+      (retroflat_create_bitmap_cb)retro3d_texture_create;
+#     else
+   retroflat_2d_px = (retroflat_px_cb)retroflat_px;
+#        ifdef RETROFLAT_SOFT_SHAPES
+   /* TODO: Work retrosoft routines to use retroflat_blit_t */
+   retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+#        else
+   retroflat_2d_line = (retroflat_line_cb)retroflat_line;
+   retroflat_2d_rect = (retroflat_rect_cb)retroflat_rect;
+#        endif /* RETROFLAT_SOFT_SHAPES */
+   retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retroflat_blit_bitmap;
+   retroflat_2d_load_bitmap = (retroflat_load_bitmap_cb)retroflat_load_bitmap;
+   retroflat_2d_create_bitmap =
+      (retroflat_create_bitmap_cb)retroflat_create_bitmap;
+#     endif /* RETROFLAT_BMP_TEX */
+
    debug_printf( 1, "retroflat: MFIX_PRECISION: %f", MFIX_PRECISION );
 
    debug_printf( 1, "retroflat: allocating state (" SIZE_T_FMT " bytes)...",
@@ -2668,20 +2488,23 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    retroflat_heartbeat_set( 1000, 2 );
 
+   /* Set default, so that this is never zero, to avoid division by zero. */
+   g_retroflat_state->scale = 1;
+
 #  ifndef RETROFLAT_NO_CLI
 
    debug_printf( 1, "retroflat: parsing args..." );
 
    /* All platforms: add command-line args based on compile definitons. */
 
-#     ifdef RETROSND_ARGS
+#  if !defined( RETROFLAT_NO_SOUND ) && defined( RETROSND_ARGS )
 	retval = maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
       "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd, args );
    maug_cleanup_if_not_ok();
 	retval = maug_add_arg( MAUG_CLI_SIGIL "rsl", MAUG_CLI_SIGIL_SZ + 4,
       "List MIDI devices", 0, (maug_cli_cb)retrosnd_cli_rsl, args );
    maug_cleanup_if_not_ok();
-#     endif /* RETROSND_ARGS */
+# endif /* !RETROFLAT_NO_SOUND && RETROSND_ARGS */
 
 #     ifdef RETROFLAT_SCREENSAVER
 	retval = maug_add_arg( MAUG_CLI_SIGIL "p", MAUG_CLI_SIGIL_SZ + 2,
@@ -2698,6 +2521,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       (maug_cli_cb)retroflat_cli_rfm, args );
    maug_cleanup_if_not_ok();
 #     elif !defined( RETROFLAT_NO_CLI_SZ )
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfs", MAUG_CLI_SIGIL_SZ + 4,
+      "Set screen scale factor.", 0,
+      (maug_cli_cb)retroflat_cli_rfs, args );
+   maug_cleanup_if_not_ok();
    retval = maug_add_arg( MAUG_CLI_SIGIL "rfx", MAUG_CLI_SIGIL_SZ + 4,
       "Set the screen X position.", 0,
       (maug_cli_cb)retroflat_cli_rfx, args );
@@ -2765,19 +2592,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Setup intended screen size. */
-   /* TODO: Handle window resizing someday! */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   if(
-      RETROFLAT_FLAGS_SCALE2X == (RETROFLAT_FLAGS_SCALE2X & args->flags)
-   ) {
-      debug_printf( 1, "setting window scale to 2x..." );
-      g_retroflat_state->screen_w = args->screen_w * 2;
-      g_retroflat_state->screen_h = args->screen_h * 2;
-   } else {
-      g_retroflat_state->screen_w = args->screen_w;
-      g_retroflat_state->screen_h = args->screen_h;
-   }
+   g_retroflat_state->screen_w = args->screen_w;
+   g_retroflat_state->screen_h = args->screen_h;
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
    /* == Platform-Specific Init == */
@@ -2792,9 +2610,12 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup the refresh grid, if requested, only after screen space has been
     * determined by the platform!
     */
-   assert( 0 < retroflat_screen_w() );
-   assert( 0 < retroflat_screen_h() );
-   assert( 0 < retroflat_screen_colors() );
+   maug_cleanup_if_eq(
+      (size_t)0, retroflat_screen_w(), SIZE_T_FMT, MERROR_GUI );
+   maug_cleanup_if_eq(
+      (size_t)0, retroflat_screen_h(), SIZE_T_FMT, MERROR_GUI );
+   maug_cleanup_if_eq(
+      (size_t)0, retroflat_screen_colors(), SIZE_T_FMT, MERROR_GUI );
 
    /* This is intended as a default and can be modified by calling this macro
     * again later.
@@ -3116,13 +2937,9 @@ extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 #     include <retrosft.h>
 #  endif /* RETROFLAT_SOFT_SHAPES */
 
-/**
- * \brief Directly addressable callback to produce pixels on a surface.
- *
- * This is assigned in retroflat_init(), as that is when all of the _px()
- * callback functions are defined and available.
- */
-extern retroflat_px_cb g_retroflat_px;
+/* Second retapis.h include for function bodies not needed. */
+
+/* Second retapii.h include for function bodies not needed. */
 
 #endif /* RETROFLT_C */
 

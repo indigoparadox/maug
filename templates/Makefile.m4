@@ -5,6 +5,10 @@ define(`dexea', `$1d.exe')
 divert(0)
 `#' vim: ft=make noexpandtab
 
+RETROFLAT_SOUND := 1
+RETROFLAT_VDP := 1
+RETROFLAT_OPENGL := 0
+
 C_FILES := src/main.c
 
 include maug/Makefile.inc
@@ -13,6 +17,10 @@ include maug/Makefile.inc
 .PHONY: clean
 
 all: template.ale template.sdl dexea(template) wexea(template) ntexea(template) template.html
+
+# MacOS
+
+$(eval $(call TGTMAC68K,template))
 
 # Unix (Allegro)
 

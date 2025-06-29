@@ -9,13 +9,18 @@ INCLUDES_GCC += -I$(MAUG_ROOT)/src
 INCLUDES_WATCOM += -i=$(MAUG_ROOT)/src
 INCLUDES_VS += /I $(MAUG_ROOT)/src
 
-ifeq ("$(OPENGL)","1")
+ifeq ("$(RETROFLAT_OPENGL)","1")
 	DEFINES_GCC += -DRETROFLAT_OPENGL -DRETROFLAT_3D
 	DEFINES_WATCOM += -DRETROFLAT_OPENGL -DRETROFLAT_3D
 endif
-ifeq ("$(SMALL3DL)","1")
+ifeq ("$(RETROFLAT_SMALL3DL)","1")
 	DEFINES_GCC += -DRETROFLAT_SMALL3DL -DRETROFLAT_3D
 	DEFINES_WATCOM += -DRETROFLAT_SMALL3DL -DRETROFLAT_3D
+endif
+
+ifneq ("$(RETROFLAT_SOUND)","1")
+	DEFINES_GCC += -DRETROFLAT_NO_SOUND
+	DEFINES_WATCOM += -DRETROFLAT_NO_SOUND
 endif
 
 GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell git -C $(MAUG_ROOT) rev-parse HEAD)\""
@@ -52,8 +57,8 @@ else
 	CFLAGS_GCC64 += -DDEBUG -Wall -g -pg
 	LDFLAGS_GCC += -g -pg
 	LDFLAGS_GCC64 += -g -pg
-	CFLAGS_EMCC += -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD) -Wall
-	LDFLAGS_EMCC += --profiling-functions
+	CFLAGS_EMCC += -g -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD) -Wall
+	LDFLAGS_EMCC += -g --profiling-functions
 	LDFLAGS_WATCOM386 += debug all
 	CFLAGS_CECL += /W1 /MLd
 endif
@@ -106,5 +111,28 @@ include maug/make/Makewasm.inc
 include maug/make/Makedos.inc
 include maug/make/Makends.inc
 include maug/make/Makeos2.inc
+include maug/make/Makemac.inc
 include maug/make/Makeplug.inc
+
+# ---
+
+define TGTISO
+
+# Easier to understand error messages.
+ifeq ("$$(shell which mkisofs 2>/dev/null)","")
+$$(error could not find mkisofs!)
+endif
+
+$(1).dst: $$(BINS)
+	mkdir -v -p $$@
+	cp -v -R $$^ $$@
+	cp -v -R $(2) $$@
+
+$(1).iso: $(1).dst
+	mkisofs -J -o $$@ $$<
+
+CLEAN_TARGETS += $(1).dst $(1).iso
+
+endef
+
 

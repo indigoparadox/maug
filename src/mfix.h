@@ -208,16 +208,14 @@ mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut, const char* fun, mfix_t num ) {
 mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut, mfix_t num ) {
 #endif /* MFIX_DEBUG */
    mfix_t cos_out;
-   uint8_t neg = 0;
 #ifdef MFIX_DEBUG
    mfix_t num_orig = num;
 #endif /* MFIX_DEBUG */
 
    assert( MFIX_PRECISION == 1000 );
 
-   /* Can't take an index of a negative number, so hold on to neg for later. */
+   /* Can't take an index of a negative number. */
    if( num < 0 ) {
-      neg = 1;
       num *= -1;
    }
 
@@ -231,11 +229,6 @@ mfix_t _mfix_lut( const mfix_t* SEG_MCONST lut, mfix_t num ) {
    assert( MFIX_LUT_CT > num );
    assert( 0 <= num );
    cos_out = lut[num];
-
-   /* Restore neg taken earlier. */
-   if( neg ) {
-      cos_out *= -1;
-   }
 
 #ifdef MFIX_DEBUG
    debug_printf( 1, "%s %d = %d (%s %d = %f)",

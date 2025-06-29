@@ -27,7 +27,10 @@ CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/
 # Setup CFLAGS_GCC_NDS_LIBNDS
 
 DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS
-INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include -I$(MAUG_ROOT)/api/nds -I $(DEVKITPRO)/calico/include
+INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include \
+	-I$(MAUG_ROOT)/api/retro2d/nds -I$(MAUG_ROOT)/api/input/nds \
+	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/nds \
+	-I $(DEVKITPRO)/calico/include
 
 CFLAGS_GCC_NDS_LIBNDS := $(DEFINES_GCC_NDS_LIBNDS) $(INCLUDES_GCC_NDS_LIBNDS)
 
@@ -60,6 +63,10 @@ $$(info Selectively enabling MVFS for platform "NDS" with no filesystem!)
 CFLAGS_OPT_GCC_NDS += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
 MAUG_DEPS_NDS += $$(MVFS_H_DIR)/mvfs.h
 endif
+endif
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_NDS += -I$(MAUG_ROOT)/api/sound/nds
 endif
 
 $(1).nds: obj/nds-libnds/$(1).elf

@@ -70,10 +70,16 @@ struct MFMT_STRUCT {
  */
 
 #define mfmt_bmp_check_header() \
+   debug_printf( MFMT_TRACE_BMP_LVL, \
+      "bmp file sz: " U32_FMT ", magic: %c%c", \
+      header->sz, (((char*)header)[0]), (((char*)header)[1]) ); \
    if( 40 == header->sz ) { \
+      debug_printf( MFMT_TRACE_BMP_LVL, "bmp info header detected by sz" ); \
       header_bmp_info = (struct MFMT_STRUCT_BMPINFO*)header; \
-   } else if( 0x4d42 == *((uint16_t*)header) ) { \
-      debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected" ); \
+   } else if( \
+      'B' == (((char*)header)[0]) && 'M' == (((char*)header)[1]) \
+   ) { \
+      debug_printf( MFMT_TRACE_BMP_LVL, "bmp file header detected by sig" ); \
       header_bmp_file = (struct MFMT_STRUCT_BMPFILE*)header; \
       header_bmp_info = &(header_bmp_file->info); \
    } else { \
@@ -270,7 +276,7 @@ MERROR_RETVAL mfmt_decode_rle(
    do {
       retval = p_file_in->seek( p_file_in, file_offset + in_byte_cur++ );
       maug_cleanup_if_not_ok();
-      retval = p_file_in->read_int( p_file_in, &byte_buffer, 1, 0 );
+      retval = p_file_in->read_byte( p_file_in, &byte_buffer );
       maug_cleanup_if_not_ok();
 
       /*
@@ -464,9 +470,10 @@ MERROR_RETVAL mfmt_read_bmp_header(
       maug_cleanup_if_not_ok();
       
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "bitmap file " UPRINTF_U32_FMT " bytes long, px at "
-            UPRINTF_U32_FMT " bytes",
-         header_bmp_file->file_sz, header_bmp_file->px_offset );
+         "bitmap file " U32_FMT " bytes long, px at "
+            U32_FMT " bytes",
+         header_bmp_file->file_sz,
+         header_bmp_file->px_offset );
    }
 
    /* Read the bitmap image header. */
@@ -476,12 +483,12 @@ MERROR_RETVAL mfmt_read_bmp_header(
       (uint8_t*)&file_hdr_sz, 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
-      error_printf( "invalid header size: " UPRINTF_U32_FMT, file_hdr_sz );
+      error_printf( "invalid header size: " U32_FMT, file_hdr_sz );
       retval = MERROR_FILE;
       goto cleanup;
    }
    debug_printf(
-      MFMT_TRACE_BMP_LVL, "bitmap header is " UPRINTF_U32_FMT " bytes",
+      MFMT_TRACE_BMP_LVL, "bitmap header is " U32_FMT " bytes",
       file_hdr_sz );
 
    if( 40 > file_sz - (file_offset + header_offset) ) {
@@ -529,7 +536,8 @@ MERROR_RETVAL mfmt_read_bmp_header(
    maug_cleanup_if_not_ok();
 
    if( 8 < header_bmp_info->bpp ) {
-      error_printf( "invalid bitmap bpp: %u", header_bmp_info->bpp );
+      error_printf( "invalid bitmap bpp: %u",
+         header_bmp_info->bpp );
       retval = MERROR_FILE;
       goto cleanup;
    }
@@ -543,10 +551,12 @@ MERROR_RETVAL mfmt_read_bmp_header(
    maug_cleanup_if_not_ok();
 
    if( 
-      MFMT_BMP_COMPRESSION_NONE != header_bmp_info->compression &&
-      MFMT_BMP_COMPRESSION_RLE4 != header_bmp_info->compression
+      MFMT_BMP_COMPRESSION_NONE !=
+         header_bmp_info->compression &&
+      MFMT_BMP_COMPRESSION_RLE4 != 
+         header_bmp_info->compression
    ) {
-      error_printf( "invalid bitmap compression: " UPRINTF_U32_FMT,
+      error_printf( "invalid bitmap compression: " U32_FMT,
          header_bmp_info->compression );
       retval = MERROR_FILE;
       goto cleanup;
@@ -561,10 +571,12 @@ MERROR_RETVAL mfmt_read_bmp_header(
       (uint8_t*)&(header_bmp_info->palette_ncolors), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
-   debug_printf( 2, "bitmap is " UPRINTF_S32_FMT " x " UPRINTF_S32_FMT
-      ", %u bpp (palette has " UPRINTF_U32_FMT " colors)",
-      header_bmp_info->width, header_bmp_info->height,
-      header_bmp_info->bpp, header_bmp_info->palette_ncolors );
+   debug_printf( 2, "bitmap is " S32_FMT " x " S32_FMT
+      ", %u bpp (palette has " U32_FMT " colors)",
+      header_bmp_info->width,
+      header_bmp_info->height,
+      header_bmp_info->bpp,
+      header_bmp_info->palette_ncolors );
 
 cleanup:
 
@@ -596,7 +608,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
       maug_cleanup_if_not_ok();
 
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "set palette entry " OFF_T_FMT " to " UPRINTF_X32_FMT,
+         "set palette entry " OFF_T_FMT " to " X32_FMT,
          i, palette[i] );
    }
 
@@ -613,7 +625,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
    struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
    int32_t x = 0,
-      y = 0;
+      y = 0,
+      width_mod_4 = 0;
    off_t i = 0,
       byte_in_idx = 0,
       byte_out_idx = 0,
@@ -654,23 +667,30 @@ MERROR_RETVAL mfmt_read_bmp_px(
    }
 
    maug_mzero( &file_decomp, sizeof( mfile_t ) );
-   if( MFMT_BMP_COMPRESSION_RLE4 == header_bmp_info->compression ) {
+   if(
+      MFMT_BMP_COMPRESSION_RLE4 == header_bmp_info->compression
+   ) {
       debug_printf( 1, "allocating decompression buffer..." );
 
       /* Create a temporary memory buffer and decompress into it. */
       decomp_buffer_h = maug_malloc(
-         header_bmp_info->width, header_bmp_info->height );
+         header_bmp_info->width,
+         header_bmp_info->height );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, decomp_buffer_h );
 
       retval = mfmt_decode_rle(
          p_file_in, file_offset, header_bmp_info->img_sz,
          header_bmp_info->width,
-         decomp_buffer_h, header_bmp_info->width * header_bmp_info->height,
+         decomp_buffer_h,
+         header_bmp_info->width *
+            header_bmp_info->height,
          MFMT_DECOMP_FLAG_4BIT );
       maug_cleanup_if_not_ok();
 
       retval = mfile_lock_buffer(
-         decomp_buffer_h,  header_bmp_info->width * header_bmp_info->height,
+         decomp_buffer_h,
+         header_bmp_info->width *
+            header_bmp_info->height,
          &file_decomp );
       maug_cleanup_if_not_ok();
 
@@ -679,11 +699,13 @@ MERROR_RETVAL mfmt_read_bmp_px(
    }
 
    /* TODO: Handle padding for non-conforming images. */
-   assert( 0 == header_bmp_info->width % 4 );
+   width_mod_4 = header_bmp_info->width % 4;
+   maug_cleanup_if_ne( (int32_t)0, width_mod_4, S32_FMT, MERROR_GUI );
 
    #define mfmt_read_bmp_px_out_idx() \
       (MFMT_PX_FLAG_INVERT_Y == (MFMT_PX_FLAG_INVERT_Y & flags) ? \
-      ((header_bmp_info->height - y - 1) * header_bmp_info->width) : \
+      ((header_bmp_info->height - y - 1) * \
+         header_bmp_info->width) : \
       ((y) * header_bmp_info->width))
 
    y = header_bmp_info->height - 1;
@@ -700,8 +722,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
       debug_printf( MFMT_TRACE_BMP_LVL,
          "byte in: " OFF_T_FMT " (" OFF_T_FMT 
-            "), bit " OFF_T_FMT ", y: " UPRINTF_U32_FMT
-            ", x: " UPRINTF_U32_FMT "), byte out: " OFF_T_FMT,
+            "), bit " OFF_T_FMT ", y: " U32_FMT
+            ", x: " U32_FMT "), byte out: " OFF_T_FMT,
          byte_in_idx, file_sz, bit_idx, y, x, byte_out_idx );
 
       /* Buffer bounds check. */
@@ -726,7 +748,7 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
          /* Move on to a new byte. */
          /* TODO: Bad cursor? */
-         retval = p_file_bmp->read_int( p_file_bmp, &byte_buffer, 1, 0 );
+         retval = p_file_bmp->read_byte( p_file_bmp, &byte_buffer );
          maug_cleanup_if_not_ok();
          /*
          mfile_cread( p_file_bmp, &(byte_buffer) );
@@ -762,8 +784,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
       /* Place the pixel buffer at the X/Y in the grid. */
       debug_printf( MFMT_TRACE_BMP_LVL,
-         "writing byte " OFF_T_FMT " (x: " UPRINTF_S32_FMT
-         ", y: " UPRINTF_S32_FMT ")",
+         "writing byte " OFF_T_FMT " (x: " S32_FMT
+         ", y: " S32_FMT ")",
          byte_out_idx, x, y );
       px[byte_out_idx] = pixel_buffer;
       byte_out_idx++;

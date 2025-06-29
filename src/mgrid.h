@@ -40,8 +40,8 @@ struct MGRID* mgrid_get_layer_p(
    uint8_t* grid_pack_buf = (uint8_t*)grid_pack;
 
    if( 0 == grid_pack->count || layer >= grid_pack->count ) {
-      error_printf( "invalid layer " UPRINTF_U32_FMT
-         " requested (of " UPRINTF_U32_FMT ")!",
+      error_printf( "invalid layer " U32_FMT
+         " requested (of " U32_FMT ")!",
          layer, grid_pack->count );
       return NULL;
    }

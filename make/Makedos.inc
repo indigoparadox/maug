@@ -32,10 +32,16 @@ C_MAUG_STUBS := $(wildcard maug/dosstubs/*.c)
 define TGTDOSALE
 
 CFLAGS_WATCOM386_DOS_ALLEGRO += \
-	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/allegro
+	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/retro2d/allegro \
+	-I$(MAUG_ROOT)/api/input/allegro -I$(MAUG_ROOT)/api/file/unix \
+	-I$(MAUG_ROOT)/api/log/unix
 
 LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+endif
 
 $(1)d.exe: $$(addprefix obj/doswa/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_WATCOM386) name $$@ \
@@ -57,9 +63,15 @@ endef
 
 define TGTDOSGAL
 
-CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/allegro
+CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO \
+	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
+	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix
 
 LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_DJGPP_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+endif
 
 $(1)dg.exe: $$(addprefix obj/dosdg/,$$(subst .c,.o,$$(C_FILES)))
 	$$(LD_DJGPP) -o $$@ $$^ \
@@ -81,7 +93,9 @@ endef
 
 define TGTDOSBIOS
 
-CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/dosbios
+CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/retro2d/dosbios \
+	-I$(MAUG_ROOT)/api/input/dosbios -I$(MAUG_ROOT)/api/file/unix \
+	-I$(MAUG_ROOT)/api/log/unix
 
 # Strip out options to bake-in resources, as they make the exe too big!
 
@@ -102,7 +116,11 @@ endif
 CFLAGS_WATCOM_DOS_BIOS += \
 	-bt=dos -DRETROFLAT_API_PC_BIOS -DRETROFLAT_DEPTH_BIOS
 
-LDFLAGS_WATCOM_DOS_BIOS += system dos option stack=8k
+LDFLAGS_WATCOM_DOS_BIOS += system dos option stack=8k option eliminate
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/sound/dosbios
+endif
 
 $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_MPLUG_OVLS)))
 	$$(LD_WATCOM) name $$@ option dosseg option map \

@@ -52,7 +52,7 @@ void retrofont_string(
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags );
+   size_t* p_out_w, size_t* p_out_h, uint8_t flags );
 
 /**
  * \brief Get a pointer to the glyph with the given index in the given font.
@@ -93,7 +93,7 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
    while( p_c - 1 > font_name ) {
       /* Start at the char before the '.' and work backwords until a '-'. */
       p_c--;
-      if( '-' == *p_c ) {
+      if( '-' == *p_c || '_' == *p_c ) {
          break;
       }
 
@@ -110,7 +110,8 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
 
    glyph_h = atoi( glyph_h_buf );
 
-   debug_printf( 1, "detected glyph height: " SIZE_T_FMT, glyph_h );
+   debug_printf(
+      RETROFONT_TRACE_LVL, "detected glyph height: " SIZE_T_FMT, glyph_h );
 
    return glyph_h;
 }
@@ -158,6 +159,8 @@ MERROR_RETVAL retrofont_load(
    retval = mfile_open_read( font_name, &font_file );
    maug_cleanup_if_not_ok();
 
+   debug_printf( RETROFONT_TRACE_LVL, "font file opened, reading..." );
+
    /* Figure out font width from file and alloc just enough. */
    retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
    maug_cleanup_if_not_ok();
@@ -194,7 +197,7 @@ MERROR_RETVAL retrofont_load(
    font->glyph_h = glyph_h;
    font->glyph_sz = glyph_h * glyph_w_bytes;
 
-   while( mfile_has_bytes( &font_file ) ) {
+   while( font_file.has_bytes( &font_file ) ) {
       retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
 
       retrofont_split_glyph_line( line, line_bytes );
@@ -277,7 +280,7 @@ void retrofont_blit_glyph(
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
-   int16_t x_iter, y_iter, y_start, y_end, x_end;
+   int16_t x_iter, y_iter, y_start, y_end, x_end, x_pen_down = -1;
    uint8_t prev_px_was_clear = 0;
 
    debug_printf( RETROFONT_TRACE_LVL, "blit glyph: %c", c );
@@ -296,9 +299,24 @@ void retrofont_blit_glyph(
             (glyph[(y_iter)] & (1 << (font->glyph_w - (x_iter))))))
 
    for( y_iter = y_start ; y_end > y_iter ; y_iter++ ) {
+      /* Reset drawing state for new "scanline." */
       prev_px_was_clear = 1;
-      for( x_iter = 0 ; x_end > x_iter ; x_iter++ ) {
+      x_pen_down = -1;
+
+      /* Note the >= here... slightly "overscan" on X so we can close any
+       * end-terminating horizontal lines.
+       */
+      for( x_iter = 0 ; x_end >= x_iter ; x_iter++ ) {
          if( _retrofont_px_is_clear( x_iter, y_iter ) ) {
+
+            if( 0 <= x_pen_down ) {
+               /* Draw this "scanline" of the glyph in one go. */
+               retroflat_2d_line( 
+                  target, color,
+                  x + x_pen_down, y + y_iter, x + x_iter, y + y_iter, 0 );
+               x_pen_down = -1;
+            }
+
             if(
                RETROFONT_FLAG_OUTLINE == (RETROFONT_FLAG_OUTLINE & flags) &&
                (!prev_px_was_clear ||
@@ -316,8 +334,12 @@ void retrofont_blit_glyph(
             prev_px_was_clear = 1;
 
          } else {
-            /* Draw normal color pixel. */
-            retroflat_2d_px( target, color, x + x_iter, y + y_iter, 0 );
+            /* This pixel is filled. */
+
+            if( 0 > x_pen_down ) {
+               /* Store the X coord to start drawing this "scanline." */
+               x_pen_down = x_iter;
+            }
 
             prev_px_was_clear = 0;
          }
@@ -403,10 +425,11 @@ cleanup:
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags
+   size_t* p_out_w, size_t* p_out_h, uint8_t flags
 ) {
    size_t x_iter = 0;
    size_t i = 0;
+   size_t out_h = 0; /* Only used if p_out_h is NULL. */
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFONT* font = NULL;
 
@@ -414,6 +437,10 @@ MERROR_RETVAL retrofont_string_sz(
       error_printf( "NULL font specified!" );
       retval = MERROR_GUI;
       goto cleanup;
+   }
+
+   if( NULL == p_out_h ) {
+      p_out_h = &out_h;
    }
 
    if( 0 == str_sz ) {
@@ -432,19 +459,19 @@ MERROR_RETVAL retrofont_string_sz(
       /* Handle forced newline. */
       if( '\r' == str[i] || '\n' == str[i] ) {
          x_iter = 0;
-         *out_h_p += font->glyph_h;
+         *p_out_h += font->glyph_h;
          continue;
       }
 
       x_iter += font->glyph_w;
 
-      if( *out_w_p <= x_iter ) {
-         *out_w_p = x_iter;
+      if( NULL != p_out_w && *p_out_w <= x_iter ) {
+         *p_out_w = x_iter;
       }
       if( 0 < max_w && max_w < x_iter + font->glyph_w ) {
          x_iter = 0;
-         *out_h_p += font->glyph_h;
-         if( 0 < max_h && *out_h_p + font->glyph_h >= max_h && i < str_sz ) {
+         *p_out_h += font->glyph_h;
+         if( 0 < max_h && *p_out_h + font->glyph_h >= max_h && i < str_sz ) {
             error_printf( "string will not fit!" );
 
             /* Do not quit; just make a note and keep going. */
@@ -454,8 +481,10 @@ MERROR_RETVAL retrofont_string_sz(
    }
 
    /* Add the height of the last line. */
-   *out_h_p += font->glyph_h;
-   *out_w_p += 1;
+   *p_out_h += font->glyph_h;
+   if( NULL != p_out_w ) {
+      *p_out_w += 1;
+   }
 
 cleanup:
 
