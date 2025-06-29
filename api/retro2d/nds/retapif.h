@@ -401,18 +401,19 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
+
+#if defined( RETROFLAT_OPENGL )
+      retval = retroglu_draw_lock( bmp );
+         debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
+#endif /* RETROFLAT_OPENGL */
+
+      bmp->flags |= RETROFLAT_NDS_FLAG_BMP_LOCKED;
+
       /* Regular bitmaps don't need locking. */
       goto cleanup;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_draw_lock( bmp );
-#  else
-
-   /* TODO */
    swiWaitForVBlank();
-
-#  endif /* RETROFLAT_OPENGL */
 
 cleanup:
 
@@ -426,22 +427,26 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    uint16_t* bg_map_inactive;
 
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
+
+#if defined( RETROFLAT_OPENGL )
+      retval = retroglu_draw_lock( bmp );
+         debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_release()!" );
+#endif /* RETROFLAT_OPENGL */
+
+      bmp->flags &= ~RETROFLAT_NDS_FLAG_BMP_LOCKED;
+
       /* Regular bitmaps don't need locking. */
       goto cleanup;
    }
 
-#  if defined( RETROFLAT_OPENGL )
-   retval = retroglu_draw_release( bmp );
-#  else
-
-   /* TODO */
+#  if !defined( RETROFLAT_OPENGL )
 
    _retroflat_nds_change_bg();
 
    /* Update sprite engines. */
    oamUpdate( RETROFLAT_NDS_OAM_ACTIVE );
 
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* !RETROFLAT_OPENGL */
 
 cleanup:
 

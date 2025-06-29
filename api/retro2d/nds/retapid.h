@@ -6,6 +6,8 @@
 
 #define RETROGUI_NO_TEXTBOX
 
+#define RETROFLAT_NDS_FLAG_BMP_LOCKED 0x20
+
 #define RETROFLAT_NDS_FLAG_CHANGE_BG   0x02
 
 /* == Nintendo DS == */
@@ -107,7 +109,9 @@ struct RETROFLAT_BITMAP {
 typedef int RETROFLAT_COLOR_DEF;
 
 /* TODO */
-#  define retroflat_bitmap_locked( bmp ) (0)
+#  define retroflat_bitmap_locked( bmp ) \
+   (RETROFLAT_NDS_FLAG_BMP_LOCKED == \
+      ((bmp)->flags & RETROFLAT_NDS_FLAG_BMP_LOCKED))
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
 #  ifdef RETROFLAT_VDP
