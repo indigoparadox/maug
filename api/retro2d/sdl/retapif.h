@@ -350,7 +350,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 #  if defined( RETROFLAT_OPENGL )
 
    if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
-      retval = retro3d_texture_lock( &(bmp->tex) );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
  
 #  elif defined( RETROFLAT_API_SDL1 )
@@ -436,7 +436,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       SDL_GL_SwapWindow( g_retroflat_state->platform.window );
 #     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
    } else {
-      retval = retro3d_texture_release( &(bmp->tex) );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
 
 #  elif defined( RETROFLAT_API_SDL1 )
