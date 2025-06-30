@@ -577,7 +577,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
       tile_id = instance * -1;
          _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
    } else {
-      /* TODO */
+      /* TODO: Break up the image we've been passed into tiles and draw it
+       *       as wide/tall as we need to. */
    }
 
 cleanup:

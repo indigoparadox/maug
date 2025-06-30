@@ -128,7 +128,7 @@ retroflat_create_bitmap_cb retroflat_2d_create_bitmap RETROFLT_CB_INIT;
 
 #  define retroflat_2d_blit_win( src, d_x, d_y ) \
       retroflat_blit_bitmap( NULL, (src), 0, 0, d_x, d_y, \
-         (win)->gui->w, (win)->gui->h, 0 )
+         (win)->gui->w, (win)->gui->h, RETROFLAT_INSTANCE_NULL )
 
 #endif /* RETROFLAT_BMP_TEX || DOCUMENTATION */
 
