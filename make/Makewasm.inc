@@ -15,7 +15,7 @@ EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2
 # NOTE: The -O2 here facilitates ASYNCIFY. It is necessary, or we'll get lots
 #       of "unreachable executed" errors at runtime.
-CFLAGS_EMCSS += -I$(MAUG_ROOT)/api/file/wasm -O2
+CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix -O2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl

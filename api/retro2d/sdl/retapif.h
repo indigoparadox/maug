@@ -2,6 +2,53 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+static SDL_Surface* _retroflat_sdl_load_bitmap( retroflat_asset_path path ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   SDL_Surface* bmp_out = NULL;
+   SDL_RWops* rwo = NULL;
+   mfile_t bmp_file;
+   MAUG_MHANDLE buffer_h = (MAUG_MHANDLE)NULL;
+   uint8_t* buffer = NULL;
+
+   retval = mfile_open_read( path, &bmp_file );
+   maug_cleanup_if_not_ok();
+
+   /* Create a memory buffer. */
+   buffer_h = maug_malloc( 1, bmp_file.sz );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
+
+   maug_mlock( buffer_h, buffer );
+   maug_cleanup_if_null_lock( uint8_t*, buffer );
+
+   /* Read the file into a memory buffer. */
+   retval = bmp_file.read_block( &bmp_file, buffer, bmp_file.sz );
+   maug_cleanup_if_not_ok();
+
+   debug_printf( 1, "%c%c", buffer[0], buffer[1] );
+
+   rwo = SDL_RWFromConstMem( buffer, bmp_file.sz );
+   if( !rwo ) {
+      error_printf( "could not setup SDL RWOps from mfile buffer!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   /* Read the buffer into SDL (1 in second arg frees the RWOps)! */
+   bmp_out = SDL_LoadBMP_RW( rwo, 1 );
+
+cleanup:
+
+   if( NULL != buffer ) {
+      maug_munlock( buffer_h, buffer );
+   }
+
+   if( (MAUG_MHANDLE)NULL != buffer_h ) {
+      maug_mfree( buffer_h );
+   }
+
+   return bmp_out;
+}
+
 /* === */
 
 MERROR_RETVAL retroflat_init_platform(
@@ -568,7 +615,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
       "loading bitmap: %s", filename_path );
 
-   tmp_surface = SDL_LoadBMP( filename_path ); /* Free stream on close. */
+   tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
@@ -607,7 +654,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->renderer = NULL;
    
-   tmp_surface = SDL_LoadBMP( filename_path );
+   tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
