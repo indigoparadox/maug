@@ -3,31 +3,19 @@
 
 define TGTWASMSDL
 
-ifeq ($$(FORCE_MVFS),)
-ifeq ($$(MVFS_AVAIL),1)
-# Selectively enable VFS for this platform.
-$$(info Selectively enabling MVFS for platform "WASM" with no filesystem!)
-CFLAGS_OPT_WASM += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
-MAUG_DEPS_WASM += $$(MVFS_H_DIR)/mvfs.h
-endif
-endif
-
-ifeq ($$(FORCE_XPM),)
-ifeq ($$(XPM_AVAIL),1)
-# Selectively enable XPM for this platform.
-$$(info Selectively enabling XPM for platform "WASM" with no filesystem!)
-CFLAGS_OPT_WASM += -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR)
-MAUG_DEPS_WASM += $$(RETROXPM_H_DIR)/xpmasset.h
-endif
-endif
-
 ifneq ("$$(EMCC_CONFIG)","")
 	EMCC_EM_CONFIG := --em-config $$(EMCC_CONFIG)
 endif
 
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl -s USE_OGG=1 \
-	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix
+	-I$(MAUG_ROOT)/api/log/unix
+
+# These facilitate async wrappers for the file API.
+LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2
+# NOTE: The -O2 here facilitates ASYNCIFY. It is necessary, or we'll get lots
+#       of "unreachable executed" errors at runtime.
+CFLAGS_EMCSS += -I$(MAUG_ROOT)/api/file/wasm -O2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl
