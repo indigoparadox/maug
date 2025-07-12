@@ -31,11 +31,20 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 /* === */
 
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_f, uint8_t* buf ) {
+   return mfile_file_read_block( p_f, buf, 1 );
+}
+
+/* === */
+
+
+MERROR_RETVAL mfile_file_read_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
    MERROR_RETVAL retval = MERROR_OK;
    DWORD last_read = 0;
    BOOL read_ok = 0;
 
-   read_ok = ReadFile( p_f->h.handle, buf, 1, &last_read, NULL );
+   read_ok = ReadFile( p_f->h.handle, buf, buf_sz, &last_read, NULL );
    if( !read_ok || 1 > last_read ) {
       error_printf( "unable to read from file!" );
       retval = MERROR_FILE;

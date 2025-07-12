@@ -33,8 +33,16 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 /* === */
 
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
+   return mfile_file_read_block( p_file, buf, 1 );
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_read_block(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz
+) {
    MERROR_RETVAL retval = MERROR_OK;
-   int32_t count = 1;
+   int32_t count = buf_sz;
    OSErr err;
 
    err = FSRead( p_file->h.file_ref, &count, buf );

@@ -17,6 +17,26 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 
 /* === */
 
+MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
+   return mfile_file_read_block( p_file, buf, 1 );
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_read_block(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
+
+   /* TODO */
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
 ) {
