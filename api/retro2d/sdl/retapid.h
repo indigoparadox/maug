@@ -217,7 +217,15 @@ struct RETROFLAT_PLATFORM_ARGS {
 
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
-#  ifndef RETROFLAT_API_SDL1
+#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_NO_SDL1_SCALING )
+   /* The real screen buffer, if scaling is enabled. Things are drawn onto
+    * g_retroflat_state->buffer (technically the actual scaling buffer) before
+    * being scaled onto the screen. This is necessary for e.g. WASM, where we
+    * can't otherwise easily scale the screen.
+    */
+   SDL_Surface* scale_buffer;
+   SDL_Rect scale_rect;
+#  elif !defined( RETROFLAT_API_SDL1 )
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */
 };

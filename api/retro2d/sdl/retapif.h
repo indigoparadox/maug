@@ -165,10 +165,34 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_SDL_ICO */
 
 #     ifndef RETROFLAT_OPENGL
+#        ifndef RETROFLAT_NO_SDL1_SCALING
+   /* Insert a normal surface as the standard buffer that things draw to, so
+    * those things can be scaled onto the scale buffer as the last step.
+    */
+   g_retroflat_state->buffer.surface = SDL_CreateRGBSurface(
+      0, g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   g_retroflat_state->platform.scale_rect.x = 0;
+   g_retroflat_state->platform.scale_rect.y = 0;
+   g_retroflat_state->platform.scale_rect.w =
+      g_retroflat_state->screen_w * g_retroflat_state->scale;
+   g_retroflat_state->platform.scale_rect.h =
+      g_retroflat_state->screen_h * g_retroflat_state->scale;
+   g_retroflat_state->platform.scale_buffer = 
+#        else
+   /* Do not insert the scale buffer if there is no scaling! */
    g_retroflat_state->buffer.surface = 
+#        endif /* !RETROFLAT_NO_SDL1_SCALING */
 #     endif /* !RETROFLAT_OPENGL */
    SDL_SetVideoMode(
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      g_retroflat_state->screen_w
+#        ifndef RETROFLAT_NO_SDL1_SCALING
+         * g_retroflat_state->scale,
+#        endif /* !RETROFLAT_NO_SDL1_SCALING */
+      g_retroflat_state->screen_h
+#        ifndef RETROFLAT_NO_SDL1_SCALING
+         * g_retroflat_state->scale,
+#        endif /* !RETROFLAT_NO_SDL1_SCALING */
       info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
@@ -259,7 +283,9 @@ cleanup:
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
-#     ifndef RETROFLAT_API_SDL1
+#     ifdef RETROFLAT_API_SDL1
+   SDL_FreeSurface( g_retroflat_state->buffer.surface );
+#     else
    SDL_DestroyWindow( g_retroflat_state->platform.window );
 #     endif /* !RETROFLAT_API_SDL1 */
 
@@ -511,7 +537,18 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          retroflat_vdp_call( "retroflat_vdp_flip" );
 #     endif /* RETROFLAT_VDP */
 
+#     ifdef RETROFLAT_NO_SDL1_SCALING
          SDL_Flip( bmp->surface );
+#     else
+         /* Do the scaled blit from the intermediate scaling buffer to the
+          * real screen buffer before flip.
+          */
+         SDL_SoftStretch(
+            g_retroflat_state->buffer.surface, NULL,
+            g_retroflat_state->platform.scale_buffer,
+            &(g_retroflat_state->platform.scale_rect) );
+         SDL_Flip( g_retroflat_state->platform.scale_buffer );
+#     endif /* RETROFLAT_NO_SDL1_SCALING */
       }
 
    } else {

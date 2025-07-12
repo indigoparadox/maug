@@ -1087,6 +1087,7 @@ struct RETROFLAT_ARGS {
    int screen_x;
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
+   int screen_scale;
 #  endif /* RETROFLAT_NO_CLI_SZ */
    struct RETROFLAT_PLATFORM_ARGS platform;
 #  ifndef RETROFLAT_NO_SOUND
@@ -2499,9 +2500,6 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    retroflat_heartbeat_set( 1000, 2 );
 
-   /* Set default, so that this is never zero, to avoid division by zero. */
-   g_retroflat_state->scale = 1;
-
 #  ifndef RETROFLAT_NO_CLI
 
    debug_printf( 1, "retroflat: parsing args..." );
@@ -2576,6 +2574,15 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
 
 #  endif /* !RETROFLAT_NO_CLI */
+
+   /* Set default, so that this is never zero, to avoid division by zero. */
+   if( 0 < args->screen_scale ) {
+      debug_printf( 1, "setting screen scale to: %d", args->screen_scale );
+      g_retroflat_state->scale = args->screen_scale;
+   } else {
+      debug_printf( 1, "setting screen scale to default: 1" );
+      g_retroflat_state->scale = 1;
+   }
 
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
