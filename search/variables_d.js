@@ -1,0 +1,23 @@
+var searchData=
+[
+  ['screen_5fcolors_0',['screen_colors',['../group__maug__retroflt.html#ga336ba0e9eb513f6d299673c4b7060a9f',1,'RETROFLAT_STATE']]],
+  ['screen_5fh_1',['screen_h',['../group__maug__retroflt.html#ga7407aaec24ac0b212ce12d92858ccc59',1,'RETROFLAT_ARGS::screen_h'],['../group__maug__retroflt.html#ga6b049f1864b97c82eec68a6c8315c067',1,'RETROFLAT_VIEWPORT::screen_h'],['../group__maug__retroflt.html#ga1636f2ef1a0469d4887ae0df552dc9a9',1,'RETROFLAT_STATE::screen_h']]],
+  ['screen_5fh_5fremainder_2',['screen_h_remainder',['../group__maug__retroflt.html#ga2b6eb33e216ff9ec1346257db7036ab6',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5ftile_5fh_3',['screen_tile_h',['../group__maug__retroflt.html#gabbe529e9c5ae1714d2243989e7064158',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5ftile_5fw_4',['screen_tile_w',['../group__maug__retroflt.html#ga88c624c656c1ba14ed6cc3f8ddf702f8',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5fv_5fh_5',['screen_v_h',['../group__maug__retroflt.html#gac1e7fe7127d595465bce4d9ec15bc3d1',1,'RETROFLAT_STATE']]],
+  ['screen_5fv_5fw_6',['screen_v_w',['../group__maug__retroflt.html#ga2fd654318e4d00f38cd68c6e8a55217b',1,'RETROFLAT_STATE']]],
+  ['screen_5fw_7',['screen_w',['../group__maug__retroflt.html#gaea336bf0c321b390b7ef03f8a25459bb',1,'RETROFLAT_VIEWPORT::screen_w'],['../group__maug__retroflt.html#ga5e85c4d16b4209f82a189f433d106815',1,'RETROFLAT_STATE::screen_w']]],
+  ['screen_5fw_5fremainder_8',['screen_w_remainder',['../group__maug__retroflt.html#ga1028f83525b9b65791c8aa53a8bee54a',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5fx_9',['screen_x',['../group__maug__retroflt.html#gaef6028d6a8f6c54d75623f8f0f7dbc15',1,'RETROFLAT_ARGS::screen_x'],['../group__maug__retroflt.html#ga14682f991afa6b88f97532affee99135',1,'RETROFLAT_VIEWPORT::screen_x']]],
+  ['screen_5fy_10',['screen_y',['../group__maug__retroflt.html#gacba814758d8d897ecf4c692c074814c5',1,'RETROFLAT_ARGS::screen_y'],['../group__maug__retroflt.html#gae44c21ac2121a42f6b56f19dbc6ca1b2',1,'RETROFLAT_VIEWPORT::screen_y']]],
+  ['sect_5fh_11',['sect_h',['../structRETROTILE__DATA__DS.html#adf49707aeb1660edf27a9c5ed2c8be82',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fh_5fhalf_12',['sect_h_half',['../structRETROTILE__DATA__DS.html#ae0ec669d8d55925297cd8922021c2122',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fw_13',['sect_w',['../structRETROTILE__DATA__DS.html#a26954d4c8767996340629414d0e38ec9',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fw_5fhalf_14',['sect_w_half',['../structRETROTILE__DATA__DS.html#a454241426fe1fef7d630c9714e332a1a',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fx_15',['sect_x',['../structRETROTILE__DATA__DS.html#a8220cdaa62874ad9570e90598764aaec',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fy_16',['sect_y',['../structRETROTILE__DATA__DS.html#a081a6ff35940c41ac01eaa636c7aef99',1,'RETROTILE_DATA_DS']]],
+  ['stack_17',['stack',['../structMLISP__EXEC__STATE.html#a2cdcdc7d0e3d80a343b6d5cee77b8c0f',1,'MLISP_EXEC_STATE']]],
+  ['static_5frotation_18',['static_rotation',['../structRETROTILE__TILE__DEF.html#a5a0e14997a4e8dbc8b659e1f7834fb8c',1,'RETROTILE_TILE_DEF']]],
+  ['sz_19',['sz',['../structMFMT__STRUCT.html#aae861ab44ef1fcb11785876f19305f5d',1,'MFMT_STRUCT::sz'],['../structMFMT__STRUCT__BMPINFO.html#a7ad7a22540f5a3fbc2c92e1237eab4ee',1,'MFMT_STRUCT_BMPINFO::sz'],['../structRETROTILE.html#a625d1be2cdb98e9b0cd697e490cb6d23',1,'RETROTILE::sz']]]
+];
