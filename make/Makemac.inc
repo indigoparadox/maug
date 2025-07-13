@@ -16,7 +16,7 @@ OBJDIR_GCC_MAC_M68K=obj/gcc-mac-mac68k
 CFLAGS_GCC_MAC_M68K := \
 	-DRETROFLAT_API_MAC \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
-	-I$(MAUG_ROOT)/api/file/mac68k -I$(MAUG_ROOT)/api/log/unix
+	-I$(MAUG_ROOT)/api/file/mac68k -I$(MAUG_ROOT)/api/log/mac68k
 # TODO: Make math link optional.
 LDFLAGS_GCC_MAC_M68K := -lm
 

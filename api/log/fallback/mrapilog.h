@@ -9,6 +9,7 @@ void error_printf( const char* fmt, ... );
 #  define size_printf( lvl, name, sz ) debug_printf( lvl, name " size is " SIZE_T_FMT " bytes", (sz) );
 
 #  define size_multi_printf( lvl, name, sz, max ) debug_printf( lvl, "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
+
 #elif defined( UPRINTF_C )
 
 void debug_printf( int level, const char* fmt, ... ) {
@@ -54,7 +55,7 @@ void maug_debug_printf(
 #endif /* MAUG_LOG_FILE */
    }
 
-   if( lvl >= g_maug_uprintf_threshold ) {
+   if( lvl >= DEBUG_THRESHOLD ) {
       platform_fprintf( out, "(%d) %s : " SIZE_T_FMT ": ",
          lvl, src_name, line );
       
