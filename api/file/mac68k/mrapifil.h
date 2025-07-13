@@ -206,6 +206,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    p_file->has_bytes = mfile_file_has_bytes;
    p_file->read_byte = mfile_file_read_byte;
+   p_file->read_block = mfile_file_read_block;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;
