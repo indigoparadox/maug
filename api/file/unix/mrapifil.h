@@ -169,7 +169,7 @@ cleanup:
    if( stat_r ) {
       /* Retry the stat after fetch. */
       mfile_wasm_fetch( filename );
-      star_r = stat( filename, &file_stat );
+      stat_r = stat( filename, &file_stat );
    } else {
       debug_printf( 1, "file exists: %d", stat_r );
    }
