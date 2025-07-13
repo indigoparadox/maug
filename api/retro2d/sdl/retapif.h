@@ -877,8 +877,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    SDL_Rect src_rect = { s_x, s_y, w, h };
    SDL_Rect dest_rect = { d_x, d_y, w, h };
    SDL_Texture* tmp_tex = NULL;
-   int is_screen = 0,
-       tmp_autolock = 0;
+   int is_screen = 0;
 #  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
 
    assert( NULL != src );

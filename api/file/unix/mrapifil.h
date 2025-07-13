@@ -167,12 +167,23 @@ cleanup:
    stat_r = stat( filename, &file_stat );
 #        ifdef RETROFLAT_OS_WASM
    if( stat_r ) {
+      /* Retry the stat after fetch. */
       mfile_wasm_fetch( filename );
-      stat( filename, &file_stat );
+      star_r = stat( filename, &file_stat );
    } else {
       debug_printf( 1, "file exists: %d", stat_r );
    }
 #        endif /* RETROFLAT_OS_WASM */
+
+   /* Perform *real* check after probe-checks above, which could cause the file
+    * to be cached.
+    */
+   if( stat_r ) {
+      error_printf( "could not stat: %s", filename );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
    p_file->sz = file_stat.st_size;
 #     endif /* !MAUG_NO_STAT */
 
