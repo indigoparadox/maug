@@ -39,10 +39,10 @@ endif
 ifeq ("$(3)","")
 # Use generic maug icon if not specified.
 $$(OBJDIR_GCC_MAC_M68K)/icon.r: $(MAUG_ROOT)/maug32.bmp
-	$(MAUG_ROOT)/tools/bmp.py to_icn -x -6 $$< $$@
+	$(MAUG_ROOT)/tools/bmp.py to_icn -x $$< $$@
 else
 $$(OBJDIR_GCC_MAC_M68K)/icon.r: $(3)
-	$(MAUG_ROOT)/tools/bmp.py to_icn -x -6 $$< $$@
+	$(MAUG_ROOT)/tools/bmp.py to_icn -x $$< $$@
 endif
 
 $$(OBJDIR_GCC_MAC_M68K)/macrsrc.r: $(MAUG_ROOT)/scraps/macrsrc.r | \

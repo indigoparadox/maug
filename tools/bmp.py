@@ -54,34 +54,43 @@ class BitmapIn( object ):
 
 class ICNOut( object ):
 
-    def __init__( self ):
+    def __init__( self, bpp=1, bpp_mask=0x01 ):
 
         self.px_bytes = []
         self.mask_bytes = []
         self.px_byte_iter = 0
         self.mask_byte_iter = 0
-        self.byte_sz = 0
+        self.px_byte_sz = 0
+        self.mask_byte_sz = 0
+        self.bpp = bpp
+        self.bpp_mask = bpp_mask
 
     def pixel( self, px : int ):
         self.mask_byte_iter <<= 1
-        self.px_byte_iter <<= 1
+        self.px_byte_iter <<= self.bpp
         if 1 == px:
-            # Write color index #1 (dark blue) as 1 (opaque black).
-            # All other colors will end up 0 (white).
-            self.px_byte_iter |= 0x01
+            if 4 <= self.bpp:
+                self.px_byte_iter |= (px & self.bpp_mask)
+            else:
+                # Write color index #1 (dark blue) as 1 (opaque black).
+                # All other colors will end up 0 (white).
+                self.px_byte_iter |= 0x01
         if 0 < px:
             # If the color index isn't #0 (black), it's opaque.
             self.mask_byte_iter |= 0x01
         # Iterate to next bit.
-        self.byte_sz += 1
+        self.px_byte_sz += self.bpp
+        self.mask_byte_sz += 1
 
-        if 8 == self.byte_sz:
+        if 8 == self.px_byte_sz:
             # Finished constructing a whole byte.
             self.px_bytes.append( self.px_byte_iter )
-            self.mask_bytes.append( self.mask_byte_iter )
             self.px_byte_iter = 0
+            self.px_byte_sz = 0
+        if 8 == self.mask_byte_sz:
+            self.mask_bytes.append( self.mask_byte_iter )
             self.mask_byte_iter = 0
-            self.byte_sz = 0
+            self.mask_byte_sz = 0
 
     def write_bytes( self, bytes_arr, out_icn_f, in_hex, term_comma=False ):
         idx = 0
@@ -121,29 +130,27 @@ def to_icn( in_bmp, out_icn, **args ):
     with open( in_bmp, 'rb' ) as in_bmp_f:
         bmp = BitmapIn( in_bmp_f )
         icn = ICNOut()
+        cicn = ICNOut( 4, 0x0f )
         bmp.pixels( icn.pixel, icn.line )
         logger.debug( f"output icn is {len( icn.px_bytes )} bytes" )
         with open( out_icn, 'wb' ) as out_icn_f:
-            if args['system6']:
-                # Write System 6 icon.
-                if args['hex']:
-                    out_icn_f.write(
-                        'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
-                icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'], True )
-                icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
-                if args['hex']:
-                    out_icn_f.write( '}\n};\n\n'.encode( 'utf-8' ) )
+            # Write System 6 icon.
+            if args['hex']:
+                out_icn_f.write(
+                    'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
+            icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'], True )
+            icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
+            if args['hex']:
+                out_icn_f.write( '}\n};\n\n'.encode( 'utf-8' ) )
 
-            else:
+            if args['system7']:
                 # Write System 7 icon.
-                # TODO: Write color icon to list.
                 if args['hex']:
                     out_icn_f.write(
-                        'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
-                icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'], True )
-                icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
+                        'resource \'icl4\' (128) {\n'.encode( 'utf-8' ) )
+                cicn.write_bytes( cicn.px_bytes, out_icn_f, args['hex'] )
                 if args['hex']:
-                    out_icn_f.write( '}\n};\n\n'.encode( 'utf-8' ) )
+                    out_icn_f.write( '};\n\n'.encode( 'utf-8' ) )
 
 def main():
 
@@ -159,7 +166,7 @@ def main():
 
     parser_to_icn.add_argument( '-x', '--hex', action='store_true' )
 
-    parser_to_icn.add_argument( '-6', '--system6', action='store_true' )
+    parser_to_icn.add_argument( '-7', '--system7', action='store_true' )
 
     parser_to_icn.add_argument( 'in_bmp' )
 
