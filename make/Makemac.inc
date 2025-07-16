@@ -37,8 +37,8 @@ $$(OBJDIR_GCC_MAC_M68K)/$(3).r: $(3)
 $$(OBJDIR_GCC_MAC_M68K)/macrsrc.r: $(MAUG_ROOT)/scraps/macrsrc.r | \
 $$(OBJDIR_GCC_MAC_M68K)/$(3).r
 	cp -v $$< $$@
-	sed -i "s|xxx|$$(OBJDIR_GCC_MAC_M68K)/$(3).r|g" $$@
 	sed -i "s|zzz|$(4)|g" $$@
+	cat $$(OBJDIR_GCC_MAC_M68K)/$(3).r >> $$@
 
 $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL \
 $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \

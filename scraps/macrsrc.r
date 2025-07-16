@@ -1,19 +1,12 @@
 
 #include "Types.r"
 
-resource 'BNDL' (128, "MyApp Bundle") {
-    'zzz', 0,
-    {
-        'ICN#', { 128 },
-        'FREF', { 128 }
-    }
+resource 'BNDL' (128) {
+   'zzz', 0,
+   { 'ICN#', { 0, 128 }; 'FREF', { 0, 128 } }
 };
 
-resource 'FREF' (128, "MyApp FREF") {
-    'APPL', 0, ""
-};
-
-data 'ICN#' (128, "MyApp Icon") {
-   include "xxx"
+resource 'FREF' (128) {
+   'APPL', 0, ""
 };
 

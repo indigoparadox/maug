@@ -79,16 +79,18 @@ class ICNOut( object ):
 
     def write_bytes( self, bytes_arr, out_icn_f, in_hex ):
         idx = 0
+        out_icn_f.write( '$"'.encode( 'utf-8' ) )
         for b in bytes_arr:
             # Iterate through the given byte array and write in hex or raw
             # as specified.
             if in_hex:
-                if 0 == idx % 32:
-                    out_icn_f.write( '\n'.encode( 'utf-8' ) )
+                if 0 == idx % 32 and 0 != idx:
+                    out_icn_f.write( '"\n$"'.encode( 'utf-8' ) )
                 out_icn_f.write( f"{b:02x}".encode( 'utf-8' ) )
             else:
                 out_icn_f.write( b.to_bytes( 1 ) )
             idx += 1
+        out_icn_f.write( '"\n'.encode( 'utf-8' ) )
 
     def line( self, y : int ):
         pass
@@ -106,11 +108,11 @@ def to_icn( in_bmp, out_icn, **args ):
         with open( out_icn, 'wb' ) as out_icn_f:
             if args['hex']:
                 out_icn_f.write(
-                    'resource \'ICN#\' (128) {\n$"'.encode( 'utf-8' ) )
+                    'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
             icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'] )
             icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
             if args['hex']:
-                out_icn_f.write( '\n"\n};\n'.encode( 'utf-8' ) )
+                out_icn_f.write( '\n}\n};\n'.encode( 'utf-8' ) )
 
 def main():
 
