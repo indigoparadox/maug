@@ -65,32 +65,50 @@ class ICNOut( object ):
     def pixel( self, px : int ):
         self.mask_byte_iter <<= 1
         self.px_byte_iter <<= 1
-        if 1 < px:
+        if 1 == px:
+            # Write color index #1 (dark blue) as 1 (opaque black).
+            # All other colors will end up 0 (white).
             self.px_byte_iter |= 0x01
         if 0 < px:
+            # If the color index isn't #0 (black), it's opaque.
             self.mask_byte_iter |= 0x01
+        # Iterate to next bit.
         self.byte_sz += 1
+
         if 8 == self.byte_sz:
+            # Finished constructing a whole byte.
             self.px_bytes.append( self.px_byte_iter )
             self.mask_bytes.append( self.mask_byte_iter )
             self.px_byte_iter = 0
             self.mask_byte_iter = 0
             self.byte_sz = 0
 
-    def write_bytes( self, bytes_arr, out_icn_f, in_hex ):
+    def write_bytes( self, bytes_arr, out_icn_f, in_hex, term_comma=False ):
         idx = 0
         out_icn_f.write( '$"'.encode( 'utf-8' ) )
         for b in bytes_arr:
             # Iterate through the given byte array and write in hex or raw
             # as specified.
             if in_hex:
-                if 0 == idx % 32 and 0 != idx:
+                if 0 == idx % 20 and 0 != idx:
                     out_icn_f.write( '"\n$"'.encode( 'utf-8' ) )
                 out_icn_f.write( f"{b:02x}".encode( 'utf-8' ) )
+                # Add spaces:
+                # - If *not* at the end of a line of 20 bytes.
+                # - If the byte just written is odd.
+                # - If this isn't the last byte written.
+                if 0 != (idx + 1) % 20 and \
+                1 == idx % 2 and \
+                idx < len( bytes_arr ) - 1:
+                    out_icn_f.write( ' '.encode( 'utf-8' ) )
             else:
                 out_icn_f.write( b.to_bytes( 1 ) )
             idx += 1
-        out_icn_f.write( '"\n'.encode( 'utf-8' ) )
+        out_icn_f.write( '"'.encode( 'utf-8' ) )
+        if in_hex and term_comma:
+            # Add a terminating comma to this hex block.
+            out_icn_f.write( ','.encode( 'utf-8' ) )
+        out_icn_f.write( '\n'.encode( 'utf-8' ) )
 
     def line( self, y : int ):
         pass
@@ -106,13 +124,26 @@ def to_icn( in_bmp, out_icn, **args ):
         bmp.pixels( icn.pixel, icn.line )
         logger.debug( f"output icn is {len( icn.px_bytes )} bytes" )
         with open( out_icn, 'wb' ) as out_icn_f:
-            if args['hex']:
-                out_icn_f.write(
-                    'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
-            icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'] )
-            icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
-            if args['hex']:
-                out_icn_f.write( '\n}\n};\n'.encode( 'utf-8' ) )
+            if args['system6']:
+                # Write System 6 icon.
+                if args['hex']:
+                    out_icn_f.write(
+                        'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
+                icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'], True )
+                icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
+                if args['hex']:
+                    out_icn_f.write( '}\n};\n\n'.encode( 'utf-8' ) )
+
+            else:
+                # Write System 7 icon.
+                # TODO: Write color icon to list.
+                if args['hex']:
+                    out_icn_f.write(
+                        'resource \'ICN#\' (128) {\n{\n'.encode( 'utf-8' ) )
+                icn.write_bytes( icn.px_bytes, out_icn_f, args['hex'], True )
+                icn.write_bytes( icn.mask_bytes, out_icn_f, args['hex'] )
+                if args['hex']:
+                    out_icn_f.write( '}\n};\n\n'.encode( 'utf-8' ) )
 
 def main():
 
@@ -127,6 +158,8 @@ def main():
     parser_to_icn.set_defaults( func=to_icn )
 
     parser_to_icn.add_argument( '-x', '--hex', action='store_true' )
+
+    parser_to_icn.add_argument( '-6', '--system6', action='store_true' )
 
     parser_to_icn.add_argument( 'in_bmp' )
 

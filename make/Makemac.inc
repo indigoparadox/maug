@@ -30,22 +30,33 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_MAC_M68K += -I$(MAUG_ROOT)/api/sound/null
 endif
 
-# TODO: Use generic maug icon if not present!
-$$(OBJDIR_GCC_MAC_M68K)/$(3).r: $(3)
-	$(MAUG_ROOT)/tools/bmp.py to_icn -x $$< $$@
+ifeq ("$(4)","")
+MAUG_MAC_CREATOR := MAUG
+else
+MAUG_MAC_CREATOR := $(4)
+endif
+
+ifeq ("$(3)","")
+# Use generic maug icon if not specified.
+$$(OBJDIR_GCC_MAC_M68K)/icon.r: $(MAUG_ROOT)/maug32.bmp
+	$(MAUG_ROOT)/tools/bmp.py to_icn -x -6 $$< $$@
+else
+$$(OBJDIR_GCC_MAC_M68K)/icon.r: $(3)
+	$(MAUG_ROOT)/tools/bmp.py to_icn -x -6 $$< $$@
+endif
 
 $$(OBJDIR_GCC_MAC_M68K)/macrsrc.r: $(MAUG_ROOT)/scraps/macrsrc.r | \
-$$(OBJDIR_GCC_MAC_M68K)/$(3).r
+$$(OBJDIR_GCC_MAC_M68K)/icon.r
 	cp -v $$< $$@
-	sed -i "s|zzz|$(4)|g" $$@
-	cat $$(OBJDIR_GCC_MAC_M68K)/$(3).r >> $$@
+	sed -i "s|zzz|$$(MAUG_MAC_CREATOR)|g" $$@
+	cat $$(OBJDIR_GCC_MAC_M68K)/icon.r >> $$@
 
 $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL \
 $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
 $(1).m68k.dsk: \
 $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin | $$(OBJDIR_GCC_MAC_M68K)/macrsrc.r
 	Rez -I$(RINCLUDES) --copy "$$<" "$$(OBJDIR_GCC_MAC_M68K)/macrsrc.r" \
-		-t "APPL" -c "$(4)" -o $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
+		-t "APPL" -c "$$(MAUG_MAC_CREATOR)" -o $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
 		--cc $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL --cc $(1).m68k.dsk
 	if [ -n "$(2)" ]; then \
 		hmount $(1).m68k.dsk && \
