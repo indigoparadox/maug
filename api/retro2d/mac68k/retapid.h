@@ -10,6 +10,8 @@
 #include <Quickdraw.h>
 #include <Dialogs.h>
 #include <Fonts.h>
+#include <Gestalt.h>
+#include <Traps.h>
 
 #define RETROPLAT_PRESENT 1
 

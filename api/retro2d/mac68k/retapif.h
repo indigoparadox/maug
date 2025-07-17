@@ -22,6 +22,7 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
    Rect r = { 0, 0, 0, 0 };
    unsigned char title_buf[128];
+   long cqd_result = 0;
 
    InitGraf( &qd.thePort );
    InitFonts();
@@ -34,7 +35,17 @@ static MERROR_RETVAL retroflat_init_platform(
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
    maug_cleanup_if_not_ok_msg( "title string too long!" );
 
-   g_retroflat_state->screen_colors = 2;
+   /* Detect if Color QuickDraw is present. */
+   if(
+      NGetTrapAddress( _Gestalt, ToolTrap ) !=
+         NGetTrapAddress( _Unimplemented, ToolTrap ) &&
+      noErr == Gestalt( gestaltQuickdrawVersion, &cqd_result ) &&
+      0x0101 <= cqd_result
+   ) {
+      g_retroflat_state->screen_colors = 16;
+   } else {
+      g_retroflat_state->screen_colors = 2;
+   }
 
    /* Create the window. */
    /* TODO: Set X/Y from args? */
