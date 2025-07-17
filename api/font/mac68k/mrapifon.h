@@ -97,7 +97,10 @@ void retrofont_string(
 
    /* Break up draw calls for wrapping and newlines. */
    for( i = 0 ; str_sz >= i ; i++ ) {
-      debug_printf( 1, "char: 0x%02x", str[i] );
+
+      /* TODO: Iterate and check string width at each space to keep it within
+       *       max_w and wrap when it's not.
+       */
 
       if( '\n' != str[i] && '\r' != str[i] && str_sz != i ) {
          continue;
@@ -171,6 +174,9 @@ MERROR_RETVAL retrofont_string_sz(
 
    /* Handle wrapping and newlines. */
    for( i = 0 ; str_sz > i ; i++ ) {
+      /* TODO: Iterate and check string width at each space to keep it within
+       *       max_w and wrap when it's not.
+       */
       if( '\n' == i || '\r' == i ) {
          *p_out_h += font->font_height;
       }
