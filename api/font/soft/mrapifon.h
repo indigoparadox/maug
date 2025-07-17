@@ -19,24 +19,7 @@ struct RETROFONT {
    uint8_t glyph_sz;
 };
 
-MERROR_RETVAL retrofont_load(
-   const char* font_name, MAUG_MHANDLE* p_font_h,
-   uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
-
-void retrofont_blit_glyph(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags );
-
-void retrofont_string(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t x, size_t y,
-   size_t max_w, size_t max_h, uint8_t flags );
-
-MERROR_RETVAL retrofont_string_sz(
-   retroflat_blit_t* target, const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* p_out_w, size_t* p_out_h, uint8_t flags );
+#if defined( RETROFNT_C )
 
 /**
  * \brief Get a pointer to the glyph with the given index in the given font.
@@ -45,7 +28,7 @@ MERROR_RETVAL retrofont_string_sz(
    &(((uint8_t*)(p_font))[(p_font)->sz + \
       ((p_font)->glyph_sz * (idx - (p_font)->first_glyph))])
 
-#if defined( RETROFNT_C )
+/* === */
 
 void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
    size_t x = 0, y = 0;
@@ -61,6 +44,8 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
       debug_printf( RETROFONT_TRACE_LVL, "%s", glyph_bin );
    }
 }
+
+/* === */
 
 static size_t retrofont_sz_from_filename( const char* font_name ) {
    const char* p_c = NULL;
@@ -99,6 +84,8 @@ static size_t retrofont_sz_from_filename( const char* font_name ) {
 
    return glyph_h;
 }
+
+/* === */
 
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
@@ -259,6 +246,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 void retrofont_blit_glyph(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
@@ -330,6 +319,8 @@ void retrofont_blit_glyph(
       }
    }
 }
+
+/* === */
 
 void retrofont_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
@@ -405,6 +396,8 @@ cleanup:
       maug_munlock( font_h, font );
    }
 }
+
+/* === */
 
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
