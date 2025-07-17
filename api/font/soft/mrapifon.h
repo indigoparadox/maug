@@ -248,7 +248,7 @@ cleanup:
 
 /* === */
 
-void retrofont_blit_glyph(
+static void retrofont_blit_glyph(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
 ) {

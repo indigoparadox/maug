@@ -35,17 +35,6 @@ MERROR_RETVAL retrofont_load(
 
 /* === */
 
-void retrofont_blit_glyph(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
-) {
-
-#  pragma message( "warning: retrofont_blit_glyph not implemented" )
-
-}
-
-/* === */
-
 void retrofont_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
