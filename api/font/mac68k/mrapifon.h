@@ -12,9 +12,9 @@
 
 struct RETROFONT {
    uint8_t flag;
-   uint8_t font_idx;
    uint8_t font_sz;
    uint8_t font_height;
+   int16_t font_idx;
 };
 
 #if defined( RETROFNT_C )
@@ -27,6 +27,15 @@ MERROR_RETVAL retrofont_load(
    struct RETROFONT* font = NULL;
    FontInfo font_info;
 
+   if( 0 == glyph_h ) {
+      glyph_h = retrofont_sz_from_filename( font_name );
+   }
+   if( 0 == glyph_h ) {
+      error_printf( "unable to determine font height!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    *p_font_h = maug_malloc( 1, sizeof( struct RETROFONT ) );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_font_h );
 
@@ -34,6 +43,12 @@ MERROR_RETVAL retrofont_load(
    maug_cleanup_if_null_lock( struct RETROFONT*, font );
 
    font->font_sz = glyph_h;
+
+   /* TODO: Translate front from specified. */
+   GetFNum( "\pChicago", &(font->font_idx) );
+
+   TextFont( font->font_idx );
+   TextSize( font->font_sz );
 
    GetFontInfo( &font_info );
    font->font_height = font_info.ascent + font_info.descent + font_info.leading;
@@ -58,17 +73,18 @@ void retrofont_string(
    MERROR_RETVAL retval = MERROR_OK;
    unsigned char str_buf[128];
    struct RETROFONT* font = NULL;
+   size_t i = 0, str_start = 0, y_offset = 0, line_sz = 0;
+
+   if( 0 >= str_sz ) {
+      str_sz = strlen( str );
+   }
 
    maug_mlock( font_h, font );
    maug_cleanup_if_null_lock( struct RETROFONT*, font );
 
-   retval = maug_str_c2p( str, (char*)str_buf, 127 );
-   maug_cleanup_if_not_ok();
-
-   /* TODO: Handle font face and effects! */
-
-   MoveTo( x, y + font->font_height );
-
+   /* Handle font face and effects! */
+   TextFont( font->font_idx );
+   TextSize( font->font_sz );
    if( RETROFLAT_COLOR_BLACK == color ) {
       ForeColor( blackColor );
    } else {
@@ -79,8 +95,45 @@ void retrofont_string(
       ForeColor( whiteColor );
    }
 
-   DrawString( str_buf );
+   /* Break up draw calls for wrapping and newlines. */
+   for( i = 0 ; str_sz >= i ; i++ ) {
+      debug_printf( 1, "char: 0x%02x", str[i] );
 
+      if( '\n' != str[i] && '\r' != str[i] && str_sz != i ) {
+         continue;
+      }
+
+      /* Start first line from font_height offset due to quirks of MoveTo(). */
+      y_offset += font->font_height;
+
+      MoveTo( x, y + y_offset );
+
+      line_sz = i - str_start;
+
+      if( line_sz >= 127 ) {
+         error_printf( "string too long (%d): %s", line_sz, &(str[str_start]) );
+         goto cleanup;
+      }
+
+      debug_printf( 1,
+         "drawing (%d at %d): %s",
+         line_sz, str_start, &(str[str_start]) );
+
+      /* We're using this to chop out a section of the string, which will
+       * cause the retval to always be not-OK, so ignore it here.
+       *
+       * Also add +1 to line_sz for the pascal size byte.
+       */
+      maug_str_c2p(
+         &(str[str_start]), (char*)str_buf, line_sz + 1 );
+
+      DrawString( str_buf );
+
+      /* Place the new start after the line-terminating char. */
+      str_start = i + 1;
+   }
+
+   /* Reset drawing effects. */
    ForeColor( blackColor );
 
 cleanup:
@@ -102,6 +155,7 @@ MERROR_RETVAL retrofont_string_sz(
    MERROR_RETVAL retval = MERROR_OK;
    unsigned char str_buf[128];
    struct RETROFONT* font = NULL;
+   size_t i = 0;
 
    maug_mlock( font_h, font );
    maug_cleanup_if_null_lock( struct RETROFONT*, font );
@@ -109,10 +163,18 @@ MERROR_RETVAL retrofont_string_sz(
    retval = maug_str_c2p( str, (char*)str_buf, 127 );
    maug_cleanup_if_not_ok();
 
+   TextSize( font->font_sz );
+
    *p_out_w = StringWidth( str_buf );
 
-   /* TODO: Handle wrapping and newlines! */
    *p_out_h = font->font_height;
+
+   /* Handle wrapping and newlines. */
+   for( i = 0 ; str_sz > i ; i++ ) {
+      if( '\n' == i || '\r' == i ) {
+         *p_out_h += font->font_height;
+      }
+   }
 
 cleanup:
 
