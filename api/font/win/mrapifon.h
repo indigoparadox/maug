@@ -19,8 +19,17 @@ MERROR_RETVAL retrofont_load(
    MERROR_RETVAL retval = MERROR_OK;
    LOGFONT lf;
 
+   if( 0 == glyph_h ) {
+      glyph_h = retrofont_sz_from_filename( font_name ) + 2;
+   }
+   if( 0 == glyph_h ) {
+      error_printf( "unable to determine font height!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    maug_mzero( &lf, sizeof( LOGFONT ) );
-   lf.lfHeight = glyph_h * -1;
+   lf.lfHeight = glyph_h;
    lstrcpy( lf.lfFaceName, "Arial" );
 
    *p_font_h = (MAUG_MHANDLE)CreateFontIndirect( &lf );
@@ -29,6 +38,8 @@ MERROR_RETVAL retrofont_load(
       error_printf( "problem loading font!" );
       retval = MERROR_GUI;
    }
+
+cleanup:
 
    return retval;
 }

@@ -22,6 +22,15 @@ MERROR_RETVAL retrofont_load(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   if( 0 == glyph_h ) {
+      glyph_h = retrofont_sz_from_filename( font_name );
+   }
+   if( 0 == glyph_h ) {
+      error_printf( "unable to determine font height!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
 #  pragma message( "warning: retrofont_load not implemented" )
 
    return retval;
