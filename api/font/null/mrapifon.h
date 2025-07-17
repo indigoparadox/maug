@@ -16,16 +16,6 @@ struct RETROFONT {
 
 #if defined( RETROFNT_C )
 
-static size_t retrofont_sz_from_filename( const char* font_name ) {
-   size_t glyph_h = 0;
-
-#  pragma message( "warning: retrofont_sz_from_filename not implemented" )
-
-   return glyph_h;
-}
-
-/* === */
-
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count

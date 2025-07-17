@@ -147,7 +147,7 @@ void retrogxc_clear_cache() {
 
       case RETROGXC_ASSET_TYPE_FONT:
          /* Fonts are just a blob of data after a struct, so just free it! */
-         maug_mfree( asset->handle );
+         retrofont_free( &(asset->handle) );
          dropped_count++;
       }
 

@@ -472,6 +472,12 @@ cleanup:
    return retval;
 }
 
+/* === */
+
+void retrofont_free( MAUG_MHANDLE* p_font_h ) {
+   maug_mfree( *p_font_h );
+}
+
 #endif /* !RETROFNT_C */
 
 #endif /* !MAUG_API_FON_H_DEFS */

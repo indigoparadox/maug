@@ -305,7 +305,7 @@ void retrowin_free_win( struct RETROWIN* win ) {
    if( RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & win->flags) ) {
 #ifndef RETROGXC_PRESENT
       if( (MAUG_MHANDLE)NULL != win->gui->font_h ) {
-         maug_mfree( win->gui->font_h );
+         retrofont_free( &(win->gui->font_h) );
       }
 #endif /* RETROGXC_PRESENT */
 

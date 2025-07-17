@@ -510,7 +510,7 @@ cleanup:
 
 void retrocon_shutdown( struct RETROCON* con ) {
 #ifndef RETROGXC_PRESENT
-   maug_mfree( con->gui.font_h );
+   retrofont_free( &(con->gui.font_h) );
 #endif /* !RETROGXC_PRESENT */
    retrogui_free( &(con->gui) );
 }

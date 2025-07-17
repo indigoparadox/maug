@@ -146,13 +146,11 @@ endef
 
 define TGT_WATCOM386_WIN_WIN32
 
-# TODO: Use windows font API.
-
 CFLAGS_WATCOM386_WIN_WIN32 += \
 	-mf -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/soft
+	-i=$(MAUG_ROOT)/api/font/win
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
 	# OpenGL stuff is pentium-optimized.
@@ -294,13 +292,11 @@ TGTWINSDL=$(TGT_WATCOM386_WIN_SDL)
 
 define TGT_WATCOM_WIN_WIN16
 
-# TODO: Use windows font API.
-
 CFLAGS_WATCOM_WIN_WIN16 += \
 	-ml -4 -bt=windows -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/soft
+	-i=$(MAUG_ROOT)/api/font/win
 
 LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate
 
@@ -354,13 +350,11 @@ TGTWIN16=$(TGT_WATCOM_WIN_WIN16)
 
 define TGT_WATCOM386_WIN_WIN16
 
-# TODO: Use windows font API.
-
 CFLAGS_WATCOM386_WIN_WIN16 += \
 	-bt=windows -4r -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/soft
+	-i=$(MAUG_ROOT)/api/font/win
 
 LDFLAGS_WATCOM386_WIN_WIN16 += system win386
 
@@ -405,11 +399,9 @@ TGTWIN386=$(TGT_WATCOM386_WIN_WIN16)
 
 define TGT_GCC_WIN_WIN32
 
-# TODO: Use windows font API.
-
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
@@ -447,11 +439,9 @@ TGTWINNTGCC=$(TGT_GCC_WIN_WIN32)
 
 define TGT_GCC64_WIN_WIN32
 
-# TODO: Use windows font API.
-
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
