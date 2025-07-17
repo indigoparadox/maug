@@ -13,10 +13,13 @@ define TGTMAC68K
 
 OBJDIR_GCC_MAC_M68K=obj/gcc-mac-mac68k
 
+# TODO: Use mac font API.
+
 CFLAGS_GCC_MAC_M68K := \
 	-DRETROFLAT_API_MAC \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
-	-I$(MAUG_ROOT)/api/file/mac68k -I$(MAUG_ROOT)/api/log/mac68k
+	-I$(MAUG_ROOT)/api/file/mac68k -I$(MAUG_ROOT)/api/log/mac68k \
+	-I$(MAUG_ROOT)/api/font/soft
 # TODO: Make math link optional.
 LDFLAGS_GCC_MAC_M68K := -lm
 

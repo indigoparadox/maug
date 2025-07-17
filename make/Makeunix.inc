@@ -135,7 +135,7 @@ endif
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
 	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/file/unix \
-	-I$(MAUG_ROOT)/api/log/unix
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
 # = Make Icons =
@@ -173,10 +173,13 @@ ifeq ("$$(shell pkg-config allegro --libs 2>/dev/null)","")
 $$(error could not find pkg-config for allegro!)
 endif
 
+# TODO: Use allegro font API.
+
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
-	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix
+	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
+	-I$(MAUG_ROOT)/api/font/soft
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
 
@@ -217,7 +220,7 @@ endif
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
 	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
-	-I$(MAUG_ROOT)/api/log/unix
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
 
