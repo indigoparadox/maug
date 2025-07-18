@@ -35,6 +35,8 @@ MERROR_RETVAL retrofont_string_sz(
    MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
    size_t* p_out_w, size_t* p_out_h, uint8_t flags );
 
+void retrofont_free( MAUG_MHANDLE* p_font_h );
+
 #ifdef RETROFNT_C
 
 /* Provide this utility to all font API internal mechanisms. */
