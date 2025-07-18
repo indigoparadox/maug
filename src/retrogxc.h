@@ -127,6 +127,11 @@ void retrogxc_clear_cache() {
    retroflat_blit_t* bitmap = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
+   if( 0 == mdata_vector_ct( &gs_retrogxc_bitmaps ) ) {
+      /* Nothing to do! */
+      return;
+   }
+
    mdata_vector_lock( &gs_retrogxc_bitmaps );
 
    while( 0 < mdata_vector_ct( &gs_retrogxc_bitmaps ) ) {

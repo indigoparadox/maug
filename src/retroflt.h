@@ -2575,6 +2575,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  endif /* !RETROFLAT_NO_CLI */
 
+#  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Set default, so that this is never zero, to avoid division by zero. */
    if( 0 < args->screen_scale ) {
       debug_printf( 1, "setting screen scale to: %d", args->screen_scale );
@@ -2583,6 +2584,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       debug_printf( 1, "setting screen scale to default: 1" );
       g_retroflat_state->scale = 1;
    }
+#  endif /* !RETROFLAT_NO_CLI_SZ */
 
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)

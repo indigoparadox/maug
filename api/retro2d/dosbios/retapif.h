@@ -91,17 +91,6 @@ int retroflat_cli_rfm( const char* arg, struct RETROFLAT_ARGS* args ) {
 
 /* === */
 
-static
-int retroflat_cli_rfm_def( const char* arg, struct RETROFLAT_ARGS* args ) {
-   if( 0 == args->platform.screen_mode ) {
-      /* TODO: Autodetect best available? */
-      args->platform.screen_mode = RETROFLAT_SCREEN_MODE_VGA;
-   }
-   return RETROFLAT_OK;
-}
-
-/* === */
-
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -150,6 +139,11 @@ static MERROR_RETVAL retroflat_init_platform(
    debug_printf( 3, "timers initialized..." );
 
    /* Setup graphics. */
+
+   if( 0 == args->platform.screen_mode ) {
+      /* TODO: Autodetect best available? */
+      args->platform.screen_mode = RETROFLAT_SCREEN_MODE_VGA;
+   }
 
    memset( &r, 0, sizeof( r ) );
    r.x.ax = 0x0f00; /* Service: Get video mode. */

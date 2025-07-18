@@ -81,7 +81,7 @@ MERROR_RETVAL maug_add_arg(
 #define MAUG_CLI_ARG_ARG( arg, arg_sz, help, arg_callback ) \
    arg,
 
-static char g_maug_cli_args[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_SZ_MAX] = {
+static char SEG_FAR g_maug_cli_args[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_ARG )
    ""
 };
@@ -89,7 +89,7 @@ static char g_maug_cli_args[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_SZ_MAX] = {
 #define MAUG_CLI_ARG_SZ( arg, arg_sz, help, arg_callback ) \
    arg_sz,
 
-static int g_maug_cli_arg_sz[MAUG_CLI_ARG_LIST_SZ_MAX] = {
+static int SEG_FAR g_maug_cli_arg_sz[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_SZ )
    0
 };
@@ -97,19 +97,19 @@ static int g_maug_cli_arg_sz[MAUG_CLI_ARG_LIST_SZ_MAX] = {
 #define MAUG_CLI_ARG_HELP( arg, arg_sz, help, arg_callback ) \
    help,
 
-static char g_maug_cli_arg_help[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_HELP_SZ_MAX] = {
+static char SEG_FAR g_maug_cli_arg_help[MAUG_CLI_ARG_LIST_SZ_MAX][MAUG_CLI_ARG_HELP_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_HELP )
    ""
 };
 
 #define MAUG_CLI_ARG_DATA( arg, arg_sz, help, arg_callback ) NULL,
-static void* g_maug_cli_data[MAUG_CLI_ARG_LIST_SZ_MAX] = {
+static void* SEG_FAR g_maug_cli_data[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_DATA )
    NULL
 };
 
 #define MAUG_CLI_ARG_CALLED( arg, arg_sz, help, arg_callback ) 0,
-static int g_maug_cli_arg_called[MAUG_CLI_ARG_LIST_SZ_MAX] = {
+static int SEG_FAR g_maug_cli_arg_called[MAUG_CLI_ARG_LIST_SZ_MAX] = {
    MAUG_CLI( MAUG_CLI_ARG_CALLED )
    0
 };
