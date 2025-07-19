@@ -619,7 +619,7 @@ MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    /* Allocate the vectors for AST and ENV. */
  
    append_retval = mdata_vector_alloc(
-      &(parser->ast), sizeof( struct MLISP_AST_NODE ), MDATA_VECTOR_INIT_SZ );
+      &(parser->ast), sizeof( struct MLISP_AST_NODE ), 0 );
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
    }

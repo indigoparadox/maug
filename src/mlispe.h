@@ -2000,10 +2000,10 @@ MERROR_RETVAL mlisp_exec_init(
    ) {
       append_retval = mdata_vector_alloc(
          &(parser->env), sizeof( struct MLISP_ENV_NODE ),
-         MDATA_VECTOR_INIT_SZ );
+         0 );
    } else {
       append_retval = mdata_vector_alloc(
-         &(exec->env), sizeof( struct MLISP_ENV_NODE ), MDATA_VECTOR_INIT_SZ );
+         &(exec->env), sizeof( struct MLISP_ENV_NODE ), 0 );
    }
    /* TODO: Cleanup partially allocated object. */
    if( 0 > append_retval ) {

@@ -29,14 +29,6 @@
  */
 #define MDATA_VECTOR_FLAG_REFCOUNT 0x01
 
-#ifndef MDATA_VECTOR_INIT_SZ
-/**
- * \relates MDATA_VECTOR
- * \brief Default initial value for MDATA_VECTOR::ct_max.
- **/
-#  define MDATA_VECTOR_INIT_SZ 10
-#endif /* !MDATA_TRACE_LVL */
-
 #ifndef MDATA_VECTOR_INIT_STEP_SZ
 /**
  * \relates MDATA_VECTOR
@@ -288,6 +280,9 @@ MERROR_RETVAL mdata_table_get_void(
 #define mdata_vector_remove_last( v ) \
    (0 < mdata_vector_ct( v ) ? \
       (mdata_vector_remove( v, mdata_vector_ct( v ) - 1 )) : MERROR_OVERFLOW)
+
+#define mdata_vector_set_ct_step( v, step ) \
+   (v)->ct_step = step;
 
 /**
  * \relates MDATA_VECTOR
@@ -557,7 +552,7 @@ ssize_t mdata_vector_append(
       goto cleanup;
    }
 
-   mdata_vector_alloc( v, item_sz, MDATA_VECTOR_INIT_SZ );
+   mdata_vector_alloc( v, item_sz, v->ct_step );
 
    /* Lock the vector to work in it a bit. */
    mdata_vector_lock( v );
@@ -710,8 +705,16 @@ MERROR_RETVAL mdata_vector_alloc(
    if( (MAUG_MHANDLE)NULL == v->data_h ) {
       assert( 0 == v->ct_max );
 
-      v->ct_max = item_ct_init;
-      v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
+      if( 0 < item_ct_init ) {
+         debug_printf( MDATA_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
+            item_ct_init );
+         v->ct_step = item_ct_init;
+      } else if( 0 == v->ct_step ) {
+         debug_printf( MDATA_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
+            MDATA_VECTOR_INIT_STEP_SZ );
+         v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
+      }
+      v->ct_max = v->ct_step;
       debug_printf(
          MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
