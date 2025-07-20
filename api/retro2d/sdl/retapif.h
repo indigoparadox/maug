@@ -170,14 +170,12 @@ MERROR_RETVAL retroflat_init_platform(
     * those things can be scaled onto the scale buffer as the last step.
     */
    g_retroflat_state->buffer.surface = SDL_CreateRGBSurface(
-      0, g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    g_retroflat_state->platform.scale_rect.x = 0;
    g_retroflat_state->platform.scale_rect.y = 0;
-   g_retroflat_state->platform.scale_rect.w =
-      g_retroflat_state->screen_w * g_retroflat_state->scale;
-   g_retroflat_state->platform.scale_rect.h =
-      g_retroflat_state->screen_h * g_retroflat_state->scale;
+   g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
+   g_retroflat_state->platform.scale_rect.h = g_retroflat_state->screen_h;
    g_retroflat_state->platform.scale_buffer = 
 #        else
    /* Do not insert the scale buffer if there is no scaling! */
@@ -185,14 +183,8 @@ MERROR_RETVAL retroflat_init_platform(
 #        endif /* !RETROFLAT_NO_SDL1_SCALING */
 #     endif /* !RETROFLAT_OPENGL */
    SDL_SetVideoMode(
-      g_retroflat_state->screen_w
-#        ifndef RETROFLAT_NO_SDL1_SCALING
-         * g_retroflat_state->scale,
-#        endif /* !RETROFLAT_NO_SDL1_SCALING */
-      g_retroflat_state->screen_h
-#        ifndef RETROFLAT_NO_SDL1_SCALING
-         * g_retroflat_state->scale,
-#        endif /* !RETROFLAT_NO_SDL1_SCALING */
+      g_retroflat_state->screen_w,
+      g_retroflat_state->screen_h,
       info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
@@ -243,8 +235,8 @@ MERROR_RETVAL retroflat_init_platform(
    /* Create the main window. */
    g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      args->screen_w * g_retroflat_state->scale,
-      args->screen_h * g_retroflat_state->scale, RETROFLAT_WIN_FLAGS );
+      g_retroflat_state->screen_w,
+      g_retroflat_state->screen_h, RETROFLAT_WIN_FLAGS );
    maug_cleanup_if_null(
       SDL_Window*, g_retroflat_state->platform.window,
       RETROFLAT_ERROR_GRAPHICS );
@@ -261,7 +253,7 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->buffer.texture =
       SDL_CreateTexture( g_retroflat_state->buffer.renderer,
          SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-         g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+         g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
 
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
@@ -1262,8 +1254,10 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 void retroflat_resize_v() {
 #  if defined( RETROFLAT_API_SDL2 )
 
+   /*
    g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
    g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
+   */
 
    assert( NULL != g_retroflat_state->buffer.texture );
    SDL_DestroyTexture( g_retroflat_state->buffer.texture );

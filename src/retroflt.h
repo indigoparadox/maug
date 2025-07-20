@@ -2301,10 +2301,9 @@ static MERROR_RETVAL retrosnd_cli_rsl(
 static MERROR_RETVAL retroflat_cli_rfs(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
-   if( 0 < arg_c ) {
-      g_retroflat_state->scale = atoi( arg );
-      debug_printf( 3, "screen scale set to: %d",
-         g_retroflat_state->scale );
+   if( 1 < arg_c ) {
+      args->screen_scale = atoi( arg );
+      debug_printf( 3, "screen scale arg set to: %d", args->screen_scale );
    }
    return MERROR_OK;
 }
@@ -2614,8 +2613,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup intended screen size. */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   g_retroflat_state->screen_w = args->screen_w;
-   g_retroflat_state->screen_h = args->screen_h;
+   g_retroflat_state->screen_w = args->screen_w * args->screen_scale;
+   g_retroflat_state->screen_h = args->screen_h * args->screen_scale;
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
    /* == Platform-Specific Init == */
@@ -2624,8 +2623,11 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_cleanup_if_not_ok();
 
    debug_printf( 3, "screen initialized with: " SIZE_T_FMT "x" SIZE_T_FMT
-      " pixels with " SIZE_T_FMT " colors",
-      retroflat_screen_w(), retroflat_screen_h(), retroflat_screen_colors() );
+      " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
+      " with " SIZE_T_FMT " colors",
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      retroflat_screen_colors() );
 
    /* Setup the refresh grid, if requested, only after screen space has been
     * determined by the platform!
