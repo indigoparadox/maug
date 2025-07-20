@@ -2348,6 +2348,8 @@ static MERROR_RETVAL retroflat_cli_rfw(
    if( 0 > arg_c ) {
       if( 0 == args->screen_w ) {
          args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
+         debug_printf( 1, "setting arg screen_w to default: " SIZE_T_FMT,
+            args->screen_w );
       }
    } else if(
       0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 )
@@ -2355,6 +2357,8 @@ static MERROR_RETVAL retroflat_cli_rfw(
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
+         debug_printf( 1, "setting arg screen_w to: " SIZE_T_FMT,
+            args->screen_w );
    }
    return MERROR_OK;
 }
@@ -2365,6 +2369,8 @@ static MERROR_RETVAL retroflat_cli_rfh(
    if( 0 > arg_c ) {
       if( 0 == args->screen_h ) {
          args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
+         debug_printf( 1, "setting arg screen_h to default: " SIZE_T_FMT,
+            args->screen_h );
       }
    } else if(
       0 == strncmp( MAUG_CLI_SIGIL "rfh", arg, MAUG_CLI_SIGIL_SZ + 4 )
@@ -2372,6 +2378,9 @@ static MERROR_RETVAL retroflat_cli_rfh(
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
+      args->screen_w = atoi( arg );
+         debug_printf( 1, "setting arg screen_h to: " SIZE_T_FMT,
+            args->screen_h );
    }
    return MERROR_OK;
 }
@@ -2613,8 +2622,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    /* Setup intended screen size. */
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
-   g_retroflat_state->screen_w = args->screen_w * args->screen_scale;
-   g_retroflat_state->screen_h = args->screen_h * args->screen_scale;
+   g_retroflat_state->screen_w = args->screen_w *
+      g_retroflat_state->scale;
+   g_retroflat_state->screen_h = args->screen_h *
+      g_retroflat_state->scale;
 #  endif /* RETROFLAT_NO_CLI_SZ */
 
    /* == Platform-Specific Init == */

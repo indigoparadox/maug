@@ -192,7 +192,7 @@ static LRESULT CALLBACK WndProc(
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             debug_printf( 1, "retroflat: creating window buffer ("
                SIZE_T_FMT " x " SIZE_T_FMT ")...",
-               g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+               g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
             /* Do this in its own function so a one-time setup isn't using stack
             * in our WndProc!
             */
@@ -256,6 +256,7 @@ static LRESULT CALLBACK WndProc(
 
 #        ifdef RETROFLAT_WING
          if( (WinGStretchBlt_t)NULL != g_w.WinGStretchBlt ) {
+            /* TODO: Are these stretch values right? */
             if( !g_w.WinGStretchBlt(
                hdc_paint,
                0, 0,
@@ -549,8 +550,8 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_WING */
 
    /* Get the *real* size of the window, including titlebar. */
-   wr.right = g_retroflat_state->screen_w * g_retroflat_state->scale;
-   wr.bottom = g_retroflat_state->screen_h * g_retroflat_state->scale;
+   wr.right = g_retroflat_state->screen_w;
+   wr.bottom = g_retroflat_state->screen_h;
 #     ifndef RETROFLAT_API_WINCE
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */
@@ -677,6 +678,7 @@ MERROR_RETVAL retroflat_init_platform(
 
 #     ifdef RETROFLAT_API_WINCE
    /* Force screen size. */
+   /* XXX: Move this to RETROFLAT_DEFAULT_SCREEN_W/H in Makefile! */
    GetClientRect( g_retroflat_state->platform.window, &wr );
    g_retroflat_state->screen_w = wr.right - wr.left;
    g_retroflat_state->screen_h = wr.bottom - wr.top;
