@@ -85,6 +85,11 @@ static MERROR_RETVAL retroflat_init_platform(
          (((rd) & 0xff) << 16) | (((gd) & 0xff) << 8) | ((bd) & 0xff);
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_XLIB )
 
+   /* TODO: Split out into input API. */
+   XSelectInput(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.window, ExposureMask | KeyPressMask );
+
 cleanup:
 
    return retval;
@@ -270,8 +275,11 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-   /* TODO */
-#  pragma message( "warning: destroy_bitmap not implemented" )
+   /* This should also automatically free bmp->bits. */
+   XDestroyImage( bmp->img );
+   bmp->img = NULL;
+   bmp->bits = NULL;
+   bmp->bits_sz = 0;
 
 }
 
@@ -310,6 +318,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
       DefaultDepth(
          g_retroflat_state->platform.display,
          g_retroflat_state->platform.screen ) );
+   XPutImage(
+      g_retroflat_state->platform.display,
+      target_pxm,
+      DefaultGC(
+         g_retroflat_state->platform.display,
+         g_retroflat_state->platform.screen ),
+      target->img,
+      0, 0, 0, 0, t_w, t_h );
+
+   /* Replace the old target image with the newly-blitted target pixmap. */
 
    if( 0 == target_pxm ) {
       error_printf( "could not create target pixmap!" );

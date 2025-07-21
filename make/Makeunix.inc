@@ -260,7 +260,7 @@ $$(error could not find pkg-config for x11!)
 endif
 
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
-	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/null \
+	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/xlib \
 	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
 
