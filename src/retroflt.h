@@ -2348,7 +2348,7 @@ static MERROR_RETVAL retroflat_cli_rfw(
    if( 0 > arg_c ) {
       if( 0 == args->screen_w ) {
          args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
-         debug_printf( 1, "setting arg screen_w to default: " SIZE_T_FMT,
+         debug_printf( 1, "setting arg screen_w to default %d:",
             args->screen_w );
       }
    } else if(
@@ -2357,7 +2357,7 @@ static MERROR_RETVAL retroflat_cli_rfw(
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
-         debug_printf( 1, "setting arg screen_w to: " SIZE_T_FMT,
+         debug_printf( 1, "setting arg screen_w to: %d",
             args->screen_w );
    }
    return MERROR_OK;
@@ -2369,7 +2369,7 @@ static MERROR_RETVAL retroflat_cli_rfh(
    if( 0 > arg_c ) {
       if( 0 == args->screen_h ) {
          args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
-         debug_printf( 1, "setting arg screen_h to default: " SIZE_T_FMT,
+         debug_printf( 1, "setting arg screen_h to default: %d",
             args->screen_h );
       }
    } else if(
@@ -2379,7 +2379,7 @@ static MERROR_RETVAL retroflat_cli_rfh(
    } else {
       args->screen_h = atoi( arg );
       args->screen_w = atoi( arg );
-         debug_printf( 1, "setting arg screen_h to: " SIZE_T_FMT,
+         debug_printf( 1, "setting arg screen_h to: %d",
             args->screen_h );
    }
    return MERROR_OK;

@@ -710,7 +710,7 @@ MERROR_RETVAL mdata_vector_alloc(
             item_ct_init );
          v->ct_step = item_ct_init;
       } else if( 0 == v->ct_step ) {
-         debug_printf( MDATA_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
+         debug_printf( MDATA_TRACE_LVL, "setting step sz: %d",
             MDATA_VECTOR_INIT_STEP_SZ );
          v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
       }

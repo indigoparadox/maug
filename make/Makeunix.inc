@@ -48,6 +48,7 @@ endif
 
 OBJDIR_GCC_UNIX_ALLEGRO=obj/gcc-$(shell uname -s)-allegro
 OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
+OBJDIR_GCC_UNIX_XLIB=obj/gcc-$(shell uname -s)-xlib
 
 # ---
 
@@ -222,10 +223,11 @@ CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
 
-LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs) -lasound
+LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs)
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_GCC_UNIX_GLUT += -lasound
 endif
 
 $(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
@@ -239,6 +241,47 @@ $$(OBJDIR_GCC_UNIX_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_OPT_GCC)
 
 CLEAN_TARGETS += $(1).glut
+
+endef
+
+# ---
+
+# Target: UNIX xlib API
+# Variables:
+# Parameters:
+# 1. Target name. Will have ".xlib" appended to it.
+# 2. Source dependencies. Used for e.g. dynamically generated headers.
+# Only #1 will be added to CLEAN_TARGETS!
+define TGTUNIXXLIB
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config x11 --libs 2>/dev/null)","")
+$$(error could not find pkg-config for x11!)
+endif
+
+CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/null \
+	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
+
+LDFLAGS_GCC_UNIX_XLIB := $(shell pkg-config x11 --libs)
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/sound/null
+	LDFLAGS_GCC_UNIX_XLIB += -lasound
+endif
+
+$(1).xlib: $$(addprefix $$(OBJDIR_GCC_UNIX_XLIB)/,$$(subst .c,.o,$$(C_FILES)))
+	$$(CC_GCC) -o $$@ $$^ \
+		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_XLIB)
+
+$$(OBJDIR_GCC_UNIX_XLIB)/%.o: %.c | $$(MAUG_DEPS)
+	$$(MD) $$(dir $$@)
+	$$(CC_GCC) -c -o $$@ $$< \
+		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_XLIB) \
+		$$(CFLAGS_OPT_GCC)
+
+CLEAN_TARGETS += $(1).xlib
 
 endef
 
