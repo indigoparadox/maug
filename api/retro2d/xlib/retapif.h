@@ -8,6 +8,7 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
    struct timespec spec;
    time_t tm;
+   int screen_w, screen_h;
 
    /* TODO: Add some flexibility for simulating lower-color platforms. */
    g_retroflat_state->screen_colors = 16;
@@ -22,12 +23,20 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.screen = DefaultScreen(
       g_retroflat_state->platform.display );
 
+   screen_w = DisplayWidth(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.screen );
+   screen_h = DisplayHeight(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.screen );
+
    g_retroflat_state->platform.window = XCreateSimpleWindow(
       g_retroflat_state->platform.display,
       RootWindow(
          g_retroflat_state->platform.display,
          g_retroflat_state->platform.screen ),
-      100, 100,
+      (screen_w - g_retroflat_state->screen_w) / 2,
+      (screen_h - g_retroflat_state->screen_h) / 2,
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h,
       1,
@@ -196,17 +205,34 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   XPutImage(
-      g_retroflat_state->platform.display,
-      g_retroflat_state->platform.window,
-      DefaultGC(
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      XPutImage(
          g_retroflat_state->platform.display,
-         g_retroflat_state->platform.screen ),
-      g_retroflat_state->buffer.img,
-      0, 0, 0, 0,
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+         g_retroflat_state->platform.window,
+         DefaultGC(
+            g_retroflat_state->platform.display,
+            g_retroflat_state->platform.screen ),
+         g_retroflat_state->buffer.img,
+         0, 0, 0, 0,
+         g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+   }
 
    return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _retroflat_load_bitmap_px_cb(
+   void* data, uint8_t px, int32_t x, int32_t y,
+   void* header_info, uint8_t flags
+) {
+   struct RETROFLAT_BITMAP* b = (struct RETROFLAT_BITMAP*)data;
+
+   if( MFMT_PX_FLAG_NEW_LINE != (MFMT_PX_FLAG_NEW_LINE & flags) ) {
+      XPutPixel( b->img, x, y, g_retroflat_state->palette[px] );
+   }
+
+   return MERROR_OK;
 }
 
 /* === */
@@ -216,6 +242,9 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    char filename_path[RETROFLAT_PATH_MAX + 1];
    MERROR_RETVAL retval = MERROR_OK;
+   mfile_t bmp_file;
+   struct MFMT_STRUCT_BMPFILE header_bmp;
+   uint8_t bmp_flags = 0;
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -224,8 +253,59 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   /* TODO */
-#  pragma message( "warning: load_bitmap not implemented" )
+   bmp_out->flags = flags;
+
+   /* Open the bitmap file. */
+   retval = mfile_open_read( filename_path, &bmp_file );
+   maug_cleanup_if_not_ok();
+
+   /* mfmt file detection system. */
+   maug_mzero( &header_bmp, sizeof( struct MFMT_STRUCT_BMPFILE ) );
+   header_bmp.magic[0] = 'B';
+   header_bmp.magic[1] = 'M';
+   header_bmp.info.sz = 40;
+
+   retval = mfmt_read_bmp_header(
+      (struct MFMT_STRUCT*)&header_bmp,
+      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
+   maug_cleanup_if_not_ok();
+
+   /* Create buffer and XImage struct. */
+   bmp_out->bits = calloc(
+      header_bmp.info.width * header_bmp.info.height, 4 );
+   if( NULL == bmp_out->bits ) {
+      error_printf( "could not allocate bitmap bits!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   bmp_out->img = XCreateImage(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.visual, 
+      DefaultDepth(
+         g_retroflat_state->platform.display,
+         g_retroflat_state->platform.screen ),
+      ZPixmap,
+      0,
+      bmp_out->bits,
+      header_bmp.info.width,
+      header_bmp.info.height,
+      32, 0 );
+   if( NULL == bmp_out->img ) {
+      error_printf( "could not create bitmap image!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   retval = mfmt_read_bmp_px_cb(
+      (struct MFMT_STRUCT*)&header_bmp,
+      &bmp_file,
+      header_bmp.px_offset,
+      mfile_get_sz( &bmp_file ) - header_bmp.px_offset,
+      bmp_flags,
+      _retroflat_load_bitmap_px_cb,
+      bmp_out );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 
@@ -242,6 +322,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+
+   bmp_out->flags = flags;
 
    /* Create the buffer. */
    bmp_out->bits_sz = w * h * 4;
@@ -292,7 +374,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    Pixmap target_pxm = 0;
-   size_t t_w, t_h;
+   size_t t_w, t_h, x, y;
+   uint32_t px = 0;
 
    assert( NULL != src );
 
@@ -307,50 +390,65 @@ MERROR_RETVAL retroflat_blit_bitmap(
       goto cleanup;
    }
 
-   t_w = target->img->width;
-   t_h = target->img->height;
+   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+      /* Bitmap is opaque, so do this the relatively fast way. */
 
-   /* Convert the target into a client pixmap so we can blit to it. */
-   target_pxm = XCreatePixmap(
-      g_retroflat_state->platform.display,
-      g_retroflat_state->platform.window,
-      t_w, t_h,
-      DefaultDepth(
+      t_w = target->img->width;
+      t_h = target->img->height;
+
+      /* Convert the target into a client pixmap so we can blit to it. */
+      target_pxm = XCreatePixmap(
          g_retroflat_state->platform.display,
-         g_retroflat_state->platform.screen ) );
-   XPutImage(
-      g_retroflat_state->platform.display,
-      target_pxm,
-      DefaultGC(
+         g_retroflat_state->platform.window,
+         t_w, t_h,
+         DefaultDepth(
+            g_retroflat_state->platform.display,
+            g_retroflat_state->platform.screen ) );
+      XPutImage(
          g_retroflat_state->platform.display,
-         g_retroflat_state->platform.screen ),
-      target->img,
-      0, 0, 0, 0, t_w, t_h );
+         target_pxm,
+         DefaultGC(
+            g_retroflat_state->platform.display,
+            g_retroflat_state->platform.screen ),
+         target->img,
+         0, 0, 0, 0, t_w, t_h );
 
-   /* Replace the old target image with the newly-blitted target pixmap. */
+      /* Replace the old target image with the newly-blitted target pixmap. */
 
-   if( 0 == target_pxm ) {
-      error_printf( "could not create target pixmap!" );
-      retval = MERROR_GUI;
-      goto cleanup;
+      if( 0 == target_pxm ) {
+         error_printf( "could not create target pixmap!" );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
+
+      /* Perform the actual blit. */
+      XPutImage(
+         g_retroflat_state->platform.display,
+         target_pxm,
+         DefaultGC(
+            g_retroflat_state->platform.display,
+            g_retroflat_state->platform.screen ),
+         src->img,
+         s_x, s_y, d_x, d_y, w, h );
+
+      /* Replace the old target image with the newly-blitted target pixmap. */
+      XDestroyImage( target->img );
+      target->img = XGetImage(
+         g_retroflat_state->platform.display,
+         target_pxm,
+         0, 0, t_w, t_h, AllPlanes, ZPixmap );
+   } else {
+      /* Bitmap is transparent, so go pixel-by-pixel. */
+      for( y = 0 ; h > y ; y++ ) {
+         for( x = 0 ; w > x ; x++ ) {
+            px = XGetPixel( src->img, s_x + x, s_y + y );
+            if( px ) {
+               /* Non-transparent pixel! */
+               XPutPixel( target->img, d_x + x, d_y + y, px );
+            }
+         }
+      }
    }
-
-   /* Perform the actual blit. */
-   XPutImage(
-      g_retroflat_state->platform.display,
-      target_pxm,
-      DefaultGC(
-         g_retroflat_state->platform.display,
-         g_retroflat_state->platform.screen ),
-      src->img,
-      s_x, s_y, d_x, d_y, w, h );
-
-   /* Replace the old target image with the newly-blitted target pixmap. */
-   XDestroyImage( target->img );
-   target->img = XGetImage(
-      g_retroflat_state->platform.display,
-      target_pxm,
-      0, 0, t_w, t_h, AllPlanes, ZPixmap );
 
 cleanup:
 

@@ -44,6 +44,13 @@
 
 #define MFMT_PX_FLAG_INVERT_Y 0x01
 
+/**
+ * \brief Flag for mfmt_read_bmp_px_t() indicating a new line has started.
+ *
+ * \warning If this flag is set, no pixel data is provided!
+ */
+#define MFMT_PX_FLAG_NEW_LINE 0x02
+
 #ifndef MFMT_TRACE_BMP_LVL
 #  define MFMT_TRACE_BMP_LVL 0
 #endif /* !MFMT_TRACE_BMP_LVL */
@@ -123,6 +130,16 @@ struct MFMT_STRUCT_BMPFILE {
    struct MFMT_STRUCT_BMPINFO info;
 };
 
+/**
+ * \brief Utility struct for mfmt_read_bmp_px() to keep track out of output
+ *        bitmap info.
+ */
+struct MFMT_PX_OUT_STAT {
+   off_t byte_idx;
+   uint8_t SEG_FAR* px;
+   off_t px_sz;
+};
+
 /*! \} */ /* maug_fmt_bmp */
 
 /**
@@ -162,6 +179,14 @@ typedef MERROR_RETVAL (*mfmt_read_px_cb)(
    uint8_t flags );
 
 /**
+ * \brief Parameter for mfmt_read_px_cb() functions to process individual
+ *        pixel data.
+ */
+typedef MERROR_RETVAL (*mfmt_read_1px_cb)(
+   void* data, uint8_t px, int32_t x, int32_t y,
+   void* header_info, uint8_t flags );
+
+/**
  * \brief Decode RLE-encoded data from an input file into a memory buffer.
  */
 MERROR_RETVAL mfmt_decode_rle(
@@ -176,6 +201,22 @@ MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
    mfile_t* p_file_in, uint32_t file_offset, off_t file_sz,
    uint8_t flags );
+
+/**
+ * \brief Read \ref mfmt_bitmap header and return a handle to the bitmap's
+ *        decompressed pixel data if it is compressed, or NULL if it is not.
+ */
+MERROR_RETVAL mfmt_get_px_ptr(
+   struct MFMT_STRUCT_BMPINFO* header_bmp_info, mfile_t* p_bmp_in,
+   size_t px_offset, MAUG_MHANDLE* p_px_h );
+
+/**
+ * \brief Read \ref mfmt_bitmap pixels and process them using a callback.
+ */
+MERROR_RETVAL mfmt_read_bmp_px_cb(
+   struct MFMT_STRUCT* header,
+   mfile_t* p_file_in, uint32_t px_offset, off_t file_sz, uint8_t flags,
+   mfmt_read_1px_cb px_cb, void* px_cb_data );
 
 /**
  * \brief Read \ref mfmt_bitmap pixels into an 8-bit memory bitmap.
@@ -279,10 +320,6 @@ MERROR_RETVAL mfmt_decode_rle(
       retval = p_file_in->read_byte( p_file_in, &byte_buffer );
       maug_cleanup_if_not_ok();
 
-      /*
-      mfile_cread_at(
-         p_file_in, &(byte_buffer), file_offset + in_byte_cur++ );
-      */
       debug_printf( MFMT_TRACE_RLE_LVL, "in byte " OFF_T_FMT
          ": 0x%02x, out byte " OFF_T_FMT ", line px: %u",
          in_byte_cur, byte_buffer, out_byte_cur, line_px_written );
@@ -441,6 +478,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
    uint32_t file_offset, off_t file_sz, uint8_t* p_flags
@@ -583,6 +622,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
    mfile_t* p_file_in, uint32_t file_offset, off_t file_sz, uint8_t flags
@@ -617,31 +658,16 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mfmt_read_bmp_px(
-   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, off_t px_sz,
-   mfile_t* p_file_in, uint32_t file_offset, off_t file_sz, uint8_t flags
+/* === */
+
+MERROR_RETVAL mfmt_get_px_ptr(
+   struct MFMT_STRUCT_BMPINFO* header_bmp_info, mfile_t* p_bmp_in,
+   size_t px_offset, MAUG_MHANDLE* p_px_h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
-   struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
-   int32_t x = 0,
-      y = 0,
-      width_mod_4 = 0;
-   off_t i = 0,
-      byte_in_idx = 0,
-      byte_out_idx = 0,
-      bit_idx = 0;
-   uint8_t byte_buffer = 0,
-      byte_mask = 0,
-      pixel_buffer = 0;
-   MAUG_MHANDLE decomp_buffer_h = (MAUG_MHANDLE)NULL;
-   mfile_t file_decomp;
-   mfile_t *p_file_bmp = p_file_in;
 
    /* Check header for validation and info on how to decode pixels. */
 
-   mfmt_bmp_check_header();
-  
    if( 0 == header_bmp_info->height ) {
       error_printf( "bitmap height is 0!" );
       retval = MERROR_FILE;
@@ -666,31 +692,66 @@ MERROR_RETVAL mfmt_read_bmp_px(
       goto cleanup;
    }
 
-   maug_mzero( &file_decomp, sizeof( mfile_t ) );
    if(
       MFMT_BMP_COMPRESSION_RLE4 == header_bmp_info->compression
    ) {
       debug_printf( 1, "allocating decompression buffer..." );
 
       /* Create a temporary memory buffer and decompress into it. */
-      decomp_buffer_h = maug_malloc(
+      *p_px_h = maug_malloc(
          header_bmp_info->width,
          header_bmp_info->height );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, decomp_buffer_h );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_px_h );
 
       retval = mfmt_decode_rle(
-         p_file_in, file_offset, header_bmp_info->img_sz,
+         p_bmp_in, px_offset, header_bmp_info->img_sz,
          header_bmp_info->width,
-         decomp_buffer_h,
-         header_bmp_info->width *
-            header_bmp_info->height,
+         *p_px_h,
+         header_bmp_info->width * header_bmp_info->height,
          MFMT_DECOMP_FLAG_4BIT );
       maug_cleanup_if_not_ok();
+   }
+   
+cleanup:
 
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfmt_read_bmp_px_cb(
+   struct MFMT_STRUCT* header,
+   mfile_t* p_file_in, uint32_t px_offset, off_t file_sz, uint8_t flags,
+   mfmt_read_1px_cb px_cb, void* px_cb_data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
+   struct MFMT_STRUCT_BMPFILE* header_bmp_file = NULL;
+   int32_t x = 0,
+      y = 0,
+      width_mod_4 = 0;
+   off_t i = 0,
+      byte_in_idx = 0,
+      bit_idx = 0;
+   uint8_t byte_buffer = 0,
+      byte_mask = 0,
+      pixel_buffer = 0;
+   MAUG_MHANDLE decomp_buffer_h = (MAUG_MHANDLE)NULL;
+   mfile_t file_decomp;
+   mfile_t *p_file_bmp = p_file_in;
+
+   mfmt_bmp_check_header();
+  
+   maug_mzero( &file_decomp, sizeof( mfile_t ) );
+
+   retval = mfmt_get_px_ptr(
+      header_bmp_info, p_file_in, px_offset, &decomp_buffer_h );
+   maug_cleanup_if_not_ok();
+
+   if( (MAUG_MHANDLE)NULL != decomp_buffer_h ) {
       retval = mfile_lock_buffer(
          decomp_buffer_h,
-         header_bmp_info->width *
-            header_bmp_info->height,
+         header_bmp_info->width * header_bmp_info->height,
          &file_decomp );
       maug_cleanup_if_not_ok();
 
@@ -702,19 +763,15 @@ MERROR_RETVAL mfmt_read_bmp_px(
    width_mod_4 = header_bmp_info->width % 4;
    maug_cleanup_if_ne( (int32_t)0, width_mod_4, S32_FMT, MERROR_GUI );
 
-   #define mfmt_read_bmp_px_out_idx() \
-      (MFMT_PX_FLAG_INVERT_Y == (MFMT_PX_FLAG_INVERT_Y & flags) ? \
-      ((header_bmp_info->height - y - 1) * \
-         header_bmp_info->width) : \
-      ((y) * header_bmp_info->width))
-
    y = header_bmp_info->height - 1;
-   byte_out_idx = mfmt_read_bmp_px_out_idx();
+   retval = px_cb(
+      px_cb_data, 0, x, y, header_bmp_info, flags | MFMT_PX_FLAG_NEW_LINE );
+   maug_cleanup_if_not_ok();
    if( p_file_bmp == p_file_in ) {
       /* Only seek to offset if we're using the original (not translated from
        * RLE or something.
        */
-      p_file_bmp->seek( p_file_bmp, file_offset );
+      p_file_bmp->seek( p_file_bmp, px_offset );
    }
    while( 0 <= y ) {
       /* Each iteration is a single, fresh pixel. */
@@ -722,18 +779,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
 
       debug_printf( MFMT_TRACE_BMP_LVL,
          "byte in: " OFF_T_FMT " (" OFF_T_FMT 
-            "), bit " OFF_T_FMT ", y: " U32_FMT
-            ", x: " U32_FMT "), byte out: " OFF_T_FMT,
-         byte_in_idx, file_sz, bit_idx, y, x, byte_out_idx );
-
-      /* Buffer bounds check. */
-      if( px_sz <= byte_out_idx ) {
-         error_printf(
-            "byte " OFF_T_FMT " outside of " OFF_T_FMT
-            " pixel buffer!", byte_out_idx, px_sz );
-         retval = MERROR_OVERFLOW;
-         goto cleanup;
-      }
+            "), bit " OFF_T_FMT ", y: " U32_FMT ", x: " U32_FMT ")",
+         byte_in_idx, file_sz, bit_idx, y, x );
 
       /* Byte finished check. */
       if( 0 == bit_idx ) {
@@ -750,9 +797,6 @@ MERROR_RETVAL mfmt_read_bmp_px(
          /* TODO: Bad cursor? */
          retval = p_file_bmp->read_byte( p_file_bmp, &byte_buffer );
          maug_cleanup_if_not_ok();
-         /*
-         mfile_cread( p_file_bmp, &(byte_buffer) );
-         */
          byte_in_idx++;
 
          /* Start at 8 bits from the right (0 from the left). */
@@ -783,12 +827,8 @@ MERROR_RETVAL mfmt_read_bmp_px(
          byte_mask, bit_idx, pixel_buffer );
 
       /* Place the pixel buffer at the X/Y in the grid. */
-      debug_printf( MFMT_TRACE_BMP_LVL,
-         "writing byte " OFF_T_FMT " (x: " S32_FMT
-         ", y: " S32_FMT ")",
-         byte_out_idx, x, y );
-      px[byte_out_idx] = pixel_buffer;
-      byte_out_idx++;
+      retval = px_cb( px_cb_data, pixel_buffer, x, y, header_bmp_info, flags );
+      maug_cleanup_if_not_ok();
 
       /* Increment the bits position byte mask by the bpp so it's pointing
        * to the next pixel in the bitmap for the next go around.
@@ -804,17 +844,17 @@ MERROR_RETVAL mfmt_read_bmp_px(
          x = 0;
          while( byte_in_idx % 4 != 0 ) {
             byte_in_idx++;
-            p_file_bmp->seek( p_file_bmp, file_offset + byte_in_idx );
+            p_file_bmp->seek( p_file_bmp, px_offset + byte_in_idx );
          }
 
          /* Move to the next row of the output. */
-         byte_out_idx = mfmt_read_bmp_px_out_idx();
+         retval = px_cb(
+            px_cb_data, 0, x, y, header_bmp_info,
+            flags | MFMT_PX_FLAG_NEW_LINE );
+         maug_cleanup_if_not_ok();
 
          /* TODO Get past the padding. */
 
-         debug_printf( MFMT_TRACE_BMP_LVL,
-            "new row starting at byte_out_idx: " OFF_T_FMT,
-            byte_out_idx );
       }
    }
 
@@ -827,6 +867,71 @@ cleanup:
       debug_printf( 1, "freeing decomp buffer %p...", decomp_buffer_h );
       maug_mfree( decomp_buffer_h );
    }
+
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL _mfmt_read_bmp_px_cb_px(
+   void* data, uint8_t px, int32_t x, int32_t y,
+   void* header_info, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MFMT_PX_OUT_STAT* p_out = (struct MFMT_PX_OUT_STAT*)data;
+   struct MFMT_STRUCT_BMPINFO* header_bmp_info =
+      (struct MFMT_STRUCT_BMPINFO*)header_info;
+
+   /* Buffer bounds check. */
+   if( p_out->px_sz < p_out->byte_idx ) {
+      error_printf(
+         "byte " OFF_T_FMT " outside of " OFF_T_FMT
+         " pixel buffer!", p_out->byte_idx, p_out->px_sz );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   if( MFMT_PX_FLAG_NEW_LINE == (MFMT_PX_FLAG_NEW_LINE & flags) ) {
+      /* Set the output index to a new line. */
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "new row starting at byte_out_idx: " OFF_T_FMT,
+         p_out->byte_idx );
+      p_out->byte_idx =
+         (MFMT_PX_FLAG_INVERT_Y == (MFMT_PX_FLAG_INVERT_Y & flags) ?
+            ((header_bmp_info->height - y - 1) *
+               header_bmp_info->width) :
+         ((y) * header_bmp_info->width));
+
+   } else {
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "writing byte " OFF_T_FMT " (x: " S32_FMT
+         ", y: " S32_FMT ")",
+         p_out->byte_idx, x, y );
+      p_out->px[p_out->byte_idx] = px;
+      p_out->byte_idx++;
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfmt_read_bmp_px(
+   struct MFMT_STRUCT* header, uint8_t SEG_FAR* px, off_t px_sz,
+   mfile_t* p_file_in, uint32_t px_offset, off_t file_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MFMT_PX_OUT_STAT out;
+
+   maug_mzero( &out, sizeof( struct MFMT_PX_OUT_STAT ) );
+   out.px = px;
+   out.px_sz = px_sz;
+
+   retval = mfmt_read_bmp_px_cb(
+      header, p_file_in, px_offset, file_sz, flags,
+      _mfmt_read_bmp_px_cb_px, &out );
 
    return retval;
 }
