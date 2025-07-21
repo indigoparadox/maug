@@ -309,6 +309,8 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 cleanup:
 
+   mfile_close( &bmp_file );
+
    return retval;
 }
 
