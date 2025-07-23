@@ -3,6 +3,11 @@
 #define RETPLTF_H
 
 static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
+#ifdef RETROFLAT_MAC68K_COLORQD
+   if( 2 < g_retroflat_state->screen_colors ) {
+      RGBForeColor( &(g_retroflat_state->palette[color_idx]) );
+   } else
+#endif /* RETROFLAT_MAC68K_COLORQD */
    if( RETROFLAT_COLOR_BLACK == color_idx ) {
       PenPat( &(qd.black) );
    } else if( RETROFLAT_COLOR_GRAY == color_idx ) {
@@ -35,6 +40,7 @@ static MERROR_RETVAL retroflat_init_platform(
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
    maug_cleanup_if_not_ok_msg( "title string too long!" );
 
+#ifdef RETROFLAT_MAC68K_COLORQD
    /* Detect if Color QuickDraw is present. */
    if(
       NGetTrapAddress( _Gestalt, ToolTrap ) !=
@@ -44,8 +50,11 @@ static MERROR_RETVAL retroflat_init_platform(
    ) {
       g_retroflat_state->screen_colors = 16;
    } else {
+#endif /* RETROFLAT_MAC68K_COLORQD */
       g_retroflat_state->screen_colors = 2;
+#ifdef RETROFLAT_MAC68K_COLORQD
    }
+#endif /* RETROFLAT_MAC68K_COLORQD */
 
    /* Create the window. */
    /* TODO: Set X/Y from args? */
@@ -57,6 +66,20 @@ static MERROR_RETVAL retroflat_init_platform(
       retval = MERROR_GUI;
       goto cleanup;
    }
+
+#ifdef RETROFLAT_MAC68K_COLORQD
+   if( 2 < g_retroflat_state->screen_colors ) {
+#     define RETROFLAT_COLOR_TABLE_CQD( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+         g_retroflat_state->palette[idx].red = (rd << 8) | (rd); \
+         g_retroflat_state->palette[idx].green = (gd << 8) | (gd); \
+         g_retroflat_state->palette[idx].blue = (bd << 8 ) | (bd); \
+         debug_printf( 1, "init color " #name_l ": %d, %d, %d", \
+            g_retroflat_state->palette[idx].red, \
+            g_retroflat_state->palette[idx].green, \
+            g_retroflat_state->palette[idx].blue );
+      RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CQD )
+   }
+#endif /* RETROFLAT_COLOR_TABLE_CQD */
 
 cleanup:
 

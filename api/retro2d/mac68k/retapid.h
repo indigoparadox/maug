@@ -96,7 +96,7 @@ struct RETROFLAT_BITMAP {
  */
 
 /*! \brief Example, should be replaced with platform-specific type. */
-typedef int RETROFLAT_COLOR_DEF;
+typedef RGBColor RETROFLAT_COLOR_DEF;
 
 /*! \} */ /* maug_retroflt_color */
 
