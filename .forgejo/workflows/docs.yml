@@ -14,8 +14,9 @@ jobs:
       run: |
         apt update && apt install -y git
 
-    - name: Install OpenSSH and setup keys
-      uses: ./actions/openssh
+    - uses: ./actions/openssh
+      with:
+        deploy-key: "${{ secrets.DEPLOYKEY }}"
 
     - name: Checkout actions
       run: |
