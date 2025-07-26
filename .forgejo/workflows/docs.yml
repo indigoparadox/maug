@@ -14,13 +14,13 @@ jobs:
       run: |
         apt update && apt install -y git
 
-    - uses: ./actions/openssh
-      with:
-        deploy-key: "${{ secrets.DEPLOYKEY }}"
-
     - name: Checkout actions
       run: |
         git clone ${{ github.server_url }}/indigoparadox/actions actions
+
+    - uses: ./actions/openssh
+      with:
+        deploy-key: "${{ secrets.DEPLOYKEY }}"
 
     - name: Checkout maug
       run: |
