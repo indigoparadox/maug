@@ -12,7 +12,10 @@ jobs:
     steps:
     - name: Install prerequisites
       run: |
-        apt update && apt install -y git openssh-client
+        apt update && apt install -y git
+
+    - name: Run doxygen for Interfinity Dynamics
+      uses: ./actions/openssh
 
     - name: Checkout actions
       run: |
