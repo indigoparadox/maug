@@ -28,10 +28,10 @@ jobs:
     - name: Push docs to Interfinity Dynamics
       uses: ./actions/pages
       with:
-        docs-remote-repo: ssh://forgejo.interfinitydynamics.info:22022/indigoparadox/maug
+        docs-remote-repo: ssh://git@forgejo.interfinitydynamics.info:22022/indigoparadox/maug
 
     - name: Push docs to Codeberg
       uses: ./actions/pages
       with:
-        docs-remote-repo: ssh://codeberg.org/indigoparadox/maug
+        docs-remote-repo: ssh://git@codeberg.org/indigoparadox/maug
 
