@@ -52,6 +52,9 @@ $$(OBJDIR_GCC_MAC_M68K)/icon.r
 	sed -i "s|zzz|$$(MAUG_MAC_CREATOR)|g" $$@
 	cat $$(OBJDIR_GCC_MAC_M68K)/icon.r >> $$@
 
+# Note that this will move files in e.g. "assets/stubs/" to "assets/", to
+# facilitate e.g. replacing fonts with SUB defs.
+
 $$(OBJDIR_GCC_MAC_M68K)/$(1).APPL \
 $$(OBJDIR_GCC_MAC_M68K)/$(1).bin \
 $(1).m68k.dsk: \
@@ -63,7 +66,7 @@ $$(OBJDIR_GCC_MAC_M68K)/$(1).code.bin | $$(OBJDIR_GCC_MAC_M68K)/macrsrc.r
 		hmount $(1).m68k.dsk && \
 		for f in $(2); do \
 			md="`dirname "$$$${f}" | sed 's|/|:|g'`"; \
-			mf="`echo "$$$${f}" | sed 's|/|:|g'`"; \
+			mf="`echo "$$$${f}" | sed 's|stubs/||g' | sed 's|/|:|g'`"; \
 			if file $$$${f} | grep -q ASCII || file $$$${f} | grep -q JSON; then \
 				ma="-t"; \
 			else \
