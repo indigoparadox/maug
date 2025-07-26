@@ -1,0 +1,37 @@
+---
+name: Documentation
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build-documentation:
+    runs-on: docker
+    container:
+      image: forgejo.interfinitydynamics.info/indigoparadox/maug-build:debian-amd64
+    steps:
+    - name: Install prerequisites
+      run: |
+        apt update && apt install -y git openssh-client
+
+    - name: Checkout actions
+      run: |
+        git clone ${{ github.server_url }}/indigoparadox/actions actions
+
+    - name: Checkout maug
+      run: |
+        git clone ${{ github.server_url }}/${{ github.repository }} app
+
+    - name: Run doxygen for Interfinity Dynamics
+      uses: ./actions/doxygen
+
+    - name: Push docs to Interfinity Dynamics
+      uses: ./actions/pages
+      with:
+        docs-remote-repo: ssh://forgejo.interfinitydynamics.info:22022/indigoparadox/maug
+
+    - name: Push docs to Codeberg
+      uses: ./actions/pages
+      with:
+        docs-remote-repo: ssh://codeberg.org/indigoparadox/maug
+
