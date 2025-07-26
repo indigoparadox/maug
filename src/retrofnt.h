@@ -20,6 +20,14 @@
 
 struct RETROFONT;
 
+/**
+ * \brief Load a font for drawing.
+ * \param font_name Name of the font file to load.
+ * \param p_font_h Handle into which to load the font data.
+ * \param glyph_h Height of the font being loaded.
+ * \param first_glyph ASCII index of the first glyph to load from the font.
+ * \param glyphs_count Number of glyphs to load from the font.
+ */
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );

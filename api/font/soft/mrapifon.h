@@ -47,6 +47,48 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
 
 /* === */
 
+MERROR_RETVAL retrofont_load_glyph(
+   mfile_t* font_file, struct RETROFONT* font,
+   size_t* p_glyph_idx, char* glyph_idx_str, char** p_glyph_bytes
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = font_file->read_line(
+      font_file, glyph_idx_str, RETROFONT_LINE_SZ, 0 );
+   maug_cleanup_if_not_ok();
+
+   *p_glyph_bytes = maug_strchr( glyph_idx_str, ':' );
+   if( NULL == *p_glyph_bytes ) { \
+      error_printf( "invalid line: %s", glyph_idx_str );
+      /* The line couldn't parse, so skip it, but don't give up entirely and
+       * keep going to the next line.
+       */
+      retval = MERROR_WAIT;
+      goto cleanup;
+   }
+
+   /* Replace : with NULL to split the string and move pointer to actual bytes.
+    */
+   (*p_glyph_bytes)[0] = '\0'; \
+   (*p_glyph_bytes)++;
+
+   /* Hunt for sub statements. */
+   if( 0 == strncmp( "SUB", glyph_idx_str, 3 ) ) {
+      debug_printf( RETROFONT_TRACE_LVL, "found sub: %s", *p_glyph_bytes );
+      retval = MERROR_WAIT;
+      goto cleanup;
+   }
+
+   /* Figure out the index of this glyph. */
+   *p_glyph_idx = maug_atou32( glyph_idx_str, 0, 16 );
+
+   debug_printf(
+      RETROFONT_TRACE_LVL, "found glyph: " SIZE_T_FMT, *p_glyph_idx );
+
+cleanup:
+   return retval;
+}
+
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count
@@ -56,7 +98,7 @@ MERROR_RETVAL retrofont_load(
    char line[RETROFONT_LINE_SZ];
    struct RETROFONT* font = NULL;
    char* line_bytes = NULL;
-   uint16_t glyph_idx = 0;
+   size_t glyph_idx = 0;
    uint8_t* p_glyph = NULL;
    size_t i = 0;
    uint8_t glyph_w_bytes = 0;
@@ -93,12 +135,16 @@ MERROR_RETVAL retrofont_load(
    debug_printf( RETROFONT_TRACE_LVL, "font file opened, reading..." );
 
    /* Figure out font width from file and alloc just enough. */
-   retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
-   maug_cleanup_if_not_ok();
-   retrofont_split_glyph_line( line, line_bytes );
-   maug_cleanup_if_not_ok();
-   glyph_w_bytes = (maug_strlen( line_bytes ) / glyph_h) >> 1; /* 2 hex per byte */
-   debug_printf( RETROFONT_TRACE_LVL, "glyph_w_bytes: %u", glyph_w_bytes );
+   while(
+      MERROR_WAIT == (retval = retrofont_load_glyph(
+         &font_file, font, &glyph_idx, line, &line_bytes ))
+   ) {
+      /* Can't determine line width from invalid line! */
+   }
+
+   glyph_w_bytes = (maug_strlen( line_bytes ) / glyph_h) >> 1; /* 2hex p byte */
+   debug_printf( RETROFONT_TRACE_LVL, "glyph: %s, glyph_w_bytes: %u",
+      line_bytes, glyph_w_bytes );
    glyph_w = glyph_w_bytes * 8;
 
 #if 0 < RETROFONT_TRACE_LVL
@@ -129,25 +175,17 @@ MERROR_RETVAL retrofont_load(
    font->glyph_sz = glyph_h * glyph_w_bytes;
 
    while( font_file.has_bytes( &font_file ) ) {
-      retval = font_file.read_line( &font_file, line, RETROFONT_LINE_SZ, 0 );
-
-      retrofont_split_glyph_line( line, line_bytes );
-      if( MERROR_PARSE == retval ) {
-         /* The line couldn't parse, so skip it, but don't give up entirely and
-          * keep going to the next line.
-          */
+      retval = retrofont_load_glyph(
+         &font_file, font, &glyph_idx, line, &line_bytes );
+      if(
+         /* Inactionable line detected. */
+         MERROR_WAIT == retval ||
+         /* Skip glyph out of range. */
+         glyph_idx < first_glyph || glyph_idx > first_glyph + glyphs_count
+      ) {
          retval = MERROR_OK;
          continue;
       }
-
-      /* Figure out the index of this glyph. */
-      glyph_idx = maug_atou32( line, 0, 16 );
-      if( glyph_idx < first_glyph || glyph_idx > first_glyph + glyphs_count ) {
-         /* Skip glyph out of range. */
-         continue;
-      }
-
-      debug_printf( RETROFONT_TRACE_LVL, "found glyph: %u", glyph_idx );
 
       /* Find where to put the decoded glyph. */
       p_glyph = retrofont_glyph_at( font, glyph_idx );
@@ -190,8 +228,8 @@ MERROR_RETVAL retrofont_load(
       /* If we're not tracing, try to omit printfs from the inner loop! */
 #if 0 < RETROFONT_TRACE_LVL
       debug_printf( RETROFONT_TRACE_LVL,
-         "%u %s (" SIZE_T_FMT " hbytes)", glyph_idx - first_glyph, line_bytes,
-         maug_strlen( line_bytes ) );
+         SIZE_T_FMT " %s (" SIZE_T_FMT " hbytes)",
+         glyph_idx - first_glyph, line_bytes, maug_strlen( line_bytes ) );
 #endif
    }
 
