@@ -8,7 +8,7 @@ jobs:
   build-documentation:
     runs-on: docker
     container:
-      image: forgejo.interfinitydynamics.info/indigoparadox/maug-build:debian-amd64
+      image: docker.io/library/debian:bookworm
     steps:
     - name: Install prerequisites
       run: |
