@@ -1,0 +1,10 @@
+<map id="Maug_retro3d_util" name="Maug_retro3d_util">
+<area shape="rect" id="node1" title=" " alt="" coords="160,129,300,155"/>
+<area shape="rect" id="node3" href="$group__maug__retroflt__bitmap.html" title="Tools for loading bitmaps from disk and drawing them on&#45;screen." alt="" coords="354,5,513,31"/>
+<area shape="rect" id="node4" href="$group__maug__retroflt__dir.html" title="Macros and constants for definition cardinal directions in screen and world space." alt="" coords="348,55,519,80"/>
+<area shape="rect" id="node5" href="$group__maug__retroflt__drawing.html" title="Functions for drawing primitives on&#45;screen." alt="" coords="351,104,516,129"/>
+<area shape="rect" id="node6" href="$group__maug__retroflt__input.html" title="Functions and constants for polling and interpreting user input." alt="" coords="361,153,505,179"/>
+<area shape="rect" id="node7" href="$group__maug__retroflt__vdp.html" title="Video Display Processor tools for modifying display output." alt="" coords="364,203,503,228"/>
+<area shape="rect" id="node8" href="$group__maug__retroflt__viewport.html" title="A flexible API to facilitate tile&#45;based views using hardware acceleration where available." alt="" coords="349,252,518,277"/>
+<area shape="rect" id="node2" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,129,112,155"/>
+</map>
