@@ -45,7 +45,7 @@ MERROR_RETVAL retroflat_load_xpm(
    retroflat_asset_path filename_path;
 
    retval = retroflat_build_filename_path(
-      filename, filename_path, MAUG_PATH_MAX + 1, flags );
+      filename, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
    maug_cleanup_if_not_ok();
 
    debug_printf( RETROXPM_TRACE_LVL,

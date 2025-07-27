@@ -741,7 +741,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #endif /* RETROFLAT_OS_DOS */
 
 /*! \brief Maximum size of the assets path, to allow room for appending. */
-#define RETROFLAT_ASSETS_PATH_MAX (MAUG_PATH_MAX >> 1)
+#define RETROFLAT_ASSETS_PATH_MAX (MAUG_PATH_SZ_MAX >> 1)
 
 #ifndef RETROFLAT_BMP_COLORS_SZ_MAX
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
@@ -1564,7 +1564,7 @@ struct RETROFLAT_STATE {
    MERROR_RETVAL           retval;
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
-   char                    config_path[MAUG_PATH_MAX + 1];
+   char                    config_path[MAUG_PATH_SZ_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;

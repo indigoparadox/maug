@@ -22,10 +22,10 @@
  * \file mfile.h
  */
 
-#ifndef MAUG_PATH_MAX
+#ifndef MAUG_PATH_SZ_MAX
 /*! \brief Maximum size allocated for asset paths. */
-#  define MAUG_PATH_MAX 256
-#endif /* !MAUG_PATH_MAX */
+#  define MAUG_PATH_SZ_MAX 256
+#endif /* !MAUG_PATH_SZ_MAX */
 
 /**
  * \addtogroup maug_mfile_types RetroFile Types
@@ -92,12 +92,12 @@
 /**
  * \brief Path/name used to load an asset from disk.
  */
-typedef char retroflat_asset_path[MAUG_PATH_MAX + 1];
+typedef char retroflat_asset_path[MAUG_PATH_SZ_MAX + 1];
 
 /**
  * \brief Compare two asset paths. Return 0 if they're the same.
  */
-#define mfile_cmp_path( a, b ) strncmp( a, b, MAUG_PATH_MAX )
+#define mfile_cmp_path( a, b ) strncmp( a, b, MAUG_PATH_SZ_MAX )
 
 /*! \} */ /* maug_retroflt_assets */
 
@@ -198,7 +198,7 @@ MERROR_RETVAL mfile_assign_path(
    MERROR_RETVAL retval = MERROR_OK;
    char* ext_ptr = NULL;
 
-   maug_snprintf( tgt, MAUG_PATH_MAX, "%s", src );
+   maug_snprintf( tgt, MAUG_PATH_SZ_MAX, "%s", src );
 
    if( MFILE_ASSIGN_FLAG_TRIM_EXT == (MFILE_ASSIGN_FLAG_TRIM_EXT & flags) ) {
       ext_ptr = strrchr( tgt, '.' );

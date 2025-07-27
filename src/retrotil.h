@@ -322,7 +322,7 @@ struct RETROTILE_PARSER {
    void* custom_token_cb_data;
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
-   char dirname[MAUG_PATH_MAX + 1];
+   char dirname[MAUG_PATH_SZ_MAX + 1];
    uint16_t layer_class;
 };
 
@@ -1158,7 +1158,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_PARSER* parser = NULL;
-   char filename_path[MAUG_PATH_MAX];
+   char filename_path[MAUG_PATH_SZ_MAX];
    mfile_t tile_file;
    char c;
    char* filename_ext = NULL;
@@ -1176,7 +1176,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    parser->custom_token_cb = token_cb;
    parser->custom_token_cb_data = token_cb_data;
 
-   maug_strncpy( parser->dirname, dirname, MAUG_PATH_MAX );
+   maug_strncpy( parser->dirname, dirname, MAUG_PATH_SZ_MAX );
 
    if( 2 > passes ) {
       debug_printf( RETROTILE_TRACE_LVL,
@@ -1187,10 +1187,10 @@ MERROR_RETVAL retrotile_parse_json_file(
    parser->passes_max = passes;
 
    /* Setup filename path. */
-   memset( filename_path, '\0', MAUG_PATH_MAX );
+   memset( filename_path, '\0', MAUG_PATH_SZ_MAX );
    /* TODO: Configurable path. */
    maug_snprintf(
-      filename_path, MAUG_PATH_MAX, "%s/%s", dirname, filename );
+      filename_path, MAUG_PATH_SZ_MAX, "%s/%s", dirname, filename );
 
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
 

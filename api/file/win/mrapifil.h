@@ -129,12 +129,12 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    STATSTG file_stat;
 #  endif /* RETROFLAT_API_WINCE */
 #  ifdef MAUG_WCHAR
-   wchar_t filename_w[MAUG_PATH_MAX + 1] = { 0 };
+   wchar_t filename_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
 #  endif /* MAUG_WCHAR */
 
 #     ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
-      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_MAX
+      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX
    ) ) {
       error_printf( "could not create wide filename path!" );
       retval = MERROR_FILE;
