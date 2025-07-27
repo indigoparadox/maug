@@ -2426,7 +2426,7 @@ retrogui_idc_t retrogui_focus_iter(
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t i = 0;
-   ssize_t i_before = -1;
+   ssize_t i_before = -1; /* Index of the current selected IDC. */
    int autolock = 0;
 
    if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
@@ -2462,16 +2462,34 @@ retrogui_idc_t retrogui_focus_iter(
 
    /* Select the next IDC. */
    if( 0 > i ) {
-      /* Wrap around to last item. */
-      idc_out = mdata_vector_get( &(gui->ctls),
-         mdata_vector_ct( &(gui->ctls) ) - 1, union RETROGUI_CTL )->base.idc;
-      gui->focus = idc_out;
+      /* Wrap around to last SELECTABLE item. */
+      for( i = mdata_vector_ct( &(gui->ctls) ) - 1 ; 0 <= i ; i-- ) {
+         ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
+         if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+            /* Skip NON-SELECTABLE items! */
+            debug_printf( 1, "skipping: " SSIZE_T_FMT, i );
+            continue;
+         } else {
+            idc_out = ctl->base.idc;
+            gui->focus = idc_out;
+            break;
+         }
+      }
 
    } else if( mdata_vector_ct( &(gui->ctls) ) <= i ) {
-      /* Wrap around to first item. */
-      idc_out =
-         mdata_vector_get( &(gui->ctls), 0, union RETROGUI_CTL )->base.idc;
-      gui->focus = idc_out;
+      /* Wrap around to first SELECTABLE item. */
+      for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
+         ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
+         if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+            /* Skip NON-SELECTABLE items! */
+            debug_printf( 1, "skipping: " SSIZE_T_FMT, i );
+            continue;
+         } else {
+            idc_out = ctl->base.idc;
+            gui->focus = idc_out;
+            break;
+         }
+      }
 
    } else {
       error_printf( "invalid focus: " SSIZE_T_FMT, i );
