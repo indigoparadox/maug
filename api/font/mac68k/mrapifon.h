@@ -23,6 +23,18 @@ MERROR_RETVAL retrofont_try_mac68k(
    struct RETROFONT* font, const char* sub_name, void* data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   Str255 sub_name_buf;
+
+   maug_str_c2p( sub_name, (char*)sub_name_buf, 254 );
+      
+   GetFNum( sub_name_buf, &(font->font_idx) );
+
+   if( 0 == font->font_idx ) {
+      error_printf( "problem loading font: \"%s\"", &(sub_name_buf[1]) );
+      retval = MERROR_PARSE;
+   } else {
+      debug_printf( 2, "loaded font sub: \"%s\"", &(sub_name_buf[1]) );
+   }
 
    return retval;
 }
@@ -54,8 +66,8 @@ MERROR_RETVAL retrofont_load(
 
    font->font_sz = glyph_h;
 
-   /* TODO: Translate front from specified. */
-   GetFNum( "\pChicago", &(font->font_idx) );
+   retval = retrofont_load_stub( font_name, font, retrofont_try_mac68k, NULL );
+   maug_cleanup_if_not_ok();
 
    TextFont( font->font_idx );
    TextSize( font->font_sz );

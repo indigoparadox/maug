@@ -59,6 +59,7 @@ static MERROR_RETVAL retrofont_read_line(
    mfile_t* font_file, char* glyph_idx_str, char** p_glyph_bytes
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t last_char_idx = 0;
 
    retval = font_file->read_line(
       font_file, glyph_idx_str, RETROFONT_LINE_SZ, 0 );
@@ -81,7 +82,16 @@ static MERROR_RETVAL retrofont_read_line(
 
    /* Hunt for sub statements. */
    if( 0 == strncmp( "SUB", glyph_idx_str, 3 ) ) {
-      debug_printf( RETROFONT_TRACE_LVL, "found sub: %s", *p_glyph_bytes );
+      last_char_idx = strlen( *p_glyph_bytes ) - 1;
+      if(
+         '\n' == (*p_glyph_bytes)[last_char_idx] ||
+         '\r' == (*p_glyph_bytes)[last_char_idx] ||
+         '\t' == (*p_glyph_bytes)[last_char_idx] ||
+         ' ' == (*p_glyph_bytes)[last_char_idx]
+      ) {
+         (*p_glyph_bytes)[last_char_idx] = '\0';
+      }
+      debug_printf( RETROFONT_TRACE_LVL, "found sub: \"%s\"", *p_glyph_bytes );
       retval = MERROR_PARSE;
       goto cleanup;
    }
@@ -93,14 +103,15 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL retrofont_load_stub(
-   const char* font_name, char* line, char* line_bytes,
-   struct RETROFONT* font,
+   const char* font_name, struct RETROFONT* font,
    retrofont_try_platform_t try_platform,
    void* try_platform_data
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    mfile_t font_file;
    retroflat_asset_path font_stub_name;
+   char line[RETROFONT_LINE_SZ];
+   char* line_bytes = NULL;
 
    maug_mzero( font_stub_name, sizeof( retroflat_asset_path ) );
    strncpy( font_stub_name, font_name, sizeof( retroflat_asset_path ) - 1 );
@@ -118,7 +129,6 @@ static MERROR_RETVAL retrofont_load_stub(
       retval = retrofont_read_line( &font_file, line, &line_bytes );
       if( MERROR_WAIT == retval || MERROR_OK == retval ) {
          /* Not a sub line. */
-         debug_printf( 1, "%d xxx: %s / %s", retval, line, line_bytes );
          retval = MERROR_PARSE;
          continue;
 

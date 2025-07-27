@@ -32,7 +32,7 @@ MERROR_RETVAL retrofont_try_win(
    
    if( (MAUG_MHANDLE)NULL == *(font->p_font_h) ) {
       error_printf( "problem loading font: %s", sub_name );
-      retval = MERROR_GUI;
+      retval = MERROR_PARSE;
    } else {
       debug_printf( 2, "loaded font sub: %s", sub_name );
    }
@@ -47,8 +47,6 @@ MERROR_RETVAL retrofont_load(
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char line[RETROFONT_LINE_SZ];
-   char* line_bytes = NULL;
    struct RETROFONT load_capsule;
 
    if( 0 == glyph_h ) {
@@ -64,7 +62,7 @@ MERROR_RETVAL retrofont_load(
    load_capsule.glyph_h = glyph_h;
 
    retval = retrofont_load_stub(
-      font_name, line, line_bytes, &load_capsule, retrofont_try_win, NULL );
+      font_name, &load_capsule, retrofont_try_win, NULL );
    maug_cleanup_if_not_ok();
 
 cleanup:
