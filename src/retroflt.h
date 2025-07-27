@@ -740,9 +740,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_PATH_SEP '/'
 #endif /* RETROFLAT_OS_DOS */
 
-/*! \brief Maximum size of the assets path, to allow room for appending. */
-#define RETROFLAT_ASSETS_PATH_MAX (MAUG_PATH_SZ_MAX >> 1)
-
 #ifndef RETROFLAT_BMP_COLORS_SZ_MAX
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
 #endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
@@ -1565,7 +1562,7 @@ struct RETROFLAT_STATE {
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
    char                    config_path[MAUG_PATH_SZ_MAX + 1];
-   char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
+   char                    assets_path[MAUG_PATH_SZ_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
    int scale;
@@ -2573,10 +2570,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: setting config..." );
 
    /* Set the assets path. */
-   memset( g_retroflat_state->assets_path, '\0', RETROFLAT_ASSETS_PATH_MAX );
+   maug_mzero( g_retroflat_state->assets_path, MAUG_PATH_SZ_MAX + 1 );
    if( NULL != args->assets_path ) {
       maug_strncpy( g_retroflat_state->assets_path,
-         args->assets_path, RETROFLAT_ASSETS_PATH_MAX );
+         args->assets_path, MAUG_PATH_SZ_MAX );
    }
 
 #  if defined( RETROFLAT_SCREENSAVER )

@@ -2113,8 +2113,8 @@ void retrotile_format_asset_path(
    struct RETROTILE_PARSER* parser
 ) {
    /* Load the portrait. */
-   maug_mzero( path_out, RETROFLAT_ASSETS_PATH_MAX + 1 );
-   maug_snprintf( path_out, RETROFLAT_ASSETS_PATH_MAX, "%s/%s",
+   maug_mzero( path_out, MAUG_PATH_SZ_MAX + 1 );
+   maug_snprintf( path_out, MAUG_PATH_SZ_MAX, "%s/%s",
       parser->dirname, afile );
 }
 
