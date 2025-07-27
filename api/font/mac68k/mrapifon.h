@@ -19,6 +19,16 @@ struct RETROFONT {
 
 #if defined( RETROFNT_C )
 
+MERROR_RETVAL retrofont_try_mac68k(
+   struct RETROFONT* font, const char* sub_name, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count

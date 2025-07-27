@@ -10,14 +10,46 @@
  */
 #define RETROFONT_FLAG_OUTLINE  0x04
 
+/* Windows only uses the RETROFONT struct during initial font load callback. */
+struct RETROFONT {
+   MAUG_MHANDLE* p_font_h;
+   uint8_t glyph_h;
+};
+
 #if defined( RETROFNT_C )
+
+MERROR_RETVAL retrofont_try_win(
+   struct RETROFONT* font, const char* sub_name, void* data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   LOGFONT lf;
+
+   maug_mzero( &lf, sizeof( LOGFONT ) );
+   lf.lfHeight = font->glyph_h;
+   lstrcpy( lf.lfFaceName, sub_name );
+
+   *(font->p_font_h) = (MAUG_MHANDLE)CreateFontIndirect( &lf );
+   
+   if( (MAUG_MHANDLE)NULL == *(font->p_font_h) ) {
+      error_printf( "problem loading font: %s", sub_name );
+      retval = MERROR_GUI;
+   } else {
+      debug_printf( 2, "loaded font sub: %s", sub_name );
+   }
+
+   return retval;
+}
+
+/* === */
 
 MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   LOGFONT lf;
+   char line[RETROFONT_LINE_SZ];
+   char* line_bytes = NULL;
+   struct RETROFONT load_capsule;
 
    if( 0 == glyph_h ) {
       glyph_h = retrofont_sz_from_filename( font_name ) + 2;
@@ -28,16 +60,12 @@ MERROR_RETVAL retrofont_load(
       goto cleanup;
    }
 
-   maug_mzero( &lf, sizeof( LOGFONT ) );
-   lf.lfHeight = glyph_h;
-   lstrcpy( lf.lfFaceName, "Arial" );
+   load_capsule.p_font_h = p_font_h;
+   load_capsule.glyph_h = glyph_h;
 
-   *p_font_h = (MAUG_MHANDLE)CreateFontIndirect( &lf );
-   
-   if( (MAUG_MHANDLE)NULL == *p_font_h ) {
-      error_printf( "problem loading font!" );
-      retval = MERROR_GUI;
-   }
+   retval = retrofont_load_stub(
+      font_name, line, line_bytes, &load_capsule, retrofont_try_win, NULL );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 

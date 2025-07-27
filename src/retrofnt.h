@@ -18,6 +18,9 @@
 #  define RETROFONT_TRACE_LVL 0
 #endif /* !RETROFONT_TRACE_LVL */
 
+/**
+ * \brief Opaque data structure defined by each platform/API.
+ */
 struct RETROFONT;
 
 /**
@@ -45,9 +48,96 @@ MERROR_RETVAL retrofont_string_sz(
 
 void retrofont_free( MAUG_MHANDLE* p_font_h );
 
+typedef MERROR_RETVAL (*retrofont_try_platform_t)(
+   struct RETROFONT* font, const char* sub_name, void* data );
+
 #ifdef RETROFNT_C
 
 /* Provide this utility to all font API internal mechanisms. */
+
+static MERROR_RETVAL retrofont_read_line(
+   mfile_t* font_file, char* glyph_idx_str, char** p_glyph_bytes
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = font_file->read_line(
+      font_file, glyph_idx_str, RETROFONT_LINE_SZ, 0 );
+   maug_cleanup_if_not_ok();
+
+   *p_glyph_bytes = maug_strchr( glyph_idx_str, ':' );
+   if( NULL == *p_glyph_bytes ) { \
+      error_printf( "invalid line: %s", glyph_idx_str );
+      /* The line couldn't parse, so skip it, but don't give up entirely and
+       * keep going to the next line.
+       */
+      retval = MERROR_WAIT;
+      goto cleanup;
+   }
+
+   /* Replace : with NULL to split the string and move pointer to actual bytes.
+    */
+   (*p_glyph_bytes)[0] = '\0'; \
+   (*p_glyph_bytes)++;
+
+   /* Hunt for sub statements. */
+   if( 0 == strncmp( "SUB", glyph_idx_str, 3 ) ) {
+      debug_printf( RETROFONT_TRACE_LVL, "found sub: %s", *p_glyph_bytes );
+      retval = MERROR_PARSE;
+      goto cleanup;
+   }
+
+cleanup:
+   return retval;
+}
+
+/* === */
+
+static MERROR_RETVAL retrofont_load_stub(
+   const char* font_name, char* line, char* line_bytes,
+   struct RETROFONT* font,
+   retrofont_try_platform_t try_platform,
+   void* try_platform_data
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   mfile_t font_file;
+   retroflat_asset_path font_stub_name;
+
+   maug_mzero( font_stub_name, sizeof( retroflat_asset_path ) );
+   strncpy( font_stub_name, font_name, sizeof( retroflat_asset_path ) - 1 );
+   font_stub_name[strlen( font_stub_name ) - 5] = 'x';
+   debug_printf( 1, "font_name: %s", font_stub_name );
+
+   /* TODO: Load font stub and find substitute. */
+   maug_mzero( &font_file, sizeof( mfile_t ) );
+
+   retval = mfile_open_read( font_stub_name, &font_file );
+   maug_cleanup_if_not_ok();
+
+   /* Figure out font width from file and alloc just enough. */
+   do {
+      retval = retrofont_read_line( &font_file, line, &line_bytes );
+      if( MERROR_WAIT == retval || MERROR_OK == retval ) {
+         /* Not a sub line. */
+         debug_printf( 1, "%d xxx: %s / %s", retval, line, line_bytes );
+         retval = MERROR_PARSE;
+         continue;
+
+      } else if( MERROR_PARSE != retval ) {
+         goto cleanup;
+      }
+      debug_printf( RETROFONT_TRACE_LVL, "attempting substitute: %s",
+         line_bytes );
+      retval = try_platform( font, line_bytes, try_platform_data );
+   } while( MERROR_PARSE == retval );
+
+cleanup:
+
+   mfile_close( &font_file );
+
+   return retval;
+}
+
+/* === */
 
 static size_t retrofont_sz_from_filename( const char* font_name ) {
    const char* p_c = NULL;
