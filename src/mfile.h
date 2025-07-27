@@ -72,6 +72,8 @@
  */
 #define MFILE_READ_FLAG_MSBF     0x01
 
+#define MFILE_ASSIGN_FLAG_TRIM_EXT 0x01
+
 #ifndef MFILE_TRACE_LVL
 #  define MFILE_TRACE_LVL 0
 #endif /* !MFILE_TRACE_LVL */
@@ -79,6 +81,25 @@
 #ifndef MFILE_TRACE_CONTENTS_LVL
 #  define MFILE_TRACE_CONTENTS_LVL 0
 #endif /* !MFILE_TRACE_CONTENTS_LVL */
+
+/**
+ * \addtogroup maug_retroflt_assets RetroFlat Assets API
+ * \brief Functions and macros for handling graphical asset files.
+ * \todo This is kind of a mess and needs better integration with the rest!
+ * \{
+ */
+
+/**
+ * \brief Path/name used to load an asset from disk.
+ */
+typedef char retroflat_asset_path[MAUG_PATH_MAX + 1];
+
+/**
+ * \brief Compare two asset paths. Return 0 if they're the same.
+ */
+#define mfile_cmp_path( a, b ) strncmp( a, b, MAUG_PATH_MAX )
+
+/*! \} */ /* maug_retroflt_assets */
 
 struct MFILE_CADDY;
 
@@ -118,8 +139,18 @@ struct MFILE_CADDY {
 
 typedef struct MFILE_CADDY mfile_t;
 
+/**
+ * \addtogroup maug_retroflt_assets RetroFlat Assets API
+ * \{
+ */
+
+MERROR_RETVAL mfile_assign_path(
+   retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags );
+
+/*! \} */
+
 off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file );
- 
+
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf );
 
 MERROR_RETVAL mfile_file_read_block(
@@ -160,6 +191,26 @@ void mfile_close( mfile_t* p_file );
 #ifdef MVFS_ENABLED
 #  include <mvfs.h>
 #endif /* MVFS_ENABLED */
+
+MERROR_RETVAL mfile_assign_path(
+   retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* ext_ptr = NULL;
+
+   maug_snprintf( tgt, MAUG_PATH_MAX, "%s", src );
+
+   if( MFILE_ASSIGN_FLAG_TRIM_EXT == (MFILE_ASSIGN_FLAG_TRIM_EXT & flags) ) {
+      ext_ptr = strrchr( tgt, '.' );
+      if( NULL != ext_ptr ) {
+         *ext_ptr = '\0';
+      }
+   }
+
+   return retval;
+}
+
+/* === */
 
 MERROR_RETVAL mfile_file_read_int(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags

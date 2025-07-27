@@ -15,10 +15,6 @@
  * implementation that can be called from legacy projects.
  */
 
-#ifdef MAUG_ANCIENT_C
-typedef int32_t ssize_t;
-#endif /* MAUG_ANCIENT_C */
-
 #if defined( __BYTE_ORDER ) && __BYTE_ORDER == __BIG_ENDIAN || \
 defined( __BYTE_ORDER__ ) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ || \
 defined( __BIG_ENDIAN__ ) || \
@@ -53,6 +49,7 @@ defined( __ARMEL__ ) || \
 defined( __THUMBEL__ ) || \
 defined( __AARCH64EL__ ) || \
 defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ ) || \
+defined( _M_MRX000 ) || defined( _M_SH ) || \
 defined( __WATCOMC__ )
 
 #  ifdef MAUG_END_TRACE
@@ -171,6 +168,10 @@ typedef uint32_t maug_ms_t;
 #  endif /* MAUG_OS_DOS_REAL */
 
 #endif /* MAUG_OS_* */
+
+#ifdef MAUG_ANCIENT_C
+typedef int32_t ssize_t;
+#endif /* MAUG_ANCIENT_C */
 
 /*! \} */
 

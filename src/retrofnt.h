@@ -74,7 +74,7 @@ typedef MERROR_RETVAL (*retrofont_try_platform_t)(
 
 /* Provide this utility to all font API internal mechanisms. */
 
-static MERROR_RETVAL retrofont_read_line(
+MERROR_RETVAL retrofont_read_line(
    mfile_t* font_file, char* glyph_idx_str, char** p_glyph_bytes
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -121,7 +121,7 @@ cleanup:
 
 /* === */
 
-static MERROR_RETVAL retrofont_load_stub(
+MERROR_RETVAL retrofont_load_stub(
    const char* font_name, struct RETROFONT* font,
    retrofont_try_platform_t try_platform,
    void* try_platform_data
@@ -168,7 +168,7 @@ cleanup:
 
 /* === */
 
-static size_t retrofont_sz_from_filename( const char* font_name ) {
+size_t retrofont_sz_from_filename( const char* font_name ) {
    const char* p_c = NULL;
    size_t glyph_h = 0;
    size_t i = 0;

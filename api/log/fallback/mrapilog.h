@@ -40,6 +40,7 @@ void error_printf( const char* fmt, ... ) {
 #  endif /* RETROFLAT_API_WINCE */
 }
 
+#if 0
 /* TODO: Wire this up so something calls it in this module? */
 void maug_debug_printf(
    FILE* out, uint8_t flags, const char* src_name, size_t line, int16_t lvl,
@@ -67,6 +68,7 @@ void maug_debug_printf(
       platform_fflush( out );
    }
 }
+#endif
 
 #endif /* !MAUG_API_LOG_H_DEFS */
 

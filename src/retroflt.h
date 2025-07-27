@@ -708,8 +708,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_MSG_MAX 4096
 #endif /* !RETROFLAT_MSG_MAX */
 
-#define RETROFLAT_PATH_MAX MAUG_PATH_MAX
-
 #ifndef RETROFLAT_TITLE_MAX
 #  define RETROFLAT_TITLE_MAX 255
 #endif /* !RETROFLAT_TITLE_MAX */
@@ -743,7 +741,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #endif /* RETROFLAT_OS_DOS */
 
 /*! \brief Maximum size of the assets path, to allow room for appending. */
-#define RETROFLAT_ASSETS_PATH_MAX (RETROFLAT_PATH_MAX >> 1)
+#define RETROFLAT_ASSETS_PATH_MAX (MAUG_PATH_MAX >> 1)
 
 #ifndef RETROFLAT_BMP_COLORS_SZ_MAX
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
@@ -757,34 +755,6 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #define retroflat_is_waiting_for_frame() \
    (RETROFLAT_FLAGS_WAIT_FOR_FPS == \
       (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_WAIT_FOR_FPS))
-
-/**
- * \addtogroup maug_retroflt_assets RetroFlat Assets API
- * \brief Functions and macros for handling graphical asset files.
- * \todo This is kind of a mess and needs better integration with the rest!
- * \{
- */
-
-/**
- * \brief Path/name used to load an asset from disk.
- */
-typedef char retroflat_asset_path[RETROFLAT_PATH_MAX + 1];
-
-/**
- * \brief Compare two asset paths. Return 0 if they're the same.
- */
-#define retroflat_cmp_asset_path( a, b ) strncmp( a, b, RETROFLAT_PATH_MAX )
-
-#define retroflat_assign_asset_path( tgt, src ) \
-   maug_strncpy( tgt, src, RETROFLAT_PATH_MAX )
-
-#define retroflat_assign_asset_trim_ext( tgt, src ) \
-   maug_snprintf( tgt, RETROFLAT_PATH_MAX, "%s", src ); \
-   if( NULL != strrchr( tgt, '.' ) ) { \
-      *(strrchr( tgt, '.' )) = '\0'; \
-   }
-
-/*! \} */ /* maug_retroflt_assets */
 
 /**
  * \brief Prototype for the main loop function passed to retroflat_loop().
@@ -1594,7 +1564,7 @@ struct RETROFLAT_STATE {
    MERROR_RETVAL           retval;
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
-   char                    config_path[RETROFLAT_PATH_MAX + 1];
+   char                    config_path[MAUG_PATH_MAX + 1];
    char                    assets_path[RETROFLAT_ASSETS_PATH_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;

@@ -279,7 +279,7 @@ int16_t retrogxc_load_asset(
       assert( NULL != asset_iter );
       debug_printf( RETROGXC_TRACE_LVL, "\"%s\" vs \"%s\"",
         asset_iter->id, res_p );
-      if( 0 == retroflat_cmp_asset_path( asset_iter->id, res_p ) ) {
+      if( 0 == mfile_cmp_path( asset_iter->id, res_p ) ) {
          debug_printf( RETROGXC_TRACE_LVL,
             "found asset \"%s\" at index %d with type %d!",
             res_p, i, asset_iter->type );
@@ -300,7 +300,7 @@ just_load_asset:
    asset_type = l( res_p, &asset_new.handle, data, flags );
    if( RETROGXC_ASSET_TYPE_NONE != asset_type ) {
       asset_new.type = asset_type;
-      retroflat_assign_asset_path( asset_new.id, res_p );
+      mfile_assign_path( asset_new.id, res_p, 0 );
       idx = mdata_vector_append(
          &gs_retrogxc_bitmaps, &asset_new,
          sizeof( struct RETROFLAT_CACHE_ASSET ) );
