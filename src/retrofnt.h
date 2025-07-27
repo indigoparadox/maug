@@ -4,10 +4,16 @@
 
 /**
  * \addtogroup retrofont RetroFont API
+ * \brief Tools for drawing strings using loadable fonts.
+ *
+ * This API contains platform-specific parts present in MAUG_ROOT/api/font.
+ *
  * \{
  * \file retrofnt.h
+ * \file Platform-agnostic portions of the RetroFont API.
  */
 
+/*! \brief Tell other modules that retrofont is loaded. */
 #define RETROFONT_PRESENT 1
 
 #ifndef RETROFONT_LINE_SZ
@@ -35,6 +41,15 @@ MERROR_RETVAL retrofont_load(
    const char* font_name, MAUG_MHANDLE* p_font_h,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
 
+/**
+ * \brief Draw a string with the given font.
+ * \param target Bitmap, screen, or texture on which to draw string.
+ * \param color Color in which to draw string.
+ * \param str String to draw on-screen.
+ * \param str_sz Size of the string to draw in characters.
+ * \param max_w Width in pixels after which string should be wrapped.
+ * \param max_h Height in pixels after which string should be truncated.
+ */
 void retrofont_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
@@ -48,6 +63,10 @@ MERROR_RETVAL retrofont_string_sz(
 
 void retrofont_free( MAUG_MHANDLE* p_font_h );
 
+/**
+ * \brief Callback for platform-specific font substitute loader to attempt to
+ *        use font substitute.
+ */
 typedef MERROR_RETVAL (*retrofont_try_platform_t)(
    struct RETROFONT* font, const char* sub_name, void* data );
 
