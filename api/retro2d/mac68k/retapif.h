@@ -27,7 +27,9 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
    Rect r = { 0, 0, 0, 0 };
    unsigned char title_buf[128];
+#ifdef RETROFLAT_MAC68K_COLORQD
    long cqd_result = 0;
+#endif /* RETROFLAT_MAC68K_COLORQD */
 
    InitGraf( &qd.thePort );
    InitFonts();
