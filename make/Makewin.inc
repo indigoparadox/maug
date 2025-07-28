@@ -149,8 +149,7 @@ define TGT_WATCOM386_WIN_WIN32
 CFLAGS_WATCOM386_WIN_WIN32 += \
 	-mf -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
-	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/win
+	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
 	# OpenGL stuff is pentium-optimized.
@@ -161,6 +160,12 @@ else
 endif
 
 LDFLAGS_WATCOM386_WIN_WIN32 += system nt_win
+
+ifeq ("$$(RETROFLAT_OPENGL)","1")
+	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/soft
+else
+	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
+endif
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
@@ -401,7 +406,7 @@ define TGT_GCC_WIN_WIN32
 
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/win
+	-I$(MAUG_ROOT)/api/log/unix
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
@@ -409,6 +414,12 @@ endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win
+endif
+
+ifeq ("$$(RETROFLAT_OPENGL)","1")
+	CFLAGS_GCC_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/soft
+else
+	CFLAGS_GCC_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN32)))
@@ -441,14 +452,16 @@ define TGT_GCC64_WIN_WIN32
 
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/font/win
+	-I$(MAUG_ROOT)/api/log/unix
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
-	LDFLAGS_GCC64_WIN_WIN32 += -lopengl32
+	CFLAGS_GCC64_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/soft
+else
+	CFLAGS_GCC64_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
