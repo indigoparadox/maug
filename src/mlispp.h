@@ -601,7 +601,7 @@ MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
 
-   assert( NULL == parser->env.data_h );
+   assert( (MAUG_MHANDLE)NULL == parser->env.data_h );
 
    debug_printf( MLISP_TRACE_LVL,
       "initializing mlisp parser (" SIZE_T_FMT " bytes)...",

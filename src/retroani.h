@@ -17,6 +17,10 @@
 #  define RETROANI_DEFAUL_MSPF 100
 #endif /* !RETROANI_DEFAUL_MSPF */
 
+#ifndef RETROANI_TRACE_LVL
+#  define RETROANI_TRACE_LVL 0
+#endif /* !RETROANI_TRACE_LVL */
+
 /**
  * \addtogroup unilayer_animate_effects_sect Unilayer Animation Effects
  * \{
@@ -709,6 +713,11 @@ MERROR_RETVAL retroani_set_hole(
       if( flags != (flags & ani->flags) ) {
          continue;
       }
+
+      debug_printf( RETROANI_TRACE_LVL,
+         "setting hole for animation " SIZE_T_FMT ": %d, %d (%d x %d)",
+         i, x, y, w, h );
+
       ani->hole.x = x;
       ani->hole.y = y;
       ani->hole.w = w;
@@ -762,6 +771,10 @@ ssize_t retroani_create(
    ssize_t idx_out = -1;
    struct RETROANI ani_new;
 
+   debug_printf( RETROANI_TRACE_LVL,
+      "creating animation type: %u, flags: 0x%04x at %d, %d (%d x %d)",
+      type, flags, x, y, w, h );
+
    ani_new.flags = flags;
    ani_new.x = x;
    ani_new.y = y;
@@ -785,6 +798,9 @@ ssize_t retroani_create(
 
    idx_out = mdata_vector_append(
       ani_stack, &ani_new, sizeof( struct RETROANI ) );
+
+   debug_printf( RETROANI_TRACE_LVL,
+      "created animation at idx: " SSIZE_T_FMT, idx_out );
 
    return idx_out;
 }
@@ -900,6 +916,10 @@ MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
       ) {
          continue;
       }
+
+      debug_printf( RETROANI_TRACE_LVL,
+         "drawing animatione: " SSIZE_T_FMT ", type: %d", i, ani->type );
+
       ani->next_frame_ms = now_ms + ani->mspf;
       if( MERROR_EXEC == gc_animate_draw[ani->type]( ani ) ) {
          mdata_vector_unlock( ani_stack );
@@ -907,6 +927,10 @@ MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
          mdata_vector_lock( ani_stack );
          i--; /* Back up once, since this was deleted. */
       }
+
+      debug_printf( RETROANI_TRACE_LVL,
+         "drawing animation " SSIZE_T_FMT " complete!", i );
+
    }
 
 cleanup:

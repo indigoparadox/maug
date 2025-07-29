@@ -2465,7 +2465,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    }
 
    maug_mlock( g_retroflat_state_h, g_retroflat_state );
-   if( (MAUG_MHANDLE)NULL == g_retroflat_state ) {
+   if( NULL == g_retroflat_state ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not lock global state!" );
       retval = MERROR_ALLOC;

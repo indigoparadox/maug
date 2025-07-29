@@ -344,7 +344,7 @@ ssize_t mdata_strpool_find(
    char* strpool_p = NULL;
    size_t* p_str_iter_sz = NULL;
 
-   if( NULL == strpool->str_h ) {
+   if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
       error_printf( "strpool not allocated!" );
       i = -1;
       goto cleanup;
@@ -395,7 +395,7 @@ cleanup:
 MAUG_MHANDLE mdata_strpool_extract( struct MDATA_STRPOOL* s, size_t i ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* strpool = NULL;
-   MAUG_MHANDLE out_h = NULL;
+   MAUG_MHANDLE out_h = (MAUG_MHANDLE)NULL;
    size_t out_sz = 0;
    char* out_tmp = NULL;
 
@@ -417,7 +417,7 @@ cleanup:
       maug_munlock( out_h, out_tmp );
    }
 
-   if( MERROR_OK != retval && NULL != out_h ) {
+   if( MERROR_OK != retval && (MAUG_MHANDLE)NULL != out_h ) {
       maug_mfree( out_h );
    }
 
@@ -515,7 +515,7 @@ MERROR_RETVAL mdata_strpool_alloc(
       debug_printf(
          MDATA_TRACE_LVL, "creating string table of " SIZE_T_FMT " chars...",
          alloc_sz );
-      assert( NULL == strpool->str_h );
+      assert( (MAUG_MHANDLE)NULL == strpool->str_h );
       strpool->str_h = maug_malloc( alloc_sz, 1 );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
       strpool->str_sz_max = alloc_sz;
@@ -673,7 +673,7 @@ MERROR_RETVAL mdata_vector_copy(
       MDATA_TRACE_LVL,
       "copying " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
       v_src->ct_max, v_src->item_sz );
-   assert( NULL == v_dest->data_h );
+   assert( (MAUG_MHANDLE)NULL == v_dest->data_h );
    v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
 
@@ -697,7 +697,7 @@ MERROR_RETVAL mdata_vector_alloc(
    struct MDATA_VECTOR* v, size_t item_sz, size_t item_ct_init
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   MAUG_MHANDLE data_h_new = NULL;
+   MAUG_MHANDLE data_h_new = (MAUG_MHANDLE)NULL;
    size_t new_ct = item_ct_init,
       new_bytes_start = 0,
       new_bytes_sz = 0;
@@ -726,7 +726,7 @@ MERROR_RETVAL mdata_vector_alloc(
          MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
          v->ct_max, item_sz );
-      assert( NULL == v->data_h );
+      assert( (MAUG_MHANDLE)NULL == v->data_h );
       v->data_h = maug_malloc( v->ct_max, item_sz );
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );

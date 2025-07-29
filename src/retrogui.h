@@ -367,7 +367,7 @@ static retrogui_idc_t retrogui_click_LISTBOX(
 #  else
 
    assert( NULL == ctl->LISTBOX.list );
-   assert( NULL != ctl->LISTBOX.list_h );
+   assert( (MAUG_MHANDLE)NULL != ctl->LISTBOX.list_h );
    maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
    maug_cleanup_if_null_lock( char*, ctl->LISTBOX.list );
 
@@ -842,7 +842,7 @@ static MERROR_RETVAL retrogui_sz_BUTTON(
 
    assert( NULL != ctl );
    assert( NULL == ctl->BUTTON.label );
-   assert( NULL != ctl->BUTTON.label_h );
+   assert( (MAUG_MHANDLE)NULL != ctl->BUTTON.label_h );
 
    maug_mlock( ctl->BUTTON.label_h, ctl->BUTTON.label );
    maug_cleanup_if_null_lock( char*, ctl->BUTTON.label );
@@ -903,7 +903,7 @@ static MERROR_RETVAL retrogui_pos_BUTTON(
 }
 
 static void retrogui_free_BUTTON( union RETROGUI_CTL* ctl ) {
-   if( NULL != ctl->BUTTON.label_h ) {
+   if( (MAUG_MHANDLE)NULL != ctl->BUTTON.label_h ) {
       maug_mfree( ctl->BUTTON.label_h );
    }
 }
@@ -1128,7 +1128,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
 
    debug_printf( RETROGUI_TRACE_LVL,
       "clearing textbox " SIZE_T_FMT " buffer...", ctl->base.idc );
-   assert( NULL == ctl->TEXTBOX.text_h );
+   assert( (MAUG_MHANDLE)NULL == ctl->TEXTBOX.text_h );
    ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
    ctl->TEXTBOX.text_sz_max = RETROGUI_CTL_TEXT_SZ_MAX;
@@ -1168,7 +1168,7 @@ static MERROR_RETVAL retrogui_pos_TEXTBOX(
 }
 
 static void retrogui_free_TEXTBOX( union RETROGUI_CTL* ctl ) {
-   if( NULL != ctl->TEXTBOX.text_h ) {
+   if( (MAUG_MHANDLE)NULL != ctl->TEXTBOX.text_h ) {
       maug_mfree( ctl->TEXTBOX.text_h );
    }
 }
@@ -1304,7 +1304,7 @@ static MERROR_RETVAL retrogui_pos_LABEL(
 }
 
 static void retrogui_free_LABEL( union RETROGUI_CTL* ctl ) {
-   if( NULL != ctl->LABEL.label_h ) {
+   if( (MAUG_MHANDLE)NULL != ctl->LABEL.label_h ) {
       maug_mfree( ctl->LABEL.label_h );
    }
 }
@@ -2229,7 +2229,7 @@ cleanup:
       maug_munlock( buffer_h, buffer );
    }
 
-   if( NULL != buffer_h ) {
+   if( (MAUG_MHANDLE)NULL != buffer_h ) {
       maug_mfree( buffer_h );
    }
 

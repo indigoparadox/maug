@@ -867,7 +867,7 @@ cleanup:
    mfile_close( &file_decomp );
    /* decomp_buffer_h = file_decomp.h.mem; */
 
-   if( NULL != decomp_buffer_h ) {
+   if( (MAUG_MHANDLE)NULL != decomp_buffer_h ) {
       debug_printf( 1, "freeing decomp buffer %p...", decomp_buffer_h );
       maug_mfree( decomp_buffer_h );
    }

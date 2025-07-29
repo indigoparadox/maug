@@ -1538,7 +1538,7 @@ void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
    /* Unlock nodes before trying to free them. */
    retrohtr_tree_unlock( tree );
 
-   if( NULL != tree->nodes_h ) {
+   if( (MAUG_MHANDLE)NULL != tree->nodes_h ) {
       maug_mfree( tree->nodes_h );
    }
 }
@@ -1554,7 +1554,7 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree ) {
       "allocating " SIZE_T_FMT " nodes...", tree->nodes_sz_max );
    tree->nodes_h = maug_malloc(
       tree->nodes_sz_max, sizeof( struct RETROHTR_RENDER_NODE ) );
-   maug_cleanup_if_null_alloc( struct RETROHTR_RENDER_NODE*, tree->nodes_h );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, tree->nodes_h );
 
    /* XXX
    r.w_max = retroflat_screen_w();

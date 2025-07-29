@@ -1315,7 +1315,7 @@ cleanup:
       maug_munlock( parser_h, parser );
    }
 
-   if( NULL != parser_h ) {
+   if( (MAUG_MHANDLE)NULL != parser_h ) {
       maug_mfree( parser_h );
    }
 
@@ -1488,7 +1488,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    int32_t avg = 0;
    /* size_t tile_idx = 0; */
    struct RETROTILE_DATA_DS data_ds_sub;
-   MAUG_MHANDLE data_ds_h = NULL;
+   MAUG_MHANDLE data_ds_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_DATA_DS* data_ds = NULL;
    /* retroflat_tile_t* tiles = NULL; */
    MERROR_RETVAL retval = MERROR_OK;
@@ -1657,7 +1657,7 @@ cleanup:
       maug_munlock( data_ds_h, data_ds );
    }
 
-   if( free_ds_data && NULL != data_ds_h ) {
+   if( free_ds_data && (MAUG_MHANDLE)NULL != data_ds_h ) {
       maug_mfree( data_ds_h );
    }
 
@@ -1793,7 +1793,7 @@ cleanup:
       maug_munlock( temp_grid_h, temp_grid );
    }
 
-   if( NULL != temp_grid_h ) {
+   if( (MAUG_MHANDLE)NULL != temp_grid_h ) {
       maug_mfree( temp_grid_h );
    }
 

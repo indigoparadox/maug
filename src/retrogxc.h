@@ -214,7 +214,7 @@ cleanup:
    if( MERROR_OK == retval ) {
       return RETROGXC_ASSET_TYPE_BITMAP;
    } else {
-      if( NULL != *handle_p ) {
+      if( (MAUG_MHANDLE)NULL != *handle_p ) {
          maug_mfree( *handle_p );
       }
       return RETROGXC_ASSET_TYPE_NONE;
@@ -336,7 +336,7 @@ MERROR_RETVAL retrogxc_blit_bitmap(
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
    retroflat_blit_t* bitmap = NULL;
 
-   assert( NULL != gs_retrogxc_bitmaps.data_h );
+   assert( (MAUG_MHANDLE)NULL != gs_retrogxc_bitmaps.data_h );
 
    mdata_vector_lock( &gs_retrogxc_bitmaps );
 

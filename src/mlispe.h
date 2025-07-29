@@ -323,8 +323,8 @@ MERROR_RETVAL mlisp_env_dump(
    } else {
       env = &(exec->env);
    }
-   assert( NULL != env->data_h );
-   assert( NULL != parser->strpool.str_h );
+   assert( (MAUG_MHANDLE)NULL != env->data_h );
+   assert( (MAUG_MHANDLE)NULL != parser->strpool.str_h );
    mdata_strpool_lock( &(parser->strpool), strpool );
    assert( NULL != strpool );
    mdata_vector_lock( env );
@@ -956,7 +956,7 @@ static MERROR_RETVAL _mlisp_env_cb_define(
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE key;
    struct MLISP_STACK_NODE val;
-   MAUG_MHANDLE key_tmp_h = NULL;
+   MAUG_MHANDLE key_tmp_h = (MAUG_MHANDLE)NULL;
    char* key_tmp = NULL;
 
    retval = mlisp_stack_pop( exec, &val );
@@ -976,7 +976,7 @@ static MERROR_RETVAL _mlisp_env_cb_define(
    key_tmp_h = mdata_strpool_extract(
       &(parser->strpool), key.value.strpool_idx );
    /* TODO: Handle this gracefully. */
-   assert( NULL != key_tmp_h );
+   assert( (MAUG_MHANDLE)NULL != key_tmp_h );
 
    maug_mlock( key_tmp_h, key_tmp );
    maug_cleanup_if_null_lock( char*, key_tmp );
@@ -994,7 +994,7 @@ cleanup:
       maug_munlock( key_tmp_h, key_tmp );
    }
 
-   if( NULL != key_tmp_h ) {
+   if( (MAUG_MHANDLE)NULL != key_tmp_h ) {
       maug_mfree( key_tmp_h );
    }
 
@@ -1274,7 +1274,7 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
    ssize_t arg_idx = 0;
    struct MLISP_STACK_NODE stack_n_arg;
    struct MLISP_AST_NODE* ast_n_arg = NULL;
-   MAUG_MHANDLE key_tmp_h = NULL;
+   MAUG_MHANDLE key_tmp_h = (MAUG_MHANDLE)NULL;
    char* key_tmp = NULL;
    struct MLISP_AST_NODE* n = NULL;
 
@@ -1300,7 +1300,7 @@ static MERROR_RETVAL _mlisp_step_lambda_args(
       key_tmp_h = mdata_strpool_extract(
          &(parser->strpool), ast_n_arg->token_idx );
       /* TODO: Handle this gracefully. */
-      assert( NULL != key_tmp_h );
+      assert( (MAUG_MHANDLE)NULL != key_tmp_h );
 
       maug_mlock( key_tmp_h, key_tmp );
       maug_cleanup_if_null_lock( char*, key_tmp );
@@ -1322,7 +1322,7 @@ cleanup:
       maug_munlock( key_tmp_h, key_tmp );
    }
 
-   if( NULL != key_tmp_h ) {
+   if( (MAUG_MHANDLE)NULL != key_tmp_h ) {
       maug_mfree( key_tmp_h );
    }
 
@@ -1593,7 +1593,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
    }
 
    if( !mdata_vector_is_locked( env ) ) {
-      assert( env->data_h != NULL );
+      assert( (MAUG_MHANDLE)NULL != env->data_h );
       mdata_vector_lock( env );
       autolock = 1;
    }
@@ -1908,7 +1908,7 @@ MERROR_RETVAL mlisp_step_lambda(
    /* Autolock vectors used below. */
    /* TODO: Should this be a reusable macro? */
    if( !mdata_vector_is_locked( env ) ) {
-      assert( env->data_h != NULL );
+      assert( (MAUG_MHANDLE)NULL != env->data_h );
       mdata_vector_lock( env );
       autolock |= 0x01;
    }
