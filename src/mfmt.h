@@ -195,7 +195,7 @@ MERROR_RETVAL mfmt_decode_rle(
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, off_t file_sz, uint8_t* p_flags );
+   off_t file_offset, off_t file_sz, uint8_t* p_flags );
 
 MERROR_RETVAL mfmt_read_bmp_palette(
    struct MFMT_STRUCT* header, uint32_t* palette, size_t palette_sz,
@@ -482,7 +482,7 @@ cleanup:
 
 MERROR_RETVAL mfmt_read_bmp_header(
    struct MFMT_STRUCT* header, mfile_t* p_file_in,
-   uint32_t file_offset, off_t file_sz, uint8_t* p_flags
+   off_t file_offset, off_t file_sz, uint8_t* p_flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MFMT_STRUCT_BMPINFO* header_bmp_info = NULL;
@@ -494,6 +494,10 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    if( NULL != header_bmp_file ) {
       header_offset = 14; /* Size of info header. */
+
+      debug_printf( MFMT_TRACE_BMP_LVL,
+         "reading bitmap file header at " OFF_T_FMT " bytes...",
+         file_offset + 2 );
 
       /* Grab file header info. */
       retval = p_file_in->seek( p_file_in, file_offset + 2 );
