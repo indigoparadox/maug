@@ -24,16 +24,13 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_mfree( handle ) free( handle ); handle = NULL;
 
-#  define maug_mlock( handle, ptr ) ptr = handle; handle = NULL;
+#  define maug_mlock( handle, ptr ) ptr = handle; handle = (void*)0xDEADBEEF;
 
 #  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
 
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
 #  define maug_strlen( str ) strlen( str )
-
-#  define maug_is_locked( handle, ptr ) \
-      (NULL == (handle) && NULL != (ptr))
 
 #define maug_mrealloc_test( new_handle, handle, nmemb, sz ) \
    maug_cleanup_if_lt_overflow( (sz) * (nmemb), sz ); \

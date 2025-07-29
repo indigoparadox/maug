@@ -29,6 +29,8 @@
  */
 #define MDATA_VECTOR_FLAG_REFCOUNT 0x01
 
+#define MDATA_VECTOR_FLAG_IS_LOCKED 0x02
+
 #ifndef MDATA_VECTOR_INIT_STEP_SZ
 /**
  * \relates MDATA_VECTOR
@@ -239,13 +241,15 @@ MERROR_RETVAL mdata_table_get_void(
       debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
          (v)->locks ); \
    } else { \
-      if( maug_is_locked( (v)->data_h, (v)->data_bytes ) ) { \
+      assert( !mdata_vector_is_locked( v ) ); \
+      if( mdata_vector_is_locked( v ) ) { \
          error_printf( "attempting to double-lock vector!" ); \
          retval = MERROR_OVERFLOW; \
          goto cleanup; \
       } \
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
       maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
+      (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
       debug_printf( MDATA_TRACE_LVL, "locked vector " #v ); \
    }
 
@@ -264,8 +268,9 @@ MERROR_RETVAL mdata_table_get_void(
          (v)->locks ); \
    } \
    if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
-      assert( NULL == (v)->data_h && NULL != (v)->data_bytes ); \
+      assert( mdata_vector_is_locked( v ) ); \
       maug_munlock( (v)->data_h, (v)->data_bytes ); \
+      (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
       debug_printf( MDATA_TRACE_LVL, "unlocked vector " #v ); \
    }
 
@@ -308,7 +313,9 @@ MERROR_RETVAL mdata_table_get_void(
    maug_cleanup_if_not_ok(); \
    (v)->ct = (ct_new);
 
-#define mdata_vector_is_locked( v ) (NULL != (v)->data_bytes)
+#define mdata_vector_is_locked( v ) \
+   (MDATA_VECTOR_FLAG_IS_LOCKED == \
+   (MDATA_VECTOR_FLAG_IS_LOCKED & (v)->flags))
 
 /* TODO: Implement insert sorting. */
 #define mdata_vector_insert_sort( v, i, t, field )

@@ -44,9 +44,6 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
 
-#  define maug_is_locked( handle, ptr ) \
-      (NULL == (handle) && NULL != (ptr))
-
 #else
 
 /*! \} */ /* maug_mem */
