@@ -14,8 +14,6 @@ int                  g_retroflat_cmd_show;
 struct RETROFLAT_WING_MODULE g_w;
 #     endif /* RETROFLAT_WING */
 
-struct RETROFLAT_BITMAP g_buffer;
-
 /* === */
 
 #ifndef MAUG_NO_CLI

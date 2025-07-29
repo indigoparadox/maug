@@ -36,7 +36,8 @@ define TGTDOSALE
 CFLAGS_WATCOM386_DOS_ALLEGRO += \
 	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/retro2d/allegro \
 	-I$(MAUG_ROOT)/api/input/allegro -I$(MAUG_ROOT)/api/file/unix \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
+	-I$(MAUG_ROOT)/api/mem/dos
 
 LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
@@ -70,7 +71,7 @@ define TGTDOSGAL
 CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
 	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
-	-I$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/dos
 
 LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
 
@@ -100,7 +101,8 @@ define TGTDOSBIOS
 
 CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/retro2d/dosbios \
 	-I$(MAUG_ROOT)/api/input/dosbios -I$(MAUG_ROOT)/api/file/unix \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
+	-I$(MAUG_ROOT)/api/mem/dos
 
 # Strip out options to bake-in resources, as they make the exe too big!
 

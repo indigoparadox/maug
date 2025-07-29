@@ -236,11 +236,11 @@ RETROANI_CB_TABLE( RETROANI_CB_TABLE_DRAW_PROTOTYPES )
 
 #define RETROANI_CB_TABLE_LIST( idx, name ) retroani_draw_ ## name,
 
-const RETROANI_CB gc_animate_draw[] = {
+MAUG_CONST RETROANI_CB SEG_MCONST gc_animate_draw[] = {
    RETROANI_CB_TABLE( RETROANI_CB_TABLE_LIST )
 };
 
-#define RETROANI_CB_TABLE_TYPES( idx, name ) const uint8_t RETROANI_TYPE_ ## name = idx;
+#define RETROANI_CB_TABLE_TYPES( idx, name ) MAUG_CONST uint8_t SEG_MCONST RETROANI_TYPE_ ## name = idx;
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_TYPES );
 

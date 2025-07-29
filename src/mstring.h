@@ -126,6 +126,14 @@ MERROR_RETVAL maug_str_c2p(
 
 /* TODO: void maug_strtou32( const char* str, */
 
+char* maug_strchr( const char* str, char c );
+
+char* maug_strrchr( const char* str, char c );
+
+#  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
+
+#  define maug_strlen( str ) strlen( str )
+
 /*! \} */ /* maug_mstring */
 
 #ifdef MSTRING_C
@@ -693,6 +701,38 @@ MERROR_RETVAL maug_str_c2p(
    strncpy( str_out_buf, str_in, str_out_sz - 1 );
 
    return retval;
+}
+
+/* === */
+
+char* maug_strchr( const char* str, char c ) {
+   size_t str_sz = 0,
+      i = 0;
+
+   str_sz = maug_strlen( str );
+
+   for( i = 0 ; str_sz > i ; i++ ) {
+      if( str[i] == c ) {
+         return (char*)&(str[i]);
+      }
+   }
+
+   return NULL;
+}
+
+char* maug_strrchr( const char* str, char c ) {
+   ssize_t str_sz = 0,
+      i = 0;
+
+   str_sz = maug_strlen( str );
+
+   for( i = str_sz ; 0 <= i ; i-- ) {
+      if( str[i] == c ) {
+         return (char*)&(str[i]);
+      }
+   }
+
+   return NULL;
 }
 
 #endif /* MSTRING_C */

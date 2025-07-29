@@ -135,56 +135,33 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* === Setup Brush Cache === */
 
-/* This will be initialized in setup, so just preserve the number. */
-#     define RETROFLAT_COLOR_TABLE_WIN_BRUSH( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         (HBRUSH)NULL,
-
 #     define RETROFLAT_COLOR_TABLE_WIN_BRSET( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-         gc_retroflat_win_brushes[idx] = CreateSolidBrush( RGB( r, g, b ) );
+         g_retroflat_state->platform.brushes[idx] = \
+            CreateSolidBrush( RGB( r, g, b ) );
 
 #     define RETROFLAT_COLOR_TABLE_WIN_BRRM( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   if( (HBRUSH)NULL != gc_retroflat_win_brushes[idx] ) { \
-      DeleteObject( gc_retroflat_win_brushes[idx] ); \
-      gc_retroflat_win_brushes[idx] = (HBRUSH)NULL; \
+   if( (HBRUSH)NULL != g_retroflat_state->platform.brushes[idx] ) { \
+      DeleteObject( g_retroflat_state->platform.brushes[idx] ); \
+      g_retroflat_state->platform.brushes[idx] = (HBRUSH)NULL; \
    }
 
 /* === End Setup Brush Cache === */
 
 /* === Setup Pen Cache === */
 
-#     define RETROFLAT_COLOR_TABLE_WIN_PENS( \
-         idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            (HPEN)NULL,
-
 #     define RETROFLAT_COLOR_TABLE_WIN_PNSET( \
          idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            gc_retroflat_win_pens[idx] = (HPEN)CreatePen( \
+            g_retroflat_state->platform.pens[idx] = (HPEN)CreatePen( \
                PS_SOLID, RETROFLAT_LINE_THICKNESS, RGB( r, g, b ) );
 
 #     define RETROFLAT_COLOR_TABLE_WIN_PENRM( \
          idx, name_l, name_u, r, g, b, cgac, cgad ) \
-            if( (HPEN)NULL != gc_retroflat_win_pens[idx] ) { \
-               DeleteObject( gc_retroflat_win_pens[idx] ); \
-               gc_retroflat_win_pens[idx] = (HPEN)NULL; \
+            if( (HPEN)NULL != g_retroflat_state->platform.pens[idx] ) { \
+               DeleteObject( g_retroflat_state->platform.pens[idx] ); \
+               g_retroflat_state->platform.pens[idx] = (HPEN)NULL; \
             }
 
 /* === End Setup Pen Cache === */
-
-#     ifdef RETROFLT_C
-
-HBRUSH gc_retroflat_win_brushes[] = {
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRUSH )
-};
-
-static HPEN gc_retroflat_win_pens[] = {
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_PENS )
-};
-
-#     else
-
-extern HBRUSH gc_retroflat_win_brushes[];
-
-#     endif /* RETROFLT_C */
 
 /* Create a brush and set it to the target HDC. */
 #     define retroflat_win_setup_brush( old_brush, target, color, flags ) \
@@ -193,7 +170,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
                SelectObject( target->hdc_b, GetStockObject( NULL_BRUSH ) ); \
          } else { \
             old_brush = SelectObject( \
-               target->hdc_b, gc_retroflat_win_brushes[color] ); \
+               target->hdc_b, g_retroflat_state->platform.brushes[color] ); \
          }
 
 #     define retroflat_win_cleanup_brush( old_brush, target ) \
@@ -204,7 +181,7 @@ extern HBRUSH gc_retroflat_win_brushes[];
 /* Create a pen and set it to the target HDC. */
 #     define retroflat_win_setup_pen( old_pen, target, color, flags ) \
          old_pen = \
-            SelectObject( target->hdc_b, gc_retroflat_win_pens[color] );
+            SelectObject( target->hdc_b, g_retroflat_state->platform.pens[color] );
 
 #     define retroflat_win_cleanup_pen( old_pen, target ) \
          if( (HPEN)NULL != old_pen ) { \
@@ -362,6 +339,8 @@ struct RETROFLAT_PLATFORM {
 #  ifdef RETROFLAT_OPENGL
    HGLRC                hrc_win;
 #  endif /* RETROFLAT_OPENGL */
+   HBRUSH               brushes[16];
+   HPEN                 pens[16];
 };
 
 #endif /* !RETPLTD_H */
