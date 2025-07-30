@@ -1,19 +1,6 @@
 
-#ifndef MMEM_H
-#define MMEM_H
-
-/**
- * \addtogroup maug_mem Memory Management API
- * \{
- * \file mmem.h
- */
-
-#if defined( MAUG_OS_PALM )
-
-/* TODO */
-#  pragma message( "warning: not implemented!" )
-
-#elif defined( MAUG_OS_DOS_REAL )
+#if !defined( MAUG_API_MEM_H_DEFS )
+#define MAUG_API_MEM_H_DEFS
 
 typedef void* MAUG_MHANDLE;
 
@@ -44,9 +31,13 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
 
-#else
+#define maug_mrealloc_test( new_handle, handle, nmemb, sz ) \
+   maug_cleanup_if_lt_overflow( (sz) * (nmemb), sz ); \
+   new_handle = maug_mrealloc( handle, nmemb, sz ); \
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, new_handle ); \
+   handle = new_handle;
 
-/*! \} */ /* maug_mem */
+#elif defined( MMEM_C )
 
-#endif /* !MMEM_H */
+#endif /* !MAUG_API_MEM_H_DEFS */
 
