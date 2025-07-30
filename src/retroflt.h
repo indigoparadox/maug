@@ -861,6 +861,8 @@ typedef int8_t retroflat_dir8_t;
  */
 typedef size_t retroflat_pxxy_t;
 
+#define PXXY_FMT SIZE_T_FMT
+
 struct RETROFLAT_ARGS;
 
 #ifndef RETRO2D_TRACE_LVL

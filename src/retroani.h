@@ -715,7 +715,8 @@ MERROR_RETVAL retroani_set_hole(
       }
 
       debug_printf( RETROANI_TRACE_LVL,
-         "setting hole for animation " SIZE_T_FMT ": %d, %d (%d x %d)",
+         "setting hole for animation " SIZE_T_FMT ": "
+         PXXY_FMT ", " PXXY_FMT " (" PXXY_FMT " x " PXXY_FMT ")",
          i, x, y, w, h );
 
       ani->hole.x = x;
