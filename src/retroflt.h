@@ -2599,6 +2599,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == Platform-Specific Init == */
 
+   debug_printf( 1, "initializing platform..." );
+
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
 
@@ -2731,7 +2733,7 @@ void retroflat_shutdown( int retval ) {
    retroflat_shutdown_platform( retval );
 
    maug_munlock( g_retroflat_state_h, g_retroflat_state );
-   maug_mfree( g_retroflat_state );
+   maug_mfree( g_retroflat_state_h );
 
 }
 

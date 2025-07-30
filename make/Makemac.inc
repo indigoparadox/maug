@@ -17,7 +17,7 @@ CFLAGS_GCC_MAC_M68K := \
 	-DRETROFLAT_API_MAC \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
 	-I$(MAUG_ROOT)/api/file/mac68k -I$(MAUG_ROOT)/api/log/mac68k \
-	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/mac68k
+	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/unix
 # TODO: Make math link optional.
 LDFLAGS_GCC_MAC_M68K := -lm
 

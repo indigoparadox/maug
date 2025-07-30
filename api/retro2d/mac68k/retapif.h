@@ -43,6 +43,8 @@ static MERROR_RETVAL retroflat_init_platform(
    maug_cleanup_if_not_ok_msg( "title string too long!" );
 
 #ifdef RETROFLAT_MAC68K_COLORQD
+   debug_printf( RETRO2D_TRACE_LVL, "setting up quickdraw color..." );
+
    /* Detect if Color QuickDraw is present. */
    if(
       NGetTrapAddress( _Gestalt, ToolTrap ) !=
@@ -57,6 +59,8 @@ static MERROR_RETVAL retroflat_init_platform(
 #ifdef RETROFLAT_MAC68K_COLORQD
    }
 #endif /* RETROFLAT_MAC68K_COLORQD */
+
+   debug_printf( RETRO2D_TRACE_LVL, "creating the window..." );
 
    /* Create the window. */
    /* TODO: Set X/Y from args? */
