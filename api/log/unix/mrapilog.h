@@ -22,7 +22,7 @@
 
 #  ifdef LOG_TO_FILE
 #     ifndef UPRINTF_C
-extern FILE* g_log_file;
+extern FILE* SEG_MGLOBAL g_log_file;
 #     endif /* UPRINTF_C */
 #     define logging_init() g_log_file = fopen( LOG_FILE_NAME, "w" );
 #     define logging_shutdown() fclose( g_log_file );
@@ -34,7 +34,7 @@ extern FILE* g_log_file;
 #elif defined( UPRINTF_C )
 
 #  ifdef LOG_TO_FILE
-FILE* g_log_file = NULL;
+FILE* SEG_MGLOBAL g_log_file = NULL;
 #  endif /* LOG_TO_FILE */
 
 #endif /* !MAUG_API_LOG_H_DEFS */

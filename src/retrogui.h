@@ -278,17 +278,21 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui );
 #ifdef RETROGUI_C
 
 #define RETROGUI_CTL_TABLE_CONSTS( idx, c_name, c_fields ) \
-   MAUG_CONST uint8_t RETROGUI_CTL_TYPE_ ## c_name = idx;
+   MAUG_CONST uint8_t SEG_MCONST RETROGUI_CTL_TYPE_ ## c_name = idx;
 
 RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CONSTS )
+
+#ifdef RETROGUI_TRACE_TOKENS
 
 #define RETROGUI_CTL_TABLE_NAMES( idx, c_name, f_fields ) \
    #c_name,
 
-MAUG_CONST char* gc_retrogui_ctl_names[] = {
+MAUG_CONST char* SEG_MCONST gc_retrogui_ctl_names[] = {
    RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_NAMES )
    ""
 };
+
+#endif /* RETROGUI_TRACE_TOKENS */
 
 static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
    struct RETROGUI* gui, size_t idc );
@@ -1945,10 +1949,17 @@ MERROR_RETVAL retrogui_push_ctl(
    }
 
    /* Perform the actual push. */
+
+#ifdef RETROGUI_TRACE_TOKENS
    debug_printf( RETROGUI_TRACE_LVL,
       "pushing %s " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
       gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc,
       mdata_vector_ct( &(gui->ctls) ) );
+#else
+   debug_printf( RETROGUI_TRACE_LVL,
+      "pushing control type %d, " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
+      ctl->base.type, ctl->base.idc, mdata_vector_ct( &(gui->ctls) ) );
+#endif /* RETROGUI_TRACE_TOKENS */
 
    mdata_vector_append( &(gui->ctls), ctl, sizeof( union RETROGUI_CTL ) );
 
@@ -1982,9 +1993,15 @@ MERROR_RETVAL retrogui_push_ctl(
     * or whatever else might be needed to determine an automatic size.
     */
    if( 0 == ctl->base.w || 0 == ctl->base.h ) {
+#ifdef RETROGUI_TRACE_TOKENS
       debug_printf( RETROGUI_TRACE_LVL,
          "determining size for new %s control " SIZE_T_FMT "...",
          gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc );
+#else
+      debug_printf( RETROGUI_TRACE_LVL,
+         "determining size for new control type %d, " SIZE_T_FMT "...",
+         ctl->base.type, ctl->base.idc );
+#endif /* RETROGUI_TRACE_TOKENS */
       retval = _retrogui_sz_ctl(
          gui, ctl->base.idc, &(ctl->base.w), &(ctl->base.h), 0, 0 );
       maug_cleanup_if_not_ok();
@@ -2532,11 +2549,13 @@ MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
 #else
 
 #define RETROGUI_CTL_TABLE_CONSTS( idx, c_name, c_fields ) \
-   extern MAUG_CONST uint8_t RETROGUI_CTL_TYPE_ ## c_name;
+   extern MAUG_CONST uint8_t SEG_MCONST RETROGUI_CTL_TYPE_ ## c_name;
 
 RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CONSTS )
 
+#ifdef RETROGUI_TRACE_TOKENS
 extern MAUG_CONST char* gc_retrogui_ctl_names[];
+#endif /* RETROGUI_TRACE_TOKENS */
 
 #endif /* RETROGUI_C */
 

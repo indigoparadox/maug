@@ -1986,11 +1986,11 @@ MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4] =
 MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4] =
    { -1, 0, 1,  0 };
 
-MAUG_MHANDLE g_retroflat_state_h = (MAUG_MHANDLE)NULL;
-struct RETROFLAT_STATE* g_retroflat_state = NULL;
+MAUG_MHANDLE SEG_MGLOBAL g_retroflat_state_h = (MAUG_MHANDLE)NULL;
+struct RETROFLAT_STATE* SEG_MGLOBAL g_retroflat_state = NULL;
 
 #  define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-      MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u = idx;
+      MAUG_CONST RETROFLAT_COLOR SEG_MCONST RETROFLAT_COLOR_ ## name_u = idx;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
@@ -2914,17 +2914,13 @@ extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4];
 /*! \} */
 
 #define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
-   extern MAUG_CONST RETROFLAT_COLOR RETROFLAT_COLOR_ ## name_u;
+   extern MAUG_CONST RETROFLAT_COLOR SEG_MCONST RETROFLAT_COLOR_ ## name_u;
 
 RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CONSTS )
 
 extern MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[];
 
-   extern struct RETROFLAT_STATE* g_retroflat_state;
-#     if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
-   extern HINSTANCE            g_retroflat_instance;
-   extern int                  g_retroflat_cmd_show;
-#     endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
+extern struct RETROFLAT_STATE* SEG_MGLOBAL g_retroflat_state;
 
 #  if (defined( RETROFLAT_SOFT_SHAPES ) || defined( RETROFLAT_SOFT_LINES ) || \
    defined( RETROFLAT_3D ))

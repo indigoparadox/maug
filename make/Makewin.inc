@@ -253,7 +253,7 @@ define TGT_WATCOM386_WIN_SDL
 
 # SDL is always on Pentium.
 CFLAGS_WATCOM386_WIN_SDL += \
-	-mf -5s -ei -fp5 -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/retro2d/sdl \
+	-mf -5s -ei -fp5 -zm -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/retro2d/sdl \
 	-i=$(MAUG_ROOT)/api/input/sdl -i=$(MAUG_ROOT)/api/log/unix \
 	-i=$(WATCOM)/h/nt -i=$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1 \
 	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/font/soft \
@@ -300,7 +300,7 @@ TGTWINSDL=$(TGT_WATCOM386_WIN_SDL)
 define TGT_WATCOM_WIN_WIN16
 
 CFLAGS_WATCOM_WIN_WIN16 += \
-	-ml -DMAUG_DOS_MEM_L \
+	-zm -ml -DMAUG_DOS_MEM_L \
 	-4 -bt=windows -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
@@ -330,7 +330,8 @@ $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).res: $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).rc
 	wrc -r $$< -bt=windows -fo=$$@
 
 $(1)w3.exe: \
-$$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) \
+$$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_FILES) \
+$$(C_MAUG_STUBS))) \
 $$(addprefix $$(OBJDIR_WATCOM_WIN_WIN16)/,$$(subst .c,.o,$$(C_MPLUG_OVLS))) | \
 $$(OBJDIR_WATCOM_WIN_WIN16)/$(1).res
 	$$(LD_WATCOM) name $$@ option dosseg option map \

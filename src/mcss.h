@@ -200,7 +200,7 @@ MERROR_RETVAL mcss_parser_init( struct MCSS_PARSER* parser );
 #ifdef MCSS_C
 
 #define MCSS_POSITION_TABLE_CONSTS( pos_id, pos_name ) \
-   MAUG_CONST uint16_t MCSS_POSITION_ ## pos_name = pos_id;
+   MAUG_CONST uint16_t SEG_MCONST MCSS_POSITION_ ## pos_name = pos_id;
 
 MCSS_POSITION_TABLE( MCSS_POSITION_TABLE_CONSTS )
 

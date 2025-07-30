@@ -55,10 +55,6 @@
 
 #  define RETROFLAT_VDP_LIB_NAME "rvdpnt"
 
-#  ifndef MAUG_NO_STDLIB
-#     include <time.h> /* For srand() */
-#  endif /* !RETROFLAT_API_WINCE */
-
 #  ifdef RETROFLAT_WING
 
 #     if defined( RETROFLAT_API_WIN32 )
@@ -342,6 +338,17 @@ struct RETROFLAT_PLATFORM {
    HBRUSH               brushes[16];
    HPEN                 pens[16];
 };
+
+/* For now, these are set by WinMain(), so they need to be outside of the
+ * state that's zeroed on init()!
+ */
+#ifdef RETROFLT_C
+HINSTANCE SEG_MGLOBAL g_retroflat_instance;
+int SEG_MGLOBAL g_retroflat_cmd_show;
+#else
+extern HINSTANCE SEG_MGLOBAL g_retroflat_instance;
+extern int SEG_MGLOBAL g_retroflat_cmd_show;
+#endif
 
 #endif /* !RETPLTD_H */
 

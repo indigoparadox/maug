@@ -68,20 +68,24 @@ typedef MERROR_RETVAL (*retroflat_create_bitmap_cb)(
  * This is assigned in retroflat_init(), as that is when all of the _px()
  * callback functions are defined and available.
  */
-RETROFLT_CB_EXTERN retroflat_px_cb retroflat_2d_px RETROFLT_CB_INIT;
-
-RETROFLT_CB_EXTERN retroflat_line_cb retroflat_2d_line RETROFLT_CB_INIT;
-
-RETROFLT_CB_EXTERN retroflat_rect_cb retroflat_2d_rect RETROFLT_CB_INIT;
+RETROFLT_CB_EXTERN
+retroflat_px_cb SEG_MGLOBAL retroflat_2d_px RETROFLT_CB_INIT;
 
 RETROFLT_CB_EXTERN
-retroflat_blit_bitmap_cb retroflat_2d_blit_bitmap RETROFLT_CB_INIT;
+retroflat_line_cb SEG_MGLOBAL retroflat_2d_line RETROFLT_CB_INIT;
 
 RETROFLT_CB_EXTERN
-retroflat_load_bitmap_cb retroflat_2d_load_bitmap RETROFLT_CB_INIT;
+retroflat_rect_cb SEG_MGLOBAL retroflat_2d_rect RETROFLT_CB_INIT;
 
 RETROFLT_CB_EXTERN
-retroflat_create_bitmap_cb retroflat_2d_create_bitmap RETROFLT_CB_INIT;
+retroflat_blit_bitmap_cb SEG_MGLOBAL retroflat_2d_blit_bitmap RETROFLT_CB_INIT;
+
+RETROFLT_CB_EXTERN
+retroflat_load_bitmap_cb SEG_MGLOBAL retroflat_2d_load_bitmap RETROFLT_CB_INIT;
+
+RETROFLT_CB_EXTERN
+retroflat_create_bitmap_cb SEG_MGLOBAL
+   retroflat_2d_create_bitmap RETROFLT_CB_INIT;
 
 #if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
 

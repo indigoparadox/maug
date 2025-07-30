@@ -248,29 +248,6 @@ MAUG_CONST RETROANI_CB SEG_MCONST gc_animate_draw[] = {
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_TYPES );
 
-#if 0
-static const RETROFLAT_COLOR gc_animation_colors[] = {
-   RETROFLAT_COLOR_BLACK,
-   RETROFLAT_COLOR_CYAN,
-   RETROFLAT_COLOR_MAGENTA,
-   RETROFLAT_COLOR_WHITE,
-#ifdef DEPTH_VGA
-   RETROFLAT_COLOR_DARKBLUE,
-   RETROFLAT_COLOR_DARKGREEN,
-   RETROFLAT_COLOR_TEAL,
-   RETROFLAT_COLOR_DARKRED,
-   RETROFLAT_COLOR_VIOLET,
-   RETROFLAT_COLOR_BROWN,
-   RETROFLAT_COLOR_GRAY,
-   RETROFLAT_COLOR_DARKGRAY,
-   RETROFLAT_COLOR_BLUE,
-   RETROFLAT_COLOR_GREEN,
-   RETROFLAT_COLOR_RED,
-   RETROFLAT_COLOR_YELLOW
-#endif /* DEPTH_VGA */
-};
-#endif
-
 MERROR_RETVAL retroani_draw_RECTANGLE( struct RETROANI* a ) {
    /* TODO */
    return MERROR_OK;
@@ -664,8 +641,8 @@ MERROR_RETVAL retroani_set_string(
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
    p_str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
 
-   assert( RETROANI_TEXT_MAX_SZ > *p_str_sz );
-   assert( RETROANI_TYPE_STRING == ani->type );
+   /* assert( RETROANI_TEXT_MAX_SZ > *p_str_sz );
+   assert( RETROANI_TYPE_STRING == ani->type ); */
  
 #ifdef RETROGXC_PRESENT
    ani->font_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );

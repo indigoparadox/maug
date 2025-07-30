@@ -102,7 +102,7 @@ MERROR_RETVAL retrogxc_bitmap_wh(
 
 #ifdef RETROGXC_C
 
-static struct MDATA_VECTOR gs_retrogxc_bitmaps;
+static struct MDATA_VECTOR SEG_MGLOBAL gs_retrogxc_bitmaps;
 
 /* === */
 

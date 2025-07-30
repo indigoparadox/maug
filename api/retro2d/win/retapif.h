@@ -4,12 +4,6 @@
 
 /* TODO: WinG runs but just shows an empty window. */
 
-/* For now, these are set by WinMain(), so they need to be outside of the
- * state that's zeroed on init()!
- */
-HINSTANCE            g_retroflat_instance;
-int                  g_retroflat_cmd_show;
-
 #     ifdef RETROFLAT_WING
 struct RETROFLAT_WING_MODULE g_w;
 #     endif /* RETROFLAT_WING */
@@ -487,11 +481,10 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* == Win16/Win32 == */
 
-#     ifdef MAUG_NO_STDLIB
-   srand( GetTickCount() );
+#     ifdef MAUG_API_WIN16
+   srand( GetCurrentTime() );
 #     else
-   /* Time makes a better random seed if available. */
-   srand( time( NULL ) );
+   srand( GetTickCount() );
 #     endif /* RETROFLAT_API_WINCE */
 
    /* Setup color palettes. */

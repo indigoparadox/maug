@@ -26,8 +26,12 @@
    defined( MAUG_DOS_MEM_L ) && \
    defined( __WATCOMC__ )
 #  define SEG_MCONST __based( __segname( "MCONST" ) )
+#  define SEG_MGLOBAL __based( __segname( "MGLOB" ) )
 #else
+/*! \brief Segment for storing maug-specific static and global constants. */
 #  define SEG_MCONST
+/*! \brief Segment for storing maug-specific static and global variables. */
+#  define SEG_MGLOBAL
 #endif /* MAUG_OS_DOS_REAL && __WATCOMC__ */
 
 /* This can be included sooner if needed, since it has a guard. */
