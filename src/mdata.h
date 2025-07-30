@@ -771,7 +771,7 @@ cleanup:
 /* === */
 
 void mdata_vector_free( struct MDATA_VECTOR* v ) {
-   if( (MAUG_MHANDLE)NULL != v->data_h ) {
+   if( 0 < v->ct_max ) {
       maug_mfree( v->data_h );
    }
    v->ct = 0;

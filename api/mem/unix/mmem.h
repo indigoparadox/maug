@@ -28,10 +28,6 @@ typedef void* MAUG_MHANDLE;
 
 #  define maug_munlock( handle, ptr ) handle = ptr; ptr = NULL;
 
-#  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
-
-#  define maug_strlen( str ) strlen( str )
-
 #define maug_mrealloc_test( new_handle, handle, nmemb, sz ) \
    maug_cleanup_if_lt_overflow( (sz) * (nmemb), sz ); \
    new_handle = maug_mrealloc( handle, nmemb, sz ); \
