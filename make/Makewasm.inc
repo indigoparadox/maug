@@ -9,7 +9,8 @@ endif
 
 EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl -s USE_OGG=1 \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
+	-I$(MAUG_ROOT)/api/mem/unix
 
 # These facilitate async wrappers for the file API.
 LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2
