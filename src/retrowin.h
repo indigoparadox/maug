@@ -357,13 +357,14 @@ void retrowin_free_win( struct RETROWIN* win ) {
    if( RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & win->flags) ) {
       /* This GUI was created by a NULL to push_win(). */
 
+      retrowin_lock_gui( win )
+
 #ifndef RETROGXC_PRESENT
       if( (MAUG_MHANDLE)NULL != win->gui_p->font_h ) {
          retrofont_free( &(win->gui_p->font_h) );
       }
 #endif /* RETROGXC_PRESENT */
 
-      retrowin_lock_gui( win )
       retrogui_free( win->gui_p );
       retrowin_unlock_gui( win )
       maug_mfree( win->gui_h );
