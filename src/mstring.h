@@ -126,13 +126,27 @@ MERROR_RETVAL maug_str_c2p(
 
 /* TODO: void maug_strtou32( const char* str, */
 
+#ifdef MAUG_NO_STDLIB
+
+#  define maug_strncpy( dest, src, len ) maug_snprintf( dest, len, "%s", src )
+
 char* maug_strchr( const char* str, char c );
 
 char* maug_strrchr( const char* str, char c );
 
+size_t maug_strlen( const char* str );
+
+#else
+
 #  define maug_strncpy( dest, src, len ) strncpy( dest, src, len )
 
+#  define maug_strchr( str, c ) strchr( str, c )
+
+#  define maug_strrchr( str, c ) strrchr( str, c )
+
 #  define maug_strlen( str ) strlen( str )
+
+#endif /* MAUG_NO_STDLIB */
 
 /*! \} */ /* maug_mstring */
 
@@ -443,7 +457,7 @@ MERROR_RETVAL maug_tok_str(
       if( '\0' == line[i_in] ) {
          sep_match = 1;
       } else {
-         for( i_tok = 0 ; strlen( sep ) > i_tok ; i_tok++ ) {
+         for( i_tok = 0 ; maug_strlen( sep ) > i_tok ; i_tok++ ) {
             if( sep[i_tok] == line[i_in] ) {
                sep_match = 1;
                break;
@@ -688,7 +702,7 @@ MERROR_RETVAL maug_str_c2p(
    char* str_out_buf = &(str_out[1]);
    int8_t* p_str_out_buf_sz = (int8_t*)&(str_out[0]);
 
-   str_sz = strlen( str_in );
+   str_sz = maug_strlen( str_in );
 
    if( str_sz >= str_out_sz - 1 || 127 < str_sz ) {
       /* error_printf( "input string too long!" ); */
@@ -698,10 +712,12 @@ MERROR_RETVAL maug_str_c2p(
    *p_str_out_buf_sz = str_sz;
 
    /* -1 for the size at the beginning. */
-   strncpy( str_out_buf, str_in, str_out_sz - 1 );
+   maug_strncpy( str_out_buf, str_in, str_out_sz - 1 );
 
    return retval;
 }
+
+#ifdef MAUG_NO_STDLIB
 
 /* === */
 
@@ -720,6 +736,8 @@ char* maug_strchr( const char* str, char c ) {
    return NULL;
 }
 
+/* === */
+
 char* maug_strrchr( const char* str, char c ) {
    ssize_t str_sz = 0,
       i = 0;
@@ -734,6 +752,20 @@ char* maug_strrchr( const char* str, char c ) {
 
    return NULL;
 }
+
+/* === */
+
+size_t maug_strlen( const char* str ) {
+   size_t i = 0;
+
+   while( '\0' != str[i] ) {
+      i++;
+   }
+
+   return i;
+}
+
+#endif /* MAUG_NO_STDLIB */
 
 #endif /* MSTRING_C */
 

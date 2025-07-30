@@ -269,9 +269,23 @@ struct RETROTILE_DATA_BORDER {
    ((retroflat_tile_t*)(((uint8_t*)(layer)) + \
    sizeof( struct RETROTILE_LAYER )))
 
-#define retrotile_clear_tiles( t, layer ) \
-   memset( retrotile_get_tiles_p( layer ), -1, \
-      t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) )
+#ifdef MAUG_NO_STDLIB
+/* Loop is slower, but doesn't use memset. */
+/* TODO: This kinda assumes retroflat_tile_t is 8 bits... Fix that! */
+#  define retrotile_clear_tiles( t, layer, i ) \
+      assert( 1 == sizeof( retroflat_tile_t ) ); \
+      for( \
+         i = 0 ; \
+         (t)->tiles_w * (t)->tiles_h * sizeof( retroflat_tile_t ) > i ; \
+         i++ \
+      ) { \
+         retrotile_get_tiles_p( layer )[i] = -1; \
+      }
+#else
+#  define retrotile_clear_tiles( t, layer, i ) \
+      memset( retrotile_get_tiles_p( layer ), -1, \
+         (t)->tiles_w * (t)->tiles_h * sizeof( retroflat_tile_t ) )
+#endif /* MAUG_NO_STDLIB */
 
 /**
  * \addtogroup retrotile_parser RetroTile Parser
@@ -732,7 +746,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          assert( 0 == tile_def->tile_class );
 
          #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
-            } else if( 0 == strncmp( #a, token, strlen( #a ) + 1 ) ) { \
+            } else if( 0 == strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
                tile_def->tile_class = RETROTILE_CLASS_ ## A; \
                debug_printf( RETROTILE_TRACE_LVL, \
                   "set tile " SIZE_T_FMT " type: " #a " (%u)", \
@@ -1187,7 +1201,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    parser->passes_max = passes;
 
    /* Setup filename path. */
-   memset( filename_path, '\0', MAUG_PATH_SZ_MAX );
+   maug_mzero( filename_path, MAUG_PATH_SZ_MAX );
    /* TODO: Configurable path. */
    maug_snprintf(
       filename_path, MAUG_PATH_SZ_MAX, "%s/%s", dirname, filename );
@@ -1530,8 +1544,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       }
 
       /* Initialize passed tilemap while we're handling first call stuff. */
-      memset( retrotile_get_tiles_p( layer ), -1,
-         t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) );
+      retrotile_clear_tiles( t, layer, i );
 
       /* Initialize DS struct from tilemap properties. */
       maug_mzero( data_ds, sizeof( struct RETROTILE_DATA_DS ) );
@@ -1691,8 +1704,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    tiles = retrotile_get_tiles_p( layer );
 
    /* Initialize grid to empty. */
-   memset( tiles, -1,
-      t->tiles_w * t->tiles_h * sizeof( retroflat_tile_t ) );
+   retrotile_clear_tiles( t, layer, i );
 
    /* Generate the initial sector starting points. */
    for( y = 0 ; t->tiles_w > y ; y += spb ) {

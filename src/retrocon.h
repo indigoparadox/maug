@@ -316,7 +316,7 @@ MERROR_RETVAL retrocon_exec_line(
 
    /* Create an uppercase for comparison. */
    maug_mzero( line_cap, RETROCON_LBUFFER_SZ_MAX + 1 );
-   strncpy( line_cap, line, RETROCON_LBUFFER_SZ_MAX );
+   maug_strncpy( line_cap, line, RETROCON_LBUFFER_SZ_MAX );
    maug_str_upper( line_cap, line_sz );
 
    /* Find callback with name starting line. */

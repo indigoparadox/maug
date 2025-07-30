@@ -145,7 +145,7 @@ static MERROR_RETVAL retroflat_init_platform(
       args->platform.screen_mode = RETROFLAT_SCREEN_MODE_VGA;
    }
 
-   memset( &r, 0, sizeof( r ) );
+   maug_mzero( &r, sizeof( r ) );
    r.x.ax = 0x0f00; /* Service: Get video mode. */
 	int86( 0x10, &r, &r ); /* Call video interrupt. */
    g_retroflat_state->platform.old_video_mode = r.h.al;
@@ -186,7 +186,7 @@ static MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
-   memset( &r, 0, sizeof( r ) );
+   maug_mzero( &r, sizeof( r ) );
    r.h.al = args->platform.screen_mode;
    int86( 0x10, &r, &r ); /* Call video interrupt. */
 
@@ -240,7 +240,7 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
       debug_printf( 3, "restoring video mode 0x%02x...",
          g_retroflat_state->platform.old_video_mode );
 
-      memset( &r, 0, sizeof( r ) );
+      maug_mzero( &r, sizeof( r ) );
       r.x.ax = g_retroflat_state->platform.old_video_mode;
       int86( 0x10, &r, &r ); /* Call video interrupt. */
    }
@@ -273,7 +273,7 @@ void retroflat_message(
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
-   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
+   maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 

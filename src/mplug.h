@@ -40,7 +40,7 @@ MERROR_RETVAL mplug_load(
 #  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
-   memset( plugin_path, '\0', MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( plugin_path, MAUG_PATH_SZ_MAX + 1 );
 
 #if defined( RETROFLAT_OS_UNIX )
    maug_snprintf( plugin_path, MAUG_PATH_SZ_MAX, "%s.so", plugin_basename );
@@ -103,7 +103,7 @@ MERROR_RETVAL mplug_call(
 #ifdef RETROFLAT_OS_UNIX
    plugin_proc = dlsym( mod_exe, proc_name );
 #elif defined( RETROFLAT_OS_WIN )
-   memset( proc_name_ex, '\0', MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( proc_name_ex, MAUG_PATH_SZ_MAX + 1 );
 
    /* Append a _ to the proc_name to match calling convention name scheme. */
    maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX, "%s_", proc_name );

@@ -213,7 +213,7 @@ void retroflat_message(
    */
    unsigned char msg_buf[128];
 
-   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
+   maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
@@ -244,7 +244,7 @@ void retroflat_set_title( const char* format, ... ) {
 
    /* Build the title. */
    va_start( vargs, format );
-   memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
+   maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
    retval = maug_str_c2p( title, (char*)title_buf, 128 );

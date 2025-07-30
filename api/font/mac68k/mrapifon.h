@@ -98,7 +98,7 @@ void retrofont_string(
    size_t i = 0, str_start = 0, y_offset = 0, line_sz = 0;
 
    if( 0 >= str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    maug_mlock( font_h, font );

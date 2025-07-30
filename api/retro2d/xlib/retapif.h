@@ -113,7 +113,9 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* if( NULL != g_buffer_bits ) {
       free( g_buffer_bits );
    } */
-   XCloseDisplay( g_retroflat_state->platform.display );
+   if( 0 < g_retroflat_state->platform.display ) {
+      XCloseDisplay( g_retroflat_state->platform.display );
+   }
 }
 
 /* === */
@@ -138,7 +140,7 @@ void retroflat_message(
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
-   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
+   maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
@@ -156,7 +158,7 @@ void retroflat_set_title( const char* format, ... ) {
 
    /* Build the title. */
    va_start( vargs, format );
-   memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
+   maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
    /* TODO */

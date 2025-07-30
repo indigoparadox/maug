@@ -114,7 +114,7 @@ static MERROR_RETVAL retroflat_cli_c(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( -1 == arg_c ) {
-      memset( g_retroflat_state->config_path, '\0', MAUG_PATH_SZ_MAX + 1 );
+      maug_mzero( g_retroflat_state->config_path, MAUG_PATH_SZ_MAX + 1 );
 
       if( NULL != args->config_path ) {
          debug_printf( 1, "setting config path to: %s", args->config_path );

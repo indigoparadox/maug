@@ -107,7 +107,7 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
          assert( NULL == argv_out[arg_idx] );
          argv_out[arg_idx] = calloc( arg_iter + 1, sizeof( char ) );
          maug_cleanup_if_null_alloc( char*, argv_out[arg_idx] );
-         strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
+         maug_strncpy( argv_out[arg_idx], &(cmd_line[arg_start]), arg_iter );
          arg_idx++; /* Start next arg. */
          arg_iter = 0; /* New arg is 0 long. */
          arg_start = i; /* New arg starts here (maybe). */
@@ -547,8 +547,8 @@ MERROR_RETVAL retroflat_init_platform(
    AdjustWindowRect( &wr, RETROFLAT_WIN_STYLE, FALSE );
 #     endif /* !RETROFLAT_API_WINCE */
 
-   memset(
-      &(g_retroflat_state->buffer), '\0', sizeof( struct RETROFLAT_BITMAP ) );
+   maug_mzero(
+      &(g_retroflat_state->buffer), sizeof( struct RETROFLAT_BITMAP ) );
 
    debug_printf( 1, "retroflat: creating window class..." );
 
@@ -571,7 +571,7 @@ MERROR_RETVAL retroflat_init_platform(
    }
 #     endif /* MAUG_WCHAR */
 
-   memset( &wc, '\0', sizeof( WNDCLASS ) );
+   maug_mzero( &wc, sizeof( WNDCLASS ) );
 
    wc.lpfnWndProc   = (WNDPROC)&WndProc;
    wc.hInstance     = g_retroflat_instance;
@@ -841,7 +841,7 @@ void retroflat_message(
    wchar_t title_w[RETROFLAT_TITLE_MAX + 1] = { 0 };
 #  endif /* MAUG_WCHAR */
 
-   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
+   maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
@@ -888,7 +888,7 @@ void retroflat_set_title( const char* format, ... ) {
 
    /* Build the title. */
    va_start( vargs, format );
-   memset( title, '\0', RETROFLAT_TITLE_MAX + 1 );
+   maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
 #ifdef MAUG_WCHAR

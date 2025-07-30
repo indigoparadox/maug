@@ -558,10 +558,10 @@ static MERROR_RETVAL _mhtml_set_attrib_val( struct MHTML_PARSER* parser ) {
    } else if( MHTML_ATTRIB_KEY_TYPE == parser->attrib_key ) {
       /* TODO: Validate tag type. */
 
-      if( 0 == maug_strncpy( parser->base.token, "button", 7 ) ) {
-         p_tag_iter->INPUT.input_type =
-            MHTML_INPUT_TYPE_BUTTON;
-      }
+      maug_strncpy( parser->base.token, "button", 7 );
+      /* if( 0 == ) { */ /* TODO: Why were we checking this? */
+      p_tag_iter->INPUT.input_type =
+         MHTML_INPUT_TYPE_BUTTON;
 
    } else if( MHTML_ATTRIB_KEY_NAME == parser->attrib_key ) {
       /* TODO: Validate tag type. */

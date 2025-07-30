@@ -120,7 +120,7 @@ typedef int16_t retroflat_tile_t;
  *          args.assets_path = "assets";
  *       
  *          / * Zero out the data holder. * /
- *          memset( &data, '\0', sizeof( struct EXAMPLE_DATA ) );
+ *          maug_mzero( &data, sizeof( struct EXAMPLE_DATA ) );
  *       
  *          / * === Setup === * /
  *          / * Call the init with the args struct created above. * /
@@ -2014,7 +2014,7 @@ MERROR_RETVAL retroflat_build_filename_path(
    assert( 1 < buffer_out_sz );
 
    /* Build the path to the bitmap. */
-   memset( buffer_out, '\0', buffer_out_sz );
+   maug_mzero( buffer_out, buffer_out_sz );
    if(
       RETROFLAT_FLAGS_LITERAL_PATH ==
       (RETROFLAT_FLAGS_LITERAL_PATH & flags)

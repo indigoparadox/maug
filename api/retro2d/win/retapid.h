@@ -4,6 +4,11 @@
 
 #define RETROPLAT_PRESENT 1
 
+#ifdef MAUG_NO_STDLIB
+/* Define this for END_OF_MAIN below. */
+void free( void* );
+#endif /* MAUG_NO_STDLIB */
+
 /* Windows doesn't have hardware scrolling and on older systems GDI can be
  * slow, so minimize blitting!
  */

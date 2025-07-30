@@ -203,9 +203,8 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    g_retroflat_state->sound.flags = 0;
 
    /* No bank file by default. */
-   memset(
-      g_retroflat_state->sound.sf_bank_filename, '\0',
-      MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero(
+      g_retroflat_state->sound.sf_bank_filename, MAUG_PATH_SZ_MAX + 1 );
 
    if( 0 == args->sound.snd_io_base ) {
       /* Select default port. */
@@ -312,7 +311,7 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
    mfile_t opl_defs;
    uint8_t byte_buffer = 0;
 
-   memset( &opl_defs, '\0', sizeof( mfile_t ) );
+   maug_mzero( &opl_defs, sizeof( mfile_t ) );
 
    switch( g_retroflat_state->sound.driver ) {
    case RETROSND_PC_BIOS_MPU:

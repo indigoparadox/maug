@@ -369,7 +369,7 @@ void retroflat_message(
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
 
-   memset( msg_out, '\0', RETROFLAT_MSG_MAX + 1 );
+   maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 

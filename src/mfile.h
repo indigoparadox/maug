@@ -201,7 +201,7 @@ MERROR_RETVAL mfile_assign_path(
    maug_snprintf( tgt, MAUG_PATH_SZ_MAX, "%s", src );
 
    if( MFILE_ASSIGN_FLAG_TRIM_EXT == (MFILE_ASSIGN_FLAG_TRIM_EXT & flags) ) {
-      ext_ptr = strrchr( tgt, '.' );
+      ext_ptr = maug_strrchr( tgt, '.' );
       if( NULL != ext_ptr ) {
          *ext_ptr = '\0';
       }

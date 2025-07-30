@@ -139,7 +139,8 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
       /* Get the current path token. */
       tok_retval = maug_tok_str(
-         dir_idx, filename, strlen( filename ), dir_name, MAUG_PATH_SZ_MAX, "/" );
+         dir_idx, filename,
+         maug_strlen( filename ), dir_name, MAUG_PATH_SZ_MAX, "/" );
 
       if( MERROR_OK == tok_retval ) {
          debug_printf( MFILE_TRACE_LVL, "dir: %s", dir_name );

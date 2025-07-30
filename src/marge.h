@@ -124,16 +124,16 @@ static int maug_cli_h( const char* arg, ssize_t arg_c, void* args ) {
       return 0;
    }
 
-   fprintf( stderr, "usage:\n\n" );
+   error_printf( "usage:\n" );
 
    /* Display help for all available options. */
    while( '\0' != g_maug_cli_args[i][0] ) {
-      fprintf( stderr, "\t%s\t%s\n", g_maug_cli_args[i],
+      error_printf( "\t%s\t%s", g_maug_cli_args[i],
          g_maug_cli_arg_help[i] );
       i++;
    }
 
-   fprintf( stderr, "\n" );
+   error_printf( "" );
 
    /* TODO: Coherent error code. */
    return -1;

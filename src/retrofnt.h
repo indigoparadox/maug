@@ -101,7 +101,7 @@ MERROR_RETVAL retrofont_read_line(
 
    /* Hunt for sub statements. */
    if( 0 == strncmp( "SUB", glyph_idx_str, 3 ) ) {
-      last_char_idx = strlen( *p_glyph_bytes ) - 1;
+      last_char_idx = maug_strlen( *p_glyph_bytes ) - 1;
       if(
          '\n' == (*p_glyph_bytes)[last_char_idx] ||
          '\r' == (*p_glyph_bytes)[last_char_idx] ||
@@ -133,9 +133,9 @@ MERROR_RETVAL retrofont_load_stub(
    char* line_bytes = NULL;
 
    maug_mzero( font_stub_name, sizeof( retroflat_asset_path ) );
-   strncpy( font_stub_name, font_name, sizeof( retroflat_asset_path ) - 1 );
+   mfile_assign_path( font_stub_name, font_name, 0 );
    font_stub_name[strlen( font_stub_name ) - 5] = 'x';
-   debug_printf( 1, "font_name: %s", font_stub_name );
+   debug_printf( RETROFONT_TRACE_LVL, "stub font_name: %s", font_stub_name );
 
    /* TODO: Load font stub and find substitute. */
    maug_mzero( &font_file, sizeof( mfile_t ) );

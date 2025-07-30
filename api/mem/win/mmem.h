@@ -18,7 +18,7 @@ typedef HGLOBAL MAUG_MHANDLE;
  *
  * \warn This should be used on pointers, not handles!
  */
-#  define maug_mzero( ptr, sz ) memset( ptr, '\0', sz )
+void maug_mzero( void* ptr, size_t sz );
 
 #  define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
 
@@ -36,6 +36,13 @@ typedef HGLOBAL MAUG_MHANDLE;
       handle = new_handle;
 
 #elif defined( MMEM_C )
+
+void maug_mzero( void* ptr, size_t sz ) {
+   size_t i = 0;
+   for( i = 0 ; sz > i ; i++ ) {
+      ((uint8_t*)ptr)[i] = 0;
+   }
+}
 
 #endif /* !MAUG_API_MEM_H_DEFS */
 

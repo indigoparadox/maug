@@ -149,7 +149,7 @@ define TGT_WATCOM386_WIN_WIN32
 CFLAGS_WATCOM386_WIN_WIN32 += \
 	-mf -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
-	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/win \
 	-i=$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
@@ -211,7 +211,7 @@ define TGT_WATCOM386_WIN_GLUT
 CFLAGS_WATCOM386_WIN_GLUT := \
 	-mf -5s -fp5 -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_GLUT \
 	-i=$(MAUG_ROOT)/api/retro2d/glut -i=$(MAUG_ROOT)/api/input/glut \
-	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/win \
 	-i=$(MAUG_ROOT)/api/font/soft	-i=$(MAUG_ROOT)/api/mem/win
 
 LDFLAGS_WATCOM386_WIN_GLUT := system nt_win libr glut32
@@ -254,7 +254,7 @@ define TGT_WATCOM386_WIN_SDL
 # SDL is always on Pentium.
 CFLAGS_WATCOM386_WIN_SDL += \
 	-mf -5s -ei -fp5 -zm -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/retro2d/sdl \
-	-i=$(MAUG_ROOT)/api/input/sdl -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/input/sdl -i=$(MAUG_ROOT)/api/log/win \
 	-i=$(WATCOM)/h/nt -i=$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1 \
 	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/font/soft \
 	-i=$(MAUG_ROOT)/api/mem/win \
@@ -303,7 +303,7 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 	-zm -ml -DMAUG_DOS_MEM_L \
 	-4 -bt=windows -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
-	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/win \
 	-i=$(MAUG_ROOT)/api/font/win -i=$(MAUG_ROOT)/api/mem/win
 
 LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate
@@ -362,7 +362,7 @@ define TGT_WATCOM386_WIN_WIN16
 CFLAGS_WATCOM386_WIN_WIN16 += \
 	-bt=windows -4r -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
-	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/win \
 	-i=$(MAUG_ROOT)/api/font/win -i=$(MAUG_ROOT)/api/mem/win
 
 LDFLAGS_WATCOM386_WIN_WIN16 += system win386
@@ -410,7 +410,7 @@ define TGT_GCC_WIN_WIN32
 
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/mem/win
+	-I$(MAUG_ROOT)/api/log/win -i=$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
@@ -456,7 +456,7 @@ define TGT_GCC64_WIN_WIN32
 
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win \
-	-I$(MAUG_ROOT)/api/log/unix -i=$(MAUG_ROOT)/api/mem/win
+	-I$(MAUG_ROOT)/api/log/win -i=$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP

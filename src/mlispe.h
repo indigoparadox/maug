@@ -414,7 +414,7 @@ struct MLISP_ENV_NODE* mlisp_env_get(
       assert( mdata_vector_is_locked( env ) );
       node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
       if( 0 == strncmp(
-         &(strpool[node_test->name_strpool_idx]), key, strlen( key )
+         &(strpool[node_test->name_strpool_idx]), key, maug_strlen( key )
       ) ) {
          node_out = node_test;
          break;

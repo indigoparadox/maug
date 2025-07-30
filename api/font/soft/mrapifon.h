@@ -35,7 +35,7 @@ void retrofont_dump_glyph( uint8_t* glyph, uint8_t w, uint8_t h ) {
    char glyph_bin[65];
 
    for( y = 0 ; h > y ; y++ ) {
-      memset( glyph_bin, '\0', 65 );
+      maug_mzero( glyph_bin, 65 );
       
       for( x = 0 ; w > x ; x++ ) {
          glyph_bin[x] = 1 << (w - x) == (glyph[y] & (1 << (w - x))) ? 'x' : '.';

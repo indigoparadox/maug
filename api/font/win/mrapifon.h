@@ -90,7 +90,7 @@ void retrofont_string(
    assert( retroflat_bitmap_locked( target ) );
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    /* Setup drawing params. */
@@ -132,7 +132,7 @@ MERROR_RETVAL retrofont_string_sz(
    assert( retroflat_bitmap_locked( target ) );
 
    if( 0 == str_sz ) {
-      str_sz = strlen( str );
+      str_sz = maug_strlen( str );
    }
 
    old_font = SelectObject( target->hdc_b, (HFONT)font_h );

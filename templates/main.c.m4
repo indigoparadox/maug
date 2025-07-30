@@ -45,7 +45,7 @@ int main( int argc, char** argv ) {
 
    logging_init();
 
-   memset( &args, '\0', sizeof( struct RETROFLAT_ARGS ) );
+   maug_mzero( &args, sizeof( struct RETROFLAT_ARGS ) );
 
    args.title = "template";
    args.assets_path = "assets";

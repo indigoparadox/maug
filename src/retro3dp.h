@@ -522,7 +522,7 @@ retro3dp_parse_obj_token( struct RETRO3DP_PARSER* parser ) {
          if(
             0 == strncmp(
                parser->base.token, g_retro3dp_token_strings[i],
-               strlen( g_retro3dp_token_strings[i] ) + 1 )
+               maug_strlen( g_retro3dp_token_strings[i] ) + 1 )
          ) {
             retval = g_retro3dp_token_callbacks[i]( parser );
             goto cleanup;
@@ -695,7 +695,7 @@ MERROR_RETVAL retro3dp_parse_obj_file(
    }
 
    /* Build the path to the obj. */
-   memset( filename_path, '\0', MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( filename_path, MAUG_PATH_SZ_MAX + 1 );
    maug_snprintf( filename_path, MAUG_PATH_SZ_MAX, "%s%c%s",
       g_retroflat_state->assets_path, RETROFLAT_PATH_SEP, filename );
 

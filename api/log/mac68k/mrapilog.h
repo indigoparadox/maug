@@ -58,7 +58,7 @@ void _maug_debug_printf( int line, int level, const char* fmt, ... ) {
 
    pb.ioParam.ioRefNum = g_log_ref;
    pb.ioParam.ioBuffer = message;
-   pb.ioParam.ioReqCount = strlen( message );
+   pb.ioParam.ioReqCount = maug_strlen( message );
    pb.ioParam.ioPosMode = fsAtMark;
    pb.ioParam.ioPosOffset = 0;
 
@@ -79,7 +79,7 @@ void _maug_error_printf( int line, const char* fmt, ... ) {
 
    pb.ioParam.ioRefNum = g_log_ref;
    pb.ioParam.ioBuffer = message;
-   pb.ioParam.ioReqCount = strlen( message );
+   pb.ioParam.ioReqCount = maug_strlen( message );
    pb.ioParam.ioPosMode = fsAtMark;
    pb.ioParam.ioPosOffset = 0;
 

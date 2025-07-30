@@ -108,7 +108,7 @@ MERROR_RETVAL mfile_file_read_line(
          retval = MERROR_FILE;
          goto cleanup;
       }
-      strncpy(
+      maug_strncpy(
          &(buffer[line_bytes_read]), line_buf, chunk_bytes_read );
       if( NULL != newline_ptr ) {
          /* Line was completed. */
