@@ -133,8 +133,6 @@ static int maug_cli_h( const char* arg, ssize_t arg_c, void* args ) {
       i++;
    }
 
-   error_printf( "" );
-
    /* TODO: Coherent error code. */
    return -1;
 }

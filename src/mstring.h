@@ -448,7 +448,6 @@ MERROR_RETVAL maug_tok_str(
 
    if( 0 == line_sz ) {
       line_sz = maug_strlen( line );
-      assert( 0 < line );
    }
 
    for( i_in = 0 ; line_sz >= i_in ; i_in++ ) {

@@ -1509,6 +1509,9 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    struct RETROTILE_LAYER* layer = NULL;
    retroflat_tile_t* tile_iter = NULL;
    uint8_t free_ds_data = 0;
+#ifdef MAUG_NO_STDLIB
+   size_t i = 0;
+#endif /* MAUG_NO_STDLIB */
 
    /*
    maug_mlock( t->tiles, tiles );
@@ -1698,6 +1701,9 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
    retroflat_tile_t* tiles = NULL;
    /* Only use 4 cardinal directions. */
    int8_t side_iter = 0;
+#ifdef MAUG_NO_STDLIB
+   size_t i = 0;
+#endif /* MAUG_NO_STDLIB */
 
    layer = retrotile_get_layer_p( t, 0 );
 

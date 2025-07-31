@@ -113,9 +113,14 @@ typedef MERROR_RETVAL (*mfile_read_int_t)(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
 typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
+typedef MERROR_RETVAL (*mfile_printf_t)(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
+typedef MERROR_RETVAL (*mfile_vprintf_t)(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
 
 /* TODO: Don't load platform-specific file stuff if MVFS is enabled. */
 #include <mrapifil.h>
+#include <mrapilog.h>
 
 struct MFILE_CADDY {
    /*! \brief The \ref maug_mfile_types flag describing this file. */
@@ -135,6 +140,8 @@ struct MFILE_CADDY {
    mfile_seek_t seek;
    mfile_read_int_t read_int;
    mfile_read_line_t read_line;
+   mfile_printf_t printf;
+   mfile_vprintf_t vprintf;
 };
 
 typedef struct MFILE_CADDY mfile_t;
@@ -164,6 +171,12 @@ MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos );
 MERROR_RETVAL mfile_file_read_line(
    struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags );
 
+MERROR_RETVAL mfile_file_printf(
+   struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, ... );
+
+MERROR_RETVAL mfile_file_vprintf(
+   struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, va_list args );
+
 #define mfile_check_lock( p_file ) (NULL != (p_file)->mem_buffer)
 
 #define mfile_get_sz( p_file ) ((p_file)->sz)
@@ -179,6 +192,8 @@ MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE, off_t, mfile_t* p_file );
  */
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file );
 
+MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file );
+
 /**
  * \brief Close a file opened with mfile_open_read().
  */
@@ -187,6 +202,7 @@ void mfile_close( mfile_t* p_file );
 #ifdef MFILE_C
 
 #include <mrapifil.h>
+#include <mrapilog.h>
 
 #ifdef MVFS_ENABLED
 #  include <mvfs.h>
@@ -239,6 +255,21 @@ MERROR_RETVAL mfile_file_read_int(
    }
 
 cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_printf(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ...
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   va_list vargs;
+
+   va_start( vargs, fmt );
+   retval = p_file->vprintf( p_file, flags, fmt, vargs );
+   va_end( vargs );
 
    return retval;
 }
@@ -391,6 +422,8 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;
+   p_file->printf = mfile_file_printf;
+   p_file->vprintf = mfile_mem_vprintf;
 
    p_file->flags = MFILE_FLAG_READ_ONLY;
    p_file->mem_buffer = gc_mvfs_data[i];
@@ -405,6 +438,18 @@ cleanup:
    retval = mfile_plt_open_read( filename, p_file );
 
 #  endif /* MVFS_ENABLED */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* The MVFS is read-only, so don't bother hunting it. */
+
+   retval = mfile_plt_open_write( filename, p_file );
 
    return retval;
 }

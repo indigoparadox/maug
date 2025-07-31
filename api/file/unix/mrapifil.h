@@ -131,14 +131,17 @@ MERROR_RETVAL mfile_file_read_line(
 
 /* === */
 
-MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+static MERROR_RETVAL _mfile_plt_open(
+   uint8_t flags, const char* filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
    struct stat file_stat;
    int stat_r = 0;
 
 #  if defined( MFILE_MMAP )
 
-   in_file = open( filename, O_RDONLY );
+   in_file = open( filename,
+      MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & flags) ? O_RDONLY : 0 );
    if( 0 >= in_file ) {
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
@@ -188,7 +191,8 @@ cleanup:
 #     endif /* !MAUG_NO_STAT */
 
    /* Open the permanent file handle. */
-   p_file->h.file = fopen( filename, "rb" );
+   p_file->h.file = fopen( filename, 
+      MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & flags) ? "rb" : "wb" );
    if( NULL == p_file->h.file ) {
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
@@ -218,6 +222,8 @@ cleanup:
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;
+   p_file->printf = mfile_file_printf;
+   p_file->vprintf = mfile_file_vprintf;
 
    p_file->flags = MFILE_FLAG_READ_ONLY;
 
@@ -225,6 +231,37 @@ cleanup:
 
 #  endif /* MFILE_MMAP */
 
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   vfprintf( p_file->h.file, fmt, args );
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, filename, p_file );
+   if( MERROR_OK == retval ) {
+      p_file->flags |= MFILE_FLAG_READ_ONLY;
+   }
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   retval = _mfile_plt_open( 0, filename, p_file );
    return retval;
 }
 

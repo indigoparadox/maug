@@ -17,7 +17,7 @@ void _maug_error_printf( int line, const char* fmt, ... );
 
 extern short g_log_ref;
 
-#elif defined( UPRINTF_C )
+#elif defined( MFILE_C )
 
 #include <OSUtils.h>
 #include <Devices.h>

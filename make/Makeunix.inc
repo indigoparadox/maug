@@ -136,7 +136,7 @@ endif
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
 	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/file/unix \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
+	-I$(MAUG_ROOT)/api/log/mfile -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 

@@ -44,11 +44,6 @@
 
 #include <merror.h>
 
-#ifdef MAUG_C
-#  define MMEM_C
-#endif /* MAUG_C */
-#include <mmem.h>
-
 #if (defined( MAUG_OS_DOS_REAL ) || defined( MAUG_API_WIN16 ))
 /* Undefine this here so the header can have its own object file from
  * dosstubs.
@@ -60,15 +55,21 @@
 #  define SEG_FAR
 #endif /* MAUG_OS_DOS_REAL */
 
+#include <mmem.h>
+#ifdef MAUG_C
+#  define MMEM_C
+#  include <mmem.h>
+#endif /* MAUG_C */
+
 #ifdef MAUG_C
 #  define MSTRING_C
 #endif /* MAUG_C */
 #include <mstring.h>
 
 #ifdef MAUG_C
-#  define UPRINTF_C
+#  define MFILE_C
 #endif /* MAUG_C */
-#include <uprintf.h>
+#include <mfile.h>
 
 #ifdef MAUG_C
 #  define MFIX_C
@@ -84,11 +85,6 @@
 #  define MARGE_C
 #endif /* MAUG_C */
 #include <marge.h>
-
-#ifdef MAUG_C
-#  define MFILE_C
-#endif /* MAUG_C */
-#include <mfile.h>
 
 #ifdef MAUG_C
 #  define MFMT_C

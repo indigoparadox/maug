@@ -123,11 +123,39 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mfile_file_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   return retval;
+}
+
+/* === */
+
+static void _mfile_plt_open( const char* filename, mfile_t* p_file ) {
+
+   p_file->sz = GetFileSize( p_file->h.handle, NULL );
+
+   debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
+      filename, p_file->sz );
+
+   p_file->type = MFILE_CADDY_TYPE_FILE;
+
+   p_file->has_bytes = mfile_file_has_bytes;
+   p_file->read_byte = mfile_file_read_byte;
+   p_file->read_int = mfile_file_read_int;
+   p_file->read_block = mfile_file_read_block;
+   p_file->seek = mfile_file_seek;
+   p_file->read_line = mfile_file_read_line;
+   p_file->printf = mfile_file_printf;
+   p_file->vprintf = mfile_file_vprintf;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_WINCE )
-   STATSTG file_stat;
-#  endif /* RETROFLAT_API_WINCE */
 #  ifdef MAUG_WCHAR
    wchar_t filename_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
 #  endif /* MAUG_WCHAR */
@@ -158,22 +186,59 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    if( INVALID_HANDLE_VALUE == p_file->h.handle ) {
       error_printf( "could not open file: %s", filename );
+      retval = MERROR_FILE;
+      goto cleanup;
    }
 
-   p_file->sz = GetFileSize( p_file->h.handle, NULL );
+   _mfile_plt_open( filename, p_file );
 
-   debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
-      filename, p_file->sz );
-
-   p_file->type = MFILE_CADDY_TYPE_FILE;
-
-   p_file->has_bytes = mfile_file_has_bytes;
-   p_file->read_byte = mfile_file_read_byte;
-   p_file->read_int = mfile_file_read_int;
-   p_file->read_block = mfile_file_read_block;
-   p_file->seek = mfile_file_seek;
-   p_file->read_line = mfile_file_read_line;
    p_file->flags = MFILE_FLAG_READ_ONLY;
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+#  ifdef MAUG_WCHAR
+   wchar_t filename_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+#  endif /* MAUG_WCHAR */
+
+#     ifdef MAUG_WCHAR
+   if( 0 == MultiByteToWideChar(
+      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX
+   ) ) {
+      error_printf( "could not create wide filename path!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+#     endif /* MAUG_WCHAR */
+
+   /* Actually open the file. */
+   p_file->h.handle = CreateFile( 
+#     ifdef MAUG_WCHAR
+      filename_w,
+#     else
+      filename,
+#     endif /* MAUG_WCHAR */
+      GENERIC_READ,
+      FILE_SHARE_READ,
+      NULL,
+      OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL,
+      NULL );
+
+   if( INVALID_HANDLE_VALUE == p_file->h.handle ) {
+      error_printf( "could not open file: %s", filename );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+
+   _mfile_plt_open( filename, p_file );
 
 cleanup:
 

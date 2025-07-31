@@ -18,7 +18,7 @@ void _internal_debug_printf(
 
 void error_printf( const char* fmt, ... );
 
-#elif defined( UPRINTF_C )
+#elif defined( MFILE_C )
 
 void _internal_debug_printf(
    const char* src_file, int line, int level, const char* fmt, ...
