@@ -19,20 +19,21 @@
 #     define LINE_NUMBER() __LINE__
 #  endif
 
-void _internal_debug_printf( int lvl, size_t line, const char* fmt, ... );
+void _internal_debug_printf(
+  int lvl, const char* src, size_t line, const char* fmt, ... );
 
 #  define debug_printf( lvl, ... ) \
-      _internal_debug_printf( lvl, __LINE__, __VA_ARGS__ )
+      _internal_debug_printf( lvl, __FILE__, __LINE__, __VA_ARGS__ )
 
 #  define error_printf( ... ) \
-      _internal_debug_printf( -1, __LINE__, __VA_ARGS__ )
+      _internal_debug_printf( -1, __FILE__, __LINE__, __VA_ARGS__ )
 
 #  define size_printf( lvl, name, sz ) \
-      _internal_debug_printf( lvl, __LINE__, \
+      _internal_debug_printf( lvl, __FILE__, __LINE__, \
          name " size is " SIZE_T_FMT " bytes", (sz) );
 
 #  define size_multi_printf( lvl, name, sz, max ) \
-      _internal_debug_printf( lvl, __LINE__, \
+      _internal_debug_printf( lvl, __FILE__, __LINE__, \
          "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
 #  ifndef MFILE_C
@@ -47,7 +48,9 @@ void logging_shutdown();
 
 struct MFILE_CADDY SEG_MGLOBAL g_log_file;
 
-void _internal_debug_printf( int lvl, size_t line, const char* fmt, ... ) {
+void _internal_debug_printf(
+   int lvl, const char* src, size_t line, const char* fmt, ...
+) {
    va_list vargs;
 
    va_start( vargs, fmt );
@@ -59,7 +62,7 @@ void _internal_debug_printf( int lvl, size_t line, const char* fmt, ... ) {
 
    /* Try to start the line out with the preamble. */
    g_log_file.printf( &g_log_file, 0,
-      "(%d) " __FILE__ ": " SIZE_T_FMT ": ", lvl, line );
+      "(%d) %s: " SIZE_T_FMT ": ", lvl, src, line );
 
    g_log_file.vprintf( &g_log_file, 0, fmt, vargs );
 
