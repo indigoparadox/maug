@@ -2599,14 +2599,18 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* == Platform-Specific Init == */
 
-   debug_printf( 1, "initializing platform..." );
+   debug_printf( 3, "attempting to initialize platform with: " 
+      SIZE_T_FMT "x" SIZE_T_FMT " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
+      ")",
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
 
    debug_printf( 3, "screen initialized with: " SIZE_T_FMT "x" SIZE_T_FMT
       " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
-      " with " SIZE_T_FMT " colors",
+      ") with " SIZE_T_FMT " colors",
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       g_retroflat_state->screen_w, g_retroflat_state->screen_h,
       retroflat_screen_colors() );

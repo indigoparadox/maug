@@ -196,6 +196,7 @@ static LRESULT CALLBACK WndProc(
             if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not determine buffer device context!" );
+               error_printf( "could not determine buffer device context!" );
                g_retroflat_state->retval = MERROR_GUI;
                retroflat_quit( g_retroflat_state->retval );
                break;
@@ -205,6 +206,7 @@ static LRESULT CALLBACK WndProc(
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not create screen buffer!" );
+            error_printf( "could not create screen buffer!" );
             g_retroflat_state->retval = MERROR_GUI;
             retroflat_quit( g_retroflat_state->retval );
             break;
@@ -237,6 +239,7 @@ static LRESULT CALLBACK WndProc(
          if( (HDC)NULL == hdc_paint ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not determine window device context!" );
+            error_printf( "could not determine window device context!" );
             g_retroflat_state->retval = MERROR_GUI;
             retroflat_quit( g_retroflat_state->retval );
             break;
@@ -599,6 +602,7 @@ MERROR_RETVAL retroflat_init_platform(
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not register window class!" );
+      error_printf( "could not register window class!" );
       goto cleanup;
    }
 
@@ -678,11 +682,10 @@ MERROR_RETVAL retroflat_init_platform(
    if( !g_retroflat_state->platform.window ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Could not create window!" );
+      error_printf( "could not create window!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
-
-   maug_cleanup_if_null_alloc( HWND, g_retroflat_state->platform.window );
 
 #ifndef RETROFLAT_OPENGL
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRSET )

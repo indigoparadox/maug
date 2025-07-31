@@ -53,6 +53,10 @@
 #  define MAUG_CLI_ARG_SZ_MAX 20
 #endif /* !MAUG_CLI_ARG_SZ_MAX */
 
+#ifndef MAUG_CLI_TRACE_LVL
+#  define MAUG_CLI_TRACE_LVL 0
+#endif /* !MAUG_CLI_TRACE_LVL */
+
 typedef
 MERROR_RETVAL (*maug_cli_cb)( const char* arg, ssize_t arg_c, void* data );
 
@@ -154,15 +158,20 @@ int maug_parse_args( int argc, char* argv[] ) {
       last_i = 0,
       retval = 0;
 
+   debug_printf( MAUG_CLI_TRACE_LVL, "parsing %d args...", argc );
+
    for( arg_i = 1 ; argc > arg_i ; arg_i++ ) {
-      debug_printf( 1, "found arg: %s", argv[arg_i] );
+      debug_printf( MAUG_CLI_TRACE_LVL, "found arg: %s", argv[arg_i] );
       const_i = 0;
       while( '\0' != g_maug_cli_args[const_i][0] ) {
-         if( 0 == strncmp(
+         if( 0 != strncmp(
             g_maug_cli_args[const_i],
             argv[arg_i],
             g_maug_cli_arg_sz[const_i]
          ) ) {
+            debug_printf( MAUG_CLI_TRACE_LVL,
+               "arg matched: %s", g_maug_cli_args[const_i] );
+
             /* Save this matched index for the next pass. */
             last_i = const_i;
 
@@ -171,11 +180,15 @@ int maug_parse_args( int argc, char* argv[] ) {
             retval = g_maug_cli_arg_callbacks[const_i]( argv[arg_i],
                g_maug_cli_arg_called[const_i], g_maug_cli_data[const_i] );
             if( MERROR_OK != retval ) {
+               error_printf( "error calling arg!" );
                goto cleanup;
             }
 
             /* We found a match, so go to the next arg. */
             break;
+         } else {
+            debug_printf( MAUG_CLI_TRACE_LVL,
+               "arg NOT matched: %s", g_maug_cli_args[const_i] );
          }
          const_i++;
       }
@@ -192,21 +205,36 @@ int maug_parse_args( int argc, char* argv[] ) {
       }
    }
 
+   debug_printf( MAUG_CLI_TRACE_LVL, "calling defaults for uncalled args..." );
+
    /* TODO: Run default callbacks for any args not called. */
    const_i = 0;
    while( '\0' != g_maug_cli_args[const_i][0] ) {
-      if(
-         0 == g_maug_cli_arg_called[const_i] &&
-         NULL != g_maug_cli_arg_callbacks[const_i]
-      ) {
-         debug_printf( 1, "calling default arg for uncalled \"%s\"...",
-            g_maug_cli_args[const_i] );
-         retval =
-            g_maug_cli_arg_callbacks[const_i](
-               "", MAUG_CLI_ARG_C_DEFAULT, g_maug_cli_data[const_i] );
-         if( MERROR_OK != retval ) {
-            goto cleanup;
-         }
+      debug_printf( MAUG_CLI_TRACE_LVL,
+         "checking arg %d: %s (%d): callback: %p", const_i,
+         g_maug_cli_args[const_i], g_maug_cli_arg_sz[const_i],
+         g_maug_cli_arg_callbacks[const_i] );
+      if( NULL == g_maug_cli_arg_callbacks[const_i] ) {
+         debug_printf(
+            MAUG_CLI_TRACE_LVL, "arg %d callback is NULL!", const_i );
+         const_i++;
+         continue;
+      }
+      if( 0 != g_maug_cli_arg_called[const_i] ) {
+         debug_printf(
+            MAUG_CLI_TRACE_LVL, "arg %d was called; not calling default..." );
+         const_i++;
+         continue;
+      }
+      debug_printf( MAUG_CLI_TRACE_LVL,
+         "calling default arg for uncalled \"%s\"...",
+         g_maug_cli_args[const_i] );
+      retval =
+         g_maug_cli_arg_callbacks[const_i](
+            "", MAUG_CLI_ARG_C_DEFAULT, g_maug_cli_data[const_i] );
+      if( MERROR_OK != retval ) {
+         error_printf( "error calling default arg!" );
+         goto cleanup;
       }
       const_i++;
    }
@@ -252,6 +280,9 @@ MERROR_RETVAL maug_add_arg(
 
    /* Add arg to arrays. */
 
+   debug_printf( MAUG_CLI_TRACE_LVL,
+      "adding arg %d: \"%s\"", slot_idx, arg );
+
    maug_strncpy( g_maug_cli_args[slot_idx], arg, arg_sz );
    g_maug_cli_args[slot_idx + 1][0] = '\0';
    
@@ -269,6 +300,11 @@ MERROR_RETVAL maug_add_arg(
 
    g_maug_cli_data[slot_idx] = data;
    g_maug_cli_data[slot_idx + 1] = NULL;
+
+   debug_printf( MAUG_CLI_TRACE_LVL,
+      "arg %d: %s (%d): callback: %p", slot_idx,
+      g_maug_cli_args[slot_idx], g_maug_cli_arg_sz[slot_idx],
+      g_maug_cli_arg_callbacks[slot_idx] );
 
    return MERROR_OK;
 }

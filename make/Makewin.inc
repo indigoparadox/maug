@@ -363,7 +363,7 @@ CFLAGS_WATCOM386_WIN_WIN16 += \
 	-bt=windows -4r -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/mfile \
-	-i=$(MAUG_ROOT)/api/font/win -i=$(MAUG_ROOT)/api/mem/win
+	-i=$(MAUG_ROOT)/api/font/win -i=$(MAUG_ROOT)/api/mem/unix
 
 LDFLAGS_WATCOM386_WIN_WIN16 += system win386
 
