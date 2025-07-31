@@ -136,9 +136,14 @@ endif
 OBJDIR_GCC_UNIX_SDL=obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
 	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/file/unix \
-	-I$(MAUG_ROOT)/api/log/mfile -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
+
+ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/log/mfile
+else
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/log/unix
+endif
 
 # = Make Icons =
 
@@ -180,10 +185,16 @@ endif
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
-	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
+	-I$(MAUG_ROOT)/api/file/unix \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
+
+ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/log/mfile
+else
+CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/log/unix
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
@@ -222,10 +233,15 @@ endif
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
 	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs)
+
+ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/log/mfile
+else
+CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/log/unix
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/sound/null
@@ -264,10 +280,15 @@ endif
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/xlib \
 	-I$(MAUG_ROOT)/api/file/unix -DRETROSND_API_ALSA \
-	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 
 LDFLAGS_GCC_UNIX_XLIB := $(shell pkg-config x11 --libs)
+
+ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/log/mfile
+else
+CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/log/unix
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/sound/null

@@ -2700,7 +2700,10 @@ void retroflat_shutdown( int retval ) {
    debug_printf( 1, "retroflat shutdown called..." );
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-   if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h ) {
+   if(
+      NULL != g_retroflat_state &&
+      (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h
+   ) {
       maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
    }
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */

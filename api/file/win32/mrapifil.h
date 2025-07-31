@@ -7,9 +7,9 @@ union MFILE_HANDLE {
    MAUG_MHANDLE mem;
 };
 
-#  ifndef MFILE_READ_LINE_BUF_SZ
-#     define MFILE_READ_LINE_BUF_SZ 4096
-#  endif /* !MFILE_READ_LINE_BUF_SZ */
+#  ifndef MFILE_LINE_BUF_SZ
+#     define MFILE_LINE_BUF_SZ 4096
+#  endif /* !MFILE_LINE_BUF_SZ */
 
 #elif defined( MFILE_C )
 
@@ -73,7 +73,7 @@ MERROR_RETVAL mfile_file_read_line(
    DWORD chunk_bytes_read = 0;
    DWORD line_bytes_read = 0;
    int32_t newline_diff = 0;
-   char line_buf[MFILE_READ_LINE_BUF_SZ + 1];
+   char line_buf[MFILE_LINE_BUF_SZ + 1];
    char* newline_ptr = NULL;
 
    assert( MFILE_CADDY_TYPE_FILE == p_f->type );
@@ -81,7 +81,7 @@ MERROR_RETVAL mfile_file_read_line(
    start = SetFilePointer( p_f->h.handle, 0, NULL, FILE_CURRENT );
 
    while( ReadFile(
-      p_f->h.handle, line_buf, MFILE_READ_LINE_BUF_SZ, &chunk_bytes_read, NULL
+      p_f->h.handle, line_buf, MFILE_LINE_BUF_SZ, &chunk_bytes_read, NULL
    ) ) {
       /* debug_printf( 1, "---" );
       debug_printf( 1, "chunk read: %u bytes: %s", chunk_bytes_read, line_buf ); */
@@ -127,6 +127,17 @@ MERROR_RETVAL mfile_file_vprintf(
    mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   char line_buf[MFILE_LINE_BUF_SZ + 1];
+   int32_t written = 0;
+
+   maug_vsnprintf( line_buf, MFILE_LINE_BUF_SZ, fmt, args );
+
+   WriteFile(
+      p_file->h.handle, line_buf, maug_strlen( line_buf ), &written, NULL );
+
+   if( written < maug_strlen( line_buf ) ) {
+      retval = MERROR_FILE;
+   }
 
    return retval;
 }
@@ -236,7 +247,6 @@ MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
       retval = MERROR_FILE;
       goto cleanup;
    }
-
 
    _mfile_plt_open( filename, p_file );
 

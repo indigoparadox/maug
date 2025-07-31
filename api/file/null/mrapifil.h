@@ -77,7 +77,31 @@ MERROR_RETVAL mfile_file_read_line(
 
 /* === */
 
+MERROR_RETVAL mfile_file_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert( MFILE_CADDY_TYPE_FILE == p_f->type );
+
+   /* TODO */
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   /* TODO */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* TODO */

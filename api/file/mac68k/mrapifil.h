@@ -4,11 +4,18 @@
 
 #include <MacTypes.h>
 #include <Files.h>
+#include <OSUtils.h>
+#include <Devices.h>
+#include <Errors.h>
 
 union MFILE_HANDLE {
    int16_t file_ref;
    MAUG_MHANDLE mem;
 };
+
+#  ifndef MFILE_LINE_BUF_SZ
+#     define MFILE_LINE_BUF_SZ 1024
+#  endif /* !MFILE_LINE_BUF_SZ */
 
 #elif defined( MFILE_C )
 
@@ -112,7 +119,32 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+MERROR_RETVAL mfile_file_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char line_buf[MFILE_LINE_BUF_SZ + 1];
+   ParamBlockRec pb;
+
+   maug_vsnprintf( line_buf, MFILE_LINE_BUF_SZ, fmt, args );
+   strcat( line_buf, "\r" );
+
+   pb.ioParam.ioRefNum = p_file->h.file_ref;
+   pb.ioParam.ioBuffer = line_buf;
+   pb.ioParam.ioReqCount = maug_strlen( line_buf );
+   pb.ioParam.ioPosMode = fsAtMark;
+   pb.ioParam.ioPosOffset = 0;
+
+   PBWrite( &pb, false );
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL _mfile_plt_open(
+   uint8_t flags, const char* filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
    MERROR_RETVAL tok_retval = MERROR_OK;
    int16_t vol_ref = 0;
@@ -186,7 +218,8 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    /* Open file with name from the last *directory* found in the path above. */
    pb_err = HOpen(
       vol_ref, last_dir_id, (StringPtr)pas_dir_name,
-      fsRdPerm, &(p_file->h.file_ref) );
+      MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & flags) ?
+         fsRdPerm : fsWrPerm, &(p_file->h.file_ref) );
    if( noErr != pb_err ) {
       error_printf(
          "unable to open file \"%s\" (len: %u, dir_id: " S32_FMT "): %d",
@@ -211,7 +244,36 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_file_seek;
    p_file->read_line = mfile_file_read_line;
+   p_file->printf = mfile_file_printf;
+   p_file->vprintf = mfile_file_vprintf;
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, filename, p_file );
+   maug_cleanup_if_not_ok();
+
    p_file->flags = MFILE_FLAG_READ_ONLY;
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = _mfile_plt_open( 0, filename, p_file );
+   maug_cleanup_if_not_ok();
 
 cleanup:
 

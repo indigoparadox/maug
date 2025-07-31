@@ -132,11 +132,9 @@ MERROR_RETVAL mfile_file_read_line(
 /* === */
 
 static MERROR_RETVAL _mfile_plt_open(
-   uint8_t flags, const char* filename, mfile_t* p_file
+   uint8_t flags, off_t sz, const char* filename, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct stat file_stat;
-   int stat_r = 0;
 
 #  if defined( MFILE_MMAP )
 
@@ -165,30 +163,7 @@ cleanup:
 
 #  else
 
-#     ifndef MAUG_NO_STAT
-   /* Get the file size from the OS. */
-   stat_r = stat( filename, &file_stat );
-#        ifdef RETROFLAT_OS_WASM
-   if( stat_r ) {
-      /* Retry the stat after fetch. */
-      mfile_wasm_fetch( filename );
-      stat_r = stat( filename, &file_stat );
-   } else {
-      debug_printf( 1, "file exists: %d", stat_r );
-   }
-#        endif /* RETROFLAT_OS_WASM */
-
-   /* Perform *real* check after probe-checks above, which could cause the file
-    * to be cached.
-    */
-   if( stat_r ) {
-      error_printf( "could not stat: %s", filename );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   p_file->sz = file_stat.st_size;
-#     endif /* !MAUG_NO_STAT */
+   p_file->sz = sz;
 
    /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, 
@@ -250,10 +225,41 @@ MERROR_RETVAL mfile_file_vprintf(
 
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-   retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, filename, p_file );
+   size_t st_size = 0;
+#     ifndef MAUG_NO_STAT
+   struct stat file_stat;
+   int stat_r = 0;
+
+   /* Get the file size from the OS. */
+   stat_r = stat( filename, &file_stat );
+#        ifdef RETROFLAT_OS_WASM
+   if( stat_r ) {
+      /* Retry the stat after fetch. */
+      mfile_wasm_fetch( filename );
+      stat_r = stat( filename, &file_stat );
+   } else {
+      debug_printf( 1, "file exists: %d", stat_r );
+   }
+#        endif /* RETROFLAT_OS_WASM */
+   st_size = file_stat.st_size;
+#     endif /* !MAUG_NO_STAT */
+
+   /* Perform *real* check after probe-checks above, which could cause the file
+    * to be cached.
+    */
+   if( stat_r ) {
+      error_printf( "could not stat: %s", filename );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, st_size, filename, p_file );
    if( MERROR_OK == retval ) {
       p_file->flags |= MFILE_FLAG_READ_ONLY;
    }
+
+cleanup:
+
    return retval;
 }
 
@@ -261,7 +267,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
 MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-   retval = _mfile_plt_open( 0, filename, p_file );
+   retval = _mfile_plt_open( 0, 0, filename, p_file );
    return retval;
 }
 

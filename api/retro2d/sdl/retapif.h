@@ -275,11 +275,13 @@ cleanup:
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
+   if( NULL != g_retroflat_state ) {
 #     if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
-   SDL_FreeSurface( g_retroflat_state->buffer.surface );
+      SDL_FreeSurface( g_retroflat_state->buffer.surface );
 #     elif defined( RETROFLAT_API_SDL2 )
-   SDL_DestroyWindow( g_retroflat_state->platform.window );
+      SDL_DestroyWindow( g_retroflat_state->platform.window );
 #     endif /* !RETROFLAT_API_SDL1 */
+   }
 
    SDL_Quit();
 }

@@ -4,6 +4,11 @@
 
 #include <stdarg.h>
 
+#ifndef LOG_FILE_NAME
+#  pragma message( "warning: no log file name defined!" )
+#  define LOG_FILE_NAME "out.log"
+#endif /* !LOG_FILE_NAME */
+
 #ifndef MAUG_LOG_WIN_BUF_SZ_MAX
 #  define MAUG_LOG_WIN_BUF_SZ_MAX 255
 #endif /* !MAUG_LOG_WIN_BUF_SZ_MAX */
@@ -30,42 +35,39 @@ void _internal_debug_printf( int lvl, size_t line, const char* fmt, ... );
       _internal_debug_printf( lvl, __LINE__, \
          "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
-#  ifdef LOG_TO_FILE
-#     ifndef MFILE_C
+#  ifndef MFILE_C
 extern struct MFILE_CADDY SEG_MGLOBAL g_log_file;
-#     endif /* MFILE_C */
+#  endif /* MFILE_C */
 MERROR_RETVAL _internal_logging_init();
-#     define logging_init() \
-         retval = _internal_logging_init(); maug_cleanup_if_not_ok();
+#  define logging_init() \
+      retval = _internal_logging_init(); maug_cleanup_if_not_ok();
 void logging_shutdown();
-#  else
-#     define logging_init()
-#     define logging_shutdown()
-#  endif /* LOG_TO_FILE */
 
 #elif defined( MFILE_C )
-
-#  ifdef LOG_TO_FILE
 
 struct MFILE_CADDY SEG_MGLOBAL g_log_file;
 
 void _internal_debug_printf( int lvl, size_t line, const char* fmt, ... ) {
    va_list vargs;
 
-   if( lvl < DEBUG_THRESHOLD ) {
-      return;
+   va_start( vargs, fmt );
+   /* vprintf( fmt, vargs ); */
+
+   if( NULL == g_log_file.printf || lvl < DEBUG_THRESHOLD ) {
+      goto cleanup;
    }
 
    /* Try to start the line out with the preamble. */
    g_log_file.printf( &g_log_file, 0,
       "(%d) " __FILE__ ": " SIZE_T_FMT ": ", lvl, line );
 
-   va_start( vargs, fmt );
    g_log_file.vprintf( &g_log_file, 0, fmt, vargs );
-   va_end( vargs );
 
    /* Try to append a newline. */
-   g_log_file.printf( &g_log_file, 0, "\0" );
+   g_log_file.printf( &g_log_file, 0, "\n" );
+
+cleanup:
+   va_end( vargs );
 
 }
 
@@ -80,8 +82,6 @@ MERROR_RETVAL _internal_logging_init() {
 void logging_shutdown() {
    mfile_close( &g_log_file );
 }
-
-#  endif /* LOG_TO_FILE */
 
 #endif /* !MAUG_API_LOG_H_DEFS */
 

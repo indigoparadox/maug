@@ -2,6 +2,10 @@
 #if !defined( MAUG_API_LOG_H_DEFS )
 #define MAUG_API_LOG_H_DEFS
 
+#if !defined( DEBUG_THRESHOLD )
+#  define DEBUG_THRESHOLD 1
+#endif /* !DEBUG_THRESHOLD */
+
 void _maug_debug_printf( int line, int level, const char* fmt, ... );
    
 void _maug_error_printf( int line, const char* fmt, ... );

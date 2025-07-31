@@ -115,6 +115,14 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 typedef MERROR_RETVAL (*mfile_printf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
+
+/**
+ * \related MFILE_CADDY
+ * \brief Callback to printf the given format string, replacing tokens from
+ *        the providied *pre-initialized* list of args.
+ * \param Pre-initialized list of token format args.
+ * \warning The args parameter must have already been initialized with va_start!
+ */
 typedef MERROR_RETVAL (*mfile_vprintf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
 
