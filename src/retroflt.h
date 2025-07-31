@@ -2483,6 +2483,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    /* All platforms: add command-line args based on compile definitons. */
 
+   retval = maug_add_arg(
+      MAUG_CLI_SIGIL "h", MAUG_CLI_SIGIL_SZ + 2, "Display command-line help",
+      26, maug_cli_h, NULL );
+
 #  if !defined( RETROFLAT_NO_SOUND ) && defined( RETROSND_ARGS )
 	retval = maug_add_arg( MAUG_CLI_SIGIL "rsd", MAUG_CLI_SIGIL_SZ + 4,
       "Select MIDI device", 0, (maug_cli_cb)retrosnd_cli_rsd, args );
