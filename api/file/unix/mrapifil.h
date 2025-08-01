@@ -246,7 +246,6 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    }
 #        endif /* RETROFLAT_OS_WASM */
    st_size = file_stat.st_size;
-#     endif /* !MAUG_NO_STAT */
 
    /* Perform *real* check after probe-checks above, which could cause the file
     * to be cached.
@@ -256,6 +255,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
       retval = MERROR_FILE;
       goto cleanup;
    }
+#     endif /* !MAUG_NO_STAT */
 
    retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, st_size, filename, p_file );
    if( MERROR_OK == retval ) {

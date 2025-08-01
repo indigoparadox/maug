@@ -50,7 +50,7 @@ defined( __THUMBEL__ ) || \
 defined( __AARCH64EL__ ) || \
 defined( _MIPSEL ) || defined( __MIPSEL ) || defined( __MIPSEL__ ) || \
 defined( _M_MRX000 ) || defined( _M_SH ) || \
-defined( __WATCOMC__ )
+defined( __WATCOMC__ ) || defined( __BORLANDC__ )
 
 #  ifdef MAUG_END_TRACE
 #     pragma message "platform is LSBF..."
@@ -174,6 +174,7 @@ typedef unsigned long size_t;
 #endif
 
 #if defined( MAUG_ANCIENT_C ) || defined( MAUG_NO_STDLIB )
+typedef uint32_t off_t;
 typedef int32_t ssize_t;
 #endif /* MAUG_ANCIENT_C */
 

@@ -4,10 +4,14 @@
 
 typedef void* MAUG_MHANDLE;
 
+#ifndef MMEM_TRACE_LVL
+#  define MMEM_TRACE_LVL 0
+#endif /* !MMEM_TRACE_LVL */
+
 /* TODO: These need refinement/tuning for DOS low-memory/segments! */
 #  define maug_malloc( nmemb, sz ) \
       (void*)malloc( (sz) * (nmemb) ); \
-      debug_printf( 1, \
+      debug_printf( MMEM_TRACE_LVL, \
             "malloc ct: " SIZE_T_FMT ", sz: " SIZE_T_FMT " (" SIZE_T_FMT ")", \
             nmemb, sz, (sz) * (nmemb) );
 
@@ -17,7 +21,7 @@ typedef void* MAUG_MHANDLE;
  */
 #  define maug_mrealloc( handle, nmemb, sz ) \
       (void*)realloc( handle, (sz) * (nmemb) ); \
-      debug_printf( 1, \
+      debug_printf( MMEM_TRACE_LVL, \
             "realloc ct: " SIZE_T_FMT ", sz: " SIZE_T_FMT " (" SIZE_T_FMT ")", \
             nmemb, sz, (sz) * (nmemb) );
 

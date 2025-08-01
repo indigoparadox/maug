@@ -4,14 +4,25 @@
 
 typedef HGLOBAL MAUG_MHANDLE;
 
-#  define maug_malloc( nmemb, sz ) GlobalAlloc( GMEM_MOVEABLE, (sz) * (nmemb) )
+#ifndef MMEM_TRACE_LVL
+#  define MMEM_TRACE_LVL 0
+#endif /* !MMEM_TRACE_LVL */
+
+#  define maug_malloc( nmemb, sz ) \
+      GlobalAlloc( GMEM_MOVEABLE, (sz) * (nmemb) ); \
+      debug_printf( MMEM_TRACE_LVL, \
+         "malloc ct: " SIZE_T_FMT ", sz: " SIZE_T_FMT " (" SIZE_T_FMT ")", \
+         nmemb, sz, (sz) * (nmemb) );
 
 /**
  * \warn This does not test that reallocation was successful! Use
  *       maug_mrealloc_test() for that.
  */
 #  define maug_mrealloc( handle, nmemb, sz ) \
-      GlobalReAlloc( handle, (sz) * (nmemb), GMEM_MOVEABLE )
+      GlobalReAlloc( handle, (sz) * (nmemb), GMEM_MOVEABLE ); \
+      debug_printf( MMEM_TRACE_LVL, \
+         "realloc ct: " SIZE_T_FMT ", sz: " SIZE_T_FMT " (" SIZE_T_FMT ")", \
+         nmemb, sz, (sz) * (nmemb) );
 
 /**
  * \brief Zero the block of memory pointed to by ptr.

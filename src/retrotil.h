@@ -1657,7 +1657,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    }
 
    if(
-      data_ds->sect_w == t->tiles_w >> 1 &&
+      data_ds->sect_w == (t->tiles_w >> 1) &&
       NULL != animation_cb
    ) {
       retval = animation_cb( animation_cb_data, iter_y );

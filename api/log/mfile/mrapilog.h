@@ -15,6 +15,21 @@
 #     define LINE_NUMBER() __LINE__
 #  endif
 
+#ifdef MAUG_ANCIENT_C
+
+/* Old compilers can't do variadic macros, but we lose line numbers and
+ * filenames this way.
+ */
+
+void _internal_debug_printf(
+  int lvl, const char* src, size_t line, const char* fmt, va_list vargs );
+
+void debug_printf( int lvl, const char* fmt, ... );
+
+void error_printf( const char* fmt, ... );
+
+#else
+
 void _internal_debug_printf(
   int lvl, const char* src, size_t line, const char* fmt, ... );
 
@@ -24,11 +39,13 @@ void _internal_debug_printf(
 #  define error_printf( ... ) \
       _internal_debug_printf( -1, __FILE__, __LINE__, __VA_ARGS__ )
 
-#  define size_printf( lvl, name, sz ) \
+#endif /* MAUG_ANCIENT_C */
+
+#define size_printf( lvl, name, sz ) \
       _internal_debug_printf( lvl, __FILE__, __LINE__, \
          name " size is " SIZE_T_FMT " bytes", (sz) );
 
-#  define size_multi_printf( lvl, name, sz, max ) \
+#define size_multi_printf( lvl, name, sz, max ) \
       _internal_debug_printf( lvl, __FILE__, __LINE__, \
          "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
@@ -44,6 +61,11 @@ void logging_shutdown();
 
 struct MFILE_CADDY SEG_MGLOBAL g_log_file;
 
+#ifdef MAUG_ANCIENT_C
+void _internal_debug_printf(
+   int lvl, const char* src, size_t line, const char* fmt, va_list vargs
+) {
+#else
 void _internal_debug_printf(
    int lvl, const char* src, size_t line, const char* fmt, ...
 ) {
@@ -51,6 +73,7 @@ void _internal_debug_printf(
 
    va_start( vargs, fmt );
    /* vprintf( fmt, vargs ); */
+#endif /* MAUG_ANCIENT_C */
 
    if( NULL == g_log_file.printf || lvl < DEBUG_THRESHOLD ) {
       goto cleanup;
@@ -66,9 +89,30 @@ void _internal_debug_printf(
    g_log_file.printf( &g_log_file, 0, "\n" );
 
 cleanup:
+#ifdef MAUG_ANCIENT_C
    va_end( vargs );
+#endif /* MAUG_ANCIENT_C */
 
+   return;
 }
+
+#ifdef MAUG_ANCIENT_C
+
+void debug_printf( int lvl, const char* fmt, ... ) {
+   va_list vargs;
+   va_start( vargs, fmt );
+   _internal_debug_printf( lvl, "UNK", 0, fmt, vargs );
+   va_end( vargs );
+}
+
+void error_printf( const char* fmt, ... ) {
+   va_list vargs;
+   va_start( vargs, fmt );
+   _internal_debug_printf( -1, "UNK", 0, fmt, vargs );
+   va_end( vargs );
+}
+
+#endif /* MAUG_ANCIENT_C */
 
 /* === */
 
