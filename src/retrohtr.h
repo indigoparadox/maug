@@ -1293,7 +1293,7 @@ MERROR_RETVAL retrohtr_tree_draw(
 #ifdef RETROGXC_PRESENT
          0 > node->font_idx
 #else
-         NULL == node->font_h
+         (MAUG_MHANDLE)NULL == node->font_h
 #endif /* RETROGXC_PRESENT */
       ) {
          goto cleanup;
