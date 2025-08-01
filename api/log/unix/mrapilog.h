@@ -67,7 +67,9 @@ void logging_init() {
 /* === */
 
 void logging_shutdown() {
+#  ifdef LOG_TO_FILE
    fclose( g_log_file );
+#  endif /* LOG_FILE_NAME */
 }
 
 /* === */
@@ -78,7 +80,8 @@ void _internal_debug_printf(
    va_list args;
 
    if( NULL != LOG_ERR_TARGET && lvl >= DEBUG_THRESHOLD ) {
-      fprintf( LOG_STD_TARGET, "(%d) " __FILE__ ": %d: ", lvl, line );
+      fprintf(
+         LOG_STD_TARGET, "(%d) " __FILE__ ": " SIZE_T_FMT ": ", lvl, line );
       va_start( args, fmt );
       vfprintf( LOG_STD_TARGET, fmt, args );
       va_end( args );
