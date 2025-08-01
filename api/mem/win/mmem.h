@@ -23,7 +23,7 @@ void maug_mzero( void* ptr, size_t sz );
 #  define maug_mcpy( ptr_dest, ptr_src, sz ) memcpy( ptr_dest, ptr_src, sz )
 
 #  define maug_mfree( handle ) \
-      GlobalFree( handle ); handle = (MAUG_MHANDLE)NULL;
+      GlobalFree( (MAUG_MHANDLE)handle ); handle = (MAUG_MHANDLE)NULL;
 
 #  define maug_mlock( handle, ptr ) ptr = (void*)GlobalLock( handle );
 

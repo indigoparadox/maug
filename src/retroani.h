@@ -116,10 +116,6 @@ struct RETROANI_HOLE {
 #  define RETROANI_COLOR_CT_MAX 4
 #endif /* !RETROANI_COLOR_CT_MAX */
 
-#ifndef RETROANI_HOLE_CT_MAX
-#  define RETROANI_HOLE_CT_MAX 4
-#endif /* !RETROANI_HOLE_CT_MAX */
-
 /*! \brief Internal representation of an animation. Do not call directly; use
  *         retroani_create() instead.
  */
@@ -763,6 +759,7 @@ ssize_t retroani_create(
    ani_new.next_frame_ms = 0;
    ani_new.mspf = RETROANI_DEFAUL_MSPF;
    maug_mzero( ani_new.tile, RETROANI_TILE_SZ );
+   maug_mzero( &(ani_new.hole), sizeof( struct RETROANI_HOLE ) );
 
    if( RETROANI_TYPE_FIRE == type ) {
       ani_new.colors[0] = RETROFLAT_COLOR_RED;
@@ -831,6 +828,12 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 
                if( h_on && p_x > h_l && p_x < h_r && p_y > h_t && p_y < h_b ) {
                   /* We're inside an active animation "hole". */
+                  debug_printf(
+                     RETROANI_TRACE_LVL,
+                     "%u 0x%02x: " PXXY_FMT ", " PXXY_FMT " is inside hole at "
+                     "L" PXXY_FMT ", R" PXXY_FMT ", T" PXXY_FMT ", B" PXXY_FMT,
+                     a->type, h_on, p_x, p_y, h_l, h_r, h_t, h_b );
+
                   continue;
                }
 

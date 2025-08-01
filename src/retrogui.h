@@ -100,7 +100,7 @@
    maug_munlock( dest_ctl. field ## _h, str_tmp );
 
 /*! \brief Unique identifying constant number for controls. */
-typedef ssize_t retrogui_idc_t;
+typedef int16_t retrogui_idc_t;
 
 #define RETROGUI_IDC_NONE 0
 

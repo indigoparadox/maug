@@ -160,8 +160,6 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       break;
    }
 
-cleanup:
-
    return retval;
 }
 
