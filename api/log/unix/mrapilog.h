@@ -8,10 +8,6 @@
 #     define LINE_NUMBER() __LINE__
 #  endif
 
-#ifndef UPRINTF_BUFFER_SZ_MAX
-#  define UPRINTF_BUFFER_SZ_MAX 1024
-#endif /* !UPRINTF_BUFFER_SZ_MAX */
-
 #ifdef LOG_TO_FILE
 #  ifndef UPRINTF_LOG
 #     define UPRINTF_LOG

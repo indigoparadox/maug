@@ -6,6 +6,10 @@
 #  define DEBUG_THRESHOLD 1
 #endif /* !DEBUG_THRESHOLD */
 
+#ifndef UPRINTF_BUFFER_SZ_MAX
+#  define UPRINTF_BUFFER_SZ_MAX 1024
+#endif /* !UPRINTF_BUFFER_SZ_MAX */
+
 #if !defined( MFILE_MMAP ) && \
    !defined( RETROFLAT_API_WINCE ) && \
    !defined( RETROFLAT_API_PALM )

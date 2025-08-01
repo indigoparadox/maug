@@ -9,10 +9,6 @@
 #  define LOG_FILE_NAME "out.log"
 #endif /* !LOG_FILE_NAME */
 
-#ifndef MAUG_LOG_WIN_BUF_SZ_MAX
-#  define MAUG_LOG_WIN_BUF_SZ_MAX 255
-#endif /* !MAUG_LOG_WIN_BUF_SZ_MAX */
-
 #  ifdef NO_DEBUG_LINE_NUMBER
 #     define LINE_NUMBER() 0
 #  else
