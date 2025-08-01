@@ -2,6 +2,10 @@
 #ifndef MFILE_H
 #define MFILE_H
 
+#if !defined( DEBUG_THRESHOLD )
+#  define DEBUG_THRESHOLD 1
+#endif /* !DEBUG_THRESHOLD */
+
 #if !defined( MFILE_MMAP ) && \
    !defined( RETROFLAT_API_WINCE ) && \
    !defined( RETROFLAT_API_PALM )

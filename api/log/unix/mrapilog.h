@@ -23,10 +23,6 @@
 #  define LOG_STD_TARGET stdout
 #endif /* LOG_TO_FILE */
 
-#if !defined( DEBUG_THRESHOLD )
-#  define DEBUG_THRESHOLD 1
-#endif /* !DEBUG_THRESHOLD */
-
 void _internal_debug_printf(
   int lvl, const char* src, size_t line, const char* fmt, ... );
 
