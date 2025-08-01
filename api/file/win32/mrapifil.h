@@ -130,6 +130,10 @@ MERROR_RETVAL mfile_file_vprintf(
    char line_buf[MFILE_LINE_BUF_SZ + 1];
    int32_t written = 0;
 
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_file->flags) ) {
+      return MERROR_FILE;
+   }
+
    maug_vsnprintf( line_buf, MFILE_LINE_BUF_SZ, fmt, args );
 
    WriteFile(

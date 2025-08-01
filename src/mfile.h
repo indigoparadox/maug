@@ -363,6 +363,23 @@ MERROR_RETVAL mfile_mem_read_line(
 
 /* === */
 
+MERROR_RETVAL mfile_mem_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_file->flags) ) {
+      return MERROR_FILE;
+   }
+
+   /* TODO: Enable writing to memory buffer. */
+   error_printf( "writing to memory buffer not currently supported!" );
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_lock_buffer(
    MAUG_MHANDLE handle, off_t handle_sz,  mfile_t* p_file
 ) {

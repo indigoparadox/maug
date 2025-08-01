@@ -216,6 +216,10 @@ MERROR_RETVAL mfile_file_vprintf(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_file->flags) ) {
+      return MERROR_FILE;
+   }
+
    vfprintf( p_file->h.file, fmt, args );
 
    return retval;

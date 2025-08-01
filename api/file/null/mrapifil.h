@@ -84,6 +84,10 @@ MERROR_RETVAL mfile_file_vprintf(
 
    assert( MFILE_CADDY_TYPE_FILE == p_f->type );
 
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_file->flags) ) {
+      return MERROR_FILE;
+   }
+
    /* TODO */
 
    return retval;
