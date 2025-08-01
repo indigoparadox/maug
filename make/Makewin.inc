@@ -410,7 +410,7 @@ define TGT_GCC_WIN_WIN32
 
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win32 \
-	-I$(MAUG_ROOT)/api/log/mfile -i=$(MAUG_ROOT)/api/mem/win
+	-I$(MAUG_ROOT)/api/log/mfile -I$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
@@ -421,9 +421,9 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
-	CFLAGS_GCC_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/soft
+	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/font/soft
 else
-	CFLAGS_GCC_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
+	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/font/win
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC_WIN_WIN32)))
@@ -456,16 +456,16 @@ define TGT_GCC64_WIN_WIN32
 
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/file/win32 \
-	-I$(MAUG_ROOT)/api/log/mfile -i=$(MAUG_ROOT)/api/mem/win
+	-I$(MAUG_ROOT)/api/log/mfile -I$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
-	CFLAGS_GCC64_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/soft
+	CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/font/soft
 else
-	CFLAGS_GCC64_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
+	CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/font/win
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
