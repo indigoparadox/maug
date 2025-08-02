@@ -80,6 +80,7 @@ void retrofont_string(
 ) {
    RECT wr;
    HFONT old_font;
+   int fmt_flags = 0;
    
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -98,12 +99,19 @@ void retrofont_string(
    SetTextColor( target->hdc_b, g_retroflat_state->palette[color] );
    SetBkMode( target->hdc_b, TRANSPARENT );
 
+   fmt_flags = DT_LEFT | DT_TOP;
+   if( 0 == max_w || 0 == max_h ) {
+      fmt_flags |= DT_NOCLIP;
+   } else {
+      fmt_flags |= DT_WORDBREAK; 
+   }
+
    /* Size the drawing area. */
    wr.left = x;
    wr.top = y;
    wr.right = x + max_w;
    wr.bottom = y + max_h;
-   DrawText( target->hdc_b, str, str_sz, &wr, DT_LEFT | DT_TOP );
+   DrawText( target->hdc_b, str, str_sz, &wr, fmt_flags );
 
    /* Cleanup drawing params. */
    /* If we don't do this, it makes stuff we draw later weirdly transparent. */
@@ -122,6 +130,7 @@ MERROR_RETVAL retrofont_string_sz(
    MERROR_RETVAL retval = MERROR_OK;
    RECT wr;
    HFONT old_font;
+   int fmt_flags = 0;
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
@@ -142,11 +151,16 @@ MERROR_RETVAL retrofont_string_sz(
 
    old_font = SelectObject( target->hdc_b, (HFONT)font_h );
 
+   fmt_flags = DT_CALCRECT | DT_WORDBREAK;
+   if( 0 == max_w || 0 == max_h ) {
+      fmt_flags |= DT_NOCLIP;
+   }
+
    wr.left = 0;
    wr.top = 0;
    wr.right = max_w;
    wr.bottom = max_h;
-   DrawText( target->hdc_b, str, str_sz, &wr, DT_CALCRECT | DT_WORDBREAK );
+   DrawText( target->hdc_b, str, str_sz, &wr, fmt_flags );
 
    if( NULL != p_out_w ) {
       *p_out_w = wr.right - wr.left;
