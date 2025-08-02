@@ -625,7 +625,9 @@ MERROR_RETVAL retroani_set_target(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROANI* ani = NULL;
 
-   assert( mdata_vector_ct( ani_stack ) > a_idx );
+   if( a_idx >= mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OVERFLOW;
+   }
 
    mdata_vector_lock( ani_stack );
    ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
@@ -655,7 +657,9 @@ MERROR_RETVAL retroani_set_string(
    struct RETROANI* ani = NULL;
    size_t str_height = 0;
 
-   assert( mdata_vector_ct( ani_stack ) > a_idx );
+   if( a_idx >= mdata_vector_ct( ani_stack ) ) {
+      return MERROR_OVERFLOW;
+   }
 
    mdata_vector_lock( ani_stack );
    ani = mdata_vector_get( ani_stack, a_idx, struct RETROANI );
@@ -802,8 +806,10 @@ ssize_t retroani_create(
    idx_out = mdata_vector_append(
       ani_stack, &ani_new, sizeof( struct RETROANI ) );
 
-   debug_printf( RETROANI_TRACE_LVL,
-      "created animation at idx: " SSIZE_T_FMT, idx_out );
+   if( 0 <= idx_out ) {
+      debug_printf( RETROANI_TRACE_LVL,
+         "created animation at idx: " SSIZE_T_FMT, idx_out );
+   }
 
    return idx_out;
 }
