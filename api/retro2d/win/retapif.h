@@ -153,8 +153,6 @@ static LRESULT CALLBACK WndProc(
    };
 #     endif /* RETROFLAT_OPENGL */
 
-   debug_printf( 1, "msg: %u", message );
-
    switch( message ) {
       case WM_CREATE:
 
