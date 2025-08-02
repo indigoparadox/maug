@@ -364,12 +364,12 @@ cleanup:
 
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* p_out_w, size_t* p_out_h, uint8_t flags
+   MAUG_MHANDLE font_h, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* p_out_w, retroflat_pxxy_t* p_out_h, uint8_t flags
 ) {
    size_t x_iter = 0;
    size_t i = 0;
-   size_t out_h = 0; /* Only used if p_out_h is NULL. */
+   retroflat_pxxy_t out_h; /* Only used if p_out_h is NULL. */
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFONT* font = NULL;
 

@@ -174,13 +174,22 @@ cleanup:
 
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* p_out_w, size_t* p_out_h, uint8_t flags
+   MAUG_MHANDLE font_h, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* p_out_w, retroflat_pxxy_t* p_out_h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    unsigned char str_buf[128];
    struct RETROFONT* font = NULL;
    size_t i = 0;
+   retroflat_pxxy_t out_h = 0; /* Only used if p_out_h is NULL. */
+
+   if( NULL == p_out_h ) {
+      p_out_h = &out_h;
+   }
+
+   if( 0 == str_sz ) {
+      str_sz = maug_strlen( str );
+   }
 
    maug_mlock( font_h, font );
    maug_cleanup_if_null_lock( struct RETROFONT*, font );

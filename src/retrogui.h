@@ -1026,6 +1026,7 @@ static void retrogui_redraw_TEXTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    RETROFLAT_COLOR shadow_color = RETROFLAT_COLOR_DARKGRAY;
+   retroflat_pxxy_t cursor_x = 0;
 
    /* Adjust shadow colors for monochrome. */
    if( 2 >= retroflat_screen_colors() ) {
@@ -1076,11 +1077,21 @@ static void retrogui_redraw_TEXTBOX(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_idx,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+
+   retrogxc_string_sz(
+      gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_idx,
+      ctl->base.w, ctl->base.h, &cursor_x, NULL, 0 );
 #else
    retrofont_string(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_h,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+
+   retrofont_string_sz(
+      gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_h,
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h,
+      &cursor_x, NULL, 0 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
@@ -1092,7 +1103,7 @@ cleanup:
    /* TODO: Get cursor color from GUI. */
    retroflat_2d_rect( gui->draw_bmp,
       ctl->base.sel_fg,
-      gui->x + ctl->base.x + RETROGUI_PADDING + (8 * ctl->TEXTBOX.text_cur),
+      gui->x + ctl->base.x + RETROGUI_PADDING + cursor_x,
       gui->y + ctl->base.y + RETROGUI_PADDING,
       8, 8,
       /* Draw blinking cursor. */

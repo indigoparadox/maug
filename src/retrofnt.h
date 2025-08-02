@@ -58,8 +58,8 @@ void retrofont_string(
 
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* p_out_w, size_t* p_out_h, uint8_t flags );
+   MAUG_MHANDLE font_h, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* p_out_w, retroflat_pxxy_t* p_out_h, uint8_t flags );
 
 void retrofont_free( MAUG_MHANDLE* p_font_h );
 

@@ -116,8 +116,8 @@ void retrofont_string(
 
 MERROR_RETVAL retrofont_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t max_w, size_t max_h,
-   size_t* p_out_w, size_t* p_out_h, uint8_t flags
+   MAUG_MHANDLE font_h, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* p_out_w, retroflat_pxxy_t* p_out_h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    RECT wr;
@@ -135,6 +135,11 @@ MERROR_RETVAL retrofont_string_sz(
       str_sz = maug_strlen( str );
    }
 
+   if( 0 == str_sz ) {
+      /* Short-circuit if no actual text! */
+      return retval;
+   }
+
    old_font = SelectObject( target->hdc_b, (HFONT)font_h );
 
    wr.left = 0;
@@ -143,8 +148,13 @@ MERROR_RETVAL retrofont_string_sz(
    wr.bottom = max_h;
    DrawText( target->hdc_b, str, str_sz, &wr, DT_CALCRECT | DT_WORDBREAK );
 
-   *p_out_w = wr.right - wr.left;
-   *p_out_h = wr.bottom - wr.top;
+   if( NULL != p_out_w ) {
+      *p_out_w = wr.right - wr.left;
+   }
+
+   if( NULL != p_out_h ) {
+      *p_out_h = wr.bottom - wr.top;
+   }
 
    SelectObject( target->hdc_b, old_font );
 
