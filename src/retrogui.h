@@ -1089,9 +1089,7 @@ static void retrogui_redraw_TEXTBOX(
 
    retrofont_string_sz(
       gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_h,
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h,
-      &cursor_x, NULL, 0 );
+      ctl->base.w, ctl->base.h, &cursor_x, NULL, 0 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
