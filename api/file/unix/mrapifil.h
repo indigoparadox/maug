@@ -200,7 +200,7 @@ cleanup:
    p_file->printf = mfile_file_printf;
    p_file->vprintf = mfile_file_vprintf;
 
-   p_file->flags = MFILE_FLAG_READ_ONLY;
+   p_file->flags = flags;
 
 cleanup:
 

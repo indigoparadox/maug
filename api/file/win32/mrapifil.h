@@ -239,10 +239,10 @@ MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
 #     else
       filename,
 #     endif /* MAUG_WCHAR */
-      GENERIC_READ,
+      GENERIC_WRITE,
       FILE_SHARE_READ,
       NULL,
-      OPEN_EXISTING,
+      CREATE_ALWAYS,
       FILE_ATTRIBUTE_NORMAL,
       NULL );
 

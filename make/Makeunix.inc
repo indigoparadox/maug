@@ -139,7 +139,7 @@ CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
-ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+ifeq ("$$(RETROFLAT_FORCE_LOG_MFILE)", "1")
 CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/log/mfile
 else
 CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/log/unix
@@ -190,7 +190,7 @@ CFLAGS_GCC_UNIX_ALLEGRO := \
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
 
-ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+ifeq ("$$(RETROFLAT_FORCE_LOG_MFILE)", "1")
 CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/log/mfile
 else
 CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/log/unix
@@ -237,7 +237,7 @@ CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs)
 
-ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+ifeq ("$$(RETROFLAT_FORCE_LOG_MFILE)", "1")
 CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/log/mfile
 else
 CFLAGS_GCC_UNIX_GLUT += -I$(MAUG_ROOT)/api/log/unix
@@ -284,7 +284,7 @@ CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
 
 LDFLAGS_GCC_UNIX_XLIB := $(shell pkg-config x11 --libs)
 
-ifeq ("RETROFLAT_FORCE_LOG_MFILE", "1")
+ifeq ("$$(RETROFLAT_FORCE_LOG_MFILE)", "1")
 CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/log/mfile
 else
 CFLAGS_GCC_UNIX_XLIB += -I$(MAUG_ROOT)/api/log/unix

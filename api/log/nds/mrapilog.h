@@ -10,7 +10,7 @@
 
 #  define RETROFLAT_NDS_LOGGING
 
-#  define logging_init() 
+#  define logging_init() (0)
 #  define logging_shutdown()
 
 void _internal_debug_printf(

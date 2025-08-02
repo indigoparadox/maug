@@ -70,10 +70,17 @@ void logging_shutdown();
 FILE* SEG_MGLOBAL g_log_file = NULL;
 #  endif /* LOG_TO_FILE */
 
-void logging_init() {
+MERROR_RETVAL logging_init() {
+   MERROR_RETVAL retval = MERROR_OK;
 #  ifdef LOG_TO_FILE
    g_log_file = fopen( LOG_FILE_NAME, "w" );
+   if( NULL == g_log_file ) {
+      retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
+         "Error", "Unable to initiate logging!" );
+      retval = MERROR_FILE;
+   }
 #  endif /* LOG_FILE_NAME */
+   return retval;
 }
 
 /* === */

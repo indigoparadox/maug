@@ -117,7 +117,13 @@ void error_printf( const char* fmt, ... ) {
 /* === */
 
 MERROR_RETVAL _internal_logging_init() {
-   return mfile_open_write( LOG_FILE_NAME, &g_log_file );
+   MERROR_RETVAL retval = MERROR_OK;
+   retval = mfile_open_write( LOG_FILE_NAME, &g_log_file );
+   if( MERROR_OK != retval ) {
+      retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
+         "Error", "Unable to initiate logging!" );
+   }
+   return retval;
 }
 
 /* === */

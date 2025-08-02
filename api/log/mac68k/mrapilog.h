@@ -25,15 +25,18 @@ extern short g_log_ref;
 
 short g_log_ref = 0;
 
-void logging_init() {
+MERROR_RETVAL logging_init() {
+   MERROR_RETVAL retval = MERROR_OK;
    OSErr err;
 
    err = OpenDriver( "\p.AOut", &g_log_ref );
    if( noErr != err ) {
       retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
          "Error", "Unable to initiate logging: %d", err );
+      retval = MERROR_FILE;
    }
 
+   return retval;
 }
 
 /* === */
