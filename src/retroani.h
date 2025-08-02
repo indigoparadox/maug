@@ -154,6 +154,32 @@ struct RETROANI {
 /*! \brief Callback to call on active animations for every frame. */
 typedef MERROR_RETVAL (*RETROANI_CB)( struct RETROANI* a );
 
+#ifdef RETROANI_DISABLE
+
+#  define retroani_set_target( ani_stack, a_idx, target ) (MERROR_OK)
+
+#  define retroani_set_string( ani_stack, a_idx, str_in, str_sz_in, font_name_in, color_idx_in ) (MERROR_OK)
+
+#  define retroani_set_hole( ani_stack, flags, x, y, w, h ) (MERROR_OK)
+
+#  define retroani_set_colors( ani_stack, a_idx, c1, c2, c3, c4 ) (MERROR_OK)
+
+#  define retroani_create( ani_stack, type, flags, x, y, w, h ) (-1)
+
+#  define retroani_tesselate( a, y_orig )
+
+#  define retroani_frame( ani_stack, flags ) (MERROR_OK)
+
+#  define retroani_pause( ani_stack, flags ) (MERROR_OK)
+
+#  define retroani_resume( ani_stack, flags ) (MERROR_OK)
+
+#  define retroani_stop( ani, idx ) (MERROR_OK)
+
+#  define retroani_stop_all( ani_stack ) (MERROR_OK)
+
+#else
+
 MERROR_RETVAL retroani_set_target(
    struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target );
 
@@ -227,12 +253,14 @@ MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani, size_t idx );
  */
 MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack );
 
+#endif /* RETROANI_DISABLE */
+
 #define RETROANI_CB_TABLE_DRAW_PROTOTYPES( idx, name ) \
    MERROR_RETVAL retroani_draw_ ## name( struct RETROANI* );
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_DRAW_PROTOTYPES )
 
-#ifdef RETROANI_C
+#if defined( RETROANI_C ) && !defined( RETROANI_DISABLE )
 
 #define RETROANI_CB_TABLE_LIST( idx, name ) retroani_draw_ ## name,
 
@@ -1026,7 +1054,8 @@ cleanup:
 /*! \brief Internal animation callback table. */
 extern const RETROANI_CB gc_animate_draw[];
 
-#define RETROANI_CB_TABLE_TYPES( idx, name ) extern const uint8_t RETROANI_TYPE_ ## name;
+#define RETROANI_CB_TABLE_TYPES( idx, name ) \
+   extern MAUG_CONST uint8_t SEG_MCONST RETROANI_TYPE_ ## name;
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_TYPES )
 

@@ -153,8 +153,12 @@ static LRESULT CALLBACK WndProc(
    };
 #     endif /* RETROFLAT_OPENGL */
 
+   debug_printf( 1, "msg: %u", message );
+
    switch( message ) {
       case WM_CREATE:
+
+         debug_printf( 1, "WM_CREATE" );
 
          g_retroflat_state->platform.hdc_win = GetDC( hWnd );
 
@@ -388,6 +392,7 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->loop_iter(
                g_retroflat_state->loop_data );
          }
+
          break;
 
       case WM_COMMAND:
@@ -756,6 +761,7 @@ MERROR_RETVAL retroflat_loop(
    MERROR_RETVAL retval = MERROR_OK;
    int msg_retval = 0;
    MSG msg;
+   int fps_delay = 0;
 
    /* Set these to be called from WndProc later. */
    g_retroflat_state->loop_iter = (retroflat_loop_iter)loop_iter;
@@ -774,17 +780,21 @@ MERROR_RETVAL retroflat_loop(
    }
 
    if( NULL != frame_iter ) {
+      debug_printf( 1, "desired FPS: %d", RETROFLAT_FPS );
+      fps_delay = (int)(1000 / RETROFLAT_FPS);
       debug_printf( 3, "setting up frame timer %u every %d ms...",
-         RETROFLAT_WIN_FRAME_TIMER_ID, (int)(1000 / RETROFLAT_FPS) );
+         RETROFLAT_WIN_FRAME_TIMER_ID, fps_delay );
       if( !SetTimer(
          g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID,
-         (int)(1000 / RETROFLAT_FPS), NULL )
+         fps_delay, NULL )
       ) {
          retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
             "Error", "Could not create frame timer!" );
          retval = RETROFLAT_ERROR_TIMER;
          goto cleanup;
       }
+
+      debug_printf( 1, "frame timer %u added!", RETROFLAT_WIN_FRAME_TIMER_ID );
    }
 
    if( NULL != loop_iter ) {
@@ -802,6 +812,8 @@ MERROR_RETVAL retroflat_loop(
    }
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+
+   debug_printf( 1, "beginning message loop..." );
 
    /* TODO: loop_iter is artificially slow on Windows! */
 
