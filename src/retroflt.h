@@ -845,6 +845,9 @@ typedef int8_t retroflat_dir8_t;
 #define RETROFLAT_DIR8_SOUTH  4
 #define RETROFLAT_DIR8_WEST   6
 
+#define retroflat_dir4_rotate_cw( dir ) \
+   ((dir + 1) % 4)
+
 #define retroflat_dir8_reverse( dir ) \
    ((dir + 4) % 8)
 
