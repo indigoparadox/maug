@@ -2,6 +2,10 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+#ifndef RETROINPUT_TRACE_LVL
+#  define RETROINPUT_TRACE_LVL 0
+#endif /* !RETROINPUT_TRACE_LVL */
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
 };
@@ -105,22 +109,48 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    input->key_flags = 0;
 
-   /* TODO: Mouse support. */
+   mask = ExposureMask | KeyPressMask | ButtonPressMask;
 
-   mask = ExposureMask | KeyPressMask | KeyReleaseMask;
+   /* Enable mouse input events. */
+   XSelectInput(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.window, mask );
 
-   /* XNextEvent( g_display, &event ); */
-   if( (
-      XCheckWindowEvent(
+   if( !XCheckWindowEvent(
          g_retroflat_state->platform.display,
-         g_retroflat_state->platform.window, mask, &event ) ||
-      XCheckTypedWindowEvent(
-         g_retroflat_state->platform.display,
-         g_retroflat_state->platform.window, KeyPress, &event )
-   ) && KeyPress == event.type ) {
+         g_retroflat_state->platform.window, mask, &event )
+   ) {
+      goto cleanup;
+   }
+
+   /* An event was found, so process it. */
+   debug_printf( RETROINPUT_TRACE_LVL, "event: %u", event.type );
+   if( KeyPress == event.type ) {
       /* printf( "%lu\n", event.xkey.keycode ); */
       key_out = event.xkey.keycode;
+   } else if( ButtonPress == event.type ) {
+      debug_printf( RETROINPUT_TRACE_LVL,
+         "mouse button: %u", event.xbutton.button );
+      switch( event.xbutton.button ) {
+      case 1:
+         key_out = RETROFLAT_MOUSE_B_LEFT;
+         break;
+
+      case 3:
+         key_out = RETROFLAT_MOUSE_B_RIGHT;
+         break;
+
+      default:
+         /* A button we don't recognize, so don't set coords. */
+         goto cleanup;
+      }
+      input->mouse_x = event.xbutton.x / g_retroflat_state->scale;
+      input->mouse_y = event.xbutton.y / g_retroflat_state->scale;
    }
+
+cleanup:
+
+   XFlush( g_retroflat_state->platform.display );
 
    return key_out;
 }
