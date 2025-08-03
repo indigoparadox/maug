@@ -103,10 +103,12 @@ ifeq ("$$(SDL_VER_UNIX)","1")
 
 # Easier to understand error messages.
 ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
-$$(error could not find pkg-config for SDL 1.2!)
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for SDL 1.2!)
 endif
 ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
-$$(error could not find pkg-config for SDL_mixer 1.2!)
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for SDL_mixer 1.2!)
 endif
 
 # Actually setup flags.
@@ -118,10 +120,12 @@ else
 
 # Easier to understand error messages.
 ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
-$$(error could not find pkg-config for SDL 2!)
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for SDL 2!)
 endif
 ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
-$$(error could not find pkg-config for SDL_mixer 2!)
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for SDL_mixer 2!)
 endif
 
 # Actually setup flags.
@@ -177,7 +181,7 @@ define TGTUNIXALE
 
 # Easier to understand error messages.
 ifeq ("$$(shell pkg-config allegro --libs 2>/dev/null)","")
-$$(error could not find pkg-config for allegro!)
+$$(warning could not find pkg-config for allegro!)
 endif
 
 # TODO: Use allegro font API.
@@ -274,7 +278,8 @@ define TGTUNIXXLIB
 
 # Easier to understand error messages.
 ifeq ("$$(shell pkg-config x11 --libs 2>/dev/null)","")
-$$(error could not find pkg-config for x11!)
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for x11!)
 endif
 
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
