@@ -350,7 +350,7 @@ $$(OBJDIR_WATCOM_WIN_WIN16)/%.o: %.c | $$(MAUG_DEPS_WIN16)
 		$$(CFLAGS_OPT_WATCOM_WIN16) \
 		-fo="$$@" "$$(<:%.c=%)"
 
-CLEAN_TARGETS += $(1)w3.exe
+CLEAN_TARGETS += $(1)w3.exe $(1)w3.map
 
 endef
 
