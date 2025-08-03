@@ -46,7 +46,7 @@ endef
 define TGT_CECL_WINCE_SH3
 
 ifeq ("$$(WCE20DEV)","")
-$$(error $$$$WCE20DEV not defined!)
+$$(warning $$$$WCE20DEV not defined!)
 endif
 
 CFLAGS_CECL_WINCE_SH3 += /D "SH3" /D "_SH3_"
