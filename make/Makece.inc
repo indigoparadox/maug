@@ -89,7 +89,7 @@ endef
 define TGT_CECL_WINCE_MIPS
 
 ifeq ("$$(WCE20DEV)","")
-$$(error $$$$WCE20DEV not defined!)
+$$(warning $$$$WCE20DEV not defined!)
 endif
 
 CFLAGS_CECL_WINCE_MIPS += /D "MIPS" /D "_MIPS_" /QMRWCE
@@ -131,7 +131,7 @@ endef
 define TGT_CECL_WINCE_X86
 
 ifeq ("$$(WCE20DEV)","")
-$$(error $$$$WCE20DEV not defined!)
+$$(warning $$$$WCE20DEV not defined!)
 endif
 
 CFLAGS_CECL_WINCE_X86 += /D "_WINDOWS" /D "UNDER_NT" /D "_WIN32_WCE_EMULATION" /D "_X86_" /D "_UNICODE" /D "WIN32"
