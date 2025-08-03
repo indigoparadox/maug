@@ -46,9 +46,6 @@ obj/wasm/%.o: %.c | $$(MAUG_DEPS) $$(MAUG_DEPS_WASM)
 		-c -o $$@ $$< $$(CFLAGS_EMCC) $$(EMCC_FLAGS_SDL) \
 		$$(CFLAGS_OPT_GCC) $$(CFLAGS_OPT_WASM)
 
-$(1).wasm.zip: $(1).html $(1).js $(1).wasm
-	zip -r "$$@" $$^ $(2)
-
 CLEAN_TARGETS += $(1).html $(1).js $(1).wasm $(1).wasm.zip
 
 endef

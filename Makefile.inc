@@ -123,16 +123,63 @@ ifeq ("$$(shell which mkisofs 2>/dev/null)","")
 $$(error could not find mkisofs!)
 endif
 
-$(1).dst: $$(BINS)
+$(1)_iso.dst: $(2)
 	mkdir -v -p $$@
-	cp -v -R $$^ $$@
-	cp -v -R $(2) $$@
+	for f in $$^; do \
+		mkdir -v -p "$$@/`dirname $$$$f`"; \
+		cp -v -R $$$$f "$$@/$$$$f"; \
+	done
 
-$(1).iso: $(1).dst
+$(1).iso: $(1)_iso.dst
 	mkisofs -J -o $$@ $$<
 
-CLEAN_TARGETS += $(1).dst $(1).iso
+CLEAN_TARGETS += $(1)_iso.dst $(1).iso
 
 endef
 
+# ---
+
+define TGTZIP
+
+# Easier to understand error messages.
+ifeq ("$$(shell which zip 2>/dev/null)","")
+$$(error could not find zip!)
+endif
+
+$(1)_zip.dst: $(2)
+	mkdir -v -p $$@
+	for f in $$^; do \
+		mkdir -v -p "$$@/`dirname $$$$f`"; \
+		cp -v -R $$$$f "$$@/$$$$f"; \
+	done
+
+$(1).zip: $(1)_zip.dst
+	zip -r $$@ $$<
+
+CLEAN_TARGETS += $(1)_zip.dst $(1).zip
+
+endef
+
+# ---
+
+define TGTTGZ
+
+# Easier to understand error messages.
+ifeq ("$$(shell which tar 2>/dev/null)","")
+$$(error could not find tar!)
+endif
+
+$(1)_tgz.dst: $(2)
+	mkdir -v -p $$@
+	for f in $$^; do \
+		mkdir -v -p "$$@/`dirname $$$$f`"; \
+		cp -v -R $$$$f "$$@/$$$$f"; \
+	done
+
+$(1).tgz: $(1)_tgz.dst
+	tar -cvzf $$@ $$<
+
+CLEAN_TARGETS += $(1)_tgz.dst $(1).tgz
+
+endef
 
