@@ -60,7 +60,7 @@ void _internal_debug_printf(
 extern FILE* SEG_MGLOBAL g_log_file;
 #  endif /* LOG_TO_FILE */
 
-void logging_init();
+MERROR_RETVAL logging_init();
 
 void logging_shutdown();
 
