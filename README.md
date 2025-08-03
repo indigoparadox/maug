@@ -86,6 +86,21 @@ In principle, the library is split into the following parts:
 
 Each layer relies on functionality provided by the layers below it. This means that a function in `retroglu.h` or `retroflt.h` in the `src/` directory may call a function provided by `api/dosbios/retapif.h` or `src/maug.h`, but a function in `src/maug.h` may not call a function from `src/retroflt.h`.
 
+The API layer acts as a set of modules that can be swapped, depending on the platform. They should all provide the same functionality, but using the specific mechanisms of the platform they're designed for. The API layer can be further divided as follows:
+
+| API     | Description                     |
+|---------|---------------------------------|
+| file    | Filesystem access.              |
+| font    | Drawing text on-screen.         |
+| input   | Input polling/translation.      |
+| log     | Debug/error logging.            |
+| mem     | Dynamic memory allocation.      |
+| retro2d | Drawing primatives on-screen.   |
+| retro3d | Drawing 3D primatives.          |
+| sound   | Digital sound and sequencing.   |
+
+The **retro2d** API is special, as it also contains the definition of how the platform handles its main loop (e.g. message polling on Windows or the loop callback for WASM). Most platforms can simply use `retroflat_loop_generic()`, which is a generic loop that executes the program's loop callbacks repeatedly until `retroflat_quit()` is called.
+
 ### Makefiles
 
 Application Makefiles should `include maug/Makefile.inc` to enable the build macros. From there, a target must be defined with `$(eval $(call <target>,<appname>))` for each platform to build for.
