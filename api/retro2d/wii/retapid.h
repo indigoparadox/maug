@@ -19,6 +19,14 @@
 
 #define RETROFLAT_WII_FLAG_PX_LOCKED 0x02
 
+#  ifndef RETROFLAT_SOFT_SHAPES
+#     define RETROFLAT_SOFT_SHAPES
+#  endif /* !RETROFLAT_SOFT_SHAPES */
+
+#  ifndef RETROFLAT_SOFT_LINES
+#     define RETROFLAT_SOFT_LINES
+#  endif /* !RETROFLAT_SOFT_LINES */
+
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{

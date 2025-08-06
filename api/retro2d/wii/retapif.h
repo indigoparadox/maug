@@ -6,14 +6,24 @@
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 #include <ogc/cache.h>
+#include <ogc/lwp_watchdog.h> /* gettime, ticks_to_millisecs */
+
+static uint32_t _retroflat_wii_rgb2ycbcr( uint8_t r, uint8_t g, uint8_t b ) {
+   uint32_t y, cb, cr;
+   
+   y = (299 * r + 587 * g + 114 * b) / 1000;
+   cb = (-16874 * r - 33126 * g + 50000 * b + 12800000) / 100000;
+   cr = (50000 * r - 41869 * g - 8131 * b + 12800000) / 100000;
+   
+   return (y << 24) | (cb << 16) | (y << 8) | cr;
+}
+
+/* === */
 
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-
-   /* TODO */
-#  pragma message( "warning: init_platform not implemented" )
 
    debug_printf( 1, "setting up framebuffer..." );
 
@@ -41,17 +51,32 @@ static MERROR_RETVAL retroflat_init_platform(
       VIDEO_WaitVSync();
    }
 
-   g_retroflat_state->screen_v_w = g_retroflat_state->platform.rmode->fbWidth;
-   g_retroflat_state->screen_v_h = g_retroflat_state->platform.rmode->xfbHeight;
-   g_retroflat_state->screen_w = g_retroflat_state->platform.rmode->fbWidth;
-   g_retroflat_state->screen_h = g_retroflat_state->platform.rmode->xfbHeight;
+#  define RETROFLAT_COLOR_TABLE_WII( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+      g_retroflat_state->palette[idx] = _retroflat_wii_rgb2ycbcr( rd, gd, bd );
+
+      /*
+         (0xff000000 | \
+         (((rd) & 0xff) << 16) | (((gd) & 0xff) << 8) | ((bd) & 0xff)); \
+      debug_printf( 1, "setting color %d to: 0x%08x", \
+         idx, g_retroflat_state->palette[idx] );
+      */
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WII )
+
+   g_retroflat_state->screen_v_w =
+      g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
+      g_retroflat_state->platform.rmode->fbWidth :
+      g_retroflat_state->platform.rmode->fbWidth / 2;
+   g_retroflat_state->screen_v_h =
+      g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
+      g_retroflat_state->platform.rmode->xfbHeight :
+      g_retroflat_state->platform.rmode->xfbHeight / 2;
+   g_retroflat_state->screen_w = g_retroflat_state->screen_v_w;
+   g_retroflat_state->screen_h = g_retroflat_state->screen_v_h;
+   g_retroflat_state->buffer.w = g_retroflat_state->screen_v_w;
+   g_retroflat_state->buffer.h = g_retroflat_state->screen_v_h;
    g_retroflat_state->scale = 1;
    g_retroflat_state->screen_colors = 16;
-
-#  define RETROFLAT_COLOR_TABLE_WII( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-      g_retroflat_state->palette[idx] = \
-         ((((rd) & 0xff) << 16) | (((gd) & 0xff) << 8) | ((bd) & 0xff));
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WII )
 
    /* TODO: Move to input API. */
    WPAD_Init();
@@ -120,8 +145,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   /* TODO */
-#  pragma message( "warning: get_ms not implemented" )
+   return ticks_to_millisecs( gettime() );
 }
 
 /* === */
@@ -136,9 +160,6 @@ uint32_t retroflat_get_rand() {
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
-   /* TODO */
-#  pragma message( "warning: draw_lock not implemented" )
-
    return retval;
 }
 
@@ -147,13 +168,13 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO */
-#  pragma message( "warning: draw_release not implemented" )
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       /* Wait for vsync and then flip the screen buffer. */
       VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
       VIDEO_Flush();
       VIDEO_WaitVSync();
+      DCFlushRange( g_retroflat_state->buffer.bits,
+         4 * g_retroflat_state->screen_w * g_retroflat_state->screen_h );
    }
 
    return retval;
@@ -239,6 +260,8 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags
 ) {
    uint8_t autolock_px = 0;
+   size_t px_idx_l1 = 0;
+   size_t px_idx_l2 = 0;
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -265,73 +288,22 @@ void retroflat_px(
       retroflat_px_lock( target );
    }
 
-   target->bits[(y * target->w) + x] = g_retroflat_state->palette[color_idx];
+   if( (g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE) ) {
+      px_idx_l1 = (y * target->w * 2) + x;
+      target->bits[px_idx_l1] = g_retroflat_state->palette[color_idx];
+   } else {
+      /* Double the scanline for interlaced mode. */
+      px_idx_l1 = (y * target->w * 2) + x;
+      target->bits[px_idx_l1] = g_retroflat_state->palette[color_idx];
+      px_idx_l2 = (y * target->w * 2) + target->w + x;
+      target->bits[px_idx_l2] = g_retroflat_state->palette[color_idx];
+   }
 
 cleanup:
 
    if( autolock_px ) {
       retroflat_px_release( target );
    }
-
-}
-
-/* === */
-
-void retroflat_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
-) {
-
-   if( RETROFLAT_COLOR_NULL == color_idx ) {
-      return;
-   }
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-   /* TODO */
-#  pragma message( "warning: rect not implemented" )
-
-}
-
-/* === */
-
-void retroflat_line(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
-) {
-
-   if( RETROFLAT_COLOR_NULL == color_idx ) {
-      return;
-   }
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-   /* TODO */
-#  pragma message( "warning: line not implemented" )
-
-}
-
-/* === */
-
-void retroflat_ellipse(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
-) {
-
-   if( RETROFLAT_COLOR_NULL == color_idx ) {
-      return;
-   }
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-   /* TODO */
-#  pragma message( "warning: ellipse not implemented" )
 
 }
 
