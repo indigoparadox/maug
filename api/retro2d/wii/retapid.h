@@ -15,6 +15,10 @@
 
 #define RETROGUI_NO_TEXTBOX 1
 
+#define RETROFLAT_WII_FLAG_BITMAP_LOCKED 0x01
+
+#define RETROFLAT_WII_FLAG_PX_LOCKED 0x02
+
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{
@@ -31,33 +35,38 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   uint32_t* bits;
+   size_t w;
+   size_t h;
 };
 
 /**
  * \relates RETROFLAT_BITMAP
  * \brief Check to see if a bitmap is loaded.
  */
-#  define retroflat_bitmap_ok( bitmap ) (1)
+#  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->bits)
 
 /**
  * \relates RETROFLAT_BITMAP
  * \brief Check to see if a bitmap is currently locked.
  */
-#  define retroflat_bitmap_locked( bitmap ) (0)
+#  define retroflat_bitmap_locked( bitmap ) \
+   (RETROFLAT_WII_FLAG_BITMAP_LOCKED == \
+      (RETROFLAT_WII_FLAG_BITMAP_LOCKED & ((bitmap)->flags)))
 
 /**
  * \relates RETROFLAT_BITMAP
  * \brief Get the width of this bitmap using underlying mechanisms.
  * \warn The bitmap must be valid!
  */
-#  define retroflat_bitmap_w( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
 
 /**
  * \relates RETROFLAT_BITMAP
  * \brief Get the height of this bitmap using underlying mechanisms.
  * \warn The bitmap must be valid!
  */
-#  define retroflat_bitmap_h( bmp ) (0)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -71,10 +80,12 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
 
 /*! \brief Lock a surface for pixel drawing if needed. */
-#  define retroflat_px_lock( bmp )
+#  define retroflat_px_lock( bmp ) \
+      (bmp)->flags |= RETROFLAT_WII_FLAG_PX_LOCKED;
 
 /*! \brief Release a surface for pixel drawing if needed. */
-#  define retroflat_px_release( bmp )
+#  define retroflat_px_release( bmp ) \
+      (bmp)->flags &= ~RETROFLAT_WII_FLAG_PX_LOCKED;
 
 /**
  * \brief This should be called in order to quit a program using RetroFlat.
@@ -116,6 +127,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
+   GXRModeObj* rmode;
 };
 
 #endif /* !RETPLTD_H */

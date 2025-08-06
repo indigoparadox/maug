@@ -81,7 +81,7 @@ obj/wii-libogc/%.o: %.c | $$(MAUG_DEPS_WII)
 		$$(CFLAGS_GCC_WII) $$(CFLAGS_GCC_WII_LIBOGC) \
 		$$(CFLAGS_OPT_GCC_WII)
 
-CLEAN_TARGETS += $(1).nds
+CLEAN_TARGETS += $(1).dol
 
 endef
 

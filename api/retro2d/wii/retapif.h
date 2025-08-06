@@ -2,8 +2,10 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+#include <malloc.h> /* memalign */
 #include <gccore.h>
 #include <wiiuse/wpad.h>
+#include <ogc/cache.h>
 
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
@@ -13,8 +15,48 @@ static MERROR_RETVAL retroflat_init_platform(
    /* TODO */
 #  pragma message( "warning: init_platform not implemented" )
 
+   debug_printf( 1, "setting up framebuffer..." );
+
+   VIDEO_Init();
+   g_retroflat_state->platform.rmode = VIDEO_GetPreferredMode( NULL );
+   g_retroflat_state->buffer.bits = MEM_K0_TO_K1( SYS_AllocateFramebuffer(
+      g_retroflat_state->platform.rmode ) );
+   if( NULL == g_retroflat_state->buffer.bits ) {
+      error_printf( "could not setup framebuffer memory!" );
+      retval = MERROR_ALLOC;
+      goto cleanup;
+   }
+
+   debug_printf( 1, "setting up video configuration..." );
+
+   VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
+   VIDEO_SetBlack( FALSE );
+   VIDEO_Configure( g_retroflat_state->platform.rmode );
+   VIDEO_SetPostRetraceCallback( NULL );
+
+   VIDEO_Flush();
+   VIDEO_WaitVSync();
+   if( g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ) {
+      /* Extra sync for progressive mode. */
+      VIDEO_WaitVSync();
+   }
+
+   g_retroflat_state->screen_v_w = g_retroflat_state->platform.rmode->fbWidth;
+   g_retroflat_state->screen_v_h = g_retroflat_state->platform.rmode->xfbHeight;
+   g_retroflat_state->screen_w = g_retroflat_state->platform.rmode->fbWidth;
+   g_retroflat_state->screen_h = g_retroflat_state->platform.rmode->xfbHeight;
+   g_retroflat_state->scale = 1;
+   g_retroflat_state->screen_colors = 16;
+
+#  define RETROFLAT_COLOR_TABLE_WII( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+      g_retroflat_state->palette[idx] = \
+         ((((rd) & 0xff) << 16) | (((gd) & 0xff) << 8) | ((bd) & 0xff));
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WII )
+
    /* TODO: Move to input API. */
    WPAD_Init();
+
+cleanup:
 
    return retval;
 }
@@ -107,6 +149,12 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO */
 #  pragma message( "warning: draw_release not implemented" )
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      /* Wait for vsync and then flip the screen buffer. */
+      VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
+      VIDEO_Flush();
+      VIDEO_WaitVSync();
+   }
 
    return retval;
 }
@@ -145,8 +193,17 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   /* TODO */
-#  pragma message( "warning: create_bitmap not implemented" )
+   bmp_out->bits = memalign( 32, w * h * sizeof( uint32_t ) );
+   if( NULL == bmp_out->bits ) {
+      error_printf( "could not allocate new bitmap!" );
+      retval = MERROR_ALLOC;
+      goto cleanup;
+   }
+
+   bmp_out->w = w;
+   bmp_out->h = h;
+
+cleanup:
 
    return retval;
 }
@@ -154,10 +211,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-
-   /* TODO */
-#  pragma message( "warning: destroy_bitmap not implemented" )
-
+   free( bmp->bits );
+   maug_mzero( bmp, sizeof( struct RETROFLAT_BITMAP ) );
 }
 
 /* === */
@@ -183,6 +238,8 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
+   uint8_t autolock_px = 0;
+
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -199,8 +256,22 @@ void retroflat_px(
 
    retroflat_constrain_px( x, y, target, return );
 
-   /* TODO */
-#  pragma message( "warning: px not implemented" )
+   /* Autolock pixels if needed. */
+   if(
+      RETROFLAT_WII_FLAG_PX_LOCKED ==
+      (RETROFLAT_WII_FLAG_PX_LOCKED & target->flags)
+   ) {
+      autolock_px = 1;
+      retroflat_px_lock( target );
+   }
+
+   target->bits[(y * target->w) + x] = g_retroflat_state->palette[color_idx];
+
+cleanup:
+
+   if( autolock_px ) {
+      retroflat_px_release( target );
+   }
 
 }
 
