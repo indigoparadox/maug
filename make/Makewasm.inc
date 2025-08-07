@@ -12,16 +12,20 @@ EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix
 
+# -O2 is needed for HTTP fetch to work!
+# TODO: Is MVFS feasible or desirable?
+CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix -O2
+
 # These facilitate async wrappers for the file API.
 LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2
 # NOTE: The -O2 here facilitates ASYNCIFY. It is necessary, or we'll get lots
 #       of "unreachable executed" errors at runtime.
-CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix -O2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl
 endif
 
+# TODO: Load audio files with HTTP fetch?
 ifneq ("$$(AUDIO_FILES)","")
 	EMCC_FLAGS_SDL += --use-preload-plugins $$(addprefix --preload-file ,$$(AUDIO_FILES))
 endif

@@ -20,7 +20,10 @@ endif
 # Disable the keyboard and viewport/refresh functions, since the NDS doesn't
 # have those.
 DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DRETROFLAT_NO_VIEWPORT_REFRESH
+
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
+
+define TGTNDSLIBN
 
 CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
 
@@ -28,6 +31,7 @@ CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/
 
 DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS -DRETROFLAT_API_CALICO \
 	-DRETROFLAT_NO_CLI
+
 INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include \
 	-I$(MAUG_ROOT)/api/retro2d/nds -I$(MAUG_ROOT)/api/input/nds \
 	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/nds \
@@ -48,8 +52,6 @@ LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS
 
 NDSASSET_H_DIR := obj/bmpnds
 
-define TGTNDSLIBN
-
 # Remove XPM flags, as XPM mode is not supported on the DS.
 CFLAGS_OPT_GCC_NDS += \
 	$$(subst -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_GCC))
@@ -58,17 +60,14 @@ C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)
 
 MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
-ifeq ($$(FORCE_MVFS),)
-ifeq ($$(MVFS_AVAIL),1)
-# Selectively enable VFS for this platform.
-$$(info Selectively enabling MVFS for platform "NDS" with no filesystem!)
-CFLAGS_OPT_GCC_NDS += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
-MAUG_DEPS_NDS += $$(MVFS_H_DIR)/mvfs.h
-endif
+ifeq ("$$(RETROFLAT_SOUND)","1")
+CFLAGS_GCC_NDS += -I$(MAUG_ROOT)/api/sound/nds
 endif
 
-ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_NDS += -I$(MAUG_ROOT)/api/sound/nds
+ifeq ("$$(FORCE_MVFS)","1")
+CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/mvfs"
+else
+CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/nds"
 endif
 
 $(1).nds: obj/nds-libnds/$(1).elf

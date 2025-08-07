@@ -5,21 +5,6 @@ ifeq ("$(CFLAGS_WATCOM_OS2)","")
 	CFLAGS_WATCOM_OS2 := -DRETROFLAT_OS_OS2
 endif
 
-CFLAGS_WATCOM386_OS2_GLUT := \
-	-mf -5r -fp5 -bt=os2 -i$(WATCOM)/h/os2 -DRETROFLAT_API_GLUT \
-	-i=$(MAUG_ROOT)/api/retro2d/glut -i=$(MAUG_ROOT)/api/input/glut \
-	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/unix
-LDFLAGS_WATCOM386_OS2_GLUT := system os2v2_pm libr {opengl glut}
-
-CFLAGS_WATCOM386_OS2_SDL := \
-	-mf -5s -fp5 -bt=os2 -i=$(WATCOM)/h/os2 -i=$(WATCOM)/h/os2/SDL \
-	-DRETROFLAT_API_SDL1 \
-	-i=$(MAUG_ROOT)/api/retro2d/sdl -i=$(MAUG_ROOT)/api/input/sdl \
-	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
-	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/unix
-LDFLAGS_WATCOM386_OS2_SDL := system os2v2_pm libr {sdl12}
-
 OBJDIR_WATCOM386_OS2_GLUT=obj/watcom-os232-glut
 OBJDIR_WATCOM386_OS2_SDL=obj/watcom-os232-sdl
 
@@ -27,8 +12,22 @@ OBJDIR_WATCOM386_OS2_SDL=obj/watcom-os232-sdl
 
 define TGT_WATCOM386_OS2_GLUT
 
+CFLAGS_WATCOM386_OS2_GLUT := \
+	-mf -5r -fp5 -bt=os2 -i$(WATCOM)/h/os2 -DRETROFLAT_API_GLUT \
+	-i=$(MAUG_ROOT)/api/retro2d/glut -i=$(MAUG_ROOT)/api/input/glut \
+	-i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/unix
+
+LDFLAGS_WATCOM386_OS2_GLUT := system os2v2_pm libr {opengl glut}
+
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM386_OS2_GLUT += -i=$(MAUG_ROOT)/api/sound/null
+endif
+
+ifeq ("$$(FORCE_MVFS)","1")
+CFLAGS_WATCOM386_OS2_GLUT += -i="$(MAUG_ROOT)/api/file/mvfs"
+else
+CFLAGS_WATCOM386_OS2_GLUT += -i="$(MAUG_ROOT)/api/file/unix"
 endif
 
 $(1)o32gl.exe: \
@@ -56,8 +55,23 @@ TGTOS2GL=$(TGT_WATCOM386_OS2_GLUT)
 
 define TGT_WATCOM386_OS2_SDL
 
+CFLAGS_WATCOM386_OS2_SDL := \
+	-mf -5s -fp5 -bt=os2 -i=$(WATCOM)/h/os2 -i=$(WATCOM)/h/os2/SDL \
+	-DRETROFLAT_API_SDL1 \
+	-i=$(MAUG_ROOT)/api/retro2d/sdl -i=$(MAUG_ROOT)/api/input/sdl \
+	-i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/unix
+
+LDFLAGS_WATCOM386_OS2_SDL := system os2v2_pm libr {sdl12}
+
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM386_OS2_SDL += -i=$(MAUG_ROOT)/api/sound/sdl
+endif
+
+ifeq ("$$(FORCE_MVFS)","1")
+CFLAGS_WATCOM386_OS2_SDL += -i="$(MAUG_ROOT)/api/file/mvfs"
+else
+CFLAGS_WATCOM386_OS2_SDL += -i="$(MAUG_ROOT)/api/file/unix"
 endif
 
 $(1)o32s.exe: \

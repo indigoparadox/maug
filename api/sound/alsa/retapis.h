@@ -4,6 +4,12 @@
 
 #  include <alsa/asoundlib.h>
 
+struct RETROFLAT_SOUND_ARGS {
+   uint8_t flags;
+   int snd_client;
+   int snd_port;
+};
+
 struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
    snd_seq_t* seq_handle;

@@ -35,7 +35,7 @@ define TGTDOSALE
 
 CFLAGS_WATCOM386_DOS_ALLEGRO += \
 	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/retro2d/allegro \
-	-I$(MAUG_ROOT)/api/input/allegro -I$(MAUG_ROOT)/api/file/unix \
+	-I$(MAUG_ROOT)/api/input/allegro \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/dos
 
@@ -44,6 +44,12 @@ LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+endif
+
+ifeq ("$$(FORCE_MVFS)","1")
+	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/file/mvfs
+else
+	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/file/unix
 endif
 
 $(1)d.exe: $$(addprefix obj/doswa/,$$(subst .c,.o,$$(C_FILES)))
@@ -70,10 +76,16 @@ define TGTDOSGAL
 
 CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
-	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
+	-I$(MAUG_ROOT)/api/log/unix \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/dos
 
 LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
+
+ifeq ("$$(FORCE_MVFS)","1")
+	CFLAGS_DJGPP_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/file/mvfs
+else
+	CFLAGS_DJGPP_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/file/unix
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_DJGPP_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
@@ -103,16 +115,6 @@ CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/retro2d/dosbios \
 	-I$(MAUG_ROOT)/api/input/dosbios -I$(MAUG_ROOT)/api/file/unix \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/dos
-
-# Strip out options to bake-in resources, as they make the exe too big!
-
-CFLAGS_OPT_WATCOM_BIOS := \
-	$$(subst -DRETROFLAT_XPM -i=$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_WATCOM))
-
-CFLAGS_OPT_WATCOM_BIOS := \
-	$$(subst -DMVFS_ENABLED -i=$$(MVFS_H_DIR),,$$(CFLAGS_OPT_WATCOM_BIOS))
-
-MAUG_DEPS_BIOS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
 ifeq ("$$(RETROFLAT_DOS_MEM_LARGE)", "1")
 	CFLAGS_WATCOM_DOS_BIOS += -ml -DMAUG_DOS_MEM_L
