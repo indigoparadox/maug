@@ -2915,6 +2915,11 @@ uint8_t retroflat_viewport_focus_generic(
 
 #ifdef RETROFLAT_LOAD_BITMAP_GENERIC
 
+/* This is a generic function that uses the callback
+ * retroflat_load_bitmap_px_cb(), which should be defined by the
+ * platform-specific API to draw the loaded bitmap onto a native canvas.
+ */
+
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
