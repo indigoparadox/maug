@@ -91,6 +91,25 @@ struct RETROFLAT_INPUT_STATE {
 
 #elif defined( RETROFLT_C )
 
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   install_keyboard();
+
+#     ifndef RETROFLAT_OS_DOS
+   /* XXX: Broken in DOS. */
+   if( 0 > install_mouse() ) {
+      allegro_message( "could not setup mouse!" );
+      retval = RETROFLAT_ERROR_MOUSE;
+      goto cleanup;
+   }
+#     endif /* !RETROFLAT_OS_DOS */
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #  if defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_DOS_REAL )
    union REGS inregs;

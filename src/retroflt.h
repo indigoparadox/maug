@@ -2615,6 +2615,9 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
 
+   retval = retroflat_init_input( args );
+   maug_cleanup_if_not_ok();
+
    debug_printf( 3, "screen initialized with: " SIZE_T_FMT "x" SIZE_T_FMT
       " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
       ") with " SIZE_T_FMT " colors",

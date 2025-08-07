@@ -87,9 +87,6 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->scale = 1;
    g_retroflat_state->screen_colors = 16;
 
-   /* TODO: Move to input API. */
-   WPAD_Init();
-
 cleanup:
 
    return retval;

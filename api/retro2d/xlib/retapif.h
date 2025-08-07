@@ -94,11 +94,6 @@ static MERROR_RETVAL retroflat_init_platform(
          (((rd) & 0xff) << 16) | (((gd) & 0xff) << 8) | ((bd) & 0xff);
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_XLIB )
 
-   /* TODO: Split out into input API. */
-   XSelectInput(
-      g_retroflat_state->platform.display,
-      g_retroflat_state->platform.window, ExposureMask | KeyPressMask );
-
 cleanup:
 
    return retval;

@@ -100,25 +100,34 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+static MAUG_CONST uint16_t g_retroflat_xlib_input_mask = 
+   ExposureMask | KeyPressMask | ButtonPressMask;
+
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+
+   /* Grab mouse clicks and key presses. */
+   XSelectInput(
+      g_retroflat_state->platform.display,
+      g_retroflat_state->platform.window,
+      g_retroflat_xlib_input_mask );
+
+   return MERROR_OK;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
    XEvent event;
-   uint16_t mask = 0;
 
    assert( NULL != input );
 
    input->key_flags = 0;
 
-   mask = ExposureMask | KeyPressMask | ButtonPressMask;
-
-   /* Enable mouse input events. */
-   XSelectInput(
-      g_retroflat_state->platform.display,
-      g_retroflat_state->platform.window, mask );
-
    if( !XCheckWindowEvent(
          g_retroflat_state->platform.display,
-         g_retroflat_state->platform.window, mask, &event )
+         g_retroflat_state->platform.window,
+         g_retroflat_xlib_input_mask, &event )
    ) {
       goto cleanup;
    }

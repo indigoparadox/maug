@@ -86,6 +86,30 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+#     ifdef RETROFLAT_OS_OS2
+void APIENTRY
+#     elif defined( RETROFLAT_OS_WIN )
+void 
+#     else
+void
+#     endif /* RETROFLAT_OS_OS2 */
+retroflat_glut_key( unsigned char key, int x, int y ) {
+#     ifdef RETROFLAT_OS_WIN
+      /* key -= 109; */
+#     endif /* RETROFLAT_OS_WIN */
+   debug_printf( 0, "key: %c (0x%02x)", key, key );
+   g_retroflat_state->input.retroflat_last_key = key;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+   glutKeyboardFunc( retroflat_glut_key );
+   return MERROR_OK;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
 

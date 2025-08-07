@@ -43,6 +43,13 @@ typedef uint32_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+   WPAD_Init();
+   return MERROR_OK;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
    uint32_t buttons_down = 0;

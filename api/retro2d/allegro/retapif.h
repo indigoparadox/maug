@@ -56,7 +56,6 @@ MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
-   install_keyboard();
 #     if !defined( RETROFLAT_OS_DOS ) || !defined( __WATCOMC__ )
    /* XXX: Broken in DOS on watcom. */
    install_timer();
@@ -95,13 +94,6 @@ MERROR_RETVAL retroflat_init_platform(
 #     ifndef RETROFLAT_OS_DOS
    if( NULL != args->title ) {
       retroflat_set_title( args->title );
-   }
-
-   /* XXX: Broken in DOS. */
-   if( 0 > install_mouse() ) {
-      allegro_message( "could not setup mouse!" );
-      retval = RETROFLAT_ERROR_MOUSE;
-      goto cleanup;
    }
 #     endif /* !RETROFLAT_OS_DOS */
 

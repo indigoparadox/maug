@@ -15,6 +15,29 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  ifdef RETROFLAT_API_SDL1
+   /* Setup key repeat. */
+   if(
+      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
+   ) {
+      if( 0 != SDL_EnableKeyRepeat(
+         1, SDL_DEFAULT_REPEAT_INTERVAL
+      ) ) {
+         error_printf( "could not enable key repeat!" );
+      } else {
+         debug_printf( 3, "key repeat enabled" );
+      }
+   }
+#  endif /* RETROFLAT_API_SDL1 */
+
+   return retval;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    int eres = 0;
    SDL_Event event;

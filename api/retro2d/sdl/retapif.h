@@ -197,19 +197,6 @@ MERROR_RETVAL retroflat_init_platform(
       RETROFLAT_ERROR_GRAPHICS );
 #     endif /* !RETROFLAT_OPENGL */
 
-   /* Setup key repeat. */
-   if(
-      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
-   ) {
-      if( 0 != SDL_EnableKeyRepeat(
-         1, SDL_DEFAULT_REPEAT_INTERVAL
-      ) ) {
-         error_printf( "could not enable key repeat!" );
-      } else {
-         debug_printf( 3, "key repeat enabled" );
-      }
-   }
-
 #  elif defined( RETROFLAT_API_SDL2 )
 
    /* == SDL2 == */

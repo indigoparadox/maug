@@ -4,45 +4,6 @@
 
 static volatile retroflat_ms_t g_ms = 0;
 
-static unsigned int g_retroflat_mouse_cursor[2][16] = {
-	{
-		0xfff0,
-		0xffe0,
-		0xffc0,
-		0xff81,
-		0xff03,
-		0x0607,
-		0x000f,
-		0x001f,
-		0xc03f,
-		0xf07f,
-		0xffff,
-		0xffff,
-		0xffff,
-		0xffff,
-		0xffff,
-		0xffff
-	},
-	{
-		0x0000,
-		0x0006,
-		0x000c,
-		0x0018,
-		0x0030,
-		0x0060,
-		0x70c0,
-		0x1d80,
-		0x0700,
-		0x0000,
-		0x0000,
-		0x0000,
-		0x0000,
-		0x0000,
-		0x0000,
-		0x0000
-	}
-};
-
 /* === */
 
 void __interrupt __far retroflat_timer_handler() {
@@ -203,25 +164,7 @@ static MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.cga_dither_table[idx] = RETROFLAT_CGA_COLOR_ ## cgad;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CGA_DITHER_INIT )
 
-   /* Get mouse info. */
-   r.x.ax = 0;
-   int86( 0x33, &r, &r );
-   debug_printf( 3, "mouse status: %d, %d", r.x.ax, r.x.bx );
-   if( -1 != r.x.ax ) {
-      retval = MERROR_GUI;
-      error_printf( "mouse not found!" );
-      goto cleanup;
-   }
-
-   /* Set mouse cursor. */
-   r.x.ax = 0x9;
-   r.x.bx = 0; /* Hotspot X */
-   r.x.cx = 0; /* Hotspot Y */
-   r.x.dx = (unsigned int)g_retroflat_mouse_cursor;
-   segread( &s );
-   s.es = s.ds;
-   int86x( 0x33, &r, &r, &s );
-
+   /* TODO: Make whether we're using DOSBIOS mouse configurable. */
    retroflat_show_mouse();
 
 cleanup:

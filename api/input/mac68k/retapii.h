@@ -94,6 +94,12 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+   return MERROR_OK;
+}
+
+/* === */
+
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
 
