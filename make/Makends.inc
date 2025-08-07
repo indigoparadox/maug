@@ -21,11 +21,11 @@ endif
 # have those.
 DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DRETROFLAT_NO_VIEWPORT_REFRESH
 
-INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include -I obj/mvfs
+INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
 
 define TGTNDSLIBN
 
-CFLAGS_GCC_NDS := $(DEFINES_GCC_NDS) $(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
+CFLAGS_GCC_NDS := $$(DEFINES_GCC_NDS) $$(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
 
 # Setup CFLAGS_GCC_NDS_LIBNDS
 
@@ -34,11 +34,11 @@ DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS -DRETROFLAT_API_CALICO \
 
 INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include \
 	-I$(MAUG_ROOT)/api/retro2d/nds -I$(MAUG_ROOT)/api/input/nds \
-	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/nds \
+	-I$(MAUG_ROOT)/api/log/nds \
 	-I$(DEVKITPRO)/calico/include -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix
 
-CFLAGS_GCC_NDS_LIBNDS := $(DEFINES_GCC_NDS_LIBNDS) $(INCLUDES_GCC_NDS_LIBNDS)
+CFLAGS_GCC_NDS_LIBNDS := $$(DEFINES_GCC_NDS_LIBNDS) $$(INCLUDES_GCC_NDS_LIBNDS)
 
 # Setup LDFLAGS_GCC_NDS
 
@@ -46,28 +46,37 @@ LDFLAGS_GCC_NDS := -specs=$(DEVKITPRO)/calico/share/ds9.specs -ffunction-section
 
 # Setup LDFLAGS_GCC_NDS_LIBNDS
 
-LIBS_GCC_NDS_LIBNDS += -L$(DEVKITPRO)/libnds/lib -lnds9 -L$(DEVKITPRO)/calico/lib -lcalico_ds9
+LIBS_GCC_NDS_LIBNDS += \
+	-L$(DEVKITPRO)/libnds/lib -lnds9 -L$(DEVKITPRO)/calico/lib -lcalico_ds9
 
-LDFLAGS_GCC_NDS_LIBNDS := -Wl,-Map,obj/nds-libnds/$(1).map $(LIBS_GCC_NDS_LIBNDS)
-
-NDSASSET_H_DIR := obj/bmpnds
+LDFLAGS_GCC_NDS_LIBNDS := \
+	-Wl,-Map,obj/nds-libnds/$(1).map $$(LIBS_GCC_NDS_LIBNDS)
 
 # Remove XPM flags, as XPM mode is not supported on the DS.
 CFLAGS_OPT_GCC_NDS += \
 	$$(subst -DRETROFLAT_XPM -I$$(RETROXPM_H_DIR),,$$(CFLAGS_OPT_GCC))
 
-C_FILES_NDS := $$(NDSASSET_C_FILE) $$(C_FILES)
+C_FILES_NDS_LIBNDS := $$(C_FILES)
+
+H_FILES_NDS_LIBNDS :=
 
 MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_NDS += -I$(MAUG_ROOT)/api/sound/nds
+CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/sound/nds
 endif
 
 ifeq ("$$(FORCE_MVFS)","1")
-CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/mvfs"
+CFLAGS_GCC_NDS_LIBNDS += -I"$(MAUG_ROOT)/api/file/mvfs" -Iobj/mvfs
 else
-CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/nds"
+ifeq ("$$(NDSASSET_ENABLED)","1")
+CFLAGS_GCC_NDS_LIBNDS += $$(CFLAGS_NDSASSET)
+C_FILES_NDS_LIBNDS += $$(NDSASSET_C_FILE)
+H_FILES_NDS_LIBNDS += $$(NDSASSET_H_FILE)
+else
+# Fall back to mvfs if NDSASSET target not defined.
+CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/mvfs" -Iobj/mvfs
+endif
 endif
 
 $(1).nds: obj/nds-libnds/$(1).elf
@@ -75,15 +84,14 @@ $(1).nds: obj/nds-libnds/$(1).elf
 		-7 $$(DEVKITPRO)/calico/bin/ds7_maine.elf -b "$(2)" "$(1);$(1);$(1)"
 
 obj/nds-libnds/$(1).elf: \
-$$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES_NDS)))
+$$(addprefix obj/nds-libnds/,$$(subst .c,.o,$$(C_FILES_NDS_LIBNDS)))
 	PATH="$(DEVKITPPRO)/tools/bin:$(DEVKITPRO)/devkitARM/bin:$(PATH)" \
 	$$(CC_GCC_NDS) -o $$@ $$^ \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_NDS) $$(LDFLAGS_GCC_NDS_LIBNDS)
 
-obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS_NDS) $$(NDSASSET_H_FILE)
+obj/nds-libnds/%.o: %.c | $$(MAUG_DEPS_NDS) $$(H_FILES_NDS_LIBNDS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_NDS) -c -o $$@ $$< \
-		-I $$(NDSASSET_H_DIR) \
 		$$(INCLUDES_GCC) $$(DEFINES_GCC) $$(GLOBAL_DEFINES) \
 		$$(CFLAGS_GCC_NDS) $$(CFLAGS_GCC_NDS_LIBNDS) \
 		$$(CFLAGS_OPT_GCC_NDS)
@@ -102,6 +110,10 @@ ifeq ($$(IM_IDENTIFY),)
 $$(error imagemagick identify is not installed!)
 endif
 endif
+
+NDSASSET_ENABLED := 1
+
+NDSASSET_H_DIR := obj/bmpnds
 
 NDSASSET_C_FILE += $$(NDSASSET_H_DIR)/ndsasset.c
 NDSASSET_H_FILE += $$(NDSASSET_H_DIR)/ndsasset.h
@@ -219,7 +231,8 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 
 	echo "\n#endif /* NDSASSET_H */\n" >> $$(NDSASSET_H_FILE)
 
-CFLAGS_GCC_NDS_LIBNDS += -DUSE_NDSASSET
+CFLAGS_NDSASSET += \
+	-DUSE_NDSASSET -I"$(MAUG_ROOT)/api/file/nds" -I$$(NDSASSET_H_DIR) 
 
 CLEAN_TARGETS += $$(NDSASSET_H_DIR)/ndsasset.h
 
