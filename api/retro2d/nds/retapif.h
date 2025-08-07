@@ -461,7 +461,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   /* TODO: Move to NDS file API! */
+   /* TODO: Move to NDS file API? */
 
    /* TODO: Assert bitmap isn't already initialized. */
 

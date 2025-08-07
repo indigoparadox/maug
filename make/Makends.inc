@@ -34,7 +34,7 @@ DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS -DRETROFLAT_API_CALICO \
 
 INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include \
 	-I$(MAUG_ROOT)/api/retro2d/nds -I$(MAUG_ROOT)/api/input/nds \
-	-I$(MAUG_ROOT)/api/log/nds \
+	-I$(MAUG_ROOT)/api/log/nds -I$(MAUG_ROOT)/api/file/nds \
 	-I$(DEVKITPRO)/calico/include -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix
 
@@ -66,17 +66,16 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/sound/nds
 endif
 
-ifeq ("$$(FORCE_MVFS)","1")
-CFLAGS_GCC_NDS_LIBNDS += -I"$(MAUG_ROOT)/api/file/mvfs" -Iobj/mvfs
-else
+ifeq ("$$(MVFS_AVAIL)","1")
+# The nds file API can use MVFS as a backup for non-images.
+CFLAGS_GCC_NDS_LIBNDS += -Iobj/mvfs -D$$(MVFS_DEFINE)
+H_FILES_NDS_LIBNDS += $$(MVFS_H_DIR)/mvfs.h
+endif
+
 ifeq ("$$(NDSASSET_ENABLED)","1")
 CFLAGS_GCC_NDS_LIBNDS += $$(CFLAGS_NDSASSET)
 C_FILES_NDS_LIBNDS += $$(NDSASSET_C_FILE)
 H_FILES_NDS_LIBNDS += $$(NDSASSET_H_FILE)
-else
-# Fall back to mvfs if NDSASSET target not defined.
-CFLAGS_GCC_NDS += -I"$(MAUG_ROOT)/api/file/mvfs" -Iobj/mvfs
-endif
 endif
 
 $(1).nds: obj/nds-libnds/$(1).elf
@@ -231,8 +230,7 @@ $$(NDSASSET_H_DIR)/ndsasset.h $$(NDSASSET_H_DIR)/ndsasset.c: $(1)
 
 	echo "\n#endif /* NDSASSET_H */\n" >> $$(NDSASSET_H_FILE)
 
-CFLAGS_NDSASSET += \
-	-DUSE_NDSASSET -I"$(MAUG_ROOT)/api/file/nds" -I$$(NDSASSET_H_DIR) 
+CFLAGS_NDSASSET += -DUSE_NDSASSET -I$$(NDSASSET_H_DIR) 
 
 CLEAN_TARGETS += $$(NDSASSET_H_DIR)/ndsasset.h
 
