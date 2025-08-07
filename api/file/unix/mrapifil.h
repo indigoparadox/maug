@@ -230,6 +230,11 @@ MERROR_RETVAL mfile_file_vprintf(
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t st_size = 0;
+#  if defined( MFILE_MMAP )
+   uint8_t* bytes_ptr = NULL;
+   struct stat st;
+   int in_file = 0;
+#  endif /* MFILE_MMAP */
 #     ifndef MAUG_NO_STAT
    struct stat file_stat;
    int stat_r = 0;

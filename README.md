@@ -195,6 +195,14 @@ uprintf's behavior can be modified by defining the following before inclusion:
 | DEBUG\_LOG        | If defined, debug will be output to LOG\_FILE\_NAME.    |
 | ANCIENT\_C        | Use static functions where vararg macros unsupported.   |
 
+## MVFS
+
+The maug virtual filesystem is a "special case" file API available on platforms that may have lots of RAM but no supported filesystem. It allows for the compiling of resources into programs.
+
+To use MVFS, an MVFS target must be specified in the program's Makefile, for example like `$(eval $(call MVFS,$(ASSET_FILES) $(BITMAP_FILES)))`. Then, `FORCE_MVFS` must be set to `1` in the Makefile before the targets that use it are called (i.e. every `$(eval $(call TARGET))` statement that comes after the first `FORCE_MVFS` statement in the Makefile will use the MVFS).
+
+MVFS is not supported on platforms like 16-bit DOS or Windows 3.x, as these platforms are restricted to very tiny segments that make it too problematic.
+
 ## Troubleshooting
 
 ### size of segment x exceeds 64k by y bytes

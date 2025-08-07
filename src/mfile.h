@@ -110,6 +110,7 @@ typedef char retroflat_asset_path[MAUG_PATH_SZ_MAX + 1];
 /*! \} */ /* maug_retroflt_assets */
 
 struct MFILE_CADDY;
+typedef struct MFILE_CADDY mfile_t;
 
 typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
 typedef MERROR_RETVAL (*mfile_read_byte_t)(
@@ -124,6 +125,16 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
 typedef MERROR_RETVAL (*mfile_printf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
 
+off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file );
+MERROR_RETVAL mfile_mem_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf );
+MERROR_RETVAL mfile_mem_read_block(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz );
+MERROR_RETVAL mfile_mem_seek( struct MFILE_CADDY* p_file, off_t pos );
+MERROR_RETVAL mfile_mem_read_line(
+   struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags );
+MERROR_RETVAL mfile_mem_vprintf(
+   mfile_t* p_file, uint8_t flags, const char* fmt, va_list args );
+
 /**
  * \related MFILE_CADDY
  * \brief Callback to printf the given format string, replacing tokens from
@@ -134,7 +145,7 @@ typedef MERROR_RETVAL (*mfile_printf_t)(
 typedef MERROR_RETVAL (*mfile_vprintf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
 
-/* TODO: Don't load platform-specific file stuff if MVFS is enabled. */
+/* Load the platform-specific file API. */
 #include <mrapifil.h>
 #include <mrapilog.h>
 
@@ -219,10 +230,6 @@ void mfile_close( mfile_t* p_file );
 
 #include <mrapifil.h>
 #include <mrapilog.h>
-
-#ifdef MVFS_ENABLED
-#  include <mvfs.h>
-#endif /* MVFS_ENABLED */
 
 MERROR_RETVAL mfile_assign_path(
    retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags
@@ -417,60 +424,9 @@ MERROR_RETVAL mfile_lock_buffer(
 
 MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( MVFS_ENABLED )
-   size_t i = 0;
-#  elif defined( MFILE_MMAP )
-   uint8_t* bytes_ptr = NULL;
-   struct stat st;
-   int in_file = 0;
-#  else
-#  endif /* MFILE_MMAP */
-
-   /* MAUG_MHANDLE* p_bytes_ptr_h, off_t* p_bytes_sz */
-
-   /* TODO: Move MVFS stuff into its own platform handler or something? */
-#  if defined( MVFS_ENABLED )
-
-   while( NULL != gc_mvfs_data[i] ) {
-      if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
-         debug_printf( 1, "found file \"%s\" at VFS index: " SIZE_T_FMT
-         " (size: " OFF_T_FMT " bytes)",
-            filename, i, *(gc_mvfs_lens[i]) );
-         break;
-      }
-      i++;
-   }
-
-   if( NULL == gc_mvfs_data[i] ) {
-      retval = MERROR_FILE;
-      error_printf( "file \"%s\" not found in VFS!", filename );
-      goto cleanup;
-   }
-
-   p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
-
-   p_file->has_bytes = mfile_mem_has_bytes;
-   p_file->read_byte = mfile_mem_read_byte;
-   p_file->read_block = mfile_mem_read_block;
-   p_file->read_int = mfile_file_read_int;
-   p_file->seek = mfile_mem_seek;
-   p_file->read_line = mfile_mem_read_line;
-   p_file->printf = mfile_file_printf;
-   p_file->vprintf = mfile_mem_vprintf;
-
-   p_file->flags = MFILE_FLAG_READ_ONLY;
-   p_file->mem_buffer = gc_mvfs_data[i];
-   p_file->sz = *(gc_mvfs_lens[i]);
-   p_file->mem_cursor = 0;
-
-cleanup:
-   
-#  else
 
    /* Call the platform-specific actual file opener from mrapifil.h. */
    retval = mfile_plt_open_read( filename, p_file );
-
-#  endif /* MVFS_ENABLED */
 
    return retval;
 }
@@ -479,8 +435,6 @@ cleanup:
 
 MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-
-   /* The MVFS is read-only, so don't bother hunting it. */
 
    retval = mfile_plt_open_write( filename, p_file );
 
