@@ -25,6 +25,7 @@ static MERROR_RETVAL retroflat_init_platform(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   /* Allocate framebuffer. */
    debug_printf( 1, "setting up framebuffer..." );
 
    VIDEO_Init();
@@ -37,6 +38,7 @@ static MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
+   /* Setup rest of video config. */
    debug_printf( 1, "setting up video configuration..." );
 
    VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
@@ -51,6 +53,7 @@ static MERROR_RETVAL retroflat_init_platform(
       VIDEO_WaitVSync();
    }
 
+   /* Setup color palette. */
 #  define RETROFLAT_COLOR_TABLE_WII( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
       g_retroflat_state->palette[idx] = _retroflat_wii_rgb2ycbcr( rd, gd, bd );
 
@@ -63,6 +66,10 @@ static MERROR_RETVAL retroflat_init_platform(
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WII )
 
+   /* Seed random number generator. */
+   srand( ticks_to_microsecs( gettime() ) );
+
+   /* Make sure screen size agrees in all state fields. */
    g_retroflat_state->screen_v_w =
       g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
       g_retroflat_state->platform.rmode->fbWidth :
@@ -75,6 +82,8 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->screen_h = g_retroflat_state->screen_v_h;
    g_retroflat_state->buffer.w = g_retroflat_state->screen_v_w;
    g_retroflat_state->buffer.h = g_retroflat_state->screen_v_h;
+
+   /* Setup screen colors. */
    g_retroflat_state->scale = 1;
    g_retroflat_state->screen_colors = 16;
 
@@ -151,14 +160,18 @@ retroflat_ms_t retroflat_get_ms() {
 /* === */
 
 uint32_t retroflat_get_rand() {
-   /* TODO */
-#  pragma message( "warning: get_rand not implemented" )
+   return rand();
 }
 
 /* === */
 
 int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
+
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      VIDEO_WaitVSync();
+      VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
+   }
 
    return retval;
 }
@@ -170,11 +183,12 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       /* Wait for vsync and then flip the screen buffer. */
-      VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
       VIDEO_Flush();
-      VIDEO_WaitVSync();
+      /*
       DCFlushRange( g_retroflat_state->buffer.bits,
          4 * g_retroflat_state->screen_w * g_retroflat_state->screen_h );
+      */
+      g_retroflat_state->platform.flags ^= RETROFLAT_WII_FLAG_FRAME_ODD;
    }
 
    return retval;
@@ -260,8 +274,7 @@ void retroflat_px(
    size_t x, size_t y, uint8_t flags
 ) {
    uint8_t autolock_px = 0;
-   size_t px_idx_l1 = 0;
-   size_t px_idx_l2 = 0;
+   size_t px_idx = 0;
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -288,16 +301,27 @@ void retroflat_px(
       retroflat_px_lock( target );
    }
 
-   if( (g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE) ) {
-      px_idx_l1 = (y * target->w * 2) + x;
-      target->bits[px_idx_l1] = g_retroflat_state->palette[color_idx];
+   if(
+      /* Non-screen bitmap. */
+      retroflat_screen_buffer() != target ||
+      /* TODO: Test progressive mode. */
+      (g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE)
+   ) {
+      px_idx = (y * target->w) + x;
+
+   } else if(
+      RETROFLAT_WII_FLAG_FRAME_ODD ==
+      (RETROFLAT_WII_FLAG_FRAME_ODD & g_retroflat_state->platform.flags)
+   ) {
+      px_idx = (y * target->w * 2) + x;
+
    } else {
-      /* Double the scanline for interlaced mode. */
-      px_idx_l1 = (y * target->w * 2) + x;
-      target->bits[px_idx_l1] = g_retroflat_state->palette[color_idx];
-      px_idx_l2 = (y * target->w * 2) + target->w + x;
-      target->bits[px_idx_l2] = g_retroflat_state->palette[color_idx];
+      /* Offset the scanline for interlaced mode. */
+      px_idx = (y * target->w * 2) + target->w + x;
    }
+
+   /* Perform the actual pixel. */
+   target->bits[px_idx] = g_retroflat_state->palette[color_idx];
 
 cleanup:
 
