@@ -224,7 +224,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 /* === */
 
-static MERROR_RETVAL _retroflat_load_bitmap_px_cb(
+MERROR_RETVAL retroflat_load_bitmap_px_cb(
    void* data, uint8_t px, int32_t x, int32_t y,
    void* header_info, uint8_t flags
 ) {
@@ -235,85 +235,6 @@ static MERROR_RETVAL _retroflat_load_bitmap_px_cb(
    }
 
    return MERROR_OK;
-}
-
-/* === */
-
-MERROR_RETVAL retroflat_load_bitmap(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
-) {
-   char filename_path[MAUG_PATH_SZ_MAX + 1];
-   MERROR_RETVAL retval = MERROR_OK;
-   mfile_t bmp_file;
-   struct MFMT_STRUCT_BMPFILE header_bmp;
-   uint8_t bmp_flags = 0;
-
-   assert( NULL != bmp_out );
-   maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
-   retval = retroflat_build_filename_path(
-      filename, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
-   maug_cleanup_if_not_ok();
-   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
-
-   bmp_out->flags = flags;
-
-   /* Open the bitmap file. */
-   retval = mfile_open_read( filename_path, &bmp_file );
-   maug_cleanup_if_not_ok();
-
-   /* mfmt file detection system. */
-   maug_mzero( &header_bmp, sizeof( struct MFMT_STRUCT_BMPFILE ) );
-   header_bmp.magic[0] = 'B';
-   header_bmp.magic[1] = 'M';
-   header_bmp.info.sz = 40;
-
-   retval = mfmt_read_bmp_header(
-      (struct MFMT_STRUCT*)&header_bmp,
-      &bmp_file, 0, mfile_get_sz( &bmp_file ), &bmp_flags );
-   maug_cleanup_if_not_ok();
-
-   /* Create buffer and XImage struct. */
-   bmp_out->bits = calloc(
-      header_bmp.info.width * header_bmp.info.height, 4 );
-   if( NULL == bmp_out->bits ) {
-      error_printf( "could not allocate bitmap bits!" );
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
-   bmp_out->img = XCreateImage(
-      g_retroflat_state->platform.display,
-      g_retroflat_state->platform.visual, 
-      DefaultDepth(
-         g_retroflat_state->platform.display,
-         g_retroflat_state->platform.screen ),
-      ZPixmap,
-      0,
-      bmp_out->bits,
-      header_bmp.info.width,
-      header_bmp.info.height,
-      32, 0 );
-   if( NULL == bmp_out->img ) {
-      error_printf( "could not create bitmap image!" );
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
-   retval = mfmt_read_bmp_px_cb(
-      (struct MFMT_STRUCT*)&header_bmp,
-      &bmp_file,
-      header_bmp.px_offset,
-      mfile_get_sz( &bmp_file ) - header_bmp.px_offset,
-      bmp_flags,
-      _retroflat_load_bitmap_px_cb,
-      bmp_out );
-   maug_cleanup_if_not_ok();
-
-cleanup:
-
-   mfile_close( &bmp_file );
-
-   return retval;
 }
 
 /* === */

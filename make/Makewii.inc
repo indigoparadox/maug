@@ -61,7 +61,7 @@ endif
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_WII += -I$(MAUG_ROOT)/api/sound/nds
+	CFLAGS_GCC_WII += -I$(MAUG_ROOT)/api/sound/wii
 endif
 
 $(1).dol: obj/wii-libogc/$(1).elf

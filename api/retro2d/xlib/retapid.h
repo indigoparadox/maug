@@ -15,6 +15,8 @@
 
 #define RETROFLAT_SOFT_LINES
 
+#define RETROFLAT_LOAD_BITMAP_GENERIC 1
+
 #include <time.h>
 #include <X11/Xutil.h>
 
