@@ -2957,6 +2957,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       header_bmp.info.width, header_bmp.info.height, bmp_out, flags );
    maug_cleanup_if_not_ok();
 
+   retroflat_draw_lock( bmp_out );
+
    retval = mfmt_read_bmp_px_cb(
       (struct MFMT_STRUCT*)&header_bmp,
       &bmp_file,
@@ -2966,6 +2968,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       retroflat_load_bitmap_px_cb,
       bmp_out );
    maug_cleanup_if_not_ok();
+
+   retroflat_draw_release( bmp_out );
 
 cleanup:
 

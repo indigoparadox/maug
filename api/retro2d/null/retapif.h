@@ -85,8 +85,8 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
-   int retval = RETROFLAT_OK;
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = RETROFLAT_OK;
 
    /* TODO */
 #  pragma message( "warning: draw_lock not implemented" )

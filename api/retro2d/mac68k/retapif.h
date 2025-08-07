@@ -21,6 +21,8 @@ static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
    }
 }
 
+/* === */
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -273,10 +275,24 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
-   int retval = RETROFLAT_OK;
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+   MERROR_RETVAL retval = RETROFLAT_OK;
 
-   /* TODO: Stow old port to be retrieved on release. */
+   if(
+      g_retroflat_state->platform.port_stack_ct + 1 <
+      RETROFLAT_M68K_PORT_STACK_MAX_CT
+   ) {
+      /* Stow old port to be retrieved on release. */
+      GetPort( &(g_retroflat_state->platform.port_stack[
+         g_retroflat_state->platform.port_stack_ct]) );
+      g_retroflat_state->platform.port_stack_ct++;
+   } else {
+      retval = MERROR_OVERFLOW;
+      error_printf( "unable to lock graphics port: port stack overflow!" );
+      retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
+         "Error", "unable to lock graphics port: port stack overflow!" );
+      goto cleanup;
+   }
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       SetPort( g_retroflat_state->platform.win );
@@ -289,6 +305,8 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       SetOrigin( 0, 0 );
    }
 
+cleanup:
+
    return retval;
 }
 
@@ -297,18 +315,29 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO: Re-set old port stowed in lock. */
+   if( 0 < g_retroflat_state->platform.port_stack_ct ) {
+      g_retroflat_state->platform.port_stack_ct--;
+      /* Re-set old port stowed in lock. */
+      SetPort( g_retroflat_state->platform.port_stack[
+         g_retroflat_state->platform.port_stack_ct] );
 
-   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
-      /* TODO */
-      SetPort( g_retroflat_state->platform.win );
-   } else {
+    } else {
+      retval = MERROR_OVERFLOW;
+      retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
+         "Error", "unable to lock graphics port: port stack underflow!" );
+      error_printf( "unable to release graphics port: port stack underflow!" );
+      goto cleanup;
+   }
+
+   if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
       bmp->bitmap.baseAddr = nil;
       ClosePort( &(bmp->port) );
       HUnlock( bmp->bits_h );
    }
 
-   return retval;
+cleanup:
+
+    return retval;
 }
 
 /* === */

@@ -15,6 +15,12 @@
 
 #define RETROPLAT_PRESENT 1
 
+/* Number of previous graphics ports we can stack. This can theoretically be as
+ * low as 2 since we won't be drawing more than 2 bitmaps at once, but you never
+ * know.
+ */
+#define RETROFLAT_M68K_PORT_STACK_MAX_CT 4
+
 /* TODO: Implement Quickdraw viewport. */
 #define RETROFLAT_SOFT_VIEWPORT
 
@@ -109,6 +115,8 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
    WindowPtr win;
+   GrafPort* port_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
+   size_t port_stack_ct;
 };
 
 #endif /* !RETPLTD_H */
