@@ -54,7 +54,7 @@ MAUG_DEPS_WII := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 ifeq ($$(FORCE_MVFS),)
 ifeq ($$(MVFS_AVAIL),1)
 # Selectively enable VFS for this platform.
-$$(info Selectively enabling MVFS for platform "NDS" with no filesystem!)
+$$(info Selectively enabling MVFS for platform "Wii" with no filesystem!)
 CFLAGS_OPT_GCC_WII += -D$$(MVFS_DEFINE) -I$$(MVFS_H_DIR)
 MAUG_DEPS_WII += $$(MVFS_H_DIR)/mvfs.h
 endif

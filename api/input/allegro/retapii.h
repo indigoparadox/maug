@@ -105,6 +105,8 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    }
 #     endif /* !RETROFLAT_OS_DOS */
 
+cleanup:
+
    return retval;
 }
 
