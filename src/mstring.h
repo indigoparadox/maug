@@ -24,8 +24,8 @@ union MAUG_FMT_SPEC {
 };
 
 #define maug_bufcat( c, buf, buf_idx, buf_sz, cleanup ) \
-   buf[buf_idx++] = c; \
-   if( buf_idx >= buf_sz ) { goto cleanup; }
+   (buf)[buf_idx++] = c; \
+   if( (buf_idx) >= (buf_sz) ) { goto cleanup; }
 
 #define maug_bufpad( pad_c, pad_sz, i, buf, buf_idx, buf_sz, cleanup ) \
    i = 0; \
@@ -248,8 +248,14 @@ int maug_itoa( long int num, char* dest, int dest_sz, int base ) {
    int negative = 0;
 
    digits = maug_digits( num, base );
-   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
-   assert( digits < dest_sz );
+
+   /* Check that digits fit in dest buffer. */
+   if( digits >= dest_sz ) {
+      if( 0 < dest_sz ) {
+         dest[0] = 'X';
+      }
+      return -1;
+   }
 
    /* Handle 0 explicitly, otherwise empty string is printed for 0. */
    if( 0 == num ) {
@@ -280,8 +286,14 @@ int maug_utoa( uint32_t num, char* dest, int dest_sz, int base ) {
    int dest_idx = 0;
 
    digits = maug_digits( num, base );
-   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
-   assert( digits < dest_sz );
+
+   /* Check that digits fit in dest buffer. */
+   if( digits >= dest_sz ) {
+      if( 0 < dest_sz ) {
+         dest[0] = 'X';
+      }
+      return -1;
+   }
 
    /* Handle 0 explicitly, otherwise empty string is printed for 0. */
    if( 0 == num ) {
@@ -304,8 +316,14 @@ int maug_ztoa( size_t num, char* dest, int dest_sz, int base ) {
    int dest_idx = 0;
 
    digits = maug_zdigits( num, base );
-   assert( (0 == num && 1 == digits) || (0 != num && 0 < digits) );
-   assert( digits < dest_sz );
+
+   /* Check that digits fit in dest buffer. */
+   if( digits >= dest_sz ) {
+      if( 0 < dest_sz ) {
+         dest[0] = 'X';
+      }
+      return -1;
+   }
 
    /* Handle 0 explicitly, otherwise empty string is printed for 0. */
    if( 0 == num ) {
@@ -531,7 +549,27 @@ void maug_vsnprintf(
    char pad_char = ' ';
    int buffer_idx = 0;
    int spec_is_long = 0;
+   int spec_digits = 0;
 
+#  define maug_bufspec( spec_val, spec_base, spec_conv ) \
+      /* Print padding. */ \
+      spec_digits = maug_digits( spec_val, spec_base ); \
+      if( \
+         spec_digits < buffer_sz - buffer_idx && \
+         pad_len < buffer_sz - buffer_idx \
+      ) { \
+         pad_len -= spec_digits; \
+         maug_bufpad( pad_char, pad_len, j, \
+            buffer, buffer_idx, buffer_sz, cleanup ); \
+         /* Print number. */ \
+         buffer_idx += spec_conv( \
+            spec_val, &(buffer[buffer_idx]), buffer_sz - buffer_idx, \
+            spec_base ); \
+      } else { \
+         /* Not enough space! */ \
+         buffer[buffer_idx] = 'X'; \
+         buffer_idx++; \
+      }
    for( i = 0 ; '\0' != fmt[i] ; i++ ) {
       c = fmt[i]; /* Separate so we can play tricks below. */
  
@@ -561,14 +599,7 @@ void maug_vsnprintf(
                   spec.u = va_arg( vargs, unsigned int );
                }
                
-               /* Print padding. */
-               pad_len -= maug_digits( spec.d, 10 );
-               maug_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += maug_utoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
+               maug_bufspec( spec.u, 10, maug_utoa );
                break;
 
             case 'd':
@@ -578,40 +609,19 @@ void maug_vsnprintf(
                   spec.d = va_arg( vargs, int );
                }
                
-               /* Print padding. */
-               pad_len -= maug_digits( spec.d, 10 );
-               maug_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += maug_itoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
+               maug_bufspec( spec.d, 10, maug_itoa );
                break;
 
             case 'z':
                spec.z = va_arg( vargs, size_t );
                
-               /* Print padding. */
-               pad_len -= maug_zdigits( spec.z, 10 );
-               maug_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += maug_ztoa(
-                  spec.z, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 10 );
+               maug_bufspec( spec.z, 10, maug_ztoa );
                break;
 
             case 'x':
                spec.d = va_arg( vargs, int );
 
-               /* Print padding. */
-               pad_len -= maug_digits( spec.d, 16 );
-               maug_bufpad( pad_char, pad_len, j,
-                  buffer, buffer_idx, buffer_sz, cleanup );
-
-               /* Print number. */
-               buffer_idx += maug_utoa(
-                  spec.d, &(buffer[buffer_idx]), buffer_sz - buffer_idx, 16 );
+               maug_bufspec( spec.u, 16, maug_utoa );
                break;
 
             case 'c':
