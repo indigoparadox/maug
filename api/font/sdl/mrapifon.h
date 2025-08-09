@@ -21,6 +21,7 @@ MERROR_RETVAL retrofont_load(
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int ttf_retval = 0;
 
    if( 0 == glyph_h ) {
       glyph_h = retrofont_sz_from_filename( font_name );
@@ -29,6 +30,21 @@ MERROR_RETVAL retrofont_load(
       error_printf( "unable to determine font height!" );
       retval = MERROR_GUI;
       goto cleanup;
+   }
+
+   if(
+      RETROFLAT_FLAGS_FONT_INIT !=
+      (RETROFLAT_FLAGS_FONT_INIT & g_retroflat_state->retroflat_flags)
+   ) {
+      debug_printf( 2, "initializing SDL_TTF..." );
+      ttf_retval = TTF_Init();
+      if( 0 > ttf_retval ) {
+         error_printf( "error initializing TTF subsystem!" );
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "Error initializing TTF subsystem!" );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
    }
 
 #  pragma message( "warning: retrofont_load not implemented" )
@@ -74,4 +90,5 @@ void retrofont_free( MAUG_MHANDLE* p_font_h ) {
 #endif /* !RETROFNT_C */
 
 #endif /* !MAUG_API_FON_H_DEFS */
+
 

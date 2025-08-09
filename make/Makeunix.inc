@@ -89,7 +89,7 @@ define TGTUNIXSDL
 
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
 	-I$(MAUG_ROOT)/api/input/sdl \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/sdl -I$(MAUG_ROOT)/api/mem/unix
 
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
 
@@ -139,6 +139,10 @@ ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
 # Make this only a warning, in case we're compiling for other targets.
 $$(warning could not find pkg-config for SDL_mixer 2!)
 endif
+ifeq ("$$(shell pkg-config SDL_ttf --libs 2>/dev/null)","")
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for SDL_ttf 2!)
+endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --cflags) \
@@ -146,9 +150,9 @@ CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --cflags) \
 LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
 endif
 
-CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --cflags) -DRETROFLAT_API_SDL2
+CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_ttf --cflags) -DRETROFLAT_API_SDL2
 
-LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --libs)
+LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_ttf --libs)
 
 # Set a default so this isn't empty.
 SDL_VER_UNIX := 2

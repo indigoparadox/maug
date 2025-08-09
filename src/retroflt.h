@@ -402,12 +402,7 @@ typedef int8_t RETROFLAT_COLOR;
 /*! \} */ /* maug_retroflt_drawing */
 
 /**
- * \addtogroup maug_retroflt_flags Global Flags
- * \brief Flags that may be present on RETROFLAT_STATE::retroflat_flags
- * \{
- */
-
-/**
+ * \relates RETROFLAT_STATE
  * \brief Flag indicating that retroflat_loop() should continue executing.
  * \warning This flag is not used on all platforms! It should only be removed
  *          using retroflat_quit().
@@ -415,12 +410,14 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
 /**
+ * \relates RETROFLAT_STATE
  * \brief Flag indicating FPS should not be capped.
  * \warning This flag should only be set inside retroflat!
  */
 #define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
 
 /**
+ * \relates RETROFLAT_STATE
  * \brief Flag indicating keyboard repeat is enabled.
  * \warning This flag should only be set inside retroflat!
  */
@@ -433,11 +430,16 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_SCREENSAVER 0x08
 
 /**
+ * \relates RETROFLAT_STATE
  * \brief Do not execute any more inter-frame loops until next frame.
  */
 #define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
 
-/*! \} */ /* maug_retroflt_flags */
+/**
+ * \relates RETROFLAT_STATE
+ * \brief Flag indicating font subsystem has been initialized, if required.
+ */
+#define RETROFLAT_FLAGS_FONT_INIT      0x40
 
 /**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
