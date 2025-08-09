@@ -44,7 +44,7 @@ define TGTNXSDL
 
 # Setup CFLAGS_GCC_NX_SDL
 
-DEFINES_GCC_NX_SDL += -DRETROFLAT_API_SDL2 -DRETROFLAT_NO_CLI
+DEFINES_GCC_NX_SDL += -DRETROFLAT_OS_NX -DRETROFLAT_API_SDL2 -DRETROFLAT_NO_CLI
 
 INCLUDES_GCC_NX_SDL += \
 	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl \
@@ -73,14 +73,19 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_NX += -I$(MAUG_ROOT)/api/sound/sdl
 endif
 
-ifneq ("$$(NX_ROMFS)","")
-	NX_ROMFS_FLAG := --romfsdir=$$(NX_ROMFS)
+ifneq ("$(2)","")
+NX_ROMFS_FLAG := --romfsdir=obj/nx-sdl/romfs
+NX_ROMFS_DEP := $$(addprefix obj/nx-sdl/romfs/,$(2))
 endif
 
-$(1).nro: obj/nx-sdl/$(1).elf | obj/nx-sdl/$(1).nacp
+$(1).nro: obj/nx-sdl/$(1).elf | obj/nx-sdl/$(1).nacp $$(NX_ROMFS_DEP)
 	$$(MD) $$(dir $$@)
 	$$(ELF2NRO) $$< $$@ --icon=/opt/devkitpro/libnx/default_icon.jpg \
 		--nacp=obj/nx-sdl/$(1).nacp $$(NX_ROMFS_FLAG)
+
+obj/nx-sdl/romfs/%: %
+	$$(MD) $$(dir $$@)
+	cp -Rv "$$<" "$$@"
 
 obj/nx-sdl/$(1).nacp:
 	$$(MD) $$(dir $$@)

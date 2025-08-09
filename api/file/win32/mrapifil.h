@@ -148,6 +148,12 @@ MERROR_RETVAL mfile_file_vprintf(
 
 /* === */
 
+MERROR_RETVAL mfile_plt_init() {
+   return MERROR_OK;
+}
+
+/* === */
+
 static void _mfile_plt_open( const char* filename, mfile_t* p_file ) {
 
    p_file->sz = GetFileSize( p_file->h.handle, NULL );

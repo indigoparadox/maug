@@ -12,6 +12,12 @@ union MFILE_HANDLE {
  * (probably via Makevfs.inc). */
 #  include <mvfs.h>
 
+MERROR_RETVAL mfile_plt_init() {
+   return MERROR_OK;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;

@@ -13,6 +13,10 @@
 #  include <emscripten.h>
 #endif /* RETROFLAT_OS_WASM */
 
+#ifdef RETROFLAT_OS_NX
+#  include <switch.h>
+#endif /* RETROFLAT_OS_WASM */
+
 union MFILE_HANDLE {
    FILE* file;
    MAUG_MHANDLE mem;
@@ -131,6 +135,16 @@ MERROR_RETVAL mfile_file_read_line(
 
 /* === */
 
+MERROR_RETVAL mfile_plt_init() {
+#ifdef RETROFLAT_OS_NX
+   /* Nintendo Switch ROMFS mount. */
+   romfsInit();
+#endif /* RETROFLAT_OS_NX */
+   return MERROR_OK;
+}
+
+/* === */
+
 static MERROR_RETVAL _mfile_plt_open(
    uint8_t flags, off_t sz, const char* filename, mfile_t* p_file
 ) {
@@ -230,39 +244,51 @@ MERROR_RETVAL mfile_file_vprintf(
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t st_size = 0;
+   char filename_prefixed[MAUG_PATH_SZ_MAX + 1];
 #  if defined( MFILE_MMAP )
    uint8_t* bytes_ptr = NULL;
    struct stat st;
    int in_file = 0;
 #  endif /* MFILE_MMAP */
-#     ifndef MAUG_NO_STAT
+#  ifndef MAUG_NO_STAT
    struct stat file_stat;
    int stat_r = 0;
+#  endif /* !MAUG_NO_STAT */
 
+   maug_mzero( filename_prefixed, MAUG_PATH_SZ_MAX + 1 );
+#  ifdef RETROFLAT_OS_NX
+   maug_snprintf( filename_prefixed, MAUG_PATH_SZ_MAX, "romfs:/%s", filename );
+#  else
+   /* Generic case: no prefix. */
+   maug_snprintf( filename_prefixed, MAUG_PATH_SZ_MAX, "%s", filename );
+#  endif /* RETROFLAT_OS_NX */
+
+#  ifndef MAUG_NO_STAT
    /* Get the file size from the OS. */
-   stat_r = stat( filename, &file_stat );
-#        ifdef RETROFLAT_OS_WASM
+   stat_r = stat( filename_prefixed, &file_stat );
+#     ifdef RETROFLAT_OS_WASM
    if( stat_r ) {
       /* Retry the stat after fetch. */
-      mfile_wasm_fetch( filename );
-      stat_r = stat( filename, &file_stat );
+      mfile_wasm_fetch( filename_prefixed );
+      stat_r = stat( filename_prefixed, &file_stat );
    } else {
       debug_printf( 1, "file exists: %d", stat_r );
    }
-#        endif /* RETROFLAT_OS_WASM */
+#     endif /* RETROFLAT_OS_WASM */
    st_size = file_stat.st_size;
 
    /* Perform *real* check after probe-checks above, which could cause the file
     * to be cached.
     */
    if( stat_r ) {
-      error_printf( "could not stat: %s", filename );
+      error_printf( "could not stat: %s", filename_prefixed );
       retval = MERROR_FILE;
       goto cleanup;
    }
-#     endif /* !MAUG_NO_STAT */
+#  endif /* !MAUG_NO_STAT */
 
-   retval = _mfile_plt_open( MFILE_FLAG_READ_ONLY, st_size, filename, p_file );
+   retval = _mfile_plt_open(
+      MFILE_FLAG_READ_ONLY, st_size, filename_prefixed, p_file );
    if( MERROR_OK == retval ) {
       p_file->flags |= MFILE_FLAG_READ_ONLY;
    }

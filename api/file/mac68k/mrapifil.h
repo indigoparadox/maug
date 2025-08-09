@@ -146,6 +146,12 @@ MERROR_RETVAL mfile_file_vprintf(
 
 /* === */
 
+MERROR_RETVAL mfile_plt_init() {
+   return MERROR_OK;
+}
+
+/* === */
+
 MERROR_RETVAL _mfile_plt_open(
    uint8_t flags, const char* filename, mfile_t* p_file
 ) {

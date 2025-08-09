@@ -2419,6 +2419,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    assert( 1 << RETROFLAT_TILE_W_BITS == RETROFLAT_TILE_W );
    assert( 1 << RETROFLAT_TILE_H_BITS == RETROFLAT_TILE_H );
 
+   debug_printf( 1, "initializing drawing routines..." );
+
    /* Initialize 2D callbacks depending on if we're in 2D or 3D mode.
     * Please see retrom2d.h for more information.
     */
@@ -2461,6 +2463,8 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    debug_printf( 1, "retroflat: off_t is (" SIZE_T_FMT " bytes)...",
       sizeof( off_t ) );
 
+   debug_printf( 1, "initializing global state..." );
+
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -2479,6 +2483,10 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
    maug_mzero( g_retroflat_state, sizeof( struct RETROFLAT_STATE ) );
 
    retroflat_heartbeat_set( 1000, 2 );
+
+   debug_printf( 1, "initializing platform filesystem..." );
+   retval = mfile_plt_init();
+   maug_cleanup_if_not_ok();
 
 #  ifndef RETROFLAT_NO_CLI
 
