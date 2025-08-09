@@ -132,12 +132,11 @@ MERROR_RETVAL retrofont_load_stub(
    char line[RETROFONT_LINE_SZ];
    char* line_bytes = NULL;
 
+   /* Load font stub and find substitute. */
    maug_mzero( font_stub_name, sizeof( retroflat_asset_path ) );
    mfile_assign_path( font_stub_name, font_name, 0 );
    font_stub_name[strlen( font_stub_name ) - 5] = 'x';
    debug_printf( RETROFONT_TRACE_LVL, "stub font_name: %s", font_stub_name );
-
-   /* TODO: Load font stub and find substitute. */
    maug_mzero( &font_file, sizeof( mfile_t ) );
 
    retval = mfile_open_read( font_stub_name, &font_file );
