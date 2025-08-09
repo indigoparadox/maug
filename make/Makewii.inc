@@ -4,14 +4,14 @@
 # TODO: Automatically use maug icon if no app icon present.
 
 ifeq ("$(CC_GCC_WII)","")
-	CC_GCC_WII := $(DEVKITPPC)/bin/powerpc-eabi-gcc
+CC_GCC_WII := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 endif
 
 ifeq ("$(ELF2DOL)","")
-	ELF2DOL := $(DEVKITPRO)/tools/bin/elf2dol
+ELF2DOL := $(DEVKITPRO)/tools/bin/elf2dol
 endif
 
-# Setup CFLAGS_GCC_WII
+# Setup Wii-specific flags.
 
 # Disable the keyboard and viewport/refresh functions, since the Wii doesn't
 # have those.
@@ -19,6 +19,10 @@ DEFINES_GCC_WII += -D__WII__ -DRETROFLAT_OS_WII -DRETROFLAT_NO_KEYBOARD -DRETROF
 INCLUDES_GCC_WII += -I obj/mvfs
 
 CFLAGS_GCC_WII := -mrvl -mcpu=750 -meabi -mhard-float $(DEFINES_GCC_WII) $(INCLUDES_GCC_WII)
+
+LDFLAGS_GCC_WII := -mrvl -mcpu=750 -meabi -mhard-float
+
+define TGTWIILIBO
 
 # Setup CFLAGS_GCC_WII_LIBOGC
 
@@ -29,19 +33,13 @@ INCLUDES_GCC_WII_LIBOGC += -I $(DEVKITPRO)/libogc/include \
 	-I$(MAUG_ROOT)/api/file/mvfs -I$(MAUG_ROOT)/api/log/wii \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 
-CFLAGS_GCC_WII_LIBOGC := $(DEFINES_GCC_WII_LIBOGC) $(INCLUDES_GCC_WII_LIBOGC)
-
-# Setup LDFLAGS_GCC_WII
-
-LDFLAGS_GCC_WII := -mrvl -mcpu=750 -meabi -mhard-float
+CFLAGS_GCC_WII_LIBOGC := $$(DEFINES_GCC_WII_LIBOGC) $$(INCLUDES_GCC_WII_LIBOGC)
 
 # Setup LDFLAGS_GCC_WII_LIBOGC
 
 LIBS_GCC_WII_LIBOGC += -L$(DEVKITPRO)/libogc/lib/wii -lwiiuse -lbte -logc -lm
 
-LDFLAGS_GCC_WII_LIBOGC := $(LIBS_GCC_WII_LIBOGC)
-
-define TGTWIILIBO
+LDFLAGS_GCC_WII_LIBOGC := $$(LIBS_GCC_WII_LIBOGC)
 
 # Remove XPM flags, as XPM mode is not supported on the DS.
 CFLAGS_OPT_GCC_WII += \
@@ -65,11 +63,12 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 endif
 
 $(1).dol: obj/wii-libogc/$(1).elf
+	$$(MD) $$(dir $$@)
 	$$(ELF2DOL) "$$<" "$$@"
 
 obj/wii-libogc/$(1).elf: \
 $$(addprefix obj/wii-libogc/,$$(subst .c,.o,$$(C_FILES_WII)))
-	PATH="$(DEVKITPRO)/tools/bin:$(DEVKITPPC)/bin:$(PATH)" \
+	$$(MD) $$(dir $$@)
 	$$(CC_GCC_WII) -o "$$@" $$^ \
 		"-Wl,-Map,$$@.map" \
 		$$(LIBS_GCC) $$(LDFLAGS_GCC_WII) $$(LDFLAGS_GCC_WII_LIBOGC)
