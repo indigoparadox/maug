@@ -9,6 +9,8 @@
 
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
+   int prev_pad;
+   int prev_pad_delay;
 };
 
 typedef uint32_t RETROFLAT_IN_KEY;

@@ -149,7 +149,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       key_out = g_retroflat_state->input.last_key;
       input->key_flags = g_retroflat_state->input.vk_mods;
 
-      debug_printf( RETROFLAT_KB_TRACE_LVL, "raw key: 0x%04x", key_out );
+      debug_printf( RETROINPUT_TRACE_LVL, "raw key: 0x%04x", key_out );
 
       /* Reset pressed key. */
       g_retroflat_state->input.last_key = 0;

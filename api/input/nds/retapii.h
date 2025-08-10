@@ -4,8 +4,14 @@
 
 #define RETROFLAT_NO_KEYBOARD
 
+#ifndef RETROFLAT_PREV_PAD_DELAY
+#  define RETROFLAT_PREV_PAD_DELAY 4
+#endif /* !RETROFLAT_PREV_PAD_DELAY */
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
+   int prev_pad;
+   int prev_pad_delay;
 };
 
 typedef int16_t RETROFLAT_IN_KEY;
@@ -40,6 +46,10 @@ typedef int16_t RETROFLAT_IN_KEY;
 #elif defined( RETROFLT_C )
 
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+
+   g_retroflat_state->retroflat_flags |= 
+      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
+
    return MERROR_OK;
 }
 
@@ -47,23 +57,47 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
-   int keys = 0;
+   int keys_down = 0,
+       keys_up = 0,
+       keys_held = 0;
 
    assert( NULL != input );
 
    scanKeys();
-   keys = keysDown();
+   keys_down = keysDown();
+   keys_up = keysUp();
+   keys_held = keysHeld();
 
    input->key_flags = 0;
 
-#  define retroflat_nds_buttons_poll( btn ) \
-   if( btn == (btn & keys) ) { \
-      return btn; \
+   /* Reset prev_pad repeat. */
+   if(
+      0 != g_retroflat_state->input.prev_pad &&
+      g_retroflat_state->input.prev_pad ==
+      (g_retroflat_state->input.prev_pad & keys_up)
+   ) {
+      g_retroflat_state->input.prev_pad = 0;
+      g_retroflat_state->input.prev_pad_delay = 0;
+      debug_printf( RETROINPUT_TRACE_LVL, "pad button reset to 0" );
    }
 
-   retroflat_nds_buttons( retroflat_nds_buttons_poll )
+#  define retroflat_nds_buttons_poll_down( btn ) \
+   if( btn == (btn & keys_down) ) { \
+      debug_printf( RETROINPUT_TRACE_LVL, "pad button down: %d", btn ); \
+      g_retroflat_state->input.prev_pad = btn; \
+      g_retroflat_state->input.prev_pad_delay = RETROFLAT_PREV_PAD_DELAY; \
+      key_out = btn; \
+      goto cleanup; \
+   }
+
+   retroflat_nds_buttons( retroflat_nds_buttons_poll_down )
 
    /* TODO: Touch screen taps to mouse. */
+
+   /* If no other event happened, repeat the last press. */
+   key_out = retroflat_repeat_pad( key_out, input );
+
+cleanup:
 
    return key_out;
 }

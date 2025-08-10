@@ -280,9 +280,9 @@ typedef int16_t retroflat_tile_t;
 #  define RETROFLAT_BITMAP_TRACE_LVL 0
 #endif /* !RETROFLAT_BITMAP_TRACE_LVL */
 
-#ifndef RETROFLAT_KB_TRACE_LVL
-#  define RETROFLAT_KB_TRACE_LVL    0
-#endif /* !RETROFLAT_KB_TRACE_LVL */
+#ifndef RETROINPUT_TRACE_LVL
+#  define RETROINPUT_TRACE_LVL 0
+#endif /* !RETROINPUT_TRACE_LVL */
 
 #include <stdarg.h>
 
@@ -418,6 +418,13 @@ typedef int8_t RETROFLAT_COLOR;
 
 /**
  * \relates RETROFLAT_STATE
+ * \brief Flag indicating keyboard repeat is enabled.
+ * \warning This flag should only be set inside retroflat!
+ */
+#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
+
+/**
+ * \relates RETROFLAT_STATE
  * \brief Flag indicating the current application is running as a screensaver.
  * \warning This flag should only be set inside retroflat!
  */
@@ -462,13 +469,6 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_MSG_FLAG_WARNING 0x04
 
 /*! \} */ /* maug_retroflt_msg_flags */
-
-/**
- * \relates RETROFLAT_INPUT
- * \brief Flag indicating keyboard repeat is enabled.
- * \warning This flag should only be set inside retroflat!
- */
-#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
 struct RETROFLAT_STATE;
 
@@ -1752,6 +1752,13 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
 /*! \} */ /* maug_retroflt_vdp */
 #  endif /* RETROFLAT_VDP || DOCUMENTATION */
 
+#ifndef RETROFLAT_NO_PAD
+
+RETROFLAT_IN_KEY retroflat_repeat_pad(
+   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input );
+
+#endif /* !RETROFLAT_NO_PAD */
+
 void retroflat_set_title( const char* format, ... );
 
 retroflat_ms_t retroflat_get_ms();
@@ -2255,7 +2262,7 @@ char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags ) {
 #endif /* !RETROFLAT_API_PC_BIOS */
    }
 
-   debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%02x", c );
+   debug_printf( RETROINPUT_TRACE_LVL, "0x%02x", c );
 
    return c;
 }
@@ -2810,6 +2817,42 @@ void retroflat_shutdown( int retval ) {
    maug_mfree( g_retroflat_state_h );
 
 }
+
+/* === */
+
+#ifndef RETROFLAT_NO_PAD
+
+RETROFLAT_IN_KEY retroflat_repeat_pad(
+   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input
+) {
+
+   /* Add a slight debounce for gamepad button repeat. */
+   if( 0 < g_retroflat_state->input.prev_pad_delay ) {
+      debug_printf(
+         RETROINPUT_TRACE_LVL,
+         "repeat delay: %d", g_retroflat_state->input.prev_pad_delay );
+      g_retroflat_state->input.prev_pad_delay--;
+   }
+
+   /* If nothing else happened and repeat is enabled and a joypad button is
+    * down, then emulate repeat for it.
+    */
+   if(
+      0 == key_out &&
+      RETROFLAT_FLAGS_KEY_REPEAT ==
+      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
+      0 != g_retroflat_state->input.prev_pad &&
+      0 == g_retroflat_state->input.prev_pad_delay
+   ) {
+      key_out = g_retroflat_state->input.prev_pad;
+      g_retroflat_state->input.prev_pad_delay = 1;
+      debug_printf( RETROINPUT_TRACE_LVL, "repeat: %d", key_out );
+   }
+
+   return key_out;
+}
+
+#endif /* !RETROFLAT_NO_PAD */
 
 /* === */
 

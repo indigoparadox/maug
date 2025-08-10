@@ -313,7 +313,7 @@ static LRESULT CALLBACK WndProc(
          default:
             /*
             TODO: Fix in win64.
-            debug_printf( RETROFLAT_KB_TRACE_LVL, "0x%x", lParam );
+            debug_printf( RETROINPUT_TRACE_LVL, "0x%x", lParam );
             */
             g_retroflat_state->input.last_key = wParam | ((lParam & 0x800000) >> 8);
             break;

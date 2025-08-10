@@ -138,7 +138,8 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   g_retroflat_state->input.flags = RETROFLAT_FLAGS_KEY_REPEAT;
+   g_retroflat_state->retroflat_flags |= 
+      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
 
 #  ifdef RETROFLAT_API_SDL1
    /* Setup key repeat. */
@@ -212,7 +213,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    switch( event.type ) {
    case SDL_QUIT:
       /* Handle SDL window close. */
-      debug_printf( 1, "quit event!" );
+      debug_printf( RETROINPUT_TRACE_LVL, "quit event!" );
       retroflat_quit( 0 );
       break;
 
@@ -223,7 +224,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       }
       */
       /* TODO: Work out mappings for XBox controller. */
-      debug_printf( 1, "gamebutton: %d", event.jbutton.button );
+      debug_printf(
+         RETROINPUT_TRACE_LVL, "gamebutton: %d", event.jbutton.button );
 
 #  elif defined( RETROFLAT_API_SDL2 )
    case SDL_CONTROLLERBUTTONDOWN:
@@ -259,7 +261,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.prev_pad = key_out;
       g_retroflat_state->input.prev_pad_delay = RETROFLAT_PREV_PAD_DELAY;
 
-      debug_printf( 1, "pad button: %d", key_out );
+      debug_printf( RETROINPUT_TRACE_LVL, "pad button: %d", key_out );
 
       /* Flush event buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
@@ -277,16 +279,16 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.prev_pad_delay = 0;
 
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
-      debug_printf( 1, "pad button reset to 0" );
+      debug_printf( RETROINPUT_TRACE_LVL, "pad button reset to 0" );
       break;
 
    case SDL_KEYDOWN:
       if(
          RETROFLAT_FLAGS_KEY_REPEAT ==
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->input.flags) ||
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) ||
          event.key.keysym.sym != g_retroflat_state->input.prev_key
       ) {
-         debug_printf( 1, "key: %d", event.key.keysym.sym );
+         debug_printf( RETROINPUT_TRACE_LVL, "key: %d", event.key.keysym.sym );
          key_out = event.key.keysym.sym;
          g_retroflat_state->input.prev_key = event.key.keysym.sym;
       }
@@ -364,27 +366,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       break;
    }
 
-   /* Add a slight debounce for gamepad button repeat. */
-   if( 0 < g_retroflat_state->input.prev_pad_delay ) {
-      debug_printf(
-         1, "repeat delay: %d", g_retroflat_state->input.prev_pad_delay );
-      g_retroflat_state->input.prev_pad_delay--;
-   }
-
-   /* If nothing else happened and repeat is enabled and a joypad button is
-    * down, then emulate repeat for it.
-    */
-   if(
-      0 == key_out &&
-      RETROFLAT_FLAGS_KEY_REPEAT ==
-      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->input.flags) &&
-      0 != g_retroflat_state->input.prev_pad &&
-      0 == g_retroflat_state->input.prev_pad_delay
-   ) {
-      key_out = g_retroflat_state->input.prev_pad;
-      g_retroflat_state->input.prev_pad_delay = 1;
-      debug_printf( 1, "repeat: %d", key_out );
-   }
+   key_out = retroflat_repeat_pad( key_out, input );
 
    return key_out;
 }
