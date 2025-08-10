@@ -4,71 +4,75 @@
 
 #include <SDL.h>
 
-#  define RETROFLAT_KEY_UP	SDLK_UP
-#  define RETROFLAT_KEY_DOWN  SDLK_DOWN
-#  define RETROFLAT_KEY_RIGHT	SDLK_RIGHT
-#  define RETROFLAT_KEY_LEFT	SDLK_LEFT
-#  define RETROFLAT_KEY_A	   SDLK_a
-#  define RETROFLAT_KEY_B	   SDLK_b
-#  define RETROFLAT_KEY_C	   SDLK_c
-#  define RETROFLAT_KEY_D	   SDLK_d
-#  define RETROFLAT_KEY_E	   SDLK_e
-#  define RETROFLAT_KEY_F	   SDLK_f
-#  define RETROFLAT_KEY_G	   SDLK_g
-#  define RETROFLAT_KEY_H	   SDLK_h
-#  define RETROFLAT_KEY_I	   SDLK_i
-#  define RETROFLAT_KEY_J	   SDLK_j
-#  define RETROFLAT_KEY_K	   SDLK_k
-#  define RETROFLAT_KEY_L	   SDLK_l
-#  define RETROFLAT_KEY_M	   SDLK_m
-#  define RETROFLAT_KEY_N	   SDLK_n
-#  define RETROFLAT_KEY_O	   SDLK_o
-#  define RETROFLAT_KEY_P	   SDLK_p
-#  define RETROFLAT_KEY_Q	   SDLK_q
-#  define RETROFLAT_KEY_R	   SDLK_r
-#  define RETROFLAT_KEY_S	   SDLK_s
-#  define RETROFLAT_KEY_T	   SDLK_t
-#  define RETROFLAT_KEY_U	   SDLK_u
-#  define RETROFLAT_KEY_V	   SDLK_v
-#  define RETROFLAT_KEY_W	   SDLK_w
-#  define RETROFLAT_KEY_X	   SDLK_x
-#  define RETROFLAT_KEY_Y	   SDLK_y
-#  define RETROFLAT_KEY_Z	   SDLK_z
-#  define RETROFLAT_KEY_0     SDLK_0
-#  define RETROFLAT_KEY_1     SDLK_1
-#  define RETROFLAT_KEY_2     SDLK_2
-#  define RETROFLAT_KEY_3     SDLK_3
-#  define RETROFLAT_KEY_4     SDLK_4
-#  define RETROFLAT_KEY_5     SDLK_5
-#  define RETROFLAT_KEY_6     SDLK_6
-#  define RETROFLAT_KEY_7     SDLK_7
-#  define RETROFLAT_KEY_8     SDLK_8
-#  define RETROFLAT_KEY_9     SDLK_9
-#  define RETROFLAT_KEY_TAB	SDLK_TAB
-#  define RETROFLAT_KEY_SPACE	SDLK_SPACE
-#  define RETROFLAT_KEY_ESC	SDLK_ESCAPE
-#  define RETROFLAT_KEY_ENTER	SDLK_RETURN
-#  define RETROFLAT_KEY_HOME	SDLK_HOME
-#  define RETROFLAT_KEY_END	SDLK_END
-#  define RETROFLAT_KEY_DELETE   SDLK_DELETE
-#  define RETROFLAT_KEY_PGUP     SDLK_PAGEUP
-#  define RETROFLAT_KEY_PGDN     SDLK_PAGEDOWN
-#  define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
-#  define RETROFLAT_KEY_SLASH SDLK_SLASH
-#  define RETROFLAT_KEY_BKSP  SDLK_BACKSPACE
-#  define RETROFLAT_KEY_SEMICOLON   SDLK_SEMICOLON
-#  define RETROFLAT_KEY_PERIOD   SDLK_PERIOD
-#  define RETROFLAT_KEY_COMMA    SDLK_COMMA
-#  define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
-#  define RETROFLAT_KEY_DASH     SDLK_MINUS
-#  define RETROFLAT_KEY_BACKSLASH  SDLK_BACKSLASH
-#  define RETROFLAT_KEY_QUOTE      SDLK_QUOTE
-#  define RETROFLAT_KEY_BRACKETL   SDLK_LEFTBRACKET
-#  define RETROFLAT_KEY_BRACKETR   SDLK_RIGHTBRACKET
-#  define RETROFLAT_KEY_INSERT   SDLK_INSERT
+#ifndef RETROFLAT_PREV_PAD_DELAY
+#  define RETROFLAT_PREV_PAD_DELAY 4
+#endif /* !RETROFLAT_PREV_PAD_DELAY */
 
-#  define RETROFLAT_MOUSE_B_LEFT    (-1)
-#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
+#define RETROFLAT_KEY_UP	SDLK_UP
+#define RETROFLAT_KEY_DOWN  SDLK_DOWN
+#define RETROFLAT_KEY_RIGHT	SDLK_RIGHT
+#define RETROFLAT_KEY_LEFT	SDLK_LEFT
+#define RETROFLAT_KEY_A	   SDLK_a
+#define RETROFLAT_KEY_B	   SDLK_b
+#define RETROFLAT_KEY_C	   SDLK_c
+#define RETROFLAT_KEY_D	   SDLK_d
+#define RETROFLAT_KEY_E	   SDLK_e
+#define RETROFLAT_KEY_F	   SDLK_f
+#define RETROFLAT_KEY_G	   SDLK_g
+#define RETROFLAT_KEY_H	   SDLK_h
+#define RETROFLAT_KEY_I	   SDLK_i
+#define RETROFLAT_KEY_J	   SDLK_j
+#define RETROFLAT_KEY_K	   SDLK_k
+#define RETROFLAT_KEY_L	   SDLK_l
+#define RETROFLAT_KEY_M	   SDLK_m
+#define RETROFLAT_KEY_N	   SDLK_n
+#define RETROFLAT_KEY_O	   SDLK_o
+#define RETROFLAT_KEY_P	   SDLK_p
+#define RETROFLAT_KEY_Q	   SDLK_q
+#define RETROFLAT_KEY_R	   SDLK_r
+#define RETROFLAT_KEY_S	   SDLK_s
+#define RETROFLAT_KEY_T	   SDLK_t
+#define RETROFLAT_KEY_U	   SDLK_u
+#define RETROFLAT_KEY_V	   SDLK_v
+#define RETROFLAT_KEY_W	   SDLK_w
+#define RETROFLAT_KEY_X	   SDLK_x
+#define RETROFLAT_KEY_Y	   SDLK_y
+#define RETROFLAT_KEY_Z	   SDLK_z
+#define RETROFLAT_KEY_0     SDLK_0
+#define RETROFLAT_KEY_1     SDLK_1
+#define RETROFLAT_KEY_2     SDLK_2
+#define RETROFLAT_KEY_3     SDLK_3
+#define RETROFLAT_KEY_4     SDLK_4
+#define RETROFLAT_KEY_5     SDLK_5
+#define RETROFLAT_KEY_6     SDLK_6
+#define RETROFLAT_KEY_7     SDLK_7
+#define RETROFLAT_KEY_8     SDLK_8
+#define RETROFLAT_KEY_9     SDLK_9
+#define RETROFLAT_KEY_TAB	SDLK_TAB
+#define RETROFLAT_KEY_SPACE	SDLK_SPACE
+#define RETROFLAT_KEY_ESC	SDLK_ESCAPE
+#define RETROFLAT_KEY_ENTER	SDLK_RETURN
+#define RETROFLAT_KEY_HOME	SDLK_HOME
+#define RETROFLAT_KEY_END	SDLK_END
+#define RETROFLAT_KEY_DELETE   SDLK_DELETE
+#define RETROFLAT_KEY_PGUP     SDLK_PAGEUP
+#define RETROFLAT_KEY_PGDN     SDLK_PAGEDOWN
+#define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
+#define RETROFLAT_KEY_SLASH SDLK_SLASH
+#define RETROFLAT_KEY_BKSP  SDLK_BACKSPACE
+#define RETROFLAT_KEY_SEMICOLON   SDLK_SEMICOLON
+#define RETROFLAT_KEY_PERIOD   SDLK_PERIOD
+#define RETROFLAT_KEY_COMMA    SDLK_COMMA
+#define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
+#define RETROFLAT_KEY_DASH     SDLK_MINUS
+#define RETROFLAT_KEY_BACKSLASH  SDLK_BACKSLASH
+#define RETROFLAT_KEY_QUOTE      SDLK_QUOTE
+#define RETROFLAT_KEY_BRACKETL   SDLK_LEFTBRACKET
+#define RETROFLAT_KEY_BRACKETR   SDLK_RIGHTBRACKET
+#define RETROFLAT_KEY_INSERT   SDLK_INSERT
+
+#define RETROFLAT_MOUSE_B_LEFT    (-1)
+#define RETROFLAT_MOUSE_B_RIGHT   (-2)
 
 #define RETROFLAT_PAD_LEFT          (-10)
 #define RETROFLAT_PAD_RIGHT         (-11)
@@ -86,6 +90,8 @@
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
    int mouse_state;
+   int prev_pad;
+   int prev_pad_delay;
    SDL_Keycode prev_key;
 #ifdef RETROFLAT_API_SDL2
    SDL_GameController* pad;
@@ -250,8 +256,28 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
+      g_retroflat_state->input.prev_pad = key_out;
+      g_retroflat_state->input.prev_pad_delay = RETROFLAT_PREV_PAD_DELAY;
+
+      debug_printf( 1, "pad button: %d", key_out );
+
       /* Flush event buffer to improve responsiveness. */
       while( (eres = SDL_PollEvent( &event )) );
+      break;
+
+   /* Detect button release for repeat emulation. */
+#  ifdef RETROFLAT_API_SDL1
+   case SDL_JOYBUTTONUP:
+      g_retroflat_state->input.prev_pad = 0;
+      g_retroflat_state->input.prev_pad_delay = 0;
+
+#  elif defined( RETROFLAT_API_SDL2 )
+   case SDL_CONTROLLERBUTTONUP:
+      g_retroflat_state->input.prev_pad = 0;
+      g_retroflat_state->input.prev_pad_delay = 0;
+
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+      debug_printf( 1, "pad button reset to 0" );
       break;
 
    case SDL_KEYDOWN:
@@ -336,6 +362,28 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          key_out = g_retroflat_state->input.mouse_state;
       }
       break;
+   }
+
+   /* Add a slight debounce for gamepad button repeat. */
+   if( 0 < g_retroflat_state->input.prev_pad_delay ) {
+      debug_printf(
+         1, "repeat delay: %d", g_retroflat_state->input.prev_pad_delay );
+      g_retroflat_state->input.prev_pad_delay--;
+   }
+
+   /* If nothing else happened and repeat is enabled and a joypad button is
+    * down, then emulate repeat for it.
+    */
+   if(
+      0 == key_out &&
+      RETROFLAT_FLAGS_KEY_REPEAT ==
+      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->input.flags) &&
+      0 != g_retroflat_state->input.prev_pad &&
+      0 == g_retroflat_state->input.prev_pad_delay
+   ) {
+      key_out = g_retroflat_state->input.prev_pad;
+      g_retroflat_state->input.prev_pad_delay = 1;
+      debug_printf( 1, "repeat: %d", key_out );
    }
 
    return key_out;
