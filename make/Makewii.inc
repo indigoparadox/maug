@@ -15,7 +15,7 @@ endif
 
 # Disable the keyboard and viewport/refresh functions, since the Wii doesn't
 # have those.
-DEFINES_GCC_WII += -D__WII__ -DRETROFLAT_OS_WII -DRETROFLAT_NO_KEYBOARD -DRETROFLAT_NO_VIEWPORT_REFRESH -DGEKKO
+DEFINES_GCC_WII += -D__WII__ -DRETROFLAT_OS_WII -DRETROFLAT_NO_VIEWPORT_REFRESH -DGEKKO
 INCLUDES_GCC_WII += -I obj/mvfs
 
 CFLAGS_GCC_WII := -mrvl -mcpu=750 -meabi -mhard-float $(DEFINES_GCC_WII) $(INCLUDES_GCC_WII)

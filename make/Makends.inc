@@ -19,7 +19,7 @@ endif
 
 # Disable the keyboard and viewport/refresh functions, since the NDS doesn't
 # have those.
-DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_KEYBOARD -DRETROFLAT_NO_VIEWPORT_REFRESH
+DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_VIEWPORT_REFRESH
 
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
 

@@ -2,6 +2,8 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+#define RETROFLAT_NO_PAD
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
    uint8_t key_code;

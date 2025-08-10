@@ -2,32 +2,29 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+#define RETROFLAT_NO_KEYBOARD
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
 };
 
 typedef int16_t RETROFLAT_IN_KEY;
 
-#  ifdef RETROFLAT_NDS_WASD
-#     define RETROFLAT_KEY_A           KEY_LEFT
-#     define RETROFLAT_KEY_D           KEY_RIGHT
-#     define RETROFLAT_KEY_W           KEY_UP
-#     define RETROFLAT_KEY_S           KEY_DOWN
-#     define RETROFLAT_KEY_Q           KEY_L
-#     define RETROFLAT_KEY_E           KEY_R
-#  else
-#     define RETROFLAT_KEY_LEFT        KEY_LEFT
-#     define RETROFLAT_KEY_RIGHT       KEY_RIGHT
-#     define RETROFLAT_KEY_UP          KEY_UP
-#     define RETROFLAT_KEY_DOWN        KEY_DOWN
-#     define RETROFLAT_KEY_INSERT      KEY_R
-#     define RETROFLAT_KEY_DELETE      KEY_L
-#  endif /* RETROFLAT_NDS_WASD */
-#  define RETROFLAT_KEY_ENTER       KEY_START
-#  define RETROFLAT_KEY_SPACE       KEY_A
-#  define RETROFLAT_KEY_ESC         KEY_B
-#  define RETROFLAT_MOUSE_B_LEFT    (-1)
-#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
+#define RETROFLAT_PAD_LEFT        KEY_LEFT
+#define RETROFLAT_PAD_RIGHT       KEY_RIGHT
+#define RETROFLAT_PAD_UP          KEY_UP
+#define RETROFLAT_PAD_DOWN        KEY_DOWN
+#define RETROFLAT_PAD_SHOULDER_R  KEY_R
+#define RETROFLAT_PAD_SHOULDER_L  KEY_L
+#define RETROFLAT_PAD_START       KEY_START
+#define RETROFLAT_PAD_A           KEY_A
+#define RETROFLAT_PAD_B           KEY_B
+#define RETROFLAT_MOUSE_B_LEFT    (-1)
+#define RETROFLAT_MOUSE_B_RIGHT   (-2)
+
+#define RETROGUI_KEY_ACTIVATE RETROFLAT_PAD_A
+#define RETROGUI_KEY_NEXT RETROFLAT_PAD_RIGHT
+#define RETROGUI_KEY_PREV RETROFLAT_PAD_LEFT
 
 #define retroflat_nds_buttons( f ) \
    f( KEY_LEFT ) \

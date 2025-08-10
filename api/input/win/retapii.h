@@ -2,6 +2,9 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+/* TODO: PAD support. */
+#define RETROFLAT_NO_PAD
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
    int16_t              last_key;

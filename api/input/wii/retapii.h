@@ -2,6 +2,8 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+#define RETROFLAT_NO_KEYBOARD
+
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 
@@ -11,22 +13,15 @@ struct RETROFLAT_INPUT_STATE {
 
 typedef uint32_t RETROFLAT_IN_KEY;
 
-#  ifdef RETROFLAT_NDS_WASD
-#     define RETROFLAT_KEY_A           WPAD_BUTTON_LEFT
-#     define RETROFLAT_KEY_D           WPAD_BUTTON_RIGHT
-#     define RETROFLAT_KEY_W           WPAD_BUTTON_UP
-#     define RETROFLAT_KEY_S           WPAD_BUTTON_DOWN
-#  else
-#     define RETROFLAT_KEY_LEFT        WPAD_BUTTON_LEFT
-#     define RETROFLAT_KEY_RIGHT       WPAD_BUTTON_RIGHT
-#     define RETROFLAT_KEY_UP          WPAD_BUTTON_UP
-#     define RETROFLAT_KEY_DOWN        WPAD_BUTTON_DOWN
-#  endif /* RETROFLAT_NDS_WASD */
-#  define RETROFLAT_KEY_ENTER       WPAD_BUTTON_PLUS
-#  define RETROFLAT_KEY_SPACE       WPAD_BUTTON_1
-#  define RETROFLAT_KEY_ESC         WPAD_BUTTON_HOME
-#  define RETROFLAT_MOUSE_B_LEFT    WPAD_BUTTON_B
-#  define RETROFLAT_MOUSE_B_RIGHT   WPAD_BUTTON_A
+#define RETROFLAT_PAD_LEFT        WPAD_BUTTON_UP
+#define RETROFLAT_PAD_RIGHT       WPAD_BUTTON_DOWN
+#define RETROFLAT_PAD_UP          WPAD_BUTTON_RIGHT
+#define RETROFLAT_PAD_DOWN        WPAD_BUTTON_LEFT
+#define RETROFLAT_PAD_START       WPAD_BUTTON_PLUS
+#define RETROFLAT_PAD_B           WPAD_BUTTON_1
+#define RETROFLAT_PAD_A           WPAD_BUTTON_2
+#define RETROFLAT_MOUSE_B_LEFT    WPAD_BUTTON_B
+#define RETROFLAT_MOUSE_B_RIGHT   WPAD_BUTTON_A
 
 #define retroflat_wii_buttons( f ) \
    f( WPAD_BUTTON_LEFT ) \

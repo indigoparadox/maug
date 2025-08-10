@@ -985,7 +985,20 @@ void retrosnd_shutdown();
 
 /* === End platform-specific APIs === */
 
+/**
+ * \addtogroup maug_retroflt_input
+ * \{
+ */
 
+#  if defined( RETROFLAT_NO_KEYBOARD )
+#     define retroflat_case_key( key, pad ) case pad:
+#  elif defined( RETROFLAT_NO_PAD )
+#     define retroflat_case_key( key, pad ) case key:
+#  else
+#     define retroflat_case_key( key, pad ) case pad: case key:
+#  endif
+
+/*! \} */ /* maug_retroflt_input */
 
 /* === OS-Specific Includes and Defines === */
 
@@ -995,11 +1008,6 @@ void retrosnd_shutdown();
 #endif /* !MAUG_WINDOWS_H */
 
 #if defined( RETROFLAT_BMP_TEX ) || defined( DOCUMENTATION )
-
-/**
- * \addtogroup maug_retro3d_util
- * \{
- */
 
 struct RETROFLAT_3DTEX {
    uint8_t flags;

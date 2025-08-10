@@ -2,6 +2,9 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
+/* TODO: PAD support. */
+#define RETROFLAT_NO_PAD
+
 #  ifndef MAUG_C
 #     include <allegro/keyboard.h>
 #  endif /* MAUG_C */
