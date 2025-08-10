@@ -24,6 +24,19 @@
 #  define RETROGUI_KEY_PREV RETROFLAT_KEY_UP
 #endif /* !RETROGUI_KEY_PREV */
 
+#ifndef RETROGUI_PAD_ACTIVATE
+#  define RETROGUI_PAD_ACTIVATE RETROFLAT_PAD_A
+#endif /* !RETROGUI_PAD_ACTIVATE */
+
+#ifndef RETROGUI_PAD_NEXT
+#  define RETROGUI_PAD_NEXT RETROFLAT_PAD_DOWN
+#endif /* !RETROGUI_PAD_NEXT */
+
+#ifndef RETROGUI_PAD_PREV
+#  define RETROGUI_PAD_PREV RETROFLAT_PAD_UP
+#endif /* !RETROGUI_PAD_PREV */
+
+
 /*! \brief RETROGUI::flags indicating controls should be redrawn. */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
@@ -1682,20 +1695,22 @@ retrogui_idc_t retrogui_poll_ctls(
 
    /* Use our cross-platform controls. */
 
-   #define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
-      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         gui->flags |= RETROGUI_FLAGS_DIRTY; \
-         idc_out = retrogui_click_ ## c_name( gui, ctl, p_input, input_evt );
+#     define RETROGUI_CTL_TABLE_CLICK( idx, c_name, c_fields ) \
+         } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+            gui->flags |= RETROGUI_FLAGS_DIRTY; \
+            idc_out = retrogui_click_ ## c_name( gui, ctl, p_input, input_evt );
 
-   #define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
-      } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         gui->flags |= RETROGUI_FLAGS_DIRTY; \
-         idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt );
+#     define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
+         } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
+            gui->flags |= RETROGUI_FLAGS_DIRTY; \
+            idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt );
 
    if( 0 == *p_input ) {
       goto reset_debounce;
 
-   } else if( RETROGUI_KEY_ACTIVATE == *p_input ) {
+   } else if(
+      retroflat_or_key( *p_input, RETROGUI_KEY_ACTIVATE, RETROGUI_PAD_ACTIVATE )
+   ) {
 
       if( 0 <= gui->focus ) {
          idc_out = gui->focus;
@@ -1704,7 +1719,9 @@ retrogui_idc_t retrogui_poll_ctls(
       }
 
  
-   } else if( RETROGUI_KEY_NEXT == *p_input ) {
+   } else if(
+      retroflat_or_key( *p_input, RETROGUI_KEY_NEXT, RETROGUI_PAD_NEXT )
+   ) {
       retrogui_focus_next( gui );
 
       debug_printf( RETROGUI_TRACE_LVL, "next: " SSIZE_T_FMT, gui->focus );
@@ -1712,7 +1729,9 @@ retrogui_idc_t retrogui_poll_ctls(
       /* Cleanup after the menu. */
       *p_input = 0;
 
-   } else if( RETROGUI_KEY_PREV == *p_input ) {
+   } else if(
+      retroflat_or_key( *p_input, RETROGUI_KEY_PREV, RETROGUI_PAD_PREV )
+   ) {
       retrogui_focus_prev( gui );
 
       debug_printf( RETROGUI_TRACE_LVL, "prev: " SSIZE_T_FMT, gui->focus );

@@ -101,6 +101,27 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #elif defined( RETROFLT_C )
 
+#  ifdef RETROFLAT_API_SDL2
+
+void _retroflat_sdl_init_joystick( int joystick_id ) {
+   if( 1 > SDL_NumJoysticks() ) {
+      error_printf( "no gamepad connected!" );
+
+   } else if( 0 < joystick_id && SDL_IsGameController( joystick_id ) ) {
+      g_retroflat_state->input.pad =
+         SDL_GameControllerOpen( joystick_id );
+      if( NULL == g_retroflat_state->input.pad ) {
+         error_printf( "unable to open gamepad: %s", SDL_GetError() );
+      } else {
+         debug_printf( 1, "initialized gamepad: %d", joystick_id );
+      }
+   } else {
+      error_printf( "joystick %d is not a known gamepad!", joystick_id );
+   }
+}
+
+#  endif
+
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -131,22 +152,8 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
-   /* Setup joysticks. */
-   /* TODO: Autodetect is args->joystick_id is 0. */
-   if( 1 > SDL_NumJoysticks() ) {
-      error_printf( "no gamepad connected!" );
-   } else if( SDL_IsGameController( args->joystick_id ) ) {
-      g_retroflat_state->input.pad =
-         SDL_GameControllerOpen( args->joystick_id );
-      if( NULL == g_retroflat_state->input.pad ) {
-         error_printf( "unable to open gamepad: %s", SDL_GetError() );
-      } else {
-         debug_printf( 1, "initialized gamepad: %d", args->joystick_id );
-      }
-   } else {
-      error_printf( "joystick %d is not a known gamepad!", args->joystick_id );
-   }
-
+   /* Break this out so it can be shared with insertion detection below. */
+   _retroflat_sdl_init_joystick( args->joystick_id );
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
    return retval;

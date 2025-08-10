@@ -992,8 +992,10 @@ void retrosnd_shutdown();
 
 #  if defined( RETROFLAT_NO_KEYBOARD )
 #     define retroflat_case_key( key, pad ) case pad:
+#     define retroflat_or_key( input, key, pad ) ((input) == (pad))
 #  elif defined( RETROFLAT_NO_PAD )
 #     define retroflat_case_key( key, pad ) case key:
+#     define retroflat_or_key( input, key, pad ) ((input) == (key))
 #  else
 /**
  * \brief Specify cases for a select() on the result of retroflat_poll_input()
@@ -1003,6 +1005,8 @@ void retrosnd_shutdown();
  * pad will ignore the pad param.
  */
 #     define retroflat_case_key( key, pad ) case pad: case key:
+#     define retroflat_or_key( input, key, pad ) \
+         (((input) == (pad)) || ((input) == (key)))
 #  endif
 
 /*! \} */ /* maug_retroflt_input */
@@ -2404,6 +2408,9 @@ static MERROR_RETVAL retroflat_cli_rfj(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
+      args->joystick_id = -1;
+      debug_printf( 1, "setting arg joystick_id to default: %d",
+         args->joystick_id );
    } else if(
       0 == strncmp( MAUG_CLI_SIGIL "rfj", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
@@ -2602,6 +2609,7 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
    args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
    args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
+   args->joystick_id = -1;
 
 #  endif /* !RETROFLAT_NO_CLI */
 
