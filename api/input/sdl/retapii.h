@@ -86,6 +86,7 @@
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
    int mouse_state;
+   SDL_Keycode prev_key;
 #ifdef RETROFLAT_API_SDL2
    SDL_GameController* pad;
 #elif defined( RETROFLAT_API_SDL1 )
@@ -103,27 +104,35 @@ typedef int16_t RETROFLAT_IN_KEY;
 
 #  ifdef RETROFLAT_API_SDL2
 
-void _retroflat_sdl_init_joystick( int joystick_id ) {
+MERROR_RETVAL _retroflat_sdl_init_joystick( int joystick_id ) {
+   assert( 0 <= joystick_id );
    if( 1 > SDL_NumJoysticks() ) {
       error_printf( "no gamepad connected!" );
 
-   } else if( 0 < joystick_id && SDL_IsGameController( joystick_id ) ) {
+   } else if( SDL_IsGameController( joystick_id ) ) {
       g_retroflat_state->input.pad =
          SDL_GameControllerOpen( joystick_id );
       if( NULL == g_retroflat_state->input.pad ) {
          error_printf( "unable to open gamepad: %s", SDL_GetError() );
       } else {
          debug_printf( 1, "initialized gamepad: %d", joystick_id );
+         return MERROR_OK;
       }
+
    } else {
       error_printf( "joystick %d is not a known gamepad!", joystick_id );
    }
+
+   return MERROR_USR;
 }
 
 #  endif
 
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   g_retroflat_state->input.flags = RETROFLAT_FLAGS_KEY_REPEAT;
 
 #  ifdef RETROFLAT_API_SDL1
    /* Setup key repeat. */
@@ -135,7 +144,7 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
       ) ) {
          error_printf( "could not enable key repeat!" );
       } else {
-         debug_printf( 3, "key repeat enabled" );
+         debug_printf( 2, "key repeat enabled" );
       }
    }
 
@@ -152,8 +161,22 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    }
 
 #  elif defined( RETROFLAT_API_SDL2 )
+   if(
+      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
+   ) {
+      debug_printf( 2, "key repeat enabled" );
+   }
+
    /* Break this out so it can be shared with insertion detection below. */
-   _retroflat_sdl_init_joystick( args->joystick_id );
+   if( 0 > args->joystick_id ) {
+      for( i = 0 ; SDL_NumJoysticks() > i ; i++ ) {
+         if( MERROR_OK == _retroflat_sdl_init_joystick( i ) ) {
+            break;
+         }
+      }
+   } else {
+      _retroflat_sdl_init_joystick( args->joystick_id );
+   }
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
    return retval;
@@ -195,6 +218,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       */
       /* TODO: Work out mappings for XBox controller. */
       debug_printf( 1, "gamebutton: %d", event.jbutton.button );
+
 #  elif defined( RETROFLAT_API_SDL2 )
    case SDL_CONTROLLERBUTTONDOWN:
       switch( event.cbutton.button ) {
@@ -223,19 +247,23 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       case SDL_CONTROLLER_BUTTON_Y:
          key_out = RETROFLAT_PAD_Y; break;
       }
+
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
       /* Flush event buffer to improve responsiveness. */
-      if(
-         RETROFLAT_FLAGS_KEY_REPEAT !=
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
-      ) {
-         while( (eres = SDL_PollEvent( &event )) );
-      }
+      while( (eres = SDL_PollEvent( &event )) );
       break;
 
    case SDL_KEYDOWN:
-      key_out = event.key.keysym.sym;
+      if(
+         RETROFLAT_FLAGS_KEY_REPEAT ==
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->input.flags) ||
+         event.key.keysym.sym != g_retroflat_state->input.prev_key
+      ) {
+         debug_printf( 1, "key: %d", event.key.keysym.sym );
+         key_out = event.key.keysym.sym;
+         g_retroflat_state->input.prev_key = event.key.keysym.sym;
+      }
 
       if(
          KMOD_RSHIFT == (KMOD_RSHIFT & event.key.keysym.mod) ||
@@ -252,13 +280,12 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
       }
 
-      /* Flush key buffer to improve responsiveness. */
-      if(
-         RETROFLAT_FLAGS_KEY_REPEAT !=
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
-      ) {
-         while( (eres = SDL_PollEvent( &event )) );
-      }
+      /* Flush event buffer to improve responsiveness. */
+      while( (eres = SDL_PollEvent( &event )) );
+      break;
+
+   case SDL_KEYUP:
+      g_retroflat_state->input.prev_key = 0;
       break;
 
    case SDL_MOUSEBUTTONUP:

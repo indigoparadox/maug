@@ -410,17 +410,11 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_RUNNING  0x01
 
 /**
+ * \relates RETROFLAT_STATE
  * \brief Flag indicating FPS should not be capped.
  * \warning This flag should only be set inside retroflat!
  */
 #define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
-
-/**
- * \relates RETROFLAT_STATE
- * \brief Flag indicating keyboard repeat is enabled.
- * \warning This flag should only be set inside retroflat!
- */
-#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
 /**
  * \relates RETROFLAT_STATE
@@ -442,7 +436,9 @@ typedef int8_t RETROFLAT_COLOR;
  * \{
  */
 
-/*! \brief This mask covers all possible icon/type flags. */
+/**
+ * \brief This mask covers all possible icon/type flags.
+ */
 #define RETROFLAT_MSG_FLAG_TYPE_MASK 0x07
 
 /**
@@ -466,6 +462,13 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_MSG_FLAG_WARNING 0x04
 
 /*! \} */ /* maug_retroflt_msg_flags */
+
+/**
+ * \relates RETROFLAT_INPUT
+ * \brief Flag indicating keyboard repeat is enabled.
+ * \warning This flag should only be set inside retroflat!
+ */
+#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
 
 struct RETROFLAT_STATE;
 
