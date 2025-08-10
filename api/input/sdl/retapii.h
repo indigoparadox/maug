@@ -87,24 +87,24 @@
 #define RETROFLAT_PAD_X             (-20)
 #define RETROFLAT_PAD_Y             (-21)
 
+#ifdef RETROFLAT_API_SDL2
+typedef int32_t RETROFLAT_IN_KEY;
+#elif defined( RETROFLAT_API_SDL1 )
+typedef int16_t RETROFLAT_IN_KEY;
+#endif /* RETROFLAT_API_SDL2 */
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
    int mouse_state;
-   int prev_pad;
+   RETROFLAT_IN_KEY prev_pad;
    int prev_pad_delay;
-   SDL_Keycode prev_key;
+   RETROFLAT_IN_KEY prev_key;
 #ifdef RETROFLAT_API_SDL2
    SDL_GameController* pad;
 #elif defined( RETROFLAT_API_SDL1 )
    SDL_Joystick* pad;
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 };
-
-#ifdef RETROFLAT_API_SDL2
-typedef int32_t RETROFLAT_IN_KEY;
-#elif defined( RETROFLAT_API_SDL1 )
-typedef int16_t RETROFLAT_IN_KEY;
-#endif /* RETROFLAT_API_SDL2 */
 
 #elif defined( RETROFLT_C )
 
@@ -136,7 +136,9 @@ MERROR_RETVAL _retroflat_sdl_init_joystick( int joystick_id ) {
 
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
+#  if defined( RETROFLAT_API_SDL2 )
    size_t i = 0;
+#  endif /* RETROFLAT_API_SDL2 */
 
    g_retroflat_state->retroflat_flags |= 
       (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);

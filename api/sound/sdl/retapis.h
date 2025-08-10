@@ -40,11 +40,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       goto cleanup;
    }
 
-#     ifdef RETROSND_API_SDL1
    if( !Mix_Init( MIX_INIT_OGG ) ) {
-#     else
-   if( !Mix_Init( MIX_INIT_MID | MIX_INIT_OGG ) ) {
-#     endif /* RETROFLAT_OS_WASM */
       error_printf( "couldn't initialize SDL mixer: %s", Mix_GetError() );
       retval = MERROR_SND;
       goto cleanup;
