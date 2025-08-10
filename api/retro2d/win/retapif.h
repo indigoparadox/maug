@@ -298,54 +298,6 @@ static LRESULT CALLBACK WndProc(
       case WM_ERASEBKGND:
          return 1;
 
-      case WM_KEYDOWN:
-         switch( wParam ) {
-         case VK_SHIFT:
-            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_SHIFT;
-            break;
-
-         case VK_CONTROL:
-            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
-            break;
-
-         /* TODO: Alt? */
-
-         default:
-            /*
-            TODO: Fix in win64.
-            debug_printf( RETROINPUT_TRACE_LVL, "0x%x", lParam );
-            */
-            g_retroflat_state->input.last_key = wParam | ((lParam & 0x800000) >> 8);
-            break;
-         }
-         break;
-
-      case WM_KEYUP:
-         switch( wParam ) {
-         case VK_SHIFT:
-            g_retroflat_state->input.vk_mods &= ~RETROFLAT_INPUT_MOD_SHIFT;
-            break;
-
-         case VK_CONTROL:
-            g_retroflat_state->input.vk_mods |= RETROFLAT_INPUT_MOD_CTRL;
-            break;
-
-         /* TODO: Alt? */
-
-         }
-         break;
-
-      case WM_LBUTTONDOWN:
-#ifndef RETROFLAT_API_WINCE
-      case WM_RBUTTONDOWN:
-#endif /* !RETROFLAT_API_WINCE */
-         g_retroflat_state->input.last_mouse = wParam;
-         g_retroflat_state->input.last_mouse_x =
-            GET_X_LPARAM( lParam ) / g_retroflat_state->scale;
-         g_retroflat_state->input.last_mouse_y =
-            GET_Y_LPARAM( lParam ) / g_retroflat_state->scale;
-         break;
-
       case WM_DESTROY:
 #ifndef RETROFLAT_OPENGL
          if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {

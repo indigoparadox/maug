@@ -3,18 +3,35 @@
 #define RETPLTI_H_DEFS
 
 /* TODO: PAD support. */
-#define RETROFLAT_NO_PAD
+#  define RETROFLAT_NO_PAD
+
+#ifndef RETROFLAT_PREV_KEY_TIMEOUT
+#  define RETROFLAT_PREV_KEY_TIMEOUT 5
+#endif /* !RETROFLAT_PREV_KEY_TIMEOUT */
+
+#ifndef RETROFLAT_PREV_KEY_DELAY
+#  define RETROFLAT_PREV_KEY_DELAY 2
+#endif /* !RETROFLAT_PREV_KEY_DELAY */
+
+typedef int16_t RETROFLAT_IN_KEY;
 
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
-   int16_t              last_key;
-   uint8_t              vk_mods;
-   unsigned int         last_mouse;
-   unsigned int         last_mouse_x;
-   unsigned int         last_mouse_y;
+   RETROFLAT_IN_KEY prev_key;
+   /**
+    * \brief Number of cycles before key repeats are registered.
+    */
+   int prev_key_delay;
+   /**
+    * \brief Number of cycles after which key release is registered.
+    *
+    * This functions as sort of an anti-debounce, as the repeat seems to have
+    * random releases in its stream.
+    */
+   int prev_key_timeout;
+   int prev_pad;
+   int prev_pad_delay;
 };
-
-typedef int16_t RETROFLAT_IN_KEY;
 
 #  ifndef VK_OEM_1
 #     define VK_OEM_1 0xba
@@ -126,10 +143,15 @@ typedef int16_t RETROFLAT_IN_KEY;
 #  define RETROFLAT_MOUSE_B_LEFT    VK_LBUTTON
 #  define RETROFLAT_MOUSE_B_RIGHT   VK_RBUTTON
 
-
 #elif defined( RETROFLT_C )
 
+#  include <retrokey.h>
+
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
+
+   g_retroflat_state->retroflat_flags |= 
+      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
+   
    return MERROR_OK;
 }
 
@@ -137,11 +159,56 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
+   int key_state = 0;
 
    assert( NULL != input );
 
    input->key_flags = 0;
 
+   if(
+      RETROFLAT_FLAGS_KEY_REPEAT ==
+      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
+      0 < g_retroflat_state->input.prev_key_delay
+   ) {
+      /* Delay processing any keys until repeat delay has expired. */
+      g_retroflat_state->input.prev_key_delay--;
+      goto cleanup;
+   }
+
+#  define RETROFLAT_KEYTABLE_CHECK( k ) \
+      } else if( (key_state = GetAsyncKeyState( k )) & 0x8000 ) { \
+         debug_printf( 1, "key_state: %02x", key_state ); \
+         if( \
+            k == g_retroflat_state->input.prev_key && \
+            RETROFLAT_FLAGS_KEY_REPEAT != \
+            (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) \
+         ) { \
+            /* Skip repeated key. */ \
+            debug_printf( 1, "key repeat skipped: %d", key_out ); \
+            goto cleanup; \
+         } \
+         key_out = k; \
+         g_retroflat_state->input.prev_key = k; \
+         g_retroflat_state->input.prev_key_timeout = \
+            RETROFLAT_PREV_KEY_TIMEOUT; \
+         g_retroflat_state->input.prev_key_delay = \
+            RETROFLAT_PREV_KEY_DELAY; \
+         debug_printf( 1, "key: %d", key_out ); \
+         goto cleanup; \
+
+   if( 0 ) {
+   RETROFLAT_KEYTABLE( RETROFLAT_KEYTABLE_CHECK );
+   }
+
+   /* Try to smooth over phantom releases in repeat stream. */
+   if( 0 < g_retroflat_state->input.prev_key_timeout ) {
+      g_retroflat_state->input.prev_key_timeout--;
+   } else {
+      debug_printf( 1, "key reset to 0" );
+      g_retroflat_state->input.prev_key = 0;
+   }
+
+#if 0
    if( g_retroflat_state->input.last_key ) {
       /* Return g_retroflat_state->last_key, which is set in WndProc when a
        * keypress msg is received.
@@ -155,6 +222,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.last_key = 0;
 
    } else if( g_retroflat_state->input.last_mouse ) {
+      /*
       if(
          MK_LBUTTON == (MK_LBUTTON & g_retroflat_state->input.last_mouse)
       ) {
@@ -171,6 +239,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.last_mouse = 0;
       g_retroflat_state->input.last_mouse_x = 0;
       g_retroflat_state->input.last_mouse_y = 0;
+      */
    }
 
 #     ifdef RETROFLAT_SCREENSAVER
@@ -182,6 +251,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* retroflat_quit( 0 ); */
    }
 #     endif /* RETROFLAT_SCREENSAVER */
+#endif
+
+cleanup:
 
    return key_out;
 }

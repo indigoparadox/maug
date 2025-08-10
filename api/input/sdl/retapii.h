@@ -366,7 +366,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       break;
    }
 
-   key_out = retroflat_repeat_pad( key_out, input );
+   key_out = retroflat_repeat_input( key_out, input,
+      &(g_retroflat_state->input.prev_pad),
+      &(g_retroflat_state->input.prev_pad_delay) );
 
    return key_out;
 }

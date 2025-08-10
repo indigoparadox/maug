@@ -151,7 +151,7 @@ define TGT_WATCOM386_WIN_WIN32
 CFLAGS_WATCOM386_WIN_WIN32 += \
 	-mf -bt=nt -i=$(WATCOM)/h/nt -DRETROFLAT_API_WIN32 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
-	-i=$(MAUG_ROOT)/api/log/mfile \
+	-i=$(MAUG_ROOT)/api/log/unix \
 	-i=$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(FORCE_MVFS)","1")
@@ -436,7 +436,7 @@ define TGT_GCC_WIN_WIN32
 
 CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win \
-	-I$(MAUG_ROOT)/api/log/mfile -I$(MAUG_ROOT)/api/mem/win
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/mem/win
 
 ifeq ("$$(RETROFLAT_VDP)","1")
 	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP

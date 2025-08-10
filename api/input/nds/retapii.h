@@ -8,13 +8,13 @@
 #  define RETROFLAT_PREV_PAD_DELAY 4
 #endif /* !RETROFLAT_PREV_PAD_DELAY */
 
+typedef int16_t RETROFLAT_IN_KEY;
+
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
-   int prev_pad;
+   RETROFLAT_IN_KEY prev_pad;
    int prev_pad_delay;
 };
-
-typedef int16_t RETROFLAT_IN_KEY;
 
 #define RETROFLAT_PAD_LEFT        KEY_LEFT
 #define RETROFLAT_PAD_RIGHT       KEY_RIGHT
@@ -95,7 +95,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    /* TODO: Touch screen taps to mouse. */
 
    /* If no other event happened, repeat the last press. */
-   key_out = retroflat_repeat_pad( key_out, input );
+   key_out = retroflat_repeat_input( key_out, input,
+      &(g_retroflat_state->input.prev_pad),
+      &(g_retroflat_state->input.prev_pad_delay) );
 
 cleanup:
 

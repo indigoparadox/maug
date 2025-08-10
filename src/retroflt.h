@@ -1752,12 +1752,9 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
 /*! \} */ /* maug_retroflt_vdp */
 #  endif /* RETROFLAT_VDP || DOCUMENTATION */
 
-#ifndef RETROFLAT_NO_PAD
-
-RETROFLAT_IN_KEY retroflat_repeat_pad(
-   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input );
-
-#endif /* !RETROFLAT_NO_PAD */
+RETROFLAT_IN_KEY retroflat_repeat_input(
+   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input,
+   RETROFLAT_IN_KEY* prev_input, int* prev_delay );
 
 void retroflat_set_title( const char* format, ... );
 
@@ -2820,18 +2817,17 @@ void retroflat_shutdown( int retval ) {
 
 /* === */
 
-#ifndef RETROFLAT_NO_PAD
-
-RETROFLAT_IN_KEY retroflat_repeat_pad(
-   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input
+RETROFLAT_IN_KEY retroflat_repeat_input(
+   RETROFLAT_IN_KEY key_out, struct RETROFLAT_INPUT* input,
+   RETROFLAT_IN_KEY* prev_input, int* prev_delay
 ) {
 
    /* Add a slight debounce for gamepad button repeat. */
-   if( 0 < g_retroflat_state->input.prev_pad_delay ) {
+   if( 0 < (*prev_delay) ) {
       debug_printf(
          RETROINPUT_TRACE_LVL,
-         "repeat delay: %d", g_retroflat_state->input.prev_pad_delay );
-      g_retroflat_state->input.prev_pad_delay--;
+         "repeat delay: %d", (*prev_delay) );
+      (*prev_delay)--;
    }
 
    /* If nothing else happened and repeat is enabled and a joypad button is
@@ -2841,18 +2837,18 @@ RETROFLAT_IN_KEY retroflat_repeat_pad(
       0 == key_out &&
       RETROFLAT_FLAGS_KEY_REPEAT ==
       (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
-      0 != g_retroflat_state->input.prev_pad &&
-      0 == g_retroflat_state->input.prev_pad_delay
+      /* There is an input to repeat. */
+      0 != *prev_input &&
+      /* Delay countdown reached. */
+      0 == *prev_delay
    ) {
-      key_out = g_retroflat_state->input.prev_pad;
-      g_retroflat_state->input.prev_pad_delay = 1;
+      key_out = *prev_input;
+      *prev_delay = 1;
       debug_printf( RETROINPUT_TRACE_LVL, "repeat: %d", key_out );
    }
 
    return key_out;
 }
-
-#endif /* !RETROFLAT_NO_PAD */
 
 /* === */
 
