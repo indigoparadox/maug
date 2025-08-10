@@ -2,17 +2,100 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
-/* TODO: PAD support. */
-#define RETROFLAT_NO_PAD
+#include <SDL.h>
+
+#  define RETROFLAT_KEY_UP	SDLK_UP
+#  define RETROFLAT_KEY_DOWN  SDLK_DOWN
+#  define RETROFLAT_KEY_RIGHT	SDLK_RIGHT
+#  define RETROFLAT_KEY_LEFT	SDLK_LEFT
+#  define RETROFLAT_KEY_A	   SDLK_a
+#  define RETROFLAT_KEY_B	   SDLK_b
+#  define RETROFLAT_KEY_C	   SDLK_c
+#  define RETROFLAT_KEY_D	   SDLK_d
+#  define RETROFLAT_KEY_E	   SDLK_e
+#  define RETROFLAT_KEY_F	   SDLK_f
+#  define RETROFLAT_KEY_G	   SDLK_g
+#  define RETROFLAT_KEY_H	   SDLK_h
+#  define RETROFLAT_KEY_I	   SDLK_i
+#  define RETROFLAT_KEY_J	   SDLK_j
+#  define RETROFLAT_KEY_K	   SDLK_k
+#  define RETROFLAT_KEY_L	   SDLK_l
+#  define RETROFLAT_KEY_M	   SDLK_m
+#  define RETROFLAT_KEY_N	   SDLK_n
+#  define RETROFLAT_KEY_O	   SDLK_o
+#  define RETROFLAT_KEY_P	   SDLK_p
+#  define RETROFLAT_KEY_Q	   SDLK_q
+#  define RETROFLAT_KEY_R	   SDLK_r
+#  define RETROFLAT_KEY_S	   SDLK_s
+#  define RETROFLAT_KEY_T	   SDLK_t
+#  define RETROFLAT_KEY_U	   SDLK_u
+#  define RETROFLAT_KEY_V	   SDLK_v
+#  define RETROFLAT_KEY_W	   SDLK_w
+#  define RETROFLAT_KEY_X	   SDLK_x
+#  define RETROFLAT_KEY_Y	   SDLK_y
+#  define RETROFLAT_KEY_Z	   SDLK_z
+#  define RETROFLAT_KEY_0     SDLK_0
+#  define RETROFLAT_KEY_1     SDLK_1
+#  define RETROFLAT_KEY_2     SDLK_2
+#  define RETROFLAT_KEY_3     SDLK_3
+#  define RETROFLAT_KEY_4     SDLK_4
+#  define RETROFLAT_KEY_5     SDLK_5
+#  define RETROFLAT_KEY_6     SDLK_6
+#  define RETROFLAT_KEY_7     SDLK_7
+#  define RETROFLAT_KEY_8     SDLK_8
+#  define RETROFLAT_KEY_9     SDLK_9
+#  define RETROFLAT_KEY_TAB	SDLK_TAB
+#  define RETROFLAT_KEY_SPACE	SDLK_SPACE
+#  define RETROFLAT_KEY_ESC	SDLK_ESCAPE
+#  define RETROFLAT_KEY_ENTER	SDLK_RETURN
+#  define RETROFLAT_KEY_HOME	SDLK_HOME
+#  define RETROFLAT_KEY_END	SDLK_END
+#  define RETROFLAT_KEY_DELETE   SDLK_DELETE
+#  define RETROFLAT_KEY_PGUP     SDLK_PAGEUP
+#  define RETROFLAT_KEY_PGDN     SDLK_PAGEDOWN
+#  define RETROFLAT_KEY_GRAVE SDLK_BACKQUOTE
+#  define RETROFLAT_KEY_SLASH SDLK_SLASH
+#  define RETROFLAT_KEY_BKSP  SDLK_BACKSPACE
+#  define RETROFLAT_KEY_SEMICOLON   SDLK_SEMICOLON
+#  define RETROFLAT_KEY_PERIOD   SDLK_PERIOD
+#  define RETROFLAT_KEY_COMMA    SDLK_COMMA
+#  define RETROFLAT_KEY_EQUALS   SDLK_EQUALS
+#  define RETROFLAT_KEY_DASH     SDLK_MINUS
+#  define RETROFLAT_KEY_BACKSLASH  SDLK_BACKSLASH
+#  define RETROFLAT_KEY_QUOTE      SDLK_QUOTE
+#  define RETROFLAT_KEY_BRACKETL   SDLK_LEFTBRACKET
+#  define RETROFLAT_KEY_BRACKETR   SDLK_RIGHTBRACKET
+#  define RETROFLAT_KEY_INSERT   SDLK_INSERT
+
+#  define RETROFLAT_MOUSE_B_LEFT    (-1)
+#  define RETROFLAT_MOUSE_B_RIGHT   (-2)
+
+#define RETROFLAT_PAD_LEFT          (-10)
+#define RETROFLAT_PAD_RIGHT         (-11)
+#define RETROFLAT_PAD_UP            (-12)
+#define RETROFLAT_PAD_DOWN          (-13)
+#define RETROFLAT_PAD_SHOULDER_R    (-14)
+#define RETROFLAT_PAD_SHOULDER_L    (-15)
+#define RETROFLAT_PAD_START         (-16)
+#define RETROFLAT_PAD_SELECT        (-17)
+#define RETROFLAT_PAD_A             (-18)
+#define RETROFLAT_PAD_B             (-19)
+#define RETROFLAT_PAD_X             (-20)
+#define RETROFLAT_PAD_Y             (-21)
 
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
-   int                  mouse_state;
+   int mouse_state;
+#ifdef RETROFLAT_API_SDL2
+   SDL_GameController* pad;
+#elif defined( RETROFLAT_API_SDL1 )
+   SDL_Joystick* pad;
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 };
 
 #ifdef RETROFLAT_API_SDL2
 typedef int32_t RETROFLAT_IN_KEY;
-#else
+#elif defined( RETROFLAT_API_SDL1 )
 typedef int16_t RETROFLAT_IN_KEY;
 #endif /* RETROFLAT_API_SDL2 */
 
@@ -34,7 +117,37 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
          debug_printf( 3, "key repeat enabled" );
       }
    }
-#  endif /* RETROFLAT_API_SDL1 */
+
+   /* Setup joysticks. */
+   if( 1 > SDL_NumJoysticks() ) {
+      error_printf( "no gamepad connected!" );
+   } else {
+      g_retroflat_state->input.pad = SDL_JoystickOpen( args->joystick_id );
+      if( NULL == g_retroflat_state->input.pad ) {
+         error_printf( "unable to open gamepad: %s", SDL_GetError() );
+      } else {
+         debug_printf( 1, "initialized gamepad: %d", args->joystick_id );
+      }
+   }
+
+#  elif defined( RETROFLAT_API_SDL2 )
+   /* Setup joysticks. */
+   /* TODO: Autodetect is args->joystick_id is 0. */
+   if( 1 > SDL_NumJoysticks() ) {
+      error_printf( "no gamepad connected!" );
+   } else if( SDL_IsGameController( args->joystick_id ) ) {
+      g_retroflat_state->input.pad =
+         SDL_GameControllerOpen( args->joystick_id );
+      if( NULL == g_retroflat_state->input.pad ) {
+         error_printf( "unable to open gamepad: %s", SDL_GetError() );
+      } else {
+         debug_printf( 1, "initialized gamepad: %d", args->joystick_id );
+      }
+   } else {
+      error_printf( "joystick %d is not a known gamepad!", args->joystick_id );
+   }
+
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
    return retval;
 }
@@ -65,6 +178,53 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       /* Handle SDL window close. */
       debug_printf( 1, "quit event!" );
       retroflat_quit( 0 );
+      break;
+
+#  ifdef RETROFLAT_API_SDL1
+   case SDL_JOYBUTTONDOWN:
+      /*
+      switch( event.jbutton.button ) {
+      }
+      */
+      /* TODO: Work out mappings for XBox controller. */
+      debug_printf( 1, "gamebutton: %d", event.jbutton.button );
+#  elif defined( RETROFLAT_API_SDL2 )
+   case SDL_CONTROLLERBUTTONDOWN:
+      switch( event.cbutton.button ) {
+      case SDL_CONTROLLER_BUTTON_DPAD_UP:
+         key_out = RETROFLAT_PAD_UP; break;
+      case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+         key_out = RETROFLAT_PAD_DOWN; break;
+      case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+         key_out = RETROFLAT_PAD_RIGHT; break;
+      case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+         key_out = RETROFLAT_PAD_LEFT; break;
+      case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+         key_out = RETROFLAT_PAD_SHOULDER_L; break;
+      case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+         key_out = RETROFLAT_PAD_SHOULDER_R; break;
+      case SDL_CONTROLLER_BUTTON_START:
+         key_out = RETROFLAT_PAD_START; break;
+      case SDL_CONTROLLER_BUTTON_BACK:
+         key_out = RETROFLAT_PAD_SELECT; break;
+      case SDL_CONTROLLER_BUTTON_A:
+         key_out = RETROFLAT_PAD_A; break;
+      case SDL_CONTROLLER_BUTTON_B:
+         key_out = RETROFLAT_PAD_B; break;
+      case SDL_CONTROLLER_BUTTON_X:
+         key_out = RETROFLAT_PAD_X; break;
+      case SDL_CONTROLLER_BUTTON_Y:
+         key_out = RETROFLAT_PAD_Y; break;
+      }
+#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+
+      /* Flush event buffer to improve responsiveness. */
+      if(
+         RETROFLAT_FLAGS_KEY_REPEAT !=
+         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
+      ) {
+         while( (eres = SDL_PollEvent( &event )) );
+      }
       break;
 
    case SDL_KEYDOWN:

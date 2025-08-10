@@ -2,7 +2,6 @@
 #if !defined( RETPLTI_H_DEFS )
 #define RETPLTI_H_DEFS
 
-/* TODO: PAD support. */
 #define RETROFLAT_NO_PAD
 
 #ifndef RETROINPUT_TRACE_LVL

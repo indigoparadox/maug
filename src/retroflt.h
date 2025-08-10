@@ -995,6 +995,13 @@ void retrosnd_shutdown();
 #  elif defined( RETROFLAT_NO_PAD )
 #     define retroflat_case_key( key, pad ) case key:
 #  else
+/**
+ * \brief Specify cases for a select() on the result of retroflat_poll_input()
+ *        for keyboard or game pad as available.
+ *
+ * Systems with no keyboard will ignore the key param and systems with no game
+ * pad will ignore the pad param.
+ */
 #     define retroflat_case_key( key, pad ) case pad: case key:
 #  endif
 
@@ -1064,6 +1071,7 @@ struct RETROFLAT_ARGS {
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
    int screen_scale;
+   int joystick_id;
 #  endif /* RETROFLAT_NO_CLI_SZ */
    struct RETROFLAT_PLATFORM_ARGS platform;
 #  ifndef RETROFLAT_NO_SOUND
@@ -2333,8 +2341,8 @@ static MERROR_RETVAL retroflat_cli_rfw(
       /* The next arg must be the new var. */
    } else {
       args->screen_w = atoi( arg );
-         debug_printf( 1, "setting arg screen_w to: %d",
-            args->screen_w );
+      debug_printf( 1, "setting arg screen_w to: %d",
+         args->screen_w );
    }
    return MERROR_OK;
 }
@@ -2354,9 +2362,8 @@ static MERROR_RETVAL retroflat_cli_rfh(
       /* The next arg must be the new var. */
    } else {
       args->screen_h = atoi( arg );
-      args->screen_w = atoi( arg );
-         debug_printf( 1, "setting arg screen_h to: %d",
-            args->screen_h );
+      debug_printf( 1, "setting arg screen_h to: %d",
+         args->screen_h );
    }
    return MERROR_OK;
 }
@@ -2390,6 +2397,26 @@ static MERROR_RETVAL retroflat_cli_u(
    }
    return MERROR_OK;
 }
+
+#  ifndef RETROFLAT_NO_PAD
+
+static MERROR_RETVAL retroflat_cli_rfj(
+   const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
+) {
+   if( 0 > arg_c ) {
+   } else if(
+      0 == strncmp( MAUG_CLI_SIGIL "rfj", arg, MAUG_CLI_SIGIL_SZ + 4 )
+   ) {
+      /* The next arg must be the new var. */
+   } else {
+      args->joystick_id = atoi( arg );
+      debug_printf( 1, "setting arg joystick_id to: %d",
+         args->joystick_id );
+   }
+   return MERROR_OK;
+}
+
+#  endif /* !RETROFLAT_NO_PAD */
 
 #endif /* !RETROFLAT_NO_CLI */
 
@@ -2559,6 +2586,13 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
       "Unlock FPS.", 0,
       (maug_cli_cb)retroflat_cli_u, args );
    maug_cleanup_if_not_ok();
+
+#     ifndef RETROFLAT_NO_PAD
+   retval = maug_add_arg( MAUG_CLI_SIGIL "rfj", MAUG_CLI_SIGIL_SZ + 4,
+      "Specify joystick ID to use.", 0,
+      (maug_cli_cb)retroflat_cli_rfj, args );
+   maug_cleanup_if_not_ok();
+#     endif /* !RETROFLAT_NO_PAD */
 
    /* Parse command line args. */
    retval = maug_parse_args( argc, argv );
