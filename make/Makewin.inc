@@ -281,7 +281,7 @@ CFLAGS_WATCOM386_WIN_SDL += -i="$(MAUG_ROOT)/api/file/win32"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_WIN_SDL += -i=$(MAUG_ROOT)/api/sound/sdl
+	CFLAGS_WATCOM386_WIN_SDL += -i=$(MAUG_ROOT)/api/sound/null
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_SDL)))
@@ -495,9 +495,9 @@ ifeq ("$$(RETROFLAT_VDP)","1")
 endif
 
 ifeq ("$$(FORCE_MVFS)","1")
-CFLAGS_GCC64_WIN_WIN32 += -I"$(MAUG_ROOT)/api/file/mvfs"
+CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/file/mvfs
 else
-CFLAGS_GCC64_WIN_WIN32 += -i="$(MAUG_ROOT)/api/file/win32"
+CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/file/win32
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
