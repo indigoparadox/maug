@@ -195,8 +195,6 @@ MERROR_RETVAL retrocon_init(
    con->gui.w = w;
    con->gui.h = h;
 
-   retrogui_lock( &(con->gui) );
-
       retrogui_init_ctl(
          &ctl, RETROGUI_CTL_TYPE_TEXTBOX, RETROCON_IDC_TEXTBOX );
 
@@ -228,8 +226,6 @@ MERROR_RETVAL retrocon_init(
          ctl_y_iter += ctl.base.h + 1;
          con->sbuffer_lines++;
       }
-
-   retrogui_unlock( &(con->gui) );
 
    con->gui.focus = RETROCON_IDC_TEXTBOX;
 
@@ -281,23 +277,19 @@ MERROR_RETVAL retrocon_print_line( struct RETROCON* con, const char* line ) {
          "copying sbuffer line " SIZE_T_FMT " to " SIZE_T_FMT "...",
          i - 1, i );
       maug_mzero( sbuffer_shift, RETROCON_LBUFFER_SZ_MAX + 1 );
-      retrogui_lock( &(con->gui) );
       retval = retrogui_get_ctl_text(
          &(con->gui), RETROCON_IDC_CON_BASE + i - 1,
          sbuffer_shift, RETROCON_LBUFFER_SZ_MAX );
       retval = retrogui_set_ctl_text(
          &(con->gui), RETROCON_IDC_CON_BASE + i,
          RETROCON_LBUFFER_SZ_MAX, sbuffer_shift );
-      retrogui_unlock( &(con->gui) );
       maug_cleanup_if_not_ok();
    }
 
    /* Put line in first sbuffer line. */
-   retrogui_lock( &(con->gui) );
    retval = retrogui_set_ctl_text(
       &(con->gui), RETROCON_IDC_CON_BASE,
       RETROCON_LBUFFER_SZ_MAX, line );
-   retrogui_unlock( &(con->gui) );
    maug_cleanup_if_not_ok();
 
 cleanup:
@@ -397,21 +389,15 @@ MERROR_RETVAL retrocon_input(
 
    /* debug_printf( RETROCON_TRACE_LVL, "processing console input..." ); */
 
-   retrogui_lock( &(con->gui) );
-
       *p_idc_out = retrogui_poll_ctls( &(con->gui), p_c, input_evt );
-
-   retrogui_unlock( &(con->gui) );
 
    *p_c = 0; /* If we got this far then don't pass keystroke back. */
 
    if( RETROCON_IDC_TEXTBOX == *p_idc_out ) {
-      retrogui_lock( &(con->gui) );
       retval = retrogui_get_ctl_text(
          &(con->gui), RETROCON_IDC_TEXTBOX, lbuffer, RETROCON_LBUFFER_SZ_MAX );
       retval = retrogui_set_ctl_text(
          &(con->gui), RETROCON_IDC_TEXTBOX, 1, "" );
-      retrogui_unlock( &(con->gui) );
       maug_cleanup_if_not_ok();
 
       if( 0 == maug_strlen( lbuffer ) ) {
@@ -497,9 +483,7 @@ MERROR_RETVAL retrocon_display(
    (con)->gui.draw_bmp = (gui_bmp);
    (con)->gui.flags |= RETROGUI_FLAGS_DIRTY;
 
-   retrogui_lock( &((con)->gui) );
    retrogui_redraw_ctls( &((con)->gui) );
-   retrogui_unlock( &((con)->gui) );
 
 cleanup:
 
