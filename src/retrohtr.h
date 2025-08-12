@@ -1521,7 +1521,7 @@ void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
       RETROHTR_TREE_FLAG_GUI_ACTIVE ==
          (tree->flags & RETROHTR_TREE_FLAG_GUI_ACTIVE)
    ) {
-      retrogui_free( &(tree->gui) );
+      retrogui_destroy( &(tree->gui) );
    }
 
    /* Unlock nodes before trying to free them. */

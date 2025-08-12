@@ -395,16 +395,8 @@ void retrowin_free_win( struct RETROWIN* win ) {
 
    if( RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & win->flags) ) {
       /* This GUI was created by a NULL to push_win(). */
-
       retrowin_lock_gui( win )
-
-#ifndef RETROGXC_PRESENT
-      if( (MAUG_MHANDLE)NULL != win->gui_p->font_h ) {
-         retrofont_free( &(win->gui_p->font_h) );
-      }
-#endif /* RETROGXC_PRESENT */
-
-      retrogui_free( win->gui_p );
+      retrogui_destroy( win->gui_p );
       retrowin_unlock_gui( win )
       maug_mfree( win->gui_h );
    }
@@ -466,9 +458,6 @@ ssize_t retrowin_push_win(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN win;
-#ifdef RETROGXC_PRESENT
-   ssize_t font_retval = 0;
-#endif /* RETROGXC_PRESENT */
    ssize_t idx_out = -1;
 
    idx_out = retrowin_get_by_idc( idc, win_stack );
@@ -496,18 +485,7 @@ ssize_t retrowin_push_win(
       retval = retrogui_init( win.gui_p );
       maug_cleanup_if_not_ok();
 
-      /* TODO: Parse font height from filename and only load printable glyphs. */
-      /* TODO: Use cache if available. */
-#ifdef RETROGXC_PRESENT
-      font_retval = retrogxc_load_font( font_filename, 0, 33, 93 );
-      if( 0 > font_retval ) {
-         retval = font_retval * -1;
-         goto cleanup;
-      }
-      win.gui_p->font_idx = font_retval;
-#else
-      retval = retrofont_load( font_filename, &(win.gui_p->font_h), 0, 33, 93 );
-#endif /* RETROGXC_PRESENT */
+      retval = retrogui_set_font( win.gui_p, font_filename );
       maug_cleanup_if_not_ok();
    }
 

@@ -2,6 +2,13 @@
 #ifndef RETROGXC_H
 #define RETROGXC_H
 
+/**
+ * \addtogroup maug_retroflt
+ * \{
+ * \addtogroup maug_retrogxc RetroGXCache API
+ * \{
+ */
+
 #include <maug.h>
 
 /* TODO: Unified asset type that automatically uses RetroGXC if present and
@@ -525,6 +532,10 @@ cleanup:
 #endif /* RETROFONT_PRESENT */
 
 #endif /* RETROGXC_C */
+
+/*! \} */ /* maug_retroflt */
+
+/*! \} */ /* maug_retrogxc */
 
 #endif /* !RETROGXC_H */
 

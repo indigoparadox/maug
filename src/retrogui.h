@@ -6,6 +6,9 @@
  * \addtogroup maug_retroflt
  * \{
  * \addtogroup maug_retrogui RetroGUI API
+ * \brief Tools for drawing interactive GUI elements in a RetroFlat program.
+ *
+ * This library works well with the \ref maug_retrowin.
  * \{
  * \file retrogui.h
  * \page maug_retrogui_example_page RetroGUI Example
@@ -179,6 +182,13 @@
  */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
+/**
+ * \relates RETROGUI
+ * \brief RETROGUI::flags indicating GUI font is owned by this RETROGUI and
+ *        can/will be freed by retrogui_destroy().
+ */
+#define RETROGUI_FLAGS_FONT_OWNED 0x02
+
 #define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
 
 #define _retrogui_copy_str( field, src_str, dest_ctl, str_tmp, str_sz ) \
@@ -326,6 +336,15 @@ struct RETROGUI {
 #ifdef RETROGXC_PRESENT
    ssize_t font_idx;
 #else
+   /**
+    * \brief Font used to draw any attached RETROGUI_CTL.
+    *
+    * This should be set with retrogui_set_font(), and will be automatically
+    * freed by retrogui_destroy() if it is. If it is set by manual assignment,
+    * then it will *not* be freed by retrogui_destroy().
+    *
+    * \warning This field is not present if \ref maug_retrogxc is loaded!
+    */
    MAUG_MHANDLE font_h;
 #endif /* RETROGXC_PRESENT */
 };
@@ -360,20 +379,24 @@ MERROR_RETVAL retrogui_pos_ctl(
 MERROR_RETVAL retrogui_push_ctl(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl );
 
-MERROR_RETVAL retrogui_get_ctl_text(
-   struct RETROGUI* gui, retrogui_idc_t idc, char* buffer, size_t buffer_sz );
-
-ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc );
+/**
+ * \brief Load the \ref retrofont for the given ::RETROGUI to draw its controls
+ *        with. Use \ref maug_retrogxc if available.
+ *
+ * Fonts loaded with this function will be automatically freed by
+ * calling retrogui_destroy() on this ::RETROGUI.
+ */
+MERROR_RETVAL retrogui_set_font(
+   struct RETROGUI* gui, const char* font_path );
 
 #ifndef RETROGUI_NO_TEXTBOX
 
-/*
-MERROR_RETVAL retrogui_set_ctl_text(
-   struct RETROGUI* gui, retrogui_idc_t idc,
-   const char* buffer, size_t buffer_sz );
-*/
+MERROR_RETVAL retrogui_get_ctl_text(
+   struct RETROGUI* gui, retrogui_idc_t idc, char* buffer, size_t buffer_sz );
 
 #endif /* !RETROGUI_NO_TEXTBOX */
+
+ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc );
 
 MERROR_RETVAL retrogui_set_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
@@ -454,7 +477,7 @@ MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc );
  *          RETROWIN, after all!
  * \return One of the \ref maug_error_retvals indicating operation result.
  */
-MERROR_RETVAL retrogui_free( struct RETROGUI* gui );
+MERROR_RETVAL retrogui_destroy( struct RETROGUI* gui );
 
 #define retrogui_focus_next( gui ) \
    retrogui_focus_iter( gui, 0, 1 )
@@ -530,7 +553,7 @@ static MERROR_RETVAL retrogui_pos_NONE(
    return MERROR_OK;
 }
 
-static void retrogui_free_NONE( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_NONE( union RETROGUI_CTL* ctl ) {
 }
 
 static MERROR_RETVAL retrogui_init_NONE( union RETROGUI_CTL* ctl ) {
@@ -822,7 +845,7 @@ static MERROR_RETVAL retrogui_pos_LISTBOX(
    return retval;
 }
 
-static void retrogui_free_LISTBOX( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_LISTBOX( union RETROGUI_CTL* ctl ) {
    assert( NULL == ctl->LISTBOX.list );
    maug_mfree( ctl->LISTBOX.list_h );
 }
@@ -1091,7 +1114,7 @@ static MERROR_RETVAL retrogui_pos_BUTTON(
    return retval;
 }
 
-static void retrogui_free_BUTTON( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_BUTTON( union RETROGUI_CTL* ctl ) {
    if( (MAUG_MHANDLE)NULL != ctl->BUTTON.label_h ) {
       maug_mfree( ctl->BUTTON.label_h );
    }
@@ -1365,7 +1388,7 @@ static MERROR_RETVAL retrogui_pos_TEXTBOX(
    return retval;
 }
 
-static void retrogui_free_TEXTBOX( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_TEXTBOX( union RETROGUI_CTL* ctl ) {
    if( (MAUG_MHANDLE)NULL != ctl->TEXTBOX.text_h ) {
       maug_mfree( ctl->TEXTBOX.text_h );
    }
@@ -1501,7 +1524,7 @@ static MERROR_RETVAL retrogui_pos_LABEL(
    return retval;
 }
 
-static void retrogui_free_LABEL( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_LABEL( union RETROGUI_CTL* ctl ) {
    if( (MAUG_MHANDLE)NULL != ctl->LABEL.label_h ) {
       maug_mfree( ctl->LABEL.label_h );
    }
@@ -1623,7 +1646,7 @@ static MERROR_RETVAL retrogui_pos_IMAGE(
    return retval;
 }
 
-static void retrogui_free_IMAGE( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_IMAGE( union RETROGUI_CTL* ctl ) {
 #  ifndef RETROGXC_PRESENT
    retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
 #  endif /* RETROGXC_PRESENT */
@@ -1732,7 +1755,7 @@ static MERROR_RETVAL retrogui_pos_FILLBAR(
    return retval;
 }
 
-static void retrogui_free_FILLBAR( union RETROGUI_CTL* ctl ) {
+static void retrogui_destroy_FILLBAR( union RETROGUI_CTL* ctl ) {
 }
 
 static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
@@ -2237,7 +2260,7 @@ MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc ) {
 
    #define RETROGUI_CTL_TABLE_FREE_CTL( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         retrogui_free_ ## c_name( ctl );
+         retrogui_destroy_ ## c_name( ctl );
 
    for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
@@ -2265,6 +2288,27 @@ cleanup:
 }
 
 /* === */
+
+MERROR_RETVAL retrogui_set_font(
+   struct RETROGUI* gui, const char* font_path
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#ifdef RETROGXC_PRESENT
+   gui->font_idx = retrogxc_load_font( font_path, 0, 33, 93 );
+   maug_cleanup_if_lt(
+      gui->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
+#else
+   retval = retrofont_load( font_path, &(gui->font_h), 0, 33, 93 );
+   maug_cleanup_if_not_ok();
+#endif /* RETROGXC_PRESENT */
+
+   gui->flags |= RETROGUI_FLAGS_FONT_OWNED;
+
+cleanup:
+
+   return retval;
+}
 
 #ifndef RETROGUI_NO_TEXTBOX
 
@@ -2597,7 +2641,7 @@ MERROR_RETVAL retrogui_init_ctl(
 
 /* === */
 
-MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
+MERROR_RETVAL retrogui_destroy( struct RETROGUI* gui ) {
    size_t i = 0;
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
@@ -2616,7 +2660,7 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
 
    #define RETROGUI_CTL_TABLE_FREE( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         retrogui_free_ ## c_name( ctl );
+         retrogui_destroy_ ## c_name( ctl );
 
    for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
@@ -2626,6 +2670,12 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
    }
 
    mdata_vector_unlock( &(gui->ctls) );
+
+#  ifndef RETROGXC_PRESENT
+   if( RETROGUI_FLAGS_FONT_OWNED == (RETROGUI_FLAGS_FONT_OWNED & gui->flags) ) {
+      maug_mfree( &(gui->font_h) );
+   }
+#  endif /* !RETROGXC_PRESENT */
 
 cleanup:
 

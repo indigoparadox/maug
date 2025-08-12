@@ -496,7 +496,7 @@ void retrocon_shutdown( struct RETROCON* con ) {
 #ifndef RETROGXC_PRESENT
    retrofont_free( &(con->gui.font_h) );
 #endif /* !RETROGXC_PRESENT */
-   retrogui_free( &(con->gui) );
+   retrogui_destroy( &(con->gui) );
 }
 
 #endif /* RETROCON_C */
