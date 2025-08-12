@@ -155,6 +155,10 @@
 #endif /* !RETROGUI_CTL_SZ_MAX_INIT */
 
 #ifndef RETROGUI_PADDING
+/**
+ * \brief Overrideable constant defining the padding for text inside of
+ *        controls in pixels.
+ */
 #  define RETROGUI_PADDING 5
 #endif /* !RETROGUI_PADDING */
 
@@ -1307,6 +1311,7 @@ cleanup:
    }
 
    /* TODO: Get cursor color from GUI. */
+   /* Use same padding as font for cursor. */
    retroflat_2d_rect( gui->draw_bmp,
       ctl->base.sel_fg,
       gui->x + ctl->base.x + RETROGUI_PADDING + cursor_x,
