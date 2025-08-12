@@ -375,7 +375,7 @@ static int retroflat_bitmap_win_transparency(
 
       /* Create HDC for source mask compatible with the buffer. */
       bmp_out->hdc_mask = CreateCompatibleDC( (HDC)NULL );
-      maug_cleanup_if_null( HDC, bmp_out->hdc_mask, RETROFLAT_ERROR_BITMAP );
+      maug_cleanup_if_null( HDC, bmp_out->hdc_mask, MERROR_GUI );
       
       bmp_out->old_hbm_mask = SelectObject( bmp_out->hdc_mask, bmp_out->mask );
 
@@ -921,12 +921,12 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    /* Create HDC for source bitmap compatible with the buffer. */
    bmp->hdc_b = CreateCompatibleDC( (HDC)NULL );
-   maug_cleanup_if_null( HDC, bmp->hdc_b, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( HDC, bmp->hdc_b, MERROR_GUI );
 
    if( (HBITMAP)NULL != bmp->mask ) {
       /* Create HDC for source mask compatible with the buffer. */
       bmp->hdc_mask = CreateCompatibleDC( (HDC)NULL );
-      maug_cleanup_if_null( HDC, bmp->hdc_mask, RETROFLAT_ERROR_BITMAP );
+      maug_cleanup_if_null( HDC, bmp->hdc_mask, MERROR_GUI );
    }
 
    /* Select bitmaps into their HDCs. */
@@ -1104,7 +1104,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->b = CreateCompatibleBitmap( g_retroflat_state->platform.hdc_win,
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight );
-   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( HBITMAP, bmp_out->b, MERROR_GUI );
 
    /* Turn the bits into a bitmap. */
    SetDIBits( g_retroflat_state->platform.hdc_win, bmp_out->b, 0,
@@ -1165,7 +1165,7 @@ MERROR_RETVAL retroflat_load_bitmap(
          bmp_out->bmi.header.biWidth,
          bmp_out->bmi.header.biHeight,
          1, 1, NULL );
-      maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
+      maug_cleanup_if_null( HBITMAP, bmp_out->mask, MERROR_GUI );
 
       /* Update transparency mask. */
       retval = retroflat_bitmap_win_transparency( bmp_out,
@@ -1299,7 +1299,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->b = CreateCompatibleBitmap(
       g_retroflat_state->platform.hdc_win, w, h );
-   maug_cleanup_if_null( HBITMAP, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( HBITMAP, bmp_out->b, MERROR_GUI );
 
    if(
       RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
@@ -1314,7 +1314,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       /* Setup bitmap transparency mask. */
       debug_printf( 1, "creating new transparency mask bitmap..." );
       bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
-      maug_cleanup_if_null( HBITMAP, bmp_out->mask, RETROFLAT_ERROR_BITMAP );
+      maug_cleanup_if_null( HBITMAP, bmp_out->mask, MERROR_GUI );
    } else {
       bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
    }

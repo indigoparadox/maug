@@ -244,8 +244,13 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->b = load_bitmap( filename_path, NULL );
    if( NULL == bmp_out->b ) {
-      allegro_message( "unable to load %s", filename_path );
-      retval = RETROFLAT_ERROR_BITMAP;
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         allegro_message( "unable to load %s", filename_path );
+      }
+      retval = MERROR_GUI;
    }
 
 cleanup:
@@ -265,7 +270,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    bmp_out->b = create_bitmap( w, h );
-   maug_cleanup_if_null( BITMAP*, bmp_out->b, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( BITMAP*, bmp_out->b, MERROR_GUI );
    clear_bitmap( bmp_out->b );
 
 cleanup:

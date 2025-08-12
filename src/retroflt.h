@@ -373,10 +373,21 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_FILL     0x01
 
 /**
- * \brief Flag for retroflat_create_bitmap() to create a bitmap without 
- *        transparency.
+ * \brief Flag for retroflat_create_bitmap() or retroflat_load_bitmap() to
+ *        create or load a bitmap without transparency.
  */
 #define RETROFLAT_FLAGS_OPAQUE   0x01
+
+/**
+ * \brief Flag for retroflat_load_bitmap() to not use assets path.
+ */
+#define RETROFLAT_FLAGS_LITERAL_PATH   0x02
+
+/**
+ * \brief flag for retroflat_load_bitmap() to not show an error dialog if
+ *        a bitmap fails to load (on supported platforms).
+ */
+#define RETROFLAT_FLAGS_BITMAP_SILENT   0x04
 
 /**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
@@ -385,11 +396,6 @@ typedef int8_t RETROFLAT_COLOR;
  *       compatibility.
  */
 #define RETROFLAT_FLAGS_ALL_CAPS 0x02
-
-/**
- * \brief Flag for retroflat_load_bitmap() to not use assets path.
- */
-#define RETROFLAT_FLAGS_LITERAL_PATH   0x02
 
 /**
  * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
@@ -468,7 +474,7 @@ typedef int8_t RETROFLAT_COLOR;
  */
 #define RETROFLAT_MSG_FLAG_WARNING 0x04
 
-/*! \} */ /* maug_retroflt_msg_flags */
+/*! \} */ /* maug_retroflt_msg_api */
 
 struct RETROFLAT_STATE;
 
@@ -1713,6 +1719,11 @@ MERROR_RETVAL retroflat_loop(
 #  endif /* retroflat_loop */
 
 /**
+ * \addtogroup maug_retroflt_msg_api
+ * \{
+ */
+
+/**
  * \brief Display a message in a dialog box and/or on stderr.
  * \param title A string with the title to use for a dialog box.
  * \param format A format string to be passed to vsnprintf().
@@ -1720,6 +1731,8 @@ MERROR_RETVAL retroflat_loop(
  */
 void retroflat_message(
    uint8_t flags, const char* title, const char* format, ... );
+
+/*! \} */ /* maug_retroflt_msg_api */
 
 /**
  * \brief Initialize RetroFlat and its underlying layers. This should be

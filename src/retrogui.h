@@ -3,6 +3,8 @@
 #define RETROGUI_H
 
 /**
+ * \addtogroup maug_retroflt
+ * \{
  * \addtogroup maug_retrogui RetroGUI API
  * \{
  * \file retrogui.h
@@ -12,41 +14,73 @@
 #  error "retrofont not present!"
 #endif /* !RETROFONT_PRESENT */
 
-#ifndef RETROGUI_KEY_ACTIVATE
-#  define RETROGUI_KEY_ACTIVATE RETROFLAT_KEY_SPACE
-#endif /* !RETROGUI_KEY_ACTIVATE */
-
-#ifndef RETROGUI_KEY_NEXT
-#  define RETROGUI_KEY_NEXT RETROFLAT_KEY_DOWN
-#endif /* !RETROGUI_KEY_NEXT */
-
-#ifndef RETROGUI_KEY_PREV
-#  define RETROGUI_KEY_PREV RETROFLAT_KEY_UP
-#endif /* !RETROGUI_KEY_PREV */
-
-#ifndef RETROGUI_PAD_ACTIVATE
-#  define RETROGUI_PAD_ACTIVATE RETROFLAT_PAD_A
-#endif /* !RETROGUI_PAD_ACTIVATE */
-
-#ifndef RETROGUI_PAD_NEXT
-#  define RETROGUI_PAD_NEXT RETROFLAT_PAD_DOWN
-#endif /* !RETROGUI_PAD_NEXT */
-
-#ifndef RETROGUI_PAD_PREV
-#  define RETROGUI_PAD_PREV RETROFLAT_PAD_UP
-#endif /* !RETROGUI_PAD_PREV */
-
-
-/*! \brief RETROGUI::flags indicating controls should be redrawn. */
-#define RETROGUI_FLAGS_DIRTY 0x01
-
-#define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
+/* TODO: Maug log unified API to reference. */
 
 #ifndef RETROGUI_TRACE_LVL
 #  define RETROGUI_TRACE_LVL 0
 #endif /* !RETROGUI_TRACE_LVL */
 
 #ifndef RETROGUI_CTL_TEXT_SZ_MAX
+/**
+ * \addtogroup maug_retrogui_cfg RetroGUI Overrideable Config
+ * \brief Options to configure RetroGUI behavior defined at compile time.
+ * \{
+ */
+
+#ifndef RETROGUI_KEY_ACTIVATE
+/**
+ * \brief Overrideable constant defining the keyboard key (RETROFLAT_KEY_*)
+ *        that will activate the RETROGUI_CTL currently referenced by
+ *        RETROGUI::focus.
+ */
+#  define RETROGUI_KEY_ACTIVATE RETROFLAT_KEY_SPACE
+#endif /* !RETROGUI_KEY_ACTIVATE */
+
+#ifndef RETROGUI_KEY_NEXT
+/**
+ * \brief Overrideable constant defining the keyboard key (RETROFLAT_KEY_*)
+ *        that will select the next activateable RETROGUI_CTL currently
+ *        referenced by RETROGUI::focus.
+ */
+#  define RETROGUI_KEY_NEXT RETROFLAT_KEY_DOWN
+#endif /* !RETROGUI_KEY_NEXT */
+
+#ifndef RETROGUI_KEY_PREV
+/**
+ * \brief Overrideable constant defining the keyboard key (RETROFLAT_KEY_*)
+ *        that will select the previous activateable RETROGUI_CTL currently
+ *        referenced by RETROGUI::focus.
+ */
+#  define RETROGUI_KEY_PREV RETROFLAT_KEY_UP
+#endif /* !RETROGUI_KEY_PREV */
+
+#ifndef RETROGUI_PAD_ACTIVATE
+/**
+ * \brief Overrideable constant defining the gamepad button (RETROFLAT_PAD_*)
+ *        that will activate the RETROGUI_CTL currently referenced by
+ *        RETROGUI::focus.
+ */
+#  define RETROGUI_PAD_ACTIVATE RETROFLAT_PAD_A
+#endif /* !RETROGUI_PAD_ACTIVATE */
+
+#ifndef RETROGUI_PAD_NEXT
+/**
+ * \brief Overrideable constant defining the gamepad button (RETROFLAT_PAD_*)
+ *        that will select the next activateable RETROGUI_CTL currently
+ *        referenced by RETROGUI::focus.
+ */
+#  define RETROGUI_PAD_NEXT RETROFLAT_PAD_DOWN
+#endif /* !RETROGUI_PAD_NEXT */
+
+#ifndef RETROGUI_PAD_PREV
+/**
+ * \brief Overrideable constant defining the gamepad button (RETROFLAT_PAD_*)
+ *        that will select the previous activateable RETROGUI_CTL currently
+ *        referenced by RETROGUI::focus.
+ */
+#  define RETROGUI_PAD_PREV RETROFLAT_PAD_UP
+#endif /* !RETROGUI_PAD_PREV */
+
 #  define RETROGUI_CTL_TEXT_SZ_MAX 128
 #endif /* !RETROGUI_CTL_TEXT_SZ_MAX */
 
@@ -73,6 +107,13 @@
 #ifndef RETROGUI_CTL_TEXT_BLINK_FRAMES
 #  define RETROGUI_CTL_TEXT_BLINK_FRAMES 15
 #endif /* !RETROGUI_CTL_TEXT_BLINK_FRAMES */
+
+/*! \} */ /* maug_retrogui_cfg */
+
+/*! \brief RETROGUI::flags indicating controls should be redrawn. */
+#define RETROGUI_FLAGS_DIRTY 0x01
+
+#define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
 
 #define retrogui_lock( gui )
 
@@ -125,6 +166,14 @@ typedef int16_t retrogui_idc_t;
 /**
  * \brief Table defining all control types and their specific fields in
  *        ::RETROGUI_CTL.
+ *
+ * This table takes a macro as an argument, itself with the argumentS:
+ *
+ * \param type_idx Index passed to RETROGUI_CTL_BASE::type.
+ * \param struct Name of the struct under the ::RETROGUI_CTL union.
+ * \param fields Semicolon-separated list of fields for the type struct.
+ *
+ * Each such macro defines a new control type.
  *
  * All entries in this table have corresponding retrogui_redraw_*,
  * retrogui_poll_*, retrogui_init_*, and retrogui_push_* functions which are
@@ -196,6 +245,12 @@ union RETROGUI_CTL {
 typedef void (*retrogui_xy_cb)(
    retroflat_pxxy_t* x, retroflat_pxxy_t* y, void* data );
 
+/*
+ * \note It is possible to have multiple GUI controllers in a program. For
+ *       example, a web browser might have a controller for its address bar and
+ *       a controller for form elements on pages.
+ *
+ */
 struct RETROGUI {
    uint8_t flags;
    retroflat_pxxy_t x;
@@ -205,6 +260,7 @@ struct RETROGUI {
    RETROFLAT_COLOR bg_color;
    retrogui_idc_t idc_prev;
    struct MDATA_VECTOR ctls;
+   /*! \brief Unique identifying index for current highlighted RETROGUI_CTL. */
    retrogui_idc_t focus;
    retroflat_blit_t* draw_bmp;
 #ifdef RETROGXC_PRESENT
@@ -263,9 +319,26 @@ MERROR_RETVAL retrogui_set_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
    const char* fmt, ... );
 
+/**
+ * \brief Set the image displayed by an IMAGE-type RETROGUI_CTL.
+ * \param idc Unique identifier index of the control to adjust.
+ * \param path Filesystem path to pass to retroflat_load_bitmap().
+ * \param flags Flags from the \ref maug_retroflt_drawing to pass to
+ *              retroflat_load_bitmap().
+ * \return One of the \ref maug_error_retvals indicating operation result.
+ */
 MERROR_RETVAL retrogui_set_ctl_image(
    struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags );
 
+/**
+ * \brief Set the current progress level displayed by a FILLBAR-type
+ *        RETROGUI_CTL.
+ * \param idc Unique identifier index of the control to adjust.
+ * \param level Numeric value out of the max param (e.g. 50 for half if max is
+ *              100).
+ * \param max The maximum possible value.
+ * \return One of the \ref maug_error_retvals indicating operation result.
+ */
 MERROR_RETVAL retrogui_set_ctl_level(
    struct RETROGUI* gui, retrogui_idc_t idc, uint16_t level, uint16_t max,
    uint8_t flags );
@@ -273,13 +346,46 @@ MERROR_RETVAL retrogui_set_ctl_level(
 MERROR_RETVAL retrogui_init_ctl(
    union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
 
+/**
+ * \relates RETROGUI
+ */
 retrogui_idc_t retrogui_focus_iter(
    struct RETROGUI* gui, size_t start, ssize_t incr );
 
+/**
+ * \relates RETROGUI
+ * \brief Prepare a ::RETROGUI controller for use.
+ *
+ * \note It is possible to have multiple GUI controllers in a program. For
+ *       example, a web browser might have a controller for its address bar and
+ *       a controller for form elements on pages.
+ *
+ * \warning This must be run before any other methods are used on the given GUI!
+ * \param gui Pointer to a RETROGUI struct to initialize.
+ * \return One of the \ref maug_error_retvals indicating operation result.
+ */
 MERROR_RETVAL retrogui_init( struct RETROGUI* gui );
 
+/**
+ * \relates RETROGUI
+ * \brief Remove a control with the given unique identifier index from the
+ *        given RETROGUI controller.
+ * \param gui Pointer to a RETROGUI struct to remove a control from.
+ * \param idc Unique identifier index of the control to remove.
+ * \return One of the \ref maug_error_retvals indicating operation result.
+ */
 MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc );
 
+/**
+ * \relates RETROGUI
+ * \brief Free memory held by a ::RETROGUI controller internally and clean up
+ *        any subordinate controls.
+ *
+ * \warning This function does not free memory used for the RETROGUI struct
+ *          directly! A RETROGUI may exist on the stack or be managed by a
+ *          RETROWIN, after all!
+ * \return One of the \ref maug_error_retvals indicating operation result.
+ */
 MERROR_RETVAL retrogui_free( struct RETROGUI* gui );
 
 #define retrogui_focus_next( gui ) \
@@ -2311,9 +2417,9 @@ MERROR_RETVAL retrogui_set_ctl_image(
    if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
       if( NULL != path ) {
 #  if defined( RETROGXC_PRESENT )
-         ctl->IMAGE.image_cache_id = retrogxc_load_bitmap( path, 0 );
+         ctl->IMAGE.image_cache_id = retrogxc_load_bitmap( path, flags );
 #  else
-         retroflat_2d_load_bitmap( path, &(ctl->IMAGE.image), 0 );
+         retroflat_2d_load_bitmap( path, &(ctl->IMAGE.image), flags );
 #  endif /* RETROGXC_PRESENT */
       } else {
 #  ifdef RETROGXC_PRESENT
@@ -2588,6 +2694,8 @@ extern MAUG_CONST char* gc_retrogui_ctl_names[];
 #endif /* RETROGUI_C */
 
 /*! \} */ /* maug_retrogui */
+
+/*! \} */ /* maug_retroflt */
 
 #endif /* !RETROGUI_H */
 

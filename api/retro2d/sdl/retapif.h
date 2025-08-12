@@ -160,7 +160,7 @@ MERROR_RETVAL retroflat_init_platform(
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
-   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( SDL_Surface*, icon, MERROR_GUI );
    SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
 #     endif /* RETROFLAT_SDL_ICO */
 
@@ -247,7 +247,7 @@ MERROR_RETVAL retroflat_init_platform(
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
-   maug_cleanup_if_null( SDL_Surface*, icon, RETROFLAT_ERROR_BITMAP );
+   maug_cleanup_if_null( SDL_Surface*, icon, MERROR_GUI );
    SDL_SetWindowIcon( g_retroflat_state->platform.window, icon );
 #     endif /* RETROFLAT_SDL_ICO */
 
@@ -580,7 +580,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    bmp->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp->surface );
    maug_cleanup_if_null(
-      SDL_Texture*, bmp->texture, RETROFLAT_ERROR_BITMAP );
+      SDL_Texture*, bmp->texture, MERROR_GUI );
 
 cleanup:
 #  endif /* RETROFLAT_API_ALLEGRO */
@@ -635,9 +635,15 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = 0;
+      error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      }
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -646,9 +652,15 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->surface = SDL_DisplayFormat( tmp_surface );
    if( NULL == bmp_out->surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
+      error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      }
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -674,9 +686,15 @@ MERROR_RETVAL retroflat_load_bitmap(
    
    tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
+      error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
+      }
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -685,9 +703,15 @@ MERROR_RETVAL retroflat_load_bitmap(
    bmp_out->surface = SDL_CreateRGBSurface( 0, tmp_surface->w, tmp_surface->h,
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    if( NULL == bmp_out->surface ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to create screen bitmap: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
+      error_printf( "SDL unable to create screen bitmap: %s", SDL_GetError() );
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "SDL unable to create screen bitmap: %s", SDL_GetError() );
+      }
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -720,9 +744,15 @@ MERROR_RETVAL retroflat_load_bitmap(
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "SDL unable to create texture: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_BITMAP;
+      error_printf( "SDL unable to create texture: %s", SDL_GetError() );
+      if(
+         RETROFLAT_FLAGS_BITMAP_SILENT !=
+         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
+      ) {
+         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+            "Error", "SDL unable to create texture: %s", SDL_GetError() );
+      }
+      retval = MERROR_GUI;
       if( NULL != bmp_out->surface ) {
          SDL_FreeSurface( bmp_out->surface );
          bmp_out->surface = NULL;
@@ -770,7 +800,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    maug_cleanup_if_null(
-      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
+      SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
@@ -789,7 +819,7 @@ cleanup:
       /* TODO: Are these masks right? */
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    maug_cleanup_if_null(
-      SDL_Surface*, bmp_out->surface, RETROFLAT_ERROR_BITMAP );
+      SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
@@ -800,7 +830,7 @@ cleanup:
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->buffer.renderer, bmp_out->surface );
    maug_cleanup_if_null(
-      SDL_Texture*, bmp_out->texture, RETROFLAT_ERROR_BITMAP );
+      SDL_Texture*, bmp_out->texture, MERROR_GUI );
       
 cleanup:
 #  endif

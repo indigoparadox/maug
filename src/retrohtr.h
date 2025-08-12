@@ -326,7 +326,7 @@ MERROR_RETVAL retrohtr_tree_create(
          retval = retroflat_load_bitmap(
             p_tag_iter->IMG.src,
             &(retrohtr_node( tree, node_new_idx )->bitmap),
-            RETROFLAT_FLAGS_LITERAL_PATH );
+            RETROFLAT_FLAGS_LITERAL_PATH | RETROFLAT_FLAGS_BITMAP_SILENT );
          if( MERROR_OK == retval ) {
             debug_printf( RETROHTR_TRACE_LVL, "loaded img: %s", 
                p_tag_iter->IMG.src );
