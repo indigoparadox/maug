@@ -154,10 +154,6 @@
 #  define RETROGUI_CTL_SZ_MAX_INIT 20
 #endif /* !RETROGUI_CTL_SZ_MAX_INIT */
 
-#ifndef RETROGUI_PADDING
-#  define RETROGUI_PADDING 5
-#endif /* !RETROGUI_PADDING */
-
 #ifndef RETROGUI_BTN_LBL_SZ_MAX
 #  define RETROGUI_BTN_LBL_SZ_MAX 64
 #endif /* !RETROGUI_BTN_LBL_SZ_MAX */
@@ -599,7 +595,7 @@ static retrogui_idc_t retrogui_click_LISTBOX(
 
       if(
          (retroflat_pxxy_t)(input_evt->mouse_y) < 
-         ctl->base.y + ((j + 1) * (h + RETROGUI_PADDING))
+         ctl->base.y + ((j + 1) * (h))
       ) {
          ctl->LISTBOX.sel_idx = j;
          break;
@@ -676,7 +672,7 @@ static void retrogui_redraw_LISTBOX(
          /* Draw selection colors. */
          retroflat_2d_rect( gui->draw_bmp, ctl->base.sel_bg,
             gui->x + ctl->base.x,
-            gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+            gui->y + ctl->base.y + (j * (h)),
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          fg_color = ctl->base.sel_fg;
       } else {
@@ -688,14 +684,14 @@ static void retrogui_redraw_LISTBOX(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_idx,
          gui->x + ctl->base.x,
-         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->y + ctl->base.y + (j * (h)),
          0, 0, 0 );
 #else
       retrofont_string(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_h,
          gui->x + ctl->base.x,
-         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->y + ctl->base.y + (j * (h)),
          0, 0, 0 );
 #endif /* RETROGXC_PRESENT */
 
@@ -1283,8 +1279,8 @@ static void retrogui_redraw_TEXTBOX(
 #ifdef RETROGXC_PRESENT
    retrogxc_string(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_idx,
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y, ctl->base.w, ctl->base.h, 0 );
 
    retrogxc_string_sz(
       gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_idx,
@@ -1292,8 +1288,8 @@ static void retrogui_redraw_TEXTBOX(
 #else
    retrofont_string(
       gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_h,
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y, ctl->base.w, ctl->base.h, 0 );
 
    retrofont_string_sz(
       gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_h,
@@ -1309,8 +1305,8 @@ cleanup:
    /* TODO: Get cursor color from GUI. */
    retroflat_2d_rect( gui->draw_bmp,
       ctl->base.sel_fg,
-      gui->x + ctl->base.x + RETROGUI_PADDING + cursor_x,
-      gui->y + ctl->base.y + RETROGUI_PADDING,
+      gui->x + ctl->base.x + cursor_x,
+      gui->y + ctl->base.y,
       8, 8,
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
@@ -1466,8 +1462,8 @@ static void retrogui_redraw_LABEL(
 #else
       gui->font_h,
 #endif /* RETROGXC_PRESENT */
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h,
+      gui->x + ctl->base.x,
+      gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
       ctl->LABEL.font_flags );
 
 cleanup:
