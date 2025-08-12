@@ -2669,7 +2669,7 @@ MERROR_RETVAL retrogui_destroy( struct RETROGUI* gui ) {
 
 #  ifndef RETROGXC_PRESENT
    if( RETROGUI_FLAGS_FONT_OWNED == (RETROGUI_FLAGS_FONT_OWNED & gui->flags) ) {
-      maug_mfree( &(gui->font_h) );
+      maug_mfree( gui->font_h );
    }
 #  endif /* !RETROGXC_PRESENT */
 
