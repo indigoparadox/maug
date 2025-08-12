@@ -795,6 +795,7 @@ INPUT                  = \
    src/retrofnt.h \
    src/retroglu.h \
    src/retrogui.h \
+   src/retrowin.h \
    src/retrofp.h \
    src/retrosft.h \
    src/retrocon.h \

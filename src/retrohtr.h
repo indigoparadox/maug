@@ -658,15 +658,12 @@ MERROR_RETVAL retrohtr_tree_size(
 
       retval = retrohtr_tree_gui( tree, &(parser->styler), &effect_style );
 
-      retrogui_lock( &(tree->gui) );
-
       if(
          /* Use the same ID for the node and control it creates. */
          MERROR_OK != retrogui_init_ctl(
             &ctl, RETROGUI_CTL_TYPE_BUTTON, node_idx )
       ) {
          error_printf( "could not initialize control!" );
-         retrogui_unlock( &(tree->gui) );
          goto cleanup;
       }
 
@@ -687,8 +684,6 @@ MERROR_RETVAL retrohtr_tree_size(
       debug_printf( RETROHTR_TRACE_LVL, "initialized control for INPUT..." );
 
       retrogui_push_ctl( &(tree->gui), &ctl );
-
-      retrogui_unlock( &(tree->gui) );
 
    } else if( 0 <= tag_idx && MHTML_TAG_TYPE_IMG == p_tag_iter->base.type ) {
 
@@ -1386,10 +1381,6 @@ MERROR_RETVAL retrohtr_tree_draw(
 
 cleanup:
 
-   if( retrogui_is_locked( &(tree->gui) ) ) {
-      retrogui_unlock( &(tree->gui) );
-   }
-
    if( mdata_vector_is_locked( &(parser->tags) ) ) {
       mdata_vector_unlock( &(parser->tags) );
    }
@@ -1410,9 +1401,7 @@ cleanup:
       RETROHTR_TREE_FLAG_GUI_ACTIVE ==
          (tree->flags & RETROHTR_TREE_FLAG_GUI_ACTIVE)
    ) {
-      retrogui_lock( &(tree->gui) );
       retrogui_redraw_ctls( &(tree->gui) );
-      retrogui_unlock( &(tree->gui) );
    }
 
    return retval;

@@ -8,6 +8,69 @@
  * \addtogroup maug_retrogui RetroGUI API
  * \{
  * \file retrogui.h
+ * \page maug_retrogui_example_page RetroGUI Example
+ *
+ * Here is a brief example of how to create a RETROGUI with a button, a
+ * LABEL, and a FILLBAR.
+ *
+ * This example presumes that gui_p EITHER points to a separate ::RETROGUI
+ * that has been created on the stack and had retrogui_init() called on it, OR
+ * it is set to win->gui_p from the \ref maug_retrowin_example_page.
+ *
+ *       / * These are arbitrary; they only must be unique! * /
+ *       # define EXAMPLE_IDC_LABEL    10
+ *       # define EXAMPLE_IDC_BUTTON   20
+ *       # define EXAMPLE_IDC_FILLBAR  30
+ *
+ *       / * Insert the label control. * /
+ *
+ *       retrogui_init_ctl( &ctl, RETROGUI_CTL_TYPE_LABEL, EXAMPLE_IDC_LABEL );
+ *
+ *       ctl.base.x = 10;
+ *       ctl.base.y = 10;
+ *       ctl.base.w = 100;
+ *       ctl.base.h = 20;
+ *       ctl.base.fg_color = RETROFLAT_COLOR_WHITE;
+ *       ctl.BUTTON.label = "Example\nLabel";
+ *       ctl.BUTTON.label_sz = maug_strlen( ctl.BUTTON.label );
+ *
+ *       retval = retrogui_push_ctl( gui_p, &ctl );
+ *       maug_cleanup_if_not_ok();
+ *
+ *       / * Insert the button control. * /
+ *
+ *       retrogui_init_ctl(
+ *          &ctl, RETROGUI_CTL_TYPE_BUTTON, EXAMPLE_IDC_BUTTON );
+ *
+ *       ctl.base.x = 10;
+ *       ctl.base.y = 40;
+ *       ctl.base.w = 60;
+ *       ctl.base.h = 20;
+ *       ctl.BUTTON.label = "Test";
+ *       ctl.BUTTON.label_sz = maug_strlen( ctl.BUTTON.label );
+ *
+ *       retval = retrogui_push_ctl( gui_p, &ctl );
+ *       maug_cleanup_if_not_ok();
+ *
+ *       / * Insert the fillbar control. * /
+ *
+ *       retrogui_init_ctl(
+ *          &ctl, RETROGUI_CTL_TYPE_FILLBAR, EXAMPLE_IDC_FILLBAR );
+ *
+ *       ctl.base.x = 10;
+ *       ctl.base.y = 70;
+ *       ctl.base.w = 100;
+ *       ctl.base.h = 10;
+ *       ctl.base.bg_color = RETROFLAT_COLOR_BLACK;
+ *       ctl.base.fg_color = RETROFLAT_COLOR_RED;
+ *
+ *       retval = retrogui_push_ctl( gui_p, &ctl );
+ *       maug_cleanup_if_not_ok();
+ *       
+ *       / * Set the level of the inserted fillbar to 50%. * /
+ *       retval = retrogui_set_ctl_level(
+ *          gui_p, EXAMPLE_IDC_FILLBAR, 50, 100, 0 );
+ *
  */
 
 #ifndef RETROFONT_PRESENT
@@ -110,16 +173,13 @@
 
 /*! \} */ /* maug_retrogui_cfg */
 
-/*! \brief RETROGUI::flags indicating controls should be redrawn. */
+/**
+ * \relates RETROGUI
+ * \brief RETROGUI::flags indicating controls should be redrawn.
+ */
 #define RETROGUI_FLAGS_DIRTY 0x01
 
 #define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
-
-#define retrogui_lock( gui )
-
-#define retrogui_unlock( gui )
-
-#define retrogui_is_locked( gui ) (mdata_vector_is_locked( &((gui)->ctls) ))
 
 #define _retrogui_copy_str( field, src_str, dest_ctl, str_tmp, str_sz ) \
    /* Sanity checking. */ \
@@ -348,6 +408,14 @@ MERROR_RETVAL retrogui_init_ctl(
 
 /**
  * \relates RETROGUI
+ * \brief Increment RETROGUI::focus, skipping elements that cannot hold focus.
+ * \warning This function is designed to be used via the retrogui_focus_next()
+ *          and retrogui_focus_prev() convenience functions!
+ * \param start Value to start from, either 0 for the first element or
+ *              ctl_count - 1 for the last.
+ * \param incr 1 or -1, depending on whether to increment forwards or backwards.
+ * \return The new value of RETROGUI::focus, or a negative value to be
+ *         converted to an error code with merror_sz_to_retval() on failure.
  */
 retrogui_idc_t retrogui_focus_iter(
    struct RETROGUI* gui, size_t start, ssize_t incr );
@@ -649,8 +717,6 @@ MERROR_RETVAL retrogui_push_listbox_item(
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
    MAUG_MHANDLE listbox_h_new = (MAUG_MHANDLE)NULL;
-
-   retrogui_lock( gui );
 
    debug_printf( RETROGUI_TRACE_LVL,
       "pushing item \"%s\" to listbox " SIZE_T_FMT "...", item, idc );
@@ -1693,7 +1759,7 @@ static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
    size_t i = 0;
    union RETROGUI_CTL* ctl = NULL;
 
-   assert( retrogui_is_locked( gui ) );
+   assert( mdata_vector_is_locked( &((gui)->ctls) ) );
 
    for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
@@ -1721,7 +1787,7 @@ static MERROR_RETVAL _retrogui_sz_ctl(
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
 
-   assert( retrogui_is_locked( gui ) );
+   assert( mdata_vector_is_locked( &((gui)->ctls) ) );
 
    debug_printf( RETROGUI_TRACE_LVL,
       "sizing control " SIZE_T_FMT " to: " SIZE_T_FMT "x" SIZE_T_FMT,
@@ -1770,7 +1836,7 @@ retrogui_idc_t retrogui_poll_ctls(
       return RETROGUI_IDC_NONE;
    }
 
-   assert( !retrogui_is_locked( gui ) );
+   assert( !mdata_vector_is_locked( &((gui)->ctls) ) );
    mdata_vector_lock( &(gui->ctls) );
 
 #  if defined( RETROGUI_NATIVE_WIN )
@@ -1943,7 +2009,7 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       return MERROR_OK;
    }
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -1988,7 +2054,7 @@ MERROR_RETVAL retrogui_pos_ctl(
    union RETROGUI_CTL* ctl = NULL;
    int autolock = 0;
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -2102,7 +2168,7 @@ MERROR_RETVAL retrogui_push_ctl(
    /* Now that append is done, lock the vector and grab a pointer to our
     * newly-pushed control to run some fixups on.
     */
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -2161,12 +2227,12 @@ MERROR_RETVAL retrogui_remove_ctl( struct RETROGUI* gui, retrogui_idc_t idc ) {
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
-   if( retrogui_is_locked( gui ) ) {
+   if( mdata_vector_is_locked( &((gui)->ctls) ) ) {
       error_printf( "GUI is locked!" );
       goto cleanup;
    }
 
-   assert( !retrogui_is_locked( gui ) );
+   assert( !mdata_vector_is_locked( &((gui)->ctls) ) );
    mdata_vector_lock( &(gui->ctls) );
 
    #define RETROGUI_CTL_TABLE_FREE_CTL( idx, c_name, c_fields ) \
@@ -2209,7 +2275,7 @@ MERROR_RETVAL retrogui_get_ctl_text(
    union RETROGUI_CTL* ctl = NULL;
    int autolock = 0;
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -2270,7 +2336,7 @@ ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
    MERROR_RETVAL retval = MERROR_OK;
    int autolock = 0;
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
    }
 
@@ -2314,7 +2380,7 @@ MERROR_RETVAL retrogui_set_ctl_text(
    MAUG_MHANDLE buffer_h = (MAUG_MHANDLE)NULL;
    va_list args;
 
-   assert( !retrogui_is_locked( gui ) );
+   assert( !mdata_vector_is_locked( &((gui)->ctls) ) );
    mdata_vector_lock( &(gui->ctls) );
 
    debug_printf( RETROGUI_TRACE_LVL,
@@ -2398,7 +2464,7 @@ MERROR_RETVAL retrogui_set_ctl_image(
    union RETROGUI_CTL* ctl = NULL;
    int autolock = 0;
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -2455,7 +2521,7 @@ MERROR_RETVAL retrogui_set_ctl_level(
    union RETROGUI_CTL* ctl = NULL;
    int autolock = 0;
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }
@@ -2536,7 +2602,7 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
-   if( retrogui_is_locked( gui ) ) {
+   if( mdata_vector_is_locked( &((gui)->ctls) ) ) {
       error_printf( "GUI is locked!" );
       goto cleanup;
    }
@@ -2545,7 +2611,7 @@ MERROR_RETVAL retrogui_free( struct RETROGUI* gui ) {
       goto cleanup;
    }
 
-   assert( !retrogui_is_locked( gui ) );
+   assert( !mdata_vector_is_locked( &((gui)->ctls) ) );
    mdata_vector_lock( &(gui->ctls) );
 
    #define RETROGUI_CTL_TABLE_FREE( idx, c_name, c_fields ) \
@@ -2584,7 +2650,7 @@ retrogui_idc_t retrogui_focus_iter(
       goto cleanup;
    }
 
-   if( !retrogui_is_locked( gui ) ) {
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
    }

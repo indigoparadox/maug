@@ -2,6 +2,50 @@
 #ifndef RETROW3D_H
 #define RETROW3D_H
 
+/**
+ * \addtogroup maug_retroflt
+ * \{
+ * \addtogroup maug_retrowin RetroFlat Window API
+ * \brief Builds on \ref maug_retrogui to allow for multiple windows.
+ * \{
+ * \file retrowin.h
+ * \page maug_retrowin_example_page RetroWin Example
+ *
+ *       struct RETROWIN* win = NULL;
+ *       struct MDATA_VECTOR win_stack;
+ *
+ *       retrowin_push_win(
+ *          NULL, / * This window should create and manage its own GUI. * /
+ *          &win_stack,
+ *          IDC_EXAMPLE_WIN, "unscii_8.hex",
+ *          / * Center * /
+ *          (retroflat_screen_w() >> 1) - (EXAMPLE_WIN_W >> 1),
+ *          / * Center * /
+ *          (retroflat_screen_h() >> 1) - (EXAMPLE_WIN_H >> 1),
+ *          EXAMPLE_WIN_W, EXAMPLE_WIN_H, RETROWIN_FLAG_BORDER_BLUE );
+ *
+ *       mdata_vector_lock( &win_stack );
+ *       win = mdata_vector_get_last( &win_stack, struct RETROWIN );
+ *       maug_cleanup_if_null_lock( struct RETROWIN*, win );
+ *
+ *       / * Lock macros will automatically fail to cleanup: label if something
+ *         * goes wrong, so no error handling here!
+ *         * /
+ *       retrowin_lock_gui( win );
+ *
+ *       / *** Pause Example to Insert Controls *** /
+ *
+ * For inserting controls into a ::RETROGUI, please see
+ * \ref maug_retrogui_example_page. Use win->gui_p as the GUI to lock
+ * and push controls onto, instead of the gui_p variable in that example.
+ *
+ *       / *** Resume Example *** /
+ *
+ *       / * Unlock window and window stack after controls have been added. * /
+ *       retrowin_unlock_gui( win );
+ *       mdata_vector_unlock( &win_stack );
+ */
+
 #ifndef RETROWIN_TRACE_LVL
 #  define RETROWIN_TRACE_LVL 0
 #endif /* !RETROWIN_TRACE_LVL */
@@ -77,9 +121,10 @@ void retrowin_free_win( struct RETROWIN* win );
 ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
 
 /**
- * \brief Create a new window.
- * \param gui Pointer to a preinitialized ::RETROGUI or NULL if the window
- *            should create and manage its own.
+ * \brief Create a new window on the given win_stack.
+ * \param gui Pointer to a ::RETROGUI already initialized with retrogui_init(),
+ *            or NULL if the window should create and manage its own RETROGUI.
+ * \param win_stack The vector on which windows are stored.
  * \param font_filename Font to load into the GUI. Only used if this window
  *                      will manage its own GUI.
  */
@@ -231,9 +276,7 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
             i, win->idc );
 
          /* Redraw the window bitmap, including controls. */
-         retrogui_lock( win->gui_p );
          retval = _retrowin_redraw_win( win );
-         retrogui_unlock( win->gui_p );
          maug_cleanup_if_not_ok();
       }
 
@@ -318,11 +361,9 @@ retrogui_idc_t retrowin_poll_win_stack(
          win->idc );
 
       retrowin_lock_gui( win );
-      retrogui_lock( win->gui_p );
 
       idc_out = retrogui_poll_ctls( win->gui_p, p_input, input_evt );
 
-      retrogui_unlock( win->gui_p );
       retrowin_unlock_gui( win );
 
       break;
@@ -581,6 +622,10 @@ cleanup:
 }
 
 #endif /* RETROW3D_C */
+
+/*! \} */ /* maug_retrowin */
+
+/*! \} */ /* maug_retroflt */
 
 #endif /* !RETROW3D_H */
 
