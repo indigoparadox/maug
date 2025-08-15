@@ -173,6 +173,10 @@ typedef uint32_t maug_ms_t;
 typedef unsigned long size_t;
 #endif
 
+#ifdef MAUG_OS_NDS
+typedef uint32_t GLuint;
+#endif /* MAUG_OS_NDS */
+
 #if defined( MAUG_ANCIENT_C ) || defined( MAUG_NO_STDLIB )
 typedef uint32_t off_t;
 typedef int32_t ssize_t;

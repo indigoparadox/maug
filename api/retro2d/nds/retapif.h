@@ -253,6 +253,7 @@ MERROR_RETVAL retroflat_init_platform(
    /* Random seed. */
    srand( time( NULL ) );
 
+#  ifndef RETROFLAT_BMP_TEX
    /* Setup color constants. */
 #  define RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT( idx, name_l, name_u, r, g, b, cgac, cgad ) \
       g_retroflat_state->palette[idx] = ARGB16( 1, \
@@ -260,6 +261,7 @@ MERROR_RETVAL retroflat_init_platform(
          120 > g ? 0 : g, \
          120 > b ? 0 : b );
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_NDS_RGBS_INIT )
+#  endif /* RETROFLAT_BMP_TEX */
 
    /* Force screen size. */
    args->screen_w = 256;
@@ -625,6 +627,7 @@ void retroflat_px(
    if( retroflat_screen_buffer() == target ) {
       px_ptr = bgGetGfxPtr( g_retroflat_state->platform.px_id );
       if( RETROFLAT_COLOR_BLACK == color_idx ) {
+         /* Use 0 alpha for transparency. */
          px_ptr[(y * target->w) + x] = ARGB16( 0, 0, 0, 0 );
       } else {
          px_ptr[(y * target->w) + x] = g_retroflat_state->palette[color_idx];
@@ -684,7 +687,7 @@ void retroflat_px(
 
 void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 
    *p_rgb = 0;
    *p_rgb |= g_retroflat_state->tex_palette[idx][0] & 0xff;
@@ -695,7 +698,7 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
    *p_rgb = g_retroflat_state->palette[idx];
 
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_BMP_TEX */
 
 }
 
@@ -711,7 +714,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
       "setting texture palette #%u to " X32_FMT "...",
       idx, rgb );
 
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 
    g_retroflat_state->tex_palette[idx][0] = rgb & 0xff;
    g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
@@ -724,7 +727,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    r = (rgb & 0xff0000) >> 16;
    g_retroflat_state->palette[idx] = ARGB16( 1, r, g, b );
 
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_BMP_TEX */
 
    return retval;
 }

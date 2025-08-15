@@ -21,6 +21,7 @@
 
 #if defined( RETROFLAT_BMP_TEX )
 typedef struct RETROFLAT_3DTEX retroflat_blit_t;
+typedef uint8_t RETROFLAT_TEX_COLOR_DEF[3];
 #else
 typedef struct RETROFLAT_BITMAP retroflat_blit_t;
 #endif

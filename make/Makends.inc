@@ -19,7 +19,7 @@ endif
 
 # Disable the keyboard and viewport/refresh functions, since the NDS doesn't
 # have those.
-DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_VIEWPORT_REFRESH
+DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_VIEWPORT_REFRESH -DRETROGL_NO_TEXTURE_LISTS -DRETROGL_NO_FOG
 
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
 
@@ -65,6 +65,11 @@ MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 ifeq ("$$(RETROFLAT_SOUND)","1")
 CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/sound/nds
 endif
+
+ifeq ("$$(RETROFLAT_OPENGL)","1")
+CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/retro3d/opengl
+endif
+
 
 ifeq ("$$(MVFS_AVAIL)","1")
 # The nds file API can use MVFS as a backup for non-images.

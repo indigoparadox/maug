@@ -139,7 +139,7 @@ struct RETROFLAT_BITMAP {
 #  endif /* !RETROFLAT_CONFIG_USE_FILE */
 
    /* SDL Colors */
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 typedef float RETROFLAT_COLOR_DEF[3];
 #else
 typedef SDL_Color RETROFLAT_COLOR_DEF;

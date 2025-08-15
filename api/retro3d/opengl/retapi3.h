@@ -6,7 +6,7 @@
 #  define RETROGL_WIN_Z -0.001
 #endif /* !RETROFLAT_GL_Z */
 
-#  if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_OS_NDS )
 #     include <GL/gl.h>
 #     include <GL/glu.h>
 #  endif /* RETROFLAT_OPENGL */
@@ -93,6 +93,7 @@ void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
 void retro3d_scene_init_bg(
    RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density
 ) {
+#  ifndef RETROGL_NO_FOG
    if( 0 < fog_draw_dist ) {
       /* Setup fog. */
       /* TODO: Move fog into retro3d APIs. */
@@ -104,6 +105,7 @@ void retro3d_scene_init_bg(
       glEnable( GL_FOG );
       debug_printf( 3, "fog enabled!" );
    }
+#  endif /* !RETROGL_NO_FOG */
 
    glClearColor(
       gc_retro3d_color_table[color][0],

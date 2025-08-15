@@ -1676,23 +1676,23 @@ defined( RETROVDP_C )
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
 
-#ifndef RETROFLAT_OPENGL
+#ifndef RETROFLAT_BMP_TEX
    /*! \brief Index of available colors, initialized on platform init. */
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
-#endif /* !RETROFLAT_OPENGL */
+#endif /* !RETROFLAT_BMP_TEX */
 
    retroflat_loop_iter  loop_iter;
    retroflat_loop_iter  frame_iter;
 
    struct RETROFLAT_PLATFORM platform;
 
-#  if defined( RETROFLAT_3D )
+#  if defined( RETROFLAT_BMP_TEX )
    /* This allows native colors to be used for things like glColor3fv while
     * these colors are used to manipulate textures passed through
-    * retroflat_bitmap_*()
+    * retroflat_bitmap_*().
     */
-   uint8_t tex_palette[RETROFLAT_COLORS_SZ][3];
-#  endif /* RETROFLAT_OPENGL */
+   RETROFLAT_TEX_COLOR_DEF tex_palette[RETROFLAT_COLORS_SZ];
+#  endif /* RETROFLAT_BMP_TEX */
 
    struct RETROFLAT_INPUT_STATE input;
 

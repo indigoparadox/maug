@@ -1220,7 +1220,7 @@ void retroflat_ellipse(
 
 void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 
    *p_rgb = 0;
    *p_rgb |= g_retroflat_state->tex_palette[idx][0] & 0xff;
@@ -1249,7 +1249,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
       "setting texture palette #%u to " X32_FMT "...",
       idx, rgb );
 
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 
    g_retroflat_state->tex_palette[idx][0] = rgb & 0xff;
    g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
