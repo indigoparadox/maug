@@ -230,7 +230,31 @@
 /*! \brief Unique identifying constant number for controls. */
 typedef int16_t retrogui_idc_t;
 
+#define RETROGUI_IDC_FMT "%d"
+
 #define RETROGUI_IDC_NONE 0
+
+/**
+ * \brief Value for retrogui_set_ctl_color() color_key indicating background.
+ */
+#define RETROGUI_COLOR_BG 1
+
+/**
+ * \brief Value for retrogui_set_ctl_color() color_key indicating foreground.
+ */
+#define RETROGUI_COLOR_FG 2
+
+/**
+ * \brief Value for retrogui_set_ctl_color() color_key indicating selection
+ *        background.
+ */
+#define RETROGUI_COLOR_SEL_BG 3
+
+/**
+ * \brief Value for retrogui_set_ctl_color() color_key indicating selection
+ *        foreground.
+ */
+#define RETROGUI_COLOR_SEL_FG 4
 
 /**
  * \addtogroup maug_retrogui_ctl RetroGUI Controls
@@ -401,6 +425,10 @@ MERROR_RETVAL retrogui_get_ctl_text(
 #endif /* !RETROGUI_NO_TEXTBOX */
 
 ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc );
+
+MERROR_RETVAL retrogui_set_ctl_color(
+   struct RETROGUI* gui, retrogui_idc_t idc, uint8_t color_key,
+   RETROFLAT_COLOR color_val );
 
 MERROR_RETVAL retrogui_set_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
@@ -746,12 +774,12 @@ MERROR_RETVAL retrogui_push_listbox_item(
    MAUG_MHANDLE listbox_h_new = (MAUG_MHANDLE)NULL;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "pushing item \"%s\" to listbox " SIZE_T_FMT "...", item, idc );
+      "pushing item \"%s\" to listbox " RETROGUI_IDC_FMT "...", item, idc );
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Adding item \"%s\" failed: Control missing!", item );
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not add item: %s", item );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -858,7 +886,7 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing listbox " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing listbox " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
@@ -1027,7 +1055,7 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
       g_retroflat_instance, NULL );
    if( (HWND)NULL == ctl->base.hwnd ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Could not create button " SIZE_T_FMT ": %s",
+         "Could not create button " RETROGUI_IDC_FMT ": %s",
          ctl->base.idc, ctl->BUTTON.label );
       retval = MERROR_GUI;
       goto cleanup;
@@ -1128,7 +1156,7 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing button " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing button " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    if( 2 < retroflat_screen_colors() ) {
@@ -1345,7 +1373,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
       g_retroflat_instance, NULL );
    if( (HWND)NULL == ctl->base.hwnd ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "Could not create textbox: " SIZE_T_FMT, ctl->base.idc );
+         "Could not create textbox: " RETROGUI_IDC_FMT, ctl->base.idc );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -1353,7 +1381,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
 #  else
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "clearing textbox " SIZE_T_FMT " buffer...", ctl->base.idc );
+      "clearing textbox " RETROGUI_IDC_FMT " buffer...", ctl->base.idc );
    assert( (MAUG_MHANDLE)NULL == ctl->TEXTBOX.text_h );
    ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
@@ -1362,7 +1390,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
    maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
    maug_cleanup_if_null_alloc( char*, ctl->TEXTBOX.text );
    debug_printf( RETROGUI_TRACE_LVL,
-      "clearing textbox " SIZE_T_FMT " buffer...", ctl->base.idc );
+      "clearing textbox " RETROGUI_IDC_FMT " buffer...", ctl->base.idc );
    maug_mzero( ctl->TEXTBOX.text, RETROGUI_CTL_TEXT_SZ_MAX + 1 );
    maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
 
@@ -1403,7 +1431,7 @@ static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing textbox " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing textbox " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
@@ -1539,7 +1567,7 @@ static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing label " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing label " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
@@ -1576,7 +1604,7 @@ static void retrogui_redraw_IMAGE(
       return;
    }
    debug_printf( RETROGUI_TRACE_LVL,
-      "redrawing image ctl " SIZE_T_FMT ", cache ID " SSIZE_T_FMT "...",
+      "redrawing image ctl " RETROGUI_IDC_FMT ", cache ID " SSIZE_T_FMT "...",
       ctl->base.idc, ctl->IMAGE.image_cache_id );
    retrogxc_blit_bitmap(
       gui->draw_bmp,
@@ -1661,7 +1689,7 @@ static MERROR_RETVAL retrogui_init_IMAGE( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing IMAGE " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing IMAGE " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    return retval;
 }
@@ -1767,7 +1795,7 @@ static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing fillbar " SIZE_T_FMT "...", ctl->base.idc );
+      "initializing fillbar " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    if( 2 < retroflat_screen_colors() ) {
@@ -1798,8 +1826,7 @@ static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
    }
 
    if( NULL == ctl ) {
-      debug_printf( RETROGUI_TRACE_LVL,
-         "could not find GUI item IDC " SIZE_T_FMT, idc );
+      error_printf( "could not find GUI item IDC " RETROGUI_IDC_FMT, idc );
    }
 
    return ctl;
@@ -1818,12 +1845,13 @@ static MERROR_RETVAL _retrogui_sz_ctl(
    assert( mdata_vector_is_locked( &((gui)->ctls) ) );
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "sizing control " SIZE_T_FMT " to: " SIZE_T_FMT "x" SIZE_T_FMT,
+      "sizing control " RETROGUI_IDC_FMT " to: " SIZE_T_FMT "x" SIZE_T_FMT,
       idc, max_w, max_h );
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
-      error_printf( "could not find control to size!" );
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not size item!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -1839,7 +1867,7 @@ static MERROR_RETVAL _retrogui_sz_ctl(
    }
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "sized control " SIZE_T_FMT " at " SIZE_T_FMT "x" SIZE_T_FMT "...",
+      "sized control " RETROGUI_IDC_FMT " at " SIZE_T_FMT "x" SIZE_T_FMT "...",
       ctl->base.idc, ctl->base.w, ctl->base.h );
 
 cleanup:
@@ -1878,7 +1906,8 @@ retrogui_idc_t retrogui_poll_ctls(
    g_retroflat_state->last_idc = 0;
    if( NULL == ctl ) {
       debug_printf( RETROGUI_TRACE_LVL,
-         "invalid IDC: " SIZE_T_FMT, gui->focus );
+         "invalid IDC: " RETROGUI_IDC_FMT, gui->focus );
+      goto cleanup;
    }
 
 #  ifndef  RETROGUI_NO_TEXTBOX
@@ -1924,7 +1953,7 @@ retrogui_idc_t retrogui_poll_ctls(
    ) {
       retrogui_focus_next( gui );
 
-      debug_printf( RETROGUI_TRACE_LVL, "next: " SSIZE_T_FMT, gui->focus );
+      debug_printf( RETROGUI_TRACE_LVL, "next: " RETROGUI_IDC_FMT, gui->focus );
 
       /* Cleanup after the menu. */
       *p_input = 0;
@@ -1934,7 +1963,7 @@ retrogui_idc_t retrogui_poll_ctls(
    ) {
       retrogui_focus_prev( gui );
 
-      debug_printf( RETROGUI_TRACE_LVL, "prev: " SSIZE_T_FMT, gui->focus );
+      debug_printf( RETROGUI_TRACE_LVL, "prev: " RETROGUI_IDC_FMT, gui->focus );
 
       /* Cleanup after the menu. */
       *p_input = 0;
@@ -1991,8 +2020,11 @@ retrogui_idc_t retrogui_poll_ctls(
 
       ctl = _retrogui_get_ctl_by_idc( gui, gui->focus );
       if( NULL == ctl ) {
+         /* This is a debug message because an invalid focus isn't necessarily
+          * a game-over situation...
+          */
          debug_printf( RETROGUI_TRACE_LVL,
-            "invalid IDC: " SIZE_T_FMT, gui->focus );
+            "invalid focus IDC: " RETROGUI_IDC_FMT, gui->focus );
          goto reset_debounce;
       }
 
@@ -2088,11 +2120,12 @@ MERROR_RETVAL retrogui_pos_ctl(
    }
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "moving control " SIZE_T_FMT " to: " SIZE_T_FMT ", " SIZE_T_FMT,
+      "moving control " RETROGUI_IDC_FMT " to: " SIZE_T_FMT ", " SIZE_T_FMT,
       idc, x, y );
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
       error_printf( "could not position control!" );
       retval = MERROR_GUI;
       goto cleanup;
@@ -2109,7 +2142,7 @@ MERROR_RETVAL retrogui_pos_ctl(
    }
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "moved control " SIZE_T_FMT " to " SIZE_T_FMT ", " SIZE_T_FMT
+      "moved control " RETROGUI_IDC_FMT " to " SIZE_T_FMT ", " SIZE_T_FMT
          " and sized to " SIZE_T_FMT "x" SIZE_T_FMT "...",
       ctl->base.idc, gui->x + ctl->base.x, gui->y + ctl->base.y,
          ctl->base.w, ctl->base.h );
@@ -2158,7 +2191,7 @@ MERROR_RETVAL retrogui_push_ctl(
       RETROFLAT_COLOR_NULL == ctl->base.bg_color
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "invalid background color specified for control " SIZE_T_FMT "!",
+         "invalid background color specified for control " RETROGUI_IDC_FMT "!",
          ctl->base.idc );
       retval = MERROR_GUI;
       goto cleanup;
@@ -2170,7 +2203,7 @@ MERROR_RETVAL retrogui_push_ctl(
       RETROFLAT_COLOR_NULL == ctl->base.fg_color
    ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error",
-         "invalid foreground color specified for control " SIZE_T_FMT "!",
+         "invalid foreground color specified for control " RETROGUI_IDC_FMT "!",
          ctl->base.idc );
       retval = MERROR_GUI;
       goto cleanup;
@@ -2180,12 +2213,12 @@ MERROR_RETVAL retrogui_push_ctl(
 
 #ifdef RETROGUI_TRACE_TOKENS
    debug_printf( RETROGUI_TRACE_LVL,
-      "pushing %s " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
+      "pushing %s " RETROGUI_IDC_FMT " to slot " SIZE_T_FMT "...",
       gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc,
       mdata_vector_ct( &(gui->ctls) ) );
 #else
    debug_printf( RETROGUI_TRACE_LVL,
-      "pushing control type %d, " SIZE_T_FMT " to slot " SIZE_T_FMT "...",
+      "pushing control type %d, " RETROGUI_IDC_FMT " to slot " SIZE_T_FMT "...",
       ctl->base.type, ctl->base.idc, mdata_vector_ct( &(gui->ctls) ) );
 #endif /* RETROGUI_TRACE_TOKENS */
 
@@ -2223,11 +2256,11 @@ MERROR_RETVAL retrogui_push_ctl(
    if( 0 == ctl->base.w || 0 == ctl->base.h ) {
 #ifdef RETROGUI_TRACE_TOKENS
       debug_printf( RETROGUI_TRACE_LVL,
-         "determining size for new %s control " SIZE_T_FMT "...",
+         "determining size for new %s control " RETROGUI_IDC_FMT "...",
          gc_retrogui_ctl_names[ctl->base.type], ctl->base.idc );
 #else
       debug_printf( RETROGUI_TRACE_LVL,
-         "determining size for new control type %d, " SIZE_T_FMT "...",
+         "determining size for new control type %d, " RETROGUI_IDC_FMT "...",
          ctl->base.type, ctl->base.idc );
 #endif /* RETROGUI_TRACE_TOKENS */
       retval = _retrogui_sz_ctl(
@@ -2331,6 +2364,9 @@ MERROR_RETVAL retrogui_get_ctl_text(
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not get control text!" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
    
@@ -2391,6 +2427,9 @@ ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not get control selection!" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -2417,6 +2456,49 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL retrogui_set_ctl_color(
+   struct RETROGUI* gui, retrogui_idc_t idc, uint8_t color_key,
+   RETROFLAT_COLOR color_val
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL* ctl = NULL;
+
+   assert( !mdata_vector_is_locked( &((gui)->ctls) ) );
+   mdata_vector_lock( &(gui->ctls) );
+
+   debug_printf( RETROGUI_TRACE_LVL,
+      "setting control " RETROGUI_IDC_FMT " color %u to: %d",
+      idc, color_key, color_val );
+
+   /* Figure out the control to update. */
+   ctl = _retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not set control color!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   switch( color_key ) {
+   case RETROGUI_COLOR_BG: ctl->base.bg_color = color_val; break;
+   case RETROGUI_COLOR_FG: ctl->base.fg_color = color_val; break;
+   case RETROGUI_COLOR_SEL_BG: ctl->base.sel_bg = color_val; break;
+   case RETROGUI_COLOR_SEL_FG: ctl->base.sel_fg = color_val; break;
+
+   default:
+      error_printf( "invalid color key specified: %u", color_key );
+      break;
+   }
+
+cleanup:
+
+   mdata_vector_unlock( &(gui->ctls) );
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL retrogui_set_ctl_text(
    struct RETROGUI* gui, retrogui_idc_t idc, size_t buffer_sz,
    const char* fmt, ...
@@ -2433,11 +2515,13 @@ MERROR_RETVAL retrogui_set_ctl_text(
    mdata_vector_lock( &(gui->ctls) );
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "setting control " SIZE_T_FMT " text to: %s", idc, fmt );
+      "setting control " RETROGUI_IDC_FMT " text to: %s", idc, fmt );
 
    /* Figure out the control to update. */
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not set control text!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -2519,11 +2603,13 @@ MERROR_RETVAL retrogui_set_ctl_image(
    }
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "setting control " SIZE_T_FMT " image to: %s", idc, path );
+      "setting control " RETROGUI_IDC_FMT " image to: %s", idc, path );
 
    /* Figure out the control to update. */
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not set control image!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -2576,11 +2662,13 @@ MERROR_RETVAL retrogui_set_ctl_level(
    }
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "setting control " SIZE_T_FMT " level to: %u", idc, level  );
+      "setting control " RETROGUI_IDC_FMT " level to: %u", idc, level  );
 
    /* Figure out the control to update. */
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
    if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not set control level!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -2616,7 +2704,7 @@ MERROR_RETVAL retrogui_init_ctl(
    MERROR_RETVAL retval = MERROR_OK;
 
    debug_printf( RETROGUI_TRACE_LVL,
-      "initializing control base " SIZE_T_FMT "...", idc );
+      "initializing control base " RETROGUI_IDC_FMT "...", idc );
 
    maug_mzero( ctl, sizeof( union RETROGUI_CTL ) );
 
@@ -2697,7 +2785,7 @@ retrogui_idc_t retrogui_focus_iter(
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    union RETROGUI_CTL* ctl = NULL;
    MERROR_RETVAL retval = MERROR_OK;
-   ssize_t i = 0;
+   retrogui_idc_t i = 0;
    ssize_t i_before = -1; /* Index of the current selected IDC. */
    int autolock = 0;
 
@@ -2739,7 +2827,8 @@ retrogui_idc_t retrogui_focus_iter(
          ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
          if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
             /* Skip NON-SELECTABLE items! */
-            debug_printf( 1, "skipping: " SSIZE_T_FMT, i );
+            debug_printf(
+               RETROGUI_TRACE_LVL, "skipping: " RETROGUI_IDC_FMT, i );
             continue;
          } else {
             idc_out = ctl->base.idc;
@@ -2754,7 +2843,8 @@ retrogui_idc_t retrogui_focus_iter(
          ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
          if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
             /* Skip NON-SELECTABLE items! */
-            debug_printf( 1, "skipping: " SSIZE_T_FMT, i );
+            debug_printf(
+               RETROGUI_TRACE_LVL, "skipping: " RETROGUI_IDC_FMT, i );
             continue;
          } else {
             idc_out = ctl->base.idc;
@@ -2764,7 +2854,7 @@ retrogui_idc_t retrogui_focus_iter(
       }
 
    } else {
-      error_printf( "invalid focus: " SSIZE_T_FMT, i );
+      error_printf( "invalid focus: " RETROGUI_IDC_FMT, i );
 
    }
 
@@ -2781,7 +2871,7 @@ cleanup:
       mdata_vector_unlock( &(gui->ctls) );
    }
 
-   debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " SIZE_T_FMT, idc_out );
+   debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " RETROGUI_IDC_FMT, idc_out );
 
    return idc_out;
 }
