@@ -32,6 +32,9 @@ struct RETRO3D_PROJ_ARGS {
 };
 
 /**
+ * \addtogroup maug_retro3d_tex
+ * \{
+ */
 
 /**
  * \brief Flag for retro3d_texture_platform_refresh() indicating the platform
@@ -50,6 +53,8 @@ struct RETRO3D_PROJ_ARGS {
  *        deactivate the current texture, rather than activating a new one.
  */
 #define RETRO3D_TEX_FLAG_DEACTIVATE 0x04
+
+/*! \} */ /* maug_retro3d_tex */
 
 /**
  * \relates RETRO3D_PROJ_ARGS
@@ -85,7 +90,7 @@ void retro3d_platform_shutdown();
 
 /**
  * \addtogroup maug_retro3d_scene Retro3D Scene Graph
- * \brief Basic scene graph API.
+ * \brief Basic 3D scene graph API.
  * \{
  */
 
@@ -148,17 +153,16 @@ void retro3d_scene_rotate( mfix_t x, mfix_t y, mfix_t z );
 void retro3d_vx( mfix_t x, mfix_t y, mfix_t z, mfix_t s, mfix_t t );
 
 /**
- * \brief Begins drawing a polygon/triangle. Follow with three calls to
- *        retro3d_vx() and a call to retro3d_tri_end().
- *
- * \note This will use the last material/color specified with
- *       retro3d_tri_begin_rgb().
+ * \brief Begins drawing a polygon/triangle using predefined
+ *        \ref maug_retroflt_color. Follow with three calls to retro3d_vx()
+ *        and a call to retro3d_tri_end().
  */
 void retro3d_tri_begin( RETROFLAT_COLOR color, uint8_t flags );
 
 /**
- * \brief Begins drawing a polygon/triangle with the given colors. Follow with
- *        three calls to retro3d_vx() and a call to retro3d_tri_end().
+ * \brief Begins drawing a polygon/triangle with the given custom RGB color.
+ *        Follow with three calls to retro3d_vx() and a call to
+ *        retro3d_tri_end().
  */
 void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags );
 
