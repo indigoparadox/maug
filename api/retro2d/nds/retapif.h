@@ -405,8 +405,7 @@ int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
 
 #if defined( RETROFLAT_OPENGL )
-      retval = retroglu_draw_lock( bmp );
-         debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
 #endif /* RETROFLAT_OPENGL */
 
       bmp->flags |= RETROFLAT_NDS_FLAG_BMP_LOCKED;
@@ -431,8 +430,7 @@ int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
 
 #if defined( RETROFLAT_OPENGL )
-      retval = retroglu_draw_lock( bmp );
-         debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_release()!" );
+      debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_release()!" );
 #endif /* RETROFLAT_OPENGL */
 
       bmp->flags &= ~RETROFLAT_NDS_FLAG_BMP_LOCKED;
