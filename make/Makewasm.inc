@@ -30,9 +30,9 @@ ifneq ("$$(AUDIO_FILES)","")
 	EMCC_FLAGS_SDL += --use-preload-plugins $$(addprefix --preload-file ,$$(AUDIO_FILES))
 endif
 
-ifeq ("$$(OPENGL)","1")
+ifeq ("$$(RETROFLAT_OPENGL)","1")
    SDL_VER_WASM := 1
-	EMCC_FLAGS_SDL += -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=1 -DRETROFLAT_OPENGL
+	EMCC_FLAGS_SDL += -s LEGACY_GL_EMULATION=1 -s GL_UNSAFE_OPTS=1 -I$(MAUG_ROOT)/api/retro3d/opengl -DRETRO3D_NO_NORMALS
 endif
 
 ifeq ("$$(SDL_VER_WASM)","1")

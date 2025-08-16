@@ -260,6 +260,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
    if( RETRO3D_TRI_FLAG_NORMAL_NEG == (RETRO3D_TRI_FLAG_NORMAL_NEG & flags) ) {
       normal_val *= -1;
    }
+#ifndef RETRO3D_NO_NORMALS
    if( RETRO3D_TRI_FLAG_NORMAL_X == (RETRO3D_TRI_FLAG_NORMAL_X & flags) ) {
       glNormal3i( normal_val, 0, 0 );
    } else if(
@@ -271,6 +272,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
    ) {
       glNormal3i( 0, 0, normal_val );
    }
+#endif /* !RETRO3D_NO_NORMALS */
    if( 0 <= r ) {
       glColor3f( r, g, b );
    }
