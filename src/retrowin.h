@@ -173,7 +173,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 0, 0,
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 0, 0,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
          0 );
@@ -201,7 +201,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 2, 2,
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 2, 2,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ) - 4,
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 4,
          0 );
@@ -213,7 +213,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 0, 0,
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 0, 0,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
          0 );

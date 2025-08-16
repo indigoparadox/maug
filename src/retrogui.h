@@ -64,7 +64,7 @@
  *       ctl.base.y = 70;
  *       ctl.base.w = 100;
  *       ctl.base.h = 10;
- *       ctl.base.bg_color = RETROFLAT_COLOR_DARKBLUE;
+ *       ctl.base.bg_color = RETROGUI_COLOR_BORDER;
  *       ctl.base.fg_color = RETROFLAT_COLOR_RED;
  *
  *       retval = retrogui_push_ctl( gui_p, &ctl );
@@ -85,6 +85,15 @@
 #ifndef RETROGUI_TRACE_LVL
 #  define RETROGUI_TRACE_LVL 0
 #endif /* !RETROGUI_TRACE_LVL */
+
+#ifndef RETROGUI_COLOR_BORDER
+/**
+ * \brief RetroGUI will try to use this color on non-monochrome systems instead
+ *        of black to draw things like borders, in order to coexist with
+ *        window transparency (which uses black).
+ */
+#  define RETROGUI_COLOR_BORDER RETROFLAT_COLOR_DARKBLUE
+#endif /* !RETROGUI_COLOR_BORDER */
 
 #ifndef RETROGUI_CTL_TEXT_SZ_MAX
 /**
@@ -892,7 +901,7 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
    ctl->base.sel_fg = RETROFLAT_COLOR_WHITE;
    if( 2 < retroflat_screen_colors() ) {
       ctl->base.sel_bg = RETROFLAT_COLOR_BLUE;
-      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+      ctl->base.fg_color = RETROGUI_COLOR_BORDER;
    } else {
       ctl->base.sel_bg = RETROFLAT_COLOR_BLACK;
       ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
@@ -948,7 +957,7 @@ static void retrogui_redraw_BUTTON(
    RETROFLAT_COLOR fg_color = ctl->base.fg_color;
    RETROFLAT_COLOR bg_color = ctl->base.bg_color;
    RETROFLAT_COLOR push_shadow_color = RETROFLAT_COLOR_DARKGRAY;
-   RETROFLAT_COLOR border_color = RETROFLAT_COLOR_DARKBLUE;
+   RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
 
    if( ctl->base.idc == gui->focus ) {
       /* Assign selected color if focused. */
@@ -1162,7 +1171,7 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
       "initializing button " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    if( 2 < retroflat_screen_colors() ) {
-      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+      ctl->base.fg_color = RETROGUI_COLOR_BORDER;
       ctl->base.bg_color = RETROFLAT_COLOR_GRAY;
       ctl->base.sel_fg = RETROFLAT_COLOR_BLUE;
       ctl->base.sel_bg = RETROFLAT_COLOR_GRAY;
@@ -1270,7 +1279,7 @@ static void retrogui_redraw_TEXTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    RETROFLAT_COLOR shadow_color = RETROFLAT_COLOR_DARKGRAY;
-   RETROFLAT_COLOR border_color = RETROFLAT_COLOR_DARKBLUE;
+   RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
    retroflat_pxxy_t cursor_x = 0;
 
    /* Adjust shadow colors for monochrome. */
@@ -1443,7 +1452,7 @@ static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
    ctl->base.sel_bg = RETROFLAT_COLOR_WHITE;
    if( 2 < retroflat_screen_colors() ) {
       ctl->base.sel_fg = RETROFLAT_COLOR_BLUE;
-      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+      ctl->base.fg_color = RETROGUI_COLOR_BORDER;
    } else {
       ctl->base.sel_fg = RETROFLAT_COLOR_BLACK;
       ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
@@ -1577,7 +1586,7 @@ static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
       "initializing label " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    if( 2 < retroflat_screen_colors() ) {
-      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+      ctl->base.fg_color = RETROGUI_COLOR_BORDER;
    } else {
       ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    }
@@ -1809,7 +1818,7 @@ static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
       "initializing fillbar " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
    if( 2 < retroflat_screen_colors() ) {
-      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+      ctl->base.fg_color = RETROGUI_COLOR_BORDER;
       ctl->base.bg_color = RETROFLAT_COLOR_GRAY;
    } else {
       ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
