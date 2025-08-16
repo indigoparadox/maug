@@ -64,7 +64,7 @@
  *       ctl.base.y = 70;
  *       ctl.base.w = 100;
  *       ctl.base.h = 10;
- *       ctl.base.bg_color = RETROFLAT_COLOR_BLACK;
+ *       ctl.base.bg_color = RETROFLAT_COLOR_DARKBLUE;
  *       ctl.base.fg_color = RETROFLAT_COLOR_RED;
  *
  *       retval = retrogui_push_ctl( gui_p, &ctl );
@@ -888,13 +888,14 @@ static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing listbox " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
-   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
    ctl->base.sel_fg = RETROFLAT_COLOR_WHITE;
    if( 2 < retroflat_screen_colors() ) {
       ctl->base.sel_bg = RETROFLAT_COLOR_BLUE;
+      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
    } else {
       ctl->base.sel_bg = RETROFLAT_COLOR_BLACK;
+      ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    }
 
    return retval;
@@ -947,6 +948,7 @@ static void retrogui_redraw_BUTTON(
    RETROFLAT_COLOR fg_color = ctl->base.fg_color;
    RETROFLAT_COLOR bg_color = ctl->base.bg_color;
    RETROFLAT_COLOR push_shadow_color = RETROFLAT_COLOR_DARKGRAY;
+   RETROFLAT_COLOR border_color = RETROFLAT_COLOR_DARKBLUE;
 
    if( ctl->base.idc == gui->focus ) {
       /* Assign selected color if focused. */
@@ -958,18 +960,19 @@ static void retrogui_redraw_BUTTON(
       bg_color = ctl->base.sel_bg;
    }
 
+   /* Figure out push shadow color for current color depth. */
+   if( 2 >= retroflat_screen_colors() ) {
+      push_shadow_color = RETROFLAT_COLOR_BLACK;
+      border_color = RETROFLAT_COLOR_BLACK;
+   }
+
    retroflat_2d_rect(
       gui->draw_bmp, bg_color, ctl->base.x, ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
-   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, 0 );
-
-   /* Figure out push shadow color for current color depth. */
-   if( 2 >= retroflat_screen_colors() ) {
-      push_shadow_color = RETROFLAT_COLOR_BLACK;
-   }
 
    /* Draw the push shadows on top/left or bottom/right, depending on pushed
     * status.
@@ -1158,12 +1161,13 @@ static MERROR_RETVAL retrogui_init_BUTTON( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing button " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
-   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    if( 2 < retroflat_screen_colors() ) {
+      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
       ctl->base.bg_color = RETROFLAT_COLOR_GRAY;
       ctl->base.sel_fg = RETROFLAT_COLOR_BLUE;
       ctl->base.sel_bg = RETROFLAT_COLOR_GRAY;
    } else {
+      ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
       ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
       ctl->base.sel_fg = RETROFLAT_COLOR_WHITE;
       ctl->base.sel_bg = RETROFLAT_COLOR_BLACK;
@@ -1266,11 +1270,13 @@ static void retrogui_redraw_TEXTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    RETROFLAT_COLOR shadow_color = RETROFLAT_COLOR_DARKGRAY;
+   RETROFLAT_COLOR border_color = RETROFLAT_COLOR_DARKBLUE;
    retroflat_pxxy_t cursor_x = 0;
 
    /* Adjust shadow colors for monochrome. */
    if( 2 >= retroflat_screen_colors() ) {
       shadow_color = RETROFLAT_COLOR_BLACK;
+      border_color = RETROFLAT_COLOR_BLACK;
    }
 
 #  if defined( RETROGUI_NATIVE_WIN )
@@ -1283,12 +1289,12 @@ static void retrogui_redraw_TEXTBOX(
 
    /* Draw chiselled inset border. */
 
-   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, ctl->base.w, 2,
       RETROFLAT_FLAGS_FILL );
 
-   retroflat_2d_rect( gui->draw_bmp, RETROFLAT_COLOR_BLACK,
+   retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, 2, ctl->base.h,
       RETROFLAT_FLAGS_FILL );
@@ -1433,13 +1439,14 @@ static MERROR_RETVAL retrogui_init_TEXTBOX( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing textbox " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
-   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
    ctl->base.sel_bg = RETROFLAT_COLOR_WHITE;
    if( 2 < retroflat_screen_colors() ) {
       ctl->base.sel_fg = RETROFLAT_COLOR_BLUE;
+      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
    } else {
       ctl->base.sel_fg = RETROFLAT_COLOR_BLACK;
+      ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    }
 
    return retval;
@@ -1569,7 +1576,11 @@ static MERROR_RETVAL retrogui_init_LABEL( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing label " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
-   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   if( 2 < retroflat_screen_colors() ) {
+      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
+   } else {
+      ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
+   }
    ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
 
    return retval;
@@ -1797,10 +1808,11 @@ static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing fillbar " RETROGUI_IDC_FMT "...", ctl->base.idc );
 
-   ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
    if( 2 < retroflat_screen_colors() ) {
+      ctl->base.fg_color = RETROFLAT_COLOR_DARKBLUE;
       ctl->base.bg_color = RETROFLAT_COLOR_GRAY;
    } else {
+      ctl->base.fg_color = RETROFLAT_COLOR_BLACK;
       ctl->base.bg_color = RETROFLAT_COLOR_WHITE;
    }
 
