@@ -6,6 +6,8 @@
 #include <mfile.h>
 
 /**
+ * \addtogroup maug_retroflt
+ * \{
  * \addtogroup retrotile RetroTile API
  * \brief Functions and structures for working with tilemaps/grids.
  * \{
@@ -2289,6 +2291,8 @@ RETROTILE_CLASS_TABLE( RETROTILE_CLASS_TABLE_CONSTS )
 #endif /* RETROTIL_C */
 
 /*! \} */ /* retrotile */
+
+/*! \} */ /* maug_retroflt */
 
 #endif /* !RETROTIL_H */
 

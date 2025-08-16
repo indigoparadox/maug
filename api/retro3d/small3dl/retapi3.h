@@ -7,7 +7,7 @@ void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
 
 /* === */
 
-void retro3d_scene_init_bg(
+void retro3d_init_bg(
    RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density
 ) {
 }

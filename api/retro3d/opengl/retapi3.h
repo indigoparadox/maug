@@ -23,6 +23,7 @@ RETROFLAT_COLOR_TABLE( RETRO3D_COLOR_TABLE )
 struct RETROFLAT_BITMAP g_bmp_wtf;
 
 static int gs_tri_vxs_drawn = -1;
+static size_t gs_scene_tris = 0;
 
 void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
    float aspect_ratio = 0;
@@ -90,7 +91,7 @@ void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args ) {
 
 /* === */
 
-void retro3d_scene_init_bg(
+void retro3d_init_bg(
    RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density
 ) {
 #  ifndef RETROGL_NO_FOG
@@ -180,9 +181,11 @@ void retro3d_scene_init() {
 
 /* === */
 
-void retro3d_scene_complete() {
+size_t retro3d_scene_complete() {
    glPopMatrix();
    glFlush();
+   gs_scene_tris = 0;
+   return gs_scene_tris;
 }
 
 /* === */
@@ -282,6 +285,7 @@ void retro3d_tri_end() {
    debug_printf( RETRO3D_TRACE_LVL, "triangle end!" );
    gs_tri_vxs_drawn = -1;
    glEnd();
+   gs_scene_tris++;
 }
 
 /* === */
