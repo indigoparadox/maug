@@ -555,7 +555,7 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 /**
  * \relates RETROFLAT_BITMAP
  */
-#define RETROFLAT_FLAGS_LOCK     0x01
+#define RETROFLAT_FLAGS_LOCK     0x08
 
 #define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
 

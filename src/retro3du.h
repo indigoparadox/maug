@@ -327,6 +327,7 @@ MERROR_RETVAL retro3d_texture_create(
          SIZE_T_FMT "). This may not work on Win32!", h );
    }
 
+   tex->flags = flags;
    tex->w = w;
    tex->h = h;
    /* TODO: Overflow checking. */
@@ -339,10 +340,20 @@ MERROR_RETVAL retro3d_texture_create(
    maug_mlock( tex->bytes_h, tex->bytes );
    maug_cleanup_if_null_lock( uint8_t*, tex->bytes );
 
-   /* TODO: Overflow checking. */
-   maug_mzero(
-      tex->bytes,
-      tex->w * tex->h * sizeof( uint32_t ) );
+   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      /* We can just blast the memory with zeros. */
+      /* TODO: Overflow checking. */
+      maug_mzero(
+         tex->bytes,
+         tex->w * tex->h * sizeof( uint32_t ) );
+   } else {
+      /* For a transparent bitmap, we need to initialize each pixel so the
+       * alpha is properly set.
+       */
+      retroflat_2d_rect(
+         tex, RETROFLAT_COLOR_BLACK, 0, 0, tex->w, tex->h,
+         RETROFLAT_FLAGS_FILL );
+   }
 
    retval = retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_GENERATE );
 
@@ -403,8 +414,15 @@ void retro3d_texture_px(
    tex->bytes[(((y * tex->w) + x) * 4) + 2] =
       g_retroflat_state->tex_palette[color_idx][2];
 
-   /* Set pixel as opaque. */
-   tex->bytes[(((y * tex->w) + x) * 4) + 3] = 0xff;
+   if(
+      RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & tex->flags) ||
+      RETROFLAT_COLOR_BLACK != color_idx
+   ) {
+      /* Set pixel as opaque. */
+      tex->bytes[(((y * tex->w) + x) * 4) + 3] = 0xff;
+   } else {
+      tex->bytes[(((y * tex->w) + x) * 4) + 3] = 0x00;
+   }
 }
 
 #endif /* RETROFLAT_BMP_TEX */

@@ -151,6 +151,15 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & win->flags) );
 
    switch( RETROWIN_FLAG_BORDER_MASK & win->flags ) {
+   case RETROWIN_FLAG_BORDER_NONE:
+      retroflat_2d_rect(
+         win->gui_p->draw_bmp, RETROFLAT_COLOR_BLACK,
+         0, 0,
+         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
+         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+         RETROFLAT_FLAGS_FILL );
+      break;
+
    case RETROWIN_FLAG_BORDER_GRAY:
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
@@ -162,7 +171,9 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
 
       /* Draw the border. */
       retroflat_2d_rect(
-         win->gui_p->draw_bmp, RETROFLAT_COLOR_BLACK, 0, 0,
+         win->gui_p->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 0, 0,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
          0 );
@@ -188,7 +199,9 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
 
       /* Draw the border. */
       retroflat_2d_rect(
-         win->gui_p->draw_bmp, RETROFLAT_COLOR_BLACK, 2, 2,
+         win->gui_p->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 2, 2,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ) - 4,
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 4,
          0 );
@@ -198,7 +211,9 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 2,
          0 );
       retroflat_2d_rect(
-         win->gui_p->draw_bmp, RETROFLAT_COLOR_BLACK, 0, 0,
+         win->gui_p->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROFLAT_COLOR_DARKBLUE : RETROFLAT_COLOR_BLACK, 0, 0,
          retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
          retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
          0 );
@@ -489,8 +504,7 @@ ssize_t retrowin_push_win(
       maug_cleanup_if_not_ok();
    }
 
-   retval = retroflat_2d_create_bitmap(
-      w, h, &(win.gui_bmp), RETROFLAT_FLAGS_OPAQUE );
+   retval = retroflat_2d_create_bitmap( w, h, &(win.gui_bmp), 0 );
    maug_cleanup_if_not_ok();
 
    win.flags |= RETROWIN_FLAG_INIT_BMP;
