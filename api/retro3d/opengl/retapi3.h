@@ -147,11 +147,6 @@ MERROR_RETVAL retro3d_platform_init() {
    glEnable( GL_CULL_FACE );
    glShadeModel( GL_SMOOTH );
 
-   /* Setup texture transparency. */
-   glEnable( GL_TEXTURE_2D );
-   glEnable( GL_BLEND );
-   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
    /* Setup depth buffer so triangles in back are hidden. */
    glEnable( GL_DEPTH_TEST );
    glDepthMask( GL_TRUE );
@@ -260,7 +255,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
    if( RETRO3D_TRI_FLAG_NORMAL_NEG == (RETRO3D_TRI_FLAG_NORMAL_NEG & flags) ) {
       normal_val *= -1;
    }
-#ifndef RETRO3D_NO_NORMALS
+#ifndef RETROGL_NO_NORMALS
    if( RETRO3D_TRI_FLAG_NORMAL_X == (RETRO3D_TRI_FLAG_NORMAL_X & flags) ) {
       glNormal3i( normal_val, 0, 0 );
    } else if(
@@ -272,7 +267,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
    ) {
       glNormal3i( 0, 0, normal_val );
    }
-#endif /* !RETRO3D_NO_NORMALS */
+#endif /* !RETROGL_NO_NORMALS */
    if( 0 <= r ) {
       glColor3f( r, g, b );
    }
@@ -417,6 +412,13 @@ MERROR_RETVAL retro3d_texture_activate( retroflat_blit_t* tex, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( RETRO3D_TEX_FLAG_DEACTIVATE != (RETRO3D_TEX_FLAG_DEACTIVATE & flags) ) {
+      /* Activate texturing, and this texture specifically. */
+      glEnable( GL_TEXTURE_2D );
+
+      /* Setup texture transparency. */
+      glEnable( GL_BLEND );
+      glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+ 
 #  ifndef RETROGL_NO_TEXTURE_LISTS
       /* Texture lists are available and should be updated by
        * retro3d_texture_platform_refresh(), so just select the texture ID.
@@ -439,6 +441,7 @@ MERROR_RETVAL retro3d_texture_activate( retroflat_blit_t* tex, uint8_t flags ) {
       glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
    } else {
+      /* Deactivate this texture, and texturing in general. */
 #  ifndef RETROGL_NO_TEXTURE_LISTS
       /* Texture lists are available, so bind the 0 texture. */
       debug_printf( RETRO3D_TRACE_LVL, "unbinding texture %d...", tex->id );
@@ -450,6 +453,9 @@ MERROR_RETVAL retro3d_texture_activate( retroflat_blit_t* tex, uint8_t flags ) {
       /* TODO: Disable texture? */
       maug_munlock( tex->bytes_h, tex->bytes );
 #  endif /* !RETROGL_NO_TEXTURE_LISTS */
+
+      glDisable( GL_BLEND );
+      glDisable( GL_TEXTURE_2D );
    }
 
 cleanup:
