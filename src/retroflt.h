@@ -2627,8 +2627,16 @@ int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
 
 #  else
 
-   args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
-   args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
+   if( 0 == args->screen_w ) {
+      args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
+      debug_printf( 1, "setting arg screen_w to default: %d",
+         args->screen_w );
+   }
+   if( 0 == args->screen_h ) {
+      args->screen_h = RETROFLAT_DEFAULT_SCREEN_H;
+      debug_printf( 1, "setting arg screen_h to default: %d",
+         args->screen_h );
+   }
    args->joystick_id = -1;
 
 #  endif /* !RETROFLAT_NO_CLI */
