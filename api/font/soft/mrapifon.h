@@ -383,6 +383,12 @@ MERROR_RETVAL retrofont_string_sz(
       p_out_h = &out_h;
    }
 
+   /* Reset output vars to zero. */
+   *p_out_h = 0;
+   if( NULL == p_out_w ) {
+      *p_out_w = 0;
+   }
+
    if( 0 == str_sz ) {
       str_sz = maug_strlen( str );
    }

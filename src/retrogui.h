@@ -129,6 +129,24 @@
 #  define RETROGUI_KEY_PREV RETROFLAT_KEY_UP
 #endif /* !RETROGUI_KEY_PREV */
 
+#ifndef RETROGUI_KEY_SEL_NEXT
+/**
+ * \brief Overrideable constant defining the keyboard key (RETROFLAT_KEY_*)
+ *        that will select the next sub-item of the current control (e.g. a
+ *        listbox.
+ */
+#  define RETROGUI_KEY_SEL_NEXT RETROFLAT_KEY_RIGHT
+#endif /* !RETROGUI_KEY_SEL_NEXT */
+
+#ifndef RETROGUI_KEY_SEL_PREV
+/**
+ * \brief Overrideable constant defining the keyboard key (RETROFLAT_KEY_*)
+ *        that will select the previous sub-item of the current control (e.g. a
+ *        listbox.
+ */
+#  define RETROGUI_KEY_SEL_PREV RETROFLAT_KEY_LEFT
+#endif /* !RETROGUI_KEY_SEL_PREV */
+
 #ifndef RETROGUI_PAD_ACTIVATE
 /**
  * \brief Overrideable constant defining the gamepad button (RETROFLAT_PAD_*)
@@ -155,6 +173,24 @@
  */
 #  define RETROGUI_PAD_PREV RETROFLAT_PAD_UP
 #endif /* !RETROGUI_PAD_PREV */
+
+#ifndef RETROGUI_PAD_SEL_NEXT
+/**
+ * \brief Overrideable constant defining the gamepad button (RETROGUI_PAD_*)
+ *        that will select the next sub-item of the current control (e.g. a
+ *        listbox.
+ */
+#  define RETROGUI_PAD_SEL_NEXT RETROFLAT_PAD_RIGHT
+#endif /* !RETROGUI_PAD_SEL_NEXT */
+
+#ifndef RETROGUI_PAD_SEL_PREV
+/**
+ * \brief Overrideable constant defining the gamepad button (RETROGUI_PAD_*)
+ *        that will select the previous sub-item of the current control (e.g. a
+ *        listbox.
+ */
+#  define RETROGUI_PAD_SEL_PREV RETROFLAT_PAD_LEFT
+#endif /* !RETROGUI_PAD_SEL_PREV */
 
 #  define RETROGUI_CTL_TEXT_SZ_MAX 128
 #endif /* !RETROGUI_CTL_TEXT_SZ_MAX */
@@ -241,7 +277,7 @@ typedef int16_t retrogui_idc_t;
 
 #define RETROGUI_IDC_FMT "%d"
 
-#define RETROGUI_IDC_NONE 0
+#define RETROGUI_IDC_NONE -1
 
 /**
  * \brief Value for retrogui_set_ctl_color() color_key indicating background.
@@ -305,6 +341,20 @@ typedef int16_t retrogui_idc_t;
 #if 0
    f( 6, SCROLLBAR, size_t min; size_t max; size_t value; )
 #endif
+
+#ifdef RETROGUI_NO_TEXTBOX
+#  define retrogui_can_focus_ctl( ctl ) \
+      (RETROGUI_CTL_TYPE_BUTTON == (ctl)->base.type || \
+      RETROGUI_CTL_TYPE_LISTBOX == (ctl)->base.type)
+#else
+/**
+ * \brief Determine if a RETROGUI_CTL can hold RETROGUI::focus.
+ */
+#  define retrogui_can_focus_ctl( ctl ) \
+      (RETROGUI_CTL_TYPE_BUTTON == (ctl)->base.type || \
+      RETROGUI_CTL_TYPE_TEXTBOX == (ctl)->base.type || \
+      RETROGUI_CTL_TYPE_LISTBOX == (ctl)->base.type)
+#endif /* RETROGUI_NO_TEXTBOX */
 
 /*! \brief Fields common to ALL ::RETROGUI_CTL types. */
 struct RETROGUI_CTL_BASE {
@@ -561,7 +611,7 @@ static retrogui_idc_t retrogui_click_NONE(
 }
 
 static retrogui_idc_t retrogui_key_NONE( 
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
@@ -668,12 +718,29 @@ cleanup:
 }
 
 static retrogui_idc_t retrogui_key_LISTBOX( 
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
    /* TODO: Move up or down to next/prev item. */
+   switch( *p_input ) {
+   retroflat_case_key( RETROGUI_KEY_SEL_NEXT, RETROGUI_PAD_SEL_NEXT )
+      ctl->LISTBOX.sel_idx++;
+
+      /* Redraw and preempt further processing of input. */
+      gui->flags |= RETROGUI_FLAGS_DIRTY;
+      *p_input = 0;
+      break;
+
+   retroflat_case_key( RETROGUI_KEY_SEL_PREV, RETROGUI_PAD_SEL_PREV )
+      ctl->LISTBOX.sel_idx--;
+
+      /* Redraw and preempt further processing of input. */
+      gui->flags |= RETROGUI_FLAGS_DIRTY;
+      *p_input = 0;
+      break;
+   }
 
    return idc_out;
 }
@@ -684,7 +751,8 @@ static void retrogui_redraw_LISTBOX(
    size_t i = 0,
       j = 0;
    retroflat_pxxy_t w = 0,
-      h = 0;
+      h = 0,
+      item_y = 0;
    RETROFLAT_COLOR fg_color;
    
    assert( NULL == ctl->LISTBOX.list );
@@ -698,9 +766,11 @@ static void retrogui_redraw_LISTBOX(
       goto cleanup;
    }
    
-   retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
-      gui->x + ctl->base.x, gui->y + ctl->base.y,
-      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+   if( RETROFLAT_COLOR_BLACK != ctl->base.bg_color ) {
+      retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
+         gui->x + ctl->base.x, gui->y + ctl->base.y,
+         ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+   }
 
    /* Parse out variable-length strings. */
    while( i < ctl->LISTBOX.list_sz ) {
@@ -713,11 +783,14 @@ static void retrogui_redraw_LISTBOX(
          gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_h,
          ctl->base.w, ctl->base.h, &w, &h, 0 );
 #endif /* RETROGXC_PRESENT */
+      debug_printf( RETROGUI_TRACE_LVL,
+         "str height for \"%s\": " SIZE_T_FMT, 
+         &(ctl->LISTBOX.list[i]), h );
       if( j == ctl->LISTBOX.sel_idx ) {
          /* Draw selection colors. */
          retroflat_2d_rect( gui->draw_bmp, ctl->base.sel_bg,
             gui->x + ctl->base.x,
-            gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+            gui->y + ctl->base.y + item_y,
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          fg_color = ctl->base.sel_fg;
       } else {
@@ -729,20 +802,22 @@ static void retrogui_redraw_LISTBOX(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_idx,
          gui->x + ctl->base.x,
-         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #else
       retrofont_string(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_h,
          gui->x + ctl->base.x,
-         gui->y + ctl->base.y + (j * (h + RETROGUI_PADDING)),
+         gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #endif /* RETROGXC_PRESENT */
 
       /* Move to next variable-length string. */
       i += maug_strlen( &(ctl->LISTBOX.list[i]) ) + 1;
       assert( i <= ctl->LISTBOX.list_sz );
+      /* Track the item high separately in case the item is multi-line. */
+      item_y += h + RETROGUI_PADDING;
       j++;
    }
 
@@ -781,6 +856,12 @@ MERROR_RETVAL retrogui_push_listbox_item(
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
    MAUG_MHANDLE listbox_h_new = (MAUG_MHANDLE)NULL;
+   int autolock = 0;
+
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
 
    debug_printf( RETROGUI_TRACE_LVL,
       "pushing item \"%s\" to listbox " RETROGUI_IDC_FMT "...", item, idc );
@@ -828,10 +909,16 @@ MERROR_RETVAL retrogui_push_listbox_item(
 
 #endif
 
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
 cleanup:
 
    if( NULL != ctl->LISTBOX.list ) {
       maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   }
+
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
    }
 
    return retval;
@@ -854,6 +941,8 @@ static MERROR_RETVAL retrogui_push_LISTBOX( union RETROGUI_CTL* ctl ) {
       retval = MERROR_GUI;
       goto cleanup;
    }
+
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
 
 cleanup:
 
@@ -936,7 +1025,7 @@ cleanup:
 }
 
 static retrogui_idc_t retrogui_key_BUTTON( 
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
@@ -1200,7 +1289,7 @@ static retrogui_idc_t retrogui_click_TEXTBOX(
 }
 
 static retrogui_idc_t retrogui_key_TEXTBOX(
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
@@ -1474,7 +1563,7 @@ static retrogui_idc_t retrogui_click_LABEL(
 }
 
 static retrogui_idc_t retrogui_key_LABEL(
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    return RETROGUI_IDC_NONE;
@@ -1606,7 +1695,7 @@ static retrogui_idc_t retrogui_click_IMAGE(
 }
 
 static retrogui_idc_t retrogui_key_IMAGE(
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    return RETROGUI_IDC_NONE;
@@ -1727,7 +1816,7 @@ static retrogui_idc_t retrogui_click_FILLBAR(
 }
 
 static retrogui_idc_t retrogui_key_FILLBAR( 
-   union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
+   struct RETROGUI* gui, union RETROGUI_CTL* ctl, RETROFLAT_IN_KEY* p_input,
    struct RETROFLAT_INPUT* input_evt
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
@@ -1953,7 +2042,7 @@ retrogui_idc_t retrogui_poll_ctls(
 #     define RETROGUI_CTL_TABLE_KEY( idx, c_name, c_fields ) \
          } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
             gui->flags |= RETROGUI_FLAGS_DIRTY; \
-            idc_out = retrogui_key_ ## c_name( ctl, p_input, input_evt );
+            idc_out = retrogui_key_ ## c_name( gui, ctl, p_input, input_evt );
 
    if( 0 == *p_input ) {
       goto reset_debounce;
@@ -2289,7 +2378,9 @@ MERROR_RETVAL retrogui_push_ctl(
       maug_cleanup_if_not_ok();
    }
 
-   if( RETROGUI_IDC_NONE == gui->focus ) {
+   if( RETROGUI_IDC_NONE == gui->focus && retrogui_can_focus_ctl( ctl ) ) {
+      debug_printf( RETROGUI_TRACE_LVL,
+         "setting focus to control: " RETROGUI_IDC_FMT, ctl->base.idc );
       gui->focus = ctl->base.idc;
    }
 
@@ -2824,7 +2915,7 @@ retrogui_idc_t retrogui_focus_iter(
       i = start ; mdata_vector_ct( &(gui->ctls) ) > i && 0 <= i ; i += incr
    ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
-      if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+      if( !retrogui_can_focus_ctl( ctl ) ) {
          continue;
       } else if( RETROGUI_IDC_NONE == gui->focus || 0 <= i_before ) {
          /* We're primed to set the new focus, so do that and finish. */
@@ -2846,7 +2937,7 @@ retrogui_idc_t retrogui_focus_iter(
       /* Wrap around to last SELECTABLE item. */
       for( i = mdata_vector_ct( &(gui->ctls) ) - 1 ; 0 <= i ; i-- ) {
          ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
-         if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+         if( !retrogui_can_focus_ctl( ctl ) ) {
             /* Skip NON-SELECTABLE items! */
             debug_printf(
                RETROGUI_TRACE_LVL, "skipping: " RETROGUI_IDC_FMT, i );
@@ -2862,7 +2953,7 @@ retrogui_idc_t retrogui_focus_iter(
       /* Wrap around to first SELECTABLE item. */
       for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
          ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
-         if( RETROGUI_CTL_TYPE_BUTTON != ctl->base.type ) {
+         if( !retrogui_can_focus_ctl( ctl ) ) {
             /* Skip NON-SELECTABLE items! */
             debug_printf(
                RETROGUI_TRACE_LVL, "skipping: " RETROGUI_IDC_FMT, i );
@@ -2892,7 +2983,8 @@ cleanup:
       mdata_vector_unlock( &(gui->ctls) );
    }
 
-   debug_printf( RETROGUI_TRACE_LVL, "selected IDC: " RETROGUI_IDC_FMT, idc_out );
+   debug_printf(
+      RETROGUI_TRACE_LVL, "selected IDC: " RETROGUI_IDC_FMT, idc_out );
 
    return idc_out;
 }
