@@ -223,6 +223,10 @@
 #  define RETROGUI_CTL_TEXT_BLINK_FRAMES 15
 #endif /* !RETROGUI_CTL_TEXT_BLINK_FRAMES */
 
+#ifndef RETROGUI_CTL_LISTBOX_CURSOR_RADIUS
+#  define RETROGUI_CTL_LISTBOX_CURSOR_RADIUS 8
+#endif /* !RETROGUI_CTL_LISTBOX_CURSOR_RADIUS */
+
 /*! \} */ /* maug_retrogui_cfg */
 
 /**
@@ -793,6 +797,14 @@ static void retrogui_redraw_LISTBOX(
             gui->y + ctl->base.y + item_y,
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          fg_color = ctl->base.sel_fg;
+
+         retroflat_ellipse(
+            gui->draw_bmp, ctl->base.sel_fg,
+            gui->x + ctl->base.x,
+            gui->y + ctl->base.y + item_y,
+            RETROGUI_CTL_LISTBOX_CURSOR_RADIUS,
+            RETROGUI_CTL_LISTBOX_CURSOR_RADIUS, 0 );
+
       } else {
          fg_color = ctl->base.fg_color;
       }
@@ -801,14 +813,16 @@ static void retrogui_redraw_LISTBOX(
       retrogxc_string(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_idx,
-         gui->x + ctl->base.x,
+         gui->x + ctl->base.x +
+            RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
          gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #else
       retrofont_string(
          gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
          gui->font_h,
-         gui->x + ctl->base.x,
+         gui->x + ctl->base.x +
+            RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
          gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #endif /* RETROGXC_PRESENT */
@@ -2053,7 +2067,7 @@ retrogui_idc_t retrogui_poll_ctls(
 
       if( 0 <= gui->focus ) {
          idc_out = gui->focus;
-         gui->focus = -1;
+         /* gui->focus = -1; */
          gui->flags |= RETROGUI_FLAGS_DIRTY;
       }
 
@@ -2535,6 +2549,7 @@ ssize_t retrogui_get_ctl_sel_idx( struct RETROGUI* gui, retrogui_idc_t idc ) {
 
    if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
    }
 
    ctl = _retrogui_get_ctl_by_idc( gui, idc );
