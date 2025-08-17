@@ -26,11 +26,6 @@ endif
 
 ifeq ("$(RETROFLAT_OPENGL)","1")
 
-# Easier to understand error messages.
-ifeq ("$(shell pkg-config gl --libs 2>/dev/null)","")
-$(error could not find pkg-config for gl!)
-endif
-
 CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
 CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
@@ -84,6 +79,13 @@ endef
 # 2. Source dependencies. Used for e.g. dynamically generated headers.
 # Only #1 will be added to CLEAN_TARGETS!
 define TGTUNIXSDL
+
+# Easier to understand error messages.
+ifeq ("$$(RETROFLAT_OPENGL)","1")
+ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
+$$(error could not find pkg-config for gl!)
+endif
+endif
 
 # = Determine Prerequisites =
 
@@ -251,8 +253,10 @@ endef
 define TGTUNIXGLUT
 
 # Easier to understand error messages.
+ifeq ("$$(RETROFLAT_OPENGL)","1")
 ifeq ("$$(shell pkg-config gl --libs 2>/dev/null)","")
 $$(error could not find pkg-config for gl!)
+endif
 endif
 
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
