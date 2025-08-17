@@ -51,6 +51,17 @@
  */
 
 /**
+ * \brief Flag for mlisp_stack_pop_ex() indicating the value should not be
+ *        removed from the stack.
+ */
+#define MLISP_STACK_FLAG_PEEK    0x01
+
+/**
+ * \brief Wrapper for mlisp_stack_pop() with no flags.
+ */
+#define mlisp_stack_pop( exec, o ) mlisp_stack_pop_ex( exec, o, 0 )
+
+/**
  * \brief Push a value onto MLISP_EXEC_STATE::stack.
  * \param exec Pointer to the running ::MLISP_EXEC_STATE.
  * \param i Value to push.
@@ -70,7 +81,10 @@ MERROR_RETVAL mlisp_stack_dump(
  *
  * \warning MLISP_EXEC_STATE::stack should be *unlocked* prior to calling!
  */
-MERROR_RETVAL mlisp_stack_pop(
+MERROR_RETVAL mlisp_stack_pop_ex(
+   struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o, uint8_t flags );
+
+MERROR_RETVAL mlisp_stack_peek(
    struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o );
 
 /*! \} */ /* mlisp_stack */
@@ -253,8 +267,8 @@ MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_PUSH );
 
 /* === */
 
-MERROR_RETVAL mlisp_stack_pop(
-   struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o
+MERROR_RETVAL mlisp_stack_pop_ex(
+   struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE* n_stack = NULL;
@@ -280,14 +294,21 @@ MERROR_RETVAL mlisp_stack_pop(
 
 #  define _MLISP_TYPE_TABLE_POPD( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == o->type ) { \
-         debug_printf( MLISP_EXEC_TRACE_LVL, \
-            "popping: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name );
+         if( MLISP_STACK_FLAG_PEEK == (MLISP_STACK_FLAG_PEEK & flags) ) { \
+            debug_printf( MLISP_EXEC_TRACE_LVL, \
+               "peeking: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name ); \
+         } else { \
+            debug_printf( MLISP_EXEC_TRACE_LVL, \
+               "popping: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name ); \
+         }
 
    if( 0 ) {
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_POPD )
    }
 
-   retval = mdata_vector_remove( &(exec->stack), n_idx );
+   if( MLISP_STACK_FLAG_PEEK != (MLISP_STACK_FLAG_PEEK & flags) ) {
+      retval = mdata_vector_remove( &(exec->stack), n_idx );
+   }
 
 cleanup:
 
