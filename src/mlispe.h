@@ -20,6 +20,10 @@
 #  define MLISP_EXEC_TRACE_LVL 0
 #endif /* !MLISP_EXEC_TRACE_LVL */
 
+#ifndef MLISP_STACK_TRACE_LVL
+#  define MLISP_STACK_TRACE_LVL 0
+#endif /* !MLISP_STACK_TRACE_LVL */
+
 #define MLISP_ENV_FLAG_BUILTIN   0x02
 
 /*! \brief Flag for _mlisp_env_cb_cmp() specifying TRUE if A > B. */
@@ -184,7 +188,7 @@ MERROR_RETVAL mlisp_stack_dump(
 
 #  define _MLISP_TYPE_TABLE_DUMPS( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == n_stack->type ) { \
-         debug_printf( MLISP_EXEC_TRACE_LVL, \
+         debug_printf( MLISP_STACK_TRACE_LVL, \
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (" #const_name "): " fmt, \
             i, n_stack->value.name );
 
@@ -195,32 +199,32 @@ MERROR_RETVAL mlisp_stack_dump(
 
       /* Handle special exceptions. */
       if( MLISP_TYPE_STR == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (STR): %s",
             i, &(strpool[n_stack->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (CB): %p",
             i, n_stack->value.cb );
 
       } else if( MLISP_TYPE_LAMBDA == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (LAMBDA): " SIZE_T_FMT,
                i, n_stack->value.lambda );
 
       } else if( MLISP_TYPE_ARGS_S == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_S): " SIZE_T_FMT,
                i, n_stack->value.args_start );
 
       } else if( MLISP_TYPE_ARGS_E == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_E): " SIZE_T_FMT,
                i, n_stack->value.args_end );
 
       } else if( MLISP_TYPE_BEGIN == n_stack->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (BEGIN): " SIZE_T_FMT,
                i, n_stack->value.begin );
 
@@ -249,7 +253,7 @@ cleanup:
    ) { \
       struct MLISP_STACK_NODE n_stack; \
       MERROR_RETVAL retval = MERROR_OK; \
-      debug_printf( MLISP_EXEC_TRACE_LVL, \
+      debug_printf( MLISP_STACK_TRACE_LVL, \
          "pushing " #const_name " onto stack: " fmt, i ); \
       n_stack.type = MLISP_TYPE_ ## const_name; \
       n_stack.value.name = i; \
@@ -295,10 +299,10 @@ MERROR_RETVAL mlisp_stack_pop_ex(
 #  define _MLISP_TYPE_TABLE_POPD( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == o->type ) { \
          if( MLISP_STACK_FLAG_PEEK == (MLISP_STACK_FLAG_PEEK & flags) ) { \
-            debug_printf( MLISP_EXEC_TRACE_LVL, \
+            debug_printf( MLISP_STACK_TRACE_LVL, \
                "peeking: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name ); \
          } else { \
-            debug_printf( MLISP_EXEC_TRACE_LVL, \
+            debug_printf( MLISP_STACK_TRACE_LVL, \
                "popping: " SSIZE_T_FMT ": " fmt, n_idx, o->value.name ); \
          }
 
@@ -532,7 +536,7 @@ MERROR_RETVAL mlisp_env_unset(
        *       enabled...
        */
       if( MLISP_TYPE_ARGS_E == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( MLISP_STACK_TRACE_LVL,
             "reached end of env stack frame: " SSIZE_T_FMT, i );
          goto cleanup;
       }
