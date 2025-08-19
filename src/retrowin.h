@@ -122,8 +122,7 @@ retrogui_idc_t retrowin_poll_win_stack(
  */
 ssize_t retrowin_get_win_stack_sel_idx(
    struct MDATA_VECTOR* win_stack,
-   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl,
-   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
+   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl );
 
 void retrowin_free_win( struct RETROWIN* win );
 
@@ -415,8 +414,7 @@ cleanup:
 
 ssize_t retrowin_get_win_stack_sel_idx(
    struct MDATA_VECTOR* win_stack,
-   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl,
-   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
+   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl
 ) {
    ssize_t idx_out = -1;
    MERROR_RETVAL retval = MERROR_OK;
