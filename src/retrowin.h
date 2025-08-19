@@ -116,6 +116,15 @@ retrogui_idc_t retrowin_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
 
+/**
+ * \brief Get the selected index of the given control in the given window
+ *        from the window stack.
+ */
+ssize_t retrowin_get_win_stack_sel_idx(
+   struct MDATA_VECTOR* win_stack,
+   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl,
+   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
+
 void retrowin_free_win( struct RETROWIN* win );
 
 ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
@@ -357,43 +366,101 @@ retrogui_idc_t retrowin_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
 ) {
-   size_t i = 0;
-   retrogui_idc_t idc_out = 0;
+   retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN* win = NULL;
+   int autolock = 0;
+   ssize_t win_idx = -1;
 
-   assert( !mdata_vector_is_locked( win_stack ) );
-   mdata_vector_lock( win_stack );
-
-   for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
-      win = mdata_vector_get( win_stack, i, struct RETROWIN );
-      assert( NULL != win );
-      if( idc_active != win->idc || !retrowin_win_is_active( win ) ) {
-         continue;
-      }
-
-      debug_printf( RETROWIN_TRACE_LVL, "polling window: " SIZE_T_FMT,
-         win->idc );
-
-      retrowin_lock_gui( win );
-
-      idc_out = retrogui_poll_ctls( win->gui_p, p_input, input_evt );
-
-      retrowin_unlock_gui( win );
-
-      break;
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock = 1;
    }
+
+   win_idx = retrowin_get_by_idc( idc_active, win_stack );
+   if( 0 > win_idx ) {
+      /* No window found! */
+      error_printf( "polling invalid window!" );
+      goto cleanup;
+   }
+
+   win = mdata_vector_get( win_stack, win_idx, struct RETROWIN );
+   assert( NULL != win );
+   assert( idc_active == win->idc );
+   if( !retrowin_win_is_active( win ) ) {
+      /* Window not active! */
+      error_printf( "polling inactive window!" );
+      goto cleanup;
+   }
+
+   retrowin_lock_gui( win );
+   idc_out = retrogui_poll_ctls( win->gui_p, p_input, input_evt );
+   retrowin_unlock_gui( win );
 
 cleanup:
 
    if( MERROR_OK != retval ) {
-      error_printf( "error redrawing windows!" );
-      idc_out = 0;
+      error_printf( "error polling windows!" );
+      idc_out = RETROGUI_IDC_NONE;
    }
 
-   mdata_vector_unlock( win_stack );
+   if( autolock ) {
+      mdata_vector_unlock( win_stack );
+   }
 
    return idc_out;
+}
+
+/* === */
+
+ssize_t retrowin_get_win_stack_sel_idx(
+   struct MDATA_VECTOR* win_stack,
+   retrogui_idc_t idc_win, retrogui_idc_t idc_ctl,
+   RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt
+) {
+   ssize_t idx_out = -1;
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROWIN* win = NULL;
+   int autolock = 0;
+   ssize_t win_idx = -1;
+
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock = 1;
+   }
+
+   win_idx = retrowin_get_by_idc( idc_win, win_stack );
+   if( 0 > win_idx ) {
+      /* No window found! */
+      error_printf( "polling invalid window!" );
+      goto cleanup;
+   }
+
+   win = mdata_vector_get( win_stack, win_idx, struct RETROWIN );
+   assert( NULL != win );
+   assert( idc_win == win->idc );
+   if( !retrowin_win_is_active( win ) ) {
+      /* Window not active! */
+      error_printf( "polling inactive window!" );
+      goto cleanup;
+   }
+
+   retrowin_lock_gui( win );
+   idx_out = retrogui_get_ctl_sel_idx( win->gui_p, idc_ctl );
+   retrowin_unlock_gui( win );
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      error_printf( "error getting window control selection index!" );
+      idx_out = merror_retval_to_sz( retval );
+   }
+
+   if( autolock ) {
+      mdata_vector_unlock( win_stack );
+   }
+
+   return idx_out;
 }
 
 /* === */
