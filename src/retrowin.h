@@ -75,13 +75,13 @@
       RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & (win)->flags) && \
       RETROWIN_FLAG_GUI_LOCKED != (RETROWIN_FLAG_GUI_LOCKED & (win)->flags) \
    ) { \
-      debug_printf( RETROWIN_TRACE_LVL, "locking managed gui handle %p...", \
-         (win)->gui_h ); \
+      /* debug_printf( RETROWIN_TRACE_LVL, "locking managed gui handle %p...", \
+         (win)->gui_h ); */ \
       maug_mlock( (win)->gui_h, (win)->gui_p ); \
       maug_cleanup_if_null_lock( struct RETROGUI*, (win)->gui_p ); \
       (win)->flags |= RETROWIN_FLAG_GUI_LOCKED; \
-      debug_printf( RETROWIN_TRACE_LVL, "locked managed gui to pointer %p!", \
-         (win)->gui_p ); \
+      /* debug_printf( RETROWIN_TRACE_LVL, "locked managed gui to pointer %p!", \
+         (win)->gui_p ); */ \
    }
 
 #define retrowin_unlock_gui( win ) \
@@ -89,8 +89,8 @@
       RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & (win)->flags) && \
       RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & (win)->flags) \
    ) { \
-      debug_printf( RETROWIN_TRACE_LVL, "unlocking managed gui pointer %p...", \
-         (win)->gui_h ); \
+      /* debug_printf( RETROWIN_TRACE_LVL, "unlocking managed gui pointer %p...", \
+         (win)->gui_h ); */ \
       maug_munlock( (win)->gui_h, (win)->gui_p ); \
       (win)->flags &= ~RETROWIN_FLAG_GUI_LOCKED; \
    }
@@ -393,6 +393,11 @@ retrogui_idc_t retrowin_poll_win_stack(
    }
 
    retrowin_lock_gui( win );
+   if( 0 != *p_input ) {
+      debug_printf( RETROWIN_TRACE_LVL,
+         "polling window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
+         win_idx, win->idc );
+   }
    idc_out = retrogui_poll_ctls( win->gui_p, p_input, input_evt );
    retrowin_unlock_gui( win );
 

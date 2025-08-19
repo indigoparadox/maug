@@ -727,7 +727,6 @@ static retrogui_idc_t retrogui_key_LISTBOX(
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
-   /* TODO: Move up or down to next/prev item. */
    switch( *p_input ) {
    retroflat_case_key( RETROGUI_KEY_SEL_NEXT, RETROGUI_PAD_SEL_NEXT )
       ctl->LISTBOX.sel_idx++;
@@ -2058,6 +2057,11 @@ retrogui_idc_t retrogui_poll_ctls(
             gui->flags |= RETROGUI_FLAGS_DIRTY; \
             idc_out = retrogui_key_ ## c_name( gui, ctl, p_input, input_evt );
 
+   if( 0 != *p_input ) {
+      debug_printf( RETROGUI_TRACE_LVL,
+         "focus " RETROGUI_IDC_FMT " input: %d", gui->focus, *p_input );
+   }
+
    if( 0 == *p_input ) {
       goto reset_debounce;
 
@@ -2071,7 +2075,6 @@ retrogui_idc_t retrogui_poll_ctls(
          gui->flags |= RETROGUI_FLAGS_DIRTY;
       }
 
- 
    } else if(
       retroflat_or_key( *p_input, RETROGUI_KEY_NEXT, RETROGUI_PAD_NEXT )
    ) {
@@ -2100,6 +2103,7 @@ retrogui_idc_t retrogui_poll_ctls(
       /* Handle mouse input. */
 
       /* Remove all focus before testing if a new control has focus. */
+      debug_printf( RETROGUI_TRACE_LVL, "resetting focus for mouse click..." );
       gui->focus = RETROGUI_IDC_NONE;
 
       mouse_x = input_evt->mouse_x - gui->x;
@@ -2125,6 +2129,9 @@ retrogui_idc_t retrogui_poll_ctls(
 
          gui->idc_prev = ctl->base.idc;
 
+         debug_printf( RETROGUI_TRACE_LVL,
+            "setting focus to clicked control: " RETROGUI_IDC_FMT,
+            ctl->base.idc );
          gui->focus = ctl->base.idc;
 
          if( 0 ) {
@@ -2392,7 +2399,7 @@ MERROR_RETVAL retrogui_push_ctl(
       maug_cleanup_if_not_ok();
    }
 
-   if( RETROGUI_IDC_NONE == gui->focus && retrogui_can_focus_ctl( ctl ) ) {
+   if( 0 > gui->focus && retrogui_can_focus_ctl( ctl ) ) {
       debug_printf( RETROGUI_TRACE_LVL,
          "setting focus to control: " RETROGUI_IDC_FMT, ctl->base.idc );
       gui->focus = ctl->base.idc;
@@ -2935,6 +2942,8 @@ retrogui_idc_t retrogui_focus_iter(
       } else if( RETROGUI_IDC_NONE == gui->focus || 0 <= i_before ) {
          /* We're primed to set the new focus, so do that and finish. */
          idc_out = ctl->base.idc;
+         debug_printf( RETROGUI_TRACE_LVL,
+            "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
          gui->focus = idc_out;
          goto cleanup;
 
@@ -2959,6 +2968,8 @@ retrogui_idc_t retrogui_focus_iter(
             continue;
          } else {
             idc_out = ctl->base.idc;
+            debug_printf( RETROGUI_TRACE_LVL,
+               "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
             gui->focus = idc_out;
             break;
          }
@@ -2975,6 +2986,8 @@ retrogui_idc_t retrogui_focus_iter(
             continue;
          } else {
             idc_out = ctl->base.idc;
+            debug_printf( RETROGUI_TRACE_LVL,
+               "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
             gui->focus = idc_out;
             break;
          }
