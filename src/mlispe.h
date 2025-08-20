@@ -119,6 +119,16 @@ MERROR_RETVAL mlisp_env_set(
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
+/**
+ * \brief Step into a lambda addressed by AST node index.
+ * \warning This should only be called in a situation where all parser/exec
+ *          vectors are locked, such as from inside of a callback defined in
+ *          mlisp_env_set()!
+ */
+MERROR_RETVAL mlisp_step_lambda_ast(
+   struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec );
+
 MERROR_RETVAL mlisp_check_state(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
@@ -1243,7 +1253,7 @@ static MERROR_RETVAL _mlisp_step_iter_children(
        * heartbeat, and we're probably just enountering its definition.
        *
        * Lambdas are lazily evaluated, so don't pursue it further until it's
-       * called (stee _mlisp_step_lambda() for more info on this.
+       * called (stee mlisp_step_lambda_ast() for more info on this.
        */
       debug_printf( MLISP_EXEC_TRACE_LVL, "skipping lambda children..." );
       goto cleanup;
@@ -1436,7 +1446,7 @@ cleanup:
 /* === */
 
 /* This is internal-only and should only be called from _mlisp_step_iter()! */
-static MERROR_RETVAL _mlisp_step_lambda(
+MERROR_RETVAL mlisp_step_lambda_ast(
    struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
@@ -1765,11 +1775,11 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
-       * to this lambda-call node, but _mlisp_step_lambda() returns
+       * to this lambda-call node, but mlisp_step_lambda_ast() returns
        * MERROR_PREEMPT up the chain for subsequent heartbeats, until lambda is
        * done.
        */
-      retval = _mlisp_step_lambda( parser, e.value.lambda, exec );
+      retval = mlisp_step_lambda_ast( parser, e.value.lambda, exec );
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
@@ -1959,7 +1969,7 @@ MERROR_RETVAL mlisp_step_lambda(
    }
    lambda_idx = e->value.lambda;
 
-   /* Autounlock just env so _mlisp_step_lambda() works. */
+   /* Autounlock just env so mlisp_step_lambda_ast() works. */
    /* TODO: We shouldn't need to do this if we reuse the multiple autolock...
     */
    if( 0x01 == (0x01 & autolock) ) {
@@ -1971,7 +1981,7 @@ MERROR_RETVAL mlisp_step_lambda(
       lambda, lambda_idx );
 
    /* Jump execution to the lambda on next iter. */
-   retval = _mlisp_step_lambda( parser, lambda_idx, exec );
+   retval = mlisp_step_lambda_ast( parser, lambda_idx, exec );
 
 cleanup:
 
