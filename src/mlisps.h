@@ -140,6 +140,7 @@ struct MLISP_AST_NODE {
  *       no danger of a MDATA_VECTOR being reallocated out from beneath another.
  */
 struct MLISP_EXEC_STATE {
+   uint16_t uid;
    /*! \brief Flags which dictate the behavior of this object. */
    uint8_t flags;
    /*! \brief The number of times each node has been visited ever. */
