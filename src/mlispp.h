@@ -316,7 +316,7 @@ MERROR_RETVAL mlisp_ast_dump(
    if( NULL == parser->ast.data_bytes ) {
       autolock = 1;
       mdata_vector_lock( &(parser->ast) );
-      debug_printf( MLISP_TRACE_LVL,
+      debug_printf( 1,
          MLISP_TRACE_SIGIL " --- BEGIN AST DUMP ---" );
    }
 
@@ -334,7 +334,7 @@ MERROR_RETVAL mlisp_ast_dump(
    /* Iterate node and children .*/
    n = mdata_vector_get( &(parser->ast), ast_node_idx, struct MLISP_AST_NODE );
    mdata_strpool_lock( &(parser->strpool), strpool );
-   debug_printf( MLISP_TRACE_LVL,
+   debug_printf( 1,
       MLISP_TRACE_SIGIL " %s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SSIZE_T_FMT
          ", c: " SSIZE_T_FMT ", f: 0x%02x)",
       indent, ab, 0 <= n->token_idx ? &(strpool[n->token_idx]) : "",
@@ -352,7 +352,7 @@ cleanup:
 
    if( NULL != parser->ast.data_bytes && autolock ) {
       mdata_vector_unlock( &(parser->ast) );
-      debug_printf( MLISP_TRACE_LVL,
+      debug_printf( 1,
          MLISP_TRACE_SIGIL " --- END AST DUMP ---" );
    }
 

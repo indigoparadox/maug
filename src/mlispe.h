@@ -1073,7 +1073,7 @@ static MERROR_RETVAL _mlisp_env_cb_if(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_if_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: child idx for if AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      "%u: node " SIZE_T_FMT " child idx: " SIZE_T_FMT,
       exec->uid, n_idx, *p_if_child_idx );
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
@@ -1235,7 +1235,7 @@ static MERROR_RETVAL _mlisp_preempt(
    /* Increment this node, since the child actually executed. */
    (*p_child_idx) = new_idx;
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+      "%u: incremented node " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
       exec->uid, n_idx, *p_child_idx );
 
 cleanup:
@@ -1260,7 +1260,7 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: child idx for AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      "%u: node " SIZE_T_FMT " child idx: " SIZE_T_FMT,
       exec->uid, n_idx, *p_child_idx );
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
@@ -1405,14 +1405,14 @@ static MERROR_RETVAL _mlisp_reset_child_pcs(
    assert( mdata_vector_is_locked( &(parser->ast) ) );
 
    /* Perform the actual reset. */
-   debug_printf( MLISP_TRACE_LVL,
-      "%u: resetting PC on node: " SIZE_T_FMT, exec->uid, n_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "%u: resetting node " SIZE_T_FMT " child idx to 0", exec->uid, n_idx );
    p_child_idx = mdata_vector_get( &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_child_idx );
    *p_child_idx = 0;
 
-   debug_printf( MLISP_TRACE_LVL,
-      "%u: resetting visit count on node: " SIZE_T_FMT, exec->uid, n_idx );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "%u: resetting node " SIZE_T_FMT " visit count to 0", exec->uid, n_idx );
    p_visit_ct = mdata_vector_get( &(exec->per_node_visit_ct), n_idx, size_t );
    assert( NULL != p_visit_ct );
    *p_visit_ct = 0;
@@ -1518,7 +1518,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
       &(exec->per_node_child_idx), n_idx, size_t );
    assert( NULL != p_lambda_child_idx );
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: child idx for lambda AST node " SIZE_T_FMT ": " SIZE_T_FMT,
+      "%u: lambda node " SIZE_T_FMT " child idx: " SIZE_T_FMT,
       exec->uid, n_idx, *p_lambda_child_idx );
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
@@ -1565,7 +1565,7 @@ static MERROR_RETVAL _mlisp_step_lambda(
          /* Increment child idx so we call the exec child on next heartbeat. */
          (*p_lambda_child_idx)++;
          debug_printf( MLISP_EXEC_TRACE_LVL,
-            "%u: incremented " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
+            "%u: incremented node " SIZE_T_FMT " child idx to: " SIZE_T_FMT,
             exec->uid, n_idx, *p_lambda_child_idx );
       }
 
