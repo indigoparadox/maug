@@ -119,16 +119,6 @@ MERROR_RETVAL mlisp_env_set(
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
-/**
- * \brief Step into a lambda addressed by AST node index.
- * \warning This should only be called in a situation where all parser/exec
- *          vectors are locked, such as from inside of a callback defined in
- *          mlisp_env_set()!
- */
-MERROR_RETVAL mlisp_step_lambda_ast(
-   struct MLISP_PARSER* parser,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec );
-
 MERROR_RETVAL mlisp_check_state(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
@@ -154,6 +144,13 @@ MERROR_RETVAL mlisp_step(
 MERROR_RETVAL mlisp_step_lambda(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* lambda );
+
+/**
+ * \brief Step into a lambda addressed by AST node index.
+ */
+MERROR_RETVAL mlisp_step_lambda_ast(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   mlisp_lambda_t lambda_idx );
 
 MERROR_RETVAL mlisp_exec_init(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags );
@@ -670,6 +667,15 @@ MERROR_RETVAL mlisp_env_set(
          token, *((mlisp_arge_t*)data) );
       e.value.args_end = *((mlisp_arge_t*)data);
       break;
+
+   case 10: /* MLISP_TYPE_BEGIN */
+      /* We probably called a lambda that takes an arg without placing an
+       * arg on the stack for it to take up!
+       */
+      error_printf(
+         "attempted to define BEGIN from stack... missing lambda arg?" );
+      retval = MERROR_EXEC;
+      goto cleanup;
 
    default:
       error_printf( "attempted to define invalid type: %d", env_type );
@@ -1253,7 +1259,7 @@ static MERROR_RETVAL _mlisp_step_iter_children(
        * heartbeat, and we're probably just enountering its definition.
        *
        * Lambdas are lazily evaluated, so don't pursue it further until it's
-       * called (stee mlisp_step_lambda_ast() for more info on this.
+       * called (stee _mlisp_step_lambda() for more info on this.
        */
       debug_printf( MLISP_EXEC_TRACE_LVL, "skipping lambda children..." );
       goto cleanup;
@@ -1446,7 +1452,7 @@ cleanup:
 /* === */
 
 /* This is internal-only and should only be called from _mlisp_step_iter()! */
-MERROR_RETVAL mlisp_step_lambda_ast(
+static MERROR_RETVAL _mlisp_step_lambda(
    struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec
 ) {
@@ -1576,8 +1582,6 @@ cleanup:
 
    return retval;
 }
-
-/* === */
 
 /* === */
 
@@ -1775,11 +1779,11 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
       /* Create a "portal" into the lambda. The execution chain stays pointing
-       * to this lambda-call node, but mlisp_step_lambda_ast() returns
+       * to this lambda-call node, but _mlisp_step_lambda() returns
        * MERROR_PREEMPT up the chain for subsequent heartbeats, until lambda is
        * done.
        */
-      retval = mlisp_step_lambda_ast( parser, e.value.lambda, exec );
+      retval = _mlisp_step_lambda( parser, e.value.lambda, exec );
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
@@ -1924,6 +1928,7 @@ MERROR_RETVAL mlisp_step_lambda(
    uint8_t autolock = 0;
    struct MDATA_VECTOR* env = NULL;
    mlisp_lambda_t lambda_idx = 0;
+   struct MLISP_AST_NODE* n = NULL;
 
    /* Prepare env for mlisp_env_get() below. */
    if(
@@ -1969,7 +1974,7 @@ MERROR_RETVAL mlisp_step_lambda(
    }
    lambda_idx = e->value.lambda;
 
-   /* Autounlock just env so mlisp_step_lambda_ast() works. */
+   /* Autounlock just env so _mlisp_step_lambda() works. */
    /* TODO: We shouldn't need to do this if we reuse the multiple autolock...
     */
    if( 0x01 == (0x01 & autolock) ) {
@@ -1980,8 +1985,86 @@ MERROR_RETVAL mlisp_step_lambda(
    debug_printf( MLISP_EXEC_TRACE_LVL, "lambda \"%s\" is AST node idx %ld",
       lambda, lambda_idx );
 
+   n = mdata_vector_get( &(parser->ast), lambda_idx, struct MLISP_AST_NODE );
+   assert( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) );
+
    /* Jump execution to the lambda on next iter. */
-   retval = mlisp_step_lambda_ast( parser, lambda_idx, exec );
+   retval = _mlisp_step_lambda( parser, lambda_idx, exec );
+
+cleanup:
+
+   /* See autolocks above. */
+   if( 0x01 == (0x01 & autolock) ) {
+      mdata_vector_unlock( env );
+   }
+   if( 0x02 == (0x02 & autolock) ) {
+      mdata_vector_unlock( &(exec->per_node_child_idx) );
+   }
+   if( 0x04 == (0x04 & autolock) ) {
+      mdata_vector_unlock( &(exec->per_node_visit_ct) );
+   }
+   if( 0x08 == (0x08 & autolock) ) {
+      mdata_vector_unlock( &(parser->ast) );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mlisp_step_lambda_ast(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   mlisp_lambda_t lambda_idx
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t autolock = 0;
+   struct MDATA_VECTOR* env = NULL;
+
+   /* Prepare env for mlisp_env_get() below. */
+   if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      env = &(parser->env);
+   } else {
+      env = &(exec->env);
+   }
+
+   if( MERROR_OK != mlisp_check_state( parser, exec ) ) {
+      error_printf( "mlisp not ready!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   /* Autolock vectors used below. */
+   /* TODO: Should this be a reusable macro? */
+   if( !mdata_vector_is_locked( env ) ) {
+      assert( (MAUG_MHANDLE)NULL != env->data_h );
+      mdata_vector_lock( env );
+      autolock |= 0x01;
+   }
+   if( !mdata_vector_is_locked( &(exec->per_node_child_idx) ) ) {
+      mdata_vector_lock( &(exec->per_node_child_idx) );
+      autolock |= 0x02;
+   }
+   if( !mdata_vector_is_locked( &(exec->per_node_visit_ct) ) ) {
+      mdata_vector_lock( &(exec->per_node_visit_ct) );
+      autolock |= 0x04;
+   }
+   if( !mdata_vector_is_locked( &(parser->ast) ) ) {
+      mdata_vector_lock( &(parser->ast) );
+      autolock |= 0x08;
+   }
+
+   /* Autounlock just env so _mlisp_step_lambda() works. */
+   /* TODO: We shouldn't need to do this if we reuse the multiple autolock...
+    */
+   if( 0x01 == (0x01 & autolock) ) {
+      mdata_vector_unlock( env );
+      autolock &= ~0x01;
+   }
+
+   /* Jump execution to the lambda on next iter. */
+   retval = _mlisp_step_lambda( parser, lambda_idx, exec );
 
 cleanup:
 
