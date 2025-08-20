@@ -91,6 +91,12 @@ typedef uint8_t mlisp_bool_t;
 struct MLISP_PARSER;
 struct MLISP_EXEC_STATE;
 
+/**
+ * \brief A callback to attach to an mlisp command with mlisp_env_set() with
+ *        MLISP_TYPE_CB.
+ * \param args_c The number of top-level arguments provided to this callback
+ *               when it was called.
+ */
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    size_t args_c, void* cb_data, uint8_t flags );
