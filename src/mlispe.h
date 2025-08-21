@@ -1307,17 +1307,6 @@ static MERROR_RETVAL _mlisp_step_iter_children(
             "node", parser, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
       }
       goto cleanup;
-
-#if 0
-   } else {
-      /* Reset the node's child pointer to 0... this will allow it to be
-       * re-entered later.
-       */
-      debug_printf( MDATA_TRACE_LVL,
-         "resetting node " SIZE_T_FMT " child pointer to 0...",
-         n_idx );
-      *p_child_idx = 0;
-#endif
    }
 
 cleanup:
