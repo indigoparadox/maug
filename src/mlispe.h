@@ -484,10 +484,12 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* strpool, size_t token_strpool_idx, size_t token_strpool_sz
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_ENV_NODE* node_out = NULL;
    struct MLISP_ENV_NODE* node_test = NULL;
    ssize_t i = 0;
    struct MDATA_VECTOR* env = NULL;
+   int autolock_env = 0;
 
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
@@ -499,20 +501,43 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    i = mdata_vector_ct( env ) - 1;
 
    /* This requires env be locked before entrance! */
-   assert( mdata_vector_is_locked( env ) );
+   if( !mdata_vector_is_locked( env ) ) {
+      mdata_vector_lock( env );
+      autolock_env = 1;
+   }
 
    while( 0 <= i ) {
       assert( mdata_vector_is_locked( env ) );
       node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
-      if( 0 == strncmp(
-         &(strpool[node_test->name_strpool_idx]),
-         &(strpool[token_strpool_idx]),
-         token_strpool_sz + 1
-      ) ) {
-         node_out = node_test;
-         break;
+      if( 0 == token_strpool_sz ) {
+         if( 0 == strcmp(
+            &(strpool[node_test->name_strpool_idx]),
+            &(strpool[token_strpool_idx])
+         ) ) {
+            node_out = node_test;
+            break;
+         }
+      } else {
+         if( 0 == strncmp(
+            &(strpool[node_test->name_strpool_idx]),
+            &(strpool[token_strpool_idx]),
+            token_strpool_sz + 1
+         ) ) {
+            node_out = node_test;
+            break;
+         }
       }
       i--;
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      node_out = NULL;
+   }
+
+   if( autolock_env ) {
+      mdata_vector_unlock( env );
    }
 
    return node_out;
