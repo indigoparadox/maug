@@ -170,10 +170,19 @@ MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_PUSH_PROTO )
 
 #ifdef MLISPE_C
 
+/**
+ * \brief Increment/decrement/otherwise set the child node pointer (analogous
+ *        to a per-AST-node cascading program counter attached to
+ *        MLISP_EXEC_STATE) for a parent node to the requested value.
+ * \param retval Return value of the last iterated statement of a parent node.
+ * \param caller Brief readable description of the parent node.
+ * \param n_idx AST node index of the parent node.
+ * \param new_idx Child node index to set to if retval is MERROR_OK.
+ * \return New retval with verdect on whether to preempt or not.
+ */
 static MERROR_RETVAL _mlisp_preempt(
-   const char* caller, struct MLISP_PARSER* parser,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx,
-   size_t new_idx );
+   MERROR_RETVAL retval, const char* caller, struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t new_idx );
 
 static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_PARSER* parser,
@@ -1102,7 +1111,7 @@ static MERROR_RETVAL _mlisp_env_cb_if(
 
          /* Set the child pointer to 1 if TRUE and 2 if FALSE. */
          retval = _mlisp_preempt(
-            "if", parser, n_idx, exec, p_if_child_idx,
+            retval, "if", parser, n_idx, exec,
             /* Flip boolean and increment. */
             (1 - s.value.boolean) + 1 );
       }
@@ -1119,10 +1128,8 @@ static MERROR_RETVAL _mlisp_env_cb_if(
       /* Step and check. */
       retval = _mlisp_step_iter(
          parser, n->ast_idx_children[*p_if_child_idx], exec );
-      if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt(
-            "if", parser, n_idx, exec, p_if_child_idx, 3 );
-      }
+      retval = _mlisp_preempt(
+         retval, "if", parser, n_idx, exec, 3 );
    }
 
 cleanup:
@@ -1214,14 +1221,25 @@ cleanup:
 /* === */
 
 static MERROR_RETVAL _mlisp_preempt(
-   const char* caller, struct MLISP_PARSER* parser,
-   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t* p_child_idx,
-   size_t new_idx
+   MERROR_RETVAL retval, const char* caller, struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec, size_t new_idx
 ) {
-   /* Could not exec *this* node yet, so don't increment its parent. */
-   MERROR_RETVAL retval = MERROR_PREEMPT;
    char* strpool = NULL;
    struct MLISP_AST_NODE* n = NULL;
+   size_t* p_child_idx = NULL;
+
+   if( MERROR_OK != retval ) {
+      /* Something bad happened, so don't increment! */
+      goto cleanup;
+   } else {
+      /* Could not exec *this* node yet, so don't increment its parent. */
+      retval = MERROR_PREEMPT;
+   }
+
+   assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
+   p_child_idx = mdata_vector_get(
+      &(exec->per_node_child_idx), n_idx, size_t );
+   assert( NULL != p_child_idx );
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
@@ -1302,10 +1320,8 @@ static MERROR_RETVAL _mlisp_step_iter_children(
       /* Step and check. */
       retval = _mlisp_step_iter(
          parser, n->ast_idx_children[*p_child_idx], exec );
-      if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt(
-            "node", parser, n_idx, exec, p_child_idx, (*p_child_idx) + 1 );
-      }
+      retval = _mlisp_preempt(
+         retval, "node", parser, n_idx, exec, (*p_child_idx) + 1 );
       goto cleanup;
    }
 
@@ -1569,11 +1585,8 @@ static MERROR_RETVAL _mlisp_step_lambda(
       retval = _mlisp_step_iter(
          parser, n->ast_idx_children[*p_lambda_child_idx], exec );
 
-      if( MERROR_OK == retval ) {
-         retval = _mlisp_preempt(
-            "lambda", parser, n_idx, exec, p_lambda_child_idx,
-            (*p_lambda_child_idx) + 1 );
-      }
+      retval = _mlisp_preempt(
+         retval, "lambda", parser, n_idx, exec, (*p_lambda_child_idx) + 1 );
 
    } else {
       /* No more children to execute! */
