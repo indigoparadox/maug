@@ -227,6 +227,10 @@
 #  define RETROGUI_CTL_LISTBOX_CURSOR_RADIUS 8
 #endif /* !RETROGUI_CTL_LISTBOX_CURSOR_RADIUS */
 
+#ifndef RETROGUI_CTL_LISTBOX_STR_SZ_MAX
+#  define RETROGUI_CTL_LISTBOX_STR_SZ_MAX 255
+#endif /* !RETROGUI_CTL_LISTBOX_STR_SZ_MAX */
+
 /*! \} */ /* maug_retrogui_cfg */
 
 /**
@@ -327,9 +331,10 @@ typedef int16_t retrogui_idc_t;
  * called internally from retrogui_redraw_ctls(), retrogui_poll_ctls(),
  * retrogui_init_ctl(), and retrogui_push_ctl(), respectively.
  */
+/* TODO: USe MDATA_VECTOR for LISTBOX items. */
 #define RETROGUI_CTL_TABLE_BASE( f ) \
    f( 0, NONE, void* none; ) \
-   f( 1, LISTBOX, MAUG_MHANDLE list_h; char* list; size_t list_sz; size_t list_sz_max; size_t sel_idx; ) \
+   f( 1, LISTBOX, struct MDATA_VECTOR list; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
    f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
    f( 4, IMAGE, retroflat_blit_t image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
@@ -405,6 +410,8 @@ union RETROGUI_CTL {
 
 typedef void (*retrogui_xy_cb)(
    retroflat_pxxy_t* x, retroflat_pxxy_t* y, void* data );
+
+typedef char retrogui_list_t[RETROGUI_CTL_LISTBOX_STR_SZ_MAX + 1];
 
 /*
  * \note It is possible to have multiple GUI controllers in a program. For
@@ -666,50 +673,52 @@ static retrogui_idc_t retrogui_click_LISTBOX(
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0,
-      j = 0;
+   size_t i = 0;
    retroflat_pxxy_t w = 0,
       h = 0;
+   int autolock = 0;
+   char* list_i = NULL;
 
 #  if defined( RETROGUI_NATIVE_WIN )
    /* Do nothing. */
 #  else
 
-   assert( NULL == ctl->LISTBOX.list );
-   assert( (MAUG_MHANDLE)NULL != ctl->LISTBOX.list_h );
-   maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
-   maug_cleanup_if_null_lock( char*, ctl->LISTBOX.list );
+   if( !mdata_vector_is_locked( &(ctl->LISTBOX.list) ) ) {
+      mdata_vector_lock( &(ctl->LISTBOX.list) );
+      autolock = 1;
+   }
 
    /* Figure out the item clicked. */
-   while( i < ctl->LISTBOX.list_sz ) {
+   while( i < mdata_vector_ct( &(ctl->LISTBOX.list) ) ) {
+      list_i =
+         (char*)mdata_vector_get( &(ctl->LISTBOX.list), i, retrogui_list_t );
+
+      /* TODO: Use retrogui_sz_LISTBOX() instead? */
 #ifdef RETROGXC_PRESENT
       retrogxc_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_idx,
+         gui->draw_bmp, list_i, 0, gui->font_idx,
          ctl->base.w, ctl->base.h, &w, &h, 0 );
 #else
       retrofont_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_h,
+         gui->draw_bmp, list_i, 0, gui->font_h,
          ctl->base.w, ctl->base.h, &w, &h, 0 );
 #endif /* RETROGXC_PRESENT */
 
       if(
          (retroflat_pxxy_t)(input_evt->mouse_y) < 
-         ctl->base.y + ((j + 1) * (h + RETROGUI_PADDING))
+         ctl->base.y + ((i + 1) * (h + RETROGUI_PADDING))
       ) {
-         ctl->LISTBOX.sel_idx = j;
+         ctl->LISTBOX.sel_idx = i;
          break;
       }
 
-      /* Try next variable-length string. */
-      i += maug_strlen( &(ctl->LISTBOX.list[i]) ) + 1;
-      assert( i <= ctl->LISTBOX.list_sz );
-      j++;
+      i++;
    }
 
 cleanup:
 
-   if( NULL != ctl->LISTBOX.list ) {
-      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   if( autolock ) {
+      mdata_vector_unlock( &(ctl->LISTBOX.list) );
    }
 
    if( MERROR_OK != retval ) {
@@ -730,6 +739,9 @@ static retrogui_idc_t retrogui_key_LISTBOX(
    switch( *p_input ) {
    retroflat_case_key( RETROGUI_KEY_SEL_NEXT, RETROGUI_PAD_SEL_NEXT )
       ctl->LISTBOX.sel_idx++;
+      if( ctl->LISTBOX.sel_idx >= mdata_vector_ct( &(ctl->LISTBOX.list) ) ) {
+         ctl->LISTBOX.sel_idx = 0;
+      }
 
       /* Redraw and preempt further processing of input. */
       gui->flags |= RETROGUI_FLAGS_DIRTY;
@@ -738,6 +750,10 @@ static retrogui_idc_t retrogui_key_LISTBOX(
 
    retroflat_case_key( RETROGUI_KEY_SEL_PREV, RETROGUI_PAD_SEL_PREV )
       ctl->LISTBOX.sel_idx--;
+      /* sel_idx is unsigned, so overflow is always positive! */
+      if( ctl->LISTBOX.sel_idx >= mdata_vector_ct( &(ctl->LISTBOX.list) ) ) {
+         ctl->LISTBOX.sel_idx = mdata_vector_ct( &(ctl->LISTBOX.list) ) - 1;
+      }
 
       /* Redraw and preempt further processing of input. */
       gui->flags |= RETROGUI_FLAGS_DIRTY;
@@ -751,45 +767,45 @@ static retrogui_idc_t retrogui_key_LISTBOX(
 static void retrogui_redraw_LISTBOX(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
-   size_t i = 0,
-      j = 0;
+   size_t i = 0;
    retroflat_pxxy_t w = 0,
       h = 0,
       item_y = 0;
    RETROFLAT_COLOR fg_color;
+   int autolock = 0;
+   char* list_i = NULL;
+   MERROR_RETVAL retval = MERROR_OK;
    
-   assert( NULL == ctl->LISTBOX.list );
-
 #  if defined( RETROGUI_NATIVE_WIN )
    /* TODO: InvalidateRect()? */
 #  else
 
-   maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
-   if( NULL == ctl->LISTBOX.list ) {
-      goto cleanup;
+   if( !mdata_vector_is_locked( &(ctl->LISTBOX.list) ) ) {
+      mdata_vector_lock( &(ctl->LISTBOX.list) );
+      autolock = 1;
    }
-   
+
    if( RETROFLAT_COLOR_BLACK != ctl->base.bg_color ) {
       retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
          gui->x + ctl->base.x, gui->y + ctl->base.y,
          ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
    }
 
-   /* Parse out variable-length strings. */
-   while( i < ctl->LISTBOX.list_sz ) {
+   while( i < mdata_vector_ct( &(ctl->LISTBOX.list) ) ) {
+      list_i =
+         (char*)mdata_vector_get( &(ctl->LISTBOX.list), i, retrogui_list_t );
 #ifdef RETROGXC_PRESENT
       retrogxc_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_idx,
+         gui->draw_bmp, list_i, 0, gui->font_idx,
          ctl->base.w, ctl->base.h, &w, &h, 0 );
 #else
       retrofont_string_sz(
-         gui->draw_bmp, &(ctl->LISTBOX.list[i]), 0, gui->font_h,
+         gui->draw_bmp, list_i, 0, gui->font_h,
          ctl->base.w, ctl->base.h, &w, &h, 0 );
 #endif /* RETROGXC_PRESENT */
       debug_printf( RETROGUI_TRACE_LVL,
-         "str height for \"%s\": " SIZE_T_FMT, 
-         &(ctl->LISTBOX.list[i]), h );
-      if( j == ctl->LISTBOX.sel_idx ) {
+         "str height for \"%s\": " SIZE_T_FMT, list_i, h );
+      if( i == ctl->LISTBOX.sel_idx ) {
          /* Draw selection colors. */
          retroflat_2d_rect( gui->draw_bmp, ctl->base.sel_bg,
             gui->x + ctl->base.x,
@@ -810,35 +826,32 @@ static void retrogui_redraw_LISTBOX(
 
 #ifdef RETROGXC_PRESENT
       retrogxc_string(
-         gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
-         gui->font_idx,
+         gui->draw_bmp, fg_color, list_i, 0, gui->font_idx,
          gui->x + ctl->base.x +
             RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
          gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #else
       retrofont_string(
-         gui->draw_bmp, fg_color, &(ctl->LISTBOX.list[i]), 0,
-         gui->font_h,
+         gui->draw_bmp, fg_color, list_i, 0, gui->font_h,
          gui->x + ctl->base.x +
             RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
          gui->y + ctl->base.y + item_y,
          0, 0, 0 );
 #endif /* RETROGXC_PRESENT */
 
-      /* Move to next variable-length string. */
-      i += maug_strlen( &(ctl->LISTBOX.list[i]) ) + 1;
-      assert( i <= ctl->LISTBOX.list_sz );
-      /* Track the item high separately in case the item is multi-line. */
+      i++;
+      /* Track the item height separately in case the item is multi-line. */
       item_y += h + RETROGUI_PADDING;
-      j++;
    }
 
 cleanup:
 
-   if( NULL != ctl->LISTBOX.list ) {
-      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
+   if( autolock ) {
+      mdata_vector_unlock( &(ctl->LISTBOX.list) );
    }
+
+   assert( MERROR_OK == retval );
 
 #  endif
 
@@ -868,8 +881,9 @@ MERROR_RETVAL retrogui_push_listbox_item(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
-   MAUG_MHANDLE listbox_h_new = (MAUG_MHANDLE)NULL;
    int autolock = 0;
+   retrogui_list_t item_stage;
+   ssize_t i = 0;
 
    if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
@@ -893,42 +907,19 @@ MERROR_RETVAL retrogui_push_listbox_item(
 
 #  else
 
-   if( 0 == ctl->LISTBOX.list_sz ) {
-      ctl->LISTBOX.list_h = maug_malloc( 255, sizeof( char ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->LISTBOX.list_h );
-      ctl->LISTBOX.list_sz_max = 255;
+   maug_mzero( item_stage, RETROGUI_CTL_LISTBOX_STR_SZ_MAX + 1 );
+   maug_strncpy( item_stage, item, RETROGUI_CTL_LISTBOX_STR_SZ_MAX );
+   i = mdata_vector_append(
+      &(ctl->LISTBOX.list), item_stage, RETROGUI_CTL_LISTBOX_STR_SZ_MAX + 1 );
+   if( 0 > i ) {
+      retval = merror_sz_to_retval( i );
    }
-
-   if( NULL != ctl->LISTBOX.list ) {
-      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
-   }
-
-   while( ctl->LISTBOX.list_sz + item_sz + 1 >= ctl->LISTBOX.list_sz_max )  {
-      debug_printf( RETROGUI_TRACE_LVL,
-         "resizing listbox items to " SIZE_T_FMT "...",
-         ctl->LISTBOX.list_sz );
-      maug_mrealloc_test(
-         listbox_h_new, ctl->LISTBOX.list_h,
-         ctl->LISTBOX.list_sz_max * 2, sizeof( char ) );
-      ctl->LISTBOX.list_sz_max *= 2;
-   }
-
-   maug_mlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
-   maug_cleanup_if_null_alloc( char*, ctl->LISTBOX.list );
-
-   maug_strncpy( &(ctl->LISTBOX.list[ctl->LISTBOX.list_sz]), item, item_sz );
-   ctl->LISTBOX.list[ctl->LISTBOX.list_sz + item_sz] = '\0';
-   ctl->LISTBOX.list_sz += item_sz + 1;
 
 #endif
 
    gui->flags |= RETROGUI_FLAGS_DIRTY;
 
 cleanup:
-
-   if( NULL != ctl->LISTBOX.list ) {
-      maug_munlock( ctl->LISTBOX.list_h, ctl->LISTBOX.list );
-   }
 
    if( autolock ) {
       mdata_vector_unlock( &(gui->ctls) );
@@ -989,8 +980,7 @@ static MERROR_RETVAL retrogui_pos_LISTBOX(
 }
 
 static void retrogui_destroy_LISTBOX( union RETROGUI_CTL* ctl ) {
-   assert( NULL == ctl->LISTBOX.list );
-   maug_mfree( ctl->LISTBOX.list_h );
+   mdata_vector_free( &(ctl->LISTBOX.list) );
 }
 
 static MERROR_RETVAL retrogui_init_LISTBOX( union RETROGUI_CTL* ctl ) {
