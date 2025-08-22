@@ -49,6 +49,9 @@
 
 #define MLISP_ENV_FLAG_ANO_AND   0x20
 
+/*! \brief Flag for _mlisp_env_cb_define() specifying global env. */
+#define MLISP_ENV_FLAG_DEFINE_GLOBAL   0x10
+
 /**
  * \addtogroup mlisp_stack MLISP Execution Stack
  * \{
@@ -1147,6 +1150,8 @@ static MERROR_RETVAL _mlisp_env_cb_define(
    struct MLISP_STACK_NODE val;
    MAUG_MHANDLE key_tmp_h = (MAUG_MHANDLE)NULL;
    char* key_tmp = NULL;
+   struct MDATA_VECTOR* env = NULL;
+   ssize_t env_idx = 0;
 
    retval = mlisp_stack_pop( exec, &val );
    maug_cleanup_if_not_ok();
@@ -1174,8 +1179,37 @@ static MERROR_RETVAL _mlisp_env_cb_define(
       "%u: define \"%s\" (strpool(" SIZE_T_FMT "))...",
       exec->uid, key_tmp, key.value.strpool_idx );
 
-   retval = mlisp_env_set(
-      parser, exec, key_tmp, 0, val.type, &(val.value), NULL, 0 );
+   /* Figure out the env to use. */
+   if(
+      MLISP_ENV_FLAG_DEFINE_GLOBAL == (MLISP_ENV_FLAG_DEFINE_GLOBAL & flags)
+   ) {
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: using global env...", exec->uid );
+      env = exec->global_env;
+   } else if(
+      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
+   ) {
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: using parser env...", exec->uid );
+      env = &(parser->env);
+   } else {
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: using exec env...", exec->uid );
+      env = &(exec->env);
+   }
+   assert( NULL != env );
+
+   /* Perform the insertion. */
+   env_idx = _mlisp_env_set_internal(
+      env, &(parser->strpool), exec->uid,
+      key_tmp, maug_strlen( key_tmp ), val.type, &(val.value), NULL, 0 );
+   if( 0 > env_idx ) {
+      retval = merror_sz_to_retval( env_idx );
+      goto cleanup;
+   }
+
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "%u: setup env node " SSIZE_T_FMT ": %s",
+      exec->uid, env_idx, key_tmp );
 
 cleanup:
 
@@ -2358,6 +2392,9 @@ MERROR_RETVAL mlisp_exec_init(
       goto cleanup;
    }
 
+   retval = mlisp_env_set(
+      parser, exec, "gdefine", 7, MLISP_TYPE_CB, _mlisp_env_cb_define,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_DEFINE_GLOBAL );
    retval = mlisp_env_set(
       parser, exec, "and", 3, MLISP_TYPE_CB, _mlisp_env_cb_ano,
       NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_AND );
