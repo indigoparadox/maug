@@ -231,6 +231,10 @@
 #  define RETROGUI_CTL_LISTBOX_STR_SZ_MAX 255
 #endif /* !RETROGUI_CTL_LISTBOX_STR_SZ_MAX */
 
+#ifndef RETROGUI_DEBOUNCE_MAX_DEFAULT
+#  define RETROGUI_DEBOUNCE_MAX_DEFAULT 100
+#endif /* !RETROGUI_DEBOUNCE_MAX_DEFAULT */
+
 /*! \} */ /* maug_retrogui_cfg */
 
 /**
@@ -431,6 +435,8 @@ struct RETROGUI {
    /*! \brief Unique identifying index for current highlighted RETROGUI_CTL. */
    retrogui_idc_t focus;
    retroflat_blit_t* draw_bmp;
+   retroflat_ms_t debounce_next;
+   retroflat_ms_t debounce_max;
 #ifdef RETROGXC_PRESENT
    ssize_t font_idx;
 #else
@@ -2052,8 +2058,16 @@ retrogui_idc_t retrogui_poll_ctls(
          "focus " RETROGUI_IDC_FMT " input: %d", gui->focus, *p_input );
    }
 
+   /* Don't accept any input until debounce period has expired. */
+   if( retroflat_get_ms() < gui->debounce_next ) {
+      debug_printf(
+         1, "debo! %d vs %d", retroflat_get_ms(), gui->debounce_next );
+      goto cleanup;
+   }
+
    if( 0 == *p_input ) {
-      goto reset_debounce;
+      /* No input to debounce! */
+      goto cleanup;
 
    } else if(
       retroflat_or_key( *p_input, RETROGUI_KEY_ACTIVATE, RETROGUI_PAD_ACTIVATE )
@@ -2134,7 +2148,7 @@ retrogui_idc_t retrogui_poll_ctls(
    } else {
 
       if( RETROGUI_IDC_NONE == gui->focus ) {
-         goto reset_debounce;
+         goto cleanup;
       }
 
       /* Send keystrokes to control that has focus. */
@@ -2146,7 +2160,7 @@ retrogui_idc_t retrogui_poll_ctls(
           */
          debug_printf( RETROGUI_TRACE_LVL,
             "invalid focus IDC: " RETROGUI_IDC_FMT, gui->focus );
-         goto reset_debounce;
+         goto cleanup;
       }
 
       if( 0 ) {
@@ -2154,10 +2168,8 @@ retrogui_idc_t retrogui_poll_ctls(
       }
    }
 
-reset_debounce:
-
-   /* Reset repeat detector. */
-   gui->idc_prev = RETROGUI_IDC_NONE;
+   /* Input must have been valid, so set a debounce backoff time. */
+   gui->debounce_next = retroflat_get_ms() + gui->debounce_max; 
 
 #  endif
 
@@ -3016,6 +3028,7 @@ MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
 
    gui->bg_color = RETROFLAT_COLOR_BLACK;
    gui->focus = RETROGUI_IDC_NONE;
+   gui->debounce_max = RETROGUI_DEBOUNCE_MAX_DEFAULT;
 
    debug_printf( RETROGUI_TRACE_LVL, "initialized GUI" );
 
