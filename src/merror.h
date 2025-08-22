@@ -38,16 +38,32 @@ typedef int MERROR_RETVAL;
 
 #define MERROR_GUI      0x0020
 
-#define MERROR_SND      0x0020
+#define MERROR_SND      MERROR_GUI
 
 #define MERROR_WAIT     0x0040
 
-#define MERROR_EXEC     0x0040
-
-/* MERROR_EXEC + MERROR_TIMEOUT */
-#define MERROR_PREEMPT  0x00c0
+#define MERROR_EXEC     MERROR_WAIT
 
 #define MERROR_TIMEOUT  0x0080
+
+/**
+ * \addtogroup maug_mlisp_retvals MLISP Return Values
+ * \brief Return values specific to \ref mlisp.
+ * \{
+ */
+
+/**
+ * \brief Indicates MLISP_AST_NODE can be executed again on next step iter pass.
+ */
+#define MERROR_PREEMPT  (MERROR_EXEC | MERROR_TIMEOUT)
+
+/**
+ * \brief Indicates MLISP_EXEC_STATE has reached a condition where it has run
+ *        out of instructions.
+ */
+#define MERROR_RESET (MERROR_EXEC | MERROR_PARSE)
+
+/*! \} */ /* maug_mlisp_retvals */
 
 /*! \} */ /* maug_error_retvals */
 

@@ -715,9 +715,10 @@ MERROR_RETVAL mlisp_env_set(
        * arg on the stack for it to take up!
        */
       error_printf(
-         "%u: attempted to define BEGIN from stack... missing lambda arg?",
+         "%u: attempted to define BEGIN from stack... "
+            "missing lambda arg or script reset?",
          exec->uid );
-      retval = MERROR_EXEC;
+      retval = MERROR_RESET;
       goto cleanup;
 
    default:
@@ -1829,7 +1830,17 @@ static MERROR_RETVAL _mlisp_step_iter(
       /* Cleanup the stack that's been pushed by children since this BEGIN's
        * initial visit.
        */
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: rewinding stack for begin on node " SSIZE_T_FMT,
+         exec->uid, n_idx );
       retval = _mlisp_stack_cleanup( parser, n_idx, exec );
+      maug_cleanup_if_not_ok();
+
+      /* Push a replacement BEGIN that can be caught later and throw an
+       * MERROR_RESET.
+       */
+      retval = _mlisp_stack_push_mlisp_begin_t( exec, n_idx );
+      maug_cleanup_if_not_ok();
 
    } else if( MLISP_TYPE_CB == e.type ) {
       /* This is a special case... rather than pushing the callback, *execute*
