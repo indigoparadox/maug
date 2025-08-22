@@ -219,32 +219,32 @@ MERROR_RETVAL mlisp_stack_dump(
 
       /* Handle special exceptions. */
       if( MLISP_TYPE_STR == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (STR): %s",
             exec->uid, i, &(strpool[n_stack->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (CB): %p",
             exec->uid, i, n_stack->value.cb );
 
       } else if( MLISP_TYPE_LAMBDA == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (LAMBDA): " SIZE_T_FMT,
             exec->uid, i, n_stack->value.lambda );
 
       } else if( MLISP_TYPE_ARGS_S == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_S): " SIZE_T_FMT,
             exec->uid, i, n_stack->value.args_start );
 
       } else if( MLISP_TYPE_ARGS_E == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (ARGS_E): " SIZE_T_FMT,
             exec->uid, i, n_stack->value.args_end );
 
       } else if( MLISP_TYPE_BEGIN == n_stack->type ) {
-         debug_printf( MLISP_STACK_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " stack " SIZE_T_FMT " (BEGIN): " SIZE_T_FMT,
             exec->uid, i, n_stack->value.begin );
 
