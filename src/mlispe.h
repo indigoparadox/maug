@@ -555,11 +555,8 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    const char* strpool, size_t token_strpool_idx, size_t token_strpool_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MLISP_ENV_NODE* node_out = NULL;
-   struct MLISP_ENV_NODE* node_test = NULL;
-   ssize_t i = 0;
+   struct MLISP_ENV_NODE* e = NULL;
    struct MDATA_VECTOR* env = NULL;
-   int autolock_env = 0;
 
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
@@ -568,49 +565,37 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    } else {
       env = &(exec->env);
    }
-   i = mdata_vector_ct( env ) - 1;
 
-   /* This requires env be locked before entrance! */
-   if( !mdata_vector_is_locked( env ) ) {
-      mdata_vector_lock( env );
-      autolock_env = 1;
+   /* At the very least, the caller using this should be in the same lock
+    * context as this search, since we're returning a pointer. So no autolock!
+    */
+   assert( mdata_vector_is_locked( env ) );
+
+   e = _mlisp_env_get_internal(
+      env, &(strpool[token_strpool_idx]), token_strpool_sz, strpool );
+   if( NULL != e ) {
+      /* Found something, so short-circuit! */
+      goto cleanup;
    }
 
-   while( 0 <= i ) {
-      assert( mdata_vector_is_locked( env ) );
-      node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
-      if( 0 == token_strpool_sz ) {
-         if( 0 == strcmp(
-            &(strpool[node_test->name_strpool_idx]),
-            &(strpool[token_strpool_idx])
-         ) ) {
-            node_out = node_test;
-            break;
-         }
-      } else {
-         if( 0 == strncmp(
-            &(strpool[node_test->name_strpool_idx]),
-            &(strpool[token_strpool_idx]),
-            token_strpool_sz + 1
-         ) ) {
-            node_out = node_test;
-            break;
-         }
-      }
-      i--;
+   assert( 0 <= token_strpool_idx );
+
+   /* Did not find anything in the local env, so try the global env if there
+    * is one!
+    */
+   if( NULL != exec->global_env ) {
+      e = _mlisp_env_get_internal(
+         exec->global_env, &(strpool[token_strpool_idx]), token_strpool_sz,
+         strpool );
    }
 
 cleanup:
 
    if( MERROR_OK != retval ) {
-      node_out = NULL;
+      e = NULL;
    }
 
-   if( autolock_env ) {
-      mdata_vector_unlock( env );
-   }
-
-   return node_out;
+   return e;
 }
 
 /* === */
