@@ -682,10 +682,11 @@ MERROR_RETVAL mlisp_env_set(
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
    ) {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "using parser env..." );
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: using parser env...", exec->uid );
       env = &(parser->env);
    } else {
-      debug_printf( MLISP_EXEC_TRACE_LVL, "using exec env..." );
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: using exec env...", exec->uid );
       env = &(exec->env);
    }
 
@@ -791,8 +792,9 @@ MERROR_RETVAL mlisp_env_set(
    }
    maug_cleanup_if_not_ok();
 
-   debug_printf( MLISP_EXEC_TRACE_LVL, "setup env node " SSIZE_T_FMT ": %s",
-      new_idx_out, token );
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "%u: setup env node " SSIZE_T_FMT ": %s",
+      exec->uid, new_idx_out, token );
 
 cleanup:
 
