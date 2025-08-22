@@ -112,6 +112,7 @@ struct MLISP_ENV_NODE {
    uint8_t flags;
    uint8_t type;
    mdata_strpool_idx_t name_strpool_idx;
+   size_t name_strpool_sz;
    union MLISP_VAL value;
    void* cb_data;
 };
@@ -161,6 +162,7 @@ struct MLISP_EXEC_STATE {
     * denote env definitions that are actually args for the current lambda.
     */
    struct MDATA_VECTOR env;
+   struct MDATA_VECTOR* global_env;
 /**
  * \brief Path through any lambdas the execution has entered during *this*
  *        heartbeat cycle. Used to detect tail calls.
