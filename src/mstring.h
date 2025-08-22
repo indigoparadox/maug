@@ -23,6 +23,12 @@ union MAUG_FMT_SPEC {
    size_t z;
 };
 
+#ifdef MAUG_TERSE
+#  define maug_tv( t, v ) t
+#else
+#  define maug_tv( t, v ) v
+#endif /* MAUG_TERSE */
+
 #define maug_bufcat( c, buf, buf_idx, buf_sz, cleanup ) \
    (buf)[buf_idx++] = c; \
    if( (buf_idx) >= (buf_sz) ) { goto cleanup; }

@@ -76,8 +76,17 @@
 #define mlisp_stack_push( exec, i, ctype ) \
    (_mlisp_stack_push_ ## ctype( exec, (ctype)i ))
 
+#if defined( MLISP_DUMP_ENABLED ) || defined( DOCUMENTATION )
+
+/**
+ * \brief Dump the stack from the given parser/exec combination.
+ * \warning This is only available if MLISP_DUMP_ENABLED is defined at compile
+ *          time!
+ */
 MERROR_RETVAL mlisp_stack_dump(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
+#endif /* MLISP_DUMP_ENABLED || DOCUMENTATION */
 
 /**
  * \brief Pop a value off of (removing from) MLISP_EXEC_STATE::stack and copy
@@ -93,8 +102,17 @@ MERROR_RETVAL mlisp_stack_peek(
 
 /*! \} */ /* mlisp_stack */
 
+#if defined( MLISP_DUMP_ENABLED ) || defined( DOCUMENTATION )
+
+/**
+ * \brief Dump the environment from the given parser/exec combination.
+ * \warning This is only available if MLISP_DUMP_ENABLED is defined at compile
+ *          time!
+ */
 MERROR_RETVAL mlisp_env_dump(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
+#endif /* MLISP_DUMP_ENABLED || DOCUMENTATION */
 
 /**
  * \brief Get a node from the environment denoted by a string in the strpool.
@@ -198,6 +216,8 @@ static MERROR_RETVAL _mlisp_reset_child_pcs(
 
 /* === */
 
+#ifdef MLISP_DUMP_ENABLED
+
 MERROR_RETVAL mlisp_stack_dump(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
@@ -264,6 +284,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* MLISP_DUMP_ENABLED */
 
 /* === */
 
@@ -346,6 +368,8 @@ cleanup:
 /* Env Functons */
 
 /* === */
+
+#if defined( MLISP_DUMP_ENABLED )
 
 MERROR_RETVAL mlisp_env_dump(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
@@ -430,6 +454,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* MLISP_DUMP_ENABLED */
 
 /* === */
 

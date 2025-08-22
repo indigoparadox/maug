@@ -76,8 +76,17 @@
  */
 #define mlisp_check_ast( parser ) (0 < mdata_vector_ct( &((parser)->ast) ))
 
+#if defined( MLISP_DUMP_ENABLED ) || defined( DOCUMENTATION )
+
+/**
+ * \brief Dump the given parser AST.
+ * \warning This is only available if MLISP_DUMP_ENABLED is defined at compile
+ *          time!
+ */
 MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_PARSER* parser, size_t ast_node_idx, size_t depth, char ab );
+
+#endif /* MLISP_DUMP_ENABLED || DOCUMENTATION */
 
 /*! \} */ /* mlisp_parser */
 
@@ -303,6 +312,8 @@ cleanup:
 
 /* === */
 
+#if defined( MLISP_DUMP_ENABLED ) || defined( DOCUMENTATION )
+
 MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_PARSER* parser, size_t ast_node_idx, size_t depth, char ab
 ) {
@@ -358,6 +369,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* MLISP_DUMP_ENABLED */
 
 /* === */
 
@@ -583,7 +596,9 @@ MERROR_RETVAL mlisp_parse_file(
       retval = mlisp_parse_c( parser, c );
       maug_cleanup_if_not_ok();
    }
+#if defined( MLISP_DUMP_ENABLED )
    mlisp_ast_dump( parser, 0, 0, 0 );
+#endif /* MLISP_DUMP_ENABLED */
    if( 0 < parser->base.pstate_sz ) {
       error_printf( "invalid parser state!" );
       retval = MERROR_EXEC;
