@@ -188,6 +188,10 @@ static MERROR_RETVAL _mlisp_step_iter(
    struct MLISP_PARSER* parser,
    size_t n_idx, struct MLISP_EXEC_STATE* exec );
 
+static MERROR_RETVAL _mlisp_reset_child_pcs(
+   struct MLISP_PARSER* parser,
+   size_t n_idx, struct MLISP_EXEC_STATE* exec );
+
 /* === */
 
 /* Stack Functions */
@@ -1119,7 +1123,7 @@ static MERROR_RETVAL _mlisp_env_cb_if(
       retval = _mlisp_step_iter(
          parser, n->ast_idx_children[*p_if_child_idx], exec );
       debug_printf( MLISP_EXEC_TRACE_LVL,
-         ":%u: ...stepped out of condition", exec->uid );
+         "%u: ...stepped out of condition", exec->uid );
 
       /* Vary the child we jump to based on the boolean val on the stack. */
       if( MERROR_OK == retval ) {
@@ -1260,19 +1264,24 @@ static MERROR_RETVAL _mlisp_preempt(
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
-   mdata_strpool_lock( &(parser->strpool), strpool );
-   assert( 0 < maug_strlen( &(strpool[n->token_idx]) ) );
-   debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: eval step " SSIZE_T_FMT " under (%s) %s...",
-      exec->uid, *p_child_idx, caller, &(strpool[n->token_idx]) );
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+   if( 0 <= n->token_idx ) {
+      mdata_strpool_lock( &(parser->strpool), strpool );
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: eval step " SSIZE_T_FMT " under (%s) %s...",
+         exec->uid, *p_child_idx, caller, &(strpool[n->token_idx]) );
+      mdata_strpool_unlock( &(parser->strpool), strpool );
+   } else {
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: eval step " SSIZE_T_FMT " under (%s) (empty token)...",
+         exec->uid, *p_child_idx, caller );
+   }
 
    if( MERROR_OK != retval ) {
       /* Something bad happened, so don't increment! */
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "%u: not incrementing node " SIZE_T_FMT " child idx from "
-            SIZE_T_FMT "!",
-         n_idx, *p_child_idx );
+            SIZE_T_FMT " (retval: 0x%x)!",
+         exec->uid, n_idx, *p_child_idx, retval );
       goto cleanup;
    }
 
@@ -2241,7 +2250,7 @@ MERROR_RETVAL mlisp_exec_init(
    }
 
    retval = mlisp_env_set(
-      parser, exec, "and", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
+      parser, exec, "and", 3, MLISP_TYPE_CB, _mlisp_env_cb_ano,
       NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_AND );
    maug_cleanup_if_not_ok();
    retval = mlisp_env_set(
