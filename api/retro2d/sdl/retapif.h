@@ -80,7 +80,7 @@ MERROR_RETVAL retroflat_init_platform(
    srand( time( NULL ) );
 
    /* Startup SDL. */
-   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK ) ) {
+   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
@@ -203,7 +203,7 @@ MERROR_RETVAL retroflat_init_platform(
 
    srand( time( NULL ) );
 
-   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER ) ) {
+   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;
