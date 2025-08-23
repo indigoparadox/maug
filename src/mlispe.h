@@ -376,16 +376,11 @@ cleanup:
 /* === */
 
 static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
-   struct MDATA_VECTOR* env, const char* key, size_t key_sz, const char* strpool
+   struct MDATA_VECTOR* env, ssize_t key_idx, size_t key_sz
 ) {
    struct MLISP_ENV_NODE* e = NULL,
       * node_test = NULL;
    ssize_t i = 0;
-
-   if( NULL == strpool || (const char*)0xdeadbeef == strpool ) {
-      error_printf( "invalid env strpool pointer!" );
-      goto cleanup;
-   }
 
    /* At the very least, the caller using this should be in the same lock
     * context as this search, since we're returning a pointer. So no autolock!
@@ -406,10 +401,9 @@ static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
          error_printf( "invalid node!" );
          goto cleanup;
       }
-      /* XXX: We're crashing here in Windows 3.x! */
       if(
          node_test->name_strpool_sz == key_sz &&
-         0 == strncmp( &(strpool[node_test->name_strpool_idx]), key, key_sz )
+         node_test->name_strpool_idx == key_idx
       ) {
          e = node_test;
          break;
@@ -520,7 +514,8 @@ struct MLISP_ENV_NODE* mlisp_env_get(
    struct MLISP_ENV_NODE* e = NULL;
    struct MDATA_VECTOR* env = NULL;
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
+   size_t key_sz = 0;
+   ssize_t key_strpool_idx = 0;
 
    /* Start with our local, exec-/parser-specific env. */
    if(
@@ -536,10 +531,17 @@ struct MLISP_ENV_NODE* mlisp_env_get(
     */
    assert( mdata_vector_is_locked( env ) );
 
-   mdata_strpool_lock( &(parser->strpool), strpool );
-   maug_cleanup_if_null_lock( char*, strpool );
+   /* Find the key in the parser strpool. If it's not in there... it's not in
+    * any env, since all the env keys are strpool indexes!
+    */
+   key_sz = strlen( key );
+   key_strpool_idx = mdata_strpool_find(
+      &(parser->strpool), key, key_sz );
+   if( 0 > key_strpool_idx || 0 == key_sz ) {
+      goto cleanup;
+   }
 
-   e = _mlisp_env_get_internal( env, key, strlen( key ), strpool );
+   e = _mlisp_env_get_internal( env, key_strpool_idx, key_sz );
    if( NULL != e ) {
       /* Found something, so short-circuit! */
       goto cleanup;
@@ -550,18 +552,13 @@ struct MLISP_ENV_NODE* mlisp_env_get(
     */
    if( NULL != exec->global_env ) {
       assert( mdata_vector_is_locked( exec->global_env ) );
-      e = _mlisp_env_get_internal(
-         exec->global_env, key, strlen( key ), strpool );
+      e = _mlisp_env_get_internal( exec->global_env, key_strpool_idx, key_sz );
    }
 
 cleanup:
 
    if( MERROR_OK != retval ) {
       e = NULL;
-   }
-
-   if( NULL != strpool ) {
-      mdata_strpool_unlock( &(parser->strpool), strpool );
    }
 
    return e;
@@ -607,8 +604,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
       exec->uid );
 #endif /* MLISP_EXEC_TRACE_LVL */
 
-   e = _mlisp_env_get_internal(
-      env, &(strpool[token_strpool_idx]), token_strpool_sz, strpool );
+   e = _mlisp_env_get_internal( env, token_strpool_idx, token_strpool_sz );
    if( NULL != e ) {
       /* Found something, so short-circuit! */
       goto cleanup;
@@ -630,8 +626,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
          goto cleanup;
       }
       e = _mlisp_env_get_internal(
-         exec->global_env, &(strpool[token_strpool_idx]), token_strpool_sz,
-         strpool );
+         exec->global_env, token_strpool_idx, token_strpool_sz );
    }
 
 #if MLISP_EXEC_TRACE_LVL > 0
