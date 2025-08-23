@@ -382,13 +382,18 @@ static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
       * node_test = NULL;
    ssize_t i = 0;
 
-   assert( NULL != strpool );
-   assert( (void*)0xdeadbeef != strpool );
+   if( NULL == strpool || (const char*)0xdeadbeef == strpool ) {
+      error_printf( "invalid env strpool pointer!" );
+      goto cleanup;
+   }
 
    /* At the very least, the caller using this should be in the same lock
     * context as this search, since we're returning a pointer. So no autolock!
     */
-   assert( mdata_vector_is_locked( env ) );
+   if( !mdata_vector_is_locked( env ) ) {
+      error_printf( "env must be locked for shared context!" );
+      goto cleanup;
+   }
 
    /* Start from the end so that later definitions (in a deeper/more relevant
     * scope) are evaluated first.
@@ -397,6 +402,11 @@ static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
 
    while( 0 <= i ) {
       node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+      if( NULL == node_test ) {
+         error_printf( "invalid node!" );
+         goto cleanup;
+      }
+      /* XXX: We're crashing here in Windows 3.x! */
       if(
          node_test->name_strpool_sz == key_sz &&
          0 == strncmp( &(strpool[node_test->name_strpool_idx]), key, key_sz )
@@ -406,6 +416,8 @@ static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
       }
       i--;
    }
+
+cleanup:
 
    return e;
 }
@@ -508,7 +520,7 @@ struct MLISP_ENV_NODE* mlisp_env_get(
    struct MLISP_ENV_NODE* e = NULL;
    struct MDATA_VECTOR* env = NULL;
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool;
+   char* strpool = NULL;
 
    /* Start with our local, exec-/parser-specific env. */
    if(
@@ -525,6 +537,7 @@ struct MLISP_ENV_NODE* mlisp_env_get(
    assert( mdata_vector_is_locked( env ) );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
+   maug_cleanup_if_null_lock( char*, strpool );
 
    e = _mlisp_env_get_internal( env, key, strlen( key ), strpool );
    if( NULL != e ) {
@@ -567,15 +580,32 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
    ) {
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) using parser env...",
+         exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
       env = &(parser->env);
    } else {
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) using exec env...",
+         exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
       env = &(exec->env);
    }
 
    /* At the very least, the caller using this should be in the same lock
     * context as this search, since we're returning a pointer. So no autolock!
     */
-   assert( mdata_vector_is_locked( env ) );
+   if( !mdata_vector_is_locked( env ) ) {
+      error_printf( "env must be locked for shared context!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+#if MLISP_EXEC_TRACE_LVL > 0
+   debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) checking env...",
+      exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
 
    e = _mlisp_env_get_internal(
       env, &(strpool[token_strpool_idx]), token_strpool_sz, strpool );
@@ -584,17 +614,30 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
       goto cleanup;
    }
 
-   assert( 0 <= token_strpool_idx );
-
    /* Did not find anything in the local env, so try the global env if there
     * is one!
     */
    if( NULL != exec->global_env ) {
-      assert( mdata_vector_is_locked( exec->global_env ) );
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: (strpool) checking global env...",
+         exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
+
+      if( !mdata_vector_is_locked( exec->global_env ) ) {
+         error_printf( "global env must be locked for shared context!" );
+         retval = MERROR_EXEC;
+         goto cleanup;
+      }
       e = _mlisp_env_get_internal(
          exec->global_env, &(strpool[token_strpool_idx]), token_strpool_sz,
          strpool );
    }
+
+#if MLISP_EXEC_TRACE_LVL > 0
+   debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) found env: %p",
+      exec->uid, e );
+#endif /* MLISP_EXEC_TRACE_LVL */
 
 cleanup:
 
@@ -1976,13 +2019,15 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       mdata_vector_is_locked( exec->global_env ) );
 
    mdata_strpool_lock( &(parser->strpool), strpool );
+   maug_cleanup_if_null_lock( char*, strpool );
    
    assert( 0 < maug_strlen( &(strpool[token_idx]) ) );
 
 #if MLISP_EXEC_TRACE_LVL > 0
    debug_printf( MLISP_EXEC_TRACE_LVL,
-      "%u: eval token: \"%s\" (maug_strlen: " SIZE_T_FMT ")",
-      exec->uid, &(strpool[token_idx]), maug_strlen( &(strpool[token_idx]) ) );
+      "%u: eval token: \"%s\" (strlen: " SIZE_T_FMT "r/" SIZE_T_FMT "d)",
+      exec->uid, &(strpool[token_idx]),
+      token_sz, maug_strlen( &(strpool[token_idx]) ) );
 #endif /* MLISP_EXEC_TRACE_LVL */
    if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz ) ) {
       /* Fake env node e to signal step_iter() to place/cleanup stack frame. */
