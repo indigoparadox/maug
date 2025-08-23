@@ -520,10 +520,15 @@ MERROR_RETVAL retrotile_topdown_draw(
 
 /* TODO: Function names should be verb_noun! */
 
-#define retrotile_parser_mstate( parser, new_mstate ) \
-   parser->mstate = new_mstate; \
-   debug_printf( \
-      RETROTILE_TRACE_LVL, "parser mstate: %d", parser->mstate );
+#if RETROTILE_TRACE_LVL > 0
+#  define retrotile_parser_mstate( parser, new_mstate ) \
+      parser->mstate = new_mstate; \
+      debug_printf( \
+         RETROTILE_TRACE_LVL, "parser mstate: %d", parser->mstate );
+#else
+#  define retrotile_parser_mstate( parser, new_mstate ) \
+      parser->mstate = new_mstate;
+#endif /* RETROTILE_TRACE_LVL */
 
 #  define RETROTILE_PARSER_MSTATE_TABLE_CONST( name, idx, tokn, parent, m ) \
       MAUG_CONST uint8_t SEG_MCONST name = idx;
@@ -693,16 +698,20 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          tileset_id_parsed = maug_atou32( token, token_sz, 10 );
          if( tileset_id_parsed > parser->tileset_id_cur ) {
             parser->tileset_id_cur = tileset_id_parsed;
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL,
                "new highest tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
+#endif /* RETROTILE_TRACE_LVL */
          }
       } else {
          assert( 0 < mdata_vector_ct( parser->p_tile_defs ) );
          parser->tileset_id_cur = maug_atou32( token, token_sz, 10 );
+#if RETROTILE_TRACE_LVL > 0
          debug_printf(
             RETROTILE_TRACE_LVL,
             "next tile ID: " SIZE_T_FMT, parser->tileset_id_cur );
+#endif /* RETROTILE_TRACE_LVL */
       }
       retrotile_parser_mstate( parser, MTILESTATE_TILES );
 
@@ -726,9 +735,11 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                tile_def->image_path, token, MFILE_ASSIGN_FLAG_TRIM_EXT );
          }
 
+#if RETROTILE_TRACE_LVL > 0
          debug_printf(
             RETROTILE_TRACE_LVL, "set tile ID " SIZE_T_FMT " to: %s",
             parser->tileset_id_cur, tile_def->image_path );
+#endif /* RETROTILE_TRACE_LVL */
       }
       retrotile_parser_mstate( parser, MTILESTATE_TILES );
 
@@ -747,33 +758,45 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          assert( NULL != tile_def );
          assert( 0 == tile_def->tile_class );
 
+#if RETROTILE_TRACE_LVL > 0
          #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
             } else if( 0 == strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
                tile_def->tile_class = RETROTILE_CLASS_ ## A; \
                debug_printf( RETROTILE_TRACE_LVL, \
                   "set tile " SIZE_T_FMT " type: " #a " (%u)", \
                   parser->tileset_id_cur, tile_def->tile_class );
+#else
+         #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
+            } else if( 0 == strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
+               tile_def->tile_class = RETROTILE_CLASS_ ## A;
+#endif /* RETROTILE_TRACE_LVL */
 
          if( 0 ) {
          RETROTILE_CLASS_TABLE( RETROTILE_CLASS_TABLE_SET )
          } else {
             tile_def->tile_class = RETROTILE_CLASS_TILE;
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL,
                "set tile " SIZE_T_FMT " type: tile (%u)",
                parser->tileset_id_cur, tile_def->tile_class );
+#endif /* RETROTILE_TRACE_LVL */
          }
       }
       retrotile_parser_mstate( parser, MTILESTATE_TILES );
 
    } else if( MTILESTATE_TILES_PROP_NAME == parser->mstate ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "parsing property: %s", token );
+#endif /* RETROTILE_TRACE_LVL */
       maug_mzero( parser->last_prop_name, RETROTILE_PROP_NAME_SZ_MAX + 1 );
       maug_strncpy( parser->last_prop_name, token, RETROTILE_PROP_NAME_SZ_MAX );
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
 
    } else if( MTILESTATE_TILES_PROP_TYPE == parser->mstate ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "property %s is type: %s",
          parser->last_prop_name, token );
+#endif /* RETROTILE_TRACE_LVL */
       parser->last_prop_type = retrotile_parse_prop_type( token, token_sz );
       retrotile_parser_mstate( parser, MTILESTATE_TILES_PROP );
 
@@ -791,18 +814,27 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
          if( 0 == strncmp( "warp_dest", parser->last_prop_name, 10 ) ) {
             maug_mzero( tile_def->warp_dest, RETROTILE_NAME_SZ_MAX );
             maug_strncpy( tile_def->warp_dest, token, RETROTILE_NAME_SZ_MAX );
-            debug_printf( 1, "set tile " SIZE_T_FMT " warp_dest: %s",
+#if RETROTILE_TRACE_LVL > 0
+            debug_printf(
+               RETROTILE_TRACE_LVL, "set tile " SIZE_T_FMT " warp_dest: %s",
                parser->tileset_id_cur, tile_def->warp_dest );
+#endif /* RETROTILE_TRACE_LVL */
 
          } else if( 0 == strncmp( "warp_x", parser->last_prop_name, 7 ) ) {
             tile_def->warp_x = maug_atos32( token, token_sz );
-            debug_printf( 1, "set tile " SIZE_T_FMT " warp_x: %d",
+#if RETROTILE_TRACE_LVL > 0
+            debug_printf(
+               RETROTILE_TRACE_LVL, "set tile " SIZE_T_FMT " warp_x: %d",
                parser->tileset_id_cur, tile_def->warp_x );
+#endif /* RETROTILE_TRACE_LVL */
 
          } else if( 0 == strncmp( "warp_y", parser->last_prop_name, 7 ) ) {
             tile_def->warp_y = maug_atos32( token, token_sz );
-            debug_printf( 1, "set tile " SIZE_T_FMT " warp_y: %d",
+#if RETROTILE_TRACE_LVL > 0
+            debug_printf(
+               RETROTILE_TRACE_LVL, "set tile " SIZE_T_FMT " warp_y: %d",
                parser->tileset_id_cur, tile_def->warp_y );
+#endif /* RETROTILE_TRACE_LVL */
 
          }
       }
@@ -812,8 +844,10 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 
    } else if( MTILESTATE_NAME == parser->mstate ) {
       maug_strncpy( parser->tileset_name, token, RETROTILE_NAME_SZ_MAX );
+#if RETROTILE_TRACE_LVL > 0
       debug_printf(
          RETROTILE_TRACE_LVL, "tileset name: %s", parser->tileset_name );
+#endif /* RETROTILE_TRACE_LVL */
 
       retrotile_parser_mstate( parser, 0 );
 
@@ -825,8 +859,10 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
       retrotile_parser_mstate( parser, MTILESTATE_TPROP );
 
    } else if( MTILESTATE_TPROP_TYPE == parser->mstate ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "property %s is type: %s",
          parser->last_prop_name, token );
+#endif /* RETROTILE_TRACE_LVL */
       parser->last_prop_type = retrotile_parse_prop_type( token, token_sz );
       retrotile_parser_mstate( parser, MTILESTATE_TPROP );
 
@@ -952,15 +988,19 @@ MERROR_RETVAL retrotile_parser_parse_token(
       if( MTILESTATE_TILESETS_FGID == parser->mstate ) {
          if( 1 == parser->pass ) {
             parser->t->tileset_fgid = maug_atou32( token, token_sz, 10 );
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "tileset FGID set to: " SIZE_T_FMT,
                parser->t->tileset_fgid );
+#endif /* RETROTILE_TRACE_LVL */
          }
          retrotile_parser_mstate( parser, MTILESTATE_TILESETS );
 
       } else if( MTILESTATE_TILESETS_SRC == parser->mstate ) {
          if( 1 == parser->pass ) {
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL, "parsing %s...", token );
+#endif /* RETROTILE_TRACE_LVL */
             parser->tj_parse_cb(
                parser->dirname, token, NULL, parser->p_tile_defs,
                parser->wait_cb, parser->wait_data,
@@ -973,9 +1013,11 @@ MERROR_RETVAL retrotile_parser_parse_token(
          if( 0 == parser->pass ) {
             /* Need this to allocate on pass 1. */
             parser->tiles_h = atoi( token );
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "tilemap height: " SIZE_T_FMT,
                parser->tiles_h );
+#endif /* RETROTILE_TRACE_LVL */
          }
          retrotile_parser_mstate( parser, MTILESTATE_NONE );
 
@@ -983,9 +1025,11 @@ MERROR_RETVAL retrotile_parser_parse_token(
          if( 0 == parser->pass ) {
             /* Need this to allocate on pass 1. */
             parser->tiles_w = atoi( token );
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "tilemap width: " SIZE_T_FMT,
                parser->tiles_w );
+#endif /* RETROTILE_TRACE_LVL */
          }
          retrotile_parser_mstate( parser, MTILESTATE_NONE );
 
@@ -996,14 +1040,18 @@ MERROR_RETVAL retrotile_parser_parse_token(
       } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
          /* TODO: Use the class table to create layers for e.g. crops, items. */
          if( 0 == strncmp( "mobile", token, 7 ) ) {
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL,
                "layer " SIZE_T_FMT " type: mobile",
                parser->pass_layer_iter );
+#endif /* RETROTILE_TRACE_LVL */
             parser->layer_class = RETROTILE_CLASS_MOBILE;
          } else {
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL,
                "layer " SIZE_T_FMT " type: tile",
                parser->pass_layer_iter );
+#endif /* RETROTILE_TRACE_LVL */
             parser->layer_class = RETROTILE_CLASS_TILE;
          }
          retrotile_parser_mstate( parser, MTILESTATE_LAYER );
@@ -1016,15 +1064,19 @@ MERROR_RETVAL retrotile_parser_parse_token(
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
 
       } else if( MTILESTATE_PROP_TYPE == parser->mstate ) {
+#if RETROTILE_TRACE_LVL > 0
          debug_printf( RETROTILE_TRACE_LVL, "property %s is type: %s",
             parser->last_prop_name, token );
+#endif /* RETROTILE_TRACE_LVL */
          parser->last_prop_type = retrotile_parse_prop_type( token, token_sz );
          retrotile_parser_mstate( parser, MTILESTATE_PROP );
 
       } else if( MTILESTATE_PROP_VAL == parser->mstate ) {
          /* We're dealing with properties of the tilemap. */
          if( 0 == strncmp( parser->last_prop_name, "name", 5 ) ) {
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
+#endif /* RETROTILE_TRACE_LVL */
             maug_strncpy( parser->tilemap_name, token, RETROTILE_NAME_SZ_MAX );
          }
 
@@ -1048,8 +1100,10 @@ MERROR_RETVAL retrotile_json_close_list( void* parg ) {
 
    if( MTILESTATE_LAYER_DATA == parser->mstate ) {
       assert( RETROTILE_PARSER_MODE_MAP == parser->mode );
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "parsed " SIZE_T_FMT " tiles!",
          parser->layer_tile_iter );
+#endif /* RETROTILE_TRACE_LVL */
       assert( parser->layer_tile_iter > 0 );
       retrotile_parser_mstate( parser, MTILESTATE_LAYER );
 
@@ -1102,10 +1156,12 @@ MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
 
    if( MTILESTATE_LAYER == parser->mstate ) {
       assert( RETROTILE_PARSER_MODE_MAP == parser->mode );
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL,
          "incrementing pass layer to " SIZE_T_FMT " after " SIZE_T_FMT
             " tiles...",
          parser->pass_layer_iter + 1, parser->layer_tile_iter );
+#endif /* RETROTILE_TRACE_LVL */
       parser->pass_layer_iter++;
       retrotile_parser_mstate( parser, MTILESTATE_LAYERS );
 
@@ -1195,8 +1251,10 @@ MERROR_RETVAL retrotile_parse_json_file(
    maug_strncpy( parser->dirname, dirname, MAUG_PATH_SZ_MAX );
 
    if( 2 > passes ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL,
          "increasing parse passes to minimum, 2!" );
+#endif /* RETROTILE_TRACE_LVL */
       passes = 2;
    }
 
@@ -1208,15 +1266,19 @@ MERROR_RETVAL retrotile_parse_json_file(
    maug_snprintf(
       filename_path, MAUG_PATH_SZ_MAX, "%s/%s", dirname, filename );
 
+#if RETROTILE_TRACE_LVL > 0
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
+#endif /* RETROTILE_TRACE_LVL */
 
    retval = mfile_open_read( filename_path, &tile_file );
    maug_cleanup_if_not_ok();
 
    /* Parse JSON and react to state. */
    for( parser->pass = 0 ; passes > parser->pass ; parser->pass++ ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "beginning pass #%u...",
          parser->pass );
+#endif /* RETROTILE_TRACE_LVL */
 
       /* Reset tilemap parser. */
       parser->mstate = 0;
@@ -1237,8 +1299,10 @@ MERROR_RETVAL retrotile_parse_json_file(
          goto cleanup;
       }
       if( 's' == filename_ext[2] ) {
+#if RETROTILE_TRACE_LVL > 0
          debug_printf( RETROTILE_TRACE_LVL,
             "(tile_defs pass %u)", parser->pass );
+#endif /* RETROTILE_TRACE_LVL */
          parser->mode = RETROTILE_PARSER_MODE_DEFS;
          parser->jparser.token_parser = retrotile_parser_parse_tiledef_token;
          parser->jparser.token_parser_arg = parser;
@@ -1258,15 +1322,19 @@ MERROR_RETVAL retrotile_parse_json_file(
              * first pass.
              */
             assert( 0 < parser->tileset_id_cur );
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "allocating " SIZE_T_FMT " tile defs...",
                parser->tileset_id_cur + 1 );
+#endif /* RETROTILE_TRACE_LVL */
             mdata_vector_fill(
                parser->p_tile_defs, parser->tileset_id_cur + 1,
                sizeof( struct RETROTILE_TILE_DEF ) );
          }
       } else {
+#if RETROTILE_TRACE_LVL > 0
          debug_printf( RETROTILE_TRACE_LVL, "(tilemap pass %u)", parser->pass );
+#endif /* RETROTILE_TRACE_LVL */
          parser->mode = RETROTILE_PARSER_MODE_MAP;
 
          parser->jparser.close_list = retrotile_json_close_list;
@@ -1295,7 +1363,9 @@ MERROR_RETVAL retrotile_parse_json_file(
 
       while( tile_file.has_bytes( &tile_file ) ) {
          tile_file.read_int( &tile_file, (uint8_t*)&c, 1, 0 );
+#if RETROTILE_TRACE_CHARS > 0
          debug_printf( RETROTILE_TRACE_CHARS, "%c", c );
+#endif /* RETROTILE_TRACE_CHARS */
          retval = mjson_parse_c( &(parser->jparser), c );
          if( MERROR_OK != retval ) {
             error_printf( "error parsing JSON!" );
@@ -1312,15 +1382,19 @@ MERROR_RETVAL retrotile_parse_json_file(
          goto cleanup;
       }
       if( 's' != filename_ext[2] ) {
+#if RETROTILE_TRACE_LVL > 0
          debug_printf( RETROTILE_TRACE_LVL,
             "pass %u found " SIZE_T_FMT " layers",
             parser->pass, parser->pass_layer_iter );
+#endif /* RETROTILE_TRACE_LVL */
       }
    }
 
+#if RETROTILE_TRACE_LVL > 0
    debug_printf(
       RETROTILE_TRACE_LVL, "finished parsing %s, retval: %d",
       filename_path, retval );
+#endif /* RETROTILE_TRACE_LVL */
 
 cleanup:
 
@@ -1432,6 +1506,7 @@ static void retrotile_gen_diamond_square_corners(
 
          /* Check if corner is already filled in. */
          if( -1 != *tile_iter ) {
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "corner coord %d x %d present: %d",
                corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
@@ -1439,6 +1514,7 @@ static void retrotile_gen_diamond_square_corners(
                   t, layer,
                   corners_x[iter_x][iter_y],
                   corners_y[iter_x][iter_y] ) );
+#endif /* RETROTILE_TRACE_LVL */
             continue;
          }
 
@@ -1446,10 +1522,12 @@ static void retrotile_gen_diamond_square_corners(
          *tile_iter = retrotile_gen_diamond_square_rand(
             min_z, max_z, tuning, top_left_z );
 
+#if RETROTILE_TRACE_LVL > 0
          debug_printf( RETROTILE_TRACE_LVL,
             "missing corner coord %d x %d: %d",
             corners_x[iter_x][iter_y], corners_y[iter_x][iter_y],
             *tile_iter );
+#endif /* RETROTILE_TRACE_LVL */
       }
    }
 }
@@ -1568,8 +1646,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
    /* Trivial case; end recursion. */
    if( 0 == data_ds->sect_w ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf(
          RETROTILE_TRACE_LVL, "%d return: null sector", iter_depth );
+#endif /* RETROTILE_TRACE_LVL */
       goto cleanup;
    }
 
@@ -1577,8 +1657,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       data_ds->sect_x + data_ds->sect_w > t->tiles_w ||
       data_ds->sect_y + data_ds->sect_h > t->tiles_h
    ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf(
          RETROTILE_TRACE_LVL, "%d return: overflow sector", iter_depth );
+#endif /* RETROTILE_TRACE_LVL */
       goto cleanup;
    }
 
@@ -1590,25 +1672,31 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
 
    if( 2 == data_ds->sect_w || 2 == data_ds->sect_h ) {
       /* Nothing to average, this sector is just corners! */
+#if RETROTILE_TRACE_LVL > 0
       debug_printf(
          RETROTILE_TRACE_LVL,
          "%d return: reached innermost point", iter_depth );
+#endif /* RETROTILE_TRACE_LVL */
       goto cleanup; /* Skip further descent regardless. */
    }
    
    avg = 
       retrotile_gen_diamond_square_avg( corners_x, corners_y, t, layer );
 
+#if RETROTILE_TRACE_LVL > 0
    debug_printf( RETROTILE_TRACE_LVL, "avg: " S32_FMT, avg );
+#endif /* RETROTILE_TRACE_LVL */
 
    tile_iter = &(retrotile_get_tile(
       t, layer,
       data_ds->sect_x + data_ds->sect_w_half,
       data_ds->sect_y + data_ds->sect_h_half ));
    if( -1 != *tile_iter ) {
+#if RETROTILE_TRACE_LVL > 0
       debug_printf( RETROTILE_TRACE_LVL, "avg already present at %d x %d!",
          data_ds->sect_x + data_ds->sect_w_half,
          data_ds->sect_y + data_ds->sect_h_half );
+#endif /* RETROTILE_TRACE_LVL */
       goto cleanup;
    }
    *tile_iter = avg;
@@ -1641,10 +1729,12 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
          data_ds_sub.lowest_generated = 32767;
          data_ds_sub.highest_generated = 0;
 
+#if RETROTILE_TRACE_LVL > 0
          debug_printf(
             RETROTILE_TRACE_LVL, "%d: child sector at %d x %d, %d wide",
             iter_depth,
             data_ds_sub.sect_x, data_ds_sub.sect_y, data_ds_sub.sect_w );
+#endif /* RETROTILE_TRACE_LVL */
 
          retval = retrotile_gen_diamond_square_iter(
             t, min_z, max_z, tuning, layer_idx, flags, &data_ds_sub,
@@ -1666,8 +1756,10 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       maug_cleanup_if_not_ok();
    }
 
+#if RETROTILE_TRACE_LVL > 0
    debug_printf(
       RETROTILE_TRACE_LVL, "%d return: all sectors complete", iter_depth );
+#endif /* RETROTILE_TRACE_LVL */
 
 cleanup:
 
@@ -1776,6 +1868,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
 
 
             for( side_iter = 0 ; 4 > side_iter ; side_iter++ ) {
+#if RETROTILE_TRACE_LVL > 0
                debug_printf( RETROTILE_TRACE_LVL,
                   SIZE_T_FMT " (%d), " SIZE_T_FMT " (%d) ("
                   SIZE_T_FMT ", " SIZE_T_FMT ")", 
@@ -1784,6 +1877,7 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
                   y,
                   gc_retroflat_offsets4_y[side_iter],
                   t->tiles_w, t->tiles_h );
+#endif /* RETROTILE_TRACE_LVL */
             
                /* Iterate through directions to expand. */
                /* TODO: Add tuning to select directional probability. */
@@ -1860,6 +1954,7 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
             }
 
             sides_avail++;
+#if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL,
                "si %d: x, y: " SIZE_T_FMT " (+%d), " SIZE_T_FMT
@@ -1871,6 +1966,7 @@ MERROR_RETVAL retrotile_gen_smooth_iter(
                gc_retroflat_offsets8_y[side_iter],
                ((y + gc_retroflat_offsets8_y[side_iter]) * t->tiles_w) +
                   x + gc_retroflat_offsets8_x[side_iter] );
+#endif /* RETROTILE_TRACE_LVL */
             sides_sum += retrotile_get_tile(
                t, layer,
                x + gc_retroflat_offsets8_x[side_iter],
@@ -1915,7 +2011,9 @@ MERROR_RETVAL retrotile_gen_borders_iter(
       borders[i].tiles_changed = 0;
    }
 
-   debug_printf( 1, "adding borders..." );
+#if RETROTILE_TRACE_LVL > 0
+   debug_printf( RETROTILE_TRACE_LVL, "adding borders..." );
+#endif /* RETROTILE_TRACE_LVL */
 
    for( y = 0 ; t->tiles_h > y ; y++ ) {
       for( x = 0 ; t->tiles_w > x ; x++ ) {
@@ -1923,15 +2021,19 @@ MERROR_RETVAL retrotile_gen_borders_iter(
          while( 0 <= borders[i].center ) {
             /* Compare/grab current center tile. */
             ctr_iter = retrotile_get_tile( t, layer, x, y );
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL,
                "x: " SIZE_T_FMT ", y: " SIZE_T_FMT ", 0x%04x vs 0x%04x",
                x, y, ctr_iter, borders[i].center );
+#endif /* RETROTILE_TRACE_LVL */
             if( ctr_iter != borders[i].center ) {
                i++;
                continue;
             }
 
+#if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL, "comparing sides..." );
+#endif /* RETROTILE_TRACE_LVL */
 
             /* Zeroth pass: look for stick-outs. */
             for( side = 0 ; 8 > side ; side += 2 ) {
@@ -2027,7 +2129,9 @@ MERROR_RETVAL retrotile_gen_borders_iter(
 
                if( outside_iter == borders[i].outside ) {
                   /* It only matches on this side. */
+#if RETROTILE_TRACE_LVL > 0
                   debug_printf( RETROTILE_TRACE_LVL, "replacing..." );
+#endif /* RETROTILE_TRACE_LVL */
                   retrotile_get_tile( t, layer, x, y ) =
                      borders[i].mod_to[side];
                   borders[i].tiles_changed++;
@@ -2088,9 +2192,12 @@ MERROR_RETVAL retrotile_alloc(
       (layers_count * sizeof( struct RETROTILE_LAYER )) +
       (layers_count * (w * h * sizeof( retroflat_tile_t ) ));
 
-   debug_printf( 1, "allocating new tilemap " SIZE_T_FMT "x" SIZE_T_FMT
+#if RETROTILE_TRACE_LVL > 0
+   debug_printf(
+      RETROTILE_TRACE_LVL, "allocating new tilemap " SIZE_T_FMT "x" SIZE_T_FMT
       " tiles, " SIZE_T_FMT " layers (" SIZE_T_FMT " bytes)...",
       w, h, layers_count, tilemap_sz );
+#endif /* RETROTILE_TRACE_LVL */
 
    *p_tilemap_h = maug_malloc( 1, tilemap_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_tilemap_h );
@@ -2146,10 +2253,12 @@ MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max ) {
    int16_t x = 0,
       y = 0;
 
-   debug_printf( 1,
+#if RETROTILE_TRACE_LVL > 0
+   debug_printf( RETROTILE_TRACE_LVL,
       "clearing " SIZE_T_FMT " vertical viewport pixels (" SIZE_T_FMT
          " rows)...",
       y_max, y_max / RETROFLAT_TILE_H );
+#endif /* RETROTILE_TRACE_LVL */
 
    retroflat_viewport_lock_refresh();
    for( y = 0 ; y_max > y ; y += RETROFLAT_TILE_H ) {
