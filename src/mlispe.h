@@ -787,12 +787,19 @@ static ssize_t _mlisp_env_set_internal(
    case 10: /* MLISP_TYPE_BEGIN */
       /* We probably called a lambda that takes an arg without placing an
        * arg on the stack for it to take up!
+       *
+       * This could be a script error, but it could also be a lambda being
+       * itered into after its finished executing (and thus has no arg on the
+       * stack waiting for it).
+       * 
+       * MERROR_RESET signals the calling program we're embedded in to deal
+       * with this situation, maybe by restarting the script with a fresh env.
        */
       error_printf(
-         "%u: attempted to define BEGIN from stack... "
+         "%u: attempted to define BEGIN from stack as %s... "
             "missing lambda arg or script reset?",
-         uid );
-      retval = MERROR_RESET;
+         uid, token );
+      new_idx_out = merror_retval_to_sz( MERROR_RESET );
       goto cleanup;
 
    default:
