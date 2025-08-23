@@ -1575,8 +1575,12 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
    retrotile_ani_cb animation_cb, void* animation_cb_data
 ) {
    int16_t iter_x = 0,
-      iter_y = 0,
-      iter_depth = 0;
+      iter_y = 0
+#if RETROTILE_TRACE_LVL > 0
+      , iter_depth = 0;
+#else
+      ;
+#endif /* RETROTILE_TRACE_LVL */
    int16_t corners_x[2][2];
    int16_t corners_y[2][2];
    int32_t avg = 0;
@@ -1664,7 +1668,9 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
       goto cleanup;
    }
 
+#if RETROTILE_TRACE_LVL > 0
    iter_depth = t->tiles_w / data_ds->sect_w;
+#endif /* RETROTILE_TRACE_LVL */
 
    /* Generate/grab corners before averaging them! */
    retrotile_gen_diamond_square_corners(

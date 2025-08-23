@@ -2024,9 +2024,11 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       e_out->type = MLISP_TYPE_FLOAT;
 
    } else {
+#if MLISP_EXEC_TRACE_LVL > 0
       error_printf(
-         "%u: could not make sense of token: %s!",
+         "%u: could not make sense of token: %s",
          exec->uid, &(strpool[token_idx]) );
+#endif /* MLISP_EXEC_TRACE_LVL */
 
    }
 
