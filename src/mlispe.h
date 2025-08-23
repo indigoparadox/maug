@@ -7,9 +7,37 @@
 /**
  * \addtogroup mlisp MLISP Interpreter
  * \{
- *
  * \file mlispe.h
  * \brief MLISP Interpreter Functions and Macros
+ */
+
+/**
+ * \addtogroup maug_mlisp_commands MLISP Commands
+ * \{
+ * \page maug_mlisp_commands_page Command Definitions
+ * The mlisp interpreter provides the following commands:
+ *
+ * * *define:* Define a variable in the environment local to the current
+ *             ::MLISP_EXEC_STATE.
+ * * *gdefine:* Define a variable in the global environment set by
+ *              mlisp_exec_set_global_env().
+ * * *and:* True if all of an arbitrary number of arguments are true.
+ * * *or:* True if any of an arbitrary number of arguments are true.
+ * * *<:* True if the first argument is less than the second.
+ * * *>:* True if the first argument is greater than the second.
+ * * *=:* True if the first argument is equal to the second.
+ * * *if:* If the condition defined by the first argument is true, then execute
+ *         the second argument. Otherwise, execute the optional third argument.
+ * * **:* Multiply an arbitrary number of arguments and push the result on the
+ *        stack.
+ * * *+:* Sum an arbitrary number of arguments and push the result on the
+ *        stack.
+ * * *\/:* Divide an arbitrary number of arguments and push the result on the
+ *         stack.
+ * * *%:* Divide an arbitrary number of arguments and push the remainder on the
+ *         stack.
+ * * *random:* A constant that will always return a different random number.
+ * \}
  */
 
 #ifndef MLISP_TOKEN_SZ_MAX

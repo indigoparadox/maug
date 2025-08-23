@@ -143,7 +143,7 @@ The following targets are currently available (possibly among others):
 
 RetroFlat is a rough, quick-and-dirty compatibility layer for making graphical programs that work on Win16 (32-bit via OpenWatcom's Win386), MS-DOS (32-bit via DOS/32a or DOS4GW via Allegro), and possibly other platforms in the future.
 
-This documentation is also available at [https://indigoparadox.github.io/maug/group__maug__retroflt.html](https://indigoparadox.github.io/maug/group__maug__retroflt.html).
+This documentation is also available at [https://indigoparadox.codeberg.page/maug/group__maug__retroflt.html](https://indigoparadox.github.io/maug/group__maug__retroflt.html).
 
 ### mtypes
 
@@ -202,6 +202,10 @@ The maug virtual filesystem is a "special case" file API available on platforms 
 To use MVFS, an MVFS target must be specified in the program's Makefile, for example like `$(eval $(call MVFS,$(ASSET_FILES) $(BITMAP_FILES)))`. Then, `FORCE_MVFS` must be set to `1` in the Makefile before the targets that use it are called (i.e. every `$(eval $(call TARGET))` statement that comes after the first `FORCE_MVFS` statement in the Makefile will use the MVFS).
 
 MVFS is not supported on platforms like 16-bit DOS or Windows 3.x, as these platforms are restricted to very tiny segments that make it too problematic.
+
+## mlisp
+
+mlisp is a basic fully interpreted scripting language using S-expressions. More information on the available commands is in [the mlisp documentation](https://indigoparadox.codeberg.page/maug/group__maug__mlisp__commands.html).
 
 ## Troubleshooting
 
