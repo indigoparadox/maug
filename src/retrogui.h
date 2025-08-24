@@ -1468,6 +1468,12 @@ static void retrogui_redraw_TEXTBOX(
 
 cleanup:
 
+   if( cursor_x + RETROGUI_CTL_TEXT_CUR_WH >= ctl->base.w ) {
+      cursor_x = 0;
+      /* TODO: Use font height. */
+      cursor_y += RETROGUI_CTL_TEXT_CUR_WH;
+   }
+
    /* Use same padding as font for cursor. */
    retroflat_2d_rect( gui->draw_bmp,
       ctl->base.sel_fg,
@@ -1486,25 +1492,29 @@ cleanup:
    if( NULL != ctl->TEXTBOX.text ) {
       /* Draw the text that comes after the cursor. */
  #ifdef RETROGXC_PRESENT
-   retrogxc_string(
+   retrogxc_string_indent(
       gui->draw_bmp, ctl->base.fg_color,
       &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
       /* Chop off chars from first half. */
       strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
       gui->font_idx,
-      gui->x + ctl->base.x + RETROGUI_PADDING +
-         cursor_x + RETROGUI_CTL_TEXT_CUR_WH,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      /* Post-cursor line beings on cursor line. */
+      gui->y + ctl->base.y + RETROGUI_PADDING + cursor_y,
+      ctl->base.w, ctl->base.h,
+      cursor_x + RETROGUI_CTL_TEXT_CUR_WH, 0 );
 #else
-   retrofont_string(
+   retrofont_string_indent(
       gui->draw_bmp, ctl->base.fg_color,
       &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
       /* Chop off chars from first half. */
       strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
       gui->font_h,
-      gui->x + ctl->base.x + RETROGUI_PADDING +
-         cursor_x + RETROGUI_CTL_TEXT_CUR_WH,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+      gui->x + ctl->base.x + RETROGUI_PADDING,
+      /* Post-cursor line beings on cursor line. */
+      gui->y + ctl->base.y + RETROGUI_PADDING + cursor_y,
+      ctl->base.w, ctl->base.h,
+      cursor_x + RETROGUI_CTL_TEXT_CUR_WH, 0 );
 #endif /* RETROGXC_PRESENT */
   
       maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );

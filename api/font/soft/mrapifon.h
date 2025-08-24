@@ -297,8 +297,19 @@ void retrofont_string(
    MAUG_MHANDLE font_h, size_t x, size_t y,
    size_t max_w, size_t max_h, uint8_t flags
 ) {
+   retrofont_string_indent(
+      target, color, str, str_sz, font_h, x, y, max_w, max_h, 0, flags );
+}
+
+/* === */
+
+void retrofont_string_indent(
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
+   const char* str, size_t str_sz,
+   MAUG_MHANDLE font_h, size_t x, size_t y,
+   size_t max_w, size_t max_h, size_t x_iter, uint8_t flags
+) {
    size_t i = 0;
-   size_t x_iter = x;
    size_t y_iter = y;
    struct RETROFONT* font = NULL;
 
@@ -317,7 +328,10 @@ void retrofont_string(
       goto cleanup;
    }
 
-   /* TODO: Stop at max_w/max_h */
+   /* Add indent to starting X the first time. Subsequent new lines will just
+    * reset to starting X.
+    */
+   x_iter += x;
 
    for( i = 0 ; str_sz > i ; i++ ) {
       /* Terminate prematurely at null. */
