@@ -231,6 +231,10 @@
 #  define RETROGUI_CTL_LISTBOX_STR_SZ_MAX 255
 #endif /* !RETROGUI_CTL_LISTBOX_STR_SZ_MAX */
 
+#ifndef RETROGUI_CTL_TEXT_CUR_WH
+#  define RETROGUI_CTL_TEXT_CUR_WH 8
+#endif /* !RETROGUI_CTL_LISTBOX_STR_SZ_MAX */
+
 #ifndef RETROGUI_DEBOUNCE_MAX_DEFAULT
 #  define RETROGUI_DEBOUNCE_MAX_DEFAULT 100
 #endif /* !RETROGUI_DEBOUNCE_MAX_DEFAULT */
@@ -1390,7 +1394,8 @@ static void retrogui_redraw_TEXTBOX(
 ) {
    RETROFLAT_COLOR shadow_color = RETROFLAT_COLOR_DARKGRAY;
    RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
-   retroflat_pxxy_t cursor_x = 0;
+   retroflat_pxxy_t cursor_x = 0,
+      cursor_y = 0;
 
    /* Adjust shadow colors for monochrome. */
    if( 2 >= retroflat_screen_colors() ) {
@@ -1439,37 +1444,36 @@ static void retrogui_redraw_TEXTBOX(
 
 #ifdef RETROGXC_PRESENT
    retrogxc_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_idx,
+      gui->draw_bmp, ctl->base.fg_color,
+      ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_idx,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 
+   /* Get the line size for cursor placement below. */
    retrogxc_string_sz(
-      gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_idx,
-      ctl->base.w, ctl->base.h, &cursor_x, NULL, 0 );
+      gui->draw_bmp, ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_idx,
+      ctl->base.w, ctl->base.h, &cursor_x, &cursor_y, RETROFONT_FLAG_SZ_MIN );
 #else
    retrofont_string(
-      gui->draw_bmp, ctl->base.fg_color, ctl->TEXTBOX.text, 0, gui->font_h,
+      gui->draw_bmp, ctl->base.fg_color,
+      ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_h,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 
+   /* Get the line size for cursor placement below. */
    retrofont_string_sz(
-      gui->draw_bmp, ctl->TEXTBOX.text, 0, gui->font_h,
-      ctl->base.w, ctl->base.h, &cursor_x, NULL, 0 );
+      gui->draw_bmp, ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_h,
+      ctl->base.w, ctl->base.h, &cursor_x, &cursor_y, RETROFONT_FLAG_SZ_MIN );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
 
-   if( NULL != ctl->TEXTBOX.text ) {
-      maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
-   }
-
-   /* TODO: Get cursor color from GUI. */
    /* Use same padding as font for cursor. */
    retroflat_2d_rect( gui->draw_bmp,
       ctl->base.sel_fg,
       gui->x + ctl->base.x + RETROGUI_PADDING + cursor_x,
-      gui->y + ctl->base.y + RETROGUI_PADDING,
-      8, 8,
+      gui->y + ctl->base.y + RETROGUI_PADDING + cursor_y,
+      RETROGUI_CTL_TEXT_CUR_WH, RETROGUI_CTL_TEXT_CUR_WH,
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
       gui->focus == ctl->base.idc &&
@@ -1478,7 +1482,34 @@ cleanup:
    if( (-1 * RETROGUI_CTL_TEXT_BLINK_FRAMES) > --(ctl->TEXTBOX.blink_frames) ) {
       ctl->TEXTBOX.blink_frames = RETROGUI_CTL_TEXT_BLINK_FRAMES;
    }
-   
+
+   if( NULL != ctl->TEXTBOX.text ) {
+      /* Draw the text that comes after the cursor. */
+ #ifdef RETROGXC_PRESENT
+   retrogxc_string(
+      gui->draw_bmp, ctl->base.fg_color,
+      &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
+      /* Chop off chars from first half. */
+      strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
+      gui->font_idx,
+      gui->x + ctl->base.x + RETROGUI_PADDING +
+         cursor_x + RETROGUI_CTL_TEXT_CUR_WH,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+#else
+   retrofont_string(
+      gui->draw_bmp, ctl->base.fg_color,
+      &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
+      /* Chop off chars from first half. */
+      strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
+      gui->font_h,
+      gui->x + ctl->base.x + RETROGUI_PADDING +
+         cursor_x + RETROGUI_CTL_TEXT_CUR_WH,
+      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
+#endif /* RETROGXC_PRESENT */
+  
+      maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
+   }
+
    gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for blink animation. */
 
 #  endif

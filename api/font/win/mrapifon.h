@@ -2,14 +2,6 @@
 #if !defined( MAUG_API_FON_H_DEFS )
 #define MAUG_API_FON_H_DEFS
 
-/**
- * \brief Flag for retroflat_string() and retroflat_string_sz() to print
- *        text as outline-only.
- * \todo This has not yet been implemented and is present for backward
- *       compatibility.
- */
-#define RETROFONT_FLAG_OUTLINE  0x04
-
 /* Windows only uses the RETROFONT struct during initial font load callback. */
 struct RETROFONT {
    MAUG_MHANDLE* p_font_h;
