@@ -225,6 +225,18 @@ size_t retrofont_sz_from_filename( const char* font_name ) {
    return glyph_h;
 }
 
+/* === */
+
+void retrofont_string(
+   retroflat_blit_t* target, RETROFLAT_COLOR color,
+   const char* str, size_t str_sz,
+   MAUG_MHANDLE font_h, size_t x, size_t y,
+   size_t max_w, size_t max_h, uint8_t flags
+) {
+   retrofont_string_indent(
+      target, color, str, str_sz, font_h, x, y, max_w, max_h, 0, flags );
+}
+
 #endif /* RETROFNT_C */
 
 #include <mrapifon.h>

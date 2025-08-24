@@ -346,6 +346,7 @@ MERROR_RETVAL retroflat_load_bitmap_px_cb(
    void* data, uint8_t px, int32_t x, int32_t y,
    void* header_info, uint8_t flags
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_BITMAP* b = (struct RETROFLAT_BITMAP*)data;
 
    /* Blit pixels based on input bitmap. Convert mfmt's 8-bit bitmap results
@@ -356,6 +357,8 @@ MERROR_RETVAL retroflat_load_bitmap_px_cb(
    } else {
       retroflat_px( b, RETROFLAT_COLOR_WHITE, x, y, 0 );
    }
+
+   return retval;
 }
 
 /* === */

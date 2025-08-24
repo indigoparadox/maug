@@ -30,11 +30,11 @@ MERROR_RETVAL retrofont_load(
 
 /* === */
 
-void retrofont_string(
+void retrofont_string_indent(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
    MAUG_MHANDLE font_h, size_t x, size_t y,
-   size_t max_w, size_t max_h, uint8_t flags
+   size_t max_w, size_t max_h, size_t indent, uint8_t flags
 ) {
 
 #  pragma message( "warning: retrofont_string not implemented" )
