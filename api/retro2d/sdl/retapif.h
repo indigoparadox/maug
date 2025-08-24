@@ -51,6 +51,31 @@ cleanup:
 
 /* === */
 
+#  if defined( RETROFLAT_OS_WASM )
+
+static retroflat_loop_iter g_retroflat_loop_wasm_pending = NULL;
+static retroflat_loop_iter g_retroflat_loop_wasm_current = NULL;
+static void* g_retroflat_loop_data_pending = NULL;
+static void* g_retroflat_loop_data_current = NULL;
+
+void retroflat_loop_wasm_iter() {
+   if( NULL != g_retroflat_loop_wasm_current ) {
+      g_retroflat_loop_wasm_current( g_retroflat_loop_data_current );
+   }
+
+   if( NULL != g_retroflat_loop_wasm_pending ) {
+      debug_printf( 1, "starting new loop: %p", g_retroflat_loop_wasm_pending );
+      g_retroflat_loop_wasm_current = g_retroflat_loop_wasm_pending;
+      g_retroflat_loop_data_current = g_retroflat_loop_data_pending;
+      g_retroflat_loop_wasm_pending = NULL;
+      g_retroflat_loop_data_pending = NULL;
+   }
+}
+
+#endif /* RETROFLAT_OS_WASM */
+
+/* === */
+
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -253,6 +278,10 @@ MERROR_RETVAL retroflat_init_platform(
 
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
+#  if defined( RETROFLAT_OS_WASM )
+   emscripten_set_main_loop( retroflat_loop_wasm_iter, 30, 0 );
+#  endif /* RETROFLAT_OS_WASM */
+
 cleanup:
 
    return retval;
@@ -282,11 +311,10 @@ MERROR_RETVAL retroflat_loop(
 
 #  if defined( RETROFLAT_OS_WASM )
 
-   /* TODO: Work in frame_iter if provided. */
-   emscripten_cancel_main_loop();
-   emscripten_set_main_loop_arg( frame_iter, data, 0, 0 );
-
-   /* TODO: Sleep forever? */
+   /* TODO: Work in loop_iter if provided. */
+   debug_printf( 1, "requesting new loop: %p", frame_iter );
+   g_retroflat_loop_wasm_pending = frame_iter;
+   g_retroflat_loop_data_pending = data;
 
 #  else
 
