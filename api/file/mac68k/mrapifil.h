@@ -2,11 +2,15 @@
 #if !defined( MAUG_API_FIL_H_DEFS )
 #define MAUG_API_FIL_H_DEFS
 
-#include <MacTypes.h>
-#include <Files.h>
-#include <OSUtils.h>
-#include <Devices.h>
-#include <Errors.h>
+#ifdef RETROFLAT_API_CARBON
+#  include <Carbon.h>
+#else
+#  include <MacTypes.h>
+#  include <Files.h>
+#  include <OSUtils.h>
+#  include <Devices.h>
+#  include <Errors.h>
+#endif /* RETROFLAT_API_CARBON */
 
 union MFILE_HANDLE {
    int16_t file_ref;

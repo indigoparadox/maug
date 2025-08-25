@@ -3,20 +3,22 @@
 #define RETPLTF_H
 
 static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
-#ifdef RETROFLAT_MAC68K_COLORQD
+#ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
       RGBForeColor( &(g_retroflat_state->palette[color_idx]) );
    } else
-#endif /* RETROFLAT_MAC68K_COLORQD */
+#endif /* RETROFLAT_API_MAC7 */
    if( RETROFLAT_COLOR_BLACK == color_idx ) {
       PenPat( &(qd.black) );
    } else if( RETROFLAT_COLOR_GRAY == color_idx ) {
       PenPat( &(qd.gray) );
    } else {
+#if RETRO2D_TRACE_LVL > 0
       if( RETROFLAT_COLOR_WHITE != color_idx ) {
          debug_printf(
             RETRO2D_TRACE_LVL, "alert! high color used: %d", color_idx );
       }
+#endif /* RETRO2D_TRACE_LVL */
       PenPat( &(qd.white) );
    }
 }
@@ -29,22 +31,24 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
    Rect r = { 0, 0, 0, 0 };
    unsigned char title_buf[128];
-#ifdef RETROFLAT_MAC68K_COLORQD
+#ifdef RETROFLAT_API_MAC7
    long cqd_result = 0;
-#endif /* RETROFLAT_MAC68K_COLORQD */
+#endif /* RETROFLAT_API_MAC7 */
 
+#ifndef RETROFLAT_API_CARBON
    InitGraf( &qd.thePort );
    InitFonts();
    InitWindows();
    InitMenus();
-   InitCursor();
    TEInit();
    InitDialogs( nil );
+#endif /* !RETROFLAT_API_CARBON */
+   InitCursor();
 
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
    maug_cleanup_if_not_ok_msg( "title string too long!" );
 
-#ifdef RETROFLAT_MAC68K_COLORQD
+#ifdef RETROFLAT_API_MAC7
    debug_printf( RETRO2D_TRACE_LVL, "setting up quickdraw color..." );
 
    /* Detect if Color QuickDraw is present. */
@@ -54,13 +58,15 @@ static MERROR_RETVAL retroflat_init_platform(
       noErr == Gestalt( gestaltQuickdrawVersion, &cqd_result ) &&
       0x0101 <= cqd_result
    ) {
+      debug_printf(
+         RETRO2D_TRACE_LVL, "color quickdraw found! using 16 colors..." );
       g_retroflat_state->screen_colors = 16;
    } else {
-#endif /* RETROFLAT_MAC68K_COLORQD */
+#endif /* RETROFLAT_API_MAC7 */
       g_retroflat_state->screen_colors = 2;
-#ifdef RETROFLAT_MAC68K_COLORQD
+#ifdef RETROFLAT_API_MAC7
    }
-#endif /* RETROFLAT_MAC68K_COLORQD */
+#endif /* RETROFLAT_API_MAC7 */
 
    debug_printf( RETRO2D_TRACE_LVL, "creating the window..." );
 
@@ -75,13 +81,14 @@ static MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
-#ifdef RETROFLAT_MAC68K_COLORQD
+#ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
 #     define RETROFLAT_COLOR_TABLE_CQD( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
          g_retroflat_state->palette[idx].red = (rd << 8) | (rd); \
          g_retroflat_state->palette[idx].green = (gd << 8) | (gd); \
          g_retroflat_state->palette[idx].blue = (bd << 8 ) | (bd); \
-         debug_printf( 1, "init color " #name_l ": %d, %d, %d", \
+         debug_printf( RETRO2D_TRACE_LVL, \
+            "init color " #name_l ": %d, %d, %d", \
             g_retroflat_state->palette[idx].red, \
             g_retroflat_state->palette[idx].green, \
             g_retroflat_state->palette[idx].blue );
@@ -283,8 +290,20 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       RETROFLAT_M68K_PORT_STACK_MAX_CT
    ) {
       /* Stow old port to be retrieved on release. */
-      GetPort( &(g_retroflat_state->platform.port_stack[
-         g_retroflat_state->platform.port_stack_ct]) );
+#ifdef RETROFLAT_API_MAC7
+      if( 2 < g_retroflat_state->screen_colors ) {
+         GetGWorld(
+            &(g_retroflat_state->platform.gworld_stack[
+               g_retroflat_state->platform.port_stack_ct]),
+            &(g_retroflat_state->platform.gdhandle_stack[
+               g_retroflat_state->platform.port_stack_ct]) );
+      } else {
+#endif /* RETROFLAT_API_MAC7 */
+         GetPort( &(g_retroflat_state->platform.port_stack[
+            g_retroflat_state->platform.port_stack_ct]) );
+#ifdef RETROFLAT_API_MAC7
+      }
+#endif /* RETROFLAT_API_MAC7 */
       g_retroflat_state->platform.port_stack_ct++;
    } else {
       retval = MERROR_OVERFLOW;
@@ -295,14 +314,29 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
-      SetPort( g_retroflat_state->platform.win );
+#ifdef RETROFLAT_API_MAC7
+      if( 2 < g_retroflat_state->screen_colors ) {
+         SetGWorld( (CGrafPtr)(g_retroflat_state->platform.win), nil );
+      } else {
+#endif /* RETROFLAT_API_MAC7 */
+         SetPort( g_retroflat_state->platform.win );
+#ifdef RETROFLAT_API_MAC7
+      }
+#endif /* RETROFLAT_API_MAC7 */
    } else {
-      HLock( bmp->bits_h );
-      bmp->bitmap.baseAddr = *(bmp->bits_h);
-      OpenPort( &(bmp->port) );
-      bmp->port.portBits = (bmp->bitmap);
-      SetPort( &(bmp->port) );
-      SetOrigin( 0, 0 );
+#ifdef RETROFLAT_API_MAC7
+      if( 2 < g_retroflat_state->screen_colors ) {
+         SetGWorld( bmp->gworld, nil );
+      } else {
+#endif /* RETROFLAT_API_MAC7 */
+         HLock( bmp->bits_h );
+         bmp->bitmap.baseAddr = *(bmp->bits_h);
+         OpenPort( &(bmp->port) );
+         SetPortBits( &(bmp->bitmap) );
+         SetOrigin( 0, 0 );
+#ifdef RETROFLAT_API_MAC7
+      }
+#endif /* RETROFLAT_API_MAC7 */
    }
 
 cleanup:
@@ -317,9 +351,21 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    if( 0 < g_retroflat_state->platform.port_stack_ct ) {
       g_retroflat_state->platform.port_stack_ct--;
-      /* Re-set old port stowed in lock. */
-      SetPort( g_retroflat_state->platform.port_stack[
-         g_retroflat_state->platform.port_stack_ct] );
+#ifdef RETROFLAT_API_MAC7
+      if( 2 < g_retroflat_state->screen_colors ) {
+         SetGWorld(
+            g_retroflat_state->platform.gworld_stack[
+               g_retroflat_state->platform.port_stack_ct],
+            g_retroflat_state->platform.gdhandle_stack[
+               g_retroflat_state->platform.port_stack_ct] );
+      } else {
+#endif /* RETROFLAT_API_MAC7 */
+         /* Re-set old port stowed in lock. */
+         SetPort( g_retroflat_state->platform.port_stack[
+            g_retroflat_state->platform.port_stack_ct] );
+#ifdef RETROFLAT_API_MAC7
+      }
+#endif /* RETROFLAT_API_MAC7 */
 
    } else {
       retval = MERROR_OVERFLOW;
@@ -329,7 +375,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       goto cleanup;
    }
 
-   if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
+   if(
+      2 >= g_retroflat_state->screen_colors &&
+      NULL != bmp &&
+      retroflat_screen_buffer() != bmp 
+   ) {
       bmp->bitmap.baseAddr = nil;
       ClosePort( &(bmp->port) );
       HUnlock( bmp->bits_h );
@@ -368,21 +418,47 @@ MERROR_RETVAL retroflat_create_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int16_t width_bytes = 0;
+#ifdef RETROFLAT_API_MAC7
+   Rect bounds;
+   QDErr err;
+#endif /* RETROFLAT_API_MAC7 */
+
+   debug_printf( RETRO2D_TRACE_LVL,
+      "creating bitmap of " SIZE_T_FMT "x" SIZE_T_FMT " with " SIZE_T_FMT
+         " colors...",
+      w, h, g_retroflat_state->screen_colors );
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   /* Get the bytes per row, rounding up to an even number of bytes. */
-   width_bytes = ((w + 15) / 16) * 2;
+#ifdef RETROFLAT_API_MAC7
+   if( 2 < g_retroflat_state->screen_colors ) {
+      SetRect( &bounds, 0, 0, w, h );
+      err = NewGWorld(
+         &(bmp_out->gworld), 4, &bounds, nil, nil, 0 );
+      if( noErr != err ) {
+         error_printf( "error setting up gworld: %d", err );
+         retval = MERROR_GUI;
+         goto cleanup;
+      }
+   } else {
+#endif /* RETROFLAT_API_MAC7 */
+      /* Get the bytes per row, rounding up to an even number of bytes. */
+      width_bytes = ((w + 15) / 16) * 2;
 
-   /* Allocate the memory for the bitmap bits. */
-   bmp_out->bits_h = NewHandleClear( width_bytes * h );
-   maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
+      /* Allocate the memory for the bitmap bits. */
+      bmp_out->bits_h = NewHandleClear( width_bytes * h );
+      maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
 
-   /* Setup the bitmap bounding region. */
-   SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
-   bmp_out->bitmap.rowBytes = width_bytes;
+      /* Setup the bitmap bounding region. */
+      SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
+      bmp_out->bitmap.rowBytes = width_bytes;
+#ifdef RETROFLAT_API_MAC7
+   }
+#endif /* RETROFLAT_API_MAC7 */
+
+   debug_printf( RETRO2D_TRACE_LVL, "bitmap created successfully!" );
 
 cleanup:
 

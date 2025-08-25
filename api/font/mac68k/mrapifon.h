@@ -155,6 +155,10 @@ void retrofont_string_indent(
 
 cleanup:
 
+   if( MERROR_OK != retval ) {
+      error_printf( "font drawing error!" );
+   }
+
    if( NULL != font ) {
       maug_munlock( font_h, font );
    }
