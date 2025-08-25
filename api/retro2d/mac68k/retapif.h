@@ -73,13 +73,24 @@ static MERROR_RETVAL retroflat_init_platform(
    /* Create the window. */
    /* TODO: Set X/Y from args? */
    SetRect( &r, 50, 50, 50 + args->screen_w, 50 + args->screen_h );
-   g_retroflat_state->platform.win = NewWindow(
-      nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
+#ifdef RETROFLAT_API_MAC7
+   if( 2 < g_retroflat_state->screen_colors ) {
+      g_retroflat_state->platform.win = NewCWindow(
+         nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
+   } else {
+#endif /* RETROFLAT_API_MAC7 */
+      g_retroflat_state->platform.win = NewWindow(
+         nil, &r, title_buf, true, documentProc, (WindowPtr)-1, false, 0 );
+#ifdef RETROFLAT_API_MAC7
+   }
+#endif /* RETROFLAT_API_MAC7 */
    if( nil == g_retroflat_state->platform.win ) {
       error_printf( "unable to create window!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
+
+   debug_printf( RETRO2D_TRACE_LVL, "created window!" );
 
 #ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
@@ -316,7 +327,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
-         SetGWorld( (CGrafPtr)(g_retroflat_state->platform.win), nil );
+         SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
          SetPort( g_retroflat_state->platform.win );
