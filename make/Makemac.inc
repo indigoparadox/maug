@@ -109,7 +109,7 @@ define TGTMAC68K7
 OBJDIR_GCC_MAC68K_TB7=obj/gcc-mac68k-tb7
 
 CFLAGS_GCC_MAC68K_TB7 := \
-	-DRETROFLAT_API_MAC7 \
+	-DRETROFLAT_API_MAC7 -DRETROANI_DISABLE \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
 	-I$(MAUG_ROOT)/api/log/mac68k \
 	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/unix

@@ -337,6 +337,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    } else {
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
+         LockPixels( GetGWorldPixMap( bmp->gworld ) );
          SetGWorld( bmp->gworld, nil );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
@@ -361,6 +362,9 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( 0 < g_retroflat_state->platform.port_stack_ct ) {
+      /* TODO: Hunt through the stack for bmp and pull it out so that bitmaps
+       *       can be locked or unlocked out of order.
+       */
       g_retroflat_state->platform.port_stack_ct--;
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
@@ -369,6 +373,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.gdhandle_stack[
                g_retroflat_state->platform.port_stack_ct] );
+         UnlockPixels( GetGWorldPixMap( bmp->gworld ) );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
          /* Re-set old port stowed in lock. */
@@ -450,6 +455,8 @@ MERROR_RETVAL retroflat_create_bitmap(
          &(bmp_out->gworld), 4, &bounds, nil, nil, 0 );
       if( noErr != err ) {
          error_printf( "error setting up gworld: %d", err );
+         retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
+            "Error", "error setting up gworld: %d", err );
          retval = MERROR_GUI;
          goto cleanup;
       }
@@ -493,33 +500,57 @@ MERROR_RETVAL retroflat_blit_bitmap(
    Rect src_r,
       dest_r;
    GrafPtr target_port;
+#ifdef RETROFLAT_API_MAC7
+   PixMap* target_pm_c;
+   PixMap* src_pm_c;
+#endif /* RETROFLAT_API_MAC7 */
 
    assert( NULL != src );
 
-   /* Half-lock the source to copy from. */
-   HLock( src->bits_h );
-   src->bitmap.baseAddr = *(src->bits_h);
-   OpenPort( &(src->port) );
-   src->port.portBits = (src->bitmap);
-
-   if( NULL == target || retroflat_screen_buffer() == target ) {
-      target_port = g_retroflat_state->platform.win;
-   } else {
-      target_port = &(target->port);
-   }
-
-   /* Perform the actual blit. */
    SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
    SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
-   CopyBits(
-      &(src->bitmap), &(target_port->portBits),
-      &src_r, &dest_r, srcCopy, NULL );
 
-   if( nil != src->bitmap.baseAddr ) {
-      ClosePort( &(src->port) );
-      src->bitmap.baseAddr = nil;
-      HUnlock( src->bits_h );
+#ifdef RETROFLAT_API_MAC7
+   if( 2 < g_retroflat_state->screen_colors ) {
+      LockPixels( GetGWorldPixMap( src->gworld ) );
+      if( NULL == target || retroflat_screen_buffer() == target ) {
+         target_pm_c = 
+            *(GetWindowPort( g_retroflat_state->platform.win )->portPixMap);
+      } else {
+         src_pm_c = *(GetGWorldPixMap( src->gworld ));
+         target_pm_c = *(GetGWorldPixMap( target->gworld ));
+      }
+      CopyBits(
+         (BitMap*)src_pm_c, (BitMap*)target_pm_c,
+         &src_r, &dest_r, srcCopy, NULL );
+      UnlockPixels( GetGWorldPixMap( src->gworld ) );
+   } else {
+#endif /* RETROFLAT_API_MAC7 */
+      /* Half-lock the source to copy from. */
+      HLock( src->bits_h );
+      src->bitmap.baseAddr = *(src->bits_h);
+      OpenPort( &(src->port) );
+      src->port.portBits = (src->bitmap);
+
+      if( NULL == target || retroflat_screen_buffer() == target ) {
+         target_port = g_retroflat_state->platform.win;
+      } else {
+         target_port = &(target->port);
+      }
+
+      /* Perform the actual blit. */
+      CopyBits(
+         &(src->bitmap), &(target_port->portBits),
+         &src_r, &dest_r, srcCopy, NULL );
+
+      if( nil != src->bitmap.baseAddr ) {
+         ClosePort( &(src->port) );
+         src->bitmap.baseAddr = nil;
+         HUnlock( src->bits_h );
+      }
+#ifdef RETROFLAT_API_MAC7
    }
+#endif /* RETROFLAT_API_MAC7 */
 
    return retval;
 }
