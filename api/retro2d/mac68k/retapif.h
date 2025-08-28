@@ -8,8 +8,10 @@ void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
    } else
    if( RETROFLAT_COLOR_BLACK == color_idx ) {
       PenPat( &(qd.black) );
+      ForeColor( blackColor );
    } else if( RETROFLAT_COLOR_GRAY == color_idx ) {
       PenPat( &(qd.gray) );
+      ForeColor( whiteColor );
    } else {
 #if RETRO2D_TRACE_LVL > 0
       if( RETROFLAT_COLOR_WHITE != color_idx ) {
@@ -18,6 +20,7 @@ void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
       }
 #endif /* RETRO2D_TRACE_LVL */
       PenPat( &(qd.white) );
+      ForeColor( whiteColor );
    }
 }
 
@@ -489,8 +492,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   SetRect( &bounds, 0, 0, w, h );
    if( 2 < g_retroflat_state->screen_colors ) {
+      SetRect( &bounds, 0, 0, w, h );
       err = NewGWorld( &(bmp_out->gworld), 8, &bounds, nil, nil, 0 );
       if( noErr != err ) {
          error_printf( "error setting up gworld: %d", err );
@@ -508,6 +511,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
 
       /* Setup the bitmap bounding region. */
+      SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
       bmp_out->bitmap.rowBytes = width_bytes;
    }
 
