@@ -369,6 +369,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    GDHandle prev_gdhandle;
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
+   /* Restore previous graphics port. */
    if( 0 < g_retroflat_state->platform.port_stack_ct ) {
       /* TODO: Hunt through the stack for bmp and pull it out so that bitmaps
        *       can be locked or unlocked out of order.
@@ -385,7 +386,6 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.gdhandle_stack[
                g_retroflat_state->platform.port_stack_ct] );
-         UnlockPixels( GetGWorldPixMap( bmp->gworld ) );
       } else {
          /* Re-set old port stowed in lock. */
          SetPort( g_retroflat_state->platform.port_stack[
@@ -400,48 +400,44 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       goto cleanup;
    }
 
-#ifndef RETROFLAT_MAC_NO_DBLBUF
+   /* Unlock pixels/flip screen buffer. */
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
-      bmp = &(g_retroflat_state->buffer);
-   }
-#endif /* !RETROFLAT_MAC_NO_DBLBUF */
-
-   if(
-      2 >= g_retroflat_state->screen_colors
-#ifdef RETROFLAT_MAC_NO_DBLBUF
-      && NULL != bmp &&
-      retroflat_screen_buffer() != bmp 
-#endif /* RETROFLAT_MAC_NO_DBLBUF */
-   ) {
-      bmp->bitmap.baseAddr = nil;
-      ClosePort( &(bmp->port) );
-      HUnlock( bmp->bits_h );
-   }
-
 #ifndef RETROFLAT_MAC_NO_DBLBUF
-   /* Draw buffer gworld on the actual window. */
-   if( 2 >= g_retroflat_state->screen_colors ) {
-      SetRect(
-         &bufbounds, 0, 0,
-         g_retroflat_state->screen_w,
-         g_retroflat_state->screen_h );
-      GetGWorld( &prev_gworld, &prev_gdhandle );
-      SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
+      /* Draw buffer on the actual window. */
+      if( 2 < g_retroflat_state->screen_colors ) {
+         /* Flip color buffer. */
+         SetRect(
+            &bufbounds, 0, 0,
+            g_retroflat_state->screen_w,
+            g_retroflat_state->screen_h );
+         GetGWorld( &prev_gworld, &prev_gdhandle );
+         SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
 
-      LockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
-      CopyBits(
-         (BitMap*)*(GetGWorldPixMap( g_retroflat_state->buffer.gworld )),
-         (BitMap*)*(((CGrafPtr)GetWindowPort( g_retroflat_state->platform.win ))->portPixMap),
-         &bufbounds,
-         &bufbounds,
-         srcCopy, nil );
+         LockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+         CopyBits(
+            (BitMap*)*(GetGWorldPixMap( g_retroflat_state->buffer.gworld )),
+            (BitMap*)*(((CGrafPtr)GetWindowPort( g_retroflat_state->platform.win ))->portPixMap),
+            &bufbounds,
+            &bufbounds,
+            srcCopy, nil );
 
-      SetGWorld( prev_gworld, prev_gdhandle );
-      UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
-   } else {
-      /* TODO */
-   }
+         SetGWorld( prev_gworld, prev_gdhandle );
+         UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+      } else {
+         /* TODO: Flip B&W buffer. */
+      }
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
+   } else {
+      if( 2 < g_retroflat_state->screen_colors ) {
+         /* Close color bitmap. */
+         UnlockPixels( GetGWorldPixMap( bmp->gworld ) );
+      } else {
+         /* Close B&W bitmap. */
+         bmp->bitmap.baseAddr = nil;
+         ClosePort( &(bmp->port) );
+         HUnlock( bmp->bits_h );
+      }
+   }
 
 cleanup:
 
