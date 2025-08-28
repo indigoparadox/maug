@@ -2,7 +2,7 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
-static void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
+void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
 #ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
       RGBForeColor( &(g_retroflat_state->palette[color_idx]) );
@@ -308,6 +308,11 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
                g_retroflat_state->platform.port_stack_ct]),
             &(g_retroflat_state->platform.gdhandle_stack[
                g_retroflat_state->platform.port_stack_ct]) );
+         debug_printf( RETRO2D_TRACE_LVL,
+            "stowed previous gworld %p to stack idx: %d",
+            g_retroflat_state->platform.gworld_stack[
+               g_retroflat_state->platform.port_stack_ct],
+            g_retroflat_state->platform.port_stack_ct );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
          GetPort( &(g_retroflat_state->platform.port_stack[
@@ -327,6 +332,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
+         debug_printf( RETRO2D_TRACE_LVL, "setting new gworld: window" );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
@@ -338,6 +344,8 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
          LockPixels( GetGWorldPixMap( bmp->gworld ) );
+         debug_printf( RETRO2D_TRACE_LVL,
+            "setting new gworld: %p", bmp->gworld );
          SetGWorld( bmp->gworld, nil );
       } else {
 #endif /* RETROFLAT_API_MAC7 */
@@ -368,6 +376,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       g_retroflat_state->platform.port_stack_ct--;
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
+         debug_printf( RETRO2D_TRACE_LVL,
+            "restoring previous gworld %p from stack idx: %d",
+            g_retroflat_state->platform.gworld_stack[
+               g_retroflat_state->platform.port_stack_ct],
+            g_retroflat_state->platform.port_stack_ct );
          SetGWorld(
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
@@ -448,11 +461,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
+   SetRect( &bounds, 0, 0, w, h );
 #ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
-      SetRect( &bounds, 0, 0, w, h );
-      err = NewGWorld(
-         &(bmp_out->gworld), 4, &bounds, nil, nil, 0 );
+      err = NewGWorld( &(bmp_out->gworld), 8, &bounds, nil, nil, 0 );
       if( noErr != err ) {
          error_printf( "error setting up gworld: %d", err );
          retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
@@ -470,7 +482,6 @@ MERROR_RETVAL retroflat_create_bitmap(
       maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
 
       /* Setup the bitmap bounding region. */
-      SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
       bmp_out->bitmap.rowBytes = width_bytes;
 #ifdef RETROFLAT_API_MAC7
    }
@@ -486,7 +497,15 @@ cleanup:
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
-   DisposeHandle( bmp->bits_h );
+#ifdef RETROFLAT_API_MAC7
+   if( 2 < g_retroflat_state->screen_colors ) {
+      DisposeGWorld( bmp->gworld );
+   } else {
+#endif /* RETROFLAT_API_MAC7 */
+      DisposeHandle( bmp->bits_h );
+#ifdef RETROFLAT_API_MAC7
+   }
+#endif /* RETROFLAT_API_MAC7 */
 }
 
 /* === */
@@ -503,6 +522,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #ifdef RETROFLAT_API_MAC7
    PixMap* target_pm_c;
    PixMap* src_pm_c;
+   int lockpix = 0;
 #endif /* RETROFLAT_API_MAC7 */
 
    assert( NULL != src );
@@ -512,18 +532,23 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
-      LockPixels( GetGWorldPixMap( src->gworld ) );
       if( NULL == target || retroflat_screen_buffer() == target ) {
+         src_pm_c = *(GetGWorldPixMap( src->gworld ));
          target_pm_c = 
-            *(GetWindowPort( g_retroflat_state->platform.win )->portPixMap);
+            *(((CGrafPtr)GetWindowPort(
+               g_retroflat_state->platform.win ))->portPixMap);
       } else {
+         lockpix = 1;
+         LockPixels( GetGWorldPixMap( src->gworld ) );
          src_pm_c = *(GetGWorldPixMap( src->gworld ));
          target_pm_c = *(GetGWorldPixMap( target->gworld ));
       }
       CopyBits(
          (BitMap*)src_pm_c, (BitMap*)target_pm_c,
          &src_r, &dest_r, srcCopy, NULL );
-      UnlockPixels( GetGWorldPixMap( src->gworld ) );
+      if( lockpix ) {
+         UnlockPixels( GetGWorldPixMap( src->gworld ) );
+      }
    } else {
 #endif /* RETROFLAT_API_MAC7 */
       /* Half-lock the source to copy from. */

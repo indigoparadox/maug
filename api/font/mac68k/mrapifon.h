@@ -40,6 +40,8 @@ MERROR_RETVAL retrofont_load(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFONT* font = NULL;
    FontInfo font_info;
+   int prev_font = 0;
+   int prev_text_sz = 0;
 
    if( 0 == glyph_h ) {
       glyph_h = retrofont_sz_from_filename( font_name );
@@ -61,11 +63,18 @@ MERROR_RETVAL retrofont_load(
    retval = retrofont_load_stub( font_name, font, retrofont_try_mac68k, NULL );
    maug_cleanup_if_not_ok();
 
+   prev_font = g_retroflat_state->platform.win->txFont;
    TextFont( font->font_idx );
+
+   prev_text_sz = g_retroflat_state->platform.win->txSize;
    TextSize( font->font_sz );
 
    GetFontInfo( &font_info );
    font->font_height = font_info.ascent + font_info.descent + font_info.leading;
+
+   /* Restore previous globals. */
+   TextFont( prev_font );
+   TextSize( prev_text_sz );
 
 cleanup:
 
@@ -88,6 +97,8 @@ void retrofont_string_indent(
    unsigned char str_buf[128];
    struct RETROFONT* font = NULL;
    size_t i = 0, str_start = 0, y_offset = 0, line_sz = 0;
+   int prev_font = 0;
+   int prev_text_sz = 0;
 
    if( 0 >= str_sz ) {
       str_sz = maug_strlen( str );
@@ -97,17 +108,13 @@ void retrofont_string_indent(
    maug_cleanup_if_null_lock( struct RETROFONT*, font );
 
    /* Handle font face and effects! */
+   prev_font = g_retroflat_state->platform.win->txFont;
    TextFont( font->font_idx );
+
+   prev_text_sz = g_retroflat_state->platform.win->txSize;
    TextSize( font->font_sz );
-   if( RETROFLAT_COLOR_BLACK == color ) {
-      ForeColor( blackColor );
-   } else {
-      if( RETROFLAT_COLOR_WHITE != color ) {
-         debug_printf(
-            RETRO2D_TRACE_LVL, "alert! high color used: %d", color );
-      }
-      ForeColor( whiteColor );
-   }
+
+   retroflat_mac_bwcolor( color );
 
    /* Break up draw calls for wrapping and newlines. */
    for( i = 0 ; str_sz >= i ; i++ ) {
@@ -152,6 +159,8 @@ void retrofont_string_indent(
 
    /* Reset drawing effects. */
    ForeColor( blackColor );
+   TextFont( prev_font );
+   TextSize( prev_text_sz );
 
 cleanup:
 
@@ -178,6 +187,8 @@ MERROR_RETVAL retrofont_string_sz(
    struct RETROFONT* font = NULL;
    size_t i = 0;
    retroflat_pxxy_t out_h = 0; /* Only used if p_out_h is NULL. */
+   int prev_text_sz = 0;
+   int prev_font = 0;
 
    if( NULL == p_out_h ) {
       p_out_h = &out_h;
@@ -193,6 +204,10 @@ MERROR_RETVAL retrofont_string_sz(
    retval = maug_str_c2p( str, (char*)str_buf, 127 );
    maug_cleanup_if_not_ok();
 
+   prev_font = g_retroflat_state->platform.win->txFont;
+   TextFont( font->font_idx );
+
+   prev_text_sz = g_retroflat_state->platform.win->txSize;
    TextSize( font->font_sz );
 
    *p_out_w = StringWidth( str_buf );
@@ -208,6 +223,10 @@ MERROR_RETVAL retrofont_string_sz(
          *p_out_h += font->font_height;
       }
    }
+
+   /* Restore previous globals. */
+   TextFont( prev_font );
+   TextSize( prev_text_sz );
 
 cleanup:
 
