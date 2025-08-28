@@ -428,14 +428,22 @@ MERROR_RETVAL retroflat_load_bitmap_px_cb(
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_BITMAP* b = (struct RETROFLAT_BITMAP*)data;
 
-   /* Blit pixels based on input bitmap. Convert mfmt's 8-bit bitmap results
-    * into a true 1-bit Quickdraw bitmap.
-    */
-   if( 0 == px ) {
-      retroflat_px( b, RETROFLAT_COLOR_BLACK, x, y, 0 );
+#ifdef RETROFLAT_API_MAC7
+   if( 2 < g_retroflat_state->screen_colors ) {
+      retroflat_px( b, px, x, y, 0 );
    } else {
-      retroflat_px( b, RETROFLAT_COLOR_WHITE, x, y, 0 );
+#endif /* RETROFLAT_API_MAC7 */
+      /* Blit pixels based on input bitmap. Convert mfmt's 8-bit bitmap results
+      * into a true 1-bit Quickdraw bitmap.
+      */
+      if( 0 == px ) {
+         retroflat_px( b, RETROFLAT_COLOR_BLACK, x, y, 0 );
+      } else {
+         retroflat_px( b, RETROFLAT_COLOR_WHITE, x, y, 0 );
+      }
+#ifdef RETROFLAT_API_MAC7
    }
+#endif /* RETROFLAT_API_MAC7 */
 
    return retval;
 }
