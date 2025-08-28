@@ -18,7 +18,7 @@ define TGTMAC68K
 OBJDIR_GCC_MAC68K_TB6=obj/gcc-mac68k-tb6
 
 CFLAGS_GCC_MAC68K_TB6 := \
-	-DRETROFLAT_API_MAC6 \
+	-DRETROFLAT_API_MAC6 -DRETROFLAT_MAC_NO_DBLBUF \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
 	-I$(MAUG_ROOT)/api/log/mac68k \
 	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/unix

@@ -105,11 +105,13 @@ static MERROR_RETVAL retroflat_init_platform(
             g_retroflat_state->palette[idx].blue );
       RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_CQD )
    }
-#endif /* RETROFLAT_COLOR_TABLE_CQD */
+#endif /* RETROFLAT_API_MAC7 */
 
+#ifndef RETROFLAT_MAC_NO_DBLBUF
    retval = retroflat_create_bitmap(
       args->screen_w, args->screen_h,
       &(g_retroflat_state->buffer), RETROFLAT_FLAGS_OPAQUE );
+#endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
 
@@ -120,7 +122,9 @@ cleanup:
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* TODO */
+#ifndef RETROFLAT_MAC_NO_DBLBUF
    retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+#endif /* !RETROFLAT_MAC_NO_DBLBUF */
    FlushEvents( everyEvent, -1 );
 }
 
@@ -335,20 +339,22 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
-#if 0
-#ifdef RETROFLAT_API_MAC7
+#ifdef RETROFLAT_MAC_NO_DBLBUF
+#  ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
          debug_printf( RETRO2D_TRACE_LVL, "setting new gworld: window" );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
       } else {
-#endif /* RETROFLAT_API_MAC7 */
+#  endif /* RETROFLAT_API_MAC7 */
          SetPort( g_retroflat_state->platform.win );
-#ifdef RETROFLAT_API_MAC7
+#  ifdef RETROFLAT_API_MAC7
       }
-#endif /* RETROFLAT_API_MAC7 */
-#endif
+#  endif /* RETROFLAT_API_MAC7 */
+   } else {
+#else
       bmp = &(g_retroflat_state->buffer);
    }
+#endif /* RETROFLAT_MAC_NO_DBLBUF */
 #ifdef RETROFLAT_API_MAC7
       if( 2 < g_retroflat_state->screen_colors ) {
          LockPixels( GetGWorldPixMap( bmp->gworld ) );
@@ -365,6 +371,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 #ifdef RETROFLAT_API_MAC7
       }
 #endif /* RETROFLAT_API_MAC7 */
+#ifdef RETROFLAT_MAC_NO_DBLBUF
+   }
+#endif /* RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
 
@@ -375,9 +384,13 @@ cleanup:
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
+#if !defined( RETROFLAT_MAC_NO_DBLBUF )
    Rect bufbounds;
+#  if defined( RETROFLAT_API_MAC7 )
    GWorldPtr prev_gworld;
    GDHandle prev_gdhandle;
+#  endif /* RETROFLAT_API_MAC7 */
+#endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
    if( 0 < g_retroflat_state->platform.port_stack_ct ) {
       /* TODO: Hunt through the stack for bmp and pull it out so that bitmaps
@@ -414,34 +427,52 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       goto cleanup;
    }
 
+#ifndef RETROFLAT_MAC_NO_DBLBUF
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       bmp = &(g_retroflat_state->buffer);
    }
+#endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
    if(
-      2 >= g_retroflat_state->screen_colors &&
+      2 >= g_retroflat_state->screen_colors
+#ifdef RETROFLAT_MAC_NO_DBLBUF
+      && NULL != bmp &&
       retroflat_screen_buffer() != bmp 
+#endif /* RETROFLAT_MAC_NO_DBLBUF */
    ) {
       bmp->bitmap.baseAddr = nil;
       ClosePort( &(bmp->port) );
       HUnlock( bmp->bits_h );
    }
 
-   /* Draw gworld on screen. */
-   SetRect( &bufbounds, 0, 0, g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-   GetGWorld( &prev_gworld, &prev_gdhandle );
-   SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
+#ifndef RETROFLAT_MAC_NO_DBLBUF
+   /* Draw buffer gworld on the actual window. */
+#  ifdef RETROFLAT_API_MAC7
+   if( 2 >= g_retroflat_state->screen_colors ) {
+      SetRect(
+         &bufbounds, 0, 0,
+         g_retroflat_state->screen_w,
+         g_retroflat_state->screen_h );
+      GetGWorld( &prev_gworld, &prev_gdhandle );
+      SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
 
-   LockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
-   CopyBits(
-      *(GetGWorldPixMap( g_retroflat_state->buffer.gworld )),
-      *(((CGrafPtr)GetWindowPort( g_retroflat_state->platform.win ))->portPixMap),
-      &bufbounds,
-      &bufbounds,
-      srcCopy, nil );
+      LockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+      CopyBits(
+         (BitMap*)*(GetGWorldPixMap( g_retroflat_state->buffer.gworld )),
+         (BitMap*)*(((CGrafPtr)GetWindowPort( g_retroflat_state->platform.win ))->portPixMap),
+         &bufbounds,
+         &bufbounds,
+         srcCopy, nil );
 
-   SetGWorld( prev_gworld, prev_gdhandle );
-   UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+      SetGWorld( prev_gworld, prev_gdhandle );
+      UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+   } else {
+#  endif /* RETROFLAT_API_MAC7 */
+
+#  ifdef RETROFLAT_API_MAC7
+   }
+#  endif /* RETROFLAT_API_MAC7 */
+#endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
 
@@ -498,8 +529,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   SetRect( &bounds, 0, 0, w, h );
 #ifdef RETROFLAT_API_MAC7
+   SetRect( &bounds, 0, 0, w, h );
    if( 2 < g_retroflat_state->screen_colors ) {
       err = NewGWorld( &(bmp_out->gworld), 8, &bounds, nil, nil, 0 );
       if( noErr != err ) {
@@ -569,22 +600,24 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #ifdef RETROFLAT_API_MAC7
    if( 2 < g_retroflat_state->screen_colors ) {
-      /*
+
+#  ifdef RETROFLAT_MAC_NO_DBLBUF
       if( NULL == target || retroflat_screen_buffer() == target ) {
          src_pm_c = *(GetGWorldPixMap( src->gworld ));
          target_pm_c = 
             *(((CGrafPtr)GetWindowPort(
                g_retroflat_state->platform.win ))->portPixMap);
       } else {
-      */
-      if( NULL == target ) {
+#  else
          target = &(g_retroflat_state->buffer);
-      }
+#  endif /* RETROFLAT_MAC_NO_DBLBUF */
          lockpix = 1;
          LockPixels( GetGWorldPixMap( src->gworld ) );
          src_pm_c = *(GetGWorldPixMap( src->gworld ));
          target_pm_c = *(GetGWorldPixMap( target->gworld ));
-      /* } */
+#  ifdef RETROFLAT_MAC_NO_DBLBUF
+      }
+#  endif /* RETROFLAT_MAC_NO_DBLBUF */
       CopyBits(
          (BitMap*)src_pm_c, (BitMap*)target_pm_c,
          &src_r, &dest_r, srcCopy, NULL );
