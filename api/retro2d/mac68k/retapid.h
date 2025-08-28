@@ -54,9 +54,7 @@ struct RETROFLAT_BITMAP {
    Ptr bits;
    BitMap bitmap;
    GrafPort port;
-#ifdef RETROFLAT_API_MAC7
    GWorldPtr gworld;
-#endif /* RETROFLAT_API_MAC7 */
 };
 
 /*! \brief Check to see if a bitmap is loaded. */
@@ -126,10 +124,8 @@ struct RETROFLAT_PLATFORM {
    WindowPtr win;
    GrafPort* port_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
    size_t port_stack_ct;
-#ifdef RETROFLAT_API_MAC7
    GWorldPtr gworld_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
    GDHandle gdhandle_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
-#endif /* RETROFLAT_API_MAC7 */
 };
 
 #endif /* !RETPLTD_H */
