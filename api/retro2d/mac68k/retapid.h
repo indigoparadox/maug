@@ -50,10 +50,8 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
-   Handle bits_h;
-   Ptr bits;
    BitMap bitmap;
-   GrafPort port;
+   GrafPtr port;
    GWorldPtr gworld;
 };
 

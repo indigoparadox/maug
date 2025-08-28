@@ -344,11 +344,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
             "setting new gworld: %p", bmp->gworld );
          SetGWorld( bmp->gworld, nil );
       } else {
-         HLock( bmp->bits_h );
-         bmp->bitmap.baseAddr = *(bmp->bits_h);
-         OpenPort( &(bmp->port) );
-         SetPortBits( &(bmp->bitmap) );
-         SetOrigin( 0, 0 );
+         SetPort( bmp->port );
       }
 #ifdef RETROFLAT_MAC_NO_DBLBUF
    }
@@ -403,13 +399,13 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    /* Unlock pixels/flip screen buffer. */
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
 #ifndef RETROFLAT_MAC_NO_DBLBUF
+      SetRect(
+         &bufbounds, 0, 0,
+         g_retroflat_state->screen_w,
+         g_retroflat_state->screen_h );
       /* Draw buffer on the actual window. */
       if( 2 < g_retroflat_state->screen_colors ) {
          /* Flip color buffer. */
-         SetRect(
-            &bufbounds, 0, 0,
-            g_retroflat_state->screen_w,
-            g_retroflat_state->screen_h );
          GetGWorld( &prev_gworld, &prev_gdhandle );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
 
@@ -425,6 +421,10 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
       } else {
          /* TODO: Flip B&W buffer. */
+         CopyBits(
+            &(g_retroflat_state->buffer.bitmap),
+            &(g_retroflat_state->platform.win->portBits),
+            &bufbounds, &bufbounds, srcCopy, NULL );
       }
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
    } else {
@@ -433,9 +433,6 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          UnlockPixels( GetGWorldPixMap( bmp->gworld ) );
       } else {
          /* Close B&W bitmap. */
-         bmp->bitmap.baseAddr = nil;
-         ClosePort( &(bmp->port) );
-         HUnlock( bmp->bits_h );
       }
    }
 
@@ -478,6 +475,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    int16_t width_bytes = 0;
    Rect bounds;
    QDErr err;
+   GrafPtr prev_port;
 
    debug_printf( RETRO2D_TRACE_LVL,
       "creating bitmap of " SIZE_T_FMT "x" SIZE_T_FMT " with " SIZE_T_FMT
@@ -502,13 +500,22 @@ MERROR_RETVAL retroflat_create_bitmap(
       /* Get the bytes per row, rounding up to an even number of bytes. */
       width_bytes = ((w + 15) / 16) * 2;
 
-      /* Allocate the memory for the bitmap bits. */
-      bmp_out->bits_h = NewHandleClear( width_bytes * h );
-      maug_cleanup_if_null_alloc( Handle, bmp_out->bits_h );
-
       /* Setup the bitmap bounding region. */
       SetRect( &(bmp_out->bitmap.bounds), 0, 0, w, h );
+
+      /* Allocate memory for bitmap structures. */
       bmp_out->bitmap.rowBytes = width_bytes;
+      bmp_out->bitmap.baseAddr = NewPtr( width_bytes * h );
+      maug_cleanup_if_null_alloc( Ptr, bmp_out->bitmap.baseAddr );
+      bmp_out->port = (GrafPtr)NewPtr( sizeof( GrafPort ) );
+      maug_cleanup_if_null_alloc( GrafPtr, bmp_out->port );
+
+      /* Setup the bitmap's port. */
+      GetPort( &prev_port );
+      OpenPort( bmp_out->port );
+      SetPortBits( &(bmp_out->bitmap) );
+      SetOrigin( 0, 0 );
+      SetPort( prev_port );
    }
 
    debug_printf( RETRO2D_TRACE_LVL, "bitmap created successfully!" );
@@ -524,7 +531,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    if( 2 < g_retroflat_state->screen_colors ) {
       DisposeGWorld( bmp->gworld );
    } else {
-      DisposeHandle( bmp->bits_h );
+      ClosePort( bmp->port );
+      DisposePtr( bmp->bitmap.baseAddr );
+      DisposePtr( (Ptr)(bmp->port) );
    }
 }
 
@@ -578,27 +587,20 @@ MERROR_RETVAL retroflat_blit_bitmap(
       /* Old-timey bitmaps. */
 
       /* Half-lock the source to copy from. */
-      HLock( src->bits_h );
-      src->bitmap.baseAddr = *(src->bits_h);
-      OpenPort( &(src->port) );
-      src->port.portBits = (src->bitmap);
-
       if( NULL == target || retroflat_screen_buffer() == target ) {
+#  ifdef RETROFLAT_MAC_NO_DBLBUF
          target_port = g_retroflat_state->platform.win;
+#else
+         target_port = g_retroflat_state->buffer.port;
+#  endif /* RETROFLAT_MAC_NO_DBLBUF */
       } else {
-         target_port = &(target->port);
+         target_port = target->port;
       }
 
       /* Perform the actual blit. */
       CopyBits(
          &(src->bitmap), &(target_port->portBits),
          &src_r, &dest_r, srcCopy, NULL );
-
-      if( nil != src->bitmap.baseAddr ) {
-         ClosePort( &(src->port) );
-         src->bitmap.baseAddr = nil;
-         HUnlock( src->bits_h );
-      }
    }
 
    return retval;
