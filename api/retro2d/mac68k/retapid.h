@@ -55,10 +55,14 @@ struct RETROFLAT_BITMAP {
    GWorldPtr gworld;
 };
 
-/*! \brief Check to see if a bitmap is loaded. */
-#  define retroflat_bitmap_ok( bmp ) (nil != (bmp)->bits_h)
+#define RETROFLAT_MAC_FLAG_BITMAP_LOCKED 0x10
 
-#  define retroflat_bitmap_locked( bmp ) (nul != (bmp)->bitmap.baseAddr)
+/*! \brief Check to see if a bitmap is loaded. */
+#  define retroflat_bitmap_ok( bmp ) (nil != (bmp)->bitmap.baseAddr)
+
+#  define retroflat_bitmap_locked( bmp ) \
+   (RETROFLAT_MAC_FLAG_BITMAP_LOCKED == \
+      (RETROFLAT_MAC_FLAG_BITMAP_LOCKED &(bmp)->flags))
 
 #  define retroflat_bitmap_w( bmp ) ((bmp)->bitmap.bounds.right)
 

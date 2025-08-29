@@ -337,6 +337,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       bmp = &(g_retroflat_state->buffer);
    }
 #endif /* RETROFLAT_MAC_NO_DBLBUF */
+      bmp->flags |= RETROFLAT_MAC_FLAG_BITMAP_LOCKED;
       /* Setup drawing to the bitmap target. */
       if( 2 < g_retroflat_state->screen_colors ) {
          LockPixels( GetGWorldPixMap( bmp->gworld ) );
@@ -428,6 +429,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       }
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
    } else {
+      bmp->flags &= ~RETROFLAT_MAC_FLAG_BITMAP_LOCKED;
       if( 2 < g_retroflat_state->screen_colors ) {
          /* Close color bitmap. */
          UnlockPixels( GetGWorldPixMap( bmp->gworld ) );
