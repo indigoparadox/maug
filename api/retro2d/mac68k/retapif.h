@@ -476,6 +476,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    Rect bounds;
    QDErr err;
    GrafPtr prev_port;
+   GWorldPtr prev_gworld;
+   GDHandle prev_gdhandle;
 
    debug_printf( RETRO2D_TRACE_LVL,
       "creating bitmap of " SIZE_T_FMT "x" SIZE_T_FMT " with " SIZE_T_FMT
@@ -496,6 +498,14 @@ MERROR_RETVAL retroflat_create_bitmap(
          retval = MERROR_GUI;
          goto cleanup;
       }
+
+      GetGWorld( &prev_gworld, &prev_gdhandle );
+      SetGWorld( bmp_out->gworld, nil );
+      SetOrigin( 0, 0 );
+      retroflat_mac_bwcolor( RETROFLAT_COLOR_BLACK );
+      PaintRect( &bounds );
+      SetGWorld( prev_gworld, prev_gdhandle );
+
    } else {
       /* Get the bytes per row, rounding up to an even number of bytes. */
       width_bytes = ((w + 15) / 16) * 2;
@@ -515,6 +525,8 @@ MERROR_RETVAL retroflat_create_bitmap(
       OpenPort( bmp_out->port );
       SetPortBits( &(bmp_out->bitmap) );
       SetOrigin( 0, 0 );
+      retroflat_mac_bwcolor( RETROFLAT_COLOR_BLACK );
+      PaintRect( &bounds );
       SetPort( prev_port );
    }
 
