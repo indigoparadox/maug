@@ -26,6 +26,36 @@ void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
 
 /* === */
 
+int retroflat_mac_get_bpp() {
+   int bpp_out = 0;
+   GDHandle gd_monitor = nil;
+
+   debug_printf( RETRO2D_TRACE_LVL, "setting up quickdraw..." );
+
+#if 0
+   /* Detect if Color QuickDraw is present. */
+   if(
+      NGetTrapAddress( _Gestalt, ToolTrap ) !=
+         NGetTrapAddress( _Unimplemented, ToolTrap ) &&
+      noErr == Gestalt( gestaltQuickdrawVersion, &cqd_result ) &&
+      0x0101 <= cqd_result
+   ) {
+      debug_printf(
+         RETRO2D_TRACE_LVL, "color quickdraw found! using 16 colors..." );
+      bpp_out = 4;
+   } else {
+      bpp_out = 1;
+   }
+#endif
+
+   gd_monitor = GetGDevice();
+   bpp_out = (*(*gd_monitor)->gdPMap)->pixelSize;
+
+   return bpp_out;
+}
+
+/* === */
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -47,21 +77,8 @@ static MERROR_RETVAL retroflat_init_platform(
    retval = maug_str_c2p( args->title, (char*)title_buf, 128 );
    maug_cleanup_if_not_ok_msg( "title string too long!" );
 
-   debug_printf( RETRO2D_TRACE_LVL, "setting up quickdraw color..." );
-
-   /* Detect if Color QuickDraw is present. */
-   if(
-      NGetTrapAddress( _Gestalt, ToolTrap ) !=
-         NGetTrapAddress( _Unimplemented, ToolTrap ) &&
-      noErr == Gestalt( gestaltQuickdrawVersion, &cqd_result ) &&
-      0x0101 <= cqd_result
-   ) {
-      debug_printf(
-         RETRO2D_TRACE_LVL, "color quickdraw found! using 16 colors..." );
-      g_retroflat_state->screen_colors = 16;
-   } else {
-      g_retroflat_state->screen_colors = 2;
-   }
+   /* Get the number of colors from the display BPP. */
+   g_retroflat_state->screen_colors = 1 << retroflat_mac_get_bpp();
 
    debug_printf( RETRO2D_TRACE_LVL, "creating the window..." );
 
@@ -421,7 +438,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          SetGWorld( prev_gworld, prev_gdhandle );
          UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
       } else {
-         /* TODO: Flip B&W buffer. */
+         /* Flip B&W buffer. */
          CopyBits(
             &(g_retroflat_state->buffer.bitmap),
             &(g_retroflat_state->platform.win->portBits),
@@ -492,7 +509,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    if( 2 < g_retroflat_state->screen_colors ) {
       SetRect( &bounds, 0, 0, w, h );
-      err = NewGWorld( &(bmp_out->gworld), 8, &bounds, nil, nil, 0 );
+      err = NewGWorld(
+         &(bmp_out->gworld), retroflat_mac_get_bpp(), &bounds, nil, nil, 0 );
       if( noErr != err ) {
          error_printf( "error setting up gworld: %d", err );
          retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
