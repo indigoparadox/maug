@@ -164,6 +164,8 @@ typedef int16_t retrotile_coord_t;
 #define RETROTILE_IDX_FMT "%u"
 
 struct RETROTILE_TILE_DEF {
+   /*! \brief Size of this struct (useful for serializing). */
+   size_t sz;
    uint8_t flags;
    retroflat_asset_path image_path;
    size_t x;
@@ -192,7 +194,10 @@ struct RETROTILE_TILE_DEF {
 /*! \} */ /* retrotile_defs */
 
 struct RETROTILE_LAYER {
+   /*! \brief Size of this struct (useful for serializing). */
    size_t sz;
+   /*! \brief Size of the layer in bytes (including this struct header). */
+   size_t total_sz;
    uint16_t layer_class;
 };
 
@@ -213,10 +218,12 @@ struct RETROTILE_COORDS {
  * \warning Only tile layers are supported!
  */
 struct RETROTILE {
+   /*! \brief Size of this struct (useful for serializing). */
+   size_t sz;
    char name[RETROTILE_NAME_SZ_MAX + 1];
    char tileset[RETROTILE_NAME_SZ_MAX + 1];
    /*! \brief Size of the tilemap in bytes (including this struct header). */
-   uint32_t sz;
+   uint32_t total_sz;
    /*! \brief Number of tile layers in this tilemap. */
    uint32_t layers_count;
    /*! \brief First GID in the accompanying tileset. */
@@ -734,6 +741,9 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             mfile_assign_path(
                tile_def->image_path, token, MFILE_ASSIGN_FLAG_TRIM_EXT );
          }
+
+         /* Setup tile_def sz for serializing. */
+         tile_def->sz = sizeof( struct RETROTILE_TILE_DEF );
 
 #if RETROTILE_TRACE_LVL > 0
          debug_printf(
@@ -2174,7 +2184,7 @@ struct RETROTILE_LAYER* retrotile_get_layer_p(
    tilemap_buf += sizeof( struct RETROTILE );
    layer_iter = (struct RETROTILE_LAYER*)tilemap_buf;
    while( layer_idx > 0 ) {
-      tilemap_buf += layer_iter->sz;
+      tilemap_buf += layer_iter->total_sz;
       layer_iter = (struct RETROTILE_LAYER*)tilemap_buf;
       layer_idx--;
    }
@@ -2212,11 +2222,12 @@ MERROR_RETVAL retrotile_alloc(
    maug_cleanup_if_null_alloc( struct RETROTILE*, tilemap );
 
    maug_mzero( tilemap, tilemap_sz );
-   tilemap->sz = tilemap_sz;
+   tilemap->total_sz = tilemap_sz;
    tilemap->layers_count = layers_count;
    tilemap->tiles_w = w;
    tilemap->tiles_h = h;
    tilemap->tile_scale = RETROTILE_TILE_SCALE_DEFAULT;
+   tilemap->sz = sizeof( struct RETROTILE );
 
    maug_strncpy( tilemap->name, tilemap_name, RETROTILE_NAME_SZ_MAX );
 
@@ -2225,9 +2236,10 @@ MERROR_RETVAL retrotile_alloc(
    for( i = 0 ; layers_count > i ; i++ ) {
       layer_iter = retrotile_get_layer_p( tilemap, i );
       assert( NULL != layer_iter );
-      layer_iter->sz = sizeof( struct RETROTILE_LAYER ) +
+      layer_iter->total_sz = sizeof( struct RETROTILE_LAYER ) +
          (w * h * sizeof( retroflat_tile_t ));
       maug_cleanup_if_not_ok();
+      layer_iter->sz = sizeof( struct RETROTILE_LAYER );
    }
 
 cleanup:

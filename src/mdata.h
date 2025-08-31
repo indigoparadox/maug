@@ -58,6 +58,8 @@ typedef ssize_t mdata_strpool_idx_t;
  * and store that index.
  */
 struct MDATA_STRPOOL {
+   /*! \brief Size of this struct (useful for serializing). */
+   size_t sz;
    MAUG_MHANDLE str_h;
    size_t str_sz;
    size_t str_sz_max;
@@ -81,6 +83,8 @@ struct MDATA_STRPOOL {
  *          with wrapper macros and convenience functions.
  */
 struct MDATA_VECTOR {
+   /*! \brief Size of this struct (useful for serializing). */
+   size_t sz;
    uint8_t flags;
    /*! \brief Handle for allocated items (unlocked). */
    MAUG_MHANDLE data_h;
@@ -519,6 +523,7 @@ MERROR_RETVAL mdata_strpool_alloc(
       strpool->str_h = maug_malloc( alloc_sz, 1 );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
       strpool->str_sz_max = alloc_sz;
+      strpool->sz = sizeof( struct MDATA_STRPOOL );
 
    } else if( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
       while( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
@@ -735,6 +740,8 @@ MERROR_RETVAL mdata_vector_alloc(
       mdata_vector_lock( v );
       maug_mzero( v->data_bytes, v->ct_max * item_sz );
       mdata_vector_unlock( v );
+
+      v->sz = sizeof( struct MDATA_VECTOR );
 
    } else if( v->ct_max <= v->ct + 1 || v->ct_max <= item_ct_init ) {
       assert( item_sz == v->item_sz );
