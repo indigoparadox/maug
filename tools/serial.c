@@ -13,14 +13,23 @@
 #define PARSE_MODE_STRUCT_BODY 2
 #define PARSE_MODE_STRUCT_FIELD_TYPE 3
 #define PARSE_MODE_STRUCT_FIELD_NAME 4
+#define PARSE_MODE_COMMENT_SLASH 5
+#define PARSE_MODE_COMMENT 6
+#define PARSE_MODE_COMMENT_STAR 7
+
+#ifdef DEBUG
+#  define debug_int( str_in, int_in ) printf( "%s: %d\n", str_in, int_in );
+#else
+#  define debug_int( str_in, int_in )
+#endif /* DEBUG */
 
 #define parse_push_mode( parser, mode_in ) \
-   printf( "push: %d\n", mode_in ); \
+   debug_int( "push", mode_in ); \
    (parser)->mode[++((parser)->mode_cur)] = mode_in; \
    assert( (parser)->mode_cur < PARSE_STACK_DEPTH );
 
 #define parse_pop_mode( parser ) \
-   printf( "pop: %d\n", parse_mode( parser ) ); \
+   debug_int( "pop", parse_mode( parser ) ); \
    (parser)->mode_cur--;
 
 #define parse_mode( parser ) \
@@ -50,21 +59,25 @@ void parse_reset_token( struct STRUCT_PARSER* parser ) {
 int parse_c( struct STRUCT_PARSER* parser, char c ) {
    int retval = 0;
 
-   /*
+#ifdef DEBUG
    printf( "%d %d %c\n", parser->mode_cur, parse_mode( parser ), c );
-   */
+#endif /* DEBUG */
 
    switch( c ) {
    /* Indicate newline on newline chars. */
    case '\n':
    case '\r':
       parser->newline = 1;
+      debug_int( "newline", 1 );
       /* Fall through. */
    case ' ':
    case '\t':
       switch( parse_mode( parser ) ) {
       case PARSE_MODE_NONE:
-         if( 0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ ) ) {
+         if(
+            parser->newline &&
+            0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ )
+         ) {
             parse_push_mode( parser, PARSE_MODE_STRUCT_NAME );
          } else if( '\r' != c && '\n' != c ) {
             /* Don't immediately cancel out newline if this whitespace is the
@@ -72,6 +85,7 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
              * a new line!
              */
             parser->newline = 0;
+            debug_int( "newline", 0 );
          }
          break;
 
@@ -84,13 +98,6 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
          strncpy( parser->parsed.name, parser->token, PARSE_TOKEN_SZ );
          parser->parsed.name_sz = parser->token_sz;
          printf( "struct: %s\n", parser->parsed.name );
-         break;
-
-      case PARSE_MODE_STRUCT_BODY:
-         /* TODO: Note that whitespace must exist between { and first field
-          *       type!
-          */
-         parse_push_mode( parser, PARSE_MODE_STRUCT_FIELD_TYPE );
          break;
 
       case PARSE_MODE_STRUCT_FIELD_TYPE:
@@ -116,8 +123,6 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
       }
       break;
 
-   /* TODO: Handle comments. */
-
    case '{':
       switch( parse_mode( parser ) ) {
       case PARSE_MODE_STRUCT_NAME:
@@ -139,11 +144,71 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
       }
       break;
 
-   default:
-      parser->token[parser->token_sz++] = c;
-      assert( parser->token_sz <= PARSE_TOKEN_SZ );
+   case '/':
+      if( PARSE_MODE_COMMENT_STAR == parse_mode( parser ) ) {
+         /* COMMENT_STAR */
+         parse_pop_mode( parser );
+         /* COMMENT */
+         parse_pop_mode( parser );
+         /* COMMENT_SLASH */
+         parse_pop_mode( parser );
+      } else {
+         parse_push_mode( parser, PARSE_MODE_COMMENT_SLASH );
+         if( PARSE_MODE_COMMENT != parse_mode( parser ) ) {
+            parser->token[parser->token_sz++] = c;
+            assert( parser->token_sz <= PARSE_TOKEN_SZ );
+         }
+      }
       break;
 
+   case '*':
+      if( PARSE_MODE_COMMENT_SLASH == parse_mode( parser ) ) {
+         parse_push_mode( parser, PARSE_MODE_COMMENT );
+      } else if( PARSE_MODE_COMMENT == parse_mode( parser ) ) {
+         parse_push_mode( parser, PARSE_MODE_COMMENT_STAR );
+      } else {
+         parser->token[parser->token_sz++] = c;
+         assert( parser->token_sz <= PARSE_TOKEN_SZ );
+      }
+      break;
+
+   case '(':
+      switch( parse_mode( parser ) ) {
+      case PARSE_MODE_NONE:
+         /* We must've found a function that returns a struct. That doesn't
+          * count!
+          */
+         parser->newline = 0;
+         debug_int( "newline", 0 );
+         break;
+      }
+      break;
+
+   default:
+      switch( parse_mode( parser ) ) {
+      case PARSE_MODE_COMMENT:
+         /* Do nothing! */
+         break;
+
+      case PARSE_MODE_STRUCT_BODY:
+         parse_push_mode( parser, PARSE_MODE_STRUCT_FIELD_TYPE );
+         parser->token[parser->token_sz++] = c;
+         assert( parser->token_sz <= PARSE_TOKEN_SZ );
+         break;
+
+      case PARSE_MODE_COMMENT_SLASH:
+         /* Not a *, so abandon this pre-comment state. */
+         parse_pop_mode( parser );
+         parser->token[parser->token_sz++] = c;
+         assert( parser->token_sz <= PARSE_TOKEN_SZ );
+         break;
+
+      default:
+         parser->token[parser->token_sz++] = c;
+         assert( parser->token_sz <= PARSE_TOKEN_SZ );
+         break;
+      }
+      break;
    }
 
 cleanup:
