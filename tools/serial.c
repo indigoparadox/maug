@@ -9,26 +9,37 @@
 #define PARSE_TOKEN_SZ 255
 #define PARSE_STACK_DEPTH 128
 #define PARSE_FIELDS_MAX 255
+#define PARSE_DEFINES_MAX 255
 
-#define parse_field_type_table( f, parser ) \
-   f( parser, size_t,                  1 ) \
-   f( parser, ssize_t,                 2 ) \
-   f( parser, uint8_t,                 3 ) \
-   f( parser, int8_t,                  4 ) \
-   f( parser, uint16_t,                5 ) \
-   f( parser, int16_t,                 6 ) \
-   f( parser, uint32_t,                7 ) \
-   f( parser, int32_t,                 8 ) \
-   f( parser, char,                    9 ) \
-   f( parser, retroflat_asset_path,    10 ) \
-   f( parser, mfix_t,                  11 ) \
-   f( parser, retrotile_coord_t,       12 ) \
-   f( parser, float,                   13 )
+/* !\brief These are the types we can handle by default. These can be expanded
+ *         in msercust.h. Note that this is just used for emitting the serialize
+ *         code on a high level. The engine should include functions to 
+ *         serialize these named accordingly!
+ */
+#define parse_field_type_table_base( f ) \
+   f( size_t,                  1 ) \
+   f( ssize_t,                 2 ) \
+   f( uint8_t,                 3 ) \
+   f( int8_t,                  4 ) \
+   f( uint16_t,                5 ) \
+   f( int16_t,                 6 ) \
+   f( uint32_t,                7 ) \
+   f( int32_t,                 8 ) \
+   f( char,                    9 ) \
+   f( retroflat_asset_path,    10 ) \
+   f( mfix_t,                  11 ) \
+   f( retrotile_coord_t,       12 ) \
+   f( float,                   13 )
 
-#define parse_field_type( parser, type_name, type_idx ) \
-   } else if( 0 == strncmp( (parser)->token, #type_name, PARSE_TOKEN_SZ ) ) { \
-      debug_int( "type", type_idx ); \
-      (parser)->parsed.fields[(parser)->parsed.fields_ct].type = type_idx;
+#include <msercust.h>
+
+#ifndef parse_field_type_table
+/**
+ * \brief Definition for the type table if not overridden in msercust.h.
+ */
+#  define parse_field_type_table( f ) \
+      parse_field_type_table_base( f )
+#endif /* !parse_field_type_table */
 
 #define PARSE_MODE_NONE 0
 #define PARSE_MODE_STRUCT_NAME 1
@@ -39,7 +50,13 @@
 #define PARSE_MODE_COMMENT 6
 #define PARSE_MODE_COMMENT_STAR 7
 #define PARSE_MODE_NO_SERIAL 8
+/*! \brief Inside of [array size indicator] for a struct field. */
 #define PARSE_MODE_STRUCT_FIELD_ARRAY 9
+/*! \brief Preprocessor directive starting. */
+#define PARSE_MODE_HASH 10
+/*! \brief Inside of a preprocessor define. */
+#define PARSE_MODE_DEFINE_NAME 11
+#define PARSE_MODE_DEFINE_VALUE 12
 
 #ifdef DEBUG
 #  define debug_int( name_in, int_in ) \
@@ -84,6 +101,11 @@ struct STRUCT_PARSED {
    int ready;
 };
 
+struct PARSE_DEFINE {
+   char name[PARSE_TOKEN_SZ + 1];
+   int value;
+};
+
 struct STRUCT_PARSER {
    int mode[PARSE_STACK_DEPTH];
    size_t mode_cur;
@@ -93,6 +115,8 @@ struct STRUCT_PARSER {
    size_t array_token_sz;
    int newline;
    struct STRUCT_PARSED parsed;
+   struct PARSE_DEFINE defines[PARSE_DEFINES_MAX];
+   size_t defines_ct;
 };
 
 void parse_dump_struct( struct STRUCT_PARSED* parsed ) {
@@ -104,15 +128,108 @@ void parse_dump_struct( struct STRUCT_PARSED* parsed ) {
    }
 }
 
+int eval_array_sz( struct STRUCT_PARSER* parser, const char* array_sz_str ) {
+   int array_sz_out = 0;
+   size_t i = 0,
+      j = 0,
+      k = 0;
+   char arr_def_token[PARSE_TOKEN_SZ + 1];
+   int last_op = '+';
+
+   memset( arr_def_token, '\0', PARSE_TOKEN_SZ + 1 );
+
+   printf( "eval: %s\n", array_sz_str );
+
+   /* Parse defines out of array size string. */
+   for( i = 0 ; strlen( array_sz_str ) > i ; i++ ) {
+      switch( array_sz_str[i] ) {
+      case '+':
+         /* TODO: Make this a reusable function. */
+         /* Find the current define. */
+         /* TODO: Handle this being a literal number. */
+         for( j = 0 ; parser->defines_ct > j ; j++ ) {
+            if( 0 == strncmp(
+               arr_def_token, parser->defines[j].name, PARSE_TOKEN_SZ
+            ) ) {
+               printf( "found: %s, %d\n",
+                  parser->defines[j].name,
+                  parser->defines[j].value );
+               break;
+            }
+         }
+
+         if( j >= parser->defines_ct ) {
+            error_str( "could not find define: %s\n", arr_def_token );
+            goto cleanup;
+         }
+
+         /* Apply the last op with this value. */
+         switch( last_op ) {
+         case '+':
+            array_sz_out += parser->defines[j].value;
+            break;
+         }
+
+         /* Reset the arr_def_token. */
+         memset( arr_def_token, '\0', PARSE_TOKEN_SZ + 1 );
+         k = 0;
+
+         /* Store this op for the next last op. */
+         last_op = '+';
+         break;
+
+      default:
+         arr_def_token[k++] = array_sz_str[i];
+         break;
+      }
+   }
+
+cleanup:
+
+   return array_sz_out;
+}
+
+void parse_emit_struct( struct STRUCT_PARSED* parsed ) {
+   size_t i = 0;
+   char type_str[PARSE_TOKEN_SZ + 1];
+
+#define parse_field_type_str( type_name, type_idx ) \
+   case type_idx: \
+      memset( type_str, '\0', PARSE_TOKEN_SZ + 1 ); \
+      strncpy( type_str, #type_name, PARSE_TOKEN_SZ ); \
+      break;
+
+   printf( "MERROR_RETVAL mserialize_struct_%s( struct %s ser_struct ) {\n",
+      parsed->name, parsed->name );
+   for( i = 0 ; parsed->fields_ct > i ; i++ ) {
+      /* Get the type string for this field. */
+      switch( parsed->fields[i].type ) {
+      parse_field_type_table( parse_field_type_str )
+      }
+
+      printf( "   mserialize_field_%s( ser_struct->%s, %d );\n",
+         type_str, parsed->fields[i].name, parsed->fields[i].array );
+   }
+   printf( "}\n" );
+
+}
+
 void parse_reset_token( struct STRUCT_PARSER* parser ) {
-   memset( parser->token, '\0', PARSE_TOKEN_SZ );
-   parser->token_sz = 0;
+   if( PARSE_MODE_STRUCT_FIELD_ARRAY == parse_mode( parser ) ) {
+      memset( parser->array_token, '\0', PARSE_TOKEN_SZ );
+      parser->array_token_sz = 0;
+   } else {
+      memset( parser->token, '\0', PARSE_TOKEN_SZ );
+      parser->token_sz = 0;
+   }
 }
 
 int parse_token_append( struct STRUCT_PARSER* parser, char c ) {
    int retval = 0;
 
    if( PARSE_MODE_STRUCT_FIELD_ARRAY == parse_mode( parser ) ) {
+      parser->array_token[parser->array_token_sz++] = c;
+      assert( parser->array_token_sz <= PARSE_TOKEN_SZ );
    } else {
       parser->token[parser->token_sz++] = c;
       assert( parser->token_sz <= PARSE_TOKEN_SZ );
@@ -172,6 +289,31 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
    case '\r':
       parser->newline = 1;
       debug_int( "newline", 1 );
+      if( PARSE_MODE_DEFINE_VALUE == parse_mode( parser ) ) {
+         /* Store the defined value. */
+         parser->defines[parser->defines_ct].value = atoi( parser->token );
+         parser->defines_ct++;
+         /* DEFINE_VALUE */
+         parse_pop_mode( parser );
+         /* DEFINE_NAME */
+         parse_pop_mode( parser );
+         /* HASH */
+         parse_pop_mode( parser );
+         parse_reset_token( parser );
+         goto cleanup;
+
+      } else {
+         /* Hash modes end uneventfully on newline. */
+         if( PARSE_MODE_DEFINE_NAME == parse_mode( parser ) ) {
+            parse_pop_mode( parser );
+         }
+         if( PARSE_MODE_HASH == parse_mode( parser ) ) {
+            parse_pop_mode( parser );
+         }
+         /* TODO: Handle backslash escapes? */
+         parse_reset_token( parser );
+         goto cleanup;
+      }
       /* Fall through. */
    case ' ':
    case '\t':
@@ -210,7 +352,22 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
          if( 0 == parser->token_sz ) {
             /* Do nothing! */
             break;
-         parse_field_type_table( parse_field_type, parser )
+
+         } else if( 0 == strncmp( parser->token, "struct ", PARSE_TOKEN_SZ ) ) {
+            /* Do nothing! Prepend this "struct" to type token! */
+            goto cleanup;
+
+         } else if( 0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ ) ) {
+            /* Make sure a single space exists after "struct". */
+            retval = parse_token_append( parser, ' ' );
+            goto cleanup;
+
+#define parse_field_type_assign( type_name, type_idx ) \
+   } else if( 0 == strncmp( parser->token, #type_name, PARSE_TOKEN_SZ ) ) { \
+      debug_int( "type", type_idx ); \
+      (parser)->parsed.fields[parser->parsed.fields_ct].type = type_idx;
+
+         parse_field_type_table( parse_field_type_assign )
          } else {
             error_str( "invalid field type", parser->token );
             parser->parsed.valid = 0;
@@ -220,6 +377,24 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
 
       case PARSE_MODE_STRUCT_FIELD_NAME:
          /* Do nothing until ;. */
+         break;
+
+      case PARSE_MODE_HASH:
+         if( 0 == strncmp( parser->token, "define", PARSE_TOKEN_SZ ) ) {
+            parse_push_mode( parser, PARSE_MODE_DEFINE_NAME );
+         }
+         break;
+
+      case PARSE_MODE_DEFINE_NAME:
+         /* Note the name for this define. */
+         memset(
+            parser->defines[parser->defines_ct].name,
+            '\0', PARSE_TOKEN_SZ + 1 );
+         strncpy(
+            parser->defines[parser->defines_ct].name, parser->token,
+            PARSE_TOKEN_SZ );
+         debug_str( "define", parser->token );
+         parse_push_mode( parser, PARSE_MODE_DEFINE_VALUE );
          break;
       }
 
@@ -265,7 +440,11 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
          parse_pop_mode( parser );
          assert( 0 == parser->mode_cur );
          if( parser->parsed.valid ) {
+#ifdef DEBUG
             parse_dump_struct( &(parser->parsed) );
+#else
+            parse_emit_struct( &(parser->parsed) );
+#endif /* DEBUG */
          }
          break;
       }
@@ -275,6 +454,7 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
       switch( parse_mode( parser ) ) {
       case PARSE_MODE_STRUCT_FIELD_NAME:
          parse_push_mode( parser, PARSE_MODE_STRUCT_FIELD_ARRAY );
+         parse_reset_token( parser );
          break;
       }
       break;
@@ -283,9 +463,8 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
       switch( parse_mode( parser ) ) {
       case PARSE_MODE_STRUCT_FIELD_ARRAY:
          /* Note the array size. */
-         /* TODO: Handle preprocessor constants. */
          parser->parsed.fields[parser->parsed.fields_ct].array =
-            atoi( parser->token );
+            eval_array_sz( parser, parser->array_token );
          parse_pop_mode( parser );
          retval = parse_set_field_name( parser );
          break;
@@ -331,6 +510,14 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
       case PARSE_MODE_NONE:
          parser->newline = 0;
          debug_int( "newline", 0 );
+         break;
+      }
+      break;
+
+   case '#':
+      switch( parse_mode( parser ) ) {
+      case PARSE_MODE_NONE:
+         parse_push_mode( parser, PARSE_MODE_HASH );
          break;
       }
       break;
