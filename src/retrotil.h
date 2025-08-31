@@ -180,6 +180,8 @@ struct RETROTILE_TILE_DEF {
    mfix_t static_rotation;
    retrotile_coord_t warp_x;
    retrotile_coord_t warp_y;
+   /*! \brief Dummy field; do not serialize fields after this! */
+   int8_t no_serial;
 #ifdef RETROFLAT_3D
    /* TODO: Work this into retrogxc? */
    struct RETRO3DP_MODEL model;
