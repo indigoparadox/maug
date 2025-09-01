@@ -344,13 +344,14 @@ int parse_token_append( struct STRUCT_PARSER* parser, char c ) {
 int parse_set_field_name( struct STRUCT_PARSER* parser ) {
    int retval = 0;
 
+   /*
    if(
       0 == parser->parsed.fields_ct &&
       0 != strncmp( parser->token, "sz", PARSE_TOKEN_SZ )
    ) {
       error_str( "invalid first field", parser->token );
       parser->parsed.valid = 0;
-   } else if(
+   } else */ if(
       0 == strncmp( parser->token, "no_serial", PARSE_TOKEN_SZ )
    ) {
       /* FIELD_NAME */
