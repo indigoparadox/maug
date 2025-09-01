@@ -208,6 +208,8 @@ struct RETROTILE_LAYER {
  *        a convenience for game logic.
  */
 struct RETROTILE_COORDS {
+   /*! \brief Size of this struct (useful for serializing). */
+   size_t sz;
    /* \brief X position in tilemap tiles. */
    retrotile_coord_t x;
    /* \brief Y position in tilemap tiles. */

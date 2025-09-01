@@ -29,7 +29,11 @@
    f( retroflat_asset_path,    10 ) \
    f( mfix_t,                  11 ) \
    f( retrotile_coord_t,       12 ) \
-   f( float,                   13 )
+   f( float,                   13 ) \
+   f( struct RETROTILE_COORDS, 14 ) \
+   f( retroflat_dir4_t,        15 ) \
+   f( struct MDATA_VECTOR,     16 ) \
+   f( struct MLISP_EXEC_STATE, 17 )
 
 #include <msercust.h>
 
