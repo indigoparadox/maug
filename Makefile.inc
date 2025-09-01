@@ -141,6 +141,27 @@ endef
 
 # ---
 
+define TGTSER
+
+obj/mserdefs/serial: $(MAUG_ROOT)/tools/serial.c
+	mkdir -v -p "`dirname $$@`"
+	gcc -Isrc -o $$@ $$<
+
+obj/mserdefs/mserdef.c: $(1) | obj/mserdefs/serial
+	echo "#include <maug.h>" > $$@
+	echo "#include \"../../src/msercust.h\"" >> $$@
+	./obj/mserdefs/serial $$^ >> $$@
+	echo "#ifndef MSERDEF_H" > $$(subst .c,.h,$$@)
+	echo "#define MSERDEF_H" >> $$(subst .c,.h,$$@)
+	./obj/mserdefs/serial -p $$^ >> $$(subst .c,.h,$$@)
+	echo "#endif /* MSERDEF_H */" >> $$(subst .c,.h,$$@)
+
+C_FILES := obj/mserdefs/mserdef.c $(C_FILES)
+
+endef
+
+# ---
+
 define TGTZIP
 
 # Easier to understand error messages.
