@@ -274,20 +274,30 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed ) {
       } \
       break;
 
-   printf( "MERROR_RETVAL mserialize_struct_%s( struct %s ser_struct ) {\n",
+   printf( "MERROR_RETVAL mserialize_struct_%s( "
+      "struct %s ser_struct, size_t array ) {\n",
       parsed->name, parsed->name );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
+   printf( "   size_t i = 0;\n" );
+
+   /* Handle array value simply for complex objects. */
+   printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
+
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
       /* Get the type string for this field. */
       switch( parsed->fields[i].type ) {
       parse_field_type_table( parse_field_type_str )
       }
 
-      printf( "   retval = mserialize_field_%s( ser_struct->%s, %d );\n",
+      printf( "      retval = mserialize_%s( ser_struct->%s, %d );\n",
          type_str, parsed->fields[i].name, parsed->fields[i].array );
-      printf( "   maug_cleanup_if_not_ok();\n" );
+      printf( "      maug_cleanup_if_not_ok();\n" );
    }
-   printf( "cleanup:\n   return retval\n}\n\n" );
+
+   /* Handle array value simply for complex objects. */
+   printf( "   }\n" );
+
+   printf( "cleanup:\n   return retval;\n}\n\n" );
 
 }
 
@@ -438,10 +448,14 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
             retval = parse_token_append( parser, ' ' );
             goto cleanup;
 
+         /* Note the default assignment of array as "1", to specify 1 item.
+          * This makes writing primative serializers a bit easer.
+          */
 #define parse_field_type_assign( type_name, type_idx ) \
    } else if( 0 == strncmp( parser->token, #type_name, PARSE_TOKEN_SZ ) ) { \
       debug_int( "type", type_idx ); \
-      (parser)->parsed.fields[parser->parsed.fields_ct].type = type_idx;
+      (parser)->parsed.fields[parser->parsed.fields_ct].type = type_idx; \
+      (parser)->parsed.fields[parser->parsed.fields_ct].array = 1;
 
          parse_field_type_table( parse_field_type_assign )
          } else {
@@ -635,6 +649,7 @@ int main( int argc, char* argv[] ) {
    struct STRUCT_PARSER parser;
    int i = 0;
 
+   /* TODO: CLI options for multiple headers and protoype generation. */
    if( 2 > argc ) {
       fprintf( stderr, "usage: %s <header.h>\n", argv[0] );
       retval = 1;
