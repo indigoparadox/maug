@@ -258,7 +258,7 @@ cleanup:
    return array_sz_out;
 }
 
-void parse_emit_struct( struct STRUCT_PARSED* parsed ) {
+void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    size_t i = 0,
       j = 0;
    char type_str[PARSE_TOKEN_SZ + 1];
@@ -275,8 +275,15 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "struct %s ser_struct, size_t array ) {\n",
+      "struct %s ser_struct, size_t array )",
       parsed->name, parsed->name );
+
+   if( prototype ) {
+      printf( ";\n\n" );
+      return;
+   }
+
+   printf( " {\n" );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
    printf( "   size_t i = 0;\n" );
 
@@ -362,7 +369,7 @@ int parse_set_field_name( struct STRUCT_PARSER* parser ) {
    return retval;
 }
 
-int parse_c( struct STRUCT_PARSER* parser, char c ) {
+int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
    int retval = 0;
 
 #ifdef DEBUG
@@ -533,7 +540,7 @@ int parse_c( struct STRUCT_PARSER* parser, char c ) {
 #ifdef DEBUG
             parse_dump_struct( &(parser->parsed) );
 #else
-            parse_emit_struct( &(parser->parsed) );
+            parse_emit_struct( &(parser->parsed), prototypes );
 #endif /* DEBUG */
          }
          break;
@@ -641,7 +648,7 @@ cleanup:
    return retval;
 }
 
-int main( int argc, char* argv[] ) {
+int parse_header( const char* header_path, int prototypes ) {
    int retval = 0;
    FILE* header_f = NULL;
    size_t read_sz = 0;
@@ -649,25 +656,50 @@ int main( int argc, char* argv[] ) {
    struct STRUCT_PARSER parser;
    int i = 0;
 
-   /* TODO: CLI options for multiple headers and protoype generation. */
-   if( 2 > argc ) {
-      fprintf( stderr, "usage: %s <header.h>\n", argv[0] );
+   header_f = fopen( header_path, "r" );
+   if( NULL == header_f ) {
+      error_str( "coult not open", header_path );
       retval = 1;
       goto cleanup;
    }
-
-   header_f = fopen( argv[1], "r" );
-   assert( NULL != header_f );
 
    memset( &parser, '\0', sizeof( struct STRUCT_PARSER ) );
    do {
       memset( read_buf, '\0', READ_BUF_SZ + 1 );
       read_sz = fread( read_buf, 1, READ_BUF_SZ, header_f );
       for( i = 0 ; READ_BUF_SZ > i && '\0' != read_buf[i] ; i++ ) {
-         retval = parse_c( &parser, read_buf[i] );
+         retval = parse_c( &parser, read_buf[i], prototypes );
          assert( 0 == retval );
       }
    } while( read_sz == READ_BUF_SZ );
+
+cleanup:
+
+   if( NULL != header_f ) {
+      fclose( header_f );
+   }
+
+   return retval;
+}
+
+int main( int argc, char* argv[] ) {
+   int retval = 0;
+   int i = 0;
+   int prototypes = 0;
+
+   if( 2 > argc ) {
+      fprintf( stderr, "usage: %s <header.h>\n", argv[0] );
+      retval = 1;
+      goto cleanup;
+   }
+
+   for( i = 1 ; argc > i ; i++ ) {
+      if( 0 == strcmp( "-p", argv[i] ) ) {
+         prototypes = 1;
+      } else {
+         retval = parse_header( argv[i], prototypes );
+      }
+   }
 
 cleanup:
 
