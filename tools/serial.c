@@ -128,61 +128,126 @@ void parse_dump_struct( struct STRUCT_PARSED* parsed ) {
    }
 }
 
+/*! \brief Figure out what integer or defined constant a token could be. */
+int eval_token(
+   struct STRUCT_PARSER* parser, const char* token, int* p_result
+) {
+   int retval = 0;
+   size_t i = 0;
+
+   *p_result = 0;
+
+   /* See if the value is an integer. */
+   for( i = 0 ; strlen( token ) > i ; i++ ) {
+      if( '9' < token[i] || '0' > token[i] ) {
+         goto try_define;
+      }
+   }
+
+   /* It's not not an integer, anyway! */
+   *p_result = atoi( token );
+   debug_str( "eval integer token", token );
+   debug_int( "eval integer value", *p_result );
+
+   goto cleanup;
+
+try_define:
+
+   /* If the value isn't an integer, search for a #define of it. */
+   for( i = 0 ; parser->defines_ct > i ; i++ ) {
+      if( 0 == strncmp( token, parser->defines[i].name, PARSE_TOKEN_SZ ) ) {
+         debug_str( "eval define name", parser->defines[i].name );
+         debug_int( "eval define value", parser->defines[i].value );
+         /* Ship out the define value. */
+         *p_result = parser->defines[i].value;
+         goto cleanup;
+      }
+   }
+
+   /* If we've reached this, we couldn't figure it out! */
+   error_str( "could not find define: %s\n", token );
+   retval = 1;
+
+cleanup:
+
+   return retval;
+}
+
+/*! \brief Evaluate a math operation on two values. */
+int eval_op(
+   struct STRUCT_PARSER* parser, const char* token, int* p_result, char op
+) {
+   int retval = 0;
+   int last_val = 0;
+
+   /* Translate the ASCII op into math. */
+   switch( op ) {
+   case '+':
+      if( !eval_token( parser, token, &last_val ) ) {
+         *p_result += last_val;
+      }
+      break;
+   case '-':
+      if( !eval_token( parser, token, &last_val ) ) {
+         *p_result -= last_val;
+      }
+      break;
+   case '*':
+      if( !eval_token( parser, token, &last_val ) ) {
+         *p_result *= last_val;
+      }
+      break;
+   case '/':
+      if( !eval_token( parser, token, &last_val ) ) {
+         *p_result /= last_val;
+      }
+      break;
+   }
+
+   return retval;
+}
+
 int eval_array_sz( struct STRUCT_PARSER* parser, const char* array_sz_str ) {
    int array_sz_out = 0;
    size_t i = 0,
-      j = 0,
       k = 0;
    char arr_def_token[PARSE_TOKEN_SZ + 1];
    int last_op = '+';
+   int retval = 0;
 
    memset( arr_def_token, '\0', PARSE_TOKEN_SZ + 1 );
 
-   printf( "eval: %s\n", array_sz_str );
+   debug_str( "eval sequence", array_sz_str );
 
    /* Parse defines out of array size string. */
    for( i = 0 ; strlen( array_sz_str ) > i ; i++ ) {
       switch( array_sz_str[i] ) {
+      case '-':
+      case '*':
+      case '/':
       case '+':
-         /* TODO: Make this a reusable function. */
-         /* Find the current define. */
-         /* TODO: Handle this being a literal number. */
-         for( j = 0 ; parser->defines_ct > j ; j++ ) {
-            if( 0 == strncmp(
-               arr_def_token, parser->defines[j].name, PARSE_TOKEN_SZ
-            ) ) {
-               printf( "found: %s, %d\n",
-                  parser->defines[j].name,
-                  parser->defines[j].value );
-               break;
-            }
-         }
-
-         if( j >= parser->defines_ct ) {
-            error_str( "could not find define: %s\n", arr_def_token );
-            goto cleanup;
-         }
-
          /* Apply the last op with this value. */
-         switch( last_op ) {
-         case '+':
-            array_sz_out += parser->defines[j].value;
-            break;
+         if( eval_op( parser, arr_def_token, &array_sz_out, last_op ) ) {
+            goto cleanup;
          }
 
          /* Reset the arr_def_token. */
          memset( arr_def_token, '\0', PARSE_TOKEN_SZ + 1 );
          k = 0;
 
-         /* Store this op for the next last op. */
-         last_op = '+';
+         /* Store the next op from this char. */
+         last_op = array_sz_str[i];
          break;
 
       default:
+         /* Append to the token. */
          arr_def_token[k++] = array_sz_str[i];
          break;
       }
    }
+
+   /* Evaluate the last symbol. */
+   eval_op( parser, arr_def_token, &array_sz_out, last_op );
 
 cleanup:
 
@@ -190,27 +255,35 @@ cleanup:
 }
 
 void parse_emit_struct( struct STRUCT_PARSED* parsed ) {
-   size_t i = 0;
+   size_t i = 0,
+      j = 0;
    char type_str[PARSE_TOKEN_SZ + 1];
 
 #define parse_field_type_str( type_name, type_idx ) \
    case type_idx: \
       memset( type_str, '\0', PARSE_TOKEN_SZ + 1 ); \
       strncpy( type_str, #type_name, PARSE_TOKEN_SZ ); \
+      for( j = 0 ; strlen( type_str ) > j ; j++ ) { \
+         if( ' ' == type_str[j] ) { \
+            type_str[j] = '_'; \
+         } \
+      } \
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( struct %s ser_struct ) {\n",
       parsed->name, parsed->name );
+   printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
       /* Get the type string for this field. */
       switch( parsed->fields[i].type ) {
       parse_field_type_table( parse_field_type_str )
       }
 
-      printf( "   mserialize_field_%s( ser_struct->%s, %d );\n",
+      printf( "   retval = mserialize_field_%s( ser_struct->%s, %d );\n",
          type_str, parsed->fields[i].name, parsed->fields[i].array );
+      printf( "   maug_cleanup_if_not_ok();\n" );
    }
-   printf( "}\n" );
+   printf( "cleanup:\n   return retval\n}\n\n" );
 
 }
 
@@ -253,8 +326,7 @@ int parse_set_field_name( struct STRUCT_PARSER* parser ) {
       parse_pop_mode( parser );
       /* FIELD_TYPE */
       parse_pop_mode( parser );
-      /* Found deactivation dummy field. Fields are this are runtime-only.
-         */
+      /* Found deactivation dummy field. Fields after this are runtime-only. */
       parse_push_mode( parser, PARSE_MODE_NO_SERIAL );
 
       /* Don't bother storing this field. */
