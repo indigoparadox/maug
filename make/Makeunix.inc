@@ -90,7 +90,7 @@ endif
 # = Determine Prerequisites =
 
 CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
-	-I$(MAUG_ROOT)/api/input/sdl \
+	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_SDL_ICO -I$$(OBJDIR_GCC_UNIX_SDL)/ico
@@ -206,7 +206,8 @@ endif
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
 
 LDFLAGS_GCC_UNIX_ALLEGRO := \
 	$$(shell pkg-config allegro --libs)
@@ -262,7 +263,8 @@ endif
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
 	-DRETROSND_API_ALSA \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
 
 LDFLAGS_GCC_UNIX_GLUT := -lglut $(shell pkg-config gl --libs)
 
@@ -315,7 +317,8 @@ endif
 
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/xlib \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
 
 LDFLAGS_GCC_UNIX_XLIB := $(shell pkg-config x11 --libs)
 

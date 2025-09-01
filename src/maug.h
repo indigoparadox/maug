@@ -97,11 +97,6 @@
 #include <mplug.h>
 
 #ifdef MAUG_C
-#  define MSERIAL_C
-#endif /* MAUG_C */
-#include <mserial.h>
-
-#ifdef MAUG_C
 #  define MPARSER_C
 #endif /* MAUG_C */
 #include <mparser.h>
@@ -112,6 +107,7 @@
 #  define MPARSER_C
 #  define MLISPP_C
 #  define MLISPE_C
+#  define MSERIAL_C
 #endif /* MAUG_C */
 
 #ifndef MAUG_NO_RETRO

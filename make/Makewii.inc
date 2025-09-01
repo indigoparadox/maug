@@ -31,7 +31,8 @@ DEFINES_GCC_WII_LIBOGC += -DRETROFLAT_API_LIBOGC -DRETROFLAT_NO_CLI
 INCLUDES_GCC_WII_LIBOGC += -I $(DEVKITPRO)/libogc/include \
 	-I$(MAUG_ROOT)/api/retro2d/wii -I$(MAUG_ROOT)/api/input/wii \
 	-I$(MAUG_ROOT)/api/file/mvfs -I$(MAUG_ROOT)/api/log/wii \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
 
 CFLAGS_GCC_WII_LIBOGC := $$(DEFINES_GCC_WII_LIBOGC) $$(INCLUDES_GCC_WII_LIBOGC)
 

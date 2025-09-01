@@ -37,7 +37,7 @@ CFLAGS_WATCOM386_DOS_ALLEGRO += \
 	-bt=nt -s -3s -DRETROFLAT_API_ALLEGRO -I$(MAUG_ROOT)/api/retro2d/allegro \
 	-I$(MAUG_ROOT)/api/input/allegro \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/dos
+	-I$(MAUG_ROOT)/api/mem/dos -I$(MAUG_ROOT)/api/serial/asn1
 
 LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
@@ -76,7 +76,7 @@ define TGTDOSGAL
 
 CFLAGS_DJGPP_DOS_ALLEGRO += -DRETROFLAT_API_ALLEGRO \
 	-I$(MAUG_ROOT)/api/retro2d/allegro -I$(MAUG_ROOT)/api/input/allegro \
-	-I$(MAUG_ROOT)/api/log/unix \
+	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/dos
 
 LDFLAGS_DJGPP_DOS_ALLEGRO += -lalleg
@@ -114,7 +114,7 @@ define TGTDOSBIOS
 CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/retro2d/dosbios \
 	-I$(MAUG_ROOT)/api/input/dosbios -I$(MAUG_ROOT)/api/file/unix \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/dos
+	-I$(MAUG_ROOT)/api/mem/dos -I$(MAUG_ROOT)/api/serial/asn1
 
 ifeq ("$$(RETROFLAT_DOS_MEM_LARGE)", "1")
 	CFLAGS_WATCOM_DOS_BIOS += -ml -DMAUG_DOS_MEM_L

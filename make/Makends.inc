@@ -36,7 +36,7 @@ INCLUDES_GCC_NDS_LIBNDS += -I$(DEVKITPRO)/libnds/include \
 	-I$(MAUG_ROOT)/api/retro2d/nds -I$(MAUG_ROOT)/api/input/nds \
 	-I$(MAUG_ROOT)/api/log/nds -I$(MAUG_ROOT)/api/file/nds \
 	-I$(DEVKITPRO)/calico/include -I$(MAUG_ROOT)/api/font/soft \
-	-I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/mem/unix -I$(MAUG_ROOT)/api/serial/asn1
 
 CFLAGS_GCC_NDS_LIBNDS := $$(DEFINES_GCC_NDS_LIBNDS) $$(INCLUDES_GCC_NDS_LIBNDS)
 

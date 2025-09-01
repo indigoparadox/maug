@@ -20,7 +20,7 @@ OBJDIR_GCC_MAC68K_TB6=obj/gcc-mac68k-tb6
 CFLAGS_GCC_MAC68K_TB6 := \
 	-DRETROFLAT_API_MAC6 -DRETROANI_DISABLE \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
-	-I$(MAUG_ROOT)/api/log/mac68k \
+	-I$(MAUG_ROOT)/api/log/mac68k -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/unix
 
 # TODO: Make math link optional.
@@ -111,7 +111,7 @@ OBJDIR_GCC_MACPPC_CARBON=obj/gcc-macppc-carbon
 CFLAGS_GCC_MACPPC_CARBON := \
 	-DRETROFLAT_API_MAC \
 	-I$(MAUG_ROOT)/api/retro2d/mac68k -I$(MAUG_ROOT)/api/input/mac68k \
-	-I$(MAUG_ROOT)/api/log/mac68k \
+	-I$(MAUG_ROOT)/api/log/mac68k -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/font/mac68k -I$(MAUG_ROOT)/api/mem/unix
 
 # TODO: Make math link optional.

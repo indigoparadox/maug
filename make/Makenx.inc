@@ -49,7 +49,8 @@ DEFINES_GCC_NX_SDL += -DRETROFLAT_OS_NX -DRETROFLAT_API_SDL2 -DRETROFLAT_NO_CLI
 INCLUDES_GCC_NX_SDL += \
 	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl \
 	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
 
 CFLAGS_GCC_NX_SDL := $$(DEFINES_GCC_NX_SDL) $$(INCLUDES_GCC_NX_SDL) \
 	$$(shell $$(PKGCONFIG_NX) --cflags sdl2 SDL2_mixer SDL2_image)

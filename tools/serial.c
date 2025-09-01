@@ -275,7 +275,7 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "struct %s* ser_struct, size_t array )",
+      "mfile_t* ser_f, struct %s* p_ser_struct, size_t array )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -296,8 +296,18 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       parse_field_type_table( parse_field_type_str )
       }
 
-      printf( "      retval = mserialize_%s( &(ser_struct->%s), %d );\n",
-         type_str, parsed->fields[i].name, parsed->fields[i].array );
+      if( 1 < parsed->fields[i].array ) {
+         /* If it's an array, just pass the field directly and not a pointer
+          * to it.
+          */
+         printf(
+            "      retval = mserialize_%s( ser_f, p_ser_struct->%s, %d );\n",
+            type_str, parsed->fields[i].name, parsed->fields[i].array );
+      } else {
+         printf(
+            "      retval = mserialize_%s( ser_f, &(p_ser_struct->%s), %d );\n",
+            type_str, parsed->fields[i].name, parsed->fields[i].array );
+      }
       printf( "      maug_cleanup_if_not_ok();\n" );
    }
 
