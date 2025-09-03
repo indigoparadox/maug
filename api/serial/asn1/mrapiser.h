@@ -206,18 +206,20 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
    return _mserialize_asn_int( ser_out, p_sz, *p_ser_int, array );
 }
 
-MERROR_RETVAL mserialize_struct_MDATA_VECTOR(
-   mfile_t* ser_out, size_t* p_sz, struct MDATA_VECTOR* p_ser_struct, int array 
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   /* TODO */
-
-   return retval;
-}
-
 MERROR_RETVAL mserialize_struct_MLISP_EXEC_STATE(
    mfile_t* ser_out, size_t* p_sz, struct MLISP_EXEC_STATE* p_ser_struct, int array 
+) {
+   /* TODO */
+}
+
+MERROR_RETVAL mserialize_vector_struct_MLISP_EXEC_STATE(
+   mfile_t* ser_out, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec
+) {
+   /* TODO */
+}
+
+MERROR_RETVAL mserialize_vector_struct_MLISP_ENV_NODE(
+   mfile_t* ser_out, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec
 ) {
    /* TODO */
 }

@@ -145,6 +145,7 @@ struct MLISP_EXEC_STATE {
    /*! \brief Flags which dictate the behavior of this object. */
    uint8_t flags;
    /*! \brief The number of times each node has been visited ever. */
+   /* vector_type size_t */
    struct MDATA_VECTOR per_node_visit_ct;
    /**
     * \brief The hild index that will be visited on next visit of each node.
@@ -152,8 +153,10 @@ struct MLISP_EXEC_STATE {
     * This is tracked per MLISP_AST_NODE, so each node has its own "program
     * counter." This facilitates things like tail call optimization.
     */
+   /* vector_type size_t */
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
+   /* vector_type struct_MLISP_STACK_NODE */
    struct MDATA_VECTOR stack;
    /**
     * \brief Environment in which statements are defined if ::MLISP_
@@ -161,7 +164,9 @@ struct MLISP_EXEC_STATE {
     * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
     * denote env definitions that are actually args for the current lambda.
     */
+   /* vector_type struct_MLISP_ENV_NODE */
    struct MDATA_VECTOR env;
+   /* vector_type struct_MLISP_ENV_NODE */
    struct MDATA_VECTOR* global_env;
 /**
  * \brief Path through any lambdas the execution has entered during *this*

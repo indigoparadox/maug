@@ -12,28 +12,33 @@
 #define PARSE_DEFINES_MAX 255
 
 /* !\brief These are the types we can handle by default. These can be expanded
- *         in msercust.h. Note that this is just used for emitting the serialize
+ *         in msercust.h.
+ *
+ *         Note that this is just used for emitting the serialize
  *         code on a high level. The engine should include functions to 
  *         serialize these named accordingly!
+ *
+ *         Values lower than 10 are special cases with specially defined calls:
+ *         1 - struct MDATA_VECTOR
  */
 #define parse_field_type_table_base( f ) \
-   f( size_t,                  1 ) \
-   f( ssize_t,                 2 ) \
-   f( uint8_t,                 3 ) \
-   f( int8_t,                  4 ) \
-   f( uint16_t,                5 ) \
-   f( int16_t,                 6 ) \
-   f( uint32_t,                7 ) \
-   f( int32_t,                 8 ) \
-   f( char,                    9 ) \
-   f( retroflat_asset_path,    10 ) \
-   f( mfix_t,                  11 ) \
-   f( retrotile_coord_t,       12 ) \
-   f( float,                   13 ) \
-   f( struct RETROTILE_COORDS, 14 ) \
-   f( retroflat_dir4_t,        15 ) \
-   f( struct MDATA_VECTOR,     16 ) \
-   f( struct MLISP_EXEC_STATE, 17 )
+   f( size_t,                  10 ) \
+   f( ssize_t,                 11 ) \
+   f( uint8_t,                 12 ) \
+   f( int8_t,                  13 ) \
+   f( uint16_t,                14 ) \
+   f( int16_t,                 15 ) \
+   f( uint32_t,                16 ) \
+   f( int32_t,                 17 ) \
+   f( char,                    18 ) \
+   f( float,                   19 ) \
+   f( mfix_t,                  20 ) \
+   f( retroflat_asset_path,    21 ) \
+   f( retrotile_coord_t,       22 ) \
+   f( retroflat_dir4_t,        23 ) \
+   f( retroflat_ms_t,          24 ) \
+   f( struct RETROTILE_COORDS, 25 ) \
+   f( struct MLISP_EXEC_STATE, 26 )
 
 #include <msercust.h>
 
@@ -61,6 +66,7 @@
 /*! \brief Inside of a preprocessor define. */
 #define PARSE_MODE_DEFINE_NAME 11
 #define PARSE_MODE_DEFINE_VALUE 12
+#define PARSE_MODE_COMMENT_VECTOR_TYPE 13
 
 #ifdef DEBUG
 #  define debug_int( name_in, int_in ) \
@@ -91,6 +97,9 @@
 
 struct STRUCT_PARSED_FIELD {
    char name[PARSE_TOKEN_SZ + 1];
+   /*! \brief Type of item stored if this is a struct MDATA_VECTOR. */
+   char vector_type[PARSE_TOKEN_SZ + 1];
+   /*! \brief Type of the field in parse_field_type_table(). */
    int type;
    int array;
 };
@@ -183,6 +192,8 @@ int eval_op(
 ) {
    int retval = 0;
    int last_val = 0;
+
+   debug_str( "evaluating", token );
 
    /* Translate the ASCII op into math. */
    switch( op ) {
@@ -302,10 +313,24 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
       /* Get the type string for this field. */
       switch( parsed->fields[i].type ) {
+      case 1: /* struct MDATA_VECTOR */
+         memset( type_str, '\0', PARSE_TOKEN_SZ + 1 ); \
+         strcpy( type_str, "struct_MDATA_VECTOR" );
+         break;
+
       parse_field_type_table( parse_field_type_str )
       }
 
-      if( 1 < parsed->fields[i].array ) {
+      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+         /* If it's a vector, call the specialized vector serializer we emit
+          * in the next function.
+          */
+         printf(
+            "      retval = mserialize_vector_%s( "
+            "ser_f, &written, &(p_ser_struct->%s) );\n",
+            parsed->fields[i].vector_type, parsed->fields[i].name );
+
+      } else if( 1 < parsed->fields[i].array ) {
          /* If it's an array, just pass the field directly and not a pointer
           * to it.
           */
@@ -340,6 +365,76 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
     */
 
 }
+
+void parse_emit_vector( struct STRUCT_PARSED* parsed, int prototype ) {
+   size_t i = 0,
+      j = 0;
+   char type_str[PARSE_TOKEN_SZ + 1];
+
+   printf( "MERROR_RETVAL mserialize_vector_struct_%s( "
+      "mfile_t* ser_f, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec )",
+      parsed->name, parsed->name );
+
+   if( prototype ) {
+      printf( ";\n\n" );
+      return;
+   }
+
+   printf( " {\n" );
+   printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
+   printf( "   size_t written = 0;\n" );
+   printf( "   size_t i = 0;\n" );
+   printf( "   off_t header = 0;\n" );
+   printf( "   int autolock = 0;\n" );
+
+   printf( "   debug_printf( "
+      "MSERIAL_TRACE_LVL, \"serializing vector of %s...\" );\n",
+      parsed->name );
+
+   printf(
+      "   header = mserialize_header( ser_f, MSERIALIZE_TYPE_ARRAY, 0 );\n" );
+
+   /* Skip serializing if nothing to serialize. */
+   printf( "   if( 0 == mdata_vector_ct( p_ser_vec ) ) {\n" );
+   printf( "      retval = mserialize_footer( ser_f, header, 0 );\n" );
+   printf( "      return retval;\n" );
+   printf( "   }\n" );
+
+   /* Emit autolock for serialized vector. */
+   printf( "   if( !mdata_vector_is_locked( p_ser_vec ) ) {\n" );
+   printf( "      mdata_vector_lock( p_ser_vec );\n" );
+   printf( "      autolock = 1;\n" );
+   printf( "   }\n" );
+
+   printf( "   for( i = 0 ; mdata_vector_ct( p_ser_vec ) > i ; i++ ) {\n" );
+   printf( "      retval = mserialize_struct_%s( "
+      "ser_f, &written, mdata_vector_get( p_ser_vec, i, struct %s ), 1 );\n",
+      parsed->name, parsed->name );
+   printf( "      maug_cleanup_if_not_ok();\n" );
+   printf( "      *p_sz += written;\n" );
+   printf( "   }\n" );
+
+   printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
+
+   printf(
+      "   debug_printf( MSERIAL_TRACE_LVL, \"serialized vector of %s.\" );\n",
+      parsed->name );
+
+   /* Emit cleanup. */
+   printf( "cleanup:\n" );
+   printf( "   if( autolock ) {\n" );
+   printf( "      mdata_vector_unlock( p_ser_vec );\n" );
+   printf( "   }\n" );
+   printf( "   return retval;\n}\n\n" );
+
+
+   /* TODO: Emit reader function with running size_t that stops parsing when
+    *       the size_t matches the size of the object that was saved.
+    */
+
+
+}
+
 
 void parse_reset_token( struct STRUCT_PARSER* parser ) {
    if( PARSE_MODE_STRUCT_FIELD_ARRAY == parse_mode( parser ) ) {
@@ -419,6 +514,10 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
       if( PARSE_MODE_DEFINE_VALUE == parse_mode( parser ) ) {
          /* Store the defined value. */
          parser->defines[parser->defines_ct].value = atoi( parser->token );
+         debug_str( "stored define name", 
+            parser->defines[parser->defines_ct].name );
+         debug_int( "stored define value", 
+            parser->defines[parser->defines_ct].value );
          parser->defines_ct++;
          /* DEFINE_VALUE */
          parse_pop_mode( parser );
@@ -480,6 +579,13 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             /* Do nothing! */
             break;
 
+         } else if(
+            0 == strncmp( parser->token, "struct MDATA_VECTOR", PARSE_TOKEN_SZ )
+         ) {
+            debug_int( "type", 1 );
+            parser->parsed.fields[parser->parsed.fields_ct].type = 1;
+            parser->parsed.fields[parser->parsed.fields_ct].array = 1;
+
          } else if( 0 == strncmp( parser->token, "struct ", PARSE_TOKEN_SZ ) ) {
             /* Do nothing! Prepend this "struct" to type token! */
             goto cleanup;
@@ -527,15 +633,28 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
          debug_str( "define", parser->token );
          parse_push_mode( parser, PARSE_MODE_DEFINE_VALUE );
          break;
+
+      case PARSE_MODE_COMMENT:
+         debug_str( "comment", parser->token );
+         if( 0 == strncmp( parser->token, "vector_type", PARSE_TOKEN_SZ ) ) {
+            parse_push_mode( parser, PARSE_MODE_COMMENT_VECTOR_TYPE );
+         }
+         break;
+
+      case PARSE_MODE_COMMENT_VECTOR_TYPE:
+         strncpy(
+            parser->parsed.fields[parser->parsed.fields_ct].vector_type,
+            parser->token,
+            PARSE_TOKEN_SZ );
+         parse_pop_mode( parser );
+         break;
       }
 
       if(
-         PARSE_MODE_COMMENT != parse_mode( parser ) &&
+         /* Array sizes should be taken as one whole string, even with spaces.
+          */
          PARSE_MODE_STRUCT_FIELD_ARRAY != parse_mode( parser )
       ) {
-         /* Don't reset the token inside "meta" states that can interrupt
-          * other states that will need the token later.
-          */
          parse_reset_token( parser );
       }
       break;
@@ -575,6 +694,7 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             parse_dump_struct( &(parser->parsed) );
 #else
             parse_emit_struct( &(parser->parsed), prototypes );
+            parse_emit_vector( &(parser->parsed), prototypes );
 #endif /* DEBUG */
          }
          break;
@@ -655,10 +775,6 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
 
    default:
       switch( parse_mode( parser ) ) {
-      case PARSE_MODE_COMMENT:
-         /* Do nothing! */
-         break;
-
       case PARSE_MODE_STRUCT_BODY:
          parse_push_mode( parser, PARSE_MODE_STRUCT_FIELD_TYPE );
          retval = parse_token_append( parser, c );
