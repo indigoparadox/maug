@@ -286,7 +286,7 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "mfile_t* ser_f, size_t* p_sz, struct %s* p_ser_struct, size_t array )",
+      "mfile_t* ser_f, struct %s* p_ser_struct, size_t array )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -296,12 +296,11 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
    printf( " {\n" );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
-   printf( "   size_t written = 0;\n" );
    printf( "   size_t i = 0;\n" );
    printf( "   off_t header = 0;\n" );
 
    printf(
-      "   debug_printf( MSERIAL_TRACE_LVL, \"serializing struct %s...\" );\n",
+      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serializing struct %s...\" );\n",
       parsed->name );
 
    printf(
@@ -321,13 +320,17 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       parse_field_type_table( parse_field_type_str )
       }
 
+      printf(
+         "      debug_printf( MSERIALIZE_TRACE_LVL, "
+            "\"serializing field: %s\" );\n", parsed->fields[i].name );
+
       if( 0 < strlen( parsed->fields[i].vector_type ) ) {
          /* If it's a vector, call the specialized vector serializer we emit
           * in the next function.
           */
          printf(
             "      retval = mserialize_vector_%s( "
-            "ser_f, &written, &(p_ser_struct->%s) );\n",
+            "ser_f, &(p_ser_struct->%s) );\n",
             parsed->fields[i].vector_type, parsed->fields[i].name );
 
       } else if( 1 < parsed->fields[i].array ) {
@@ -336,16 +339,15 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           */
          printf(
             "      retval = mserialize_%s( "
-            "ser_f, &written, p_ser_struct->%s, %d );\n",
+            "ser_f, p_ser_struct->%s, %d );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       } else {
          printf(
             "      retval = mserialize_%s( "
-            "ser_f, &written, &(p_ser_struct->%s), %d );\n",
+            "ser_f, &(p_ser_struct->%s), %d );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       }
       printf( "      maug_cleanup_if_not_ok();\n" );
-      printf( "      *p_sz += written;\n" );
    }
 
    /* Handle array value simply for complex objects. */
@@ -354,7 +356,7 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
 
    printf(
-      "   debug_printf( MSERIAL_TRACE_LVL, \"serialized struct %s.\" );\n",
+      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serialized struct %s.\" );\n",
       parsed->name );
 
    printf( "cleanup:\n   return retval;\n}\n\n" );
@@ -372,7 +374,7 @@ void parse_emit_vector( struct STRUCT_PARSED* parsed, int prototype ) {
    char type_str[PARSE_TOKEN_SZ + 1];
 
    printf( "MERROR_RETVAL mserialize_vector_struct_%s( "
-      "mfile_t* ser_f, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec )",
+      "mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -382,13 +384,12 @@ void parse_emit_vector( struct STRUCT_PARSED* parsed, int prototype ) {
 
    printf( " {\n" );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
-   printf( "   size_t written = 0;\n" );
    printf( "   size_t i = 0;\n" );
    printf( "   off_t header = 0;\n" );
    printf( "   int autolock = 0;\n" );
 
    printf( "   debug_printf( "
-      "MSERIAL_TRACE_LVL, \"serializing vector of %s...\" );\n",
+      "MSERIALIZE_TRACE_LVL, \"serializing vector of %s...\" );\n",
       parsed->name );
 
    printf(
@@ -408,16 +409,15 @@ void parse_emit_vector( struct STRUCT_PARSED* parsed, int prototype ) {
 
    printf( "   for( i = 0 ; mdata_vector_ct( p_ser_vec ) > i ; i++ ) {\n" );
    printf( "      retval = mserialize_struct_%s( "
-      "ser_f, &written, mdata_vector_get( p_ser_vec, i, struct %s ), 1 );\n",
+      "ser_f, mdata_vector_get( p_ser_vec, i, struct %s ), 1 );\n",
       parsed->name, parsed->name );
    printf( "      maug_cleanup_if_not_ok();\n" );
-   printf( "      *p_sz += written;\n" );
    printf( "   }\n" );
 
    printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
 
    printf(
-      "   debug_printf( MSERIAL_TRACE_LVL, \"serialized vector of %s.\" );\n",
+      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serialized vector of %s.\" );\n",
       parsed->name );
 
    /* Emit cleanup. */

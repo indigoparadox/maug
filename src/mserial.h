@@ -2,9 +2,9 @@
 #ifndef MSERIAL_H
 #define MSERIAL_H
 
-#ifndef MSERIAL_TRACE_LVL
-#  define MSERIAL_TRACE_LVL 0
-#endif /* !MSERIAL_TRACE_LVL */
+#ifndef MSERIALIZE_TRACE_LVL
+#  define MSERIALIZE_TRACE_LVL 0
+#endif /* !MSERIALIZE_TRACE_LVL */
 
 #include "mrapiser.h"
 
@@ -14,66 +14,69 @@
 #define MSERIALIZE_TYPE_FLOAT    4
 #define MSERIALIZE_TYPE_ARRAY    5
 
+typedef MERROR_RETVAL (*mserialize_cb_t)(
+   mfile_t* ser_out, void* p_ser_int, int array  );
+
 off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags );
 
 MERROR_RETVAL mserialize_footer( mfile_t* ser_out, off_t header, uint8_t flags );
 
 MERROR_RETVAL mserialize_size_t(
-   mfile_t* ser_out, size_t* p_sz, size_t* p_ser_int, int array );
+   mfile_t* ser_out, size_t* p_ser_int, int array );
+
+MERROR_RETVAL mserialize_vector_size_t(
+   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec );
 
 MERROR_RETVAL mserialize_ssize_t(
-   mfile_t* ser_out, size_t* p_sz, ssize_t* p_ser_int, int array );
+   mfile_t* ser_out, ssize_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint8_t(
-   mfile_t* ser_out, size_t* p_sz, uint8_t* p_ser_int, int array );
+   mfile_t* ser_out, uint8_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int8_t(
-   mfile_t* ser_out, size_t* p_sz, int8_t* p_ser_int, int array );
+   mfile_t* ser_out, int8_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint16_t(
-   mfile_t* ser_out, size_t* p_sz, uint16_t* p_ser_int, int array );
+   mfile_t* ser_out, uint16_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int16_t(
-   mfile_t* ser_out, size_t* p_sz, int16_t* p_ser_int, int array );
+   mfile_t* ser_out, int16_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint32_t(
-   mfile_t* ser_out, size_t* p_sz, uint32_t* p_ser_int, int array );
+   mfile_t* ser_out, uint32_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int32_t(
-   mfile_t* ser_out, size_t* p_sz, int32_t* p_ser_int, int array );
+   mfile_t* ser_out, int32_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_float(
-   mfile_t* ser_out, size_t* p_sz, float* p_ser_float, int array );
+   mfile_t* ser_out, float* p_ser_float, int array );
 
 MERROR_RETVAL mserialize_mfix_t(
-   mfile_t* ser_out, size_t* p_sz, mfix_t* p_ser_int, int array );
+   mfile_t* ser_out, mfix_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_char(
-   mfile_t* ser_out, size_t* p_sz, char* p_ser_char, int array );
+   mfile_t* ser_out, char* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retroflat_asset_path(
-   mfile_t* ser_out, size_t* p_sz, retroflat_asset_path* p_ser_char, int array );
+   mfile_t* ser_out, retroflat_asset_path* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retrotile_coord_t(
-   mfile_t* ser_out, size_t* p_sz, retrotile_coord_t* p_ser_int, int array );
+   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array );
+
+MERROR_RETVAL mserialize_mdata_strpool_idx_t(
+   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_retroflat_dir4_t(
-   mfile_t* ser_out, size_t* p_sz, retroflat_dir4_t* p_ser_int, int array );
+   mfile_t* ser_out, retroflat_dir4_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_retroflat_ms_t(
-   mfile_t* ser_out, size_t* p_sz, retroflat_ms_t* p_ser_int, int array );
+   mfile_t* ser_out, retroflat_ms_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, size_t* p_sz, struct RETROTILE_COORDS* p_ser_struct, int array );
+   mfile_t* ser_out, struct RETROTILE_COORDS* p_ser_struct, int array );
 
-MERROR_RETVAL mserialize_struct_MLISP_EXEC_STATE(
-   mfile_t* ser_out, size_t* p_sz, struct MLISP_EXEC_STATE* p_ser_struct, int array );
-
-MERROR_RETVAL mserialize_vector_struct_MLISP_EXEC_STATE(
-   mfile_t* ser_out, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec );
-
-MERROR_RETVAL mserialize_vector_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, size_t* p_sz, struct MDATA_VECTOR* p_ser_vec );
+MERROR_RETVAL mserialize_union_MLISP_VAL(
+   mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array );
 
 #include "mrapiser.h"
 

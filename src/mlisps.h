@@ -166,18 +166,19 @@ struct MLISP_EXEC_STATE {
     */
    /* vector_type struct_MLISP_ENV_NODE */
    struct MDATA_VECTOR env;
-   /* vector_type struct_MLISP_ENV_NODE */
-   struct MDATA_VECTOR* global_env;
 /**
  * \brief Path through any lambdas the execution has entered during *this*
  *        heartbeat cycle. Used to detect tail calls.
  */
+   /* vector_type size_t */
    struct MDATA_VECTOR lambda_trace;
    void* cb_attachment;
 #ifdef MLISP_DEBUG_TRACE
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;
 #endif /* MLISP_DEBUG_TRACE */
+   /* vector_type struct_MLISP_ENV_NODE */
+   struct MDATA_VECTOR* global_env;
 };
 
 struct MLISP_PARSER {

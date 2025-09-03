@@ -82,13 +82,21 @@
 
 #define MFILE_ASSIGN_FLAG_TRIM_EXT 0x01
 
-#ifndef MFILE_TRACE_LVL
-#  define MFILE_TRACE_LVL 0
-#endif /* !MFILE_TRACE_LVL */
+#ifndef MFILE_READ_TRACE_LVL
+#  define MFILE_READ_TRACE_LVL 0
+#endif /* !MFILE_READ_TRACE_LVL */
 
-#ifndef MFILE_TRACE_CONTENTS_LVL
-#  define MFILE_TRACE_CONTENTS_LVL 0
-#endif /* !MFILE_TRACE_CONTENTS_LVL */
+#ifndef MFILE_WRITE_TRACE_LVL
+#  define MFILE_WRITE_TRACE_LVL 0
+#endif /* !MFILE_WRITE_TRACE_LVL */
+
+#ifndef MFILE_SEEK_TRACE_LVL
+#  define MFILE_SEEK_TRACE_LVL 0
+#endif /* !MFILE_SEEK_TRACE_LVL */
+
+#ifndef MFILE_CONTENTS_TRACE_LVL
+#  define MFILE_CONTENTS_TRACE_LVL 0
+#endif /* !MFILE_CONTENTS_TRACE_LVL */
 
 /**
  * \addtogroup maug_retroflt_assets RetroFlat Assets API
@@ -138,6 +146,14 @@ MERROR_RETVAL mfile_mem_read_line(
    struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags );
 MERROR_RETVAL mfile_mem_vprintf(
    mfile_t* p_file, uint8_t flags, const char* fmt, va_list args );
+
+/**
+ * \related MFILE_CADDY
+ * \brief Insert provided buffer into the given file.
+ * 
+ * Note that this method *inserts* the given buffer into the file, shifting the
+ * rest of the contents forward.
+ */
 MERROR_RETVAL mfile_mem_write_block(
    struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
 
@@ -246,16 +262,17 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
    size_t cursor = 0;
    cursor = p_file->cursor( p_file );
    if( 0 <= cursor ) {
-#if MFILE_TRACE_LVL > 0
-      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
+#if MFILE_READ_TRACE_LVL > 0
+      debug_printf( MFILE_READ_TRACE_LVL,
+         "file has " OFF_T_FMT " bytes left...",
          p_file->sz - cursor );
-#endif /* MFILE_TRACE_LVL */
+#endif /* MFILE_READ_TRACE_LVL */
       return p_file->sz - cursor;
    } else {
-#if MFILE_TRACE_LVL > 0
+#if MFILE_READ_TRACE_LVL > 0
       /* TODO: Improved error message/handling. */
-      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
-#endif /* MFILE_TRACE_LVL */
+      debug_printf( MFILE_READ_TRACE_LVL, "file has error bytes left!" );
+#endif /* MFILE_READ_TRACE_LVL */
       return 0;
    }
 }
@@ -294,12 +311,12 @@ MERROR_RETVAL mfile_file_read_int(
       MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags)
 #endif
    ) {
-      debug_printf( MFILE_TRACE_LVL, "reading integer forward" );
+      debug_printf( MFILE_READ_TRACE_LVL, "reading integer forward" );
       /* Shrink the buffer moving right and read into it. */
       retval = p_file->read_block( p_file, buf, buf_sz );
  
    } else {
-      debug_printf( MFILE_TRACE_LVL, "reading integer reversed" );
+      debug_printf( MFILE_READ_TRACE_LVL, "reading integer reversed" );
       /* Move to the end of the output buffer and read backwards. */
       while( 0 < buf_sz ) {
          retval = p_file->read_byte( p_file, (buf + (buf_sz - 1)) );
@@ -372,7 +389,7 @@ MERROR_RETVAL mfile_mem_seek( struct MFILE_CADDY* p_file, off_t pos ) {
 
    p_file->mem_cursor = pos;
 
-   debug_printf( MFILE_TRACE_LVL,
+   debug_printf( MFILE_SEEK_TRACE_LVL,
       "seeking memory buffer to position " OFF_T_FMT " (" OFF_T_FMT ")",
       pos, p_file->mem_cursor );
 
@@ -506,6 +523,9 @@ MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file ) {
 /* === */
 
 void mfile_close( mfile_t* p_file ) {
+#  if MFILE_SEEK_TRACE_LVL > 0
+   debug_printf( MFILE_SEEK_TRACE_LVL, "closing file..." );
+#  endif /* MFILE_SEEK_TRACE_LVL */
 #  ifdef MFILE_MMAP
    munmap( bytes_ptr_h, bytes_sz );
 #  else

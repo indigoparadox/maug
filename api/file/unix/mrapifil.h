@@ -100,6 +100,10 @@ MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
 
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
+   debug_printf( MFILE_SEEK_TRACE_LVL,
+      "seeking cursor to " OFF_T_FMT " of " OFF_T_FMT " bytes...",
+      pos, p_file->sz );
+
    if( fseek( p_file->h.file, pos, SEEK_SET ) ) {
       error_printf( "unable to seek file!" );
       retval = MERROR_FILE;
@@ -152,7 +156,7 @@ static MERROR_RETVAL _mfile_plt_open(
       retval = MERROR_FILE;
       goto cleanup;
    } else {
-      debug_printf( MFILE_TRACE_LVL, "opened file: %s", filename );
+      debug_printf( MFILE_SEEK_TRACE_LVL, "opened file: %s", filename );
    }
 
    fstat( in_file, &st );
@@ -174,13 +178,13 @@ cleanup:
 
    /* Open the permanent file handle. */
    p_file->h.file = fopen( filename, 
-      MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & flags) ? "rb" : "wb" );
+      MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & flags) ? "rb" : "wb+" );
    if( NULL == p_file->h.file ) {
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
    } else {
-      debug_printf( MFILE_TRACE_LVL, "opened file: %s", filename );
+      debug_printf( MFILE_SEEK_TRACE_LVL, "opened file: %s", filename );
    }
 
 #     ifdef MAUG_NO_STAT
@@ -229,6 +233,8 @@ MERROR_RETVAL mfile_file_vprintf(
       return MERROR_FILE;
    }
 
+   /* TODO: Shift remaining contents down first. Break out function from write_block for this. */
+
    vfprintf( p_file->h.file, fmt, args );
 
    /* TODO: Update file size! */
@@ -242,18 +248,93 @@ MERROR_RETVAL mfile_file_write_block(
    struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t written = 0;
+   ssize_t written = 0;
+   MAUG_MHANDLE end_buf_h = (MAUG_MHANDLE)NULL;
+   uint8_t* end_buf = NULL;
+   size_t cursor = 0;
+   size_t end_buf_sz = 0;
+   ssize_t read = 0;
+#if MFILE_WRITE_TRACE_LVL > 0
+   size_t i = 0;
+#endif /* MFILE_WRITE_TRACE_LVL */
 
    if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
       return MERROR_FILE;
    }
 
-   written = fwrite( buf, 1, buf_sz, p_f->h.file ); 
-   if( written < buf_sz ) {
-      retval = MERROR_FILE;
+   cursor = p_f->cursor( p_f );
+
+   if( 0 < p_f->sz && cursor < p_f->sz ) {
+      /* Grab the rest of the file to shift down if we're not at the end. */
+      end_buf_sz = p_f->sz - cursor;
+#if MFILE_WRITE_TRACE_LVL > 0
+      debug_printf( MFILE_WRITE_TRACE_LVL,
+         "allocating buffer to hold remaining " SIZE_T_FMT
+            " bytes from " SIZE_T_FMT " to " SIZE_T_FMT,
+         end_buf_sz, cursor, p_f->sz );
+#endif /* MFILE_WRITE_TRACE_LVL */
+      end_buf_h = maug_malloc( end_buf_sz, 1 );
+      maug_mlock( end_buf_h, end_buf );
+      read = fread( end_buf, 1, end_buf_sz, p_f->h.file );
+      if( read < end_buf_sz ) {
+         error_printf(
+            "error reading remainder of file! (read " SIZE_T_FMT " of "
+               SIZE_T_FMT " bytes)",
+            read, end_buf_sz );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+
+      /* Rewind after reading the file end into the buffer. */
+      fseek( p_f->h.file, cursor, SEEK_SET );
    }
 
-   /* TODO: Update file size! */
+#if MFILE_WRITE_TRACE_LVL > 0
+   debug_printf( MFILE_WRITE_TRACE_LVL,
+      "writing binary data to cursor position " OFF_T_FMT "...",
+      cursor );
+   for( i = 0 ; buf_sz > i ; i++ ) {
+      debug_printf( MFILE_CONTENTS_TRACE_LVL, " > 0x%02x", buf[i] );
+   }
+#endif /* MFILE_WRITE_TRACE_LVL */
+
+   written = fwrite( buf, 1, buf_sz, p_f->h.file ); 
+   if( written < buf_sz ) {
+      error_printf( "error inserting into file!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   p_f->sz += written;
+
+   if( NULL != end_buf ) {
+      cursor += written;
+#if MFILE_WRITE_TRACE_LVL > 0
+      debug_printf( MFILE_WRITE_TRACE_LVL,
+         "shifting " SIZE_T_FMT " bytes of binary data to cursor position "
+            OFF_T_FMT "...",
+         end_buf_sz, cursor );
+      for( i = 0 ; end_buf_sz > i ; i++ ) {
+         debug_printf( MFILE_CONTENTS_TRACE_LVL, " > 0x%02x", end_buf[i] );
+      }
+#endif /* MFILE_WRITE_TRACE_LVL */
+      written = fwrite( end_buf, 1, end_buf_sz, p_f->h.file );
+      if( written < end_buf_sz ) {
+         error_printf( "error re-inserting file remainder!" );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+   }
+
+cleanup:
+
+   if( NULL != end_buf ) {
+      maug_munlock( end_buf_h, end_buf );
+   }
+
+   if( (MAUG_MHANDLE)NULL != end_buf_h ) {
+      maug_mfree( end_buf_h );
+   }
 
    return retval;
 }
