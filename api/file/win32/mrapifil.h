@@ -13,19 +13,8 @@ union MFILE_HANDLE {
 
 #elif defined( MFILE_C )
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
-   off_t cursor = 0;
-
-   cursor = (off_t)SetFilePointer( p_file->h.handle, 0, NULL, FILE_CURRENT );
-
-   if( 0 <= cursor ) {
-      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
-         p_file->sz - cursor );
-      return p_file->sz - cursor;
-   } else {
-      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
-      return 0;
-   }
+off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
+   return (off_t)SetFilePointer( p_file->h.handle, 0, NULL, FILE_CURRENT );
 }
 
 /* === */
@@ -164,6 +153,7 @@ static void _mfile_plt_open( const char* filename, mfile_t* p_file ) {
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
    p_file->has_bytes = mfile_file_has_bytes;
+   p_file->cursor = mfile_file_cursor;
    p_file->read_byte = mfile_file_read_byte;
    p_file->read_int = mfile_file_read_int;
    p_file->read_block = mfile_file_read_block;

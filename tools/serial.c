@@ -275,7 +275,7 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "mfile_t* ser_f, struct %s* p_ser_struct, size_t array )",
+      "mfile_t* ser_f, size_t* p_sz, struct %s* p_ser_struct, size_t array )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -285,7 +285,16 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
    printf( " {\n" );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
+   printf( "   size_t written = 0;\n" );
    printf( "   size_t i = 0;\n" );
+   printf( "   off_t header = 0;\n" );
+
+   printf(
+      "   debug_printf( MSERIAL_TRACE_LVL, \"serializing struct %s...\" );\n",
+      parsed->name );
+
+   printf(
+      "   header = mserialize_header( ser_f, MSERIALIZE_TYPE_OBJECT, 0 );\n" );
 
    /* Handle array value simply for complex objects. */
    printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
@@ -301,20 +310,34 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           * to it.
           */
          printf(
-            "      retval = mserialize_%s( ser_f, p_ser_struct->%s, %d );\n",
+            "      retval = mserialize_%s( "
+            "ser_f, &written, p_ser_struct->%s, %d );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       } else {
          printf(
-            "      retval = mserialize_%s( ser_f, &(p_ser_struct->%s), %d );\n",
+            "      retval = mserialize_%s( "
+            "ser_f, &written, &(p_ser_struct->%s), %d );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       }
       printf( "      maug_cleanup_if_not_ok();\n" );
+      printf( "      *p_sz += written;\n" );
    }
 
    /* Handle array value simply for complex objects. */
    printf( "   }\n" );
 
+   printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
+
+   printf(
+      "   debug_printf( MSERIAL_TRACE_LVL, \"serialized struct %s.\" );\n",
+      parsed->name );
+
    printf( "cleanup:\n   return retval;\n}\n\n" );
+
+
+   /* TODO: Emit reader function with running size_t that stops parsing when
+    *       the size_t matches the size of the object that was saved.
+    */
 
 }
 

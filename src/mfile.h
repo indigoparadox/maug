@@ -112,6 +112,7 @@ typedef char retroflat_asset_path[MAUG_PATH_SZ_MAX + 1];
 struct MFILE_CADDY;
 typedef struct MFILE_CADDY mfile_t;
 
+typedef off_t (*mfile_cursor_t)( struct MFILE_CADDY* p_file );
 typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
 typedef MERROR_RETVAL (*mfile_read_byte_t)(
    struct MFILE_CADDY* p_file, uint8_t* buf );
@@ -124,7 +125,10 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
    struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
 typedef MERROR_RETVAL (*mfile_printf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
+typedef MERROR_RETVAL (*mfile_write_block_t)(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
 
+off_t mfile_mem_cursor( struct MFILE_CADDY* p_file );
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file );
 MERROR_RETVAL mfile_mem_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf );
 MERROR_RETVAL mfile_mem_read_block(
@@ -134,6 +138,8 @@ MERROR_RETVAL mfile_mem_read_line(
    struct MFILE_CADDY* p_f, char* buffer, off_t buffer_sz, uint8_t flags );
 MERROR_RETVAL mfile_mem_vprintf(
    mfile_t* p_file, uint8_t flags, const char* fmt, va_list args );
+MERROR_RETVAL mfile_mem_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
 
 /**
  * \related MFILE_CADDY
@@ -162,6 +168,7 @@ struct MFILE_CADDY {
    uint8_t* mem_buffer;
    uint8_t flags;
    mfile_has_bytes_t has_bytes;
+   mfile_cursor_t cursor;
    mfile_read_byte_t read_byte;
    mfile_read_block_t read_block;
    mfile_seek_t seek;
@@ -169,6 +176,7 @@ struct MFILE_CADDY {
    mfile_read_line_t read_line;
    mfile_printf_t printf;
    mfile_vprintf_t vprintf;
+   mfile_write_block_t write_block;
 };
 
 typedef struct MFILE_CADDY mfile_t;
@@ -201,6 +209,9 @@ MERROR_RETVAL mfile_file_read_line(
 MERROR_RETVAL mfile_file_printf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, ... );
 
+MERROR_RETVAL mfile_file_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
+
 MERROR_RETVAL mfile_file_vprintf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, va_list args );
 
@@ -230,6 +241,26 @@ void mfile_close( mfile_t* p_file );
 
 #include <mrapifil.h>
 #include <mrapilog.h>
+
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+   size_t cursor = 0;
+   cursor = p_file->cursor( p_file );
+   if( 0 <= cursor ) {
+#if MFILE_TRACE_LVL > 0
+      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
+         p_file->sz - cursor );
+#endif /* MFILE_TRACE_LVL */
+      return p_file->sz - cursor;
+   } else {
+#if MFILE_TRACE_LVL > 0
+      /* TODO: Improved error message/handling. */
+      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
+#endif /* MFILE_TRACE_LVL */
+      return 0;
+   }
+}
+
+/* === */
 
 MERROR_RETVAL mfile_assign_path(
    retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags
@@ -295,6 +326,12 @@ MERROR_RETVAL mfile_file_printf(
    va_end( vargs );
 
    return retval;
+}
+
+/* === */
+
+off_t mfile_mem_cursor( struct MFILE_CADDY* p_file ) {
+   return p_file->mem_cursor;
 }
 
 /* === */
@@ -390,6 +427,29 @@ MERROR_RETVAL mfile_mem_vprintf(
    /* TODO: Enable writing to memory buffer. */
    error_printf( "writing to memory buffer not currently supported!" );
 
+   /* TODO: Expand buffer and reflect this in sz if writing beyond the end
+    *       of the buffer.
+    */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_mem_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
+      return MERROR_FILE;
+   }
+
+   /* TODO: Expand buffer and reflect this in sz if writing beyond the end
+    *       of the buffer.
+    */
+   error_printf( "writing to memory buffer not currently supported!" );
+
    return retval;
 }
 
@@ -409,11 +469,13 @@ MERROR_RETVAL mfile_lock_buffer(
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
 
    p_file->has_bytes = mfile_mem_has_bytes;
+   p_file->cursor = mfile_mem_cursor;
    p_file->read_byte = mfile_mem_read_byte;
    p_file->read_block = mfile_mem_read_block;
    p_file->read_int = mfile_file_read_int;
    p_file->seek = mfile_mem_seek;
    p_file->read_line = mfile_mem_read_line;
+   p_file->write_block = mfile_mem_write_block;
 
    p_file->sz = handle_sz;
 

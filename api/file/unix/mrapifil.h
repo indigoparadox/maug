@@ -66,15 +66,8 @@ EM_JS( void, mfile_wasm_fetch, (const char* path), {
 
 /* === */
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
-   if( 0 <= ftell( (p_file)->h.file ) ) {
-      debug_printf( MFILE_TRACE_LVL, "file has " OFF_T_FMT " bytes left...",
-         p_file->sz - (off_t)ftell( (p_file)->h.file ) );
-      return p_file->sz - (off_t)ftell( (p_file)->h.file );
-   } else {
-      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
-      return 0;
-   }
+off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
+   return ftell( (p_file)->h.file );
 }
 
 /* === */
@@ -206,6 +199,7 @@ cleanup:
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
    p_file->has_bytes = mfile_file_has_bytes;
+   p_file->cursor = mfile_file_cursor;
    p_file->read_byte = mfile_file_read_byte;
    p_file->read_block = mfile_file_read_block;
    p_file->read_int = mfile_file_read_int;
@@ -213,6 +207,7 @@ cleanup:
    p_file->read_line = mfile_file_read_line;
    p_file->printf = mfile_file_printf;
    p_file->vprintf = mfile_file_vprintf;
+   p_file->write_block = mfile_file_write_block;
 
    p_file->flags = flags;
 
@@ -235,6 +230,30 @@ MERROR_RETVAL mfile_file_vprintf(
    }
 
    vfprintf( p_file->h.file, fmt, args );
+
+   /* TODO: Update file size! */
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t written = 0;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
+      return MERROR_FILE;
+   }
+
+   written = fwrite( buf, 1, buf_sz, p_f->h.file ); 
+   if( written < buf_sz ) {
+      retval = MERROR_FILE;
+   }
+
+   /* TODO: Update file size! */
 
    return retval;
 }

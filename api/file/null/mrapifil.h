@@ -8,7 +8,7 @@ union MFILE_HANDLE {
 
 #elif defined( MFILE_C )
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
+off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
    
    /* TODO */
 

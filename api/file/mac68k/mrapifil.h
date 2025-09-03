@@ -23,22 +23,8 @@ union MFILE_HANDLE {
 
 #elif defined( MFILE_C )
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
-   int32_t cursor = 0;
-   OSErr err;
-
-   err = GetFPos( p_file->h.file_ref, &cursor );
-   if( noErr != err ) {
-      debug_printf( MFILE_TRACE_LVL, "file has error bytes left!" );
-      return 0;
-   }
-
-   /*
-   debug_printf( MFILE_TRACE_LVL, "file has " S32_FMT " bytes left...",
-      p_file->sz - cursor );
-   */
-
-   return p_file->sz - cursor;
+off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
+   return GetFPos( p_file->h.file_ref, &cursor );
 }
 
 /* === */
@@ -253,6 +239,7 @@ MERROR_RETVAL _mfile_plt_open(
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
    p_file->has_bytes = mfile_file_has_bytes;
+   p_file->cursor = mfile_file_cursor;
    p_file->read_byte = mfile_file_read_byte;
    p_file->read_block = mfile_file_read_block;
    p_file->read_int = mfile_file_read_int;
