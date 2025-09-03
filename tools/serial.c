@@ -35,10 +35,13 @@
    f( mfix_t,                  20 ) \
    f( retroflat_asset_path,    21 ) \
    f( retrotile_coord_t,       22 ) \
-   f( retroflat_dir4_t,        23 ) \
-   f( retroflat_ms_t,          24 ) \
-   f( struct RETROTILE_COORDS, 25 ) \
-   f( struct MLISP_EXEC_STATE, 26 )
+   f( mdata_strpool_idx_t,     23 ) \
+   f( retroflat_dir4_t,        24 ) \
+   f( retroflat_ms_t,          25 ) \
+   f( struct RETROTILE_COORDS, 26 ) \
+   f( struct MLISP_EXEC_STATE, 27 ) \
+   f( struct MLISP_ENV_NODE,   28 ) \
+   f( union MLISP_VAL,         29 )
 
 #include <msercust.h>
 
@@ -67,6 +70,7 @@
 #define PARSE_MODE_DEFINE_NAME 11
 #define PARSE_MODE_DEFINE_VALUE 12
 #define PARSE_MODE_COMMENT_VECTOR_TYPE 13
+#define PARSE_MODE_IGNORE 14
 
 #ifdef DEBUG
 #  define debug_int( name_in, int_in ) \
@@ -102,6 +106,8 @@ struct STRUCT_PARSED_FIELD {
    /*! \brief Type of the field in parse_field_type_table(). */
    int type;
    int array;
+   /*! \brief Type of union, if this is a union. */
+   char union_type[PARSE_TOKEN_SZ + 1];
 };
 
 struct STRUCT_PARSED {
@@ -111,6 +117,7 @@ struct STRUCT_PARSED {
    size_t fields_ct;
    struct STRUCT_PARSED_FIELD fields[PARSE_FIELDS_MAX];
    int valid;
+   int is_union;
    int ready;
 };
 
@@ -269,6 +276,10 @@ cleanup:
    return array_sz_out;
 }
 
+void parse_emit_union( struct STRUCT_PARSED* parsed, int prototype ) {
+   /* TODO: Emit code to serialize union as block of bytes. */
+}
+
 void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    size_t i = 0,
       j = 0;
@@ -332,6 +343,28 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
             "      retval = mserialize_vector_%s( "
             "ser_f, &(p_ser_struct->%s) );\n",
             parsed->fields[i].vector_type, parsed->fields[i].name );
+
+      } else if(
+         1 < parsed->fields[i].array &&
+         0 < strlen( parsed->fields[i].union_type )
+      ) {
+         /* If it's a vector, call the specialized union serializer.
+          * Pass the pointer directly for an array.
+          */
+         printf(
+            "      retval = mserialize_%s( "
+            "ser_f, p_ser_struct->%s, %d );\n",
+            parsed->fields[i].union_type, parsed->fields[i].name,
+            parsed->fields[i].array );
+
+      } else if( 0 < strlen( parsed->fields[i].union_type ) ) {
+         /* If it's a vector, call the specialized union serializer.
+          */
+         printf(
+            "      retval = mserialize_%s( "
+            "ser_f, &(p_ser_struct->%s), %d );\n",
+            parsed->fields[i].union_type, parsed->fields[i].name,
+            parsed->fields[i].array );
 
       } else if( 1 < parsed->fields[i].array ) {
          /* If it's an array, just pass the field directly and not a pointer
@@ -546,10 +579,21 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
       switch( parse_mode( parser ) ) {
       case PARSE_MODE_NONE:
          if(
-            parser->newline &&
+            parser->newline && 
             0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ )
          ) {
+            memset( &(parser->parsed), '\0', sizeof( struct STRUCT_PARSED ) );
             parse_push_mode( parser, PARSE_MODE_STRUCT_NAME );
+
+         } else if(
+            parser->newline && 
+            0 == strncmp( parser->token, "union", PARSE_TOKEN_SZ )
+         ) {
+            /* Unions are treated as structs with is_union=1. */
+            memset( &(parser->parsed), '\0', sizeof( struct STRUCT_PARSED ) );
+            parser->parsed.is_union = 1;
+            parse_push_mode( parser, PARSE_MODE_STRUCT_NAME );
+
          } else if( '\r' != c && '\n' != c ) {
             /* Don't immediately cancel out newline if this whitespace is the
              * newline, but if it's not then a token happened and it's no longer
@@ -566,7 +610,6 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             break;
          }
          /* Reset the parsed struct to prepare for population. */
-         memset( &(parser->parsed), '\0', sizeof( struct STRUCT_PARSED ) );
          strncpy( parser->parsed.name, parser->token, PARSE_TOKEN_SZ );
          parser->parsed.name_sz = parser->token_sz;
          parser->parsed.ready = 0;
@@ -586,14 +629,32 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             parser->parsed.fields[parser->parsed.fields_ct].type = 1;
             parser->parsed.fields[parser->parsed.fields_ct].array = 1;
 
-         } else if( 0 == strncmp( parser->token, "struct ", PARSE_TOKEN_SZ ) ) {
-            /* Do nothing! Prepend this "struct" to type token! */
-            goto cleanup;
-
          } else if( 0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ ) ) {
             /* Make sure a single space exists after "struct". */
             retval = parse_token_append( parser, ' ' );
             goto cleanup;
+
+         } else if( 0 == strncmp( parser->token, "struct ", PARSE_TOKEN_SZ ) ) {
+            /* Do nothing! Prepend this "struct" to type token! */
+            goto cleanup;
+
+         } else if( 0 == strncmp( parser->token, "union", PARSE_TOKEN_SZ ) ) {
+            /* Make sure a single space exists after "union". */
+            retval = parse_token_append( parser, '_' );
+            goto cleanup;
+
+         } else if( 0 == strncmp( parser->token, "union_", PARSE_TOKEN_SZ ) ) {
+            /* Do nothing! Prepend this "union" to type token! */
+            goto cleanup;
+
+         } else if( 0 == strncmp( parser->token, "union_", 6 ) ) {
+            /* Assuming the full-length comparison above failed, we must have
+             * the full union name, now. If this is a union, that is.
+             */
+            strncpy(
+               parser->parsed.fields[parser->parsed.fields_ct].union_type,
+               parser->token,
+               PARSE_TOKEN_SZ );
 
          /* Note the default assignment of array as "1", to specify 1 item.
           * This makes writing primative serializers a bit easer.
@@ -638,6 +699,11 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
          debug_str( "comment", parser->token );
          if( 0 == strncmp( parser->token, "vector_type", PARSE_TOKEN_SZ ) ) {
             parse_push_mode( parser, PARSE_MODE_COMMENT_VECTOR_TYPE );
+         } else if(
+            0 == strncmp( parser->token,
+               "mserial_ignore_until_next_cbrace", PARSE_TOKEN_SZ )
+         ) {
+            parse_push_mode( parser, PARSE_MODE_IGNORE );
          }
          break;
 
@@ -693,10 +759,21 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
 #ifdef DEBUG
             parse_dump_struct( &(parser->parsed) );
 #else
-            parse_emit_struct( &(parser->parsed), prototypes );
-            parse_emit_vector( &(parser->parsed), prototypes );
+            if( parser->parsed.is_union ) {
+               parse_emit_union( &(parser->parsed), prototypes );
+               parse_emit_vector( &(parser->parsed), prototypes );
+            } else {
+               parse_emit_struct( &(parser->parsed), prototypes );
+               parse_emit_vector( &(parser->parsed), prototypes );
+            }
 #endif /* DEBUG */
          }
+         break;
+      case PARSE_MODE_IGNORE:
+         /* IGNORE */
+         parse_pop_mode( parser );
+         /* COMMENT */
+         parse_pop_mode( parser );
          break;
       }
       break;
@@ -787,7 +864,9 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
          break;
 
       default:
-         retval = parse_token_append( parser, c );
+         if( PARSE_MODE_IGNORE != parse_mode( parser ) ) {
+            retval = parse_token_append( parser, c );
+         }
          break;
       }
       break;

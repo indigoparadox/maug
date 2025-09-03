@@ -99,11 +99,15 @@ struct MLISP_EXEC_STATE;
  */
 typedef MERROR_RETVAL (*mlisp_env_cb_t)(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
-   size_t args_c, void* cb_data, uint8_t flags );
+   size_t args_c, uint8_t* cb_data, uint8_t flags );
 
 #define _MLISP_TYPE_TABLE_FIELDS( idx, ctype, name, const_name, fmt ) \
    ctype name;
 
+/* We need to ignore this since it builds the fields with the preprocessor and
+ * the meta-serializer doesn't support that.
+ */
+/* mserial_ignore_until_next_cbrace */
 union MLISP_VAL {
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_FIELDS )
 };
@@ -166,6 +170,8 @@ struct MLISP_EXEC_STATE {
     */
    /* vector_type struct_MLISP_ENV_NODE */
    struct MDATA_VECTOR env;
+   /*! \brief Dummy field; do not serialize fields after this! */
+   int8_t no_serial;
 /**
  * \brief Path through any lambdas the execution has entered during *this*
  *        heartbeat cycle. Used to detect tail calls.

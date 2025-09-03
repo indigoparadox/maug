@@ -357,9 +357,25 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
    return _mserialize_asn_int( ser_out, *p_ser_int, array );
 }
 
+MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
+   mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array
+) {
+   /* TODO */
+   return MERROR_OK;
+}
+
+MERROR_RETVAL mserialize_vector_struct_MLISP_ENV_NODE(
+   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec
+) {
+   /* TODO */
+   return MERROR_OK;
+}
+
 MERROR_RETVAL mserialize_union_MLISP_VAL(
    mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array 
 ) {
+   /* TODO */
+   return MERROR_OK;
 }
 
 #endif /* !MAUG_API_SER_H_DEFS */
