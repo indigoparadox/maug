@@ -81,6 +81,22 @@ MERROR_RETVAL mfile_file_vprintf(
 
 /* === */
 
+MERROR_RETVAL mfile_file_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
+      return MERROR_FILE;
+   }
+
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mfile_plt_init() {
    
    /* TODO */

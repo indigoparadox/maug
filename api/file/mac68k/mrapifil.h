@@ -24,7 +24,11 @@ union MFILE_HANDLE {
 #elif defined( MFILE_C )
 
 off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
-   return GetFPos( p_file->h.file_ref, &cursor );
+   int32_t cursor = 0;
+
+   GetFPos( p_file->h.file_ref, &cursor );
+
+   return cursor;
 }
 
 /* === */
@@ -85,7 +89,7 @@ MERROR_RETVAL mfile_file_read_line(
    while( buf_i + 1 < buffer_sz ) {
       err = FSRead( p_f->h.file_ref, &count, &(buffer[buf_i]) );
       if( '\n' == buffer[buf_i] || '\r' == buffer[buf_i] ) {
-         debug_printf( MFILE_TRACE_CONTENTS_LVL,
+         debug_printf( MFILE_CONTENTS_TRACE_LVL,
             "read line (" SIZE_T_FMT " chars): %s", buf_i, buffer );
          goto cleanup;
       }
@@ -120,6 +124,8 @@ MERROR_RETVAL mfile_file_vprintf(
       return MERROR_FILE;
    }
 
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
+
    maug_vsnprintf( line_buf, MFILE_LINE_BUF_SZ, fmt, args );
    strcat( line_buf, "\r" );
 
@@ -130,6 +136,22 @@ MERROR_RETVAL mfile_file_vprintf(
    pb.ioParam.ioPosOffset = 0;
 
    PBWrite( &pb, false );
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
+      return MERROR_FILE;
+   }
+
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
 
    return retval;
 }
@@ -160,7 +182,7 @@ MERROR_RETVAL _mfile_plt_open(
    /* Get current working directory. */
    GetVol( vol_name, &vol_ref );
    GetWDInfo( vol_ref, &vol_ref, &iter_id, nil );
-   debug_printf( MFILE_TRACE_LVL, "vol: %s", &(vol_name[1]) );
+   debug_printf( MFILE_SEEK_TRACE_LVL, "vol: %s", &(vol_name[1]) );
 
    /* Iterate subdirectories from the current working directory by breaking
     * the path up by '/' separators.
@@ -175,7 +197,7 @@ MERROR_RETVAL _mfile_plt_open(
          maug_strlen( filename ), dir_name, MAUG_PATH_SZ_MAX, "/" );
 
       if( MERROR_OK == tok_retval ) {
-         debug_printf( MFILE_TRACE_LVL, "dir: %s", dir_name );
+         debug_printf( MFILE_SEEK_TRACE_LVL, "dir: %s", dir_name );
 
          /* Translate the path token into a pascal string. */
          retval = maug_str_c2p( dir_name, pas_dir_name, MAUG_PATH_SZ_MAX + 1 );
@@ -200,14 +222,14 @@ MERROR_RETVAL _mfile_plt_open(
          last_dir_id = iter_id;
          iter_id = pb.hFileInfo.ioDirID;
 
-         debug_printf( MFILE_TRACE_LVL,
+         debug_printf( MFILE_SEEK_TRACE_LVL,
             "opened item: %s (id: " S32_FMT ")", dir_name, iter_id );
 
          /* Figure out if this is a subdirectory or a file that can't be
           * traversed any further.
           */
          if( !(pb.hFileInfo.ioFlAttrib & ioDirMask) ) {
-            debug_printf( MFILE_TRACE_LVL, "item is a file!" );
+            debug_printf( MFILE_SEEK_TRACE_LVL, "item is a file!" );
             break;
          }
 
@@ -233,7 +255,8 @@ MERROR_RETVAL _mfile_plt_open(
     */
    p_file->sz = pb.hFileInfo.ioFlLgLen;
 
-   debug_printf( MFILE_TRACE_LVL, "opened file %s (sz: " OFF_T_FMT " bytes)...",
+   debug_printf( MFILE_SEEK_TRACE_LVL,
+      "opened file %s (sz: " OFF_T_FMT " bytes)...",
       filename, p_file->sz );
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
@@ -247,6 +270,7 @@ MERROR_RETVAL _mfile_plt_open(
    p_file->read_line = mfile_file_read_line;
    p_file->printf = mfile_file_printf;
    p_file->vprintf = mfile_file_vprintf;
+   p_file->write_block = mfile_file_write_block;
 
 cleanup:
 

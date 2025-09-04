@@ -309,11 +309,11 @@ MERROR_RETVAL mfile_file_write_block(
 
    if( NULL != end_buf ) {
       cursor += written;
-#if MFILE_WRITE_TRACE_LVL > 0
+#if MFILE_WRITE_TRACE_LVL > 1
       debug_printf( MFILE_WRITE_TRACE_LVL,
-         "shifting " SIZE_T_FMT " bytes of binary data to cursor position "
-            OFF_T_FMT "...",
-         end_buf_sz, cursor );
+         "shifting " SIZE_T_FMT " bytes of binary data from cursor position "
+            OFF_T_FMT " to position " OFF_T_FMT "...",
+         end_buf_sz, p_f->cursor( p_f ), cursor );
       for( i = 0 ; end_buf_sz > i ; i++ ) {
          debug_printf( MFILE_CONTENTS_TRACE_LVL, " > 0x%02x", end_buf[i] );
       }
@@ -324,6 +324,10 @@ MERROR_RETVAL mfile_file_write_block(
          retval = MERROR_FILE;
          goto cleanup;
       }
+      /* Rewind after writing the file end back into the buffer.
+       * This should help reduce the surprise.
+       */
+      fseek( p_f->h.file, cursor, SEEK_SET );
    }
 
 cleanup:

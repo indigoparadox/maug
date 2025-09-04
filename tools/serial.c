@@ -309,16 +309,26 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
    printf( "   size_t i = 0;\n" );
    printf( "   off_t header = 0;\n" );
+   printf( "   off_t header_array = 0;\n" );
 
+   /* Handle array value simply for complex objects. */
+   printf( "   if( 1 < array ) {\n" );
    printf(
-      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serializing struct %s...\" );\n",
-      parsed->name );
-
-   printf(
-      "   header = mserialize_header( ser_f, MSERIALIZE_TYPE_OBJECT, 0 );\n" );
+      "     header_array = mserialize_header( ser_f, "
+      "MSERIALIZE_TYPE_ARRAY, 0 );\n" );
+   printf( "   }\n" );
 
    /* Handle array value simply for complex objects. */
    printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
+
+   printf(
+      "      debug_printf( MSERIALIZE_TRACE_LVL, "
+         "\"serializing struct %s...\" );\n",
+      parsed->name );
+
+   printf(
+      "      header = mserialize_header( ser_f, "
+      "MSERIALIZE_TYPE_OBJECT, 0 );\n" );
 
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
       /* Get the type string for this field. */
@@ -383,16 +393,25 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       printf( "      maug_cleanup_if_not_ok();\n" );
    }
 
-   /* Handle array value simply for complex objects. */
-   printf( "   }\n" );
-
-   printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
+   printf( "      retval = mserialize_footer( ser_f, header, 0 );\n" );
+   printf( "      maug_cleanup_if_not_ok();\n" );
 
    printf(
-      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serialized struct %s.\" );\n",
+      "      debug_printf( MSERIALIZE_TRACE_LVL, \"serialized struct %s.\" );\n",
       parsed->name );
+   printf( "   }\n" );
 
-   printf( "cleanup:\n   return retval;\n}\n\n" );
+   /* Handle array value simply for complex objects. */
+   printf( "   if( 1 < array ) {\n" );
+   printf( "      retval = mserialize_footer( ser_f, header_array, 0 );\n" );
+   printf( "   }\n" );
+
+   printf( "cleanup:\n" );
+   printf( "   if( MERROR_OK != retval ) {\n" );
+   printf(
+      "      error_printf( \"problem serializing %s!\" );\n", parsed->name );
+   printf( "   }\n" );
+   printf( "   return retval;\n}\n\n" );
 
 
    /* TODO: Emit reader function with running size_t that stops parsing when

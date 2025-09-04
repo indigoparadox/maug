@@ -123,6 +123,8 @@ MERROR_RETVAL mfile_file_vprintf(
       return MERROR_FILE;
    }
 
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
+
    maug_vsnprintf( line_buf, MFILE_LINE_BUF_SZ, fmt, args );
 
    WriteFile(
@@ -131,6 +133,22 @@ MERROR_RETVAL mfile_file_vprintf(
    if( written < maug_strlen( line_buf ) ) {
       retval = MERROR_FILE;
    }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_file_write_block(
+   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
+      return MERROR_FILE;
+   }
+
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
 
    return retval;
 }
@@ -161,6 +179,7 @@ static void _mfile_plt_open( const char* filename, mfile_t* p_file ) {
    p_file->read_line = mfile_file_read_line;
    p_file->printf = mfile_file_printf;
    p_file->vprintf = mfile_file_vprintf;
+   p_file->write_block = mfile_file_write_block;
 }
 
 /* === */

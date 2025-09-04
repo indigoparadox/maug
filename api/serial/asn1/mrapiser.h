@@ -25,7 +25,7 @@ static MERROR_RETVAL _mserialize_asn_int_value(
       retval = p_file->write_block( p_file, &int_buf, 1 );
       maug_cleanup_if_not_ok();
       debug_printf( MSERIALIZE_TRACE_LVL,
-         "wrote byte #%d to buffer: 0x%02x", int_buf );
+         "serialized byte #%d of %d: 0x%02x", value_sz - i, value, int_buf );
    }
 
 cleanup:
@@ -61,6 +61,8 @@ MERROR_RETVAL _mserialize_asn_sz( mfile_t* ser_out, size_t sz ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t sz_of_sz = 0;
    uint8_t sz_of_sz_asn = 0;
+
+   debug_printf( MSERIALIZE_TRACE_LVL, "writing size: " SIZE_T_FMT, sz );
 
    /* TODO: Boundary checking for int32_t vs size_t. */
    sz_of_sz = _mserialize_asn_get_int_sz( sz );
@@ -134,7 +136,10 @@ MERROR_RETVAL _mserialize_asn_vector_int(
    debug_printf( MSERIALIZE_TRACE_LVL, "serializing vector of integers..." );
    header = mserialize_header( ser_f, MSERIALIZE_TYPE_ARRAY, 0 );
    if( 0 == mdata_vector_ct( p_ser_vec ) ) {
+      /* Close empty vector. */
       retval = mserialize_footer( ser_f, header, 0 );
+      debug_printf(
+         MSERIALIZE_TRACE_LVL, "serialized empty vector of integers." );
       return retval;
    }
    if( !mdata_vector_is_locked( p_ser_vec ) ) {
@@ -151,6 +156,7 @@ cleanup:
    if( autolock ) {
       mdata_vector_unlock( p_ser_vec );
    }
+   assert( MERROR_OK == retval );
    return retval;
 }
 
@@ -159,17 +165,35 @@ cleanup:
 off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags ) {
    MERROR_RETVAL retval = MERROR_USR;
    uint8_t asn_seq = MSERIALIZE_ASN_TYPE_SEQUENCE;
-
+   
+   assert(
+      MSERIALIZE_TYPE_ARRAY == type ||
+      MSERIALIZE_TYPE_OBJECT == type ||
+      MSERIALIZE_TYPE_STRING == type );
+ 
    switch( type ) {
+   case MSERIALIZE_TYPE_ARRAY:
+      break;
+
    case MSERIALIZE_TYPE_OBJECT:
-      retval = ser_out->write_block( ser_out, &asn_seq, 1 );
       break;
 
    case MSERIALIZE_TYPE_STRING:
       asn_seq = MSERIALIZE_ASN_TYPE_STRING;
-      retval = ser_out->write_block( ser_out, &asn_seq, 1 );
       break;
+
+   default:
+      goto cleanup;
    }
+
+   retval = ser_out->write_block( ser_out, &asn_seq, 1 );
+
+   debug_printf( MSERIALIZE_TRACE_LVL,
+      "beginning sequence with type: 0x%02x", asn_seq );
+
+   assert( MERROR_OK == retval );
+
+cleanup:
 
    if( MERROR_OK == retval ) {
       return ser_out->cursor( ser_out );
@@ -186,11 +210,6 @@ MERROR_RETVAL mserialize_footer(
    MERROR_RETVAL retval = MERROR_OK;
    size_t seq_sz = 0;
 
-   if( 0 == header ) {
-      /* Invalid header value. Must not need a header! */
-      goto cleanup;
-   }
-   
    seq_sz = ser_out->sz - header;
    debug_printf( MSERIALIZE_TRACE_LVL,
       "ending sequence of " SIZE_T_FMT " bytes", seq_sz );
@@ -200,6 +219,8 @@ MERROR_RETVAL mserialize_footer(
    ser_out->seek( ser_out, header );
    retval = _mserialize_asn_sz( ser_out, seq_sz );
    ser_out->seek( ser_out, ser_out->sz );
+
+   assert( MERROR_OK == retval );
 
 cleanup:
 
@@ -284,6 +305,8 @@ MERROR_RETVAL mserialize_char(
       retval = _mserialize_asn_int( ser_out, *p_ser_char, 1 );
    }
 
+   assert( MERROR_OK == retval );
+
 cleanup:
 
    return retval;
@@ -333,20 +356,28 @@ MERROR_RETVAL mserialize_struct_RETROTILE_COORDS(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
-   off_t header = 0;
+   off_t header = 0,
+      header_array = 0;
    debug_printf( MSERIALIZE_TRACE_LVL,
       "serializing struct RETROTILE_COORDS..." );
-   header = mserialize_header( ser_out, MSERIALIZE_TYPE_OBJECT, 0 );
+   if( 1 < array ) {
+      header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+   }
    for( i = 0 ; array > i ; i++ ) {
+      header = mserialize_header( ser_out, MSERIALIZE_TYPE_OBJECT, 0 );
       debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: x" );
       retval = mserialize_retrotile_coord_t( ser_out, &(p_ser_struct->x), 1 );
       maug_cleanup_if_not_ok();
       debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: y" );
       retval = mserialize_retrotile_coord_t( ser_out, &(p_ser_struct->y), 1 );
       maug_cleanup_if_not_ok();
+      retval = mserialize_footer( ser_out, header, 0 );
+      maug_cleanup_if_not_ok();
+      debug_printf( MSERIALIZE_TRACE_LVL, "serialized struct BASE_DEF." );
    }
-   retval = mserialize_footer( ser_out, header, 0 );
-   debug_printf( MSERIALIZE_TRACE_LVL, "serialized struct BASE_DEF." );
+   if( 1 < array ) {
+      retval = mserialize_footer( ser_out, header_array, 0 );
+   }
 cleanup:
    return retval;
 }
