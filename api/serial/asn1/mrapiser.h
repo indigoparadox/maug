@@ -22,6 +22,10 @@ static MERROR_RETVAL _mserialize_asn_int_value(
       /* Grab the i'th byte of the value from left and place it in the buffer.
        */
       int_buf = ((value >> (i * 8)) & 0xff);
+      if( (value_sz - 1) == i && 0 > value && 0 == int_buf ) {
+         /* Two's complement buffer to disambiguate that this is negative. */
+         int_buf = 0xff;
+      }
       retval = p_file->write_block( p_file, &int_buf, 1 );
       maug_cleanup_if_not_ok();
       debug_printf( MSERIALIZE_TRACE_LVL,
@@ -42,13 +46,13 @@ static int8_t _mserialize_asn_get_int_sz( int32_t value ) {
       /* TODO: 0x7f only for integer types? */
       val_sz = 1;
       
-   } else if( value == (value & 0xffff) ) {
+   } else if( value == (value & 0x7fff) ) {
       val_sz = 2;
 
-   } else if( value == (value & 0xffffff) ) {
+   } else if( value == (value & 0x7fffff) ) {
       val_sz = 3;
 
-   } else if( value == (value & 0xffffffff) ) {
+   } else if( value == (value & 0x7fffffff) ) {
       val_sz = 4;
    }
 
@@ -126,20 +130,21 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL _mserialize_asn_vector_int(
+MERROR_RETVAL mserialize_vector(
    mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    off_t header = 0;
    int autolock = 0;
-   debug_printf( MSERIALIZE_TRACE_LVL, "serializing vector of integers..." );
+   debug_printf( MSERIALIZE_TRACE_LVL, "serializing vector %p of %d...",
+      p_ser_vec, mdata_vector_ct( p_ser_vec ) );
    header = mserialize_header( ser_f, MSERIALIZE_TYPE_ARRAY, 0 );
    if( 0 == mdata_vector_ct( p_ser_vec ) ) {
       /* Close empty vector. */
       retval = mserialize_footer( ser_f, header, 0 );
       debug_printf(
-         MSERIALIZE_TRACE_LVL, "serialized empty vector of integers." );
+         MSERIALIZE_TRACE_LVL, "serialized empty vector." );
       return retval;
    }
    if( !mdata_vector_is_locked( p_ser_vec ) ) {
@@ -151,7 +156,7 @@ MERROR_RETVAL _mserialize_asn_vector_int(
       maug_cleanup_if_not_ok();
    }
    retval = mserialize_footer( ser_f, header, 0 );
-   debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector of integers." );
+   debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector %p.", p_ser_vec );
 cleanup:
    if( autolock ) {
       mdata_vector_unlock( p_ser_vec );
@@ -239,7 +244,7 @@ MERROR_RETVAL mserialize_size_t(
 MERROR_RETVAL mserialize_vector_size_t(
    mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec
 ) {
-   return _mserialize_asn_vector_int(
+   return mserialize_vector(
       ser_out, p_ser_vec, (mserialize_cb_t)mserialize_size_t );
 }
 

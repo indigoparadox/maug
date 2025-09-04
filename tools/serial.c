@@ -350,9 +350,9 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           * in the next function.
           */
          printf(
-            "      retval = mserialize_vector_%s( "
-            "ser_f, &(p_ser_struct->%s) );\n",
-            parsed->fields[i].vector_type, parsed->fields[i].name );
+            "      retval = mserialize_vector( "
+            "ser_f, &(p_ser_struct->%s), (mserialize_cb_t)mserialize_%s );\n",
+            parsed->fields[i].name, parsed->fields[i].vector_type );
 
       } else if(
          1 < parsed->fields[i].array &&
@@ -419,74 +419,6 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
     */
 
 }
-
-void parse_emit_vector( struct STRUCT_PARSED* parsed, int prototype ) {
-   size_t i = 0,
-      j = 0;
-   char type_str[PARSE_TOKEN_SZ + 1];
-
-   printf( "MERROR_RETVAL mserialize_vector_struct_%s( "
-      "mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec )",
-      parsed->name, parsed->name );
-
-   if( prototype ) {
-      printf( ";\n\n" );
-      return;
-   }
-
-   printf( " {\n" );
-   printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
-   printf( "   size_t i = 0;\n" );
-   printf( "   off_t header = 0;\n" );
-   printf( "   int autolock = 0;\n" );
-
-   printf( "   debug_printf( "
-      "MSERIALIZE_TRACE_LVL, \"serializing vector of %s...\" );\n",
-      parsed->name );
-
-   printf(
-      "   header = mserialize_header( ser_f, MSERIALIZE_TYPE_ARRAY, 0 );\n" );
-
-   /* Skip serializing if nothing to serialize. */
-   printf( "   if( 0 == mdata_vector_ct( p_ser_vec ) ) {\n" );
-   printf( "      retval = mserialize_footer( ser_f, header, 0 );\n" );
-   printf( "      return retval;\n" );
-   printf( "   }\n" );
-
-   /* Emit autolock for serialized vector. */
-   printf( "   if( !mdata_vector_is_locked( p_ser_vec ) ) {\n" );
-   printf( "      mdata_vector_lock( p_ser_vec );\n" );
-   printf( "      autolock = 1;\n" );
-   printf( "   }\n" );
-
-   printf( "   for( i = 0 ; mdata_vector_ct( p_ser_vec ) > i ; i++ ) {\n" );
-   printf( "      retval = mserialize_struct_%s( "
-      "ser_f, mdata_vector_get( p_ser_vec, i, struct %s ), 1 );\n",
-      parsed->name, parsed->name );
-   printf( "      maug_cleanup_if_not_ok();\n" );
-   printf( "   }\n" );
-
-   printf( "   retval = mserialize_footer( ser_f, header, 0 );\n" );
-
-   printf(
-      "   debug_printf( MSERIALIZE_TRACE_LVL, \"serialized vector of %s.\" );\n",
-      parsed->name );
-
-   /* Emit cleanup. */
-   printf( "cleanup:\n" );
-   printf( "   if( autolock ) {\n" );
-   printf( "      mdata_vector_unlock( p_ser_vec );\n" );
-   printf( "   }\n" );
-   printf( "   return retval;\n}\n\n" );
-
-
-   /* TODO: Emit reader function with running size_t that stops parsing when
-    *       the size_t matches the size of the object that was saved.
-    */
-
-
-}
-
 
 void parse_reset_token( struct STRUCT_PARSER* parser ) {
    if( PARSE_MODE_STRUCT_FIELD_ARRAY == parse_mode( parser ) ) {
@@ -780,10 +712,8 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
 #else
             if( parser->parsed.is_union ) {
                parse_emit_union( &(parser->parsed), prototypes );
-               parse_emit_vector( &(parser->parsed), prototypes );
             } else {
                parse_emit_struct( &(parser->parsed), prototypes );
-               parse_emit_vector( &(parser->parsed), prototypes );
             }
 #endif /* DEBUG */
          }

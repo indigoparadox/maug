@@ -17,6 +17,9 @@
 typedef MERROR_RETVAL (*mserialize_cb_t)(
    mfile_t* ser_out, void* p_ser_int, int array  );
 
+MERROR_RETVAL mserialize_vector(
+   mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb );
+
 off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags );
 
 MERROR_RETVAL mserialize_footer( mfile_t* ser_out, off_t header, uint8_t flags );
