@@ -13,12 +13,16 @@
 #define MSERIALIZE_TYPE_INTEGER  3
 #define MSERIALIZE_TYPE_FLOAT    4
 #define MSERIALIZE_TYPE_ARRAY    5
+#define MSERIALIZE_TYPE_BLOB     6
 
 typedef MERROR_RETVAL (*mserialize_cb_t)(
    mfile_t* ser_out, void* p_ser_int, int array  );
 
 MERROR_RETVAL mserialize_vector(
    mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb );
+
+MERROR_RETVAL mserialize_block(
+   mfile_t* p_file, void* p_block, size_t block_sz );
 
 off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags );
 
