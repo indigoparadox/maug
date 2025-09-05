@@ -6,6 +6,7 @@
 #define MSERIALIZE_ASN_TYPE_INT        0x02
 #define MSERIALIZE_ASN_TYPE_BLOB       0x04
 #define MSERIALIZE_ASN_TYPE_SEQUENCE   0x30
+#define MSERIALIZE_ASN_TYPE_REAL       0x09
 
 #elif defined( MSERIAL_C )
 
@@ -435,7 +436,6 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array
 ) {
-   /* TODO */
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    off_t header = 0,
@@ -487,8 +487,7 @@ MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
       maug_cleanup_if_not_ok();
 
       debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: value" );
-      retval = mserialize_block(
-         ser_out, &(p_ser_struct->value), sizeof( union MLISP_VAL ) );
+      retval = mserialize_union_MLISP_VAL( ser_out, &(p_ser_struct->value), 1 );
       maug_cleanup_if_not_ok();
 
       retval = mserialize_footer( ser_out, header, 0 );
@@ -515,8 +514,17 @@ MERROR_RETVAL mserialize_vector_struct_MLISP_ENV_NODE(
 MERROR_RETVAL mserialize_union_MLISP_VAL(
    mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array 
 ) {
-   /* TODO */
-   return MERROR_OK;
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+
+   for( i = 0 ; array > i ; i++ ) {
+      retval = mserialize_block(
+         ser_out, p_ser_val, sizeof( union MLISP_VAL ) );
+      maug_cleanup_if_not_ok();
+   }
+
+cleanup:
+   return retval;
 }
 
 #endif /* !MAUG_API_SER_H_DEFS */
