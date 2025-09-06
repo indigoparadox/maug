@@ -276,11 +276,11 @@ cleanup:
    return array_sz_out;
 }
 
-void parse_emit_union( struct STRUCT_PARSED* parsed, int prototype ) {
+void parse_emit_ser_union( struct STRUCT_PARSED* parsed, int prototype ) {
    /* TODO: Emit code to serialize union as block of bytes. */
 }
 
-void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
+void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    size_t i = 0,
       j = 0;
    char type_str[PARSE_TOKEN_SZ + 1];
@@ -297,7 +297,7 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "mfile_t* ser_f, struct %s* p_ser_struct, size_t array )",
+      "mfile_t* ser_f, struct %s* p_ser_struct, int array )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -322,8 +322,10 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
 
    printf(
+      "#if MSERIALIZE_TRACE_LVL > 0\n"
       "      debug_printf( MSERIALIZE_TRACE_LVL, "
-         "\"serializing struct %s...\" );\n",
+         "\"serializing struct %s...\" );\n"
+      "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
 
    printf(
@@ -397,7 +399,9 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "      maug_cleanup_if_not_ok();\n" );
 
    printf(
-      "      debug_printf( MSERIALIZE_TRACE_LVL, \"serialized struct %s.\" );\n",
+      "#if MSERIALIZE_TRACE_LVL > 0\n"
+      "      debug_printf( MSERIALIZE_TRACE_LVL, \"serialized struct %s.\" );\n"
+      "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
    printf( "   }\n" );
 
@@ -412,11 +416,130 @@ void parse_emit_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       "      error_printf( \"problem serializing %s!\" );\n", parsed->name );
    printf( "   }\n" );
    printf( "   return retval;\n}\n\n" );
+}
 
+void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
+   size_t i = 0,
+      j = 0;
+   char type_str[PARSE_TOKEN_SZ + 1];
+
+   printf( "MERROR_RETVAL mdeserialize_struct_%s( "
+      "mfile_t* ser_f, struct %s* p_ser_struct, int array, "
+      "ssize_t* p_ser_sz )",
+      parsed->name, parsed->name );
+
+   if( prototype ) {
+      printf( ";\n\n" );
+      return;
+   }
+
+   printf( " {\n" );
+   printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
+   printf( "   ssize_t remaining = 0;\n" );
+   printf( "   ssize_t struct_sz = 0;\n" );
+   printf( "   ssize_t field_sz = 0;\n" );
+   printf( "   uint8_t struct_type = 0;\n" );
+
+   printf(
+      "   retval = mdeserialize_header( ser_f, &struct_type, &struct_sz );\n" );
+   printf( "   maug_cleanup_if_not_ok();\n" );
+
+   /* Report the struct's deserialized size to caller. */
+   printf( "   *p_ser_sz = struct_sz;\n" );
+
+   printf(
+      "#if MSERIALIZE_TRACE_LVL > 0\n"
+      "      debug_printf( MSERIALIZE_TRACE_LVL, "
+         "\"deserializing struct %s...\" );\n"
+      "#endif /* MSERIALIZE_TRACE_LVL */\n",
+      parsed->name );
 
    /* TODO: Emit reader function with running size_t that stops parsing when
     *       the size_t matches the size of the object that was saved.
     */
+   for( i = 0 ; parsed->fields_ct > i ; i++ ) {
+      /* Get the type string for this field. */
+      switch( parsed->fields[i].type ) {
+      case 1: /* struct MDATA_VECTOR */
+         memset( type_str, '\0', PARSE_TOKEN_SZ + 1 ); \
+         strcpy( type_str, "struct_MDATA_VECTOR" );
+         break;
+
+      parse_field_type_table( parse_field_type_str )
+      }
+
+      printf(
+         "      debug_printf( MSERIALIZE_TRACE_LVL, "
+            "\"deserializing field: %s\" );\n", parsed->fields[i].name );
+
+      printf( "      field_sz = 0;\n" );
+
+      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+         /* If it's a vector, call the specialized vector serializer we emit
+          * in the next function.
+          */
+         printf(
+            "      retval = mdeserialize_vector( "
+            "ser_f, &(p_ser_struct->%s), (mdeserialize_cb_t)mdeserialize_%s, "
+            "&field_sz );\n",
+            parsed->fields[i].name, parsed->fields[i].vector_type );
+
+      } else if(
+         1 < parsed->fields[i].array &&
+         0 < strlen( parsed->fields[i].union_type )
+      ) {
+         /* If it's a vector, call the specialized union serializer.
+          * Pass the pointer directly for an array.
+          */
+         printf(
+            "      retval = mdeserialize_%s( "
+            "ser_f, p_ser_struct->%s, %d, &field_sz );\n",
+            parsed->fields[i].union_type, parsed->fields[i].name,
+            parsed->fields[i].array );
+
+      } else if( 0 < strlen( parsed->fields[i].union_type ) ) {
+         /* If it's a vector, call the specialized union serializer.
+          */
+         printf(
+            "      retval = mdeserialize_%s( "
+            "ser_f, &(p_ser_struct->%s), %d, &field_sz );\n",
+            parsed->fields[i].union_type, parsed->fields[i].name,
+            parsed->fields[i].array );
+
+      } else if( 1 < parsed->fields[i].array ) {
+         /* If it's an array, just pass the field directly and not a pointer
+          * to it.
+          */
+         printf(
+            "      retval = mdeserialize_%s( "
+            "ser_f, p_ser_struct->%s, %d, &field_sz );\n",
+            type_str, parsed->fields[i].name, parsed->fields[i].array );
+      } else {
+         printf(
+            "      retval = mdeserialize_%s( "
+            "ser_f, &(p_ser_struct->%s), %d, &field_sz );\n",
+            type_str, parsed->fields[i].name, parsed->fields[i].array );
+      }
+
+      /* Check if further fields need to be deserialized or if this was maybe
+       * serialized by a previous version and are thus not present.
+       */
+      printf( "      struct_sz -= field_sz;\n" );
+      printf( "      if( struct_sz == 0 ) {\n" );
+      printf( "         goto cleanup;\n" );
+      printf( "      }\n" );
+   }
+
+   printf(
+      "#if MSERIALIZE_TRACE_LVL > 0\n"
+      "      debug_printf( MSERIALIZE_TRACE_LVL, "
+         "\"deserialized struct %s.\" );\n"
+      "#endif /* MSERIALIZE_TRACE_LVL */\n",
+      parsed->name );
+
+   printf( "cleanup:\n" );
+   printf( "   return retval;\n" );
+   printf( "}\n\n" );
 
 }
 
@@ -711,9 +834,10 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             parse_dump_struct( &(parser->parsed) );
 #else
             if( parser->parsed.is_union ) {
-               parse_emit_union( &(parser->parsed), prototypes );
+               parse_emit_ser_union( &(parser->parsed), prototypes );
             } else {
-               parse_emit_struct( &(parser->parsed), prototypes );
+               parse_emit_ser_struct( &(parser->parsed), prototypes );
+               parse_emit_deser_struct( &(parser->parsed), prototypes );
             }
 #endif /* DEBUG */
          }
