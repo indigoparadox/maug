@@ -148,6 +148,15 @@ void parse_dump_struct( struct STRUCT_PARSED* parsed ) {
    }
 }
 
+void parse_token_nospace( char* token ) {
+   size_t i = 0;
+   for( i = 0 ; PARSE_TOKEN_SZ > i ; i++ ) {
+      if( ' ' == token[i] ) {
+         token[i] = '_';
+      }
+   }
+}
+
 /*! \brief Figure out what integer or defined constant a token could be. */
 int eval_token(
    struct STRUCT_PARSER* parser, const char* token, int* p_result
@@ -351,10 +360,15 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
          /* If it's a vector, call the specialized vector serializer we emit
           * in the next function.
           */
+
+         memset( type_str, '\0', PARSE_TOKEN_SZ );
+         strncpy( type_str, parsed->fields[i].vector_type, PARSE_TOKEN_SZ );
+         parse_token_nospace( type_str );
+
          printf(
             "      retval = mserialize_vector( "
             "ser_f, &(p_ser_struct->%s), (mserialize_cb_t)mserialize_%s );\n",
-            parsed->fields[i].name, parsed->fields[i].vector_type );
+            parsed->fields[i].name, type_str );
 
       } else if(
          1 < parsed->fields[i].array &&
@@ -435,10 +449,23 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
    printf( " {\n" );
    printf( "   MERROR_RETVAL retval = MERROR_OK;\n" );
-   printf( "   ssize_t remaining = 0;\n" );
+   printf( "   size_t i = 0;\n" );
+   printf( "   ssize_t seq_sz = 0;\n" );
    printf( "   ssize_t struct_sz = 0;\n" );
+   printf( "   ssize_t struct_remaining = 0;\n" );
    printf( "   ssize_t field_sz = 0;\n" );
    printf( "   uint8_t struct_type = 0;\n" );
+   printf( "   uint8_t type = 0;\n" );
+   for( i = 0 ; parsed->fields_ct > i ; i++ ) {
+      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+         /* This field is a vector, so we need a temporary buffer of the
+          * field size so the mdeserialize_vector() call can deserialize to it
+          * before appending to the vector!
+          */
+         printf( "   uint8_t vec_buf_%d[sizeof( %s )];\n",
+            i, parsed->fields[i].vector_type );
+      }
+   }
 
    printf(
       "   retval = mdeserialize_header( ser_f, &struct_type, &struct_sz );\n" );
@@ -447,10 +474,36 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    /* Report the struct's deserialized size to caller. */
    printf( "   *p_ser_sz = struct_sz;\n" );
 
+   /* Setup sizes. Saying the seq size is the total size is fine since it's
+    * unused if this isn't an array, anyway.
+    */
+   printf( "   struct_remaining = struct_sz;\n" );
+   printf( "   seq_sz = struct_sz;\n" );
+
+   printf( "   if( array > 1 ) {\n" );
+   printf( "      debug_printf( MSERIALIZE_TRACE_LVL, \"deserializing array of %%d struct %s...\", array );\n", parsed->name );
+   printf( "   }\n" );
+
+   /* Array-specific processing. If this is an array, then assume we're
+    * embedded in the array right now.
+    */
+   printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
+   printf( "      if( array > 1 ) {\n" );
+   printf( "         if( 0 >= seq_sz ) {\n" );
+   printf( "            error_printf( \"sequence contained fewer values "
+      "(\" SIZE_T_FMT \" than expected (\" SIZE_T_FMT \")!\", i, array );\n" );
+   printf( "            break;\n" );
+   printf( "         }\n" );
+   printf(
+      "         retval = mdeserialize_header( ser_f, &type, &struct_sz );\n" );
+   printf( "         maug_cleanup_if_not_ok();\n" );
+   printf( "      }\n" );
+
    printf(
       "#if MSERIALIZE_TRACE_LVL > 0\n"
       "      debug_printf( MSERIALIZE_TRACE_LVL, "
-         "\"deserializing struct %s...\" );\n"
+         "\"deserializing struct %s (\" SSIZE_T_FMT \" bytes)...\", "
+         "struct_sz );\n"
       "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
 
@@ -478,11 +531,17 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
          /* If it's a vector, call the specialized vector serializer we emit
           * in the next function.
           */
+
+         memset( type_str, '\0', PARSE_TOKEN_SZ );
+         strncpy( type_str, parsed->fields[i].vector_type, PARSE_TOKEN_SZ );
+         parse_token_nospace( type_str );
+
          printf(
             "      retval = mdeserialize_vector( "
             "ser_f, &(p_ser_struct->%s), (mdeserialize_cb_t)mdeserialize_%s, "
-            "&field_sz );\n",
-            parsed->fields[i].name, parsed->fields[i].vector_type );
+            "vec_buf_%d, sizeof( %s ), &field_sz );\n",
+            parsed->fields[i].name, type_str,
+            i, parsed->fields[i].vector_type );
 
       } else if(
          1 < parsed->fields[i].array &&
@@ -524,8 +583,10 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       /* Check if further fields need to be deserialized or if this was maybe
        * serialized by a previous version and are thus not present.
        */
-      printf( "      struct_sz -= field_sz;\n" );
-      printf( "      if( struct_sz == 0 ) {\n" );
+      printf( "      struct_remaining -= field_sz;\n" );
+      printf( "      if( 0 >= struct_remaining ) {\n" );
+      printf( "         error_printf( "
+         "\"struct %s was smaller than expected!\" );\n", parsed->name );
       printf( "         goto cleanup;\n" );
       printf( "      }\n" );
    }
@@ -536,6 +597,9 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
          "\"deserialized struct %s.\" );\n"
       "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
+
+   printf( "      seq_sz -= struct_sz;\n" );
+   printf( "   }\n" );
 
    printf( "cleanup:\n" );
    printf( "   return retval;\n" );
@@ -782,11 +846,23 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
          break;
 
       case PARSE_MODE_COMMENT_VECTOR_TYPE:
-         strncpy(
-            parser->parsed.fields[parser->parsed.fields_ct].vector_type,
-            parser->token,
-            PARSE_TOKEN_SZ );
-         parse_pop_mode( parser );
+         if(
+            0 == strncmp( parser->token, "struct", PARSE_TOKEN_SZ ) ||
+            0 == strncmp( parser->token, "union", PARSE_TOKEN_SZ )
+         ) {
+            /* Just join the string if type is "struct" or "union" because
+             * there's more to come!
+             */
+            retval = parse_token_append( parser, ' ' );
+            goto cleanup;
+         } else {
+            /* The whole token is build so copy it to field vector type. */
+            strncpy(
+               parser->parsed.fields[parser->parsed.fields_ct].vector_type,
+               parser->token,
+               PARSE_TOKEN_SZ );
+            parse_pop_mode( parser );
+         }
          break;
       }
 

@@ -160,7 +160,7 @@ struct MLISP_EXEC_STATE {
    /* vector_type size_t */
    struct MDATA_VECTOR per_node_child_idx;
    /*! \brief A stack of data values resulting from evaluating statements. */
-   /* vector_type struct_MLISP_STACK_NODE */
+   /* vector_type struct MLISP_STACK_NODE */
    struct MDATA_VECTOR stack;
    /**
     * \brief Environment in which statements are defined if ::MLISP_
@@ -168,7 +168,7 @@ struct MLISP_EXEC_STATE {
     * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
     * denote env definitions that are actually args for the current lambda.
     */
-   /* vector_type struct_MLISP_ENV_NODE */
+   /* vector_type struct MLISP_ENV_NODE */
    struct MDATA_VECTOR env;
    /*! \brief Dummy field; do not serialize fields after this! */
    int8_t no_serial;
@@ -183,7 +183,7 @@ struct MLISP_EXEC_STATE {
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;
 #endif /* MLISP_DEBUG_TRACE */
-   /* vector_type struct_MLISP_ENV_NODE */
+   /* vector_type struct MLISP_ENV_NODE */
    struct MDATA_VECTOR* global_env;
 };
 

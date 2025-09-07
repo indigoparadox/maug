@@ -323,37 +323,6 @@ MERROR_RETVAL mserialize_float(
    /* TODO */
 }
 
-MERROR_RETVAL mserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, struct RETROTILE_COORDS* p_ser_struct, int array 
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
-   off_t header = 0,
-      header_array = 0;
-   debug_printf( MSERIALIZE_TRACE_LVL,
-      "serializing struct RETROTILE_COORDS..." );
-   if( 1 < array ) {
-      header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
-   }
-   for( i = 0 ; array > i ; i++ ) {
-      header = mserialize_header( ser_out, MSERIALIZE_TYPE_OBJECT, 0 );
-      debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: x" );
-      retval = mserialize_retrotile_coord_t( ser_out, &(p_ser_struct->x), 1 );
-      maug_cleanup_if_not_ok();
-      debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: y" );
-      retval = mserialize_retrotile_coord_t( ser_out, &(p_ser_struct->y), 1 );
-      maug_cleanup_if_not_ok();
-      retval = mserialize_footer( ser_out, header, 0 );
-      maug_cleanup_if_not_ok();
-      debug_printf( MSERIALIZE_TRACE_LVL, "serialized struct BASE_DEF." );
-   }
-   if( 1 < array ) {
-      retval = mserialize_footer( ser_out, header_array, 0 );
-   }
-cleanup:
-   return retval;
-}
-
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array
 ) {
@@ -425,13 +394,6 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mserialize_vector_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec
-) {
-   return mserialize_vector(
-      ser_out, p_ser_vec, (mserialize_cb_t)mserialize_struct_MLISP_ENV_NODE );
-}
-
 MERROR_RETVAL mserialize_union_MLISP_VAL(
    mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array 
 ) {
@@ -448,27 +410,65 @@ cleanup:
    return retval;
 }
 
-static MERROR_RETVAL _mdeserialize_asn_int_value(
-   mfile_t* ser_in, int32_t* p_value
+/* === */
+
+static MERROR_RETVAL _mdeserialize_asn_sz(
+   mfile_t* ser_in, int32_t* p_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   uint8_t byte_buf = 0;
-   size_t value_sz = 1;
+   size_t value_sz = 0;
    size_t i = 0;
+   uint8_t byte_buf = 0;
 
    retval = ser_in->read_block( ser_in, &byte_buf, 1 );
-   maug_cleanup_if_not_ok_msg( "error reading field type" );
+   maug_cleanup_if_not_ok_msg( "error reading integer size" );
+
+   *p_sz = 0;
 
    if( 0x80 == (0x80 & byte_buf) ) {
       /* This is actually the size of the size. */
       value_sz = byte_buf & ~0x80;
+
+      debug_printf( MSERIALIZE_TRACE_LVL, "value_sz determined: " SIZE_T_FMT,
+         value_sz );
+
+      assert( value_sz <= 4 );
+
+      for( i = 0 ; value_sz > i ; i++ ) {
+         /* TODO: Detect if first octet is 0xff (negative). */
+
+         /* Left-shift first to make more room. */
+         *p_sz <<= 8;
+
+         retval = ser_in->read_block( ser_in, &byte_buf, 1 );
+         maug_cleanup_if_not_ok_msg( "error reading field size" );
+
+         *p_sz |= byte_buf;
+      }
+   } else {
+      /* No high bit, so it's a single-bit size or raw integer. */
+      *p_sz = byte_buf;
    }
 
+cleanup:
+   return retval;
+}
+
+static MERROR_RETVAL _mdeserialize_asn_int_value(
+   mfile_t* ser_in, int32_t* p_value, size_t value_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t byte_buf = 0;
+   size_t i = 0;
+
    assert( value_sz <= 4 );
+   assert( value_sz > 0 );
 
    *p_value = 0;
 
    for( i = 0 ; value_sz > i ; i++ ) {
+      /* TODO: Detect if first octet is 0xff (negative). */
+
       /* Left-shift first to make more room. */
       *p_value <<= 8;
 
@@ -487,13 +487,18 @@ MERROR_RETVAL mdeserialize_header(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t sz_buf = 0;
-
+   off_t offset = 0;
+   
+   offset = ser_in->cursor( ser_in );
    retval = ser_in->read_block( ser_in, p_type, 1 );
-   maug_cleanup_if_not_ok();
+   maug_cleanup_if_not_ok_msg( "error reading field type" );
 
-   retval = _mdeserialize_asn_int_value( ser_in, &sz_buf );
+   retval = _mdeserialize_asn_sz( ser_in, &sz_buf );
 
-   debug_printf( 1, "type: 0x%02x, sz: %d", *p_type, sz_buf );
+   *p_sz = sz_buf;
+
+   debug_printf( 1, "offset: " OFF_T_FMT ", type: 0x%02x, sz: %d (0x%04x)",
+      offset, *p_type, sz_buf, sz_buf );
 
 cleanup:
 
@@ -505,9 +510,51 @@ MERROR_RETVAL mdeserialize_int(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t type = 0;
+   ssize_t sz_seq = 0;
+   ssize_t sz = 0;
+   size_t i = 0;
 
-   retval = mdeserialize_header( ser_in, &type, p_ser_sz );
+   retval = mdeserialize_header( ser_in, &type, &sz );
    maug_cleanup_if_not_ok();
+
+   /* Setup sizes. Saying the seq size is the total size is fine since it's
+    * unused if this isn't an array, anyway.
+    */
+   *p_ser_sz = sz;
+   sz_seq = sz;
+
+   for( i = 0 ; array > i ; i++ ) {
+      if( array > 1 ) {
+         /* Array-specific processing. If this is an array, then assume we're
+          * embedded in the array right now.
+          */
+         if( 0 >= sz_seq ) {
+            error_printf(
+               "sequence contained fewer values (" SIZE_T_FMT " than expected ("
+                  SIZE_T_FMT ")!",
+               i, array );
+            break;
+         }
+
+         retval = mdeserialize_header( ser_in, &type, &sz );
+         maug_cleanup_if_not_ok();
+
+         if( MSERIALIZE_ASN_TYPE_SEQUENCE == type ) {
+            error_printf( "invalid int: detected sequence!" );
+            retval = MERROR_FILE;
+            goto cleanup;
+         }
+      }
+      
+      retval = _mdeserialize_asn_int_value( ser_in, &(p_int[i]), sz );
+      maug_cleanup_if_not_ok();
+
+      debug_printf( MSERIALIZE_TRACE_LVL, "deserialized integer: %d",
+         p_int[i] );
+
+      /* Detect if there are more values to deserialize. */
+      sz_seq -= sz;
+   }
 
 cleanup:
 
@@ -515,9 +562,41 @@ cleanup:
 }
 
 MERROR_RETVAL mdeserialize_vector(
-   mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
-   ssize_t* p_ser_sz
+   mfile_t* ser_in, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
+   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t type = 0;
+   ssize_t sz_seq = 0;
+   ssize_t sz = 0;
+   size_t count = 0;
+
+   debug_printf( MSERIALIZE_TRACE_LVL, "deserializing vector..." );
+
+   retval = mdeserialize_header( ser_in, &type, &sz_seq );
+   maug_cleanup_if_not_ok();
+
+   *p_ser_sz = sz;
+
+   if( MSERIALIZE_ASN_TYPE_SEQUENCE != type ) {
+      error_printf( "expected sequence! found: 0x%02x", type );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+   while( 0 < sz_seq ) {
+      retval = cb( ser_in, buf, 1, &sz );
+      maug_cleanup_if_not_ok();
+      mdata_vector_append( p_ser_vec, buf, buf_sz );
+      sz_seq -= sz;
+      count++;
+   }
+
+   debug_printf( MSERIALIZE_TRACE_LVL,
+      "deserialized " SSIZE_T_FMT " values.", count );
+
+cleanup:
+   return retval;
 }
 
 MERROR_RETVAL mdeserialize_float(
@@ -528,6 +607,7 @@ MERROR_RETVAL mdeserialize_float(
 MERROR_RETVAL mdeserialize_char(
    mfile_t* ser_out, char* p_ser_char, int array, ssize_t* p_ser_sz 
 ) {
+   xxx
 }
 
 MERROR_RETVAL mdeserialize_retroflat_asset_path(
@@ -536,20 +616,9 @@ MERROR_RETVAL mdeserialize_retroflat_asset_path(
 ) {
 }
 
-MERROR_RETVAL mdeserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, struct RETROTILE_COORDS* p_ser_struct, int array,
-   ssize_t* p_ser_sz 
-) {
-}
-
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array,
    ssize_t* p_ser_sz 
-) {
-}
-
-MERROR_RETVAL mdeserialize_vector_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec 
 ) {
 }
 

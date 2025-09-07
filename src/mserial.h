@@ -100,7 +100,7 @@ MERROR_RETVAL mdeserialize_int(
 
 MERROR_RETVAL mdeserialize_vector(
    mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
-   ssize_t* p_ser_sz );
+   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_size_t(
    mfile_t* ser_out, size_t* p_ser_int, int array, ssize_t* p_ser_sz );
@@ -155,9 +155,6 @@ MERROR_RETVAL mdeserialize_struct_RETROTILE_COORDS(
 
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array, ssize_t* p_ser_sz );
-
-MERROR_RETVAL mdeserialize_vector_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec );
 
 MERROR_RETVAL mdeserialize_union_MLISP_VAL(
    mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz );
