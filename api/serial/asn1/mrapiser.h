@@ -653,32 +653,64 @@ cleanup:
 }
 
 MERROR_RETVAL mdeserialize_float(
-   mfile_t* ser_out, float* p_ser_float, int array, ssize_t* p_ser_sz 
+   mfile_t* ser_in, float* p_ser_float, int array, ssize_t* p_ser_sz 
 ) {
 }
 
 MERROR_RETVAL mdeserialize_char(
-   mfile_t* ser_out, char* p_ser_char, int array, ssize_t* p_ser_sz 
+   mfile_t* ser_in, char* p_ser_char, int array, ssize_t* p_ser_sz 
 ) {
-   /* xxx
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t type = 0;
+   size_t sz = 0;
+   size_t cpy_sz = array;
+   off_t start = 0;
+
    retval = mdeserialize_header( ser_in, &type, &sz );
-   maug_cleanup_if_not_ok(); */
+   maug_cleanup_if_not_ok();
+
+   /* Grab the start to seek to if provided is more than expected. */
+   start = ser_in->cursor( ser_in );
+
+   /* Use the lesser of (expected/provided) sizes. */
+   if( sz < cpy_sz ) {
+      cpy_sz = sz;
+   }
+
+   ser_in->read_block( ser_in, p_ser_char, cpy_sz );
+
+   /* Make sure we're focused on the next field when we're done. */
+   ser_in->seek( ser_in, start + sz );
+
+#if MSERIALIZE_TRACE_LVL > 0
+   if( 1 < array ) {
+      debug_printf(
+         MSERIALIZE_TRACE_LVL, "deserialized string: %s", p_ser_char );
+   } else {
+      debug_printf(
+         MSERIALIZE_TRACE_LVL, "deserialized char: %c", *p_ser_char );
+   }
+#endif /* MSERIALIZE_TRACE_LVL */
+
+cleanup:
+
+   return retval;
 }
 
 MERROR_RETVAL mdeserialize_retroflat_asset_path(
-   mfile_t* ser_out, retroflat_asset_path* p_ser_char, int array,
+   mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array,
    ssize_t* p_ser_sz 
 ) {
 }
 
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array,
+   mfile_t* ser_in, struct MLISP_ENV_NODE* p_ser_struct, int array,
    ssize_t* p_ser_sz 
 ) {
 }
 
 MERROR_RETVAL mdeserialize_union_MLISP_VAL(
-   mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz 
+   mfile_t* ser_in, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz 
 ) {
 }
 
