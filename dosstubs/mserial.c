@@ -3,6 +3,9 @@
 #  define MSERIAL_C
 #  include <maug.h>
 #  include <mjson.h>
+#  include <mlisps.h>
+#  include <mlispp.h>
+#  include <mlispe.h>
 #  include <retroflt.h>
 #  ifndef RETROFLAT_NO_RETROGXC
 #     include <retrogxc.h>

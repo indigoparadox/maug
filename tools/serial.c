@@ -353,8 +353,10 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       }
 
       printf(
+         "#if MSERIALIZE_TRACE_LVL > 0\n"
          "      debug_printf( MSERIALIZE_TRACE_LVL, "
-            "\"serializing field: %s\" );\n", parsed->fields[i].name );
+            "\"serializing field: %s\" );\n"
+         "#endif /* MSERIALIZE_TRACE_LVL */\n", parsed->fields[i].name );
 
       if( 0 < strlen( parsed->fields[i].vector_type ) ) {
          /* If it's a vector, call the specialized vector serializer we emit
@@ -481,7 +483,9 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   seq_sz = struct_sz;\n" );
 
    printf( "   if( array > 1 ) {\n" );
+   printf( "#if MSERIALIZE_TRACE_LVL > 0\n" );
    printf( "      debug_printf( MSERIALIZE_TRACE_LVL, \"deserializing array of %%d struct %s...\", array );\n", parsed->name );
+   printf( "#endif\n" );
    printf( "   }\n" );
 
    /* Array-specific processing. If this is an array, then assume we're
@@ -522,8 +526,10 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       }
 
       printf(
+         "#if MSERIALIZE_TRACE_LVL > 0\n"
          "      debug_printf( MSERIALIZE_TRACE_LVL, "
-            "\"deserializing field: %s\" );\n", parsed->fields[i].name );
+            "\"deserializing field: %s\" );\n"
+         "#endif /* MSERIALIZE_TRACE_LVL */\n", parsed->fields[i].name );
 
       printf( "      field_sz = 0;\n" );
 

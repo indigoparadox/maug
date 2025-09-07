@@ -44,9 +44,9 @@
 #define retrogxc_load_bitmap( res_p, flags ) \
    retrogxc_load_asset( res_p, retrogxc_loader_bitmap, NULL, flags )
 
-typedef int8_t RETROGXC_ASSET_TYPE;
+typedef int8_t retrogxc_asset_type_t;
 
-typedef RETROGXC_ASSET_TYPE (*retrogxc_loader)(
+typedef retrogxc_asset_type_t (*retrogxc_loader)(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
@@ -68,15 +68,15 @@ void retrogxc_clear_cache();
 
 void retrogxc_shutdown();
 
-RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
+retrogxc_asset_type_t retrogxc_loader_bitmap(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
-RETROGXC_ASSET_TYPE retrogxc_loader_xpm(
+retrogxc_asset_type_t retrogxc_loader_xpm(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
-RETROGXC_ASSET_TYPE retrogxc_loader_font(
+retrogxc_asset_type_t retrogxc_loader_font(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
@@ -195,7 +195,7 @@ void retrogxc_shutdown() {
 
 /* === */
 
-RETROGXC_ASSET_TYPE retrogxc_loader_bitmap(
+retrogxc_asset_type_t retrogxc_loader_bitmap(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, void* data,
    uint8_t flags
 ) {
@@ -238,7 +238,7 @@ cleanup:
 
 #ifdef RETROFONT_PRESENT
 
-RETROGXC_ASSET_TYPE retrogxc_loader_font(
+retrogxc_asset_type_t retrogxc_loader_font(
    const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, void* data,
    uint8_t flags
 ) {
@@ -275,7 +275,7 @@ int16_t retrogxc_load_asset(
       i = 0;
    struct RETROFLAT_CACHE_ASSET asset_new;
    struct RETROFLAT_CACHE_ASSET* asset_iter = NULL;
-   RETROGXC_ASSET_TYPE asset_type = RETROGXC_ASSET_TYPE_NONE;
+   retrogxc_asset_type_t asset_type = RETROGXC_ASSET_TYPE_NONE;
    MERROR_RETVAL retval = MERROR_OK;
 
    maug_mzero( &asset_new, sizeof( struct RETROFLAT_CACHE_ASSET ) );
