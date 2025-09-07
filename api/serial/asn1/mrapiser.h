@@ -607,7 +607,9 @@ MERROR_RETVAL mdeserialize_float(
 MERROR_RETVAL mdeserialize_char(
    mfile_t* ser_out, char* p_ser_char, int array, ssize_t* p_ser_sz 
 ) {
-   xxx
+   /* xxx
+   retval = mdeserialize_header( ser_in, &type, &sz );
+   maug_cleanup_if_not_ok(); */
 }
 
 MERROR_RETVAL mdeserialize_retroflat_asset_path(
