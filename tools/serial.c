@@ -456,6 +456,8 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   ssize_t struct_sz = 0;\n" );
    printf( "   ssize_t struct_remaining = 0;\n" );
    printf( "   ssize_t field_sz = 0;\n" );
+   printf( "   size_t seq_header_sz = 0;\n" );
+   printf( "   size_t header_sz = 0;\n" );
    printf( "   uint8_t struct_type = 0;\n" );
    printf( "   uint8_t type = 0;\n" );
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
@@ -470,11 +472,15 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    }
 
    printf(
-      "   retval = mdeserialize_header( ser_f, &struct_type, &struct_sz );\n" );
+      "   maug_mzero( p_ser_struct, sizeof( struct %s ) );\n", parsed->name );
+
+   printf(
+      "   retval = mdeserialize_header( "
+      "ser_f, &struct_type, &struct_sz, &seq_header_sz );\n" );
    printf( "   maug_cleanup_if_not_ok();\n" );
 
    /* Report the struct's deserialized size to caller. */
-   printf( "   *p_ser_sz = struct_sz;\n" );
+   printf( "   *p_ser_sz = struct_sz + seq_header_sz;\n" );
 
    /* Setup sizes. Saying the seq size is the total size is fine since it's
     * unused if this isn't an array, anyway.
@@ -482,11 +488,11 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   struct_remaining = struct_sz;\n" );
    printf( "   seq_sz = struct_sz;\n" );
 
-   printf( "   if( array > 1 ) {\n" );
    printf( "#if MSERIALIZE_TRACE_LVL > 0\n" );
+   printf( "   if( array > 1 ) {\n" );
    printf( "      debug_printf( MSERIALIZE_TRACE_LVL, \"deserializing array of %%d struct %s...\", array );\n", parsed->name );
-   printf( "#endif\n" );
    printf( "   }\n" );
+   printf( "#endif\n" );
 
    /* Array-specific processing. If this is an array, then assume we're
     * embedded in the array right now.
@@ -499,7 +505,8 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "            break;\n" );
    printf( "         }\n" );
    printf(
-      "         retval = mdeserialize_header( ser_f, &type, &struct_sz );\n" );
+      "         retval = mdeserialize_header( "
+      "ser_f, &type, &struct_sz, &header_sz );\n" );
    printf( "         maug_cleanup_if_not_ok();\n" );
    printf( "      }\n" );
 
@@ -586,6 +593,8 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       }
 
+      printf( "      maug_cleanup_if_not_ok();\n" );
+
       /* Check if further fields need to be deserialized or if this was maybe
        * serialized by a previous version and are thus not present.
        */
@@ -604,7 +613,7 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
 
-   printf( "      seq_sz -= struct_sz;\n" );
+   printf( "      seq_sz -= (struct_sz + header_sz);\n" );
    printf( "   }\n" );
 
    printf( "cleanup:\n" );

@@ -93,7 +93,7 @@ MERROR_RETVAL mserialize_union_MLISP_VAL(
 /* === */
 
 MERROR_RETVAL mdeserialize_header(
-   mfile_t* ser_in, uint8_t* p_type, ssize_t* p_sz );
+   mfile_t* ser_in, uint8_t* p_type, ssize_t* p_sz, size_t* p_header_sz );
 
 MERROR_RETVAL mdeserialize_int(
    mfile_t* ser_out, int32_t* p_ser_int, int array, ssize_t* p_ser_sz );
