@@ -737,8 +737,22 @@ MERROR_RETVAL mdeserialize_retroflat_asset_path(
    mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array,
    ssize_t* p_ser_sz 
 ) {
-   /* TODO */
-   return MERROR_FILE;
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   ssize_t path_sz;
+
+   *p_ser_sz = 0;
+
+   for( i = 0 ; array > i ; i++ ) {
+      retval = mdeserialize_char(
+         ser_in, p_ser_char[i], MAUG_PATH_SZ_MAX, &path_sz );
+      maug_cleanup_if_not_ok();
+      *p_ser_sz += path_sz;
+   }
+
+cleanup:
+
+   return retval;
 }
 
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
@@ -756,7 +770,7 @@ MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
    uint8_t struct_type = 0;
    uint8_t type = 0;
 
-   maug_mzero( p_ser_struct, sizeof( struct MLISP_ENV_NODE ) );
+   maug_mzero( p_ser_struct, sizeof( struct MLISP_ENV_NODE ) * array );
    retval = mdeserialize_header(
       ser_in, &struct_type, &struct_sz, &seq_header_sz );
    maug_cleanup_if_not_ok();
@@ -868,10 +882,64 @@ cleanup:
 }
 
 MERROR_RETVAL mdeserialize_union_MLISP_VAL(
-   mfile_t* ser_in, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz 
+   mfile_t* ser_in, union MLISP_VAL* p_ser_union, int array, ssize_t* p_ser_sz 
 ) {
-   /* TODO */
-   return MERROR_FILE;
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   ssize_t seq_sz = 0;
+   ssize_t union_sz = 0;
+   ssize_t union_remaining = 0;
+   size_t seq_header_sz = 0;
+   size_t header_sz = 0;
+   uint8_t union_type = 0;
+   uint8_t type = 0;
+
+   maug_mzero( p_ser_union, sizeof( union MLISP_VAL ) * array );
+   retval = mdeserialize_header(
+      ser_in, &union_type, &union_sz, &seq_header_sz );
+   maug_cleanup_if_not_ok();
+
+   *p_ser_sz = union_sz + seq_header_sz;
+   union_remaining = union_sz;
+   seq_sz = union_sz;
+   
+#if MSERIALIZE_TRACE_LVL > 0
+   if( array > 1 ) {
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserializing array of %d union MLISP_VAL...", array );
+   }
+#endif
+
+   for( i = 0 ; array > i ; i++ ) {
+      if( array > 1 ) {
+         if( 0 >= seq_sz ) {
+            error_printf(
+               "sequence contained fewer values (" SIZE_T_FMT
+                  " than expected (" SIZE_T_FMT ")!",
+               i, array );
+            break;
+         }
+         retval = mdeserialize_header( ser_in, &type, &union_sz, &header_sz );
+         maug_cleanup_if_not_ok();
+      }
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserializing union MLISP_VAL (" SSIZE_T_FMT " bytes)...",
+         union_sz );
+#endif /* MSERIALIZE_TRACE_LVL */
+      retval = ser_in->read_block( ser_in, (uint8_t*)&p_ser_union, union_sz );
+      maug_cleanup_if_not_ok();
+      union_remaining -= union_sz;
+      if( 0 >= union_remaining ) {
+         error_printf( "union MLISP_VAL was smaller than expected!" );
+         goto cleanup;
+      }
+   }
+
+cleanup:
+
+   return retval;
 }
 
 #endif /* !MAUG_API_SER_H_DEFS */

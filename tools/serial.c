@@ -10,6 +10,7 @@
 #define PARSE_STACK_DEPTH 128
 #define PARSE_FIELDS_MAX 255
 #define PARSE_DEFINES_MAX 255
+#define PARSE_SKIP_FLAGS_CT 255
 
 /* !\brief These are the types we can handle by default. These can be expanded
  *         in msercust.h.
@@ -71,17 +72,24 @@
 #define PARSE_MODE_DEFINE_VALUE 12
 #define PARSE_MODE_COMMENT_VECTOR_TYPE 13
 #define PARSE_MODE_IGNORE 14
+#define PARSE_MODE_COMMENT_SKIP_FLAG 15
 
 #ifdef DEBUG
 #  define debug_int( name_in, int_in ) \
       printf( "%s: %d\n", name_in, int_in ); fflush( stdout );
 #  define debug_str( name_in, str_in ) \
       printf( "%s: %s\n", name_in, str_in ); fflush( stdout );
+#  define debug_int_str( name_in, int_in, str_in ) \
+      printf( "%s: %d: %s\n", name_in, int_in, str_in ); fflush( stdout );
+#  define debug_str_int( name_in, str_in, int_in ) \
+      printf( "%s: %s: %d\n", name_in, str_in, int_in ); fflush( stdout );
 #define error_str( msg_in, str_in ) \
       printf( "%s: %s\n", msg_in, str_in ); fflush( stdout );
 #else
 #  define debug_int( name_in, int_in )
 #  define debug_str( name_in, str_in )
+#  define debug_int_str( name_in, int_in, str_in )
+#  define debug_str_int( name_in, str_in, int_in )
 #  define error_str( msg_in, str_in ) \
       fprintf( stderr, "%s: %s\n", msg_in, str_in ); fflush( stderr );
 #endif /* DEBUG */
@@ -116,6 +124,8 @@ struct STRUCT_PARSED {
    size_t name_sz;
    size_t fields_ct;
    struct STRUCT_PARSED_FIELD fields[PARSE_FIELDS_MAX];
+   char skip_flags[PARSE_SKIP_FLAGS_CT][PARSE_TOKEN_SZ + 1];
+   size_t skip_flags_ct;
    int valid;
    int is_union;
    int ready;
@@ -175,8 +185,7 @@ int eval_token(
 
    /* It's not not an integer, anyway! */
    *p_result = atoi( token );
-   debug_str( "eval integer token", token );
-   debug_int( "eval integer value", *p_result );
+   debug_str_int( "eval integer token", token, *p_result );
 
    goto cleanup;
 
@@ -185,8 +194,8 @@ try_define:
    /* If the value isn't an integer, search for a #define of it. */
    for( i = 0 ; parser->defines_ct > i ; i++ ) {
       if( 0 == strncmp( token, parser->defines[i].name, PARSE_TOKEN_SZ ) ) {
-         debug_str( "eval define name", parser->defines[i].name );
-         debug_int( "eval define value", parser->defines[i].value );
+         debug_str_int( "eval define", parser->defines[i].name,
+            parser->defines[i].value );
          /* Ship out the define value. */
          *p_result = parser->defines[i].value;
          goto cleanup;
@@ -330,6 +339,18 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    /* Handle array value simply for complex objects. */
    printf( "   for( i = 0 ; array > i ; i++ ) {\n" );
 
+   for( i = 0 ; parsed->skip_flags_ct > i ; i++ ) {
+      if( '\0' == parsed->skip_flags[i][0] ) {
+         break;
+      }
+
+      /* Do not serialize structs with skipped flags. */
+      printf( "      if( %s == (%s & p_ser_struct[i].flags) ) {\n",
+         parsed->skip_flags[i], parsed->skip_flags[i] );
+      printf( "         continue;\n" );
+      printf( "      }\n" );
+   }
+
    printf(
       "#if MSERIALIZE_TRACE_LVL > 0\n"
       "      debug_printf( MSERIALIZE_TRACE_LVL, "
@@ -472,7 +493,8 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    }
 
    printf(
-      "   maug_mzero( p_ser_struct, sizeof( struct %s ) );\n", parsed->name );
+      "   maug_mzero( p_ser_struct, sizeof( struct %s ) * array );\n",
+      parsed->name );
 
    printf(
       "   retval = mdeserialize_header( "
@@ -672,10 +694,10 @@ int parse_set_field_name( struct STRUCT_PARSER* parser ) {
       parser->parsed.fields[parser->parsed.fields_ct].name,
       parser->token,
       PARSE_TOKEN_SZ );
-   debug_str( "field name",
-      parser->parsed.fields[parser->parsed.fields_ct].name );
    parser->parsed.fields_ct++;
-   debug_int( "fields", parser->parsed.fields_ct );
+   debug_int_str( "field",
+      parser->parsed.fields_ct,
+      parser->parsed.fields[parser->parsed.fields_ct].name );
    /* FIELD_NAME */
    parse_pop_mode( parser );
    /* FIELD_TYPE */
@@ -700,9 +722,8 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
       if( PARSE_MODE_DEFINE_VALUE == parse_mode( parser ) ) {
          /* Store the defined value. */
          parser->defines[parser->defines_ct].value = atoi( parser->token );
-         debug_str( "stored define name", 
-            parser->defines[parser->defines_ct].name );
-         debug_int( "stored define value", 
+         debug_str_int( "stored define", 
+            parser->defines[parser->defines_ct].name,
             parser->defines[parser->defines_ct].value );
          parser->defines_ct++;
          /* DEFINE_VALUE */
@@ -850,14 +871,34 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
 
       case PARSE_MODE_COMMENT:
          debug_str( "comment", parser->token );
-         if( 0 == strncmp( parser->token, "vector_type", PARSE_TOKEN_SZ ) ) {
+         if(
+            0 == strncmp( parser->token, "serial_skip_flag", PARSE_TOKEN_SZ )
+         ) {
+            parse_push_mode( parser, PARSE_MODE_COMMENT_SKIP_FLAG );
+
+         } else if(
+            0 == strncmp( parser->token, "vector_type", PARSE_TOKEN_SZ )
+         ) {
             parse_push_mode( parser, PARSE_MODE_COMMENT_VECTOR_TYPE );
+
          } else if(
             0 == strncmp( parser->token,
                "mserial_ignore_until_next_cbrace", PARSE_TOKEN_SZ )
          ) {
             parse_push_mode( parser, PARSE_MODE_IGNORE );
          }
+         break;
+
+      case PARSE_MODE_COMMENT_SKIP_FLAG:
+         strncpy(
+            parser->parsed.skip_flags[parser->parsed.skip_flags_ct],
+            parser->token,
+            PARSE_TOKEN_SZ );
+         parser->parsed.skip_flags_ct++;
+         debug_int_str( "added skip flag", parser->parsed.skip_flags_ct,
+            parser->parsed.skip_flags[parser->parsed.skip_flags_ct - 1] );
+         assert( parser->parsed.skip_flags_ct < PARSE_SKIP_FLAGS_CT );
+         parse_pop_mode( parser );
          break;
 
       case PARSE_MODE_COMMENT_VECTOR_TYPE:
