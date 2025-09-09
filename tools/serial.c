@@ -573,7 +573,7 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
          printf(
             "      retval = mdeserialize_vector( "
-            "ser_f, &(p_ser_struct->%s), (mdeserialize_cb_t)mdeserialize_%s, "
+            "ser_f, &(p_ser_struct[i].%s), (mdeserialize_cb_t)mdeserialize_%s, "
             "vec_buf_%d, sizeof( %s ), &field_sz );\n",
             parsed->fields[i].name, type_str,
             i, parsed->fields[i].vector_type );
@@ -587,7 +587,7 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           */
          printf(
             "      retval = mdeserialize_%s( "
-            "ser_f, p_ser_struct->%s, %d, &field_sz );\n",
+            "ser_f, p_ser_struct[i].%s, %d, &field_sz );\n",
             parsed->fields[i].union_type, parsed->fields[i].name,
             parsed->fields[i].array );
 
@@ -596,7 +596,7 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           */
          printf(
             "      retval = mdeserialize_%s( "
-            "ser_f, &(p_ser_struct->%s), %d, &field_sz );\n",
+            "ser_f, &(p_ser_struct[i].%s), %d, &field_sz );\n",
             parsed->fields[i].union_type, parsed->fields[i].name,
             parsed->fields[i].array );
 
@@ -606,12 +606,12 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
           */
          printf(
             "      retval = mdeserialize_%s( "
-            "ser_f, p_ser_struct->%s, %d, &field_sz );\n",
+            "ser_f, p_ser_struct[i].%s, %d, &field_sz );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       } else {
          printf(
             "      retval = mdeserialize_%s( "
-            "ser_f, &(p_ser_struct->%s), %d, &field_sz );\n",
+            "ser_f, &(p_ser_struct[i].%s), %d, &field_sz );\n",
             type_str, parsed->fields[i].name, parsed->fields[i].array );
       }
 

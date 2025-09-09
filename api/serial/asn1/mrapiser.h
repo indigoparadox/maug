@@ -535,9 +535,11 @@ MERROR_RETVAL mdeserialize_header(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t sz_buf = 0;
+#if MSERIALIZE_TRACE_LVL > 0
    off_t offset = 0;
    
    offset = ser_in->cursor( ser_in );
+#endif /* MSERIALIZE_TRACE_LVL */
    retval = ser_in->read_block( ser_in, p_type, 1 );
    maug_cleanup_if_not_ok_msg( "error reading field type" );
 
