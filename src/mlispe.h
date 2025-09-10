@@ -141,7 +141,7 @@ MERROR_RETVAL mlisp_stack_peek(
  *          time!
  */
 MERROR_RETVAL mlisp_env_dump(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t global );
 
 #endif /* MLISP_DUMP_ENABLED || DOCUMENTATION */
 
@@ -168,6 +168,9 @@ MERROR_RETVAL mlisp_env_set(
    const char* token, size_t token_sz, uint8_t env_type, const void* data,
    void* cb_data, uint8_t flags );
 
+ssize_t mlisp_count_builtins(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
+
 MERROR_RETVAL mlisp_check_state(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
@@ -193,6 +196,9 @@ MERROR_RETVAL mlisp_step(
 MERROR_RETVAL mlisp_step_lambda(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
    const char* lambda );
+
+MERROR_RETVAL mlisp_exec_add_env_builtins(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec );
 
 MERROR_RETVAL mlisp_exec_init(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags );
@@ -452,7 +458,7 @@ cleanup:
 #if defined( MLISP_DUMP_ENABLED )
 
 MERROR_RETVAL mlisp_env_dump(
-   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t global
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -467,7 +473,9 @@ MERROR_RETVAL mlisp_env_dump(
                " \"%s\" (" #const_name "): " fmt, \
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.name ); \
 
-   if(
+   if( global ) {
+      env = exec->global_env;
+   } else if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
    ) {
       env = &(parser->env);
@@ -475,7 +483,10 @@ MERROR_RETVAL mlisp_env_dump(
       env = &(exec->env);
    }
 
-   if( (MAUG_MHANDLE)NULL == env->data_h ) {
+   if(
+      NULL == env ||
+      (MAUG_MHANDLE)NULL == env->data_h
+   ) {
       error_printf( "no env present!" );
       retval = MERROR_EXEC;
       goto cleanup;
@@ -913,8 +924,15 @@ static ssize_t _mlisp_env_set_internal(
    }
 
    /* Add the node to the env. */
-   new_idx_out = mdata_vector_append(
-      env, &e, sizeof( struct MLISP_ENV_NODE ) );
+   if( MLISP_ENV_FLAG_BUILTIN == (MLISP_ENV_FLAG_BUILTIN & flags) ) {
+      /* Put it at the beginning. */
+      new_idx_out = mdata_vector_insert(
+         env, &e, 0, sizeof( struct MLISP_ENV_NODE ) );
+   } else {
+      /* Put it at the end. */
+      new_idx_out = mdata_vector_append(
+         env, &e, sizeof( struct MLISP_ENV_NODE ) );
+   }
 
 cleanup:
 
@@ -2309,14 +2327,17 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mlisp_check_state(
+ssize_t mlisp_count_builtins(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
 ) {
-   /* struct MDATA_VECTOR* env = NULL; */
    MERROR_RETVAL retval = MERROR_OK;
+   struct MDATA_VECTOR* env = NULL;
+   size_t builtins = 0;
+   int autolock = 0;
+   size_t i = 0;
+   struct MLISP_ENV_NODE* e = NULL;
 
    /* Prepare env for mlisp_env_get() below. */
-   /*
    if(
       MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
    ) {
@@ -2324,21 +2345,52 @@ MERROR_RETVAL mlisp_check_state(
    } else {
       env = &(exec->env);
    }
-   */
+
+   if( 0 == mdata_vector_ct( env ) ) {
+      goto cleanup;
+   }
+
+   if( !mdata_vector_is_locked( env ) ) {
+      mdata_vector_lock( env );
+      autolock = 1;
+   }
+
+   for( i = 0 ; mdata_vector_ct( env ) > i ; i++ ) {
+      e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
+      assert( NULL != e );
+      if( MLISP_ENV_FLAG_BUILTIN == (MLISP_ENV_FLAG_BUILTIN & e->flags) ) {
+         builtins++;
+      } else {
+         /* Non-builtin found, and builtins are at the beginning! */
+         break;
+      }
+   }
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      builtins = merror_retval_to_sz( retval );
+   }
+
+   if( autolock ) {
+      mdata_vector_unlock( env );
+   }
+
+   return builtins;
+}
+
+/* === */
+
+MERROR_RETVAL mlisp_check_state(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
 
    if( !mlisp_check_ast( parser  ) ) {
       error_printf( "no valid AST present; could not exec!" );
       retval = MERROR_EXEC;
       goto cleanup;
    }
-
-   /*
-   if( NULL == env->data_bytes ) {
-      error_printf( "no valid env present; could not exec!" );
-      retval = MERROR_EXEC;
-      goto cleanup;
-   }
-   */
 
    if(
       MLISP_EXEC_FLAG_INITIALIZED != (exec->flags & MLISP_EXEC_FLAG_INITIALIZED)
@@ -2553,6 +2605,83 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mlisp_exec_add_env_builtins(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   retval = mlisp_env_set(
+      parser, exec, "gdefine", 7, MLISP_TYPE_CB, _mlisp_env_cb_define,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_DEFINE_GLOBAL );
+   maug_cleanup_if_not_ok();
+
+   retval = mlisp_env_set(
+      parser, exec, "and", 3, MLISP_TYPE_CB, _mlisp_env_cb_ano,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_AND );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "or", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_OR );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "define", 6, MLISP_TYPE_CB, _mlisp_env_cb_define,
+      NULL, MLISP_ENV_FLAG_BUILTIN );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "*", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MUL );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "+", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_ADD );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "/", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_DIV );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "%", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MOD );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "<", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_LT );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, ">", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_GT );
+   maug_cleanup_if_not_ok();
+   
+   retval = mlisp_env_set(
+      parser, exec, "=", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
+      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_EQ );
+   maug_cleanup_if_not_ok();
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mlisp_exec_init(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, uint8_t flags
 ) {
@@ -2653,57 +2782,7 @@ MERROR_RETVAL mlisp_exec_init(
       goto cleanup;
    }
 
-   retval = mlisp_env_set(
-      parser, exec, "gdefine", 7, MLISP_TYPE_CB, _mlisp_env_cb_define,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_DEFINE_GLOBAL );
-   retval = mlisp_env_set(
-      parser, exec, "and", 3, MLISP_TYPE_CB, _mlisp_env_cb_ano,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_AND );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "or", 2, MLISP_TYPE_CB, _mlisp_env_cb_ano,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_OR );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
-      NULL, MLISP_ENV_FLAG_BUILTIN );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
-      NULL, MLISP_ENV_FLAG_BUILTIN );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "define", 6, MLISP_TYPE_CB, _mlisp_env_cb_define,
-      NULL, MLISP_ENV_FLAG_BUILTIN );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "*", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MUL );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "+", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_ADD );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "/", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_DIV );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "%", 1, MLISP_TYPE_CB, _mlisp_env_cb_arithmetic,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ARI_MOD );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "<", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_LT );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, ">", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_GT );
-   maug_cleanup_if_not_ok();
-   retval = mlisp_env_set(
-      parser, exec, "=", 1, MLISP_TYPE_CB, _mlisp_env_cb_cmp,
-      NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_CMP_EQ );
-   maug_cleanup_if_not_ok();
+   retval = mlisp_exec_add_env_builtins( parser, exec );
 
 cleanup:
 

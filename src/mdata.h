@@ -160,6 +160,9 @@ void mdata_strpool_free( struct MDATA_STRPOOL* strpool );
 ssize_t mdata_vector_append(
    struct MDATA_VECTOR* v, const void* item, size_t item_sz );
 
+ssize_t mdata_vector_insert(
+   struct MDATA_VECTOR* v, const void* item, ssize_t idx, size_t item_sz );
+
 /**
  * \relates MDATA_VECTOR
  * \brief Remove item at the given index, shifting subsequent items up by 1.
@@ -363,17 +366,21 @@ ssize_t mdata_strpool_find(
       ) {
          /* String found. Advance past the size before returning. */
          i += sizeof( size_t );
+#if MDATA_TRACE_LVL > 0
          debug_printf( MDATA_TRACE_LVL,
             "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\"",
             i, *p_str_iter_sz, &(strpool_p[i]) );
+#endif /* MDATA_TRACE_LVL */
 
          goto cleanup;
+#if MDATA_TRACE_LVL > 0
       } else {
          debug_printf( MDATA_TRACE_LVL,
             "skipping strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT
                " bytes): \"%s\"",
             i + sizeof( size_t ), *p_str_iter_sz,
                &(strpool_p[i + sizeof( size_t )]) );
+#endif /* MDATA_TRACE_LVL */
       }
       i += *p_str_iter_sz;
    }
@@ -461,10 +468,12 @@ ssize_t mdata_strpool_append(
    alloc_sz = sizeof( size_t ) + str_sz + 1 /* NULL */ + padding;
    assert( 0 == alloc_sz % sizeof( size_t ) );
 
+#if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
       "adding size_t (" SIZE_T_FMT " bytes) + string %s (" SIZE_T_FMT
          " bytes) + 1 NULL + " SIZE_T_FMT " bytes padding to strpool...",
       sizeof( size_t ), str, str_sz, padding );
+#endif /* MDATA_TRACE_LVL */
 
    retval = mdata_strpool_alloc( strpool, alloc_sz );
    maug_cleanup_if_not_ok();
@@ -472,9 +481,11 @@ ssize_t mdata_strpool_append(
    maug_mlock( strpool->str_h, strpool_p );
    maug_cleanup_if_null_alloc( char*, strpool_p );
 
+#if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
       "strpool (" SIZE_T_FMT " bytes) locked to: %p",
       strpool->str_sz, strpool_p );
+#endif /* MDATA_TRACE_LVL */
 
    /* Add this string at the end of the string table. */
    maug_strncpy( &(strpool_p[strpool->str_sz + sizeof( size_t )]), str, str_sz );
@@ -487,9 +498,10 @@ ssize_t mdata_strpool_append(
 
    idx_p_out = strpool->str_sz + sizeof( size_t );
 
-   debug_printf(
-      MDATA_TRACE_LVL, "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL, "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
       strpool->str_sz, &(strpool_p[idx_p_out]) );
+#endif /* MDATA_TRACE_LVL */
 
    /* Set the string table cursor to the next available spot. */
    strpool->str_sz += alloc_sz;
@@ -516,9 +528,11 @@ MERROR_RETVAL mdata_strpool_alloc(
    MAUG_MHANDLE str_h_new = (MAUG_MHANDLE)NULL;
 
    if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
+#if MDATA_TRACE_LVL > 0
       debug_printf(
          MDATA_TRACE_LVL, "creating string table of " SIZE_T_FMT " chars...",
          alloc_sz );
+#endif /* MDATA_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == strpool->str_h );
       strpool->str_h = maug_malloc( alloc_sz, 1 );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
@@ -527,9 +541,11 @@ MERROR_RETVAL mdata_strpool_alloc(
 
    } else if( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
       while( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
+#if MDATA_TRACE_LVL > 0
          debug_printf(
             MDATA_TRACE_LVL, "enlarging string table to " SIZE_T_FMT "...",
             strpool->str_sz_max * 2 );
+#endif /* MDATA_TRACE_LVL */
          maug_mrealloc_test(
             str_h_new, strpool->str_h, strpool->str_sz_max, (size_t)2 );
          strpool->str_sz_max *= 2;
@@ -573,9 +589,11 @@ ssize_t mdata_vector_append(
 
    if( NULL != item ) {
       /* Copy provided item. */
+#if MDATA_TRACE_LVL > 0
       debug_printf(
          MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
          idx_out );
+#endif /* MDATA_TRACE_LVL */
 
       memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
    }
@@ -597,6 +615,74 @@ cleanup:
 
 /* === */
 
+ssize_t mdata_vector_insert(
+   struct MDATA_VECTOR* v, const void* item, ssize_t idx, size_t item_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t i = 0;
+
+   assert( 0 <= idx );
+
+   if( 0 < v->item_sz && item_sz != v->item_sz ) {
+      error_printf( "attempting to add item of " SIZE_T_FMT " bytes to vector, "
+         "but vector is already sized for " SIZE_T_FMT "-byte items!",
+         item_sz, v->item_sz );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   if( idx > v->ct ) {
+      error_printf( "attempting to insert beyond end of vector!" );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   mdata_vector_alloc( v, item_sz, v->ct_step );
+
+   /* Lock the vector to work in it a bit. */
+   mdata_vector_lock( v );
+
+   for( i = v->ct ; idx < i ; i-- ) {
+#if MDATA_TRACE_LVL > 0
+      debug_printf( MDATA_TRACE_LVL,
+         "copying vector item " SSIZE_T_FMT " to " SSIZE_T_FMT "...",
+         i - 1, i );
+#endif /* MDATA_TRACE_LVL */
+      memcpy(
+         _mdata_vector_item_ptr( v, i ),
+         _mdata_vector_item_ptr( v, i - 1),
+         item_sz );
+   }
+
+#if MDATA_TRACE_LVL > 0
+   debug_printf(
+      MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT, idx );
+#endif /* MDATA_TRACE_LVL */
+   if( NULL != item ) {
+      /* Copy provided item. */
+      memcpy( _mdata_vector_item_ptr( v, idx ), item, item_sz );
+   } else {
+      /* Just blank the given index. */
+      maug_mzero( _mdata_vector_item_ptr( v, idx ), item_sz );
+   }
+
+   v->ct++;
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      error_printf( "error adding to vector: %d", retval );
+      idx = retval * -1;
+      assert( 0 > idx );
+   }
+
+   mdata_vector_unlock( v );
+
+   return idx;
+}
+
+/* === */
+
 MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -613,16 +699,20 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
       goto cleanup;
    }
 
+#if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL, "removing vector item: " SIZE_T_FMT, idx );
+#endif /* MDATA_TRACE_LVL */
 
    assert( 0 < v->item_sz );
 
    mdata_vector_lock( v );
 
    for( i = idx ; v->ct > i + 1 ; i++ ) {
+#if MDATA_TRACE_LVL > 0
       debug_printf( MDATA_TRACE_LVL,
          "shifting " SIZE_T_FMT "-byte vector item " SIZE_T_FMT " up by 1...",
          v->item_sz, i );
+#endif /* MDATA_TRACE_LVL */
       memcpy(
          &(v->data_bytes[i * v->item_sz]),
          &(v->data_bytes[(i + 1) * v->item_sz]),
@@ -642,9 +732,11 @@ cleanup:
 
 void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
 
+#if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
       "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       idx, v->ct );
+#endif /* MDATA_TRACE_LVL */
 
    assert( 0 == v->ct || NULL != v->data_bytes );
 
@@ -674,10 +766,11 @@ MERROR_RETVAL mdata_vector_copy(
    v_dest->ct_max = v_src->ct_max;
    v_dest->ct = v_src->ct;
    v_dest->item_sz = v_src->item_sz;
-   debug_printf(
-      MDATA_TRACE_LVL,
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL,
       "copying " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
       v_src->ct_max, v_src->item_sz );
+#endif /* MDATA_TRACE_LVL */
    assert( (MAUG_MHANDLE)NULL == v_dest->data_h );
    v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
@@ -718,19 +811,24 @@ MERROR_RETVAL mdata_vector_alloc(
       assert( 0 == v->ct_max );
 
       if( 0 < item_ct_init ) {
+#if MDATA_TRACE_LVL > 0
          debug_printf( MDATA_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
             item_ct_init );
+#endif /* MDATA_TRACE_LVL */
          v->ct_step = item_ct_init;
       } else if( 0 == v->ct_step ) {
+#if MDATA_TRACE_LVL > 0
          debug_printf( MDATA_TRACE_LVL, "setting step sz: %d",
             MDATA_VECTOR_INIT_STEP_SZ );
+#endif /* MDATA_TRACE_LVL */
          v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
       }
       v->ct_max = v->ct_step;
-      debug_printf(
-         MDATA_TRACE_LVL,
+#if MDATA_TRACE_LVL > 0
+      debug_printf( MDATA_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
          v->ct_max, item_sz );
+#endif /* MDATA_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == v->data_h );
       v->data_h = maug_malloc( v->ct_max, item_sz );
       v->item_sz = item_sz;
@@ -753,9 +851,10 @@ MERROR_RETVAL mdata_vector_alloc(
       }
 
       /* Perform the resize. */
-      debug_printf(
-         MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
+#if MDATA_TRACE_LVL > 0
+      debug_printf( MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
          new_ct );
+#endif /* MDATA_TRACE_LVL */
       maug_mrealloc_test( data_h_new, v->data_h, new_ct, item_sz );
       
       /* Zero out the new space. */
