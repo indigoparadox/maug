@@ -207,6 +207,9 @@ MERROR_RETVAL mlisp_exec_set_global_env(
 
 void mlisp_exec_free( struct MLISP_EXEC_STATE* exec );
 
+MERROR_RETVAL mlisp_deserialize_prepare_EXEC_STATE(
+   struct MLISP_EXEC_STATE* exec, size_t i );
+
 #define _MLISP_TYPE_TABLE_PUSH_PROTO( idx, ctype, name, const_name, fmt ) \
    MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
       struct MLISP_EXEC_STATE* exec, ctype i );
@@ -471,8 +474,19 @@ MERROR_RETVAL mlisp_env_dump(
    } else {
       env = &(exec->env);
    }
-   assert( (MAUG_MHANDLE)NULL != env->data_h );
-   assert( (MAUG_MHANDLE)NULL != parser->strpool.str_h );
+
+   if( (MAUG_MHANDLE)NULL == env->data_h ) {
+      error_printf( "no env present!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
+   if( (MAUG_MHANDLE)NULL != parser->strpool.str_h ) {
+      error_printf( "no env strpool present!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
+
    mdata_strpool_lock( &(parser->strpool), strpool );
    assert( NULL != strpool );
    mdata_vector_lock( env );
@@ -2751,6 +2765,19 @@ void mlisp_exec_free( struct MLISP_EXEC_STATE* exec ) {
 #if MLISP_EXEC_TRACE_LVL > 0
    debug_printf( MLISP_EXEC_TRACE_LVL, "exec destroyed!" );
 #endif /* MLISP_EXEC_TRACE_LVL */
+}
+
+/* === */
+
+MERROR_RETVAL mlisp_deserialize_prepare_EXEC_STATE(
+   struct MLISP_EXEC_STATE* exec, size_t i
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   /* TODO: Re-add built-in function definitions. */
+   /* TODO: Provide mechanism for program using maug to re-add function
+    *       definitions!
+    */
+   return retval;
 }
 
 #else

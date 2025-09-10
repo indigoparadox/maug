@@ -10,7 +10,7 @@
 #define PARSE_STACK_DEPTH 128
 #define PARSE_FIELDS_MAX 255
 #define PARSE_DEFINES_MAX 255
-#define PARSE_SKIP_FLAGS_CT 255
+#define PARSE_SKIP_FLAGS_CT_MAX 255
 
 /* !\brief These are the types we can handle by default. These can be expanded
  *         in msercust.h.
@@ -73,6 +73,7 @@
 #define PARSE_MODE_COMMENT_VECTOR_TYPE 13
 #define PARSE_MODE_IGNORE 14
 #define PARSE_MODE_COMMENT_SKIP_FLAG 15
+#define PARSE_MODE_COMMENT_PREPARE_CB 16
 
 #ifdef DEBUG
 #  define debug_int( name_in, int_in ) \
@@ -124,8 +125,9 @@ struct STRUCT_PARSED {
    size_t name_sz;
    size_t fields_ct;
    struct STRUCT_PARSED_FIELD fields[PARSE_FIELDS_MAX];
-   char skip_flags[PARSE_SKIP_FLAGS_CT][PARSE_TOKEN_SZ + 1];
+   char skip_flags[PARSE_SKIP_FLAGS_CT_MAX][PARSE_TOKEN_SZ + 1];
    size_t skip_flags_ct;
+   char prepare_cb[PARSE_TOKEN_SZ + 1];
    int valid;
    int is_union;
    int ready;
@@ -492,6 +494,7 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       }
    }
 
+   /* Prepare the empty structs. */
    printf(
       "   maug_mzero( p_ser_struct, sizeof( struct %s ) * array );\n",
       parsed->name );
@@ -539,6 +542,14 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
          "struct_sz );\n"
       "#endif /* MSERIALIZE_TRACE_LVL */\n",
       parsed->name );
+
+   /* Preprocess the currently-empty struct with the prepare_cb if one is
+    * defined.
+    */
+   if( '\0' != parsed->prepare_cb[0] ) {
+      printf( "      retval = %s( p_ser_struct, i );\n", parsed->prepare_cb );
+      printf( "      maug_cleanup_if_not_ok();\n" );
+   }
 
    /* TODO: Emit reader function with running size_t that stops parsing when
     *       the size_t matches the size of the object that was saved.
@@ -877,6 +888,11 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             parse_push_mode( parser, PARSE_MODE_COMMENT_SKIP_FLAG );
 
          } else if(
+            0 == strncmp( parser->token, "serial_prepare_cb", PARSE_TOKEN_SZ )
+         ) {
+            parse_push_mode( parser, PARSE_MODE_COMMENT_PREPARE_CB );
+
+         } else if(
             0 == strncmp( parser->token, "vector_type", PARSE_TOKEN_SZ )
          ) {
             parse_push_mode( parser, PARSE_MODE_COMMENT_VECTOR_TYPE );
@@ -897,7 +913,16 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
          parser->parsed.skip_flags_ct++;
          debug_int_str( "added skip flag", parser->parsed.skip_flags_ct,
             parser->parsed.skip_flags[parser->parsed.skip_flags_ct - 1] );
-         assert( parser->parsed.skip_flags_ct < PARSE_SKIP_FLAGS_CT );
+         assert( parser->parsed.skip_flags_ct < PARSE_SKIP_FLAGS_CT_MAX );
+         parse_pop_mode( parser );
+         break;
+
+      case PARSE_MODE_COMMENT_PREPARE_CB:
+         strncpy(
+            parser->parsed.prepare_cb,
+            parser->token,
+            PARSE_TOKEN_SZ );
+         debug_str( "added prepare cb", parser->parsed.prepare_cb );
          parse_pop_mode( parser );
          break;
 
