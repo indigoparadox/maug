@@ -2,11 +2,23 @@
 # vim: ft=make noexpandtab
 
 CHECK_C_FILES := \
-   check/check.c \
+   check/maugchck.c \
    check/chkmfmt.c \
-	check/chkrtil.c
+   check/chkmlsp.c \
+   check/chkmdat.c
 
-CFLAGS_CHECK := -Isrc -DMAUG_OS_UNIX -DMAUG_NO_RETRO -DDEBUG -DDEBUG_LOG -DDEBUG_THRESHOLD=1 -DRETROFLAT_OS_UNIX
+CFLAGS_CHECK := \
+	-Isrc \
+	-Iapi/mem/unix \
+	-Iapi/file/unix \
+	-Iapi/log/unix \
+	-DMAUG_NO_RETRO \
+	-DDEBUG \
+	-DDEBUG_LOG \
+	-DDEBUG_THRESHOLD=1 \
+	-DRETROFLAT_OS_UNIX \
+	-DMFILE_TRACE_LVL=1
+
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1
 

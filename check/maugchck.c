@@ -1,8 +1,7 @@
 
 #define MAUG_C
-#include <maug.h>
 
-#include <check.h>
+#include "maugchck.h"
 
 #define main_add_test_proto( suite_name ) \
    Suite* suite_name ## _suite();
@@ -16,13 +15,15 @@
    srunner_free( sr_ ## suite_name );
 
 main_add_test_proto( mfmt )
-main_add_test_proto( rtil )
+main_add_test_proto( mlsp )
+main_add_test_proto( mdat )
 
 int main( void ) {
    int number_failed = 0;
 
    main_add_test( mfmt );
-   main_add_test( rtil );
+   main_add_test( mlsp );
+   main_add_test( mdat );
 
    return( number_failed == 0 ) ? 0 : 1;
 }

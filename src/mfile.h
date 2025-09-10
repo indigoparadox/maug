@@ -473,7 +473,7 @@ MERROR_RETVAL mfile_mem_write_block(
 /* === */
 
 MERROR_RETVAL mfile_lock_buffer(
-   MAUG_MHANDLE handle, off_t handle_sz,  mfile_t* p_file
+   MAUG_MHANDLE handle, off_t handle_sz, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
