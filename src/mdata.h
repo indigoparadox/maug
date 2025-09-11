@@ -203,8 +203,7 @@ MERROR_RETVAL mdata_table_set(
    struct MDATA_TABLE* t, const char* key, size_t key_sz,
    void* value, size_t value_sz );
 
-MERROR_RETVAL mdata_table_get_void(
-   struct MDATA_TABLE* t, const char* key, void** value_out, size_t value_sz );
+void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
 
 /*! \} */
 
@@ -338,6 +337,16 @@ MERROR_RETVAL mdata_table_get_void(
 #define mdata_vector_get_flag( v, flag ) ((flag) == ((v)->flags & (flag)))
 
 /*! \} */ /* mdata_vector */
+
+/**
+ * \addtogroup mdata_table
+ * \{
+ */
+
+#define mdata_table_get( t, key, type ) \
+   ((type*)mdata_table_get_void( t, key ))
+
+/*! \} */ /* mdata_table */
 
 #define mdata_retval( idx ) (0 > idx ? ((idx) * -1) : MERROR_OK)
 
@@ -920,14 +929,11 @@ MERROR_RETVAL mdata_table_set(
 
 /* === */
 
-MERROR_RETVAL mdata_table_get_void(
-   struct MDATA_TABLE* t, const char* key, void** value_out, size_t value_sz
-) {
+void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* c = NULL;
    size_t i = 0;
-
-   assert( NULL == *value_out );
+   void* value_out = NULL;
 
    mdata_vector_lock( &(t->data_cols[0]) );
    mdata_vector_lock( &(t->data_cols[1]) );
@@ -936,7 +942,7 @@ MERROR_RETVAL mdata_table_get_void(
       c = mdata_vector_get( &(t->data_cols[0]), i, char );
       assert( NULL != c );
       if( 0 == strncmp( key, c, t->data_cols[0].item_sz - 1 ) ) {
-         *value_out = mdata_vector_get_void( &(t->data_cols[1]), i );
+         value_out = mdata_vector_get_void( &(t->data_cols[1]), i );
          goto cleanup;
       }
    }
@@ -949,7 +955,11 @@ cleanup:
    mdata_vector_unlock( &(t->data_cols[0]) );
    mdata_vector_unlock( &(t->data_cols[1]) );
 
-   return retval;
+   if( MERROR_OK != retval ) {
+      value_out = NULL;
+   }
+
+   return value_out;
 }
 
 #endif /* MDATA_C */
