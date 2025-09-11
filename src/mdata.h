@@ -113,6 +113,7 @@ struct MDATA_VECTOR {
  */
 
 struct MDATA_TABLE {
+   uint16_t flags;
    struct MDATA_VECTOR data_cols[2];
    size_t key_sz;
 };
@@ -199,11 +200,15 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
  * \{
  */
 
+MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t );
+
 MERROR_RETVAL mdata_table_set(
    struct MDATA_TABLE* t, const char* key, size_t key_sz,
    void* value, size_t value_sz );
 
 void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
+
+void mdata_table_free( struct MDATA_TABLE* t );
 
 /*! \} */
 
@@ -343,8 +348,13 @@ void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
  * \{
  */
 
+#define mdata_table_is_locked( t ) \
+   (mdata_vector_is_locked( &((t)->data_cols[0]) ))
+
 #define mdata_table_get( t, key, type ) \
    ((type*)mdata_table_get_void( t, key ))
+
+#define mdata_table_ct( t ) ((t)->data_cols[0].ct)
 
 /*! \} */ /* mdata_table */
 
@@ -896,6 +906,23 @@ void mdata_vector_free( struct MDATA_VECTOR* v ) {
 
 /* === */
 
+MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   mdata_vector_lock( &(t->data_cols[0]) );
+   mdata_vector_lock( &(t->data_cols[1]) );
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      assert( !mdata_vector_is_locked( &(t->data_cols[0]) ) );
+   }
+
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL mdata_table_set(
    struct MDATA_TABLE* t, const char* key, size_t key_sz,
    void* value, size_t value_sz
@@ -935,8 +962,6 @@ void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
    size_t i = 0;
    void* value_out = NULL;
 
-   mdata_vector_lock( &(t->data_cols[0]) );
-   mdata_vector_lock( &(t->data_cols[1]) );
    for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
       /* TODO: Maybe strpool would be better for this? */
       c = mdata_vector_get( &(t->data_cols[0]), i, char );
@@ -952,9 +977,6 @@ void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
 
 cleanup:
    
-   mdata_vector_unlock( &(t->data_cols[0]) );
-   mdata_vector_unlock( &(t->data_cols[1]) );
-
    if( MERROR_OK != retval ) {
       value_out = NULL;
    }

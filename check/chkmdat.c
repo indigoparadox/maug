@@ -68,8 +68,12 @@ void vector_teardown() {
 START_TEST( test_mdat_table_set ) {
    int* p_int = NULL;
 
+   mdata_table_lock( &g_table_test_set );
+
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
    ck_assert_int_eq( *p_int, g_test_data[_i] );
+
+   mdata_table_unlock( &g_table_test_set );
 }
 END_TEST
 
