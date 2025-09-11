@@ -145,6 +145,10 @@ MERROR_RETVAL mlisp_env_dump(
 
 #endif /* MLISP_DUMP_ENABLED || DOCUMENTATION */
 
+struct MLISP_ENV_NODE* mlisp_env_get(
+   struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec,
+   const char* key );
+
 /**
  * \brief Get a node from the environment denoted by a string in the strpool.
  * \param parser 
@@ -228,6 +232,8 @@ MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_PUSH_PROTO )
    ((exec_child_idx) < (n)->ast_idx_children_sz)
 
 #ifdef MLISPE_C
+
+uint16_t g_mlispe_last_uid = 0;
 
 /**
  * \brief Increment/decrement/otherwise set the child node pointer (analogous
@@ -468,7 +474,7 @@ MERROR_RETVAL mlisp_env_dump(
 
 #  define _MLISP_TYPE_TABLE_DUMPE( idx, ctype, name, const_name, fmt ) \
       } else if( MLISP_TYPE_ ## const_name == e->type ) { \
-         debug_printf( MLISP_EXEC_TRACE_LVL, \
+         debug_printf( 1, \
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT \
                " \"%s\" (" #const_name "): " fmt, \
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.name ); \
@@ -492,11 +498,13 @@ MERROR_RETVAL mlisp_env_dump(
       goto cleanup;
    }
 
-   if( (MAUG_MHANDLE)NULL != parser->strpool.str_h ) {
+   /*
+   if( (MAUG_MHANDLE)NULL == parser->strpool.str_h ) {
       error_printf( "no env strpool present!" );
       retval = MERROR_EXEC;
       goto cleanup;
    }
+   */
 
    mdata_strpool_lock( &(parser->strpool), strpool );
    assert( NULL != strpool );
@@ -516,30 +524,30 @@ MERROR_RETVAL mlisp_env_dump(
       MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DUMPE );
       /* Handle special exceptions. */
       } else if( MLISP_TYPE_STR == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT " \"%s\" (STR): %s",
             exec->uid, i, &(strpool[e->name_strpool_idx]),
             &(strpool[e->value.strpool_idx]) );
 
       } else if( MLISP_TYPE_CB == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT " \"%s\" (CB): %p",
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.cb );
 
       } else if( MLISP_TYPE_LAMBDA == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (LAMBDA): " SIZE_T_FMT,
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.lambda );
 
       } else if( MLISP_TYPE_ARGS_S == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (ARGS_S): " SIZE_T_FMT,
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.args_start );
 
       } else if( MLISP_TYPE_ARGS_E == e->type ) {
-         debug_printf( MLISP_EXEC_TRACE_LVL,
+         debug_printf( 1,
             "%u: " MLISP_TRACE_SIGIL " env " SIZE_T_FMT
                " \"%s\" (ARGS_E): " SIZE_T_FMT,
             exec->uid, i, &(strpool[e->name_strpool_idx]), e->value.args_end );
@@ -1497,6 +1505,9 @@ cleanup:
 
 /* === */
 
+#ifndef MAUG_NO_RETRO
+/* TODO: Define this in retroflat in line with dependency guidelines. */
+
 static MERROR_RETVAL _mlisp_env_cb_random(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, size_t n_idx,
    size_t args_c, void* cb_data, uint8_t flags
@@ -1528,6 +1539,8 @@ cleanup:
 
    return retval;
 }
+
+#endif /* !MAUG_NO_RETRO */
 
 /* === */
 
@@ -2625,10 +2638,13 @@ MERROR_RETVAL mlisp_exec_add_env_builtins(
       NULL, MLISP_ENV_FLAG_BUILTIN | MLISP_ENV_FLAG_ANO_OR );
    maug_cleanup_if_not_ok();
    
+#ifndef MAUG_NO_RETRO
+/* TODO: Define this in retroflat in line with dependency guidelines. */
    retval = mlisp_env_set(
       parser, exec, "random", 6, MLISP_TYPE_CB, _mlisp_env_cb_random,
       NULL, MLISP_ENV_FLAG_BUILTIN );
    maug_cleanup_if_not_ok();
+#endif /* !MAUG_NO_RETRO */
    
    retval = mlisp_env_set(
       parser, exec, "if", 2, MLISP_TYPE_CB, _mlisp_env_cb_if,
@@ -2694,7 +2710,7 @@ MERROR_RETVAL mlisp_exec_init(
    maug_mzero( exec, sizeof( struct MLISP_EXEC_STATE ) );
 
    exec->flags = flags;
-   exec->uid = retroflat_get_rand();
+   exec->uid = g_mlispe_last_uid++;
 
    /* Setup lambda visit stack so it can be locked on first step. */
    append_retval = mdata_vector_append(

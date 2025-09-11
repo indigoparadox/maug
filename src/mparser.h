@@ -100,14 +100,18 @@ struct MPARSER {
       SIZE_T_FMT ", state: %u", c, (parser)->i, mparser_pstate( parser ) ); \
    retval = MERROR_PARSE;
 
-#define mparser_wait( parser ) \
-   if( \
-      NULL != (parser)->wait_cb && \
-      retroflat_get_ms() >= (parser)->wait_next \
-   ) { \
-      (parser)->wait_next = retroflat_get_ms() + MPARSER_WAIT_INC; \
-      retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
-   }
+#ifndef MAUG_NO_RETRO
+#  define mparser_wait( parser ) \
+      if( \
+         NULL != (parser)->wait_cb && \
+         retroflat_get_ms() >= (parser)->wait_next \
+      ) { \
+         (parser)->wait_next = retroflat_get_ms() + MPARSER_WAIT_INC; \
+         retval = (parser)->wait_cb( retval, (parser), (parser)->wait_data ); \
+      }
+#else
+#  define mparser_wait( parser )
+#endif
 
 mparser_pstate_t mparser_pstate_pop(
    const char* ptype, struct MPARSER* parser

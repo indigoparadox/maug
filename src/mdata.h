@@ -202,6 +202,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t );
 
+MERROR_RETVAL mdata_table_unlock( struct MDATA_TABLE* t );
+
 MERROR_RETVAL mdata_table_set(
    struct MDATA_TABLE* t, const char* key, size_t key_sz,
    void* value, size_t value_sz );
@@ -916,6 +918,23 @@ cleanup:
 
    if( MERROR_OK != retval ) {
       assert( !mdata_vector_is_locked( &(t->data_cols[0]) ) );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mdata_table_unlock( struct MDATA_TABLE* t ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   mdata_vector_unlock( &(t->data_cols[0]) );
+   mdata_vector_unlock( &(t->data_cols[1]) );
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
    }
 
    return retval;
