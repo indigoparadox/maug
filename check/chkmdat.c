@@ -6,8 +6,8 @@ struct MDATA_VECTOR g_vector_test_insert;
 
 struct MDATA_TABLE g_table_test_set;
 
-char g_test_keys[8][4] = {
-   "aaa", "bbb", "ccc", "ddd", "eee", "fff", "ggg", "hhh" };
+char g_test_keys[8][8] = {
+   "a", "bb", "ccc", "dddd", "eeeee", "ffffff", "ggggggg", "hhhhhhhh" };
 int g_test_data[8] = { 16, 32, 64, 128, 88, 512, 1024, 2048 };
 
 START_TEST( test_mdat_vector_append ) {
@@ -79,6 +79,8 @@ void vector_teardown() {
 START_TEST( test_mdat_table_set ) {
    int* p_int = NULL;
 
+   debug_printf( MDATA_TRACE_LVL, "test_mdat_table_set" );
+
    mdata_table_lock( &g_table_test_set );
 
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
@@ -124,13 +126,41 @@ START_TEST( test_mdat_table_lockunlock ) {
 }
 END_TEST
 
+START_TEST( test_mdat_table_overwrite ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MDATA_TABLE table_test;
+   int i = 0;
+   int* p_int;
+
+   maug_mzero( &table_test, sizeof( struct MDATA_TABLE ) );
+
+   ck_assert_int_eq( mdata_table_ct( &table_test ), 0 );
+
+   for( i = 0 ; 10 > i ; i++ ) {
+      retval = mdata_table_set( &table_test, "xyz", &i, sizeof( int ) );
+      ck_assert_int_eq( MERROR_OK, retval );
+   }
+   i = 0;
+
+   ck_assert_int_eq( mdata_table_ct( &table_test ), 1 );
+
+   mdata_table_lock( &table_test );
+
+   p_int = mdata_table_get( &table_test, "xyz", int );
+   ck_assert_int_eq( *p_int, 9 );
+
+cleanup:
+
+   mdata_table_unlock( &table_test );
+}
+
 void table_setup() {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
    for( i = 0 ; 8 > i ; i++ ) {
       retval = mdata_table_set(
-         &g_table_test_set, g_test_keys[i], 3,
+         &g_table_test_set, g_test_keys[i],
          &(g_test_data[i]), sizeof( int ) );
       ck_assert_int_eq( MERROR_OK, retval );
    }
@@ -165,6 +195,7 @@ Suite* mdat_suite( void ) {
    tcase_add_loop_test( tc_table, test_mdat_table_set, 0, 8 );
    tcase_add_loop_test( tc_table, test_mdat_table_unset, 0, 8 );
    tcase_add_loop_test( tc_table, test_mdat_table_lockunlock, 0, 8 );
+   tcase_add_test( tc_table, test_mdat_table_overwrite );
 
    suite_add_tcase( s, tc_table );
 
