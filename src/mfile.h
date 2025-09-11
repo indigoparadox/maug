@@ -477,7 +477,7 @@ MERROR_RETVAL mfile_lock_buffer(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 1,
+   debug_printf( MFILE_SEEK_TRACE_LVL,
       "locking handle %p as file %p (" OFF_T_FMT " bytes)...",
       handle, p_file, handle_sz );
 

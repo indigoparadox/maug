@@ -14,16 +14,16 @@
    number_failed += srunner_ntests_failed( sr_ ## suite_name ); \
    srunner_free( sr_ ## suite_name );
 
+main_add_test_proto( mdat )
 main_add_test_proto( mfmt )
 main_add_test_proto( mlsp )
-main_add_test_proto( mdat )
 
 int main( void ) {
    int number_failed = 0;
 
+   main_add_test( mdat );
    main_add_test( mfmt );
    main_add_test( mlsp );
-   main_add_test( mdat );
 
    return( number_failed == 0 ) ? 0 : 1;
 }

@@ -74,6 +74,9 @@ void mlisp_setup() {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
+   maug_mzero( &g_parser, sizeof( struct MLISP_PARSER ) );
+   maug_mzero( &g_exec, sizeof( struct MLISP_EXEC_STATE ) );
+
    /* Setup parser. */
    retval = mlisp_parser_init( &g_parser );
    ck_assert_int_eq( retval, MERROR_OK );

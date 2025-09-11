@@ -3,9 +3,9 @@
 
 CHECK_C_FILES := \
    check/maugchck.c \
+   check/chkmdat.c \
    check/chkmfmt.c \
-   check/chkmlsp.c \
-   check/chkmdat.c
+   check/chkmlsp.c
 
 CFLAGS_CHECK := \
 	-Isrc \
@@ -17,10 +17,11 @@ CFLAGS_CHECK := \
 	-DDEBUG_LOG \
 	-DDEBUG_THRESHOLD=1 \
 	-DRETROFLAT_OS_UNIX \
-	-DMFILE_TRACE_LVL=1 \
 	-DMLISP_DUMP_ENABLED
 
+#CFLAGS_CHECK += -DMFILE_TRACE_LVL=1
 #CFLAGS_CHECK += -DMLISP_EXEC_TRACE_LVL=1
+#CFLAGS_CHECK += -DMDATA_TRACE_LVL=1
 
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1

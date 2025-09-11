@@ -42,6 +42,17 @@ cleanup:
 }
 END_TEST
 
+START_TEST( test_mdat_vector_lockunlock ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ck_assert( !mdata_vector_is_locked( &g_vector_test_append ) );
+   mdata_vector_lock( &g_vector_test_append );
+   ck_assert( mdata_vector_is_locked( &g_vector_test_append ) );
+   mdata_vector_unlock( &g_vector_test_append );
+   ck_assert( !mdata_vector_is_locked( &g_vector_test_append ) );
+cleanup:
+   return;
+}
+END_TEST
 void vector_setup() {
    size_t i = 0;
    ssize_t idx = 0;
@@ -77,6 +88,42 @@ START_TEST( test_mdat_table_set ) {
 }
 END_TEST
 
+START_TEST( test_mdat_table_unset ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int* p_int = NULL;
+
+   mdata_table_lock( &g_table_test_set );
+
+   p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
+   ck_assert_int_eq( *p_int, g_test_data[_i] );
+
+   /* Only remove the special case (index 3). */
+   retval = mdata_table_unset( &g_table_test_set, g_test_keys[3] );
+   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert( mdata_table_is_locked( &g_table_test_set ) );
+
+   p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
+
+   /* See if *only* the special case was removed. */
+   if( 3 == _i ) {
+      ck_assert_ptr_eq( p_int, NULL );
+   } else {
+      ck_assert_ptr_ne( p_int, NULL );
+   }
+
+   mdata_table_unlock( &g_table_test_set );
+}
+END_TEST
+
+START_TEST( test_mdat_table_lockunlock ) {
+   ck_assert( !mdata_table_is_locked( &g_table_test_set ) );
+   mdata_table_lock( &g_table_test_set );
+   ck_assert( mdata_table_is_locked( &g_table_test_set ) );
+   mdata_table_unlock( &g_table_test_set );
+   ck_assert( !mdata_table_is_locked( &g_table_test_set ) );
+}
+END_TEST
+
 void table_setup() {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
@@ -98,7 +145,7 @@ Suite* mdat_suite( void ) {
    TCase* tc_vector;
    TCase* tc_table;
 
-   s = suite_create( "mlsp" );
+   s = suite_create( "mdat" );
 
    tc_vector = tcase_create( "Vector" );
 
@@ -116,6 +163,8 @@ Suite* mdat_suite( void ) {
    tcase_add_checked_fixture( tc_table, table_setup, table_teardown );
 
    tcase_add_loop_test( tc_table, test_mdat_table_set, 0, 8 );
+   tcase_add_loop_test( tc_table, test_mdat_table_unset, 0, 8 );
+   tcase_add_loop_test( tc_table, test_mdat_table_lockunlock, 0, 8 );
 
    suite_add_tcase( s, tc_table );
 

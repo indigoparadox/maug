@@ -208,6 +208,9 @@ MERROR_RETVAL mdata_table_set(
    struct MDATA_TABLE* t, const char* key, size_t key_sz,
    void* value, size_t value_sz );
 
+MERROR_RETVAL mdata_table_unset(
+   struct MDATA_TABLE* t, const char* key );
+
 void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
 
 void mdata_table_free( struct MDATA_TABLE* t );
@@ -708,7 +711,7 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   if( NULL != v->data_bytes ) {
+   if( mdata_vector_is_locked( v ) ) {
       error_printf( "vector cannot be resized while locked!" );
       retval = MERROR_ALLOC;
       goto cleanup;
@@ -970,6 +973,63 @@ MERROR_RETVAL mdata_table_set(
 
    /* TODO: Set retval! */
 
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mdata_table_unset(
+   struct MDATA_TABLE* t, const char* key
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   char* c = NULL;
+   size_t i = 0;
+   void* value_out = NULL;
+   int autolock = 0;
+
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL, "unsetting table key: %s", key );
+#endif /* MDATA_TRACE_LVL */
+
+   /* Autolock is fine to have for unset, as there is no returned pointer to
+    * preserve.
+    */
+   if( !mdata_table_is_locked( t ) ) {
+#if MDATA_TRACE_LVL > 0
+      debug_printf( MDATA_TRACE_LVL, "autolocking table vectors" );
+#endif /* MDATA_TRACE_LVL */
+      assert( !mdata_vector_is_locked( &(t->data_cols[0]) ) );
+      assert( !mdata_vector_is_locked( &(t->data_cols[1]) ) );
+      mdata_table_lock( t );
+      autolock = 1;
+   }
+
+   for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
+      /* TODO: Maybe strpool would be better for this? */
+      c = mdata_vector_get( &(t->data_cols[0]), i, char );
+      assert( NULL != c );
+      if( 0 == strncmp( key, c, t->data_cols[0].item_sz - 1 ) ) {
+         /* We're either autolocked or locked manually... but we're locked by
+          * now either way!
+          */
+         assert( mdata_table_is_locked( t ) );
+         mdata_table_unlock( t );
+
+         /* Remove the item. */
+         mdata_vector_remove( &(t->data_cols[0]), i );
+         mdata_vector_remove( &(t->data_cols[1]), i );
+         goto cleanup;
+      }
+   }
+
+cleanup:
+
+   if( autolock && mdata_table_is_locked( t ) ) {
+      mdata_table_unlock( t );
+   } else if( !autolock && !mdata_table_is_locked( t ) ) {
+      mdata_table_lock( t );
+   }
+   
    return retval;
 }
 
