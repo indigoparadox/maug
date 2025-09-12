@@ -205,6 +205,8 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
 
 /*! \} */ /* mdata_vector */
 
+uint32_t mdata_hash( const char* token, size_t token_sz );
+
 /**
  * \addtogroup mdata_table
  * \{
@@ -929,6 +931,28 @@ void mdata_vector_free( struct MDATA_VECTOR* v ) {
 
 /* === */
 
+uint32_t mdata_hash( const char* token, size_t token_sz ) {
+   uint32_t hash_out = 2166136261u; /* Arbitrary fixed prime. */
+   size_t i = 0;
+   char c = 0;
+
+   for( i = 0 ; token_sz > i ; i++ ) {
+      c = token[i];
+
+      /* Case-insensitive. */
+      if( 'A' <= c && 'Z' >= c ) {
+         c += 32;
+      }
+
+      hash_out ^= c;
+      hash_out *= 16777619u;
+   }
+
+   return hash_out;
+}
+
+/* === */
+
 MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -970,28 +994,6 @@ struct MDATA_TABLE_REPLACE_CADDY {
 
 /* === */
 
-static uint32_t _mdata_table_hash_key( const char* key, size_t key_sz ) {
-   uint32_t hash_out = 2166136261u; /* Arbitrary fixed prime. */
-   size_t i = 0;
-   char c = 0;
-
-   for( i = 0 ; key_sz > i ; i++ ) {
-      c = key[i];
-
-      /* Case-insensitive. */
-      if( 'A' <= c && 'Z' >= c ) {
-         c += 32;
-      }
-
-      hash_out ^= c;
-      hash_out *= 16777619u;
-   }
-
-   return hash_out;
-}
-
-/* === */
-
 ssize_t _mdata_table_hunt_index( struct MDATA_TABLE* t, const char* key ) {
    struct MDATA_TABLE_KEY* key_iter = NULL;
    uint32_t key_hash = 0;
@@ -1005,7 +1007,7 @@ ssize_t _mdata_table_hunt_index( struct MDATA_TABLE* t, const char* key ) {
    if( MDATA_TABLE_KEY_SZ_MAX < key_sz ) {
       key_sz = MDATA_TABLE_KEY_SZ_MAX;
    }
-   key_hash = _mdata_table_hash_key( key, key_sz );
+   key_hash = mdata_hash( key, key_sz );
 
    /* Compare the key to what we have. */
    /* TODO: Divide and conquer! */
@@ -1123,7 +1125,7 @@ MERROR_RETVAL mdata_table_set(
          key, key_tmp.string );
    }
    key_tmp.string_sz = strlen( key_tmp.string );
-   key_tmp.hash = _mdata_table_hash_key( key_tmp.string, key_tmp.string_sz );
+   key_tmp.hash = mdata_hash( key_tmp.string, key_tmp.string_sz );
 
 #if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
