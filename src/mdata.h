@@ -52,7 +52,9 @@
  * \{
  */
 
-#define MDATA_STRPOOL_FLAG_DEDUPE 0x01
+#define MDATA_STRPOOL_FLAG_IS_LOCKED 0x01
+
+#define MDATA_STRPOOL_FLAG_DEDUPE 0x02
 
 typedef ssize_t mdata_strpool_idx_t;
 
@@ -64,9 +66,9 @@ typedef ssize_t mdata_strpool_idx_t;
  * and store that index.
  */
 struct MDATA_STRPOOL {
-   /*! \brief Size of this struct (useful for serializing). */
-   size_t sz;
+   uint8_t flags;
    MAUG_MHANDLE str_h;
+   char* str_p;
    size_t str_sz;
    size_t str_sz_max;
 };
@@ -261,16 +263,26 @@ void mdata_table_free( struct MDATA_TABLE* t );
  * \{
  */
 
-#define mdata_strpool_sz( strpool ) ((strpool)->str_sz_max)
+#define mdata_strpool_sz( sp ) ((sp)->str_sz_max)
 
-#define mdata_strpool_lock( strpool, ptr ) \
-   maug_mlock( (strpool)->str_h, ptr ); \
-   maug_cleanup_if_null_lock( char*, ptr );
+#define mdata_strpool_is_locked( sp ) \
+   (MDATA_STRPOOL_FLAG_IS_LOCKED == \
+   (MDATA_STRPOOL_FLAG_IS_LOCKED & (sp)->flags))
 
-#define mdata_strpool_unlock( strpool, ptr ) \
-   if( NULL != ptr ) { \
-      maug_munlock( (strpool)->str_h, ptr ); \
+#define mdata_strpool_lock( sp ) \
+   assert( NULL == (sp)->str_p ); \
+   maug_mlock( (sp)->str_h, (sp)->str_p ); \
+   maug_cleanup_if_null_lock( char*, (sp)->str_p ); \
+   (sp)->flags |= MDATA_STRPOOL_FLAG_IS_LOCKED;
+
+#define mdata_strpool_unlock( sp ) \
+   if( NULL != (sp)->str_p ) { \
+      maug_munlock( (sp)->str_h, (sp)->str_p ); \
+      (sp)->flags &= ~MDATA_STRPOOL_FLAG_IS_LOCKED; \
    }
+
+#define mdata_strpool_get( sp, idx ) \
+   (&((sp)->str_p[idx]))
 
 #define mdata_strpool_padding( str_sz ) \
    (sizeof( size_t ) - ((str_sz + 1 /* NULL */) % sizeof( size_t )))
@@ -415,7 +427,29 @@ void mdata_table_free( struct MDATA_TABLE* t );
 MERROR_RETVAL mdata_strpool_check_idx(
    struct MDATA_STRPOOL* sp, mdata_strpool_idx_t idx
 ) {
+   MERROR_RETVAL retval = MERROR_OVERFLOW;
+   mdata_strpool_idx_t i = 0;
+   int autolock = 0;
 
+   if( !mdata_strpool_is_locked( sp ) ) {
+      mdata_strpool_lock( sp );
+      autolock = 1;
+   }
+
+   for( i = 0 ; sp->str_sz > i ; i += (size_t)*(&(sp->str_p[i])) ) {
+      if( idx == i ) {
+         retval = MERROR_OK;
+         goto cleanup;
+      }
+   }
+
+cleanup:
+
+   if( autolock ) {
+      mdata_strpool_unlock( sp );
+   }
+
+   return retval;
 }
 
 /* === */
@@ -504,14 +538,17 @@ MAUG_MHANDLE mdata_strpool_extract(
    struct MDATA_STRPOOL* sp, mdata_strpool_idx_t idx
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
    MAUG_MHANDLE out_h = (MAUG_MHANDLE)NULL;
    size_t out_sz = 0;
    char* out_tmp = NULL;
+   int autolock = 0;
 
-   mdata_strpool_lock( sp, strpool );
+   if( !mdata_strpool_is_locked( sp ) ) {
+      mdata_strpool_lock( sp );
+      autolock = 1;
+   }
 
-   out_sz = maug_strlen( &(strpool[idx]) );
+   out_sz = maug_strlen( mdata_strpool_get( sp, idx ) );
    out_h = maug_malloc( out_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
 
@@ -519,7 +556,7 @@ MAUG_MHANDLE mdata_strpool_extract(
    maug_cleanup_if_null_lock( char*, out_tmp );
 
    maug_mzero( out_tmp, out_sz + 1 );
-   maug_strncpy( out_tmp, &(strpool[idx]), out_sz );
+   maug_strncpy( out_tmp, mdata_strpool_get( sp, idx ), out_sz );
 
 cleanup:
 
@@ -531,8 +568,8 @@ cleanup:
       maug_mfree( out_h );
    }
 
-   if( NULL != strpool ) {
-      mdata_strpool_unlock( sp, strpool );
+   if( autolock ) {
+      mdata_strpool_unlock( sp );
    }
 
    return out_h;
@@ -648,7 +685,6 @@ MERROR_RETVAL mdata_strpool_alloc(
       strpool->str_h = maug_malloc( alloc_sz, 1 );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
       strpool->str_sz_max = alloc_sz;
-      strpool->sz = sizeof( struct MDATA_STRPOOL );
 
    } else if( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
       while( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {

@@ -194,7 +194,6 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    struct MLISP_PARSER* parser, mdata_strpool_idx_t token_idx, size_t token_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
    struct MLISP_AST_NODE* n = NULL;
 
    mdata_vector_lock( &(parser->ast) );
@@ -203,47 +202,61 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
       &(parser->ast), parser->ast_node_iter, struct MLISP_AST_NODE );
    assert( NULL != n );
 
-   mdata_strpool_lock( &(parser->strpool), strpool );
+   mdata_strpool_lock( &(parser->strpool) );
    if( 0 == token_sz ) {
-      token_sz = maug_strlen( &(strpool[token_idx]) );
+      token_sz = maug_strlen(
+         mdata_strpool_get( &(parser->strpool), token_idx ) );
    }
    assert( 0 < token_sz );
 
    /* Setup flags based on token name. */
-   if( 0 == strncmp( &(strpool[token_idx]), "lambda", token_sz + 1 ) ) {
+   if(
+      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
+         "lambda", token_sz + 1 )
+   ) {
       /* Special node: lambda. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
-         &(strpool[token_idx]), token_sz );
+         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
       n->flags |= MLISP_AST_FLAG_LAMBDA;
 
-   } else if( 0 == strncmp( &(strpool[token_idx]), "if", token_sz + 1 ) ) {
+   } else if(
+      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
+         "if", token_sz + 1 )
+   ) {
       /* Special node: if. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: IF",
-         &(strpool[token_idx]), token_sz );
+         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
       n->flags |= MLISP_AST_FLAG_IF;
 
-   } else if( 0 == strncmp( &(strpool[token_idx]), "begin", token_sz + 1 ) ) {
+   } else if(
+      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
+         "begin", token_sz + 1 )
+   ) {
       /* Special node: begin. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: BEGIN",
-         &(strpool[token_idx]), token_sz );
+         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
       n->flags |= MLISP_AST_FLAG_BEGIN;
 
-   } else if( 0 == strncmp( &(strpool[token_idx]), "define", token_sz + 1 ) ) {
+   } else if(
+      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
+         "define", token_sz + 1 )
+   ) {
       /* Special node: define. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: DEFINE",
-         &(strpool[token_idx]), token_sz );
+         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
       n->flags |= MLISP_AST_FLAG_DEFINE;
    }
 
    /* Debug report. */
    debug_printf( MLISP_PARSE_TRACE_LVL, "setting node " SSIZE_T_FMT
       " token: \"%s\" (" SIZE_T_FMT ")",
-      parser->ast_node_iter, &(strpool[token_idx]), token_sz );
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+      parser->ast_node_iter,
+      mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+   /* mdata_strpool_unlock( &(parser->strpool), strpool ); */
 
    /* Set the token from the strpool. */
    n->token_idx = token_idx;
@@ -251,8 +264,8 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
 
 cleanup:
 
-   if( NULL != strpool ) {
-      mdata_strpool_unlock( &(parser->strpool), strpool );
+   if( mdata_strpool_is_locked( &(parser->strpool) ) ) {
+      mdata_strpool_unlock( &(parser->strpool) );
    }
 
    mdata_vector_unlock( &(parser->ast) );
@@ -322,7 +335,6 @@ MERROR_RETVAL mlisp_ast_dump(
    struct MLISP_AST_NODE* n = NULL;
    char indent[101];
    size_t i = 0;
-   char* strpool = NULL;
 
    if( NULL == parser->ast.data_bytes ) {
       autolock = 1;
@@ -344,13 +356,14 @@ MERROR_RETVAL mlisp_ast_dump(
 
    /* Iterate node and children .*/
    n = mdata_vector_get( &(parser->ast), ast_node_idx, struct MLISP_AST_NODE );
-   mdata_strpool_lock( &(parser->strpool), strpool );
+   mdata_strpool_lock( &(parser->strpool) );
    debug_printf( 1,
       MLISP_TRACE_SIGIL " %s%c: \"%s\" (i: " SIZE_T_FMT ", t: " SSIZE_T_FMT
          ", c: " SSIZE_T_FMT ", f: 0x%02x)",
-      indent, ab, 0 <= n->token_idx ? &(strpool[n->token_idx]) : "",
+      indent, ab, 0 <= n->token_idx ?
+         mdata_strpool_get( &(parser->strpool), n->token_idx ) : "",
       ast_node_idx, n->token_idx, n->ast_idx_children_sz, n->flags );
-   mdata_strpool_unlock( &(parser->strpool), strpool );
+   mdata_strpool_unlock( &(parser->strpool) );
    for( i = 0 ; MLISP_AST_IDX_CHILDREN_MAX > i ; i++ ) {
       if( -1 == n->ast_idx_children[i] ) {
          continue;
