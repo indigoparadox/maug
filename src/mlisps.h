@@ -36,16 +36,6 @@
  */
 #define MLISP_EXEC_FLAG_DEF_TERM   0x20
 
-/**
- * \relates MLISP_EXEC_STATE
- * \brief Flag for MLISP_EXEC_STATE::flags indicating defines and calls should
- *        reference MLISP_PARSER::env instead of MLISP_EXEC_STATE::env.
- *
- * This allows multiple MLISP_EXEC_STATE objects to share a common set of
- * definitions.
- */
-#define MLISP_EXEC_FLAG_SHARED_ENV 0x40
-
 #define MLISP_EXEC_FLAG_INITIALIZED   0x08
 
 /**

@@ -481,12 +481,8 @@ MERROR_RETVAL mlisp_env_dump(
 
    if( global ) {
       env = exec->global_env;
-   } else if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
    } else {
-      env = &(exec->env);
+      env = _mlisp_env_select( exec );
    }
 
    if(
@@ -569,6 +565,12 @@ cleanup:
 
 /* === */
 
+static struct MDATA_VECTOR* _mlisp_env_select( struct MLISP_EXEC_STATE* exec ) {
+   return &(exec->env);
+}
+
+/* === */
+
 struct MLISP_ENV_NODE* mlisp_env_get(
    struct MLISP_PARSER* parser, struct MLISP_EXEC_STATE* exec, const char* key
 ) {
@@ -578,14 +580,7 @@ struct MLISP_ENV_NODE* mlisp_env_get(
    size_t key_sz = 0;
    ssize_t key_strpool_idx = 0;
 
-   /* Start with our local, exec-/parser-specific env. */
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    /* At the very least, the caller using this should be in the same lock
     * context as this search, since we're returning a pointer. So no autolock!
@@ -635,21 +630,7 @@ struct MLISP_ENV_NODE* mlisp_env_get_strpool(
    struct MLISP_ENV_NODE* e = NULL;
    struct MDATA_VECTOR* env = NULL;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) using parser env...",
-         exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(parser->env);
-   } else {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: (strpool) using exec env...",
-         exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    /* At the very least, the caller using this should be in the same lock
     * context as this search, since we're returning a pointer. So no autolock!
@@ -724,9 +705,6 @@ static ssize_t _mlisp_env_unset_internal(
    for( i = mdata_vector_ct( env ) - 1 ; 0 <= i ; i-- ) {
       e = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
 
-      /* TODO: This could be problematic if MLISP_EXEC_FLAG_SHARED_ENV is
-       *       enabled...
-       */
       if( MLISP_TYPE_ARGS_E == e->type ) {
 #if MLISP_STACK_TRACE_LVL > 0
          debug_printf( MLISP_STACK_TRACE_LVL,
@@ -768,13 +746,7 @@ MERROR_RETVAL mlisp_env_unset(
    char* strpool = NULL;
    ssize_t rem_idx = 0;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
 #if MLISP_EXEC_TRACE_LVL > 0
    debug_printf( MLISP_EXEC_TRACE_LVL,
@@ -958,20 +930,7 @@ MERROR_RETVAL mlisp_env_set(
    ssize_t env_idx = 0;
    struct MDATA_VECTOR* env = NULL;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "%u: using parser env...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(parser->env);
-   } else {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: using exec env...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    if( 0 == token_sz ) {
       token_sz = maug_strlen( token );
@@ -1009,13 +968,7 @@ static ssize_t _mlisp_env_get_env_frame(
    uint8_t autolock = 0;
    struct MDATA_VECTOR* env = NULL;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    if( !mdata_vector_is_locked( env ) ) {
       mdata_vector_lock( env );
@@ -1070,13 +1023,7 @@ static ssize_t _mlisp_env_prune_args(
    size_t removed = 0;
    struct MDATA_VECTOR* env = NULL;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    /* This function modifies the env, so existing locks might break. */
    assert( !mdata_vector_is_locked( env ) );
@@ -1369,19 +1316,11 @@ static MERROR_RETVAL _mlisp_env_cb_define(
          "%u: using global env...", exec->uid );
 #endif /* MLISP_EXEC_TRACE_LVL */
       env = exec->global_env;
-   } else if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "%u: using parser env...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(parser->env);
    } else {
 #if MLISP_EXEC_TRACE_LVL > 0
       debug_printf( MLISP_EXEC_TRACE_LVL, "%u: using exec env...", exec->uid );
 #endif /* MLISP_EXEC_TRACE_LVL */
-      env = &(exec->env);
+      env = _mlisp_env_select( exec );
    }
    assert( NULL != env );
 
@@ -1844,13 +1783,7 @@ static MERROR_RETVAL _mlisp_reset_lambda(
    ssize_t ret_idx = 0;
    struct MDATA_VECTOR* env = NULL;
 
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
 #if MLISP_EXEC_TRACE_LVL > 0
    debug_printf( MLISP_EXEC_TRACE_LVL,
@@ -2220,10 +2153,7 @@ static MERROR_RETVAL _mlisp_step_iter(
    /* Lock the env so we can grab the token from it and evalauate it below
     * in one swoop without an unlock.
     */
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) { env = &(parser->env); } else { env = &(exec->env); }
-   assert( NULL != env );
+   env = _mlisp_env_select( exec );
    assert( !mdata_vector_is_locked( env ) );
    assert(
       NULL == exec->global_env || !mdata_vector_is_locked( exec->global_env ) );
@@ -2351,13 +2281,7 @@ ssize_t mlisp_count_builtins(
    struct MLISP_ENV_NODE* e = NULL;
 
    /* Prepare env for mlisp_env_get() below. */
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    if( 0 == mdata_vector_ct( env ) ) {
       goto cleanup;
@@ -2519,13 +2443,7 @@ MERROR_RETVAL mlisp_step_lambda(
    struct MLISP_AST_NODE* n = NULL;
 
    /* Prepare env for mlisp_env_get() below. */
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      env = &(parser->env);
-   } else {
-      env = &(exec->env);
-   }
+   env = _mlisp_env_select( exec );
 
    if( MERROR_OK != mlisp_check_state( parser, exec ) ) {
       error_printf( "mlisp not ready!" );
@@ -2721,20 +2639,8 @@ MERROR_RETVAL mlisp_exec_init(
    maug_cleanup_if_not_ok();
    mdata_vector_remove_last( &(exec->lambda_trace) );
 
-   /* TODO: MLISP_EXEC_FLAG_SHARED_ENV might not be such a great idea, since
-    *       it could let lambdas clobber each others stack frames on env.
-    *       Maybe make sure those stack frames are obeyed by lambda caller idx?
-    */
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & exec->flags)
-   ) {
-      append_retval = mdata_vector_alloc(
-         &(parser->env), sizeof( struct MLISP_ENV_NODE ),
-         0 );
-   } else {
-      append_retval = mdata_vector_alloc(
-         &(exec->env), sizeof( struct MLISP_ENV_NODE ), 0 );
-   }
+   append_retval = mdata_vector_alloc(
+      &(exec->env), sizeof( struct MLISP_ENV_NODE ), 0 );
    /* TODO: Cleanup partially allocated object. */
    if( 0 > append_retval ) {
       retval = mdata_retval( append_retval );
@@ -2786,17 +2692,6 @@ MERROR_RETVAL mlisp_exec_init(
    exec->flags |= MLISP_EXEC_FLAG_INITIALIZED;
 
    /* Setup initial env. */
-
-   if(
-      MLISP_EXEC_FLAG_SHARED_ENV == (MLISP_EXEC_FLAG_SHARED_ENV & flags) &&
-      0 < mdata_vector_ct( &(parser->env) )
-   ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
-         "%u: skipping initialized environment!", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
-      goto cleanup;
-   }
 
    retval = mlisp_exec_add_env_builtins( parser, exec );
 
