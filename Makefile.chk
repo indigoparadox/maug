@@ -8,6 +8,7 @@ CHECK_C_FILES := \
    check/chkmlsp.c
 
 CFLAGS_CHECK := \
+	-Wall \
 	-Isrc \
 	-Iapi/mem/unix \
 	-Iapi/file/unix \

@@ -442,12 +442,16 @@ static struct MLISP_ENV_NODE* _mlisp_env_get_internal(
     */
    i = mdata_vector_ct( env ) - 1;
 
+   /* debug_printf( 1, "get " SIZE_T_FMT ", " SIZE_T_FMT, key_idx, key_sz ); */
    while( 0 <= i ) {
       node_test = mdata_vector_get( env, i, struct MLISP_ENV_NODE );
       if( NULL == node_test ) {
          error_printf( "invalid node!" );
          goto cleanup;
       }
+      /*
+      debug_printf( 1, SIZE_T_FMT ", " SIZE_T_FMT " vs " SIZE_T_FMT ", " SIZE_T_FMT, node_test->name_strpool_idx, node_test->name_strpool_sz, key_idx, key_sz );
+      */
       if(
          node_test->name_strpool_sz == key_sz &&
          node_test->name_strpool_idx == key_idx
