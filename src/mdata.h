@@ -116,6 +116,12 @@ struct MDATA_VECTOR {
  * \{
  */
 
+struct MDATA_TABLE_KEY {
+   char string[MDATA_TABLE_KEY_SZ_MAX + 1];
+   size_t string_sz;
+   uint32_t hash;
+};
+
 struct MDATA_TABLE {
    uint16_t flags;
    struct MDATA_VECTOR data_cols[2];
@@ -205,7 +211,7 @@ void mdata_vector_free( struct MDATA_VECTOR* v );
  */
 
 typedef MERROR_RETVAL (*mdata_table_iter_t)(
-   const char* key, void* data, size_t data_sz,
+   const struct MDATA_TABLE_KEY* key, void* data, size_t data_sz,
    void* cb_data, size_t cb_data_sz, size_t idx );
 
 MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t );
@@ -958,24 +964,85 @@ cleanup:
 /* === */
 
 struct MDATA_TABLE_REPLACE_CADDY {
-   const char* key;
+   struct MDATA_TABLE_KEY* key;
    void* data;
 };
 
 /* === */
 
+static uint32_t _mdata_table_hash_key( const char* key, size_t key_sz ) {
+   uint32_t hash_out = 2166136261u; /* Arbitrary fixed prime. */
+   size_t i = 0;
+   char c = 0;
+
+   for( i = 0 ; key_sz > i ; i++ ) {
+      c = key[i];
+
+      /* Case-insensitive. */
+      if( 'A' <= c && 'Z' >= c ) {
+         c += 32;
+      }
+
+      hash_out ^= c;
+      hash_out *= 16777619u;
+   }
+
+   return hash_out;
+}
+
+/* === */
+
+ssize_t _mdata_table_hunt_index( struct MDATA_TABLE* t, const char* key ) {
+   struct MDATA_TABLE_KEY* key_iter = NULL;
+   uint32_t key_hash = 0;
+   size_t key_sz = 0;
+   ssize_t i = 0;
+
+   assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
+
+   /* Hash the key to hunt for. */
+   key_sz = maug_strlen( key );
+   if( MDATA_TABLE_KEY_SZ_MAX < key_sz ) {
+      key_sz = MDATA_TABLE_KEY_SZ_MAX;
+   }
+   key_hash = _mdata_table_hash_key( key, key_sz );
+
+   /* Compare the key to what we have. */
+   /* TODO: Divide and conquer! */
+   for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
+      key_iter = mdata_vector_get(
+         &(t->data_cols[0]), i, struct MDATA_TABLE_KEY );
+      assert( NULL != key );
+      if(
+         key_iter->hash == key_hash &&
+         key_iter->string_sz == key_sz
+      ) {
+#if MDATA_TRACE_LVL > 0
+         debug_printf( MDATA_TRACE_LVL, "found value for key: %s", key );
+#endif /* MDATA_TRACE_LVL */
+         return i;
+      }
+   }
+
+   return -1;
+}
+
+/* === */
+
 static MERROR_RETVAL _mdata_table_replace(
-   const char* key, void* data, size_t data_sz,
+   const struct MDATA_TABLE_KEY* key, void* data, size_t data_sz,
    void* cb_data, size_t cb_data_sz, size_t idx
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MDATA_TABLE_REPLACE_CADDY* caddy =
       (struct MDATA_TABLE_REPLACE_CADDY*)cb_data;
 
-   if( 0 == strncmp( key, caddy->key, MDATA_TABLE_KEY_SZ_MAX + 1 ) ) {
+   if(
+      key->hash == caddy->key->hash && key->string_sz == caddy->key->string_sz
+   ) {
 #if MDATA_TRACE_LVL > 0
       debug_printf( MDATA_TRACE_LVL,
-         "replacing table data for key %s...", key );
+         "replacing table data for key %s (%u)...", key->string, key->hash );
 #endif /* MDATA_TRACE_LVL */
       memcpy( data, caddy->data, data_sz );
       retval = MERROR_FILE;
@@ -995,7 +1062,7 @@ MERROR_RETVAL mdata_table_iter(
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    int autolock = 0;
-   char* p_key = NULL;
+   struct MDATA_TABLE_KEY* p_key = NULL;
    char* p_value = NULL;
 
    if( 0 == mdata_table_ct( t ) ) {
@@ -1038,8 +1105,8 @@ MERROR_RETVAL mdata_table_set(
    ssize_t idx_key = -1;
    ssize_t idx_val = -1;
    size_t i = 0;
-   char key_tmp[MDATA_TABLE_KEY_SZ_MAX + 1];
-   struct MDATA_TABLE_REPLACE_CADDY caddy = { key, value };
+   struct MDATA_TABLE_KEY key_tmp;
+   struct MDATA_TABLE_REPLACE_CADDY caddy;
 
    assert( !mdata_table_is_locked( t ) );
 
@@ -1047,24 +1114,28 @@ MERROR_RETVAL mdata_table_set(
       mdata_vector_ct( &(t->data_cols[0]) ) ==
       mdata_vector_ct( &(t->data_cols[1]) ) );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
-      "attempting to set key %s to " SIZE_T_FMT "-byte value...",
-      key, value_sz );
-#endif /* MDATA_TRACE_LVL */
-
-   maug_mzero( key_tmp, MDATA_TABLE_KEY_SZ_MAX + 1 );
-   maug_strncpy( key_tmp, key, MDATA_TABLE_KEY_SZ_MAX );
+   /* Get key hash and properties. */
+   maug_mzero( &key_tmp, sizeof( struct MDATA_TABLE_KEY ) );
+   maug_strncpy( key_tmp.string, key, MDATA_TABLE_KEY_SZ_MAX );
    if( maug_strlen( key ) > MDATA_TABLE_KEY_SZ_MAX + 1 ) {
       error_printf(
          "key %s is longer than maximum key size! truncating to: %s",
-         key, key_tmp );
+         key, key_tmp.string );
    }
+   key_tmp.string_sz = strlen( key_tmp.string );
+   key_tmp.hash = _mdata_table_hash_key( key_tmp.string, key_tmp.string_sz );
 
-   /* TODO: This has all kinds of issues, obviously. At some point, turn it
-    *       into a proper hashtable that can operate in tiny conditions!
-    */
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL,
+      "attempting to set key %s (%u) to " SIZE_T_FMT "-byte value...",
+      key_tmp.string, key_tmp.hash, value_sz );
+#endif /* MDATA_TRACE_LVL */
 
+   caddy.key = &key_tmp;
+   caddy.data = value;
+
+   /* Search for the hash. */
+   /* TODO: Use quicker search. */
    retval = mdata_table_iter( t, _mdata_table_replace, &caddy,
       sizeof( struct MDATA_TABLE_REPLACE_CADDY ) );
    if( MERROR_FILE == retval ) {
@@ -1073,8 +1144,10 @@ MERROR_RETVAL mdata_table_set(
       goto cleanup;
    }
 
+   /* TODO: Insert in hash order. */
+
    idx_key = mdata_vector_append(
-      &(t->data_cols[0]), key_tmp, MDATA_TABLE_KEY_SZ_MAX + 1);
+      &(t->data_cols[0]), &key_tmp, sizeof( struct MDATA_TABLE_KEY ) );
    assert( 0 <= idx_key );
 
    /* TODO: Atomicity: remove key if value fails! */
@@ -1095,10 +1168,10 @@ MERROR_RETVAL mdata_table_unset(
    struct MDATA_TABLE* t, const char* key
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* c = NULL;
-   size_t i = 0;
+   struct MDATA_TABLE_KEY* key_iter = NULL;
    void* value_out = NULL;
    int autolock = 0;
+   ssize_t idx = 0;
 
 #if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL, "unsetting table key: %s", key );
@@ -1117,23 +1190,15 @@ MERROR_RETVAL mdata_table_unset(
       autolock = 1;
    }
 
-   for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
-      /* TODO: Maybe strpool would be better for this? */
-      c = mdata_vector_get( &(t->data_cols[0]), i, char );
-      assert( NULL != c );
-      if( 0 == strncmp( key, c, t->data_cols[0].item_sz - 1 ) ) {
-         /* We're either autolocked or locked manually... but we're locked by
-          * now either way!
-          */
-         assert( mdata_table_is_locked( t ) );
-         mdata_table_unlock( t );
-
-         /* Remove the item. */
-         mdata_vector_remove( &(t->data_cols[0]), i );
-         mdata_vector_remove( &(t->data_cols[1]), i );
-         goto cleanup;
-      }
+   idx = _mdata_table_hunt_index( t, key );
+   if( 0 > idx ) {
+      goto cleanup;
    }
+
+   /* Remove the item. */
+   mdata_table_unlock( t );
+   mdata_vector_remove( &(t->data_cols[0]), idx );
+   mdata_vector_remove( &(t->data_cols[1]), idx );
 
 cleanup:
 
@@ -1150,22 +1215,27 @@ cleanup:
 
 void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* c = NULL;
+   struct MDATA_TABLE_KEY* key_iter = NULL;
    size_t i = 0;
    void* value_out = NULL;
+   uint32_t key_hash = 0;
+   size_t key_sz = 0;
+   ssize_t idx = 0;
 
-   for( i = 0 ; mdata_vector_ct( &(t->data_cols[0]) ) > i ; i++ ) {
-      /* TODO: Maybe strpool would be better for this? */
-      c = mdata_vector_get( &(t->data_cols[0]), i, char );
-      assert( NULL != c );
-      if( 0 == strncmp( key, c, t->data_cols[0].item_sz - 1 ) ) {
-         value_out = mdata_vector_get_void( &(t->data_cols[1]), i );
-         goto cleanup;
-      }
+   assert( mdata_table_is_locked( t ) );
+
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL,
+      "searching for key: %s (%u)", key, key_hash );
+#endif /* MDATA_TRACE_LVL */
+
+   idx = _mdata_table_hunt_index( t, key );
+   if( 0 > idx ) {
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
    }
 
-   /* Not found! */
-   retval = MERROR_OVERFLOW;
+   value_out = mdata_vector_get_void( &(t->data_cols[1]), idx );
 
 cleanup:
    
