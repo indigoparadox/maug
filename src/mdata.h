@@ -233,6 +233,9 @@ MERROR_RETVAL mdata_table_unset(
 
 void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
 
+void* mdata_table_hash_get_void(
+   struct MDATA_TABLE* t, uint32_t key_hash, size_t key_sz );
+
 void mdata_table_free( struct MDATA_TABLE* t );
 
 /*! \} */
@@ -378,6 +381,9 @@ void mdata_table_free( struct MDATA_TABLE* t );
 
 #define mdata_table_get( t, key, type ) \
    ((type*)mdata_table_get_void( t, key ))
+
+#define mdata_table_hash_get( t, hash, sz, type ) \
+   ((type*)mdata_table_hash_get_void( t, hash, sz ))
 
 #define mdata_table_ct( t ) ((t)->data_cols[0].ct)
 
@@ -994,20 +1000,22 @@ struct MDATA_TABLE_REPLACE_CADDY {
 
 /* === */
 
-ssize_t _mdata_table_hunt_index( struct MDATA_TABLE* t, const char* key ) {
+ssize_t _mdata_table_hunt_index(
+   struct MDATA_TABLE* t, const char* key, uint32_t key_hash, size_t key_sz
+) {
    struct MDATA_TABLE_KEY* key_iter = NULL;
-   uint32_t key_hash = 0;
-   size_t key_sz = 0;
    ssize_t i = 0;
 
    assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
 
-   /* Hash the key to hunt for. */
-   key_sz = maug_strlen( key );
-   if( MDATA_TABLE_KEY_SZ_MAX < key_sz ) {
-      key_sz = MDATA_TABLE_KEY_SZ_MAX;
+   /* Hash the key to hunt for if provided. */
+   if( NULL != key ) {
+      key_sz = maug_strlen( key );
+      if( MDATA_TABLE_KEY_SZ_MAX < key_sz ) {
+         key_sz = MDATA_TABLE_KEY_SZ_MAX;
+      }
+      key_hash = mdata_hash( key, key_sz );
    }
-   key_hash = mdata_hash( key, key_sz );
 
    /* Compare the key to what we have. */
    /* TODO: Divide and conquer! */
@@ -1192,7 +1200,7 @@ MERROR_RETVAL mdata_table_unset(
       autolock = 1;
    }
 
-   idx = _mdata_table_hunt_index( t, key );
+   idx = _mdata_table_hunt_index( t, key, 0, 0 );
    if( 0 > idx ) {
       goto cleanup;
    }
@@ -1231,7 +1239,41 @@ void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
       "searching for key: %s (%u)", key, key_hash );
 #endif /* MDATA_TRACE_LVL */
 
-   idx = _mdata_table_hunt_index( t, key );
+   idx = _mdata_table_hunt_index( t, key, 0, 0 );
+   if( 0 > idx ) {
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   value_out = mdata_vector_get_void( &(t->data_cols[1]), idx );
+
+cleanup:
+   
+   if( MERROR_OK != retval ) {
+      value_out = NULL;
+   }
+
+   return value_out;
+}
+
+/* === */
+
+void* mdata_table_hash_get_void(
+   struct MDATA_TABLE* t, uint32_t key_hash, size_t key_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct MDATA_TABLE_KEY* key_iter = NULL;
+   void* value_out = NULL;
+   ssize_t idx = 0;
+
+   assert( mdata_table_is_locked( t ) );
+
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL,
+      "searching for hash %u (" SIZE_T_FMT ")", key_hash, key_sz );
+#endif /* MDATA_TRACE_LVL */
+
+   idx = _mdata_table_hunt_index( t, NULL, key_hash, key_sz );
    if( 0 > idx ) {
       retval = MERROR_OVERFLOW;
       goto cleanup;
