@@ -452,7 +452,8 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
 
       /* Copy token to tag text. */
       p_tag_iter->TEXT.content_idx = mdata_strpool_append(
-         &(parser->strpool), parser->base.token, parser->base.token_sz );
+         &(parser->strpool), parser->base.token, parser->base.token_sz,
+         MDATA_STRPOOL_FLAG_DEDUPE );
       p_tag_iter->TEXT.content_sz = parser->base.token_sz;
    }
 

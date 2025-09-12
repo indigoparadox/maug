@@ -294,7 +294,7 @@ MERROR_RETVAL _mlisp_ast_add_raw_token( struct MLISP_PARSER* parser ) {
    mdata_strpool_idx_t str_idx = -1;
 
    str_idx = mdata_strpool_append( &(parser->strpool),
-      parser->base.token, parser->base.token_sz );
+      parser->base.token, parser->base.token_sz, MDATA_STRPOOL_FLAG_DEDUPE );
    if( 0 > str_idx ) {
       error_printf( "invalid str_idx: " SSIZE_T_FMT, str_idx );
       retval = MERROR_ALLOC;
@@ -435,7 +435,8 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
           * open paren.
           */
          str_idx = mdata_strpool_append( &(parser->strpool),
-            parser->base.token, parser->base.token_sz );
+            parser->base.token, parser->base.token_sz,
+            MDATA_STRPOOL_FLAG_DEDUPE );
          mlisp_parser_reset_token( parser );
          _mlisp_ast_set_child_token( parser, str_idx, parser->base.token_sz );
 

@@ -402,7 +402,8 @@ MERROR_RETVAL mcss_style_str_t(
       "setting %s: %s", prop_name, parser->base.token );
 
    *str_idx_p = mdata_strpool_append(
-      &(parser->strpool), parser->base.token, parser->base.token_sz );
+      &(parser->strpool), parser->base.token, parser->base.token_sz,
+      MDATA_STRPOOL_FLAG_DEDUPE );
 
    assert( 0 < *str_idx_p ); /* strpool indexes are never 0. */
 

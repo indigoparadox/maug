@@ -153,6 +153,7 @@ cleanup:
 
    mdata_table_unlock( &table_test );
 }
+END_TEST
 
 void table_setup() {
    size_t i = 0;
@@ -170,10 +171,120 @@ void table_teardown() {
 
 }
 
+START_TEST( test_mdat_strpool_add ) {
+   struct MDATA_STRPOOL sp_test;
+   mdata_strpool_idx_t idx = 0;
+
+   maug_mzero( &sp_test, sizeof( struct MDATA_STRPOOL ) );
+
+   ck_assert_int_eq( mdata_strpool_sz( &sp_test ), 0 );
+
+   idx = mdata_strpool_append(
+      &sp_test, "foo", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+
+   ck_assert_int_eq( idx, sizeof( size_t ) );
+
+   /* strpool is padded so size_t is always aligned in memory, so instead of
+    * 4 for "foo" + 0, it's 8 for the 4 bytes of padding 0s on 64-bit.
+    */
+   ck_assert_int_eq( mdata_strpool_sz( &sp_test ), 
+      sizeof( size_t ) + 4 + mdata_strpool_padding( 3 ) );
+}
+END_TEST
+
+START_TEST( test_mdat_strpool_double_add ) {
+   struct MDATA_STRPOOL sp_test;
+   mdata_strpool_idx_t idx = 0;
+
+   maug_mzero( &sp_test, sizeof( struct MDATA_STRPOOL ) );
+
+   idx = mdata_strpool_append( &sp_test, "foo", maug_strlen( "foo" ), 0 );
+   ck_assert_int_eq( idx, sizeof( size_t ) );
+
+   idx = mdata_strpool_append( &sp_test, "fii", maug_strlen( "foo" ), 0 );
+
+   /* strpool is padded so size_t is always aligned in memory, so instead of
+    * 4 for "foo" + 0, it's 8 for the 4 bytes of padding 0s on 64-bit.
+    */
+   ck_assert_int_eq( idx,
+      4 + (mdata_strpool_padding( 3 )) + (2 * sizeof( size_t ) ) );
+
+   idx = mdata_strpool_append( &sp_test, "foo", maug_strlen( "foo" ), 0 );
+   ck_assert_int_eq( idx,
+      8 + (2 * mdata_strpool_padding( 3 )) + (3 * sizeof( size_t ) ) );
+}
+END_TEST
+
+START_TEST( test_mdat_strpool_dedupe ) {
+   struct MDATA_STRPOOL sp_test;
+   mdata_strpool_idx_t idx = 0;
+
+   maug_mzero( &sp_test, sizeof( struct MDATA_STRPOOL ) );
+
+   idx = mdata_strpool_append(
+      &sp_test, "foo", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+   ck_assert_int_eq( idx, sizeof( size_t ) );
+
+   idx = mdata_strpool_append(
+      &sp_test, "fii", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+
+   /* strpool is padded so size_t is always aligned in memory, so instead of
+    * 4 for "foo" + 0, it's 8 for the 4 bytes of padding 0s on 64-bit.
+    */
+   ck_assert_int_eq( idx,
+      4 + (mdata_strpool_padding( 3 )) + (2 * sizeof( size_t ) ) );
+
+   idx = mdata_strpool_append(
+      &sp_test, "foo", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+   ck_assert_int_eq( idx, sizeof( size_t ) );
+}
+END_TEST
+
+START_TEST( test_mdat_strpool_extract ) {
+   struct MDATA_STRPOOL sp_test;
+   MAUG_MHANDLE ex_test_h = NULL;
+   char* ex_test = NULL;
+   mdata_strpool_idx_t idx = 0;
+
+   maug_mzero( &sp_test, sizeof( struct MDATA_STRPOOL ) );
+
+   idx = mdata_strpool_append(
+      &sp_test, "foo", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+   ck_assert_int_eq( idx, sizeof( size_t ) );
+   
+   idx = mdata_strpool_append(
+      &sp_test, "fii", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+
+   mdata_strpool_append(
+      &sp_test, "fee", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
+
+   ex_test_h = mdata_strpool_extract( &sp_test, idx );
+   maug_mlock( ex_test_h, ex_test );
+
+   ck_assert_str_eq( ex_test, "fii" );
+
+   maug_munlock( ex_test_h, ex_test );
+   maug_mfree( ex_test_h );
+}
+END_TEST
+
+START_TEST( test_mdat_strpool_remove ) {
+}
+END_TEST
+
+void strpool_setup() {
+
+}
+
+void strpool_teardown() {
+
+}
+
 Suite* mdat_suite( void ) {
    Suite* s;
    TCase* tc_vector;
    TCase* tc_table;
+   TCase* tc_strpool;
 
    s = suite_create( "mdat" );
 
@@ -198,6 +309,20 @@ Suite* mdat_suite( void ) {
    tcase_add_test( tc_table, test_mdat_table_overwrite );
 
    suite_add_tcase( s, tc_table );
+
+   /* = */
+
+   tc_strpool = tcase_create( "StrPool" );
+
+   tcase_add_checked_fixture( tc_strpool, strpool_setup, strpool_teardown );
+
+   tcase_add_test( tc_strpool, test_mdat_strpool_add );
+   tcase_add_test( tc_strpool, test_mdat_strpool_double_add );
+   tcase_add_test( tc_strpool, test_mdat_strpool_dedupe );
+   tcase_add_test( tc_strpool, test_mdat_strpool_extract );
+   tcase_add_test( tc_strpool, test_mdat_strpool_remove );
+
+   suite_add_tcase( s, tc_strpool );
 
    return s;
 }

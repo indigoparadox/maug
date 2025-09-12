@@ -461,6 +461,12 @@ cleanup:
 
 /* === */
 
+static struct MDATA_VECTOR* _mlisp_env_select( struct MLISP_EXEC_STATE* exec ) {
+   return &(exec->env);
+}
+
+/* === */
+
 #if defined( MLISP_DUMP_ENABLED )
 
 MERROR_RETVAL mlisp_env_dump(
@@ -562,12 +568,6 @@ cleanup:
 }
 
 #endif /* MLISP_DUMP_ENABLED */
-
-/* === */
-
-static struct MDATA_VECTOR* _mlisp_env_select( struct MLISP_EXEC_STATE* exec ) {
-   return &(exec->env);
-}
 
 /* === */
 
@@ -821,8 +821,8 @@ static ssize_t _mlisp_env_set_internal(
    /* Setup the new node to copy. */
    maug_mzero( &e, sizeof( struct MLISP_ENV_NODE ) );
    e.flags = flags;
-   e.name_strpool_idx =
-      mdata_strpool_append( strpool_d, token, token_sz );
+   e.name_strpool_idx = mdata_strpool_append(
+      strpool_d, token, token_sz, MDATA_STRPOOL_FLAG_DEDUPE );
    e.name_strpool_sz = token_sz;
    if( 0 > e.name_strpool_idx ) {
       retval = mdata_retval( e.name_strpool_idx );
