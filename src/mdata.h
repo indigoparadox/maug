@@ -982,8 +982,6 @@ MERROR_RETVAL mdata_table_unlock( struct MDATA_TABLE* t ) {
    mdata_vector_unlock( &(t->data_cols[0]) );
    mdata_vector_unlock( &(t->data_cols[1]) );
 
-cleanup:
-
    if( MERROR_OK != retval ) {
       assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
    }
@@ -1058,8 +1056,6 @@ static MERROR_RETVAL _mdata_table_replace(
       retval = MERROR_FILE;
    }
 
-cleanup:
-
    return retval;
 }
 
@@ -1114,7 +1110,6 @@ MERROR_RETVAL mdata_table_set(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t idx_key = -1;
    ssize_t idx_val = -1;
-   size_t i = 0;
    struct MDATA_TABLE_KEY key_tmp;
    struct MDATA_TABLE_REPLACE_CADDY caddy;
 
@@ -1178,8 +1173,6 @@ MERROR_RETVAL mdata_table_unset(
    struct MDATA_TABLE* t, const char* key
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MDATA_TABLE_KEY* key_iter = NULL;
-   void* value_out = NULL;
    int autolock = 0;
    ssize_t idx = 0;
 
@@ -1225,11 +1218,7 @@ cleanup:
 
 void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MDATA_TABLE_KEY* key_iter = NULL;
-   size_t i = 0;
    void* value_out = NULL;
-   uint32_t key_hash = 0;
-   size_t key_sz = 0;
    ssize_t idx = 0;
 
    assert( mdata_table_is_locked( t ) );
@@ -1262,7 +1251,6 @@ void* mdata_table_hash_get_void(
    struct MDATA_TABLE* t, uint32_t key_hash, size_t key_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   struct MDATA_TABLE_KEY* key_iter = NULL;
    void* value_out = NULL;
    ssize_t idx = 0;
 
