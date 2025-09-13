@@ -479,8 +479,6 @@ void mdata_strpool_dump( struct MDATA_STRPOOL* sp ) {
    }
    printf( "\n" );
 
-cleanup:
-
    if( NULL != strpool_p ) {
       maug_munlock( sp->str_h, strpool_p );
    }
@@ -556,13 +554,21 @@ MAUG_MHANDLE mdata_strpool_extract(
    size_t out_sz = 0;
    char* out_tmp = NULL;
    int autolock = 0;
+   char* str_src = NULL;
 
    if( !mdata_strpool_is_locked( sp ) ) {
       mdata_strpool_lock( sp );
       autolock = 1;
    }
 
-   out_sz = maug_strlen( mdata_strpool_get( sp, idx ) );
+   str_src = mdata_strpool_get( sp, idx );
+   if( NULL == str_src ) {
+      error_printf( "invalid strpool index: " SSIZE_T_FMT, idx );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   out_sz = maug_strlen( str_src );
    out_h = maug_malloc( out_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
 
@@ -570,7 +576,7 @@ MAUG_MHANDLE mdata_strpool_extract(
    maug_cleanup_if_null_lock( char*, out_tmp );
 
    maug_mzero( out_tmp, out_sz + 1 );
-   maug_strncpy( out_tmp, mdata_strpool_get( sp, idx ), out_sz );
+   maug_strncpy( out_tmp, str_src, out_sz );
 
 cleanup:
 
