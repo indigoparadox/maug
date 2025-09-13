@@ -28,7 +28,7 @@ MERROR_RETVAL init_mlsp_script(
    ck_assert_int_eq( retval, MERROR_OK );
 
    /* Grab count including builtins. */
-   *p_baseline_env_ct = mdata_vector_ct( &(exec->env) );
+   *p_baseline_env_ct = mdata_table_ct( &(exec->env) );
 
    /* Execute the script. */
    for( i = 0 ; iter > i ; i++ ) {
@@ -58,12 +58,10 @@ START_TEST( test_mlsp_exec_step ) {
     * testing script above.
     */
    if( 2 == _i ) {
-      ck_assert_int_eq(
-         mdata_vector_ct( &(exec.env) ), baseline_env_ct );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct );
    
    } else if( 3 == _i ) {
-      ck_assert_int_eq(
-         mdata_vector_ct( &(exec.env) ), baseline_env_ct + 1 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 1 );
 
       /* Check visit count. */
       mdata_vector_lock( &(exec.per_node_visit_ct) );
@@ -72,19 +70,17 @@ START_TEST( test_mlsp_exec_step ) {
       ck_assert_int_eq( *p_visit_ct, _i );
 
       /* Check env. */
-      mdata_vector_lock( &(exec.env) );
+      mdata_table_lock( &(exec.env) );
       e = mlisp_env_get( &parser, &exec, "x" );
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 3 );
    } else if( 7 == _i ) {
-      ck_assert_int_eq(
-         mdata_vector_ct( &(exec.env) ), baseline_env_ct + 1 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 1 );
 
    } else if( 8 == _i ) {
-      ck_assert_int_eq(
-         mdata_vector_ct( &(exec.env) ), baseline_env_ct + 2 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 2 );
 
-      mdata_vector_lock( &(exec.env) );
+      mdata_table_lock( &(exec.env) );
       e = mlisp_env_get( &parser, &exec, "y" );
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 9 );
@@ -95,7 +91,7 @@ START_TEST( test_mlsp_exec_step ) {
 
 cleanup:
    if( 8 == _i || 3 == _i ) {
-      mdata_vector_unlock( &(exec.env) );
+      mdata_table_unlock( &(exec.env) );
    } else if( 3 == _i ) {
       mdata_vector_unlock( &(exec.per_node_visit_ct) );
    }
@@ -115,17 +111,26 @@ START_TEST( test_mlsp_exec_lambda ) {
    retval = init_mlsp_script(
       &parser, &exec, g_script_lambda, _i, &baseline_env_ct );
 
+   /*
    debug_printf( 1, " ------ %d -------", _i );
    mlisp_env_dump( &parser, &exec, 0 );
+   */
 
-   mdata_vector_lock( &(exec.env) );
-   debug_printf( 1, "get y" );
+   mdata_table_lock( &(exec.env) );
    e = mlisp_env_get( &parser, &exec, "y" );
-   ck_assert_ptr_ne( e, NULL );
-   ck_assert_int_eq( e->value.integer, 9 );
-   debug_printf( 1, "end get y: %d", e->value.integer );
+   if( 3 > _i ) {
+      ck_assert_ptr_eq( e, NULL );
+   } else if( 13 > _i ) {
+      ck_assert_ptr_ne( e, NULL );
+      ck_assert_int_eq( e->value.integer, 1 );
+   } else {
+      ck_assert_ptr_ne( e, NULL );
+      ck_assert_int_eq( e->value.integer, 9 );
+   }
 
 cleanup:
+
+   mdata_table_unlock( &(exec.env) );
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
@@ -139,7 +144,7 @@ Suite* mlsp_suite( void ) {
    tc_exec = tcase_create( "Exec" );
 
    tcase_add_loop_test( tc_exec, test_mlsp_exec_step, 0, 9 );
-   tcase_add_loop_test( tc_exec, test_mlsp_exec_lambda, 0, 25 );
+   tcase_add_loop_test( tc_exec, test_mlsp_exec_lambda, 0, 24 );
 
    suite_add_tcase( s, tc_exec );
 

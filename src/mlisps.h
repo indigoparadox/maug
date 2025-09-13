@@ -72,8 +72,6 @@ typedef uint8_t mlisp_bool_t;
    f( 4, mdata_strpool_idx_t, strpool_idx,   STR,     SSIZE_T_FMT ) \
    f( 5, mlisp_env_cb_t,      cb,            CB,      "%p" ) \
    f( 6, mlisp_lambda_t,      lambda,        LAMBDA,  SSIZE_T_FMT ) \
-   f( 7, mlisp_args_t,        args_start,    ARGS_S,  SSIZE_T_FMT ) \
-   f( 8, mlisp_arge_t,        args_end,      ARGS_E,  SSIZE_T_FMT ) \
    f(10, mlisp_begin_t,       begin,         BEGIN,   SSIZE_T_FMT )   
 
 /*! \} */ /* mlisp_types */
@@ -105,10 +103,7 @@ union MLISP_VAL {
 struct MLISP_ENV_NODE {
    uint8_t flags;
    uint8_t type;
-   mdata_strpool_idx_t name_strpool_idx;
-   size_t name_strpool_sz;
    union MLISP_VAL value;
-   void* cb_data;
 };
 
 struct MLISP_STACK_NODE {
@@ -159,8 +154,8 @@ struct MLISP_EXEC_STATE {
     * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
     * denote env definitions that are actually args for the current lambda.
     */
-   /* vector_type struct MLISP_ENV_NODE */
-   struct MDATA_VECTOR env;
+   /* table_type struct MLISP_ENV_NODE */
+   struct MDATA_TABLE env;
    /*! \brief Dummy field; do not serialize fields after this! */
    int8_t no_serial;
 /**
@@ -174,8 +169,8 @@ struct MLISP_EXEC_STATE {
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;
 #endif /* MLISP_DEBUG_TRACE */
-   /* vector_type struct MLISP_ENV_NODE */
-   struct MDATA_VECTOR* global_env;
+   /* table_type struct MLISP_ENV_NODE */
+   struct MDATA_TABLE* global_env;
 };
 
 struct MLISP_PARSER {
@@ -186,7 +181,6 @@ struct MLISP_PARSER {
     * \brief Definitions to use if ::MLISP_EXEC_FLAG_DEF_TERM is defined on the
     *        accompanying MLISP_EXEC_STATE::flags.
     */
-   struct MDATA_VECTOR env;
    ssize_t ast_node_iter;
 };
 

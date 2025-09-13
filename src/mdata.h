@@ -258,6 +258,13 @@ void mdata_table_free( struct MDATA_TABLE* t );
 
 /*! \} */
 
+#if MDATA_TRACE_LVL > 0
+#  define mdata_debug_printf( fmt, ... ) \
+      debug_printf( MDATA_TRACE_LVL, fmt, __VA_ARGS__ );
+#else
+#  define mdata_debug_printf( fmt, ... )
+#endif /* MDATA_TRACE_LVL */
+
 /**
  * \addtogroup mdata_strpool
  * \{
@@ -282,7 +289,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
    }
 
 #define mdata_strpool_get( sp, idx ) \
-   (&((sp)->str_p[idx]))
+   ((idx >= 0 && idx < (sp)->str_sz) ? &((sp)->str_p[idx]) : NULL)
 
 #define mdata_strpool_padding( str_sz ) \
    (sizeof( size_t ) - ((str_sz + 1 /* NULL */) % sizeof( size_t )))
@@ -303,13 +310,15 @@ void mdata_table_free( struct MDATA_TABLE* t );
  *          label! (This is fine for mdata_vector_unlock(), however.)
  */
 #define mdata_vector_lock( v ) \
-   if( \
+   if( NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
+      mdata_debug_printf( "locking empty vector..." ); \
+      (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
+   } else if( \
       mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
       0 < (v)->locks \
    ) { \
       (v)->locks++; \
-      debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
-         (v)->locks ); \
+      mdata_debug_printf( "vector " #v " locks: " SSIZE_T_FMT, (v)->locks ); \
    } else { \
       assert( !mdata_vector_is_locked( v ) ); \
       if( mdata_vector_is_locked( v ) ) { \
@@ -320,7 +329,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
       maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
       (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
-      debug_printf( MDATA_TRACE_LVL, "locked vector " #v ); \
+      mdata_debug_printf( "locked vector " #v ); \
    }
 
 /**
@@ -329,19 +338,24 @@ void mdata_table_free( struct MDATA_TABLE* t );
  * \note mdata_vector_unlock() may be called after the cleanup label.
  */
 #define mdata_vector_unlock( v ) \
-   if( \
-      mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
-      0 < (v)->locks \
-   ) { \
-      (v)->locks--; \
-      debug_printf( MDATA_TRACE_LVL, "vector " #v " locks: " SSIZE_T_FMT, \
-         (v)->locks ); \
-   } \
-   if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
-      assert( mdata_vector_is_locked( v ) ); \
-      maug_munlock( (v)->data_h, (v)->data_bytes ); \
+   if( NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
+      mdata_debug_printf( "locking empty vector..." ); \
       (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
-      debug_printf( MDATA_TRACE_LVL, "unlocked vector " #v ); \
+   } else { \
+      if( \
+         mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
+         0 < (v)->locks \
+      ) { \
+         (v)->locks--; \
+         mdata_debug_printf( "vector " #v " locks: " SSIZE_T_FMT, \
+            (v)->locks ); \
+      } \
+      if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
+         assert( mdata_vector_is_locked( v ) ); \
+         maug_munlock( (v)->data_h, (v)->data_bytes ); \
+         (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
+         mdata_debug_printf( "unlocked vector " #v ); \
+      } \
    }
 
 #define mdata_vector_get( v, idx, type ) \
@@ -978,6 +992,7 @@ MERROR_RETVAL mdata_vector_alloc(
 #endif /* MDATA_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == v->data_h );
       v->data_h = maug_malloc( v->ct_max, item_sz );
+      assert( 0 < item_sz );
       v->item_sz = item_sz;
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
@@ -1099,7 +1114,11 @@ ssize_t _mdata_table_hunt_index(
    struct MDATA_TABLE* t, const char* key, uint32_t key_hash, size_t key_sz
 ) {
    struct MDATA_TABLE_KEY* key_iter = NULL;
-   ssize_t i = 0;
+   ssize_t i = -1;
+
+   if( 0 == mdata_table_ct( t ) ) {
+      goto cleanup;
+   }
 
    assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
 
@@ -1128,6 +1147,8 @@ ssize_t _mdata_table_hunt_index(
          return i;
       }
    }
+
+cleanup:
 
    return -1;
 }
@@ -1373,6 +1394,14 @@ cleanup:
    }
 
    return value_out;
+}
+
+/* === */
+
+void mdata_table_free( struct MDATA_TABLE* t ) {
+   mdata_vector_free( &(t->data_cols[0]) );
+   mdata_vector_free( &(t->data_cols[1]) );
+   maug_mzero( t, sizeof( struct MDATA_TABLE ) );
 }
 
 #endif /* MDATA_C */

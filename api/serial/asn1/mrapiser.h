@@ -189,6 +189,14 @@ cleanup:
 
 /* === */
 
+MERROR_RETVAL mserialize_table(
+   mfile_t* ser_f, struct MDATA_TABLE* p_ser_tab, mserialize_cb_t cb
+) {
+   /* TODO */
+}
+
+/* === */
+
 MERROR_RETVAL mserialize_block(
    mfile_t* ser_f, void* p_block, size_t block_sz
 ) {
@@ -349,6 +357,7 @@ MERROR_RETVAL mserialize_float(
    return MERROR_FILE;
 }
 
+#if 0
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array
 ) {
@@ -399,22 +408,6 @@ MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
       maug_cleanup_if_not_ok();
 
 #if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL,
-         "serializing field: name_strpool_idx" );
-#endif /* MSERIALIZE_TRACE_LVL */
-      retval = mserialize_mdata_strpool_idx_t(
-         ser_out, &(p_ser_struct->name_strpool_idx), 1 );
-      maug_cleanup_if_not_ok();
-
-#if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL,
-         "serializing field: name_strpool_sz" );
-#endif /* MSERIALIZE_TRACE_LVL */
-      retval = mserialize_size_t(
-         ser_out, &(p_ser_struct->name_strpool_sz), 1 );
-      maug_cleanup_if_not_ok();
-
-#if MSERIALIZE_TRACE_LVL > 0
       debug_printf( MSERIALIZE_TRACE_LVL, "serializing field: value" );
 #endif /* MSERIALIZE_TRACE_LVL */
       retval = mserialize_union_MLISP_VAL( ser_out, &(p_ser_struct->value), 1 );
@@ -435,6 +428,7 @@ MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
 cleanup:
    return retval;
 }
+#endif
 
 MERROR_RETVAL mserialize_union_MLISP_VAL(
    mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array 
@@ -685,6 +679,13 @@ cleanup:
    return retval;
 }
 
+MERROR_RETVAL mdeserialize_table(
+   mfile_t* ser_in, struct MDATA_TABLE* p_ser_tab, mdeserialize_cb_t cb,
+   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
+) {
+   /* TODO */
+}
+
 MERROR_RETVAL mdeserialize_float(
    mfile_t* ser_in, float* p_ser_float, int array, ssize_t* p_ser_sz 
 ) {
@@ -757,6 +758,7 @@ cleanup:
    return retval;
 }
 
+#if 0
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_in, struct MLISP_ENV_NODE* p_ser_struct, int array,
    ssize_t* p_ser_sz 
@@ -832,34 +834,6 @@ MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
 
 #if MSERIALIZE_TRACE_LVL > 0
       debug_printf( MSERIALIZE_TRACE_LVL,
-         "deserializing field: name_strpool_idx" );
-#endif /* MSERIALIZE_TRACE_LVL */
-      field_sz = 0;
-      retval = mdeserialize_mdata_strpool_idx_t(
-         ser_in, &(p_ser_struct->name_strpool_idx), 1, &field_sz );
-      maug_cleanup_if_not_ok();
-      struct_remaining -= field_sz;
-      if( 0 >= struct_remaining ) {
-         error_printf( "struct MLISP_ENV_NODE was smaller than expected!" );
-         goto cleanup;
-      }
-
-#if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL,
-         "deserializing field: name_strpool_sz" );
-#endif /* MSERIALIZE_TRACE_LVL */
-      field_sz = 0;
-      retval = mdeserialize_size_t(
-         ser_in, &(p_ser_struct->name_strpool_sz), 1, &field_sz );
-      maug_cleanup_if_not_ok();
-      struct_remaining -= field_sz;
-      if( 0 >= struct_remaining ) {
-         error_printf( "struct MLISP_ENV_NODE was smaller than expected!" );
-         goto cleanup;
-      }
-
-#if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL,
          "deserializing field: value" );
 #endif /* MSERIALIZE_TRACE_LVL */
       field_sz = 0;
@@ -882,6 +856,7 @@ MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
 cleanup:
    return retval;
 }
+#endif
 
 MERROR_RETVAL mdeserialize_union_MLISP_VAL(
    mfile_t* ser_in, union MLISP_VAL* p_ser_union, int array, ssize_t* p_ser_sz 

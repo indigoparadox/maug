@@ -84,15 +84,18 @@
  *          by the format-specific API!
  */
 typedef MERROR_RETVAL (*mserialize_cb_t)(
-   mfile_t* ser_out, void* p_ser_val, int array  );
+   mfile_t* ser_out, void* p_ser_val, int array );
 
 typedef MERROR_RETVAL (*mdeserialize_cb_t)(
-   mfile_t* ser_out, void* p_ser_int, int array, ssize_t* p_ser_sz  );
+   mfile_t* ser_out, void* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mserialize_int( mfile_t* ser_out, int32_t value, int array );
 
 MERROR_RETVAL mserialize_vector(
    mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb );
+
+MERROR_RETVAL mserialize_table(
+   mfile_t* ser_f, struct MDATA_TABLE* p_ser_tab, mserialize_cb_t cb );
 
 MERROR_RETVAL mserialize_block(
    mfile_t* p_file, void* p_block, size_t block_sz );
@@ -168,6 +171,10 @@ MERROR_RETVAL mdeserialize_int(
 
 MERROR_RETVAL mdeserialize_vector(
    mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
+   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
+
+MERROR_RETVAL mdeserialize_table(
+   mfile_t* ser_f, struct MDATA_TABLE* p_ser_vec, mdeserialize_cb_t cb,
    uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_size_t(

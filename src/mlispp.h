@@ -195,6 +195,7 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_AST_NODE* n = NULL;
+   char* strpool_token = NULL;
 
    mdata_vector_lock( &(parser->ast) );
 
@@ -203,59 +204,49 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    assert( NULL != n );
 
    mdata_strpool_lock( &(parser->strpool) );
+
+   strpool_token = mdata_strpool_get( &(parser->strpool), token_idx );
+   assert( NULL != strpool_token );
+
    if( 0 == token_sz ) {
-      token_sz = maug_strlen(
-         mdata_strpool_get( &(parser->strpool), token_idx ) );
+      token_sz = maug_strlen( strpool_token );
    }
    assert( 0 < token_sz );
 
    /* Setup flags based on token name. */
-   if(
-      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
-         "lambda", token_sz + 1 )
-   ) {
+   if( 0 == strncmp( strpool_token, "lambda", token_sz + 1 ) ) {
       /* Special node: lambda. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
-         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+         strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_LAMBDA;
 
-   } else if(
-      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
-         "if", token_sz + 1 )
-   ) {
+   } else if( 0 == strncmp( strpool_token, "if", token_sz + 1 ) ) {
       /* Special node: if. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: IF",
-         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+         strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_IF;
 
-   } else if(
-      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
-         "begin", token_sz + 1 )
-   ) {
+   } else if( 0 == strncmp( strpool_token, "begin", token_sz + 1 ) ) {
       /* Special node: begin. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: BEGIN",
-         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+         strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_BEGIN;
 
-   } else if(
-      0 == strncmp( mdata_strpool_get( &(parser->strpool), token_idx ),
-         "define", token_sz + 1 )
-   ) {
+   } else if( 0 == strncmp( strpool_token, "define", token_sz + 1 ) ) {
       /* Special node: define. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: DEFINE",
-         mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+         strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_DEFINE;
    }
 
    /* Debug report. */
-   debug_printf( MLISP_PARSE_TRACE_LVL, "setting node " SSIZE_T_FMT
-      " token: \"%s\" (" SIZE_T_FMT ")",
-      parser->ast_node_iter,
-      mdata_strpool_get( &(parser->strpool), token_idx ), token_sz );
+   debug_printf( MLISP_PARSE_TRACE_LVL,
+      "setting node " SSIZE_T_FMT " token: \"%s\" (" SIZE_T_FMT ")",
+      parser->ast_node_iter, strpool_token, token_sz );
    /* mdata_strpool_unlock( &(parser->strpool), strpool ); */
 
    /* Set the token from the strpool. */
@@ -630,8 +621,6 @@ MERROR_RETVAL mlisp_parser_init( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t append_retval = 0;
 
-   assert( (MAUG_MHANDLE)NULL == parser->env.data_h );
-
    debug_printf( MLISP_TRACE_LVL,
       "initializing mlisp parser (" SIZE_T_FMT " bytes)...",
       sizeof( struct MLISP_PARSER ) );
@@ -667,11 +656,10 @@ cleanup:
 
 void mlisp_parser_free( struct MLISP_PARSER* parser ) {
    debug_printf( MLISP_TRACE_LVL,
-         "destroying parser (ast: " SIZE_T_FMT ", env: " SIZE_T_FMT ")...",
-         mdata_vector_ct( &(parser->ast) ), mdata_vector_ct( &(parser->env) ) );
+         "destroying parser (ast: " SIZE_T_FMT ")...",
+         mdata_vector_ct( &(parser->ast) ) );
    mdata_strpool_free( &(parser->strpool) );
    mdata_vector_free( &(parser->ast) );
-   mdata_vector_free( &(parser->env) );
    debug_printf( MLISP_PARSE_TRACE_LVL, "parser destroyed!" );
 }
 
