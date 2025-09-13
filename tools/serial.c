@@ -112,9 +112,9 @@
 
 struct STRUCT_PARSED_FIELD {
    char name[PARSE_TOKEN_SZ + 1];
+   char* prefix;
    /*! \brief Type of item stored if this is a struct MDATA_VECTOR. */
-   char vector_type[PARSE_TOKEN_SZ + 1];
-   char table_type[PARSE_TOKEN_SZ + 1];
+   char member_type[PARSE_TOKEN_SZ + 1];
    /*! \brief Type of the field in parse_field_type_table(). */
    int type;
    int array;
@@ -384,33 +384,23 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
             "\"serializing field: %s\" );\n"
          "#endif /* MSERIALIZE_TRACE_LVL */\n", parsed->fields[i].name );
 
-      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+      if( NULL != parsed->fields[i].prefix ) {
          /* If it's a vector, call the specialized vector serializer we emit
           * in the next function.
           */
 
          memset( type_str, '\0', PARSE_TOKEN_SZ );
-         strncpy( type_str, parsed->fields[i].vector_type, PARSE_TOKEN_SZ );
+         strncpy( type_str, parsed->fields[i].member_type, PARSE_TOKEN_SZ );
          parse_token_nospace( type_str );
 
          printf(
-            "      retval = mserialize_vector( "
-            "ser_f, &(p_ser_struct->%s), (mserialize_cb_t)mserialize_%s );\n",
-            parsed->fields[i].name, type_str );
-
-      } else if( 0 < strlen( parsed->fields[i].table_type ) ) {
-         /* If it's a table, call the specialized table serializer we emit
-          * in the next function.
-          */
-
-         memset( type_str, '\0', PARSE_TOKEN_SZ );
-         strncpy( type_str, parsed->fields[i].table_type, PARSE_TOKEN_SZ );
-         parse_token_nospace( type_str );
-
-         printf(
-            "      retval = mserialize_table( "
-            "ser_f, &(p_ser_struct->%s), (mserialize_cb_t)mserialize_%s );\n",
-            parsed->fields[i].name, type_str );
+            "      retval = mserialize_%s( "
+            "ser_f, %sp_ser_struct->%s%s, (mserialize_cb_t)mserialize_%s );\n",
+            parsed->fields[i].prefix,
+            1 < parsed->fields[i].array ? "" : "&(", /* Wrap if not an array. */
+            parsed->fields[i].name,
+            1 < parsed->fields[i].array ? "" : ")", /* Wrap if not an array. */
+            type_str );
 
       } else if(
          1 < parsed->fields[i].array &&
@@ -501,20 +491,13 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
    printf( "   uint8_t struct_type = 0;\n" );
    printf( "   uint8_t type = 0;\n" );
    for( i = 0 ; parsed->fields_ct > i ; i++ ) {
-      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+      if( NULL != parsed->fields[i].prefix ) {
          /* This field is a vector, so we need a temporary buffer of the
           * field size so the mdeserialize_vector() call can deserialize to it
           * before appending to the vector!
           */
-         printf( "   uint8_t vec_buf_%d[sizeof( %s )];\n",
-            i, parsed->fields[i].vector_type );
-      } else if( 0 < strlen( parsed->fields[i].table_type ) ) {
-         /* This field is a table, so we need a temporary buffer of the
-          * field size so the mdeserialize_table() call can deserialize to it
-          * before appending to the vector!
-          */
-         printf( "   uint8_t tab_buf_%d[sizeof( %s )];\n",
-            i, parsed->fields[i].table_type );
+         printf( "   uint8_t fld_buf_%d[sizeof( %s )];\n",
+            i, parsed->fields[i].member_type );
       }
    }
 
@@ -597,37 +580,26 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
       printf( "      field_sz = 0;\n" );
 
-      if( 0 < strlen( parsed->fields[i].vector_type ) ) {
+      if( NULL != parsed->fields[i].prefix ) {
          /* If it's a vector, call the specialized vector serializer we emit
           * in the next function.
           */
 
          memset( type_str, '\0', PARSE_TOKEN_SZ );
-         strncpy( type_str, parsed->fields[i].vector_type, PARSE_TOKEN_SZ );
+         strncpy( type_str, parsed->fields[i].member_type, PARSE_TOKEN_SZ );
          parse_token_nospace( type_str );
 
          printf(
-            "      retval = mdeserialize_vector( "
-            "ser_f, &(p_ser_struct[i].%s), (mdeserialize_cb_t)mdeserialize_%s, "
-            "vec_buf_%d, sizeof( %s ), &field_sz );\n",
-            parsed->fields[i].name, type_str,
-            i, parsed->fields[i].vector_type );
-
-      } else if( 0 < strlen( parsed->fields[i].table_type ) ) {
-         /* If it's a table, call the specialized table serializer we emit
-          * in the next function.
-          */
-
-         memset( type_str, '\0', PARSE_TOKEN_SZ );
-         strncpy( type_str, parsed->fields[i].table_type, PARSE_TOKEN_SZ );
-         parse_token_nospace( type_str );
-
-         printf(
-            "      retval = mdeserialize_table( "
-            "ser_f, &(p_ser_struct[i].%s), (mdeserialize_cb_t)mdeserialize_%s, "
-            "tab_buf_%d, sizeof( %s ), &field_sz );\n",
-            parsed->fields[i].name, type_str,
-            i, parsed->fields[i].table_type );
+            "      retval = mdeserialize_%s( "
+               "ser_f, %sp_ser_struct[i].%s%s, "
+               "(mdeserialize_cb_t)mdeserialize_%s, "
+               "fld_buf_%d, sizeof( %s ), &field_sz );\n",
+            parsed->fields[i].prefix,
+            1 < parsed->fields[i].array ? "" : "&(", /* Wrap if not an array. */
+            parsed->fields[i].name,
+            1 < parsed->fields[i].array ? "" : ")", /* Wrap if not an array. */
+            type_str,
+            i, parsed->fields[i].member_type );
 
       } else if(
          1 < parsed->fields[i].array &&
@@ -983,8 +955,9 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             goto cleanup;
          } else {
             /* The whole token is built so copy it to field vector type. */
+            parser->parsed.fields[parser->parsed.fields_ct].prefix = "vector";
             strncpy(
-               parser->parsed.fields[parser->parsed.fields_ct].vector_type,
+               parser->parsed.fields[parser->parsed.fields_ct].member_type,
                parser->token,
                PARSE_TOKEN_SZ );
             parse_pop_mode( parser );
@@ -1003,8 +976,9 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             goto cleanup;
          } else {
             /* The whole token is built so copy it to field table type. */
+            parser->parsed.fields[parser->parsed.fields_ct].prefix = "table";
             strncpy(
-               parser->parsed.fields[parser->parsed.fields_ct].table_type,
+               parser->parsed.fields[parser->parsed.fields_ct].member_type,
                parser->token,
                PARSE_TOKEN_SZ );
             parse_pop_mode( parser );
