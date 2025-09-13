@@ -207,7 +207,7 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx );
  * \return Return a generic pointer to the item at the requested index, or NULL
  *         if the index is outside of the vector bounds.
  */
-void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx );
+void* mdata_vector_get_void( const struct MDATA_VECTOR* v, size_t idx );
 
 MERROR_RETVAL mdata_vector_copy(
    struct MDATA_VECTOR* v_dest, struct MDATA_VECTOR* v_src );
@@ -249,7 +249,7 @@ MERROR_RETVAL mdata_table_set(
 MERROR_RETVAL mdata_table_unset(
    struct MDATA_TABLE* t, const char* key );
 
-void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key );
+void* mdata_table_get_void( const struct MDATA_TABLE* t, const char* key );
 
 void* mdata_table_hash_get_void(
    struct MDATA_TABLE* t, uint32_t key_hash, size_t key_sz );
@@ -897,7 +897,7 @@ cleanup:
 
 /* === */
 
-void* mdata_vector_get_void( struct MDATA_VECTOR* v, size_t idx ) {
+void* mdata_vector_get_void( const struct MDATA_VECTOR* v, size_t idx ) {
 
 #if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
@@ -1117,7 +1117,8 @@ struct MDATA_TABLE_REPLACE_CADDY {
 /* === */
 
 ssize_t _mdata_table_hunt_index(
-   struct MDATA_TABLE* t, const char* key, uint32_t key_hash, size_t key_sz
+   const struct MDATA_TABLE* t,
+   const char* key, uint32_t key_hash, size_t key_sz
 ) {
    struct MDATA_TABLE_KEY* key_iter = NULL;
    ssize_t i = -1;
@@ -1340,7 +1341,7 @@ cleanup:
 
 /* === */
 
-void* mdata_table_get_void( struct MDATA_TABLE* t, const char* key ) {
+void* mdata_table_get_void( const struct MDATA_TABLE* t, const char* key ) {
    MERROR_RETVAL retval = MERROR_OK;
    void* value_out = NULL;
    ssize_t idx = 0;

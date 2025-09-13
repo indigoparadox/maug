@@ -14,6 +14,10 @@
 #  define MLISP_TRACE_LVL 0
 #endif /* !MLISP_TRACE_LVL */
 
+#ifndef MLISP_EXEC_ENV_FRAME_CT_MAX
+#  define MLISP_EXEC_ENV_FRAME_CT_MAX 10
+#endif /* !MLISP_EXEC_ENV_FRAME_CT_MAX */
+
 #ifndef MLISP_TRACE_SIGIL
 #  define MLISP_TRACE_SIGIL "TRACE"
 #endif /* !MLISP_TRACE_SIGIL */
@@ -151,11 +155,25 @@ struct MLISP_EXEC_STATE {
    /**
     * \brief Environment in which statements are defined if ::MLISP_
     *
-    * This is segmented with ::MLISP_TYPE_ARGS_S and :: MLISP_TYPE_ARGS_E, to
-    * denote env definitions that are actually args for the current lambda.
+    * This is an array indexed by MLISP_EXEC_STATE::env_select, below. The
+    * members of this array are referred to as frames, elsewhere. Diving
+    * into a lambda during execution will increment
+    * MLISP_EXEC_STATE::env_select and initialize a new table here (unless it's
+    * the same lambda doing a tail call, which will free the current env frame
+    * first). Leaving that lambda will free the current env frame and decrement
+    * MLISP_EXEC_STATE::env_select.
+    *
+    * mlisp_env_get() will search the highest-indexed (most recent) frame
+    * before searching lower frames. mlisp_env_set() will store in the
+    * highest-indexed (currently selected) frame.
     */
    /* table_type struct MLISP_ENV_NODE */
-   struct MDATA_TABLE env;
+   struct MDATA_TABLE env[MLISP_EXEC_ENV_FRAME_CT_MAX];;
+   /**
+    * \brief The current topmost frame of MLISP_EXEC_STATE::env. Please see
+    *        that for more information.
+    */
+   int8_t env_select;
    /*! \brief Dummy field; do not serialize fields after this! */
    int8_t no_serial;
 /**
