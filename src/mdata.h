@@ -310,7 +310,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
  *          label! (This is fine for mdata_vector_unlock(), however.)
  */
 #define mdata_vector_lock( v ) \
-   if( NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
+   if( (MAUG_MHANDLE)NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
       mdata_debug_printf( "locking empty vector..." ); \
       (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
    } else if( \
@@ -338,7 +338,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
  * \note mdata_vector_unlock() may be called after the cleanup label.
  */
 #define mdata_vector_unlock( v ) \
-   if( NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
+   if( (MAUG_MHANDLE)NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
       mdata_debug_printf( "locking empty vector..." ); \
       (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
    } else { \
