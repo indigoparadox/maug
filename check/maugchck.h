@@ -8,6 +8,7 @@
 #include <mlisps.h>
 #include <mlispp.h>
 #include <mlispe.h>
+#include "mserial.h"
 
 #endif /* !MAUGCHCK_H */
 

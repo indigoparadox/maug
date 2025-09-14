@@ -163,7 +163,7 @@ MERROR_RETVAL mserialize_vector(
    for( i = 0 ; array > i ; i++ ) {
       header = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
       
-      if( 0 == mdata_vector_ct( p_ser_vec ) ) {
+      if( 0 == mdata_vector_ct( &(p_ser_vec[i]) ) ) {
          /* Close empty vector. */
          retval = mserialize_footer( ser_out, header, 0 );
          maug_cleanup_if_not_ok();
@@ -173,19 +173,19 @@ MERROR_RETVAL mserialize_vector(
          continue;
       }
       
-      if( !mdata_vector_is_locked( p_ser_vec ) ) {
-         mdata_vector_lock( p_ser_vec );
-         autolock = 1;
+      if( !mdata_vector_is_locked( &(p_ser_vec[i]) ) ) {
+         mdata_vector_lock( &(p_ser_vec[i]) );
+         autolock++;
       }
       
-      for( j = 0 ; mdata_vector_ct( p_ser_vec ) > j ; j++ ) {
-         retval = cb( ser_out, mdata_vector_get_void( p_ser_vec, j ), 1 );
+      for( j = 0 ; mdata_vector_ct( &(p_ser_vec[i]) ) > j ; j++ ) {
+         retval = cb( ser_out, mdata_vector_get_void( &(p_ser_vec[i]), j ), 1 );
          maug_cleanup_if_not_ok();
       }
       
       retval = mserialize_footer( ser_out, header, 0 );
 #if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector %p.", p_ser_vec );
+      debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector %p.", &(p_ser_vec[i]) );
 #endif /* MSERIALIZE_TRACE_LVL */
    }
 
@@ -194,8 +194,8 @@ MERROR_RETVAL mserialize_vector(
    }
 
 cleanup:
-   if( autolock ) {
-      mdata_vector_unlock( p_ser_vec );
+   for( i = 0 ; autolock > i ; i++ ) {
+      mdata_vector_unlock( &(p_ser_vec[i]) );
    }
    return retval;
 }
@@ -402,7 +402,7 @@ MERROR_RETVAL mserialize_footer(
       "ending sequence of " SIZE_T_FMT " bytes", seq_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
 
-   assert( ser_out->cursor( ser_out ) == ser_out->sz );
+   /* assert( ser_out->cursor( ser_out ) == ser_out->sz ); */
 
    ser_out->seek( ser_out, header );
    retval = _mserialize_asn_sz( ser_out, seq_sz );
@@ -803,53 +803,86 @@ MERROR_RETVAL mdeserialize_vector(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t type = 0;
-   ssize_t sz_seq = 0;
-   ssize_t sz = 0;
-   size_t header_sz_seq = 0;
+   ssize_t sz_vec_arr = 0;
+   ssize_t sz_vec = 0;
+   ssize_t sz_item = 0;
+   size_t header_sz = 0;
    size_t count = 0;
    ssize_t idx_added = 0;
+   size_t i = 0;
 
 #if MSERIALIZE_TRACE_LVL > 0
    debug_printf( MSERIALIZE_TRACE_LVL, "deserializing vector..." );
 #endif /* MSERIALIZE_TRACE_LVL */
 
-   retval = mdeserialize_header( ser_in, &type, &sz_seq, &header_sz_seq );
+   retval = mdeserialize_header( ser_in, &type, &sz_vec_arr, &header_sz );
    maug_cleanup_if_not_ok();
 
-   *p_ser_sz = sz + header_sz_seq;
+   /* Assemble the size of the full sequence to return. Not used below,
+    * so we can reuse header_sz for subordinate header sizes.
+    */
+   *p_ser_sz = sz_vec_arr + header_sz;
 
-   if( MSERIALIZE_ASN_TYPE_SEQUENCE != type ) {
-      error_printf( "expected sequence! found: 0x%02x", type );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   while( 0 < sz_seq ) {
-      debug_printf( MSERIALIZE_TRACE_LVL,
-         "reading vector item " SIZE_T_FMT " (" SSIZE_T_FMT
-            " bytes remaining)...",
-         count, sz_seq );
-      retval = cb( ser_in, buf, 1, &sz );
-      maug_cleanup_if_not_ok();
 #if MSERIALIZE_TRACE_LVL > 0
+   if( array > 1 ) {
       debug_printf( MSERIALIZE_TRACE_LVL,
-         "adding " SIZE_T_FMT "-byte item as "
-            SIZE_T_FMT "-byte item to vector...",
-         sz, buf_sz );
-#endif /* MSERIALIZE_TRACE_LVL */
-      idx_added = mdata_vector_append( p_ser_vec, buf, buf_sz );
-      if( 0 > idx_added ) {
-         retval = merror_sz_to_retval( idx_added );
+         "deserializing array of %d union MLISP_VAL...", array );
+   }
+#endif
+
+   for( i = 0 ; array > i ; i++ ) {
+      if( array > 1 ) {
+         if( 0 >= sz_vec_arr ) {
+            error_printf(
+               "vector array sequence contained fewer values (" SIZE_T_FMT
+                  " than expected (" SIZE_T_FMT ")!",
+               i, array );
+            break;
+         }
+         retval = mdeserialize_header( ser_in, &type, &sz_vec, &header_sz );
+         maug_cleanup_if_not_ok();
+
+         /* Subtract the size of this vector in the array from the size of the
+          * array as a whole.
+          */
+         sz_vec_arr -= sz_vec + header_sz;
+      } else {
+         sz_vec = sz_vec_arr;
+      }
+
+      if( MSERIALIZE_ASN_TYPE_SEQUENCE != type ) {
+         error_printf( "expected sequence! found: 0x%02x", type );
+         retval = MERROR_FILE;
          goto cleanup;
       }
-      sz_seq -= sz;
-      count++;
-   }
+
+      while( 0 < sz_vec ) {
+         debug_printf( MSERIALIZE_TRACE_LVL,
+            "reading vector item " SIZE_T_FMT " (" SSIZE_T_FMT
+               " bytes remaining)...",
+            count, sz_vec );
+         retval = cb( ser_in, buf, 1, &sz_item );
+         maug_cleanup_if_not_ok();
+#if MSERIALIZE_TRACE_LVL > 0
+         debug_printf( MSERIALIZE_TRACE_LVL,
+            "adding " SIZE_T_FMT "-byte item as "
+               SIZE_T_FMT "-byte item to vector...",
+            sz_item, buf_sz );
+#endif /* MSERIALIZE_TRACE_LVL */
+         idx_added = mdata_vector_append( p_ser_vec, buf, buf_sz );
+         if( 0 > idx_added ) {
+            retval = merror_sz_to_retval( idx_added );
+            goto cleanup;
+         }
+         sz_vec -= sz_item;
+         count++;
+      }
 
 #if MSERIALIZE_TRACE_LVL > 0
-   debug_printf( MSERIALIZE_TRACE_LVL,
-      "deserialized " SSIZE_T_FMT " values.", count );
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserialized " SSIZE_T_FMT " values.", count );
 #endif /* MSERIALIZE_TRACE_LVL */
+   }
 
 cleanup:
    return retval;

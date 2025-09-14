@@ -15,6 +15,7 @@ CFLAGS_CHECK := \
 	-Iapi/mem/unix \
 	-Iapi/file/unix \
 	-Iapi/log/unix \
+	-Iapi/serial/asn1 \
 	-DMAUG_NO_RETRO \
 	-DDEBUG \
 	-DDEBUG_LOG \

@@ -149,14 +149,16 @@ MERROR_RETVAL mserialize_mfix_t(
 MERROR_RETVAL mserialize_char(
    mfile_t* ser_out, const char* p_ser_char, int array );
 
+MERROR_RETVAL mserialize_mdata_strpool_idx_t(
+   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array );
+
+#ifndef MAUG_NO_RETRO
+
 MERROR_RETVAL mserialize_retroflat_asset_path(
    mfile_t* ser_out, const retroflat_asset_path* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retrotile_coord_t(
    mfile_t* ser_out, const retrotile_coord_t* p_ser_int, int array );
-
-MERROR_RETVAL mserialize_mdata_strpool_idx_t(
-   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_retroflat_dir4_t(
    mfile_t* ser_out, const retroflat_dir4_t* p_ser_int, int array );
@@ -164,8 +166,7 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
 MERROR_RETVAL mserialize_retroflat_ms_t(
    mfile_t* ser_out, const retroflat_ms_t* p_ser_int, int array );
 
-MERROR_RETVAL mserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, const struct RETROTILE_COORDS* p_ser_struct, int array );
+#endif /* !MAUG_NO_RETRO */
 
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_out, const struct MLISP_ENV_NODE* p_ser_struct, int array );
@@ -178,6 +179,10 @@ MERROR_RETVAL mserialize_struct_MDATA_TABLE_KEY(
 
 /* === */
 
+/**
+ * \param p_sz Pointer to where to store the size of the received value.
+ * \param p_header_sz Pointer to where to store the size of the header, itself.
+ */
 MERROR_RETVAL mdeserialize_header(
    mfile_t* ser_in, uint8_t* p_type, ssize_t* p_sz, size_t* p_header_sz );
 
@@ -225,14 +230,16 @@ MERROR_RETVAL mdeserialize_mfix_t(
 MERROR_RETVAL mdeserialize_char(
    mfile_t* ser_in, char* p_ser_char, int array, ssize_t* p_ser_sz );
 
+MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
+   mfile_t* ser_in, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz );
+
+#ifndef MAUG_NO_RETRO
+
 MERROR_RETVAL mdeserialize_retroflat_asset_path(
    mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retrotile_coord_t(
    mfile_t* ser_in, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz );
-
-MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
-   mfile_t* ser_in, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retroflat_dir4_t(
    mfile_t* ser_in, retroflat_dir4_t* p_ser_int, int array, ssize_t* p_ser_sz );
@@ -240,8 +247,7 @@ MERROR_RETVAL mdeserialize_retroflat_dir4_t(
 MERROR_RETVAL mdeserialize_retroflat_ms_t(
    mfile_t* ser_in, retroflat_ms_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
-MERROR_RETVAL mdeserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_in, struct RETROTILE_COORDS* p_ser_struct, int array, ssize_t* p_ser_sz );
+#endif /* !MAUG_NO_RETRO */
 
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
    mfile_t* ser_in, struct MLISP_ENV_NODE* p_ser_struct, int array, ssize_t* p_ser_sz );
@@ -311,20 +317,30 @@ MERROR_RETVAL mserialize_mfix_t(
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
+#ifndef MAUG_NO_RETRO
+
 MERROR_RETVAL mserialize_retrotile_coord_t(
    mfile_t* ser_out, const retrotile_coord_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
-MERROR_RETVAL mserialize_mdata_strpool_idx_t (
-   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array 
+MERROR_RETVAL mserialize_retroflat_dir4_t(
+   mfile_t* ser_out, const retroflat_dir4_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
-MERROR_RETVAL mserialize_retroflat_dir4_t(
-   mfile_t* ser_out, const retroflat_dir4_t* p_ser_int, int array 
+MERROR_RETVAL mserialize_retroflat_ms_t(
+   mfile_t* ser_out, const retroflat_ms_t* p_ser_int, int array 
+) {
+   return mserialize_int( ser_out, *p_ser_int, array );
+}
+
+#endif /* !MAUG_NO_RETRO */
+
+MERROR_RETVAL mserialize_mdata_strpool_idx_t (
+   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
@@ -439,8 +455,8 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mdeserialize_retrotile_coord_t(
-   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz 
+MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
+   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t value = 0;
@@ -451,8 +467,10 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
-   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz 
+#ifndef MAUG_NO_RETRO
+
+MERROR_RETVAL mdeserialize_retrotile_coord_t(
+   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t value = 0;
@@ -486,6 +504,8 @@ MERROR_RETVAL mdeserialize_retroflat_ms_t(
 cleanup:
    return retval;
 }
+
+#endif /* !MAUG_NO_RETRO */
 
 #endif /* MSERIAL_C */
 

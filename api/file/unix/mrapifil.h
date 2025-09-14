@@ -183,8 +183,10 @@ cleanup:
       error_printf( "could not open file: %s", filename );
       retval = MERROR_FILE;
       goto cleanup;
+#if MFILE_SEEK_TRACE_LVL > 0
    } else {
       debug_printf( MFILE_SEEK_TRACE_LVL, "opened file: %s", filename );
+#endif /* MFILE_SEEK_TRACE_LVL */
    }
 
 #     ifdef MAUG_NO_STAT
@@ -197,8 +199,11 @@ cleanup:
    fseek( p_file->h.file, 0, SEEK_SET );
 #     endif /* MAUG_NO_STAT */
 
-   debug_printf( 1, "opened file %s (" OFF_T_FMT " bytes)...",
+#if MFILE_SEEK_TRACE_LVL > 0
+   debug_printf(
+      MFILE_SEEK_TRACE_LVL, "opened file %s (" OFF_T_FMT " bytes)...",
       filename, p_file->sz );
+#endif /* MFILE_SEEK_TRACE_LVL */
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
 

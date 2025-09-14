@@ -63,10 +63,39 @@ START_TEST( test_mfil_mem_insert ) {
 }
 END_TEST
 
+START_TEST( test_mfil_mem_cursor ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   mfile_t test_file;
+   char test_buf[TEST_MEM_SZ];
+
+   retval = mfile_lock_buffer( test_buf, TEST_MEM_SZ, &test_file );
+   ck_assert_int_eq( retval, MERROR_OK );
+
+   test_file.write_block( &test_file, &(g_test_mem[_i]), _i );
+
+   ck_assert_int_eq( test_file.cursor( &test_file ), _i );
+
+   mfile_close( &test_file );
+}
+
+START_TEST( test_mfil_file_cursor ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   mfile_t test_file;
+
+   retval = mfile_open_write( "chkfile", &test_file );
+   ck_assert_int_eq( retval, MERROR_OK );
+
+   test_file.write_block( &test_file, &(g_test_mem[_i]), _i );
+
+   ck_assert_int_eq( test_file.cursor( &test_file ), _i );
+
+   mfile_close( &test_file );
+}
 
 Suite* mfil_suite( void ) {
    Suite* s;
    TCase* tc_mem;
+   TCase* tc_file;
 
    s = suite_create( "mfil" );
 
@@ -75,8 +104,15 @@ Suite* mfil_suite( void ) {
    tcase_add_loop_test( tc_mem, test_mfil_mem_read, 0, TEST_MEM_SZ );
    tcase_add_loop_test( tc_mem, test_mfil_mem_write, 0, TEST_MEM_SZ );
    tcase_add_loop_test( tc_mem, test_mfil_mem_insert, 1, TEST_MEM_SZ );
+   tcase_add_loop_test( tc_mem, test_mfil_mem_cursor, 0, TEST_MEM_SZ );
 
    suite_add_tcase( s, tc_mem );
+
+   tc_file = tcase_create( "File" );
+
+   tcase_add_loop_test( tc_file, test_mfil_file_cursor, 0, TEST_MEM_SZ );
+
+   suite_add_tcase( s, tc_file );
 
    return s;
 }
