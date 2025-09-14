@@ -43,7 +43,8 @@
    f( struct MLISP_EXEC_STATE, 27 ) \
    f( struct MLISP_ENV_NODE,   28 ) \
    f( union MLISP_VAL,         29 ) \
-   f( struct MDATA_TABLE,      30 )
+   f( struct MDATA_TABLE,      30 ) \
+   f( struct MDATA_TABLE_KEY,  31 )
 
 #include <msercust.h>
 
@@ -320,7 +321,7 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       break;
 
    printf( "MERROR_RETVAL mserialize_struct_%s( "
-      "mfile_t* ser_f, struct %s* p_ser_struct, int array )",
+      "mfile_t* ser_f, const struct %s* p_ser_struct, int array )",
       parsed->name, parsed->name );
 
    if( prototype ) {
@@ -395,11 +396,20 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
          printf(
             "      retval = mserialize_%s( "
-            "ser_f, %sp_ser_struct->%s%s, (mserialize_cb_t)mserialize_%s );\n",
+            "ser_f, %s%sp_ser_struct->%s%s, %d, "
+            "(mserialize_cb_t)mserialize_%s );\n",
             parsed->fields[i].prefix,
+            /* Cast vector/table pointers to non-const because they have to be
+             * locked.
+             */
+            0 == strcmp( parsed->fields[i].prefix, "vector" ) ?
+               "(struct MDATA_VECTOR*)" : (0 == strcmp(
+                  parsed->fields[i].prefix, "table" ) ?
+                     "(struct MDATA_TABLE*)" : ""),
             1 < parsed->fields[i].array ? "" : "&(", /* Wrap if not an array. */
             parsed->fields[i].name,
             1 < parsed->fields[i].array ? "" : ")", /* Wrap if not an array. */
+            parsed->fields[i].array,
             type_str );
 
       } else if(
@@ -591,13 +601,14 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
 
          printf(
             "      retval = mdeserialize_%s( "
-               "ser_f, %sp_ser_struct[i].%s%s, "
+               "ser_f, %sp_ser_struct[i].%s%s, %d, "
                "(mdeserialize_cb_t)mdeserialize_%s, "
                "fld_buf_%d, sizeof( %s ), &field_sz );\n",
             parsed->fields[i].prefix,
             1 < parsed->fields[i].array ? "" : "&(", /* Wrap if not an array. */
             parsed->fields[i].name,
             1 < parsed->fields[i].array ? "" : ")", /* Wrap if not an array. */
+            parsed->fields[i].array,
             type_str,
             i, parsed->fields[i].member_type );
 

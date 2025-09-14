@@ -142,11 +142,13 @@ cleanup:
 /* === */
 
 MERROR_RETVAL mserialize_vector(
-   mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb
+   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec, int array,
+   mserialize_cb_t cb
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
-   off_t header = 0;
+   size_t i = 0, j = 0;
+   off_t header = 0,
+      header_array = 0;
    int autolock = 0;
    
 #if MSERIALIZE_TRACE_LVL > 0
@@ -154,31 +156,42 @@ MERROR_RETVAL mserialize_vector(
       p_ser_vec, mdata_vector_ct( p_ser_vec ) );
 #endif /* MSERIALIZE_TRACE_LVL */
    
-   header = mserialize_header( ser_f, MSERIALIZE_TYPE_ARRAY, 0 );
-   
-   if( 0 == mdata_vector_ct( p_ser_vec ) ) {
-      /* Close empty vector. */
-      retval = mserialize_footer( ser_f, header, 0 );
+   if( 1 < array ) {
+      header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+   }
+
+   for( i = 0 ; array > i ; i++ ) {
+      header = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+      
+      if( 0 == mdata_vector_ct( p_ser_vec ) ) {
+         /* Close empty vector. */
+         retval = mserialize_footer( ser_out, header, 0 );
+         maug_cleanup_if_not_ok();
 #if MSERIALIZE_TRACE_LVL > 0
-      debug_printf( MSERIALIZE_TRACE_LVL, "serialized empty vector." );
+         debug_printf( MSERIALIZE_TRACE_LVL, "serialized empty vector." );
 #endif /* MSERIALIZE_TRACE_LVL */
-      return retval;
-   }
-   
-   if( !mdata_vector_is_locked( p_ser_vec ) ) {
-      mdata_vector_lock( p_ser_vec );
-      autolock = 1;
-   }
-   
-   for( i = 0 ; mdata_vector_ct( p_ser_vec ) > i ; i++ ) {
-      retval = cb( ser_f, mdata_vector_get_void( p_ser_vec, i ), 1 );
-      maug_cleanup_if_not_ok();
-   }
-   
-   retval = mserialize_footer( ser_f, header, 0 );
+         continue;
+      }
+      
+      if( !mdata_vector_is_locked( p_ser_vec ) ) {
+         mdata_vector_lock( p_ser_vec );
+         autolock = 1;
+      }
+      
+      for( j = 0 ; mdata_vector_ct( p_ser_vec ) > j ; j++ ) {
+         retval = cb( ser_out, mdata_vector_get_void( p_ser_vec, j ), 1 );
+         maug_cleanup_if_not_ok();
+      }
+      
+      retval = mserialize_footer( ser_out, header, 0 );
 #if MSERIALIZE_TRACE_LVL > 0
-   debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector %p.", p_ser_vec );
+      debug_printf( MSERIALIZE_TRACE_LVL, "serialized vector %p.", p_ser_vec );
 #endif /* MSERIALIZE_TRACE_LVL */
+   }
+
+   if( 1 < array ) {
+      retval = mserialize_footer( ser_out, header_array, 0 );
+   }
 
 cleanup:
    if( autolock ) {
@@ -189,16 +202,115 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mserialize_table(
-   mfile_t* ser_f, struct MDATA_TABLE* p_ser_tab, mserialize_cb_t cb
+struct MSERIALIZE_TABLE_CADDY {
+   mfile_t* ser_f;
+   mserialize_cb_t cb;
+};
+
+/* === */
+
+static MERROR_RETVAL _mserialize_table_iter(
+   const struct MDATA_TABLE_KEY* key, void* data, size_t data_sz,
+   void* cb_data, size_t cb_data_sz, size_t idx
 ) {
-   /* TODO */
+   MERROR_RETVAL retval = MERROR_OK;
+   off_t header = 0;
+   struct MSERIALIZE_TABLE_CADDY* caddy =
+      (struct MSERIALIZE_TABLE_CADDY*)cb_data;
+
+   header = mserialize_header( caddy->ser_f, MSERIALIZE_TYPE_OBJECT, 0 );
+
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL, "serializing table tuple for: %s",
+      key->string );
+#endif /* MSERIALIZE_TRACE_LVL */
+
+   /* Serialize key. */
+   retval = mserialize_struct_MDATA_TABLE_KEY( caddy->ser_f, key, 1 );
+   maug_cleanup_if_not_ok();
+
+   /* Serialize value. */
+   retval = caddy->cb( caddy->ser_f, data, 1 );
+   maug_cleanup_if_not_ok();
+
+   retval = mserialize_footer( caddy->ser_f, header, 0 );
+
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL, "serialized table tuple." );
+#endif /* MSERIALIZE_TRACE_LVL */
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mserialize_table(
+   mfile_t* ser_out, struct MDATA_TABLE* p_ser_tab, int array,
+   mserialize_cb_t cb
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   off_t header = 0,
+      header_array = 0;
+   int autolock = 0;
+   struct MSERIALIZE_TABLE_CADDY caddy;
+   
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL, "serializing table %p of %d...",
+      p_ser_tab, mdata_table_ct( p_ser_tab ) );
+#endif /* MSERIALIZE_TRACE_LVL */
+   
+   if( 1 < array ) {
+      header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+   }
+
+   for( i = 0 ; array > i ; i++ ) {
+      header = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+      
+      if( 0 == mdata_table_ct( p_ser_tab ) ) {
+         /* Close empty table. */
+         retval = mserialize_footer( ser_out, header, 0 );
+         maug_cleanup_if_not_ok();
+#if MSERIALIZE_TRACE_LVL > 0
+         debug_printf( MSERIALIZE_TRACE_LVL, "serialized empty table." );
+#endif /* MSERIALIZE_TRACE_LVL */
+         continue;
+      }
+      
+      if( !mdata_table_is_locked( p_ser_tab ) ) {
+         mdata_table_lock( p_ser_tab );
+         autolock = 1;
+      }
+      
+      caddy.ser_f = ser_out;
+      caddy.cb = cb;
+      retval = mdata_table_iter( p_ser_tab, _mserialize_table_iter, &caddy, 0 );
+      maug_cleanup_if_not_ok();
+      
+      retval = mserialize_footer( ser_out, header, 0 );
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "serialized table %p.", p_ser_tab );
+#endif /* MSERIALIZE_TRACE_LVL */
+   }
+
+   if( 1 < array ) {
+      retval = mserialize_footer( ser_out, header_array, 0 );
+   }
+
+cleanup:
+   if( autolock ) {
+      mdata_table_unlock( p_ser_tab );
+   }
+   return retval;
+
 }
 
 /* === */
 
 MERROR_RETVAL mserialize_block(
-   mfile_t* ser_f, void* p_block, size_t block_sz
+   mfile_t* ser_out, const void* p_block, size_t block_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    off_t header = 0;
@@ -209,12 +321,12 @@ MERROR_RETVAL mserialize_block(
       block_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
 
-   header = mserialize_header( ser_f, MSERIALIZE_TYPE_BLOB, 0 );
+   header = mserialize_header( ser_out, MSERIALIZE_TYPE_BLOB, 0 );
 
-   retval = ser_f->write_block( ser_f, p_block, block_sz );
+   retval = ser_out->write_block( ser_out, p_block, block_sz );
    maug_cleanup_if_not_ok();
    
-   retval = mserialize_footer( ser_f, header, 0 );
+   retval = mserialize_footer( ser_out, header, 0 );
    maug_cleanup_if_not_ok();
    
 #if MSERIALIZE_TRACE_LVL > 0
@@ -299,13 +411,12 @@ MERROR_RETVAL mserialize_footer(
    assert( MERROR_OK == retval );
 
    return retval;
-
 }
 
 /* === */
 
 MERROR_RETVAL mserialize_char(
-   mfile_t* ser_out, char* p_ser_char, int array 
+   mfile_t* ser_out, const char* p_ser_char, int array 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    off_t header = 0;
@@ -336,14 +447,23 @@ cleanup:
 }
 
 MERROR_RETVAL mserialize_retroflat_asset_path(
-   mfile_t* ser_out, retroflat_asset_path* p_ser_char, int array 
+   mfile_t* ser_out, const retroflat_asset_path* p_ser_char, int array 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
+   off_t header_array = 0;
+
+   if( 1 < array ) {
+      header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+   }
 
    for( i = 0 ; array > i ; i++ ) {
       retval = mserialize_char( ser_out, p_ser_char[i], MAUG_PATH_SZ_MAX );
       maug_cleanup_if_not_ok();
+   }
+
+   if( 1 < array ) {
+      retval = mserialize_footer( ser_out, header_array, 0 );
    }
 
 cleanup:
@@ -351,7 +471,7 @@ cleanup:
 }
 
 MERROR_RETVAL mserialize_float(
-   mfile_t* ser_out, float* p_ser_float, int array 
+   mfile_t* ser_out, const float* p_ser_float, int array 
 ) {
    /* TODO */
    return MERROR_FILE;
@@ -359,7 +479,7 @@ MERROR_RETVAL mserialize_float(
 
 #if 0
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array
+   mfile_t* ser_out, const struct MLISP_ENV_NODE* p_ser_struct, int array
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -431,7 +551,7 @@ cleanup:
 #endif
 
 MERROR_RETVAL mserialize_union_MLISP_VAL(
-   mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array 
+   mfile_t* ser_out, const union MLISP_VAL* p_ser_val, int array 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -443,6 +563,62 @@ MERROR_RETVAL mserialize_union_MLISP_VAL(
    }
 
 cleanup:
+   return retval;
+}
+
+MERROR_RETVAL mserialize_struct_MDATA_TABLE_KEY(
+   mfile_t* ser_out, const struct MDATA_TABLE_KEY* p_ser_struct, int array
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   off_t header = 0;
+   off_t header_array = 0;
+   if( 1 < array ) {
+     header_array = mserialize_header( ser_out, MSERIALIZE_TYPE_ARRAY, 0 );
+   }
+   for( i = 0 ; array > i ; i++ ) {
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "serializing struct MDATA_TABLE_KEY..." );
+#endif /* MSERIALIZE_TRACE_LVL */
+      header = mserialize_header( ser_out, MSERIALIZE_TYPE_OBJECT, 0 );
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "serializing field: string: %s", p_ser_struct->string );
+#endif /* MSERIALIZE_TRACE_LVL */
+      retval = mserialize_char( ser_out, p_ser_struct->string,
+         MDATA_TABLE_KEY_SZ_MAX + 1 );
+      maug_cleanup_if_not_ok();
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "serializing field: string_sz: %d", p_ser_struct->string_sz );
+#endif /* MSERIALIZE_TRACE_LVL */
+      retval = mserialize_size_t( ser_out, &(p_ser_struct->string_sz), 1 );
+      maug_cleanup_if_not_ok();
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "serializing field: hash: %d", p_ser_struct->hash );
+#endif /* MSERIALIZE_TRACE_LVL */
+      retval = mserialize_uint32_t( ser_out, &(p_ser_struct->hash), 1 );
+      maug_cleanup_if_not_ok();
+
+      retval = mserialize_footer( ser_out, header, 0 );
+      maug_cleanup_if_not_ok();
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "serialized struct MDATA_TABLE_KEY." );
+#endif /* MSERIALIZE_TRACE_LVL */
+   }
+   if( 1 < array ) {
+      retval = mserialize_footer( ser_out, header_array, 0 );
+   }
+cleanup:
+   if( MERROR_OK != retval ) {
+      error_printf( "problem serializing MDATA_TABLE_KEY!" );
+   }
    return retval;
 }
 
@@ -622,8 +798,8 @@ cleanup:
 }
 
 MERROR_RETVAL mdeserialize_vector(
-   mfile_t* ser_in, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
-   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
+   mfile_t* ser_in, struct MDATA_VECTOR* p_ser_vec, int array,
+   mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t type = 0;
@@ -680,8 +856,8 @@ cleanup:
 }
 
 MERROR_RETVAL mdeserialize_table(
-   mfile_t* ser_in, struct MDATA_TABLE* p_ser_tab, mdeserialize_cb_t cb,
-   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
+   mfile_t* ser_in, struct MDATA_TABLE* p_ser_tab, int array,
+   mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
 ) {
    /* TODO */
 }
@@ -916,6 +1092,97 @@ MERROR_RETVAL mdeserialize_union_MLISP_VAL(
 
 cleanup:
 
+   return retval;
+}
+
+MERROR_RETVAL mdeserialize_struct_MDATA_TABLE_KEY(
+   mfile_t* ser_in, struct MDATA_TABLE_KEY* p_ser_struct, int array,
+   ssize_t* p_ser_sz
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0;
+   ssize_t seq_sz = 0;
+   ssize_t struct_sz = 0;
+   ssize_t struct_remaining = 0;
+   ssize_t field_sz = 0;
+   size_t seq_header_sz = 0;
+   size_t header_sz = 0;
+   uint8_t struct_type = 0;
+   uint8_t type = 0;
+
+   maug_mzero( p_ser_struct, sizeof( struct MDATA_TABLE_KEY ) * array );
+   retval = mdeserialize_header(
+      ser_in, &struct_type, &struct_sz, &seq_header_sz );
+   maug_cleanup_if_not_ok();
+   *p_ser_sz = struct_sz + seq_header_sz;
+   struct_remaining = struct_sz;
+   seq_sz = struct_sz;
+
+#if MSERIALIZE_TRACE_LVL > 0
+   if( array > 1 ) {
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserializing array of %d struct MDATA_TABLE_KEY...", array );
+   }
+#endif
+
+   for( i = 0 ; array > i ; i++ ) {
+      if( array > 1 ) {
+         if( 0 >= seq_sz ) {
+            error_printf(
+               "sequence contained fewer values (" SIZE_T_FMT
+                  " than expected (" SIZE_T_FMT ")!",
+               i, array );
+            break;
+         }
+         retval = mdeserialize_header( ser_in, &type, &struct_sz, &header_sz );
+         maug_cleanup_if_not_ok();
+      }
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "deserializing struct MDATA_TABLE_KEY (" SSIZE_T_FMT " bytes)...", struct_sz );
+#endif /* MSERIALIZE_TRACE_LVL */
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "deserializing field: string" );
+#endif /* MSERIALIZE_TRACE_LVL */
+      field_sz = 0;
+      retval = mdeserialize_char( ser_in, p_ser_struct[i].string, 9, &field_sz );
+      maug_cleanup_if_not_ok();
+      struct_remaining -= field_sz;
+      if( 0 >= struct_remaining ) {
+         error_printf( "struct MDATA_TABLE_KEY was smaller than expected!" );
+         goto cleanup;
+      }
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "deserializing field: string_sz" );
+#endif /* MSERIALIZE_TRACE_LVL */
+      field_sz = 0;
+      retval = mdeserialize_size_t(
+         ser_in, &(p_ser_struct[i].string_sz), 1, &field_sz );
+      maug_cleanup_if_not_ok();
+      struct_remaining -= field_sz;
+      if( 0 >= struct_remaining ) {
+         error_printf( "struct MDATA_TABLE_KEY was smaller than expected!" );
+         goto cleanup;
+      }
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL, "deserializing field: hash" );
+#endif /* MSERIALIZE_TRACE_LVL */
+      field_sz = 0;
+      retval = mdeserialize_uint32_t(
+         ser_in, &(p_ser_struct[i].hash), 1, &field_sz );
+      maug_cleanup_if_not_ok();
+      struct_remaining -= field_sz;
+      if( 0 >= struct_remaining ) {
+         error_printf( "struct MDATA_TABLE_KEY was smaller than expected!" );
+         goto cleanup;
+      }
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf(
+         MSERIALIZE_TRACE_LVL, "deserialized struct MDATA_TABLE_KEY." );
+#endif /* MSERIALIZE_TRACE_LVL */
+      seq_sz -= (struct_sz + header_sz);
+   }
+cleanup:
    return retval;
 }
 

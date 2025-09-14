@@ -84,82 +84,97 @@
  *          by the format-specific API!
  */
 typedef MERROR_RETVAL (*mserialize_cb_t)(
-   mfile_t* ser_out, void* p_ser_val, int array );
+   mfile_t* ser_out, const void* p_ser_val, int array );
 
 typedef MERROR_RETVAL (*mdeserialize_cb_t)(
    mfile_t* ser_out, void* p_ser_int, int array, ssize_t* p_ser_sz );
 
-MERROR_RETVAL mserialize_int( mfile_t* ser_out, int32_t value, int array );
+MERROR_RETVAL mserialize_int(
+   mfile_t* ser_out, const int32_t value, int array );
 
+/**
+ * \note We can't accept struct MDATA_VECTOR* as const because we have to lock
+ *       it!
+ */
 MERROR_RETVAL mserialize_vector(
-   mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mserialize_cb_t cb );
+   mfile_t* ser_out, struct MDATA_VECTOR* p_ser_vec, int array,
+   mserialize_cb_t cb );
 
+/**
+ * \note We can't accept struct MDATA_TABLE* as const because we have to lock
+ *       it!
+ */
 MERROR_RETVAL mserialize_table(
-   mfile_t* ser_f, struct MDATA_TABLE* p_ser_tab, mserialize_cb_t cb );
+   mfile_t* ser_out, struct MDATA_TABLE* p_ser_tab, int array,
+   mserialize_cb_t cb );
 
 MERROR_RETVAL mserialize_block(
-   mfile_t* p_file, void* p_block, size_t block_sz );
+   mfile_t* ser_out, const void* p_block, size_t block_sz );
 
 off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags );
 
-MERROR_RETVAL mserialize_footer( mfile_t* ser_out, off_t header, uint8_t flags );
+MERROR_RETVAL mserialize_footer(
+   mfile_t* ser_out, off_t header, uint8_t flags );
 
 MERROR_RETVAL mserialize_size_t(
-   mfile_t* ser_out, size_t* p_ser_int, int array );
+   mfile_t* ser_out, const size_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_ssize_t(
-   mfile_t* ser_out, ssize_t* p_ser_int, int array );
+   mfile_t* ser_out, const ssize_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint8_t(
-   mfile_t* ser_out, uint8_t* p_ser_int, int array );
+   mfile_t* ser_out, const uint8_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int8_t(
-   mfile_t* ser_out, int8_t* p_ser_int, int array );
+   mfile_t* ser_out, const int8_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint16_t(
-   mfile_t* ser_out, uint16_t* p_ser_int, int array );
+   mfile_t* ser_out, const uint16_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int16_t(
-   mfile_t* ser_out, int16_t* p_ser_int, int array );
+   mfile_t* ser_out, const int16_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_uint32_t(
-   mfile_t* ser_out, uint32_t* p_ser_int, int array );
+   mfile_t* ser_out, const uint32_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_int32_t(
-   mfile_t* ser_out, int32_t* p_ser_int, int array );
+   mfile_t* ser_out, const int32_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_float(
-   mfile_t* ser_out, float* p_ser_float, int array );
+   mfile_t* ser_out, const float* p_ser_float, int array );
 
 MERROR_RETVAL mserialize_mfix_t(
-   mfile_t* ser_out, mfix_t* p_ser_int, int array );
+   mfile_t* ser_out, const mfix_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_char(
-   mfile_t* ser_out, char* p_ser_char, int array );
+   mfile_t* ser_out, const char* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retroflat_asset_path(
-   mfile_t* ser_out, retroflat_asset_path* p_ser_char, int array );
+   mfile_t* ser_out, const retroflat_asset_path* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retrotile_coord_t(
-   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array );
+   mfile_t* ser_out, const retrotile_coord_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_mdata_strpool_idx_t(
-   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array );
+   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_retroflat_dir4_t(
-   mfile_t* ser_out, retroflat_dir4_t* p_ser_int, int array );
+   mfile_t* ser_out, const retroflat_dir4_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_retroflat_ms_t(
-   mfile_t* ser_out, retroflat_ms_t* p_ser_int, int array );
+   mfile_t* ser_out, const retroflat_ms_t* p_ser_int, int array );
 
 MERROR_RETVAL mserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, struct RETROTILE_COORDS* p_ser_struct, int array );
+   mfile_t* ser_out, const struct RETROTILE_COORDS* p_ser_struct, int array );
 
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array );
+   mfile_t* ser_out, const struct MLISP_ENV_NODE* p_ser_struct, int array );
 
 MERROR_RETVAL mserialize_union_MLISP_VAL(
-   mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array );
+   mfile_t* ser_out, const union MLISP_VAL* p_ser_val, int array );
+
+MERROR_RETVAL mserialize_struct_MDATA_TABLE_KEY(
+   mfile_t* ser_out, const struct MDATA_TABLE_KEY* p_ser_struct, int array );
 
 /* === */
 
@@ -167,145 +182,149 @@ MERROR_RETVAL mdeserialize_header(
    mfile_t* ser_in, uint8_t* p_type, ssize_t* p_sz, size_t* p_header_sz );
 
 MERROR_RETVAL mdeserialize_int(
-   mfile_t* ser_out, int32_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, int32_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_vector(
-   mfile_t* ser_f, struct MDATA_VECTOR* p_ser_vec, mdeserialize_cb_t cb,
-   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
+   mfile_t* ser_in, struct MDATA_VECTOR* p_ser_vec, int array,
+   mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_table(
-   mfile_t* ser_f, struct MDATA_TABLE* p_ser_vec, mdeserialize_cb_t cb,
-   uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
+   mfile_t* ser_in, struct MDATA_TABLE* p_ser_vec, int array,
+   mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_size_t(
-   mfile_t* ser_out, size_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, size_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_ssize_t(
-   mfile_t* ser_out, ssize_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, ssize_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_uint8_t(
-   mfile_t* ser_out, uint8_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, uint8_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_int8_t(
-   mfile_t* ser_out, int8_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, int8_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_uint16_t(
-   mfile_t* ser_out, uint16_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, uint16_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_int16_t(
-   mfile_t* ser_out, int16_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, int16_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_uint32_t(
-   mfile_t* ser_out, uint32_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, uint32_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_int32_t(
-   mfile_t* ser_out, int32_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, int32_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_float(
-   mfile_t* ser_out, float* p_ser_float, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, float* p_ser_float, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_mfix_t(
-   mfile_t* ser_out, mfix_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, mfix_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_char(
-   mfile_t* ser_out, char* p_ser_char, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, char* p_ser_char, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retroflat_asset_path(
-   mfile_t* ser_out, retroflat_asset_path* p_ser_char, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retrotile_coord_t(
-   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
-   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, mdata_strpool_idx_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retroflat_dir4_t(
-   mfile_t* ser_out, retroflat_dir4_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, retroflat_dir4_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retroflat_ms_t(
-   mfile_t* ser_out, retroflat_ms_t* p_ser_int, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, retroflat_ms_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_struct_RETROTILE_COORDS(
-   mfile_t* ser_out, struct RETROTILE_COORDS* p_ser_struct, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, struct RETROTILE_COORDS* p_ser_struct, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_struct_MLISP_ENV_NODE(
-   mfile_t* ser_out, struct MLISP_ENV_NODE* p_ser_struct, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, struct MLISP_ENV_NODE* p_ser_struct, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_union_MLISP_VAL(
-   mfile_t* ser_out, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz );
+   mfile_t* ser_in, union MLISP_VAL* p_ser_val, int array, ssize_t* p_ser_sz );
+
+MERROR_RETVAL mdeserialize_struct_MDATA_TABLE_KEY(
+   mfile_t* ser_in, struct MDATA_TABLE_KEY* p_ser_struct, int array,
+   ssize_t* p_ser_sz );
 
 #include "mrapiser.h"
 
 #ifdef MSERIAL_C
 
 MERROR_RETVAL mserialize_size_t(
-   mfile_t* ser_out, size_t* p_ser_int, int array 
+   mfile_t* ser_out, const size_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_ssize_t(
-   mfile_t* ser_out, ssize_t* p_ser_int, int array 
+   mfile_t* ser_out, const ssize_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_uint8_t(
-   mfile_t* ser_out, uint8_t* p_ser_int, int array 
+   mfile_t* ser_out, const uint8_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_int8_t(
-   mfile_t* ser_out, int8_t* p_ser_int, int array 
+   mfile_t* ser_out, const int8_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_uint16_t(
-   mfile_t* ser_out, uint16_t* p_ser_int, int array 
+   mfile_t* ser_out, const uint16_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_int16_t(
-   mfile_t* ser_out, int16_t* p_ser_int, int array 
+   mfile_t* ser_out, const int16_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_uint32_t(
-   mfile_t* ser_out, uint32_t* p_ser_int, int array 
+   mfile_t* ser_out, const uint32_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_int32_t(
-   mfile_t* ser_out, int32_t* p_ser_int, int array 
+   mfile_t* ser_out, const int32_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_mfix_t(
-   mfile_t* ser_out, mfix_t* p_ser_int, int array 
+   mfile_t* ser_out, const mfix_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_retrotile_coord_t(
-   mfile_t* ser_out, retrotile_coord_t* p_ser_int, int array 
+   mfile_t* ser_out, const retrotile_coord_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_mdata_strpool_idx_t (
-   mfile_t* ser_out, mdata_strpool_idx_t* p_ser_int, int array 
+   mfile_t* ser_out, const mdata_strpool_idx_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
 
 MERROR_RETVAL mserialize_retroflat_dir4_t(
-   mfile_t* ser_out, retroflat_dir4_t* p_ser_int, int array 
+   mfile_t* ser_out, const retroflat_dir4_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }

@@ -1211,6 +1211,9 @@ MERROR_RETVAL mdata_table_iter(
    /* Execute the callback for every item. */
    for( i = 0 ; mdata_table_ct( t ) > i ; i++ ) {
       p_key = mdata_vector_get_void( &(t->data_cols[0]), i );
+      assert( NULL != p_key );
+      assert( 0 < p_key->string_sz );
+      assert( p_key->string_sz == maug_strlen( p_key->string ) );
       p_value = mdata_vector_get_void( &(t->data_cols[1]), i );
       retval = cb(
          p_key, p_value, t->data_cols[1].item_sz, cb_data, cb_data_sz, i );
@@ -1237,6 +1240,8 @@ MERROR_RETVAL mdata_table_set(
    ssize_t idx_val = -1;
    struct MDATA_TABLE_KEY key_tmp;
    struct MDATA_TABLE_REPLACE_CADDY caddy;
+
+   assert( 0 < maug_strlen( key ) );
 
    assert( !mdata_table_is_locked( t ) );
 

@@ -134,7 +134,7 @@ typedef MERROR_RETVAL (*mfile_read_line_t)(
 typedef MERROR_RETVAL (*mfile_printf_t)(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
 typedef MERROR_RETVAL (*mfile_write_block_t)(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
 
 off_t mfile_mem_cursor( struct MFILE_CADDY* p_file );
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file );
@@ -155,7 +155,7 @@ MERROR_RETVAL mfile_mem_vprintf(
  * rest of the contents forward.
  */
 MERROR_RETVAL mfile_mem_write_block(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
 
 /**
  * \related MFILE_CADDY
@@ -226,7 +226,7 @@ MERROR_RETVAL mfile_file_printf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, ... );
 
 MERROR_RETVAL mfile_file_write_block(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz );
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
 
 MERROR_RETVAL mfile_file_vprintf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, va_list args );
@@ -454,7 +454,7 @@ MERROR_RETVAL mfile_mem_vprintf(
 /* === */
 
 MERROR_RETVAL mfile_mem_write_block(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 

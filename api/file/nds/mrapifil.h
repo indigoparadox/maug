@@ -90,7 +90,7 @@ MERROR_RETVAL mfile_file_vprintf(
 /* === */
 
 MERROR_RETVAL mfile_file_write_block(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
