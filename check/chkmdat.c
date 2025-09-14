@@ -11,7 +11,6 @@ char g_test_keys[8][8] = {
 int g_test_data[8] = { 16, 32, 64, 128, 88, 512, 1024, 2048 };
 
 START_TEST( test_mdat_vector_append ) {
-   MAUG_MHANDLE check_rle_out_h = (MAUG_MHANDLE)NULL;
    MERROR_RETVAL retval = MERROR_OK;
    int* p_int = NULL;
 
@@ -23,11 +22,12 @@ START_TEST( test_mdat_vector_append ) {
 
 cleanup:
    mdata_vector_unlock( &g_vector_test_append );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 
 START_TEST( test_mdat_vector_insert ) {
-   MAUG_MHANDLE check_rle_out_h = (MAUG_MHANDLE)NULL;
    MERROR_RETVAL retval = MERROR_OK;
    int* p_int = NULL;
 
@@ -39,6 +39,8 @@ START_TEST( test_mdat_vector_insert ) {
 
 cleanup:
    mdata_vector_unlock( &g_vector_test_append );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -50,6 +52,7 @@ START_TEST( test_mdat_vector_lockunlock ) {
    mdata_vector_unlock( &g_vector_test_append );
    ck_assert( !mdata_vector_is_locked( &g_vector_test_append ) );
 cleanup:
+   ck_assert_int_eq( retval, MERROR_OK );
    return;
 }
 END_TEST
@@ -114,6 +117,8 @@ START_TEST( test_mdat_table_unset ) {
    }
 
    mdata_table_unlock( &g_table_test_set );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -149,9 +154,9 @@ START_TEST( test_mdat_table_overwrite ) {
    p_int = mdata_table_get( &table_test, "xyz", int );
    ck_assert_int_eq( *p_int, 9 );
 
-cleanup:
-
    mdata_table_unlock( &table_test );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 

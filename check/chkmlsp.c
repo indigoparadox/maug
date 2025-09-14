@@ -28,12 +28,13 @@ MERROR_RETVAL init_mlsp_script(
    ck_assert_int_eq( retval, MERROR_OK );
 
    /* Grab count including builtins. */
-   *p_baseline_env_ct = mdata_table_ct( &(exec->env) );
+   *p_baseline_env_ct = mdata_table_ct( &(exec->env[0]) );
 
    /* Execute the script. */
    for( i = 0 ; iter > i ; i++ ) {
       retval = mlisp_step( parser, exec );
       ck_assert_int_eq( retval, MERROR_OK );
+      ck_assert( !mdata_table_is_locked( &(exec->env[0]) ) );
    }
 
    return retval;
@@ -42,7 +43,7 @@ MERROR_RETVAL init_mlsp_script(
 START_TEST( test_mlsp_exec_step ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_visit_ct = NULL;
-   size_t i = 0;
+   int8_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
    struct MLISP_PARSER parser;
    struct MLISP_EXEC_STATE exec;
@@ -58,10 +59,10 @@ START_TEST( test_mlsp_exec_step ) {
     * testing script above.
     */
    if( 2 == _i ) {
-      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env[0]) ), baseline_env_ct );
    
    } else if( 3 == _i ) {
-      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 1 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env[0]) ), baseline_env_ct + 1 );
 
       /* Check visit count. */
       mdata_vector_lock( &(exec.per_node_visit_ct) );
@@ -70,28 +71,36 @@ START_TEST( test_mlsp_exec_step ) {
       ck_assert_int_eq( *p_visit_ct, _i );
 
       /* Check env. */
-      mdata_table_lock( &(exec.env) );
-      e = mlisp_env_get( &parser, &exec, "x" );
+      for( i = exec.env_select ; 0 <= i ; i-- ) {
+         ck_assert( !mdata_table_is_locked( &(exec.env[i]) ) );
+         mdata_table_lock( &(exec.env[i]) );
+      }
+      e = mlisp_env_get( &exec, "x" );
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 3 );
    } else if( 7 == _i ) {
-      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 1 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env[0]) ), baseline_env_ct + 1 );
 
    } else if( 8 == _i ) {
-      ck_assert_int_eq( mdata_table_ct( &(exec.env) ), baseline_env_ct + 2 );
+      ck_assert_int_eq( mdata_table_ct( &(exec.env[0]) ), baseline_env_ct + 2 );
 
-      mdata_table_lock( &(exec.env) );
-      e = mlisp_env_get( &parser, &exec, "y" );
+      for( i = exec.env_select ; 0 <= i ; i-- ) {
+         ck_assert( !mdata_table_is_locked( &(exec.env[i]) ) );
+         mdata_table_lock( &(exec.env[i]) );
+      }
+      e = mlisp_env_get( &exec, "y" );
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 9 );
-      e = mlisp_env_get( &parser, &exec, "x" );
+      e = mlisp_env_get( &exec, "x" );
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 3 );
    }
 
 cleanup:
    if( 8 == _i || 3 == _i ) {
-      mdata_table_unlock( &(exec.env) );
+      for( i = exec.env_select ; 0 <= i ; i-- ) {
+         mdata_table_unlock( &(exec.env[i]) );
+      }
    } else if( 3 == _i ) {
       mdata_vector_unlock( &(exec.per_node_visit_ct) );
    }
@@ -102,7 +111,7 @@ END_TEST
 START_TEST( test_mlsp_exec_lambda ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_visit_ct = NULL;
-   size_t i = 0;
+   int8_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
    struct MLISP_PARSER parser;
    struct MLISP_EXEC_STATE exec;
@@ -116,21 +125,32 @@ START_TEST( test_mlsp_exec_lambda ) {
    mlisp_env_dump( &parser, &exec, 0 );
    */
 
-   mdata_table_lock( &(exec.env) );
-   e = mlisp_env_get( &parser, &exec, "y" );
+   for( i = exec.env_select ; 0 <= i ; i-- ) {
+      mdata_table_lock( &(exec.env[i]) );
+   }
+   e = mlisp_env_get( &exec, "y" );
    if( 3 > _i ) {
+      /* y is not defined. */
       ck_assert_ptr_eq( e, NULL );
    } else if( 13 > _i ) {
+      /* y is initially defined as 1. */
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 1 );
-   } else {
+   } else if( 20 > _i ) {
+      /* We've passed into the child scope and y was redefined. */
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 9 );
+   } else {
+      /* We've passed outside of the scope where y is redefined. */
+      ck_assert_ptr_ne( e, NULL );
+      ck_assert_int_eq( e->value.integer, 1 );
    }
 
 cleanup:
 
-   mdata_table_unlock( &(exec.env) );
+   for( i = exec.env_select ; 0 <= i ; i-- ) {
+      mdata_table_unlock( &(exec.env[i]) );
+   }
 
    ck_assert_int_eq( retval, MERROR_OK );
 }

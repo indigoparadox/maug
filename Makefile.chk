@@ -5,7 +5,9 @@ CHECK_C_FILES := \
    check/maugchck.c \
    check/chkmdat.c \
    check/chkmfmt.c \
-   check/chkmlsp.c
+   check/chkmlsp.c \
+   check/chkmfil.c \
+   check/chkmser.c
 
 CFLAGS_CHECK := \
 	-Wall \
@@ -17,9 +19,9 @@ CFLAGS_CHECK := \
 	-DDEBUG \
 	-DDEBUG_LOG \
 	-DDEBUG_THRESHOLD=1 \
-	-DRETROFLAT_OS_UNIX \
-	-DMLISP_DUMP_ENABLED
+	-DRETROFLAT_OS_UNIX
 
+#CFLAGS_CHECK += -DMLISP_DUMP_ENABLED
 #CFLAGS_CHECK += -DMFILE_TRACE_LVL=1
 #CFLAGS_CHECK += -DMLISP_EXEC_TRACE_LVL=1
 #CFLAGS_CHECK += -DMDATA_TRACE_LVL=1

@@ -17,6 +17,8 @@
 main_add_test_proto( mdat )
 main_add_test_proto( mfmt )
 main_add_test_proto( mlsp )
+main_add_test_proto( mfil )
+main_add_test_proto( mser )
 
 int main( void ) {
    int number_failed = 0;
@@ -24,6 +26,8 @@ int main( void ) {
    main_add_test( mdat );
    main_add_test( mfmt );
    main_add_test( mlsp );
+   main_add_test( mfil );
+   main_add_test( mser );
 
    return( number_failed == 0 ) ? 0 : 1;
 }

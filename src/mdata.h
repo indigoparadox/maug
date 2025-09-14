@@ -320,10 +320,15 @@ void mdata_table_free( struct MDATA_TABLE* t );
       (v)->locks++; \
       mdata_debug_printf( "vector " #v " locks: " SSIZE_T_FMT, (v)->locks ); \
    } else { \
-      assert( !mdata_vector_is_locked( v ) ); \
+      /* assert( !mdata_vector_is_locked( v ) ); */ \
       if( mdata_vector_is_locked( v ) ) { \
          error_printf( "attempting to double-lock vector!" ); \
          retval = MERROR_OVERFLOW; \
+         goto cleanup; \
+      } \
+      if( (MAUG_MHANDLE)NULL == (v)->data_h ) { \
+         error_printf( "invalid data handle!" ); \
+         retval = MERROR_ALLOC; \
          goto cleanup; \
       } \
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
@@ -1085,9 +1090,11 @@ MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t ) {
 
 cleanup:
 
+   /*
    if( MERROR_OK != retval ) {
       assert( !mdata_vector_is_locked( &(t->data_cols[0]) ) );
    }
+   */
 
    return retval;
 }
