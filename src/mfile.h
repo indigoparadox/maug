@@ -457,15 +457,26 @@ MERROR_RETVAL mfile_mem_write_block(
    struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   ssize_t mv_sz = 0;
 
    if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
       return MERROR_FILE;
    }
 
+   mv_sz = (p_f->sz - (p_f->mem_cursor + buf_sz));
+   if( 0 < mv_sz ) {
+      memmove(
+         &(p_f->mem_buffer[p_f->mem_cursor + buf_sz]),
+         &(p_f->mem_buffer[p_f->mem_cursor]),
+         mv_sz );
+   }
+
+   memcpy( &(p_f->mem_buffer[p_f->mem_cursor]), buf, buf_sz );
+   p_f->mem_cursor += buf_sz;
+
    /* TODO: Expand buffer and reflect this in sz if writing beyond the end
     *       of the buffer.
     */
-   error_printf( "writing to memory buffer not currently supported!" );
 
    return retval;
 }
@@ -543,7 +554,8 @@ void mfile_close( mfile_t* p_file ) {
    case MFILE_CADDY_TYPE_MEM_BUFFER:
       if( NULL != p_file->mem_buffer ) {
          maug_munlock( p_file->h.mem, p_file->mem_buffer );
-         debug_printf( 1, "unlocked handle %p from file %p...",
+         debug_printf( MFILE_SEEK_TRACE_LVL,
+            "unlocked handle %p from file %p...",
             p_file->h.mem, p_file );
          p_file->type = 0;
       }
