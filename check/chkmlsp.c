@@ -110,7 +110,6 @@ END_TEST
 
 START_TEST( test_mlsp_exec_lambda ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t* p_visit_ct = NULL;
    int8_t i = 0;
    struct MLISP_ENV_NODE* e = NULL;
    struct MLISP_PARSER parser;
@@ -145,8 +144,6 @@ START_TEST( test_mlsp_exec_lambda ) {
       ck_assert_ptr_ne( e, NULL );
       ck_assert_int_eq( e->value.integer, 1 );
    }
-
-cleanup:
 
    for( i = exec.env_select ; 0 <= i ; i-- ) {
       mdata_table_unlock( &(exec.env[i]) );

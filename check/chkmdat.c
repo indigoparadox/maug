@@ -277,14 +277,6 @@ START_TEST( test_mdat_strpool_remove ) {
 }
 END_TEST
 
-void strpool_setup() {
-
-}
-
-void strpool_teardown() {
-
-}
-
 Suite* mdat_suite( void ) {
    Suite* s;
    TCase* tc_vector;
@@ -299,6 +291,7 @@ Suite* mdat_suite( void ) {
    
    tcase_add_loop_test( tc_vector, test_mdat_vector_append, 0, 8 );
    tcase_add_loop_test( tc_vector, test_mdat_vector_insert, 0, 8 );
+   tcase_add_test( tc_vector, test_mdat_vector_lockunlock );
 
    suite_add_tcase( s, tc_vector );
 
@@ -310,7 +303,7 @@ Suite* mdat_suite( void ) {
 
    tcase_add_loop_test( tc_table, test_mdat_table_set, 0, 8 );
    tcase_add_loop_test( tc_table, test_mdat_table_unset, 0, 8 );
-   tcase_add_loop_test( tc_table, test_mdat_table_lockunlock, 0, 8 );
+   tcase_add_test( tc_table, test_mdat_table_lockunlock );
    tcase_add_test( tc_table, test_mdat_table_overwrite );
 
    suite_add_tcase( s, tc_table );
@@ -318,8 +311,6 @@ Suite* mdat_suite( void ) {
    /* = */
 
    tc_strpool = tcase_create( "StrPool" );
-
-   tcase_add_checked_fixture( tc_strpool, strpool_setup, strpool_teardown );
 
    tcase_add_test( tc_strpool, test_mdat_strpool_add );
    tcase_add_test( tc_strpool, test_mdat_strpool_double_add );
