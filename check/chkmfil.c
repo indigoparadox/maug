@@ -71,7 +71,7 @@ START_TEST( test_mfil_mem_cursor ) {
    retval = mfile_lock_buffer( test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
-   test_file.write_block( &test_file, &(g_test_mem[_i]), _i );
+   test_file.write_block( &test_file, g_test_mem, _i );
 
    ck_assert_int_eq( test_file.cursor( &test_file ), _i );
 
@@ -85,7 +85,8 @@ START_TEST( test_mfil_file_cursor ) {
    retval = mfile_open_write( "chkfile", &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
-   test_file.write_block( &test_file, &(g_test_mem[_i]), _i );
+   debug_printf( 1, "%d", _i );
+   test_file.write_block( &test_file, g_test_mem, _i );
 
    ck_assert_int_eq( test_file.cursor( &test_file ), _i );
 

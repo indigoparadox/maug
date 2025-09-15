@@ -6,7 +6,7 @@ struct MDATA_VECTOR g_vector_test_insert;
 
 struct MDATA_TABLE g_table_test_set;
 
-char g_test_keys[8][8] = {
+char g_test_keys[9][8] = {
    "a", "bb", "ccc", "dddd", "eeeee", "ffffff", "ggggggg", "hhhhhhhh" };
 int g_test_data[8] = { 16, 32, 64, 128, 88, 512, 1024, 2048 };
 

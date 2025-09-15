@@ -11,6 +11,7 @@ CHECK_C_FILES := \
 
 CFLAGS_CHECK := \
 	-Wall \
+	-g \
 	-Isrc \
 	-Iapi/mem/unix \
 	-Iapi/file/unix \
@@ -22,16 +23,22 @@ CFLAGS_CHECK := \
 	-DDEBUG_THRESHOLD=1 \
 	-DRETROFLAT_OS_UNIX
 
+#CFLAGS_CHECK += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+
 #CFLAGS_CHECK += -DMLISP_DUMP_ENABLED
 #CFLAGS_CHECK += -DMFILE_TRACE_LVL=1
 #CFLAGS_CHECK += -DMLISP_EXEC_TRACE_LVL=1
 #CFLAGS_CHECK += -DMDATA_TRACE_LVL=1
+#CFLAGS_CHECK += -DMSERIALIZE_TRACE_LVL=1
+
+LDFLAGS_CHECK := -g
+#LDFLAGS_CHECK += -fsanitize=address -fsanitize=leak -fsanitize=undefined
 
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1
 
 mcheck: $(addprefix obj/,$(subst .c,.o,$(CHECK_C_FILES)))
-	$(CC) -o $@ $^ $(shell pkg-config --libs check)
+	$(CC) -o $@ $^ $(LDFLAGS_CHECK) $(shell pkg-config --libs check)
 
 obj/%.o: %.c
 	mkdir -p $(dir $@)

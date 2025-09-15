@@ -826,9 +826,9 @@ MERROR_RETVAL mdeserialize_vector(
 #if MSERIALIZE_TRACE_LVL > 0
    if( array > 1 ) {
       debug_printf( MSERIALIZE_TRACE_LVL,
-         "deserializing array of %d union MLISP_VAL...", array );
+         "deserializing array of %d vectors...", array );
    }
-#endif
+#endif /* MSERIALIZE_TRACE_LVL */
 
    for( i = 0 ; array > i ; i++ ) {
       if( array > 1 ) {
@@ -846,6 +846,11 @@ MERROR_RETVAL mdeserialize_vector(
           * array as a whole.
           */
          sz_vec_arr -= sz_vec + header_sz;
+
+#if MSERIALIZE_TRACE_LVL > 0
+         debug_printf( MSERIALIZE_TRACE_LVL,
+            "deserializing vector %d...", i );
+#endif /* MSERIALIZE_TRACE_LVL */
       } else {
          sz_vec = sz_vec_arr;
       }
@@ -869,7 +874,7 @@ MERROR_RETVAL mdeserialize_vector(
                SIZE_T_FMT "-byte item to vector...",
             sz_item, buf_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
-         idx_added = mdata_vector_append( p_ser_vec, buf, buf_sz );
+         idx_added = mdata_vector_append( &(p_ser_vec[i]), buf, buf_sz );
          if( 0 > idx_added ) {
             retval = merror_sz_to_retval( idx_added );
             goto cleanup;
