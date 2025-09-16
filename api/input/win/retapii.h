@@ -175,16 +175,29 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       goto cleanup;
    }
 
+#if RETROINPUT_TRACE_LVL > 0
+#  define debug_key_state() \
+      debug_printf( RETROINPUT_TRACE_LVL, "key_state: %02x", key_state );
+#  define debug_key_skip() \
+      debug_printf( RETROINPUT_TRACE_LVL, "key repeat skipped: %d", key_out );
+#  define debug_key() \
+      debug_printf( RETROINPUT_TRACE_LVL, "key: %d", key_out );
+#else
+#  define debug_key_state()
+#  define debug_key_skip()
+#  define debug_key()
+#endif /* RETROINPUT_TRACE_LVL */
+
 #  define RETROFLAT_KEYTABLE_CHECK( k ) \
       } else if( (key_state = GetAsyncKeyState( k )) & 0x8000 ) { \
-         debug_printf( 1, "key_state: %02x", key_state ); \
+         debug_key() \
          if( \
             k == g_retroflat_state->input.prev_key && \
             RETROFLAT_FLAGS_KEY_REPEAT != \
             (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) \
          ) { \
             /* Skip repeated key. */ \
-            debug_printf( 1, "key repeat skipped: %d", key_out ); \
+            debug_key_skip() \
             goto cleanup; \
          } \
          key_out = k; \
@@ -193,7 +206,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
             RETROFLAT_PREV_KEY_TIMEOUT; \
          g_retroflat_state->input.prev_key_delay = \
             RETROFLAT_PREV_KEY_DELAY; \
-         debug_printf( 1, "key: %d", key_out ); \
+         debug_key(); \
          goto cleanup; \
 
    if( 0 ) {
@@ -204,7 +217,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    if( 0 < g_retroflat_state->input.prev_key_timeout ) {
       g_retroflat_state->input.prev_key_timeout--;
    } else {
-      debug_printf( 1, "key reset to 0" );
       g_retroflat_state->input.prev_key = 0;
    }
 

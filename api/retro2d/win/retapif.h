@@ -64,7 +64,9 @@ LPSTR* retroflat_win_cli( LPSTR cmd_line, int* argc_out ) {
    /* This uses calloc() to simplify things, since this works on Windows, the
     * only platform where this routine is used, anyway. */
 
-   debug_printf( 1, "retroflat: win cli: %s", cmd_line );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "retroflat: win cli: %s", cmd_line );
+#endif /* RETRO2D_TRACE_LVL */
 
    /* Get the number of args. */
    *argc_out = 1; /* Program name. */
@@ -156,7 +158,9 @@ static LRESULT CALLBACK WndProc(
    switch( message ) {
       case WM_CREATE:
 
-         debug_printf( 1, "WM_CREATE" );
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL, "WM_CREATE" );
+#endif /* RETRO2D_TRACE_LVL */
 
          g_retroflat_state->platform.hdc_win = GetDC( hWnd );
 
@@ -167,7 +171,9 @@ static LRESULT CALLBACK WndProc(
          SetPixelFormat(
             g_retroflat_state->platform.hdc_win, pixel_fmt_int, &pixel_fmt );
 
-         debug_printf( 1, "setting up OpenGL context..." );
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL, "setting up OpenGL context..." );
+#endif /* RETRO2D_TRACE_LVL */
 
          g_retroflat_state->platform.hrc_win =
             wglCreateContext( g_retroflat_state->platform.hdc_win );
@@ -184,9 +190,12 @@ static LRESULT CALLBACK WndProc(
 
          /* Setup the screen buffer. */
          if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            debug_printf( 1, "retroflat: creating window buffer ("
-               SIZE_T_FMT " x " SIZE_T_FMT ")...",
+#if RETRO2D_TRACE_LVL > 0
+            debug_printf( RETRO2D_TRACE_LVL,
+               "retroflat: creating window buffer ("
+                  SIZE_T_FMT " x " SIZE_T_FMT ")...",
                g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+#endif /* RETRO2D_TRACE_LVL */
             /* Do this in its own function so a one-time setup isn't using stack
             * in our WndProc!
             */
@@ -371,7 +380,9 @@ static int retroflat_bitmap_win_transparency(
 
    /* Unlock the mask if one exists. */
    if( (HDC)NULL == bmp_out->hdc_mask ) {
-      debug_printf( 1, "autolocking transparency mask..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "autolocking transparency mask..." );
+#endif /* RETRO2D_TRACE_LVL */
 
       /* Create HDC for source mask compatible with the buffer. */
       bmp_out->hdc_mask = CreateCompatibleDC( (HDC)NULL );
@@ -399,12 +410,17 @@ static int retroflat_bitmap_win_transparency(
    BitBlt(
       bmp_out->hdc_b, 0, 0, w, h, bmp_out->hdc_mask, 0, 0, SRCINVERT );
 
-   debug_printf( 1, "updated transparency mask for %p", bmp_out );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf(
+      RETRO2D_TRACE_LVL, "updated transparency mask for %p", bmp_out );
+#endif /* RETRO2D_TRACE_LVL */
 
 cleanup:
 
    if( autorelock ) {
-      debug_printf( 1, "autounlocking transparency mask..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "autounlocking transparency mask..." );
+#endif /* RETRO2D_TRACE_LVL */
       SelectObject( bmp_out->hdc_mask, bmp_out->old_hbm_mask );
       DeleteDC( bmp_out->hdc_mask );
       bmp_out->hdc_mask = (HDC)NULL;
@@ -508,7 +524,9 @@ MERROR_RETVAL retroflat_init_platform(
    maug_mzero(
       &(g_retroflat_state->buffer), sizeof( struct RETROFLAT_BITMAP ) );
 
-   debug_printf( 1, "retroflat: creating window class..." );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "retroflat: creating window class..." );
+#endif /* RETRO2D_TRACE_LVL */
 
 #     ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
@@ -561,13 +579,17 @@ MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
-   debug_printf( 1, "retroflat: creating window..." );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "retroflat: creating window..." );
+#endif /* RETRO2D_TRACE_LVL */
    
 #     ifdef RETROFLAT_SCREENSAVER
    if( (HWND)0 != g_retroflat_state->platform.parent ) {
       /* Shrink the child window into the parent. */
-      debug_printf( 1, "retroflat: using window parent: %p",
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "retroflat: using window parent: %p",
          g_retroflat_state->platform.parent );
+#endif /* RETRO2D_TRACE_LVL */
       window_style = WS_CHILD;
       GetClientRect( g_retroflat_state->platform.parent, &wr );
    } else if(
@@ -725,15 +747,22 @@ MERROR_RETVAL retroflat_loop(
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
        */
-      debug_printf( 1, "main loop already running!" );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "main loop already running!" );
+#endif /* RETRO2D_TRACE_LVL */
       goto cleanup;
    }
 
    if( NULL != frame_iter ) {
-      debug_printf( 1, "desired FPS: %d", RETROFLAT_FPS );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "desired FPS: %d", RETROFLAT_FPS );
+#endif /* RETROFLAT_FPS */
       fps_delay = (int)(1000 / RETROFLAT_FPS);
-      debug_printf( 3, "setting up frame timer %u every %d ms...",
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL,
+         "setting up frame timer %u every %d ms...",
          RETROFLAT_WIN_FRAME_TIMER_ID, fps_delay );
+#endif /* RETRO2D_TRACE_LVL */
       if( !SetTimer(
          g_retroflat_state->platform.window, RETROFLAT_WIN_FRAME_TIMER_ID,
          fps_delay, NULL )
@@ -744,12 +773,17 @@ MERROR_RETVAL retroflat_loop(
          goto cleanup;
       }
 
-      debug_printf( 1, "frame timer %u added!", RETROFLAT_WIN_FRAME_TIMER_ID );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL,
+         "frame timer %u added!", RETROFLAT_WIN_FRAME_TIMER_ID );
+#endif /* RETRO2D_TRACE_LVL */
    }
 
    if( NULL != loop_iter ) {
-      debug_printf( 3, "setting up loop timer %u every 1 ms...",
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "setting up loop timer %u every 1 ms...",
          RETROFLAT_WIN_LOOP_TIMER_ID );
+#endif /* RETRO2D_TRACE_LVL */
       if( !SetTimer(
          g_retroflat_state->platform.window,
          RETROFLAT_WIN_LOOP_TIMER_ID, 1, NULL )
@@ -763,7 +797,9 @@ MERROR_RETVAL retroflat_loop(
 
    g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
 
-   debug_printf( 1, "beginning message loop..." );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "beginning message loop..." );
+#endif /* RETRO2D_TRACE_LVL */
 
    /* TODO: loop_iter is artificially slow on Windows! */
 
@@ -775,7 +811,10 @@ MERROR_RETVAL retroflat_loop(
       if( WM_QUIT == msg.message ) {
          /* Get retval from PostQuitMessage(). */
          retval = msg.wParam;
-         debug_printf( 1, "WM_QUIT received, retval: %d", retval );
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL,
+            "WM_QUIT received, retval: %d", retval );
+#endif /* RETRO2D_TRACE_LVL */
       }
       retroflat_heartbeat_update();
    } while( WM_QUIT != msg.message && 0 < msg_retval );
@@ -890,8 +929,10 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL != bmp ) {
       retval = retro3d_texture_lock( &(bmp->tex) );
+#if RETRO2D_TRACE_LVL > 0
    } else {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
+#endif /* RETRO2D_TRACE_LVL */
    }
 
 #  else
@@ -952,8 +993,10 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    if( NULL == bmp ) {
       /* Windows has its own OpenGL flip function.*/
       SwapBuffers( g_retroflat_state->platform.hdc_win );
+#if RETRO2D_TRACE_LVL > 0
    } else {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_release()!" );
+#endif /* RETRO2D_TRACE_LVL */
    }
 
 #  else
@@ -1034,12 +1077,17 @@ MERROR_RETVAL retroflat_load_bitmap(
    retval = retroflat_build_filename_path(
       filename, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
    maug_cleanup_if_not_ok();
-   debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL,
+      "retroflat: loading bitmap: %s", filename_path );
+#endif /* RETRO2D_TRACE_LVL */
 
 #  ifdef RETROFLAT_OPENGL
 
    assert( NULL != bmp_out );
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_load_bitmap()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retval = retro3d_texture_load_bitmap(
       filename_path, &(bmp_out->tex), flags );
@@ -1094,8 +1142,10 @@ MERROR_RETVAL retroflat_load_bitmap(
       sizeof( BITMAPINFOHEADER ) + (colors * sizeof( RGBQUAD )) );
 
    /* This never gets the height right? */
-   debug_printf( 1, "bitmap w: %08x, h: %08x, colors: %d",
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "bitmap w: %08x, h: %08x, colors: %d",
       bmp_out->bmi.header.biWidth, bmp_out->bmi.header.biHeight, colors );
+#endif /* RETRO2D_TRACE_LVL */
 
    assert( 0 < bmp_out->bmi.header.biWidth );
    assert( 0 < bmp_out->bmi.header.biHeight );
@@ -1160,7 +1210,10 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* The transparency portion is the same for Win32 and Win16. */
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       /* Setup bitmap transparency mask. */
-      debug_printf( 1, "creating new transparency mask bitmap..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf(
+         RETRO2D_TRACE_LVL, "creating new transparency mask bitmap..." );
+#endif /* RETRO2D_TRACE_LVL */
       bmp_out->mask = CreateBitmap(
          bmp_out->bmi.header.biWidth,
          bmp_out->bmi.header.biHeight,
@@ -1205,7 +1258,9 @@ MERROR_RETVAL retroflat_create_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_create_bitmap()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
    */
@@ -1240,7 +1295,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    }
 #     endif /* RETROFLAT_WING */
 
-   debug_printf( 0, "creating bitmap..." );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "creating bitmap..." );
+#endif /* RETRO2D_TRACE_LVL */
 
    bmp_out->bmi.header.biWidth = w;
 #     ifdef RETROFLAT_WING
@@ -1281,7 +1338,9 @@ MERROR_RETVAL retroflat_create_bitmap(
       (WinGCreateBitmap_t)NULL != g_w.WinGCreateBitmap
    ) {
       /* Setup an optimal WinG hardware screen buffer bitmap. */
-      debug_printf( 1, "creating WinG-backed bitmap..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "creating WinG-backed bitmap..." );
+#endif /* RETRO2D_TRACE_LVL */
 
       bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
       bmp_out->b = g_w.WinGCreateBitmap(
@@ -1290,7 +1349,9 @@ MERROR_RETVAL retroflat_create_bitmap(
          (void far*)&(bmp_out->bits) );
       assert( NULL != bmp_out->b );
 
-      debug_printf( 1, "WinG bitmap bits: %p", bmp_out->bits );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL, "WinG bitmap bits: %p", bmp_out->bits );
+#endif /* RETRO2D_TRACE_LVL */
 
       bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
 
@@ -1304,7 +1365,10 @@ MERROR_RETVAL retroflat_create_bitmap(
    if(
       RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
    ) {
-      debug_printf( 1, "creating screen device context..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf(
+         RETRO2D_TRACE_LVL, "creating screen device context..." );
+#endif /* RETRO2D_TRACE_LVL */
       bmp_out->hdc_b = CreateCompatibleDC(
          g_retroflat_state->platform.hdc_win );
       bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
@@ -1312,7 +1376,10 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       /* Setup bitmap transparency mask. */
-      debug_printf( 1, "creating new transparency mask bitmap..." );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf(
+         RETRO2D_TRACE_LVL, "creating new transparency mask bitmap..." );
+#endif /* RETRO2D_TRACE_LVL */
       bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
       maug_cleanup_if_null( HBITMAP, bmp_out->mask, MERROR_GUI );
    } else {
@@ -1340,7 +1407,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retro3d_texture_destroy( &(bmp->tex) );
    */
@@ -1400,7 +1469,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #  if defined( RETROFLAT_OPENGL )
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_blit_bitmap()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retval = retro3d_texture_blit(
       &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
@@ -1499,7 +1570,9 @@ void retroflat_px(
 
 #  if defined( RETROFLAT_OPENGL )
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_px()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
    */
@@ -1558,7 +1631,9 @@ void retroflat_rect(
 
    assert( NULL != target );
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /* Draw the rect onto the given 2D texture. */
    /*
    retrosoft_rect( target, color_idx, x, y, w, h, flags );
@@ -1614,7 +1689,9 @@ void retroflat_line(
 
    assert( NULL != target );
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_line()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
    */
@@ -1671,7 +1748,9 @@ void retroflat_ellipse(
 
    assert( NULL != target );
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_ellipse()!" );
+#endif /* RETRO2D_TRACE_LVL */
    /*
    retrosoft_ellipse( target, color, x, y, w, h, flags );
    */
