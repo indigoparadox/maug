@@ -428,6 +428,7 @@ void parse_emit_ser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       } else if( 0 < strlen( parsed->fields[i].union_type ) ) {
          /* If it's a vector, call the specialized union serializer.
           */
+         assert( 0 < parsed->fields[i].array );
          printf(
             "      retval = mserialize_%s( "
             "ser_f, &(p_ser_struct->%s), %d );\n",
@@ -511,6 +512,8 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       }
    }
 
+   printf( "   assert( 0 < array );\n" );
+
    /* Prepare the empty structs. */
    printf(
       "   maug_mzero( p_ser_struct, sizeof( struct %s ) * array );\n",
@@ -582,10 +585,18 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
       parse_field_type_table( parse_field_type_str )
       }
 
+      printf( "      if( 0 >= struct_remaining ) {\n" );
+      printf( "         error_printf( "
+         "\"struct %s too small (\" SSIZE_T_FMT \" of \" SSIZE_T_FMT \")\", struct_remaining, struct_sz );\n",
+         parsed->name );
+      printf( "         goto cleanup;\n" );
+      printf( "      }\n" );
+
       printf(
          "#if MSERIALIZE_TRACE_LVL > 0\n"
          "      debug_printf( MSERIALIZE_TRACE_LVL, "
-            "\"deserializing field: %s\" );\n"
+            "\"deserializing field: %s at offset %%d (0x%%02x)\", "
+            "ser_f->cursor( ser_f ), ser_f->cursor( ser_f ) );\n"
          "#endif /* MSERIALIZE_TRACE_LVL */\n", parsed->fields[i].name );
 
       printf( "      field_sz = 0;\n" );
@@ -655,11 +666,14 @@ void parse_emit_deser_struct( struct STRUCT_PARSED* parsed, int prototype ) {
        * serialized by a previous version and are thus not present.
        */
       printf( "      struct_remaining -= field_sz;\n" );
-      printf( "      if( 0 >= struct_remaining ) {\n" );
-      printf( "         error_printf( "
-         "\"struct %s was smaller than expected!\" );\n", parsed->name );
-      printf( "         goto cleanup;\n" );
-      printf( "      }\n" );
+
+      printf(
+         "#if MSERIALIZE_TRACE_LVL > 0\n"
+         "      debug_printf( MSERIALIZE_TRACE_LVL, "
+            "\"deserialized field: %s "
+            "(\" SSIZE_T_FMT \" of \" SSIZE_T_FMT \")\", "
+            "field_sz, struct_sz );\n"
+         "#endif /* MSERIALIZE_TRACE_LVL */\n", parsed->fields[i].name );
    }
 
    printf(
@@ -859,6 +873,7 @@ int parse_c( struct STRUCT_PARSER* parser, char c, int prototypes ) {
             /* Assuming the full-length comparison above failed, we must have
              * the full union name, now. If this is a union, that is.
              */
+            parser->parsed.fields[parser->parsed.fields_ct].array = 1;
             strncpy(
                parser->parsed.fields[parser->parsed.fields_ct].union_type,
                parser->token,

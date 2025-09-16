@@ -286,7 +286,8 @@ MERROR_RETVAL mserialize_table(
       
       caddy.ser_f = ser_out;
       caddy.cb = cb;
-      retval = mdata_table_iter( p_ser_tab, _mserialize_table_iter, &caddy, 0 );
+      retval = mdata_table_iter(
+         &(p_ser_tab[i]), _mserialize_table_iter, &caddy, 0 );
       maug_cleanup_if_not_ok();
       
       retval = mserialize_footer( ser_out, header, 0 );
@@ -862,10 +863,12 @@ MERROR_RETVAL mdeserialize_vector(
       }
 
       while( 0 < sz_vec ) {
+#if MSERIALIZE_TRACE_LVL > 0
          debug_printf( MSERIALIZE_TRACE_LVL,
             "reading vector item " SIZE_T_FMT " (" SSIZE_T_FMT
                " bytes remaining)...",
             count, sz_vec );
+#endif /* MSERIALIZE_TRACE_LVL */
          retval = cb( ser_in, buf, 1, &sz_item );
          maug_cleanup_if_not_ok();
 #if MSERIALIZE_TRACE_LVL > 0
@@ -893,11 +896,152 @@ cleanup:
    return retval;
 }
 
+static MERROR_RETVAL _mdeserialize_table_tuple(
+   mfile_t* ser_in, struct MDATA_TABLE* p_ser_tab, size_t count,
+   mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_tuple_sz
+) {
+   struct MDATA_TABLE_KEY key;
+   uint8_t type = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t header_tuple_sz = 0;
+   ssize_t sz_item = 0;
+   ssize_t sz_key = 0;
+   ssize_t sz_tuple = 0;
+
+   maug_mzero( &key, sizeof( struct MDATA_TABLE_KEY ) );
+
+   /* Break out tuple deserialization to make this easier to understand. */
+
+   retval = mdeserialize_header(
+      ser_in, &type, &sz_tuple, &header_tuple_sz );
+   maug_cleanup_if_not_ok();
+
+   *p_tuple_sz = sz_tuple + header_tuple_sz;
+
+   if( MSERIALIZE_ASN_TYPE_SEQUENCE != type ) {
+      error_printf( "expected sequence! found: 0x%02x", type );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL,
+      "reading table tuple key " SIZE_T_FMT " (" SSIZE_T_FMT
+         " bytes remaining)...",
+      count, sz_tuple );
+#endif /* MSERIALIZE_TRACE_LVL */
+   retval = mdeserialize_struct_MDATA_TABLE_KEY( ser_in, &key, 1, &sz_key );
+   maug_cleanup_if_not_ok();
+   sz_tuple -= sz_key;
+   if( 0 >= sz_tuple ) {
+      error_printf( "table key found with no item!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL,
+      "reading table tuple item " SIZE_T_FMT " (" SSIZE_T_FMT
+         " bytes remaining)...",
+      count, sz_tuple );
+#endif /* MSERIALIZE_TRACE_LVL */
+   retval = cb( ser_in, buf, 1, &sz_item );
+   maug_cleanup_if_not_ok();
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL,
+      "adding " SIZE_T_FMT "-byte item as "
+         SIZE_T_FMT "-byte item to table...",
+      sz_item, buf_sz );
+#endif /* MSERIALIZE_TRACE_LVL */
+   retval = mdata_table_set( p_ser_tab, key.string, buf, buf_sz );
+   maug_cleanup_if_not_ok();
+   sz_tuple -= sz_item;
+
+cleanup:
+
+   return retval;
+}
+
 MERROR_RETVAL mdeserialize_table(
    mfile_t* ser_in, struct MDATA_TABLE* p_ser_tab, int array,
    mdeserialize_cb_t cb, uint8_t* buf, size_t buf_sz, ssize_t* p_ser_sz
 ) {
-   /* TODO */
+   MERROR_RETVAL retval = MERROR_OK;
+   uint8_t type = 0;
+   ssize_t sz_tab_arr = 0;
+   ssize_t sz_tab = 0;
+   size_t header_sz = 0;
+   size_t count = 0;
+   size_t i = 0;
+   ssize_t sz_tuple = 0;
+
+#if MSERIALIZE_TRACE_LVL > 0
+   debug_printf( MSERIALIZE_TRACE_LVL, "deserializing table..." );
+#endif /* MSERIALIZE_TRACE_LVL */
+
+   retval = mdeserialize_header( ser_in, &type, &sz_tab_arr, &header_sz );
+   maug_cleanup_if_not_ok();
+
+   /* Assemble the size of the full sequence to return. Not used below,
+    * so we can reuse header_sz for subordinate header sizes.
+    */
+   *p_ser_sz = sz_tab_arr + header_sz;
+
+#if MSERIALIZE_TRACE_LVL > 0
+   if( array > 1 ) {
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserializing array of %d tables...", array );
+   }
+#endif /* MSERIALIZE_TRACE_LVL */
+
+   for( i = 0 ; array > i ; i++ ) {
+      if( array > 1 ) {
+         if( 0 >= sz_tab_arr ) {
+            error_printf(
+               "table array sequence contained fewer values (" SIZE_T_FMT
+                  " than expected (" SIZE_T_FMT ")!",
+               i, array );
+            break;
+         }
+         retval = mdeserialize_header( ser_in, &type, &sz_tab, &header_sz );
+         maug_cleanup_if_not_ok();
+
+         /* Subtract the size of this table in the array from the size of the
+          * array as a whole.
+          */
+         sz_tab_arr -= (sz_tab + header_sz);
+
+#if MSERIALIZE_TRACE_LVL > 0
+         debug_printf( MSERIALIZE_TRACE_LVL,
+            "deserializing table %d...", i );
+#endif /* MSERIALIZE_TRACE_LVL */
+      } else {
+         sz_tab = sz_tab_arr;
+      }
+
+      if( MSERIALIZE_ASN_TYPE_SEQUENCE != type ) {
+         error_printf( "expected sequence! found: 0x%02x", type );
+         retval = MERROR_FILE;
+         goto cleanup;
+      }
+
+      while( 0 < sz_tab ) {
+         retval = _mdeserialize_table_tuple(
+            ser_in, &(p_ser_tab[i]), count, cb, buf, buf_sz, &sz_tuple );
+         maug_cleanup_if_not_ok();
+         sz_tab -= sz_tuple;
+         count++;
+      }
+
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserialized " SSIZE_T_FMT " values.", count );
+#endif /* MSERIALIZE_TRACE_LVL */
+   }
+
+cleanup:
+   return retval;
+
 }
 
 MERROR_RETVAL mdeserialize_float(
@@ -927,6 +1071,11 @@ MERROR_RETVAL mdeserialize_char(
 
    /* Use the lesser of (expected/provided) sizes. */
    if( sz < cpy_sz ) {
+#if MSERIALIZE_TRACE_LVL > 0
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "shrinking string copy size to seq len: " SSIZE_T_FMT " bytes",
+         sz );
+#endif /* MSERIALIZE_TRACE_LVL */
       cpy_sz = sz;
    }
 
@@ -937,8 +1086,9 @@ MERROR_RETVAL mdeserialize_char(
 
 #if MSERIALIZE_TRACE_LVL > 0
    if( 1 < array ) {
-      debug_printf(
-         MSERIALIZE_TRACE_LVL, "deserialized string: %s", p_ser_char );
+      debug_printf( MSERIALIZE_TRACE_LVL,
+         "deserialized string: %s (" SSIZE_T_FMT " bytes)",
+         p_ser_char, cpy_sz );
    } else {
       debug_printf(
          MSERIALIZE_TRACE_LVL, "deserialized char: %c", *p_ser_char );
@@ -1084,6 +1234,10 @@ MERROR_RETVAL mdeserialize_union_MLISP_VAL(
    size_t header_sz = 0;
    uint8_t union_type = 0;
    uint8_t type = 0;
+#if MSERIALIZE_TRACE_LVL > 0
+   size_t j = 0;
+   uint8_t* p_ser_byte = (uint8_t*)p_ser_union;
+#endif /* MSERIALIZE_TRACE_LVL */
 
    maug_mzero( p_ser_union, sizeof( union MLISP_VAL ) * array );
    retval = mdeserialize_header(
@@ -1114,18 +1268,26 @@ MERROR_RETVAL mdeserialize_union_MLISP_VAL(
          maug_cleanup_if_not_ok();
       }
 
+      if( 0 >= union_remaining ) {
+         error_printf(
+            "union MLISP_VAL too small (" SSIZE_T_FMT " of " SSIZE_T_FMT ")",
+            union_remaining, union_sz );
+         goto cleanup;
+      }
 #if MSERIALIZE_TRACE_LVL > 0
       debug_printf( MSERIALIZE_TRACE_LVL,
          "deserializing union MLISP_VAL (" SSIZE_T_FMT " bytes)...",
          union_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
-      retval = ser_in->read_block( ser_in, (uint8_t*)&p_ser_union, union_sz );
+      retval = ser_in->read_block(
+         ser_in, (uint8_t*)&(p_ser_union[i]), union_sz );
       maug_cleanup_if_not_ok();
-      union_remaining -= union_sz;
-      if( 0 >= union_remaining ) {
-         error_printf( "union MLISP_VAL was smaller than expected!" );
-         goto cleanup;
+#if MSERIALIZE_TRACE_LVL > 0
+      for( j = 0 ; union_sz > j ; j++ ) {
+         debug_printf( MSERIALIZE_TRACE_LVL, "union " SIZE_T_FMT ": 0x%02x",
+            j, p_ser_byte[j] );
       }
+#endif /* MSERIALIZE_TRACE_LVL */
    }
 
 cleanup:
@@ -1210,7 +1372,7 @@ MERROR_RETVAL mdeserialize_struct_MDATA_TABLE_KEY(
          ser_in, &(p_ser_struct[i].hash), 1, &field_sz );
       maug_cleanup_if_not_ok();
       struct_remaining -= field_sz;
-      if( 0 >= struct_remaining ) {
+      if( 0 > struct_remaining ) {
          error_printf( "struct MDATA_TABLE_KEY was smaller than expected!" );
          goto cleanup;
       }

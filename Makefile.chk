@@ -23,7 +23,8 @@ CFLAGS_CHECK := \
 	-DDEBUG_THRESHOLD=1 \
 	-DRETROFLAT_OS_UNIX
 
-#CFLAGS_CHECK += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+#CFLAGS_CHECK += -fsanitize=address -fsanitize=undefined
+#CFLAGS_CHECK += -fsanitize=leak
 
 #CFLAGS_CHECK += -DMLISP_DUMP_ENABLED
 #CFLAGS_CHECK += -DMFILE_TRACE_LVL=1
@@ -32,7 +33,8 @@ CFLAGS_CHECK := \
 #CFLAGS_CHECK += -DMSERIALIZE_TRACE_LVL=1
 
 LDFLAGS_CHECK := -g
-#LDFLAGS_CHECK += -fsanitize=address -fsanitize=leak -fsanitize=undefined
+#LDFLAGS_CHECK += -fsanitize=address -fsanitize=undefined
+#LDFLAGS_CHECK += -fsanitize=leak
 
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1
