@@ -91,6 +91,7 @@ START_TEST( test_mfil_file_cursor ) {
 
    mfile_close( &test_file );
 }
+END_TEST
 
 Suite* mfil_suite( void ) {
    Suite* s;

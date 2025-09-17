@@ -152,6 +152,7 @@ cleanup:
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
+END_TEST
 
 START_TEST( test_mser_vector_read_arr ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -201,6 +202,7 @@ cleanup:
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
+END_TEST
 
 START_TEST( test_mser_vector_write ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -279,6 +281,7 @@ void gen_test_tab( struct MDATA_TABLE* tab_test, size_t i_mult ) {
       key[0]++;
    }
 }
+END_TEST
 
 START_TEST( test_mser_table_read ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -318,6 +321,7 @@ START_TEST( test_mser_table_read ) {
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
+END_TEST
 
 START_TEST( test_mser_table_read_arr ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -367,7 +371,7 @@ START_TEST( test_mser_table_read_arr ) {
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
-
+END_TEST
 
 START_TEST( test_mser_table_write ) {
    MERROR_RETVAL retval = MERROR_OK;

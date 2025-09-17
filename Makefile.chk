@@ -9,7 +9,7 @@ CHECK_C_FILES := \
    check/chkmfil.c \
    check/chkmser.c
 
-CFLAGS_CHECK := \
+CFLAGS_CHECK_UNIX := \
 	-Wall \
 	-g \
 	-Isrc \
@@ -23,28 +23,50 @@ CFLAGS_CHECK := \
 	-DDEBUG_THRESHOLD=1 \
 	-DRETROFLAT_OS_UNIX
 
-#CFLAGS_CHECK += -fsanitize=address -fsanitize=undefined
-#CFLAGS_CHECK += -fsanitize=leak
+CFLAGS_CHECK_WIN16 := \
+	-d3 \
+	-I$(WATCOM)/h \
+	-I$(WATCOM)/h/win \
+	-Isrc \
+	-Iapi/mem/win \
+	-Iapi/file/unix \
+	-Iapi/log/unix \
+	-Iapi/serial/asn1 \
+	-DMAUG_NO_RETRO \
+	-DDEBUG \
+	-DDEBUG_LOG \
+	-DDEBUG_THRESHOLD=1 \
+	-DRETROFLAT_OS_WIN
 
-#CFLAGS_CHECK += -DMLISP_DUMP_ENABLED
-#CFLAGS_CHECK += -DMFILE_TRACE_LVL=1
-#CFLAGS_CHECK += -DMLISP_EXEC_TRACE_LVL=1
-#CFLAGS_CHECK += -DMDATA_TRACE_LVL=1
-#CFLAGS_CHECK += -DMSERIALIZE_TRACE_LVL=1
+#CFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
+#CFLAGS_CHECK_UNIX += -fsanitize=leak
 
-LDFLAGS_CHECK := -g
-#LDFLAGS_CHECK += -fsanitize=address -fsanitize=undefined
-#LDFLAGS_CHECK += -fsanitize=leak
+#CFLAGS_CHECK_UNIX += -DMLISP_DUMP_ENABLED
+#CFLAGS_CHECK_UNIX += -DMFILE_TRACE_LVL=1
+#CFLAGS_CHECK_UNIX += -DMLISP_EXEC_TRACE_LVL=1
+#CFLAGS_CHECK_UNIX += -DMDATA_TRACE_LVL=1
+#CFLAGS_CHECK_UNIX += -DMSERIALIZE_TRACE_LVL=1
+
+LDFLAGS_CHECK_UNIX := -g
+#LDFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
+#LDFLAGS_CHECK_UNIX += -fsanitize=leak
 
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1
 
-mcheck: $(addprefix obj/,$(subst .c,.o,$(CHECK_C_FILES)))
-	$(CC) -o $@ $^ $(LDFLAGS_CHECK) $(shell pkg-config --libs check)
+mcheck: $(addprefix obj/unix/,$(subst .c,.o,$(CHECK_C_FILES)))
+	$(CC) -o $@ $^ $(LDFLAGS_CHECK_UNIX) $(shell pkg-config --libs check)
 
-obj/%.o: %.c
+obj/unix/%.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $(CFLAGS_CHECK) $(shell pkg-config --cflags check) $<
+	$(CC) -c -o $@ $(CFLAGS_CHECK_UNIX) $(shell pkg-config --cflags check) $<
+
+mcheck16.exe: $(addprefix obj/win16/,$(subst .c,.o,$(CHECK_C_FILES)))
+	wlink system windows fil {$^}
+
+obj/win16/%.o: %.c
+	mkdir -p $(dir $@)
+	wcc $(CFLAGS_CHECK_WIN16) -fo=$@ $<
 
 clean:
 	rm -rf mcheck obj
