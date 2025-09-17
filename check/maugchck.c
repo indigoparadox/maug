@@ -1,5 +1,6 @@
 
 #define MAUG_C
+#define MFAKECHK_C
 
 #include "maugchck.h"
 

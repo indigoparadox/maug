@@ -1,4 +1,5 @@
 
+#ifndef MAUG_NO_RETRO
 #ifndef RETROFLAT_NO_RETROGXC
 #  define MAUG_NO_RETRO
 #  include <maug.h>
@@ -7,4 +8,5 @@
 #  define RETROGXC_C
 #  include <retrogxc.h>
 #endif /* !RETROFLAT_NO_RETROGXC */
+#endif /* !MAUG_NO_RETRO */
 
