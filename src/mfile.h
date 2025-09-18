@@ -459,6 +459,16 @@ MERROR_RETVAL mfile_mem_write_block(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t mv_sz = 0;
 
+#if MFILE_WRITE_TRACE_LVL > 0
+   debug_printf( MFILE_WRITE_TRACE_LVL, "p: %p, sz: %u, cur: %u, buf_sz: %u\n",
+      p_f->mem_buffer, p_f->sz, p_f->mem_cursor, buf_sz );
+#endif /* MFILE_WRITE_TRACE_LVL */
+
+   if( 0 == buf_sz ) {
+      /* Short-circuit empty writes. */
+      return MERROR_OK;
+   }
+
    if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
       return MERROR_FILE;
    }

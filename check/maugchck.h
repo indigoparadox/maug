@@ -14,12 +14,20 @@
 #include <mlispe.h>
 #include "mserial.h"
 
-#define MAUGCHK_TABLE( f ) \
-   f( mdat ) \
-   f( mfmt ) \
-   f( mlsp ) \
-   f( mfil ) \
-   f( mser )
+#ifdef RETROFLAT_API_WIN16
+#  define MAUGCHK_TABLE( f ) \
+      f( mdat ) \
+      f( mfmt ) \
+      f( mlsp ) \
+      f( mser )
+#else
+#  define MAUGCHK_TABLE( f ) \
+      f( mdat ) \
+      f( mfmt ) \
+      f( mlsp ) \
+      f( mfil ) \
+      f( mser )
+#endif
 
 #endif /* !MAUGCHCK_H */
 
