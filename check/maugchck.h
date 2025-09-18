@@ -2,7 +2,7 @@
 #ifndef MAUGCHCK_H
 #define MAUGCHCK_H
 
-#if defined( MAUG_OS_WIN ) || defined( RETROFLAT_OS_WIN )
+#if defined( MAUG_FAKECHECK )
 #  include <mfakechk.h>
 #else
 #  include <check.h>

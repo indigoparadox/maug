@@ -34,6 +34,7 @@ CFLAGS_CHECK_WIN16 := \
 	-Iapi/file/unix \
 	-Iapi/log/unix \
 	-Iapi/serial/asn1 \
+	-DMAUG_FAKECHECK \
 	-DMAUG_NO_RETRO \
 	-DMAUG_NO_MHTML \
 	-DDEBUG \
@@ -43,28 +44,30 @@ CFLAGS_CHECK_WIN16 := \
 	-DRETROFLAT_API_WIN16 \
 	-DMAUG_DOS_MEM_L
 
-#CFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
-#CFLAGS_CHECK_UNIX += -fsanitize=leak
-
+CFLAGS_CHECK_UNIX += -DMAUG_FAKECHECK
+#CFLAGS_CHECK_UNIX += $(shell pkg-config --cflags check)
+CFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
+CFLAGS_CHECK_UNIX += -fsanitize=leak
 #CFLAGS_CHECK_UNIX += -DMLISP_DUMP_ENABLED
 #CFLAGS_CHECK_UNIX += -DMFILE_TRACE_LVL=1
 #CFLAGS_CHECK_UNIX += -DMLISP_EXEC_TRACE_LVL=1
 #CFLAGS_CHECK_UNIX += -DMDATA_TRACE_LVL=1
 #CFLAGS_CHECK_UNIX += -DMSERIALIZE_TRACE_LVL=1
 
+#LDFLAGS_CHECK_UNIX += $(shell pkg-config --libs check)
 LDFLAGS_CHECK_UNIX := -g
-#LDFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
-#LDFLAGS_CHECK_UNIX += -fsanitize=leak
+LDFLAGS_CHECK_UNIX += -fsanitize=address -fsanitize=undefined
+LDFLAGS_CHECK_UNIX += -fsanitize=leak
 
 #-DMFMT_TRACE_BMP_LVL=1
 #-DMFMT_TRACE_RLE_LVL=1
 
 mcheck: $(addprefix obj/unix/,$(subst .c,.o,$(CHECK_C_FILES)))
-	$(CC) -o $@ $^ $(LDFLAGS_CHECK_UNIX) $(shell pkg-config --libs check)
+	$(CC) -o $@ $^ $(LDFLAGS_CHECK_UNIX)
 
 obj/unix/%.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $(CFLAGS_CHECK_UNIX) $(shell pkg-config --cflags check) $<
+	$(CC) -c -o $@ $(CFLAGS_CHECK_UNIX) $<
 
 mcheck16.exe: \
 $(addprefix obj/win16/,$(subst .c,.o,$(CHECK_C_FILES))) \

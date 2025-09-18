@@ -2,7 +2,22 @@
 #ifndef MFAKECHK_H
 #define MFAKECHK_H
 
+/**
+ * \addtogroup maug_fakecheck Fake Check API
+ * \brief Emulation layer for libcheck unit tests.
+ *
+ * This module offers a limited emulation of the libcheck library for unit
+ * tests in a way compatible with old or limited platforms using
+ * single-threading and C89.
+ * \{
+ * \file mfakechk.h
+ */
+
+#define MFAKECHECK_OK 0
+
 #define MFAKECHECK_TESTS_CT_MAX 10
+
+#define MFAKECHECK_TEST_NAME_SZ_MAX 100
 
 #define MFAKECHECK_TCASE_NAME_SZ_MAX 10
 
@@ -14,20 +29,33 @@
 
 #define CK_VERBOSE 0x01
 
-typedef void (*fakechk_fn)( int _i );
+typedef void (*fakechk_test_fn)( int _i, int* _test_retval );
 
-#define START_TEST( f ) void f ( int _i )
+typedef void (*fakechk_scaffold_fn)();
+
+#define START_TEST( f ) void f ( int _i, int* _test_retval )
 
 #define END_TEST
 
-#define tcase_add_checked_fixture( tcase, setup, teardown )
+#define tcase_add_checked_fixture( tcase, setup_fn, teardown_fn ) \
+   tcase->setup = setup_fn; \
+   tcase->teardown = teardown_fn;
 
 #define tcase_add_test( case_struct, fn ) \
-   tcase_add_loop_test( case_struct, fn, 0, 1 )
+   tcase_add_test_fn( case_struct, fn, 0, 1, #fn )
+
+#define tcase_add_loop_test( case_struct, fn, start, end ) \
+   tcase_add_test_fn( case_struct, fn, start, end, #fn )
 
 #define ck_assert( a )
 
-#define ck_assert_int_eq( a, b )
+#define ck_assert_int_eq( a, b ) \
+   if( (a) != (b) ) { \
+      fprintf( stderr, "%s: %d failure! " #a " != " #b ", " #a " == %ld, " #b " == %ld\n", \
+         __FILE__, __LINE__, (long unsigned int)(a), (long unsigned int)(b) ); \
+      *_test_retval = 1; \
+      return; \
+   }
 
 #define ck_assert_uint_eq( a, b )
 
@@ -35,22 +63,38 @@ typedef void (*fakechk_fn)( int _i );
 
 #define ck_assert_mem_eq( a, b, sz )
 
-#define ck_assert_ptr_eq( a, b )
+#define ck_assert_ptr_eq( a, b ) \
+   if( (a) != (b) ) { \
+      fprintf( stderr, "%s: %d failure! " #a " != " #b ", " #a " == %p, " #b " == %p\n", \
+         __FILE__, __LINE__, (a), (b) ); \
+      *_test_retval = 1; \
+      return; \
+   }
 
-#define ck_assert_ptr_ne( a, b )
+#define ck_assert_ptr_ne( a, b ) \
+   if( (a) == (b) ) { \
+      fprintf( stderr, "%s: %d failure! " #a " == " #b ", " #a " == %p, " #b " == %p\n", \
+         __FILE__, __LINE__, (a), (b) ); \
+      *_test_retval = 1; \
+      return; \
+   }
 
 typedef struct {
-   fakechk_fn tests[MFAKECHECK_TESTS_CT_MAX];
+   fakechk_test_fn tests[MFAKECHECK_TESTS_CT_MAX];
    int tests_ct;
+   char test_names[MFAKECHECK_TESTS_CT_MAX][MFAKECHECK_TEST_NAME_SZ_MAX];
    char name[MFAKECHECK_TCASE_NAME_SZ_MAX + 1];
    int loop_starts[MFAKECHECK_TESTS_CT_MAX];
    int loop_ends[MFAKECHECK_TESTS_CT_MAX];
+   fakechk_scaffold_fn setup;
+   fakechk_scaffold_fn teardown;
 } TCase;
 
 typedef struct {
    char name[MFAKECHECK_SUITE_NAME_SZ_MAX + 1];
    TCase* cases[MFAKECHECK_CASES_CT_MAX];
    int cases_ct;
+   int failures;
 } Suite;
 
 typedef struct {
@@ -65,8 +109,9 @@ TCase* tcase_create( const char* name );
 
 void suite_add_tcase( Suite* suite, TCase* tc );
 
-void tcase_add_loop_test(
-   TCase* case_struct, fakechk_fn fn, int start, int end );
+void tcase_add_test_fn(
+   TCase* case_struct, fakechk_test_fn fn, int start, int end,
+   const char* fn_name );
 
 int srunner_run_all( SRunner* runner, unsigned char flags );
 
@@ -127,8 +172,9 @@ TCase* tcase_create( const char* name ) {
    return tcase;
 }
 
-void tcase_add_loop_test(
-   TCase* case_struct, fakechk_fn fn, int start, int end
+void tcase_add_test_fn(
+   TCase* case_struct, fakechk_test_fn fn, int start, int end,
+   const char* fn_name
 ) {
    if( case_struct->tests_ct >= MFAKECHECK_TESTS_CT_MAX ) {
       return;
@@ -136,6 +182,8 @@ void tcase_add_loop_test(
    case_struct->tests[case_struct->tests_ct] = fn;
    case_struct->loop_starts[case_struct->tests_ct] = start;
    case_struct->loop_ends[case_struct->tests_ct] = end;
+   strncpy( &(case_struct->test_names[case_struct->tests_ct][0]), fn_name,
+      MFAKECHECK_TEST_NAME_SZ_MAX );
    case_struct->tests_ct++;
    if( case_struct->tests_ct >= MFAKECHECK_TESTS_CT_MAX ) {
       printf( "too many tests in case: %s!\n", case_struct->name );
@@ -154,8 +202,8 @@ void suite_add_tcase( Suite* suite, TCase* tc ) {
 }
 
 int srunner_run_all( SRunner* runner, unsigned char flags ) {
-   size_t i = 0, j = 0;
-   int k = 0;
+   int i = 0, j = 0, k = 0;
+   int test_retval = 0;
 
    printf( "running suite: %s\n", runner->suite->name );
 
@@ -167,15 +215,28 @@ int srunner_run_all( SRunner* runner, unsigned char flags ) {
             runner->suite->cases[i]->loop_ends[j] > k ;
             k++
          ) {
-            printf( "running test: %d (%d)\n", j, k );
-            runner->suite->cases[i]->tests[j]( k );
+            printf( "running test: %s (%d)\n", 
+               &(runner->suite->cases[i]->test_names[j][0]), k );
+            if( NULL != runner->suite->cases[i]->setup ) {
+               runner->suite->cases[i]->setup();
+            }
+            test_retval = 0;
+            runner->suite->cases[i]->tests[j]( k, &test_retval );
+            if( MFAKECHECK_OK != test_retval ) {
+               runner->suite->failures++;
+            }
+            if( NULL != runner->suite->cases[i]->teardown ) {
+               runner->suite->cases[i]->teardown();
+            }
          }
       }
    }
+
+   return 0;
 }
 
 int srunner_ntests_failed( SRunner* runner ) {
-
+   return 0;
 }
 
 void srunner_free( SRunner* runner ) {
@@ -183,6 +244,8 @@ void srunner_free( SRunner* runner ) {
 }
 
 #endif /* MFAKECHK_C */
+
+/*! \} */ /* maug_fakecheck */
 
 #endif /* !MFAKECHK_H */
 

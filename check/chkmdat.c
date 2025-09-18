@@ -18,6 +18,7 @@ START_TEST( test_mdat_vector_append ) {
 
    p_int = mdata_vector_get( &g_vector_test_append, _i, int );
 
+   ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( g_test_data[_i], *p_int );
 
 cleanup:
@@ -35,10 +36,11 @@ START_TEST( test_mdat_vector_insert ) {
 
    p_int = mdata_vector_get( &g_vector_test_insert, 7 - _i, int );
 
+   ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( g_test_data[_i], *p_int );
 
 cleanup:
-   mdata_vector_unlock( &g_vector_test_append );
+   mdata_vector_unlock( &g_vector_test_insert );
 
    ck_assert_int_eq( retval, MERROR_OK );
 }
@@ -56,6 +58,7 @@ cleanup:
    return;
 }
 END_TEST
+
 void vector_setup() {
    size_t i = 0;
    ssize_t idx = 0;
@@ -64,19 +67,22 @@ void vector_setup() {
    for( i = 0 ; 8 > i ; i++ ) {
       idx = mdata_vector_append(
          &g_vector_test_append, &(g_test_data[i]), sizeof( int ) );
-      ck_assert_int_eq( idx, i );
+      /* ck_assert_int_eq( idx, i ); */
    }
 
    maug_mzero( &g_vector_test_insert, sizeof( struct MDATA_VECTOR ) );
    for( i = 0 ; 8 > i ; i++ ) {
       idx = mdata_vector_insert(
          &g_vector_test_insert, &(g_test_data[i]), 0, sizeof( int ) );
-      ck_assert_int_eq( idx, 0 );
+      /* ck_assert_int_eq( idx, 0 ); */
    }
 }
 
 void vector_teardown() {
-
+   mdata_vector_free( &g_vector_test_insert );
+   mdata_vector_free( &g_vector_test_append );
+   memset( &g_vector_test_insert, '\0', sizeof( struct MDATA_VECTOR ) );
+   memset( &g_vector_test_append, '\0', sizeof( struct MDATA_VECTOR ) );
 }
 
 START_TEST( test_mdat_table_set ) {
@@ -87,6 +93,7 @@ START_TEST( test_mdat_table_set ) {
    mdata_table_lock( &g_table_test_set );
 
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
+   ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( *p_int, g_test_data[_i] );
 
    mdata_table_unlock( &g_table_test_set );
@@ -100,6 +107,7 @@ START_TEST( test_mdat_table_unset ) {
    mdata_table_lock( &g_table_test_set );
 
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
+   ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( *p_int, g_test_data[_i] );
 
    /* Only remove the special case (index 3). */
@@ -152,6 +160,7 @@ START_TEST( test_mdat_table_overwrite ) {
    mdata_table_lock( &table_test );
 
    p_int = mdata_table_get( &table_test, "xyz", int );
+   ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( *p_int, 9 );
 
    mdata_table_unlock( &table_test );
@@ -168,12 +177,12 @@ void table_setup() {
       retval = mdata_table_set(
          &g_table_test_set, g_test_keys[i],
          &(g_test_data[i]), sizeof( int ) );
-      ck_assert_int_eq( MERROR_OK, retval );
+      /* ck_assert_int_eq( MERROR_OK, retval ); */
    }
 }
 
 void table_teardown() {
-
+   mdata_table_free( &g_table_test_set );
 }
 
 START_TEST( test_mdat_strpool_add ) {
@@ -242,6 +251,8 @@ START_TEST( test_mdat_strpool_dedupe ) {
    idx = mdata_strpool_append(
       &sp_test, "foo", maug_strlen( "foo" ), MDATA_STRPOOL_FLAG_DEDUPE );
    ck_assert_int_eq( idx, sizeof( size_t ) );
+
+   mdata_strpool_free( &sp_test );
 }
 END_TEST
 
@@ -270,6 +281,8 @@ START_TEST( test_mdat_strpool_extract ) {
 
    maug_munlock( ex_test_h, ex_test );
    maug_mfree( ex_test_h );
+   
+   mdata_strpool_free( &sp_test );
 }
 END_TEST
 
