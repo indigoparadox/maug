@@ -69,7 +69,7 @@ obj/unix/%.o: %.c
 mcheck16.exe: \
 $(addprefix obj/win16/,$(subst .c,.o,$(CHECK_C_FILES))) \
 $(addprefix obj/win16/,$(subst .c,.o,$(wildcard dosstubs/*.c)))
-	wlink system windows fil {$^}
+	wlink name $@ system windows fil {$^}
 
 obj/win16/%.o: %.c
 	mkdir -p $(dir $@)
