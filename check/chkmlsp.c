@@ -99,13 +99,19 @@ START_TEST( test_mlsp_exec_step ) {
    }
 
 cleanup:
-   if( 8 == _i || 3 == _i ) {
-      for( i = exec.env_select ; 0 <= i ; i-- ) {
+   for( i = exec.env_select ; 0 <= i ; i-- ) {
+      if( mdata_table_is_locked( &(exec.env[i]) ) ) {
          mdata_table_unlock( &(exec.env[i]) );
       }
-   } else if( 3 == _i ) {
+   }
+   
+   if( mdata_vector_is_locked( &(exec.per_node_visit_ct) ) ) {
       mdata_vector_unlock( &(exec.per_node_visit_ct) );
    }
+
+   mlisp_parser_free( &parser );
+   mlisp_exec_free( &exec );
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -150,6 +156,9 @@ START_TEST( test_mlsp_exec_lambda ) {
    for( i = exec.env_select ; 0 <= i ; i-- ) {
       mdata_table_unlock( &(exec.env[i]) );
    }
+
+   mlisp_parser_free( &parser );
+   mlisp_exec_free( &exec );
 
    ck_assert_int_eq( retval, MERROR_OK );
 }

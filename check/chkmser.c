@@ -150,6 +150,9 @@ START_TEST( test_mser_vector_read ) {
 
 cleanup:
 
+   mdata_vector_free( &vec_gen );
+   mdata_vector_free( &vec_test );
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -200,6 +203,11 @@ START_TEST( test_mser_vector_read_arr ) {
 
 cleanup:
 
+   for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
+      mdata_vector_free( &(vec_gen[i]) );
+      mdata_vector_free( &(vec_test[i]) );
+   }
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -229,6 +237,8 @@ START_TEST( test_mser_vector_write ) {
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_vec_ser ) );
 
    ck_assert_mem_eq( buf_mem, g_test_vec_ser, sizeof( g_test_vec_ser ) );
+
+   mdata_vector_free( &vec_test );
 
    mfile_close( &ser_mem );
 }
@@ -263,6 +273,10 @@ START_TEST( test_mser_vector_write_arr ) {
 
    ck_assert_mem_eq(
       buf_mem, g_test_vec_arr_ser, sizeof( g_test_vec_arr_ser ) );
+
+   for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
+      mdata_vector_free( &(vec_test[i]) );
+   }
 
    mfile_close( &ser_mem );
 }
@@ -319,6 +333,9 @@ START_TEST( test_mser_table_read ) {
    mdata_table_unlock( &tab_gen );
    mdata_table_unlock( &tab_test );
 
+   mdata_table_free( &tab_gen );
+   mdata_table_free( &tab_test );
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -369,6 +386,11 @@ START_TEST( test_mser_table_read_arr ) {
       mdata_table_unlock( &(tab_test[i]) );
    }
 
+   for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
+      mdata_table_free( &(tab_gen[i]) );
+      mdata_table_free( &(tab_test[i]) );
+   }
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -398,6 +420,8 @@ START_TEST( test_mser_table_write ) {
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_tab_ser ) );
 
    ck_assert_mem_eq( buf_mem, g_test_tab_ser, sizeof( g_test_tab_ser ) );
+
+   mdata_table_free( &tab_test );
 
    mfile_close( &ser_mem );
 }
@@ -432,6 +456,10 @@ START_TEST( test_mser_table_write_arr ) {
 
    ck_assert_mem_eq(
       buf_mem, g_test_tab_arr_ser, sizeof( g_test_tab_arr_ser ) );
+
+   for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
+      mdata_table_free( &tab_test[i] );
+   }
 
    mfile_close( &ser_mem );
 }

@@ -165,6 +165,8 @@ START_TEST( test_mdat_table_overwrite ) {
 
    mdata_table_unlock( &table_test );
 
+   mdata_table_free( &table_test );
+
    ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -203,6 +205,8 @@ START_TEST( test_mdat_strpool_add ) {
     */
    ck_assert_int_eq( mdata_strpool_sz( &sp_test ), 
       sizeof( size_t ) + 4 + mdata_strpool_padding( 3 ) );
+
+   mdata_strpool_free( &sp_test );
 }
 END_TEST
 
@@ -226,6 +230,8 @@ START_TEST( test_mdat_strpool_double_add ) {
    idx = mdata_strpool_append( &sp_test, "foo", maug_strlen( "foo" ), 0 );
    ck_assert_int_eq( idx,
       8 + (2 * mdata_strpool_padding( 3 )) + (3 * sizeof( size_t ) ) );
+
+   mdata_strpool_free( &sp_test );
 }
 END_TEST
 
