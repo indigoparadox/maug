@@ -205,17 +205,15 @@ int srunner_run_all( SRunner* runner, unsigned char flags ) {
    int i = 0, j = 0, k = 0;
    int test_retval = 0;
 
-   printf( "running suite: %s\n", runner->suite->name );
-
    for( i = 0 ; runner->suite->cases_ct > i ; i++ ) {
-      printf( "running case: %s\n", runner->suite->cases[i]->name );
       for( j = 0 ; runner->suite->cases[i]->tests_ct > j ; j++ ) {
          for(
             k = runner->suite->cases[i]->loop_starts[j] > k ; 
             runner->suite->cases[i]->loop_ends[j] > k ;
             k++
          ) {
-            printf( "running test: %s (%d)\n", 
+            printf( "test: %s: %s: %s (%d)\n", 
+               runner->suite->name, runner->suite->cases[i]->name,
                &(runner->suite->cases[i]->test_names[j][0]), k );
             if( NULL != runner->suite->cases[i]->setup ) {
                runner->suite->cases[i]->setup();

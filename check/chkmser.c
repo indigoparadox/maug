@@ -130,7 +130,7 @@ START_TEST( test_mser_vector_read ) {
    maug_mzero( &vec_test, sizeof( struct MDATA_VECTOR ) );
 
    retval = mfile_lock_buffer(
-      g_test_vec_ser, sizeof( g_test_vec_ser ), &ser_mem );
+      (MAUG_MHANDLE)NULL, g_test_vec_ser, sizeof( g_test_vec_ser ), &ser_mem );
    ck_assert_int_eq( retval, MERROR_OK );
 
    retval = mdeserialize_vector(
@@ -176,7 +176,8 @@ START_TEST( test_mser_vector_read_arr ) {
    maug_mzero( vec_test, VEC_ARR_LOOPS * sizeof( struct MDATA_VECTOR ) );
 
    retval = mfile_lock_buffer(
-      g_test_vec_arr_ser, sizeof( g_test_vec_arr_ser ), &ser_mem );
+      (MAUG_MHANDLE)NULL, g_test_vec_arr_ser,
+      sizeof( g_test_vec_arr_ser ), &ser_mem );
    ck_assert_int_eq( retval, MERROR_OK );
 
    retval = mdeserialize_vector(
@@ -313,7 +314,7 @@ START_TEST( test_mser_table_read ) {
    maug_mzero( &tab_test, sizeof( struct MDATA_TABLE ) );
 
    retval = mfile_lock_buffer(
-      g_test_tab_ser, sizeof( g_test_tab_ser ), &ser_mem );
+      (MAUG_MHANDLE)NULL, g_test_tab_ser, sizeof( g_test_tab_ser ), &ser_mem );
    ck_assert_int_eq( retval, MERROR_OK );
 
    retval = mdeserialize_table(
@@ -360,7 +361,8 @@ START_TEST( test_mser_table_read_arr ) {
    maug_mzero( tab_test, VEC_ARR_LOOPS * sizeof( struct MDATA_TABLE ) );
 
    retval = mfile_lock_buffer(
-      g_test_tab_arr_ser, sizeof( g_test_tab_arr_ser ), &ser_mem );
+      (MAUG_MHANDLE)NULL, g_test_tab_arr_ser,
+      sizeof( g_test_tab_arr_ser ), &ser_mem );
    ck_assert_int_eq( retval, MERROR_OK );
 
    retval = mdeserialize_table(

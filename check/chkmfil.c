@@ -11,7 +11,8 @@ START_TEST( test_mfil_mem_read ) {
    mfile_t test_file;
    uint8_t char_buf;
 
-   retval = mfile_lock_buffer( g_test_mem, TEST_MEM_SZ, &test_file );
+   retval = mfile_lock_buffer(
+      (MAUG_MHANDLE)NULL, g_test_mem, TEST_MEM_SZ, &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
    test_file.seek( &test_file, _i );
@@ -28,7 +29,8 @@ START_TEST( test_mfil_mem_write ) {
    uint8_t test_buf[TEST_MEM_SZ];
    mfile_t test_file;
 
-   retval = mfile_lock_buffer( test_buf, TEST_MEM_SZ, &test_file );
+   retval = mfile_lock_buffer(
+      (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
    test_file.write_block( &test_file, g_test_mem, TEST_MEM_SZ );
@@ -49,7 +51,8 @@ START_TEST( test_mfil_mem_insert ) {
       test_buf[i] = i + 1;
    }
 
-   retval = mfile_lock_buffer( test_buf, TEST_MEM_SZ, &test_file );
+   retval = mfile_lock_buffer(
+      (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
    test_file.seek( &test_file, 0 );
@@ -68,7 +71,8 @@ START_TEST( test_mfil_mem_cursor ) {
    mfile_t test_file;
    char test_buf[TEST_MEM_SZ];
 
-   retval = mfile_lock_buffer( test_buf, TEST_MEM_SZ, &test_file );
+   retval = mfile_lock_buffer(
+      (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_int_eq( retval, MERROR_OK );
 
    test_file.write_block( &test_file, g_test_mem, _i );

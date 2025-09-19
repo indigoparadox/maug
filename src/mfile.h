@@ -56,7 +56,19 @@
 
 /*! \} */ /* maug_mfile_types */
 
+/**
+ * \relates MFILE_CADDY
+ * \brief Flag for MFILE_CADDY::flags indicating this file is read-only.
+ */
 #define MFILE_FLAG_READ_ONLY     0x01
+
+/**
+ * \relates MFILE_CADDY
+ * \brief Flag for MFILE_CADDY::flags indicating subsequent internal unlocks
+ *        should unlock the handle back to its buffer. Should only be set
+ *        internally!
+ */
+#define MFILE_FLAG_HANDLE_LOCKED 0x02
 
 /**
  * \addtogroup maug_mfile_byte_order RetroFile Byte Order
@@ -64,6 +76,12 @@
  *
  * If neither of these flags are specified, mfile_read_int_t() operations will
  * default to the native byte order of the current system.
+ *
+ * \note These flags are both the same flag, essentially, so they are set to
+ *       0x01. This is so that we can check for their presence vs the current
+ *       platform endianness. Essentially they are ignored if the requested
+ *       endianness matches the current platform's default endianness. Please
+ *       see mfile_file_read_int() for the implementation.
  */
 
 /**
@@ -176,13 +194,14 @@ struct MFILE_CADDY {
    uint8_t type;
    /*! \brief The physical handle or pointer to access the file by. */
    union MFILE_HANDLE h;
-   off_t sz;
    off_t last_read;
    /*! \brief Current position if its type is ::MFILE_CADDY_TYPE_MEM_BUFFER. */
    off_t mem_cursor;
    /*! \brief Locked pointer for MFILE_HANDLE::mem. */
    uint8_t* mem_buffer;
    uint8_t flags;
+   /*! \brief Size of the current file/buffer in bytes. */
+   off_t sz;
    mfile_has_bytes_t has_bytes;
    mfile_cursor_t cursor;
    mfile_read_byte_t read_byte;
@@ -231,14 +250,13 @@ MERROR_RETVAL mfile_file_write_block(
 MERROR_RETVAL mfile_file_vprintf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, va_list args );
 
-#define mfile_check_lock( p_file ) (NULL != (p_file)->mem_buffer)
-
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
 /**
  * \brief Lock a buffer and assign it to an ::mfile_t to read/write.
  */
-MERROR_RETVAL mfile_lock_buffer( MAUG_MHANDLE, off_t, mfile_t* p_file );
+MERROR_RETVAL mfile_lock_buffer(
+   MAUG_MHANDLE, void* ptr, off_t, mfile_t* p_file );
 
 /**
  * \brief Open a file and read it into memory or memory-map it.
@@ -355,6 +373,38 @@ off_t mfile_mem_cursor( struct MFILE_CADDY* p_file ) {
 
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file ) {
    return p_file->sz - p_file->mem_cursor;
+} 
+
+/* === */
+
+static MERROR_RETVAL mfile_mem_lock( struct MFILE_CADDY* p_f ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   assert(
+      MFILE_FLAG_HANDLE_LOCKED != (MFILE_FLAG_HANDLE_LOCKED & p_f->flags) );
+
+   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
+
+   /* Only lock if this buffer uses a handle and not a pointer. */
+   if( (MAUG_MHANDLE)NULL != p_f->h.mem ) {
+      assert( NULL == p_f->mem_buffer );
+      maug_mlock( p_f->h.mem, p_f->mem_buffer );
+      p_f->flags |= MFILE_FLAG_HANDLE_LOCKED;
+   }
+
+   return retval;
+}
+
+/* === */
+
+static void mfile_mem_release( struct MFILE_CADDY* p_f ) {
+
+   assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
+   
+   if( MFILE_FLAG_HANDLE_LOCKED == (MFILE_FLAG_HANDLE_LOCKED & p_f->flags) ) {
+      maug_munlock( p_f->h.mem, p_f->mem_buffer );
+      p_f->flags &= ~MFILE_FLAG_HANDLE_LOCKED;
+   }
 }
 
 /* === */
@@ -368,16 +418,24 @@ MERROR_RETVAL mfile_mem_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
 MERROR_RETVAL mfile_mem_read_block(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
 
    if( p_file->mem_cursor >= p_file->sz ) {
       return MERROR_FILE;
    }
 
+   retval = mfile_mem_lock( p_file );
+   maug_cleanup_if_not_ok();
+
    while( 0 < buf_sz-- ) {
       *(buf++) = p_file->mem_buffer[p_file->mem_cursor++];
    }
 
-   return MERROR_OK;
+cleanup:
+
+   mfile_mem_release( p_file );
+
+   return retval;
 }
 
 /* === */
@@ -459,11 +517,6 @@ MERROR_RETVAL mfile_mem_write_block(
    MERROR_RETVAL retval = MERROR_OK;
    ssize_t mv_sz = 0;
 
-#if MFILE_WRITE_TRACE_LVL > 0
-   debug_printf( MFILE_WRITE_TRACE_LVL, "p: %p, sz: %u, cur: %u, buf_sz: %u\n",
-      p_f->mem_buffer, p_f->sz, p_f->mem_cursor, buf_sz );
-#endif /* MFILE_WRITE_TRACE_LVL */
-
    if( 0 == buf_sz ) {
       /* Short-circuit empty writes. */
       return MERROR_OK;
@@ -472,6 +525,14 @@ MERROR_RETVAL mfile_mem_write_block(
    if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_f->flags) ) {
       return MERROR_FILE;
    }
+
+   retval = mfile_mem_lock( p_f );
+   maug_cleanup_if_not_ok();
+
+#if MFILE_WRITE_TRACE_LVL > 0
+   debug_printf( MFILE_WRITE_TRACE_LVL, "p: %p, sz: %u, cur: %u, buf_sz: %u\n",
+      p_f->mem_buffer, p_f->sz, p_f->mem_cursor, buf_sz );
+#endif /* MFILE_WRITE_TRACE_LVL */
 
    mv_sz = (p_f->sz - (p_f->mem_cursor + buf_sz));
    if( 0 < mv_sz ) {
@@ -488,13 +549,17 @@ MERROR_RETVAL mfile_mem_write_block(
     *       of the buffer.
     */
 
+cleanup:
+
+   mfile_mem_release( p_f );
+
    return retval;
 }
 
 /* === */
 
 MERROR_RETVAL mfile_lock_buffer(
-   MAUG_MHANDLE handle, off_t handle_sz, mfile_t* p_file
+   MAUG_MHANDLE handle, void* ptr, off_t handle_sz, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -503,7 +568,19 @@ MERROR_RETVAL mfile_lock_buffer(
       handle, p_file, handle_sz );
 
    maug_mzero( p_file, sizeof( struct MFILE_CADDY ) );
-   maug_mlock( handle, p_file->mem_buffer );
+   
+   /* Determine if this is based on a handle or a pointer. */
+   if( (MAUG_MHANDLE)NULL == handle && NULL != ptr ) {
+      p_file->mem_buffer = ptr;
+   } else if( (MAUG_MHANDLE)NULL == handle && NULL != ptr ) {
+      p_file->h.mem = handle;
+      /* maug_mlock( handle, p_file->mem_buffer ); */
+   } else {
+      error_printf( "must specify handle or pointer!" );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
 
    p_file->has_bytes = mfile_mem_has_bytes;
@@ -516,6 +593,8 @@ MERROR_RETVAL mfile_lock_buffer(
    p_file->write_block = mfile_mem_write_block;
 
    p_file->sz = handle_sz;
+
+cleanup:
 
    return retval;
 }

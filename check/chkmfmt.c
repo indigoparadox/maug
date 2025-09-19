@@ -12,7 +12,8 @@ START_TEST( test_mfmt_decode_rle_4bit ) {
 
    check_rle_out_h = maug_malloc( 1, sizeof( gc_check_rle_raw ) );
    mfile_lock_buffer(
-      gc_check_rle, sizeof( gc_check_rle_raw ), &check_rle_file );
+      (MAUG_MHANDLE)NULL, gc_check_rle,
+      sizeof( gc_check_rle ), &check_rle_file );
 
    retval = mfmt_decode_rle(
       &check_rle_file, 0, sizeof( gc_check_rle ), 32,
@@ -33,6 +34,8 @@ START_TEST( test_mfmt_decode_rle_4bit ) {
 
    maug_munlock( check_rle_out_h, check_rle_out );
    maug_mfree( check_rle_out_h );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -46,7 +49,8 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
 
    check_8bit_out_h = maug_malloc( 1, sizeof( gc_check_8bit ) );
    mfile_lock_buffer(
-      gc_check_4bit, sizeof( gc_check_8bit ), &check_4bit_file );
+      (MAUG_MHANDLE)NULL, gc_check_4bit,
+      sizeof( gc_check_4bit ), &check_4bit_file );
 
    maug_mlock( check_8bit_out_h, check_8bit_out );
 
@@ -65,7 +69,7 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
       /* Force inversion to match test case. */
       MFMT_PX_FLAG_INVERT_Y );
 
-   ck_assert_uint_eq( retval, MERROR_OK );
+   ck_assert_int_eq( retval, MERROR_OK );
 
    for( i = 0 ; sizeof( gc_check_8bit ) > i ; i++ ) {
       debug_printf( MFMT_TRACE_BMP_LVL,
@@ -78,6 +82,8 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
 
    maug_munlock( check_8bit_out_h, check_8bit_out );
    maug_mfree( check_8bit_out_h );
+
+   ck_assert_int_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -90,7 +96,7 @@ Suite* mfmt_suite( void ) {
    tc_decode = tcase_create( "Decode" );
 
    /* TODO: FIXME */
-   /* tcase_add_test( tc_decode, test_mfmt_decode_rle_4bit ); */
+   tcase_add_test( tc_decode, test_mfmt_decode_rle_4bit );
    tcase_add_test( tc_decode, test_mfmt_bmp_px_4bit );
 
    suite_add_tcase( s, tc_decode );
