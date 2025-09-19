@@ -447,18 +447,17 @@ cleanup:
    MERROR_RETVAL _mlisp_stack_push_ ## ctype( \
       struct MLISP_EXEC_STATE* exec, ctype i \
    ) { \
+      ssize_t stack_idx = 0; \
       struct MLISP_STACK_NODE n_stack; \
       MERROR_RETVAL retval = MERROR_OK; \
       debug_printf( MLISP_STACK_TRACE_LVL, \
          "%u: pushing " #const_name " onto stack: " fmt, exec->uid, i ); \
       n_stack.type = MLISP_TYPE_ ## const_name; \
       n_stack.value.name = i; \
-      retval = mdata_vector_append( \
+      stack_idx = mdata_vector_append( \
          &(exec->stack), &n_stack, sizeof( struct MLISP_STACK_NODE ) ); \
-      if( 0 > retval ) { \
-         retval = mdata_retval( retval ); \
-      } else { \
-         retval = 0; \
+      if( 0 > stack_idx ) { \
+         retval = mdata_retval( stack_idx ); \
       } \
       return retval; \
    }

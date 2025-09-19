@@ -462,7 +462,6 @@ static MERROR_RETVAL retrohtr_load_font(
    struct MCSS_STYLE* effect_style
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char* strpool = NULL;
 
 #ifdef RETROGXC_PRESENT
    if( 0 <= *font_idx_p ) {
@@ -476,11 +475,12 @@ static MERROR_RETVAL retrohtr_load_font(
       goto cleanup;
    }
 
-   mdata_strpool_lock( &(styler->strpool), strpool );
+   mdata_strpool_lock( &(styler->strpool) );
 
    debug_printf( RETROHTR_TRACE_LVL,
       "loading font: %s (" SSIZE_T_FMT ")",
-      &(strpool[effect_style->FONT_FAMILY]), effect_style->FONT_FAMILY );
+      mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
+      effect_style->FONT_FAMILY );
 
    if( 0 >= effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
@@ -492,15 +492,18 @@ static MERROR_RETVAL retrohtr_load_font(
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
    *font_idx_p =
-      retrogxc_load_font( &(strpool[effect_style->FONT_FAMILY]), 0, 33, 93 );
+      retrogxc_load_font(
+         mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
+         0, 33, 93 );
 #else
    retval = retrofont_load(
-      &(strpool[effect_style->FONT_FAMILY]), font_h_p, 0, 33, 93 );
+         mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
+         font_h_p, 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
 
-   mdata_strpool_unlock( &(styler->strpool), strpool );
+   mdata_strpool_unlock( &(styler->strpool) );
 
    return retval;
 }
@@ -552,7 +555,6 @@ MERROR_RETVAL retrohtr_tree_size(
    struct MCSS_STYLE effect_style;
    struct MCSS_STYLE child_prev_sibling_style;
    struct MCSS_STYLE child_style;
-   char* strpool = NULL;
    ssize_t child_iter_idx = -1;
    ssize_t tag_idx = -1;
    ssize_t node_iter_idx = -1;
@@ -625,14 +627,15 @@ MERROR_RETVAL retrohtr_tree_size(
    if( 0 <= tag_idx && MHTML_TAG_TYPE_TEXT == p_tag_iter->base.type ) {
       /* Get text size to use in calculations below. */
 
-      mdata_strpool_lock( &(parser->strpool), strpool );
+      mdata_strpool_lock( &(parser->strpool) );
 
 #ifdef RETROGXC_PRESENT
       retrogxc_string_sz(
 #else
       retrofont_string_sz(
 #endif /* RETROGXC_PRESENT */
-         NULL, &(strpool[p_tag_iter->TEXT.content_idx]),
+         NULL,
+         mdata_strpool_get( &(parser->strpool), p_tag_iter->TEXT.content_idx ),
          p_tag_iter->TEXT.content_sz,
 #ifdef RETROGXC_PRESENT
          retrohtr_node( tree, node_idx )->font_idx,
@@ -648,7 +651,7 @@ MERROR_RETVAL retrohtr_tree_size(
       debug_printf( RETROHTR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          retrohtr_node( tree, node_idx )->w );
 
-      mdata_strpool_unlock( &(parser->strpool), strpool );
+      mdata_strpool_unlock( &(parser->strpool) );
 
    } else if(
       0 <= tag_idx &&
@@ -1251,7 +1254,6 @@ MERROR_RETVAL retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    ssize_t node_idx, size_t d
 ) {
-   char* strpool = NULL;
    union MHTML_TAG* p_tag = NULL;
    struct RETROHTR_RENDER_NODE* node = NULL;
    MERROR_RETVAL retval = MERROR_OK;
@@ -1294,7 +1296,7 @@ MERROR_RETVAL retrohtr_tree_draw(
          goto cleanup;
       }
 
-      mdata_strpool_lock( &(parser->strpool), strpool );
+      mdata_strpool_lock( &(parser->strpool) );
 
 #ifdef RETROGXC_PRESENT
       retrogxc_string(
@@ -1302,7 +1304,8 @@ MERROR_RETVAL retrohtr_tree_draw(
       retrofont_string(
 #endif /* RETROGXC_PRESENT */
          NULL, node->fg,
-         &(strpool[p_tag->TEXT.content_idx]), p_tag->TEXT.content_sz,
+         mdata_strpool_get( &(parser->strpool), p_tag->TEXT.content_idx ),
+         p_tag->TEXT.content_sz,
 #ifdef RETROGXC_PRESENT
          node->font_idx,
 #else
@@ -1312,7 +1315,7 @@ MERROR_RETVAL retrohtr_tree_draw(
          retrohtr_node_screen_y( tree, node_idx ),
          node->w, node->h, 0 );
 
-      mdata_strpool_unlock( &(parser->strpool), strpool );
+      mdata_strpool_unlock( &(parser->strpool) );
 
    } else if( MHTML_TAG_TYPE_BODY == p_tag->base.type ) {
 

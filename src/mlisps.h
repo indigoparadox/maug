@@ -176,13 +176,18 @@ struct MLISP_EXEC_STATE {
    int8_t env_select;
    /*! \brief Dummy field; do not serialize fields after this! */
    int8_t no_serial;
-/**
- * \brief Path through any lambdas the execution has entered during *this*
- *        heartbeat cycle. Used to detect tail calls.
- */
+   /**
+    * \brief Path through any lambdas the execution has entered during *this*
+    *        heartbeat cycle. Used to detect tail calls.
+    */
    /* vector_type size_t */
    struct MDATA_VECTOR lambda_trace;
-   void* cb_attachment;
+   /**
+    * \brief Handle/pointer for use by addtional native callbacks. This is not
+    *        used within mlisp or its builtin callbacks and can be manipulated
+    *        freely by the embedding implementation.
+    */
+   union MAUG_MHANDLEPTR cb_attachment;
 #ifdef MLISP_DEBUG_TRACE
    size_t trace[MLISP_DEBUG_TRACE];
    size_t trace_depth;

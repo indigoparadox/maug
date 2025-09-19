@@ -35,7 +35,7 @@ START_TEST( test_mfmt_decode_rle_4bit ) {
    maug_munlock( check_rle_out_h, check_rle_out );
    maug_mfree( check_rle_out_h );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -69,7 +69,7 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
       /* Force inversion to match test case. */
       MFMT_PX_FLAG_INVERT_Y );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    for( i = 0 ; sizeof( gc_check_8bit ) > i ; i++ ) {
       debug_printf( MFMT_TRACE_BMP_LVL,
@@ -83,7 +83,7 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
    maug_munlock( check_8bit_out_h, check_8bit_out );
    maug_mfree( check_8bit_out_h );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 

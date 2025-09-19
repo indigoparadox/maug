@@ -16,7 +16,7 @@
 /**
  * \brief Return type indicating function returns a value from this list.
  */
-typedef int MERROR_RETVAL;
+typedef uint16_t MERROR_RETVAL;
 
 #define MERROR_OK       0x0000
 

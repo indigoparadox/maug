@@ -2451,11 +2451,13 @@ static MERROR_RETVAL retroflat_cli_rfj(
 
 /* Still inside RETROFLT_C! */
 
-int retroflat_init( int argc, char* argv[], struct RETROFLAT_ARGS* args ) {
+MERROR_RETVAL retroflat_init(
+   int argc, char* argv[], struct RETROFLAT_ARGS* args
+) {
 
    /* = Declare Init Vars = */
 
-   int retval = 0;
+   MERROR_RETVAL retval = 0;
 
    /* = Begin Init Procedure = */
 

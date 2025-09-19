@@ -58,9 +58,9 @@ cleanup:
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
    int i = 0;
-   MAUG_MHANDLE devs_list_buf_h = NULL;
+   MAUG_MHANDLE devs_list_buf_h = (MAUG_MHANDLE)NULL;
    char* devs_list_buf = NULL;
-   MAUG_MHANDLE devs_list_buf_new = NULL;
+   MAUG_MHANDLE devs_list_buf_new = (MAUG_MHANDLE)NULL;
    size_t devs_list_buf_sz = 512;
    MIDIOUTCAPS midi_caps;
    uint32_t num_devs = 0;

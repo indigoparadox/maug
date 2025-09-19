@@ -131,12 +131,12 @@ START_TEST( test_mser_vector_read ) {
 
    retval = mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, g_test_vec_ser, sizeof( g_test_vec_ser ), &ser_mem );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mdeserialize_vector(
       &ser_mem, &vec_test, 1, (mdeserialize_cb_t)mdeserialize_size_t,
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    mfile_close( &ser_mem );
 
@@ -153,7 +153,7 @@ cleanup:
    mdata_vector_free( &vec_gen );
    mdata_vector_free( &vec_test );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -178,13 +178,13 @@ START_TEST( test_mser_vector_read_arr ) {
    retval = mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, g_test_vec_arr_ser,
       sizeof( g_test_vec_arr_ser ), &ser_mem );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mdeserialize_vector(
       &ser_mem, vec_test, VEC_ARR_LOOPS,
       (mdeserialize_cb_t)mdeserialize_size_t,
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    mfile_close( &ser_mem );
 
@@ -209,7 +209,7 @@ cleanup:
       mdata_vector_free( &(vec_test[i]) );
    }
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -228,11 +228,11 @@ START_TEST( test_mser_vector_write ) {
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_vec_ser ), &ser_mem );
    */
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mserialize_vector( &ser_mem, &vec_test, 1,
       (mserialize_cb_t)mserialize_size_t );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    ser_mem.seek( &ser_mem, 0 );
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_vec_ser ) );
@@ -263,11 +263,11 @@ START_TEST( test_mser_vector_write_arr ) {
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_vec_ser ), &ser_mem );
    */
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mserialize_vector( &ser_mem, vec_test, VEC_ARR_LOOPS,
       (mserialize_cb_t)mserialize_size_t );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    ser_mem.seek( &ser_mem, 0 );
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_vec_arr_ser ) );
@@ -315,12 +315,12 @@ START_TEST( test_mser_table_read ) {
 
    retval = mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, g_test_tab_ser, sizeof( g_test_tab_ser ), &ser_mem );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mdeserialize_table(
       &ser_mem, &tab_test, 1, (mdeserialize_cb_t)mdeserialize_size_t,
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    mfile_close( &ser_mem );
 
@@ -337,7 +337,7 @@ START_TEST( test_mser_table_read ) {
    mdata_table_free( &tab_gen );
    mdata_table_free( &tab_test );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -363,13 +363,13 @@ START_TEST( test_mser_table_read_arr ) {
    retval = mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, g_test_tab_arr_ser,
       sizeof( g_test_tab_arr_ser ), &ser_mem );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mdeserialize_table(
       &ser_mem, tab_test, VEC_ARR_LOOPS,
       (mdeserialize_cb_t)mdeserialize_size_t,
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    mfile_close( &ser_mem );
 
@@ -393,7 +393,7 @@ START_TEST( test_mser_table_read_arr ) {
       mdata_table_free( &(tab_test[i]) );
    }
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -412,11 +412,11 @@ START_TEST( test_mser_table_write ) {
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_tab_ser ), &ser_mem );
    */
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mserialize_table( &ser_mem, &tab_test, 1,
       (mserialize_cb_t)mserialize_size_t );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    ser_mem.seek( &ser_mem, 0 );
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_tab_ser ) );
@@ -447,11 +447,11 @@ START_TEST( test_mser_table_write_arr ) {
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_tab_ser ), &ser_mem );
    */
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    retval = mserialize_table( &ser_mem, tab_test, VEC_ARR_LOOPS,
       (mserialize_cb_t)mserialize_size_t );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 
    ser_mem.seek( &ser_mem, 0 );
    ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_tab_arr_ser ) );

@@ -24,7 +24,7 @@ START_TEST( test_mdat_vector_append ) {
 cleanup:
    mdata_vector_unlock( &g_vector_test_append );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -42,7 +42,7 @@ START_TEST( test_mdat_vector_insert ) {
 cleanup:
    mdata_vector_unlock( &g_vector_test_insert );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -54,7 +54,7 @@ START_TEST( test_mdat_vector_lockunlock ) {
    mdata_vector_unlock( &g_vector_test_append );
    ck_assert( !mdata_vector_is_locked( &g_vector_test_append ) );
 cleanup:
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
    return;
 }
 END_TEST
@@ -112,7 +112,7 @@ START_TEST( test_mdat_table_unset ) {
 
    /* Only remove the special case (index 3). */
    retval = mdata_table_unset( &g_table_test_set, g_test_keys[3] );
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
    ck_assert( mdata_table_is_locked( &g_table_test_set ) );
 
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
@@ -126,7 +126,7 @@ START_TEST( test_mdat_table_unset ) {
 
    mdata_table_unlock( &g_table_test_set );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 
@@ -167,7 +167,7 @@ START_TEST( test_mdat_table_overwrite ) {
 
    mdata_table_free( &table_test );
 
-   ck_assert_int_eq( retval, MERROR_OK );
+   ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
 

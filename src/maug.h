@@ -56,6 +56,10 @@
 #endif /* MAUG_OS_DOS_REAL */
 
 #include <mmem.h>
+union MAUG_MHANDLEPTR {
+   MAUG_MHANDLE handle;
+   void* ptr;
+};
 #ifdef MAUG_C
 #  define MMEM_C
 #  include <mmem.h>

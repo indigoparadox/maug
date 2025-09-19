@@ -67,7 +67,7 @@ struct MARGE_ARG {
 
 MERROR_RETVAL maug_cli_h( const char* arg, ssize_t arg_c, void* args );
 
-int maug_parse_args( int argc, char* argv[] );
+MERROR_RETVAL maug_parse_args( int argc, char* argv[] );
 
 /**
  * \brief Add a command-line argument to the built-in parser.

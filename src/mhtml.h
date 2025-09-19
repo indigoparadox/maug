@@ -816,7 +816,6 @@ MERROR_RETVAL mhtml_dump_tree(
    struct MHTML_PARSER* parser, ssize_t iter, size_t d
 ) {
    size_t i = 0;
-   char* strpool = NULL;
    char dump_line[MHTML_DUMP_LINE_SZ + 1];
    union MHTML_TAG* p_tag_iter = NULL;
    ssize_t first_child = -1;
@@ -844,18 +843,18 @@ MERROR_RETVAL mhtml_dump_tree(
          goto cleanup;
       }
 
-      mdata_strpool_lock( &(parser->strpool), strpool );
+      mdata_strpool_lock( &(parser->strpool) );
 
       if(
          maug_strlen( dump_line ) + 7 /* ("TEXT: \n") */
             + p_tag_iter->TEXT.content_sz < MHTML_DUMP_LINE_SZ
       ) {
          strcat( dump_line, "TEXT: " );
-         strcat( dump_line, &(strpool[p_tag_iter->TEXT.content_idx]) );
+         strcat( dump_line, mdata_strpool_get( &(parser->strpool), p_tag_iter->TEXT.content_idx ) );
          strcat( dump_line, "\n" );
       }
 
-      mdata_strpool_unlock( &(parser->strpool), strpool );
+      mdata_strpool_unlock( &(parser->strpool) );
 
    } else {
       if(
