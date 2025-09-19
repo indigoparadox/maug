@@ -16,15 +16,6 @@ union MFILE_HANDLE {
 
 /* TODO: Use libfat to read files from SD card if not in MVFS. */
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
-   
-   /* TODO */
-
-   return 0;
-}
-
-/* === */
-
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
    return mfile_file_read_block( p_file, buf, 1 );
 }
@@ -117,7 +108,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    while( NULL != gc_mvfs_data[i] ) {
       if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
-         debug_printf( MFILE_TRACE_LVL,
+         debug_printf( MFILE_SEEK_TRACE_LVL,
             "found filename \"%s\" at VFS index: " SIZE_T_FMT
             " (size: " OFF_T_FMT " bytes)",
                filename, i, *(gc_mvfs_lens[i]) );

@@ -399,7 +399,7 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
@@ -423,7 +423,7 @@ cleanup:
 
 /* === */
 
-int retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
    uint16_t* bg_map_inactive;
 
