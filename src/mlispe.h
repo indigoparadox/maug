@@ -836,11 +836,15 @@ static MERROR_RETVAL _mlisp_env_cb_cmp(
    MERROR_RETVAL retval = MERROR_OK;
    struct MLISP_STACK_NODE tmp;
    uint8_t truth = 0;
-   int a_int,
+
+   /* The compiler seems to get a bit too eager if optimization is turned on,
+    * and ends up flubbing the comparison if these aren't volatile.
+    */
+   volatile int a_int,
       b_int,
       a_type,
       b_type;
-   int* cur_int = NULL;
+   volatile int* cur_int = NULL;
 
    mdata_strpool_lock( &(parser->strpool) );
 

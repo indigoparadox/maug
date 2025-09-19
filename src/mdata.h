@@ -289,7 +289,11 @@ void mdata_table_free( struct MDATA_TABLE* t );
    }
 
 #define mdata_strpool_get( sp, idx ) \
-   ((idx >= 0 && idx < (sp)->str_sz) ? &((sp)->str_p[idx]) : NULL)
+   ((idx >= 1 && idx < (sp)->str_sz) ? &((sp)->str_p[idx]) : NULL)
+
+#define mdata_strpool_get_sz( sp, idx ) \
+   ((idx >= sizeof( size_t ) && idx < (sp)->str_sz) ? \
+      (size_t)(*(&((sp)->str_p[idx - sizeof( size_t )]))) : 0)
 
 #define mdata_strpool_padding( str_sz ) \
    (sizeof( size_t ) - ((str_sz + 1 /* NULL */) % sizeof( size_t )))
@@ -573,7 +577,12 @@ MAUG_MHANDLE mdata_strpool_extract(
       goto cleanup;
    }
 
-   out_sz = maug_strlen( str_src );
+   out_sz = mdata_strpool_get_sz( sp, idx );
+#if MDATA_TRACE_LVL > 0
+   debug_printf( MDATA_TRACE_LVL,
+      "strpool str sz: " SIZE_T_FMT " stored, " SIZE_T_FMT " strlen",
+      out_sz, maug_strlen( str_src ) );
+#endif /* MDATA_TRACE_LVL */
    out_h = maug_malloc( out_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
 

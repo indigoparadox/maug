@@ -12,6 +12,7 @@ CHECK_C_FILES := \
 CFLAGS_CHECK_UNIX := \
 	-Wall \
 	-g \
+	-O2 \
 	-Isrc \
 	-Iapi/mem/unix \
 	-Iapi/file/unix \

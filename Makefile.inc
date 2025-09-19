@@ -63,6 +63,14 @@ else
 	CFLAGS_CECL += /W1 /MLd
 endif
 
+ifeq ("$(FORCEOPT)","1")
+	CFLAGS_WATCOM += -ot
+	CFLAGS_WATCOM386 += -ot
+	CFLAGS_GCC += -O2
+	CFLAGS_GCC64 += -O2
+	CFLAGS_CECL += /O2
+endif
+
 ifeq ("$(PEDANTIC)","1")
 	CFLAGS_GCC += -Wpedantic
 	CFLAGS_GCC64 += -Wpedantic

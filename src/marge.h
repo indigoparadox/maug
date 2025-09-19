@@ -57,9 +57,9 @@ typedef
 MERROR_RETVAL (*maug_cli_cb)( const char* arg, ssize_t arg_c, void* data );
 
 struct MARGE_ARG {
-   char arg[MAUG_CLI_ARG_SZ_MAX];
+   char arg[MAUG_CLI_ARG_SZ_MAX + 1];
    size_t arg_sz;
-   char help[MAUG_CLI_ARG_HELP_SZ_MAX];
+   char help[MAUG_CLI_ARG_HELP_SZ_MAX + 1];
    maug_cli_cb callback;
    void* data;
    uint8_t called;
@@ -226,6 +226,7 @@ MERROR_RETVAL maug_add_arg(
 
    debug_printf( MAUG_CLI_TRACE_LVL, "adding arg: \"%s\"", arg );
 
+   maug_mzero( &new_arg, sizeof( struct MARGE_ARG ) );
    maug_strncpy( new_arg.arg, arg, MAUG_CLI_ARG_SZ_MAX );
    maug_strncpy( new_arg.help, help, MAUG_CLI_ARG_HELP_SZ_MAX );
    new_arg.arg_sz = arg_sz;
