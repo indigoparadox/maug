@@ -308,7 +308,10 @@ MERROR_RETVAL mfmt_decode_rle(
          goto cleanup; \
       }
 
-   debug_printf( 1, "decompressing RLE into temporary buffer..." );
+#if MFMT_TRACE_RLE_LVL > 0
+   debug_printf( MFMT_TRACE_RLE_LVL,
+      "decompressing RLE into temporary buffer..." );
+#endif /* MFMT_TRACE_RLE_LVL */
 
    maug_mlock( buffer_out_h, buffer_out );
 
@@ -754,7 +757,7 @@ MERROR_RETVAL mfmt_read_bmp_px_cb(
 
    if( (MAUG_MHANDLE)NULL != decomp_buffer_h ) {
       retval = mfile_lock_buffer(
-         decomp_buffer_h,
+         decomp_buffer_h, NULL,
          header_bmp_info->width * header_bmp_info->height,
          &file_decomp );
       maug_cleanup_if_not_ok();

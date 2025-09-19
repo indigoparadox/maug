@@ -47,21 +47,44 @@ typedef void (*fakechk_scaffold_fn)();
 #define tcase_add_loop_test( case_struct, fn, start, end ) \
    tcase_add_test_fn( case_struct, fn, start, end, #fn )
 
-#define ck_assert( a )
+#define ck_assert( a ) \
+   if( !(a) ) { \
+      fprintf( stderr, \
+         "%s: %d failure! %s FALSE!\n", __FILE__, __LINE__, #a ); \
+   }
 
-#define ck_assert_int_eq( a, b ) \
+#define _ck_assert_int_eq( a, b, file, line, type, fmt ) \
    if( (a) != (b) ) { \
-      fprintf( stderr, "%s: %d failure! " #a " != " #b ", " #a " == %ld, " #b " == %ld\n", \
-         __FILE__, __LINE__, (long unsigned int)(a), (long unsigned int)(b) ); \
+      fprintf( stderr, \
+         "%s: %d failure! %s != %s, %s == " #fmt ", %s == " #fmt "\n", \
+         file, line, #a, #b, #a, (type)(a), #b, (type)(b) ); \
       *_test_retval = 1; \
       return; \
    }
 
-#define ck_assert_uint_eq( a, b )
+#define ck_assert_int_eq( a, b ) \
+   _ck_assert_int_eq( (a), (b), __FILE__, __LINE__, long int, %ld )
 
-#define ck_assert_str_eq( a, b )
+#define ck_assert_uint_eq( a, b ) \
+   _ck_assert_int_eq( a, b, __FILE__, __LINE__, long unsigned int, %lu )
 
-#define ck_assert_mem_eq( a, b, sz )
+#define ck_assert_str_eq( a, b ) \
+   if( 0 != strcmp( (a), (b) ) ) { \
+      fprintf( stderr, \
+         "%s: %d failure! %s != %s, %s == %s, %s == %s\n", \
+         __FILE__, __LINE__, #a, #b, #a, (a), #b, (b) ); \
+      *_test_retval = 1; \
+      return; \
+   }
+
+#define ck_assert_mem_eq( a, b, sz ) \
+   if( 0 != memcmp( (a), (b), (sz) ) ) { \
+      fprintf( stderr, \
+         "%s: %d failure! %s != %s\n", __FILE__, __LINE__, #a, #b ); \
+      _ck_memprint( stderr, #a, a, #b, b, sz ); \
+      *_test_retval = 1; \
+      return; \
+   }
 
 #define ck_assert_ptr_eq( a, b ) \
    if( (a) != (b) ) { \
@@ -118,6 +141,10 @@ int srunner_run_all( SRunner* runner, unsigned char flags );
 int srunner_ntests_failed( SRunner* runner );
 
 void srunner_free( SRunner* runner );
+
+void _ck_memprint(
+   void* tgt, const char* a_name, void* a,
+   const char* b_name, void* b, unsigned long int sz );
 
 #ifdef MFAKECHK_C
 
@@ -239,6 +266,23 @@ int srunner_ntests_failed( SRunner* runner ) {
 
 void srunner_free( SRunner* runner ) {
 
+}
+
+void _ck_memprint(
+   void* tgt, const char* a_name, void* a,
+   const char* b_name, void* b, unsigned long int sz
+) {
+   size_t i = 0;
+
+   fprintf( tgt, "--- memory block %s: ---\n", a_name );
+   for( i = 0 ; sz > i ; i++ ) {
+      fprintf( tgt, "0x%02x ", ((unsigned char*)a)[i] );
+   }
+
+   fprintf( tgt, "\n--- memory block %s ---\n", b_name );
+   for( i = 0 ; sz > i ; i++ ) {
+      fprintf( tgt, "0x%02x ", ((unsigned char*)b)[i] );
+   }
 }
 
 #endif /* MFAKECHK_C */

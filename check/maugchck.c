@@ -25,6 +25,8 @@ int main( void ) {
 
    MAUGCHK_TABLE( MAUGCHK_EXECS )
 
+   printf( "all checks complete! %d failures.\n", number_failed );
+
    return( number_failed == 0 ) ? 0 : 1;
 }
 
