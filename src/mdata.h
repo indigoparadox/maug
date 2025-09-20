@@ -558,7 +558,7 @@ MAUG_MHANDLE mdata_strpool_extract(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE out_h = (MAUG_MHANDLE)NULL;
-   size_t out_sz = 0;
+   size_t out_sz = 0, str_sz = 0;
    char* out_tmp = NULL;
    int autolock = 0;
    char* str_src = NULL;
@@ -576,11 +576,15 @@ MAUG_MHANDLE mdata_strpool_extract(
    }
 
    out_sz = mdata_strpool_get_sz( sp, idx );
+   str_sz = maug_strlen( str_src );
 #if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
       "strpool str sz: " SIZE_T_FMT " stored, " SIZE_T_FMT " strlen",
       out_sz, maug_strlen( str_src ) );
 #endif /* MDATA_TRACE_LVL */
+
+   assert( out_sz >= str_sz );
+
    out_h = maug_malloc( out_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
 

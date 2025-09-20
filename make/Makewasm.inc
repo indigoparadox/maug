@@ -14,7 +14,8 @@ EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
 
 # -O2 is needed for HTTP fetch to work!
 # TODO: Is MVFS feasible or desirable?
-CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix -O2
+#CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix -O2
+CFLAGS_EMCC += -I$(MAUG_ROOT)/api/file/unix
 
 # These facilitate async wrappers for the file API.
 LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2

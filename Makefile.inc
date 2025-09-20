@@ -69,6 +69,7 @@ ifeq ("$(FORCEOPT)","1")
 	CFLAGS_GCC += -O2
 	CFLAGS_GCC64 += -O2
 	CFLAGS_CECL += /O2
+	CFLAGS_EMCC += -O2
 endif
 
 ifeq ("$(PEDANTIC)","1")
