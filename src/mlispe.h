@@ -1840,6 +1840,12 @@ static MERROR_RETVAL _mlisp_step_iter(
    mlisp_lambda_t e_lambda = 0;
    int8_t env_iter = 0;
 
+   /* With -O2, gcc seems to sometimes(?) push an arbitrary integer to the
+    * stack, unless we use this variable force it to pass the literal index.
+    * This *seems* to resolve the issue.
+    */
+   volatile mdata_strpool_idx_t node_strpool_idx = 0;
+
 #ifdef MLISP_DEBUG_TRACE
    exec->trace[exec->trace_depth++] = n_idx;
    assert( exec->trace_depth <= MLISP_DEBUG_TRACE );
@@ -1928,7 +1934,8 @@ static MERROR_RETVAL _mlisp_step_iter(
          "%u: special case! pushing literal to stack: " SSIZE_T_FMT,
          exec->uid, n->token_idx );
 #endif /* MLISP_EXEC_TRACE_LVL */
-      retval = _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
+      node_strpool_idx = n->token_idx;
+      retval = _mlisp_stack_push_mdata_strpool_idx_t( exec, node_strpool_idx );
       maug_cleanup_if_not_ok();
    } else if( MLISP_TYPE_BEGIN == e.type ) {
       /* Cleanup the stack that's been pushed by children since this BEGIN's

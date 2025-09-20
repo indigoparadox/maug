@@ -17,7 +17,9 @@ endif
 
 ifneq ("$(BUILD)","RELEASE")
 	# Build debug unless release specified.
-	GCC_FSAN := -fsanitize=address -fsanitize=leak -fsanitize=undefined 
+	GCC_FSAN := -fsanitize=address -fsanitize=leak -fsanitize=undefined \
+		-fsanitize=pointer-compare -fsanitize=pointer-subtract \
+		-fsanitize-address-use-after-scope
 	CFLAGS_GCC_UNIX += $(GCC_FSAN) -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)
 	LDFLAGS_GCC_UNIX += $(GCC_FSAN)
 	CFLAGS_GCC64_UNIX += $(GCC_FSAN) -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)

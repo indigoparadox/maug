@@ -168,7 +168,7 @@ struct MLISP_EXEC_STATE {
     * highest-indexed (currently selected) frame.
     */
    /* table_type struct MLISP_ENV_NODE */
-   struct MDATA_TABLE env[MLISP_EXEC_ENV_FRAME_CT_MAX];;
+   struct MDATA_TABLE env[MLISP_EXEC_ENV_FRAME_CT_MAX];
    /**
     * \brief The current topmost frame of MLISP_EXEC_STATE::env. Please see
     *        that for more information.

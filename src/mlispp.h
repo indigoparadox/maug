@@ -665,7 +665,7 @@ void mlisp_parser_free( struct MLISP_PARSER* parser ) {
 #  define _MLISP_TYPE_TABLE_CONSTS( idx, ctype, name, const_name, fmt ) \
       extern MAUG_CONST uint8_t SEG_MCONST MLISP_TYPE_ ## const_name;
 
-MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_CONSTS );
+MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_CONSTS )
 
 #endif /* MLISPP_C */
 
