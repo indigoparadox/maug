@@ -56,7 +56,7 @@
 
 #define MDATA_STRPOOL_FLAG_DEDUPE 0x02
 
-typedef ssize_t mdata_strpool_idx_t;
+typedef size_t mdata_strpool_idx_t;
 
 /**
  * \brief A pool of immutable text strings. Deduplicates strings to save memory.
@@ -91,8 +91,6 @@ struct MDATA_STRPOOL {
  *          with wrapper macros and convenience functions.
  */
 struct MDATA_VECTOR {
-   /*! \brief Size of this struct (useful for serializing). */
-   size_t sz;
    uint8_t flags;
    /*! \brief Handle for allocated items (unlocked). */
    MAUG_MHANDLE data_h;
@@ -127,7 +125,7 @@ struct MDATA_TABLE_KEY {
 };
 
 struct MDATA_TABLE {
-   uint16_t flags;
+   volatile uint16_t flags;
    struct MDATA_VECTOR data_cols[2];
    size_t key_sz;
 };
@@ -495,17 +493,17 @@ void mdata_strpool_dump( struct MDATA_STRPOOL* sp ) {
 
 /* === */
 
-ssize_t mdata_strpool_find(
+mdata_strpool_idx_t mdata_strpool_find(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   ssize_t i = 0;
+   mdata_strpool_idx_t i = 0;
    char* strpool_p = NULL;
    size_t* p_str_iter_sz = NULL;
 
    if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
       error_printf( "strpool not allocated!" );
-      i = -1;
+      i = 0;
       goto cleanup;
    }
 
@@ -538,12 +536,12 @@ ssize_t mdata_strpool_find(
    }
 
    /* String not found. */
-   i = -1;
+   i = 0;
 
 cleanup:
 
    if( MERROR_OK != retval ) {
-      i = retval * -1;
+      i = 0;
    }
 
    if( NULL != strpool_p ) {
@@ -611,7 +609,7 @@ cleanup:
 
 /* === */
 
-ssize_t mdata_strpool_append(
+mdata_strpool_idx_t mdata_strpool_append(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz, uint8_t flags
 ) {
    mdata_strpool_idx_t idx_p_out = 0;
@@ -633,7 +631,7 @@ ssize_t mdata_strpool_append(
       /* Search the str_stable for an identical string and return that index.
       */
       idx_p_out = mdata_strpool_find( strpool, str, str_sz );
-      if( -1 != idx_p_out ) {
+      if( 0 < idx_p_out ) {
          /* Found, or error returned. */
 #if MDATA_TRACE_LVL > 0
          debug_printf( MDATA_TRACE_LVL,
@@ -691,7 +689,7 @@ ssize_t mdata_strpool_append(
 cleanup:
 
    if( MERROR_OK != retval ) {
-      idx_p_out = retval * -1;
+      idx_p_out = 0;
    }
 
    if( NULL != strpool_p ) {
@@ -1020,8 +1018,6 @@ MERROR_RETVAL mdata_vector_alloc(
       mdata_vector_lock( v );
       maug_mzero( v->data_bytes, v->ct_max * item_sz );
       mdata_vector_unlock( v );
-
-      v->sz = sizeof( struct MDATA_VECTOR );
 
    } else if( v->ct_max <= v->ct + 1 || v->ct_max <= item_ct_init ) {
       assert( item_sz == v->item_sz );

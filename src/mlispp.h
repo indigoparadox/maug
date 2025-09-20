@@ -295,15 +295,11 @@ cleanup:
 static
 MERROR_RETVAL _mlisp_ast_add_raw_token( struct MLISP_PARSER* parser ) {
    MERROR_RETVAL retval = MERROR_OK;
-   mdata_strpool_idx_t str_idx = -1;
+   mdata_strpool_idx_t str_idx = 0;
 
    str_idx = mdata_strpool_append( &(parser->strpool),
       parser->base.token, parser->base.token_sz, MDATA_STRPOOL_FLAG_DEDUPE );
-   if( 0 > str_idx ) {
-      error_printf( "invalid str_idx: " SSIZE_T_FMT, str_idx );
-      retval = MERROR_ALLOC;
-      goto cleanup;
-   }
+   maug_cleanup_if_eq( str_idx, 0, SIZE_T_FMT, MERROR_ALLOC );
 
    _mlisp_ast_add_child( parser, 0 );
    _mlisp_ast_set_child_token( parser, str_idx, parser->base.token_sz );
@@ -384,7 +380,7 @@ cleanup:
 
 MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
    MERROR_RETVAL retval = MERROR_OK;
-   mdata_strpool_idx_t str_idx = -1;
+   mdata_strpool_idx_t str_idx = 0;
    uint8_t n_flags = 0;
    size_t n_children = 0;
    struct MLISP_AST_NODE* n = NULL;
@@ -441,6 +437,7 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          str_idx = mdata_strpool_append( &(parser->strpool),
             parser->base.token, parser->base.token_sz,
             MDATA_STRPOOL_FLAG_DEDUPE );
+         maug_cleanup_if_eq( str_idx, 0, SIZE_T_FMT, MERROR_ALLOC );
          mlisp_parser_reset_token( parser );
          _mlisp_ast_set_child_token( parser, str_idx, parser->base.token_sz );
 

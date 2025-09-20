@@ -404,8 +404,7 @@ MERROR_RETVAL mcss_style_str_t(
    *str_idx_p = mdata_strpool_append(
       &(parser->strpool), parser->base.token, parser->base.token_sz,
       MDATA_STRPOOL_FLAG_DEDUPE );
-
-   assert( 0 < *str_idx_p ); /* strpool indexes are never 0. */
+   maug_cleanup_if_eq( *str_idx_p, 0, SIZE_T_FMT, MERROR_ALLOC );
 
 cleanup:
 

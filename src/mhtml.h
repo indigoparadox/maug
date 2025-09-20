@@ -46,8 +46,8 @@
    f(  2, DIV, void* none;, BLOCK ) \
    f(  3, HEAD, void* none;, NONE ) \
    f(  4, HTML, void* none;, BLOCK ) \
-   f(  5, TEXT, ssize_t content_idx; size_t content_sz;, INLINE ) \
-   f(  6, TITLE, ssize_t content_idx; size_t content_sz;, NONE ) \
+   f(  5, TEXT, mdata_strpool_idx_t content_idx; size_t content_sz;, INLINE ) \
+   f(  6, TITLE, mdata_strpool_idx_t content_idx; size_t content_sz;, NONE ) \
    f(  7, SPAN, void* none;, INLINE ) \
    f(  8, BR, void* none;, BLOCK ) \
    f(  9, STYLE, void* none;, NONE ) \
@@ -454,6 +454,8 @@ MERROR_RETVAL mhtml_push_text_tag( struct MHTML_PARSER* parser ) {
       p_tag_iter->TEXT.content_idx = mdata_strpool_append(
          &(parser->strpool), parser->base.token, parser->base.token_sz,
          MDATA_STRPOOL_FLAG_DEDUPE );
+      maug_cleanup_if_eq(
+         p_tag_iter->TEXT.content_idx, 0, SIZE_T_FMT, MERROR_ALLOC );
       p_tag_iter->TEXT.content_sz = parser->base.token_sz;
    }
 

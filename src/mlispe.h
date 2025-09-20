@@ -138,9 +138,6 @@ MERROR_RETVAL mlisp_stack_dump(
 MERROR_RETVAL mlisp_stack_pop_ex(
    struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o, uint8_t flags );
 
-MERROR_RETVAL mlisp_stack_peek(
-   struct MLISP_EXEC_STATE* exec, struct MLISP_STACK_NODE* o );
-
 /*! \} */ /* mlisp_stack */
 
 #if defined( MLISP_DUMP_ENABLED ) || defined( DOCUMENTATION )
@@ -473,12 +470,11 @@ MERROR_RETVAL mlisp_stack_pop_ex(
    struct MLISP_STACK_NODE* n_stack = NULL;
    size_t n_idx = 0;
 
+   maug_mzero( o, sizeof( struct MLISP_STACK_NODE ) );
+
    /* Check for valid stack pointer. */
-   if( mdata_vector_ct( &(exec->stack) ) == 0 ) {
-      error_printf( "stack underflow!" );
-      retval = MERROR_OVERFLOW;
-      goto cleanup;
-   }
+   maug_cleanup_if_eq(
+      mdata_vector_ct( &(exec->stack) ), 0, SIZE_T_FMT, MERROR_OVERFLOW );
 
    n_idx = mdata_vector_ct( &(exec->stack) ) - 1;
 
@@ -2005,6 +2001,9 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    MLISP_TYPE_TABLE( _MLISP_TYPE_TABLE_ENVE )
    } else {
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL, "pushing literal into stack" );
+#endif /* !MLISP_EXEC_TRACE_LVL */
       retval = _mlisp_stack_push_mdata_strpool_idx_t( exec, n->token_idx );
       maug_cleanup_if_not_ok();
    }

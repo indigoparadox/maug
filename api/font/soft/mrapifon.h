@@ -386,7 +386,7 @@ MERROR_RETVAL retrofont_string_sz(
 
    /* Reset output vars to zero. */
    *p_out_h = 0;
-   if( NULL == p_out_w ) {
+   if( NULL != p_out_w ) {
       *p_out_w = 0;
    }
 
