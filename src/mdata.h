@@ -439,6 +439,10 @@ void mdata_table_free( struct MDATA_TABLE* t );
 
 #define mdata_table_ct( t ) ((t)->data_cols[0].ct)
 
+#define mdata_table_sz( t ) \
+   mdata_vector_sz( &((t)->data_cols[0]) ) + \
+   mdata_vector_sz( &((t)->data_cols[1]) )
+
 /*! \} */ /* mdata_table */
 
 #define mdata_retval( idx ) (0 > idx ? ((idx) * -1) : MERROR_OK)

@@ -823,6 +823,7 @@ MERROR_RETVAL mhtml_dump_tree(
    ssize_t first_child = -1;
    ssize_t next_sibling = -1;
    MERROR_RETVAL retval = MERROR_OK;
+   char* tag_contents = NULL;
 
    if( 0 > iter ) {
       return retval;
@@ -852,7 +853,14 @@ MERROR_RETVAL mhtml_dump_tree(
             + p_tag_iter->TEXT.content_sz < MHTML_DUMP_LINE_SZ
       ) {
          strcat( dump_line, "TEXT: " );
-         strcat( dump_line, mdata_strpool_get( &(parser->strpool), p_tag_iter->TEXT.content_idx ) );
+         tag_contents = mdata_strpool_get(
+            &(parser->strpool), p_tag_iter->TEXT.content_idx );
+         if( NULL == tag_contents ) {
+            error_printf( "could not retrieve tag contents!" );
+            retval = MERROR_ALLOC;
+            goto cleanup;
+         }
+         strcat( dump_line, tag_contents );
          strcat( dump_line, "\n" );
       }
 
