@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['screen_5fcolors_0',['screen_colors',['../structRETROFLAT__STATE.html#a336ba0e9eb513f6d299673c4b7060a9f',1,'RETROFLAT_STATE']]],
+  ['screen_5fh_1',['screen_h',['../structRETROFLAT__ARGS.html#a7407aaec24ac0b212ce12d92858ccc59',1,'RETROFLAT_ARGS::screen_h()'],['../structRETROFLAT__STATE.html#a1636f2ef1a0469d4887ae0df552dc9a9',1,'RETROFLAT_STATE::screen_h()'],['../structRETROFLAT__VIEWPORT.html#a6b049f1864b97c82eec68a6c8315c067',1,'RETROFLAT_VIEWPORT::screen_h()']]],
+  ['screen_5fh_5fremainder_2',['screen_h_remainder',['../structRETROFLAT__VIEWPORT.html#a2b6eb33e216ff9ec1346257db7036ab6',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5ftile_5fh_3',['screen_tile_h',['../structRETROFLAT__VIEWPORT.html#abbe529e9c5ae1714d2243989e7064158',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5ftile_5fw_4',['screen_tile_w',['../structRETROFLAT__VIEWPORT.html#a88c624c656c1ba14ed6cc3f8ddf702f8',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5fv_5fh_5',['screen_v_h',['../structRETROFLAT__STATE.html#ac1e7fe7127d595465bce4d9ec15bc3d1',1,'RETROFLAT_STATE']]],
+  ['screen_5fv_5fw_6',['screen_v_w',['../structRETROFLAT__STATE.html#a2fd654318e4d00f38cd68c6e8a55217b',1,'RETROFLAT_STATE']]],
+  ['screen_5fw_7',['screen_w',['../structRETROFLAT__VIEWPORT.html#aea336bf0c321b390b7ef03f8a25459bb',1,'RETROFLAT_VIEWPORT::screen_w()'],['../structRETROFLAT__STATE.html#a5e85c4d16b4209f82a189f433d106815',1,'RETROFLAT_STATE::screen_w()']]],
+  ['screen_5fw_5fremainder_8',['screen_w_remainder',['../structRETROFLAT__VIEWPORT.html#a1028f83525b9b65791c8aa53a8bee54a',1,'RETROFLAT_VIEWPORT']]],
+  ['screen_5fx_9',['screen_x',['../structRETROFLAT__ARGS.html#aef6028d6a8f6c54d75623f8f0f7dbc15',1,'RETROFLAT_ARGS::screen_x()'],['../structRETROFLAT__VIEWPORT.html#a14682f991afa6b88f97532affee99135',1,'RETROFLAT_VIEWPORT::screen_x()']]],
+  ['screen_5fy_10',['screen_y',['../structRETROFLAT__ARGS.html#acba814758d8d897ecf4c692c074814c5',1,'RETROFLAT_ARGS::screen_y()'],['../structRETROFLAT__VIEWPORT.html#ae44c21ac2121a42f6b56f19dbc6ca1b2',1,'RETROFLAT_VIEWPORT::screen_y()']]],
+  ['sect_5fh_11',['sect_h',['../structRETROTILE__DATA__DS.html#adf49707aeb1660edf27a9c5ed2c8be82',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fh_5fhalf_12',['sect_h_half',['../structRETROTILE__DATA__DS.html#ae0ec669d8d55925297cd8922021c2122',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fw_13',['sect_w',['../structRETROTILE__DATA__DS.html#a26954d4c8767996340629414d0e38ec9',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fw_5fhalf_14',['sect_w_half',['../structRETROTILE__DATA__DS.html#a454241426fe1fef7d630c9714e332a1a',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fx_15',['sect_x',['../structRETROTILE__DATA__DS.html#a8220cdaa62874ad9570e90598764aaec',1,'RETROTILE_DATA_DS']]],
+  ['sect_5fy_16',['sect_y',['../structRETROTILE__DATA__DS.html#a081a6ff35940c41ac01eaa636c7aef99',1,'RETROTILE_DATA_DS']]],
+  ['serialization_2fdeserialization_20api_17',['Serialization/Deserialization API',['../group__maug__serial.html',1,'']]],
+  ['serialize_20code_20generation_20tool_18',['Serialize Code Generation Tool',['../group__maug__serial__tool.html',1,'(Global Namespace)'],['../group__maug__serial__tool.html',1,'(Global Namespace)']]],
+  ['serialize_20tool_20custom_20types_19',['Serialize Tool Custom Types',['../group__maug__serial__tool.html',1,'']]],
+  ['stack_20',['stack',['../structMLISP__EXEC__STATE.html#a2cdcdc7d0e3d80a343b6d5cee77b8c0f',1,'MLISP_EXEC_STATE']]],
+  ['static_5frotation_21',['static_rotation',['../structRETROTILE__TILE__DEF.html#a5a0e14997a4e8dbc8b659e1f7834fb8c',1,'RETROTILE_TILE_DEF']]],
+  ['sz_22',['sz',['../structMFILE__CADDY.html#ae6a54cc97a71c1ee7e45c6eb97b84279',1,'MFILE_CADDY::sz()'],['../structMFMT__STRUCT.html#aae861ab44ef1fcb11785876f19305f5d',1,'MFMT_STRUCT::sz()'],['../structMFMT__STRUCT__BMPINFO.html#a7ad7a22540f5a3fbc2c92e1237eab4ee',1,'MFMT_STRUCT_BMPINFO::sz()'],['../structRETROTILE__TILE__DEF.html#aef7cc1fc6b6c2aae003fdc653e9eb1c7',1,'RETROTILE_TILE_DEF::sz()'],['../structRETROTILE__LAYER.html#a3b96c58eb7d3d0d521e630d9a5e2f0e6',1,'RETROTILE_LAYER::sz()'],['../structRETROTILE.html#aac4e928822e2761a4ad9f56b2891ab32',1,'RETROTILE::sz()']]]
+];

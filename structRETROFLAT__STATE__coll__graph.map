@@ -1,0 +1,4 @@
+<map id="RETROFLAT_STATE" name="RETROFLAT_STATE">
+<area shape="rect" id="node1" title="Global singleton containing state for the current platform." alt="" coords="20,95,164,121"/>
+<area shape="rect" id="node2" href="$structRETROFLAT__VIEWPORT.html" title="The viewport data struct." alt="" coords="5,5,179,32"/>
+</map>
