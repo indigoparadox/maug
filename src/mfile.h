@@ -574,7 +574,7 @@ MERROR_RETVAL mfile_lock_buffer(
    /* Determine if this is based on a handle or a pointer. */
    if( (MAUG_MHANDLE)NULL == handle && NULL != ptr ) {
       p_file->mem_buffer = ptr;
-   } else if( (MAUG_MHANDLE)NULL == handle && NULL != ptr ) {
+   } else if( (MAUG_MHANDLE)NULL != handle && NULL == ptr ) {
       p_file->h.mem = handle;
       /* maug_mlock( handle, p_file->mem_buffer ); */
    } else {
