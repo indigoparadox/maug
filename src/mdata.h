@@ -275,12 +275,18 @@ void mdata_table_free( struct MDATA_TABLE* t );
    (MDATA_STRPOOL_FLAG_IS_LOCKED & (sp)->flags))
 
 #define mdata_strpool_lock( sp ) \
-   assert( NULL == (sp)->str_p ); \
+   mdata_debug_printf( "locking strpool %p...", sp ); \
+   if( NULL != (sp)->str_p ) { \
+      error_printf( "str_p not null! double lock?" ); \
+      retval = MERROR_ALLOC; \
+      goto cleanup; \
+   } \
    maug_mlock( (sp)->str_h, (sp)->str_p ); \
    maug_cleanup_if_null_lock( char*, (sp)->str_p ); \
    (sp)->flags |= MDATA_STRPOOL_FLAG_IS_LOCKED;
 
 #define mdata_strpool_unlock( sp ) \
+   mdata_debug_printf( "unlocking strpool %p...", sp ); \
    if( NULL != (sp)->str_p ) { \
       maug_munlock( (sp)->str_h, (sp)->str_p ); \
       (sp)->flags &= ~MDATA_STRPOOL_FLAG_IS_LOCKED; \
@@ -579,15 +585,24 @@ MAUG_MHANDLE mdata_strpool_extract(
       goto cleanup;
    }
 
-   out_sz = mdata_strpool_get_sz( sp, idx );
    str_sz = maug_strlen( str_src );
+#if 0
+   /* This seems to be broken on mac68k (strpool_sz is always 0!) */
+   out_sz = mdata_strpool_get_sz( sp, idx );
 #if MDATA_TRACE_LVL > 0
    debug_printf( MDATA_TRACE_LVL,
       "strpool str sz: " SIZE_T_FMT " stored, " SIZE_T_FMT " strlen",
       out_sz, maug_strlen( str_src ) );
 #endif /* MDATA_TRACE_LVL */
 
-   assert( out_sz >= str_sz );
+   /* assert( out_sz >= str_sz ); */
+   if( out_sz < str_sz ) {
+      error_printf(
+         "stored size " SIZE_T_FMT " does not match measured size: " SIZE_T_FMT,
+         out_sz, str_sz );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
 
    out_h = maug_malloc( out_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
@@ -597,6 +612,16 @@ MAUG_MHANDLE mdata_strpool_extract(
 
    maug_mzero( out_tmp, out_sz + 1 );
    maug_strncpy( out_tmp, str_src, out_sz );
+#endif
+
+   out_h = maug_malloc( str_sz + 1, 1 );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
+
+   maug_mlock( out_h, out_tmp );
+   maug_cleanup_if_null_lock( char*, out_tmp );
+
+   maug_mzero( out_tmp, str_sz + 1 );
+   maug_strncpy( out_tmp, str_src, str_sz );
 
 cleanup:
 

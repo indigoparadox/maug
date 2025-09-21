@@ -1025,6 +1025,11 @@ static MERROR_RETVAL _mlisp_env_cb_define(
    char* key_tmp = NULL;
    uint8_t global = 0;
 
+#if MLISP_EXEC_TRACE_LVL > 0
+   debug_printf( MLISP_EXEC_TRACE_LVL, "%u: entering define callback...",
+      exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
+
    retval = mlisp_stack_pop( exec, &val );
    maug_cleanup_if_not_ok();
 
@@ -1038,6 +1043,12 @@ static MERROR_RETVAL _mlisp_env_cb_define(
       retval = MERROR_EXEC;
       goto cleanup;
    }
+
+#if MLISP_EXEC_TRACE_LVL > 0
+   debug_printf( MLISP_EXEC_TRACE_LVL,
+      "%u: extracting define term for idx: " SIZE_T_FMT,
+      exec->uid, key.value.strpool_idx );
+#endif /* MLISP_EXEC_TRACE_LVL */
 
    key_tmp_h = mdata_strpool_extract(
       &(parser->strpool), key.value.strpool_idx );
@@ -1822,7 +1833,10 @@ cleanup:
       mdata_strpool_unlock( &(parser->strpool) );
    }
 
-   assert( MERROR_OK == retval );
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: eval token complete!",
+         exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
 
    return retval;
 }
@@ -1919,9 +1933,17 @@ static MERROR_RETVAL _mlisp_step_iter(
 
    /* Prepare to step. */
 
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL, "%u: acting on evaluated token...",
+         exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
+
    /* Put the token or its result (if callable) on the stack. */
 #  define _MLISP_TYPE_TABLE_ENVE( idx, ctype, name, const_name, fmt ) \
    } else if( MLISP_TYPE_ ## const_name == e.type ) { \
+      debug_printf( MLISP_EXEC_TRACE_LVL, \
+         "%u: pushing env: " fmt " to stack...", \
+         exec->uid, e.value.name ); \
       retval = _mlisp_stack_push_ ## ctype( exec, e.value.name ); \
       maug_cleanup_if_not_ok();
 
@@ -1961,6 +1983,11 @@ static MERROR_RETVAL _mlisp_step_iter(
        * redundant case below, but that can't be helped...
        */
 
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: special case! executing callback: %p", exec->uid, e_cb );
+#endif /* MLISP_EXEC_TRACE_LVL */
+
       /* Unlock the env so the callback below can use it if needed. */
       e_cb = e.value.cb;
       e_flags = e.flags;
@@ -1983,6 +2010,12 @@ static MERROR_RETVAL _mlisp_step_iter(
       }
 
    } else if( MLISP_TYPE_LAMBDA == e.type ) {
+
+#if MLISP_EXEC_TRACE_LVL > 0
+      debug_printf( MLISP_EXEC_TRACE_LVL,
+         "%u: special case! executing lambda...", exec->uid );
+#endif /* MLISP_EXEC_TRACE_LVL */
+
       /* Create a "portal" into the lambda. The execution chain stays pointing
        * to this lambda-call node, but _mlisp_step_lambda() returns
        * MERROR_PREEMPT up the chain for subsequent heartbeats, until lambda is

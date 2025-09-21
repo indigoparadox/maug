@@ -73,7 +73,7 @@ typedef uint8_t mlisp_bool_t;
  */
 #define MLISP_TYPE_TABLE( f ) \
    MLISP_NUM_TYPE_TABLE( f ) \
-   f( 4, mdata_strpool_idx_t, strpool_idx,   STR,     SSIZE_T_FMT ) \
+   f( 4, mdata_strpool_idx_t, strpool_idx,   STR,     SIZE_T_FMT ) \
    f( 5, mlisp_env_cb_t,      cb,            CB,      "%p" ) \
    f( 6, mlisp_lambda_t,      lambda,        LAMBDA,  SSIZE_T_FMT ) \
    f(10, mlisp_begin_t,       begin,         BEGIN,   SSIZE_T_FMT )   
