@@ -2,6 +2,10 @@
 #ifndef MJSON_H
 #define MJSON_H
 
+#ifndef MJSON_TRACE_LVL
+#  define MJSON_TRACE_LVL 0
+#endif /* !MJSON_TRACE_LVL */
+
 #define MJSON_PARSER_PSTATE_TABLE( f ) \
    f( MJSON_PSTATE_NONE, 0 ) \
    f( MJSON_PSTATE_OBJECT_KEY, 1 ) \
@@ -10,9 +14,13 @@
    f( MJSON_PSTATE_LIST, 4 ) \
    f( MJSON_PSTATE_ESCAPE, 5 )
 
-typedef MERROR_RETVAL (*mjson_parse_close_cb)( void* arg );
+struct MJSON_PARSER;
 
-typedef MERROR_RETVAL (*mjson_parse_c_cb)( void* arg );
+typedef MERROR_RETVAL (*mjson_parse_close_cb)(
+   struct MJSON_PARSER* jparser, void* arg );
+
+typedef MERROR_RETVAL (*mjson_parse_c_cb)(
+   struct MJSON_PARSER* jparser, void* arg );
 
 struct MJSON_PARSER {
    struct MPARSER base;
@@ -26,6 +34,7 @@ struct MJSON_PARSER {
    void* close_obj_arg;
    mjson_parse_close_cb close_val;
    void* close_val_arg;
+   char last_key[MPARSER_TOKEN_SZ_MAX + 1];
 };
 
 #define mjson_parser_pstate( parser ) \
@@ -57,8 +66,8 @@ struct MJSON_PARSER {
    mparser_append_token( "mjson", &((parser)->base), c )
 
 #define mjson_parser_parse_token( parser ) \
-   parser->token_parser( \
-      (&((parser)->base))->token, (&((parser)->base))->token_sz, (parser)->token_parser_arg )
+   (NULL != parser->token_parser ? parser->token_parser( \
+      parser, (&((parser)->base))->token, (&((parser)->base))->token_sz, (parser)->token_parser_arg ) : MERROR_OK)
 
 MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c );
 
@@ -96,7 +105,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->open_obj ) {
-            parser->open_obj( parser->open_obj_arg );
+            parser->open_obj( parser, parser->open_obj_arg );
          }
 
       } else if( MJSON_PSTATE_STRING == mjson_parser_pstate( parser ) ) {
@@ -117,7 +126,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->close_obj ) {
-            parser->close_obj( parser->close_obj_arg );
+            parser->close_obj( parser, parser->close_obj_arg );
          }
 
       } else if(
@@ -160,7 +169,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->close_list ) {
-            parser->close_list( parser->close_list_arg );
+            parser->close_list( parser, parser->close_list_arg );
          }
 
       } else if(
@@ -202,7 +211,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
          mjson_parser_reset_token( parser );
 
          if( NULL != parser->close_val ) {
-            parser->close_val( parser->close_val_arg );
+            parser->close_val( parser, parser->close_val_arg );
          }
 
       } else if( MJSON_PSTATE_LIST == mjson_parser_pstate( parser ) ) {
@@ -223,6 +232,16 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
 
    case ':':
       if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
+         if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
+            maug_strncpy(
+               parser->last_key, parser->base.token, MPARSER_TOKEN_SZ_MAX );
+#if MJSON_TRACE_LVL > 0
+            debug_printf(
+               MJSON_TRACE_LVL, "encountered key: %s", parser->last_key );
+#endif /* MJSON_TRACE_LVL */
+         }
+
+         /* Have the implementation look at it. */
          retval = mjson_parser_parse_token( parser );
          maug_cleanup_if_not_ok();
          retval = mjson_parser_pstate_push( parser, MJSON_PSTATE_OBJECT_VAL );

@@ -1718,6 +1718,10 @@ MERROR_RETVAL retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data );
 #  endif /* retroflat_loop */
 
+MERROR_RETVAL retroflat_build_filename_path(
+   const char* filename_in, const char* filename_ext,
+   char* buffer_out, size_t buffer_out_sz, uint8_t flags );
+
 /**
  * \addtogroup maug_retroflt_msg_api
  * \{
@@ -2045,7 +2049,7 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
 /* === Function Definitions === */
 
 MERROR_RETVAL retroflat_build_filename_path(
-   const char* filename_in,
+   const char* filename_in, const char* filename_ext,
    char* buffer_out, size_t buffer_out_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -2064,7 +2068,7 @@ MERROR_RETVAL retroflat_build_filename_path(
       /* TODO: Error checking. */
       maug_snprintf( buffer_out, buffer_out_sz - 1, "%s%c%s.%s",
          g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
-         filename_in, RETROFLAT_BITMAP_EXT );
+         filename_in, filename_ext );
    }
 
    return retval;
@@ -3054,7 +3058,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
-      filename, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
+      filename, RETROFLAT_BITMAP_EXT, filename_path,
+      MAUG_PATH_SZ_MAX + 1, flags );
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 

@@ -22,7 +22,7 @@
 
 #ifndef MPARSER_TOKEN_SZ_MAX
 /* TODO: Use a dynamically allocated block and enlarge as needed. */
-#  define MPARSER_TOKEN_SZ_MAX 4096
+#  define MPARSER_TOKEN_SZ_MAX 255
 #endif /* !MPARSER_TOKEN_SZ_MAX */
 
 #ifndef MPARSER_WAIT_INC
@@ -37,7 +37,7 @@ typedef MERROR_RETVAL (*mparser_wait_cb_t)(
    MERROR_RETVAL retval_in, void* parser, void* data );
 
 typedef MERROR_RETVAL
-(*mparser_parse_token_cb)( const char* token, size_t token_sz, void* arg );
+(*mparser_parse_token_cb)( void* parser, const char* token, size_t token_sz, void* arg );
 
 struct MPARSER {
    mparser_pstate_t pstate[MPARSER_STACK_SZ_MAX];
@@ -45,7 +45,7 @@ struct MPARSER {
    mparser_wait_cb_t wait_cb;
    void* wait_data;
    maug_ms_t wait_next;
-   char token[MPARSER_TOKEN_SZ_MAX];
+   char token[MPARSER_TOKEN_SZ_MAX + 1];
    size_t token_sz;
    size_t i;
    char last_c;
@@ -207,7 +207,7 @@ MERROR_RETVAL mparser_append_token(
    /* If size greater than max, return error indicating more buffer space
     * needed. */
    /* TODO: Expand token allocation. */
-   maug_cleanup_if_ge_overflow( (parser)->token_sz + 1, MPARSER_TOKEN_SZ_MAX );
+   maug_cleanup_if_ge_overflow( (parser)->token_sz, MPARSER_TOKEN_SZ_MAX );
 
 cleanup:
 

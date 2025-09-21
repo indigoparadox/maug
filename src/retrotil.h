@@ -673,7 +673,7 @@ static void retrotile_parser_match_token(
 /* === */
 
 MERROR_RETVAL retrotile_parser_parse_tiledef_token(
-   const char* token, size_t token_sz, void* parser_arg
+   void* jparser_void, const char* token, size_t token_sz, void* parser_arg
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROTILE_TILE_DEF* tile_def = NULL;
@@ -689,7 +689,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
       NULL != parser->custom_token_cb &&
       /* MERROR_PREEMPT is dealt with in cleanup. */
       MERROR_OK != (retval = parser->custom_token_cb(
-         token, token_sz, parser_arg ))
+         parser, token, token_sz, parser_arg ))
    ) {
       goto cleanup;
    }
@@ -899,7 +899,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrotile_parser_parse_token(
-   const char* token, size_t token_sz, void* parser_arg
+   void* jparser_void, const char* token, size_t token_sz, void* parser_arg
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROTILE_LAYER* tiles_layer = NULL;
@@ -911,7 +911,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
       NULL != parser->custom_token_cb &&
       /* MERROR_PREEMPT is dealt with in cleanup. */
       MERROR_OK != (retval = parser->custom_token_cb(
-         token, token_sz, parser_arg ))
+         parser, token, token_sz, parser_arg ))
    ) {
       goto cleanup;
    }
@@ -1107,7 +1107,9 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL retrotile_json_close_list( void* parg ) {
+MERROR_RETVAL retrotile_json_close_list(
+   struct MJSON_PARSER* jparser, void* parg
+) {
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parg;
 
    if( MTILESTATE_LAYER_DATA == parser->mstate ) {
@@ -1147,7 +1149,9 @@ MERROR_RETVAL retrotile_json_close_list( void* parg ) {
 
 /* === */
 
-MERROR_RETVAL retrotile_json_open_obj( void* parg ) {
+MERROR_RETVAL retrotile_json_open_obj(
+   struct MJSON_PARSER* jparser, void* parg
+) {
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parg;
 
    if( MTILESTATE_LAYERS == parser->mstate ) {
@@ -1163,7 +1167,9 @@ MERROR_RETVAL retrotile_json_open_obj( void* parg ) {
 
 /* === */
 
-MERROR_RETVAL retrotile_json_close_obj( void* parg ) {
+MERROR_RETVAL retrotile_json_close_obj(
+   struct MJSON_PARSER* jparser, void* parg
+) {
    struct RETROTILE_PARSER* parser = (struct RETROTILE_PARSER*)parg;
 
    if( MTILESTATE_LAYER == parser->mstate ) {

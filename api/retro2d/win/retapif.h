@@ -1075,7 +1075,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
-      filename, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
+      filename, RETROFLAT_BITMAP_EXT,
+      filename_path, MAUG_PATH_SZ_MAX + 1, flags );
    maug_cleanup_if_not_ok();
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
