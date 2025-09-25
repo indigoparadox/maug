@@ -23,5 +23,5 @@ for f in main.c.m4 Makefile.m4; do
    m4 \
       "-DTEMPLATE=$PROJECT_UPPER" \
       "-Dtemplate=$PROJECT_LOWER" \
-      "$TEMPLATES_DIR/$f" > $OUTPUT_NAME
+      "$TEMPLATES_DIR/$f" > "$TEMPLATES_DIR/../../$OUTPUT_NAME"
 done
