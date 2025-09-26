@@ -1,7 +1,7 @@
 divert(-1)
 define(`ntexea', `$1nt.exe')
-define(`wexea', `$1w.exe')
-define(`dexea', `$1d.exe')
+define(`wexea', `$1w3.exe')
+define(`dexea', `$1b.exe')
 divert(0)
 `#' vim: ft=make noexpandtab
 
@@ -16,15 +16,11 @@ include maug/Makefile.inc
 # Target-specific options.
 .PHONY: clean
 
-all: template.ale template.sdl dexea(template) wexea(template) ntexea(template) template.html
+all: template.sdl dexea(template) wexea(template) ntexea(template) template.html
 
 # MacOS
 
 $(eval $(call TGTMAC68K,template))
-
-# Unix (Allegro)
-
-$(eval $(call TGTUNIXALE,template))
 
 # Unix (SDL)
 
@@ -36,15 +32,15 @@ $(eval $(call TGTWASMSDL,template))
 
 # DOS
 
-$(eval $(call TGTDOSALE,template))
+$(eval $(call TGTDOSBIOS,template))
 
 # WinNT
 
 $(eval $(call TGTWINNT,template))
 
-# Win386
+# Win16
 
-$(eval $(call TGTWIN386,template))
+$(eval $(call TGTWIN16,template))
 
 # Clean
 
