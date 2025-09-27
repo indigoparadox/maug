@@ -138,7 +138,7 @@ START_TEST( test_mser_vector_read ) {
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 
    mdata_vector_lock( &vec_test );
    mdata_vector_lock( &vec_gen );
@@ -186,7 +186,7 @@ START_TEST( test_mser_vector_read_arr ) {
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 
    for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
       ck_assert( !mdata_vector_is_locked( &(vec_test[i]) ) );
@@ -223,7 +223,7 @@ START_TEST( test_mser_vector_write ) {
 
    maug_mzero( buf_mem, sizeof( g_test_vec_ser ) );
 
-   retval = mfile_open_write( "chkvec", &ser_mem );
+   retval = open_temp( "chkvec", &ser_mem );
    /*
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_vec_ser ), &ser_mem );
@@ -241,7 +241,7 @@ START_TEST( test_mser_vector_write ) {
 
    mdata_vector_free( &vec_test );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 }
 END_TEST
 
@@ -258,7 +258,7 @@ START_TEST( test_mser_vector_write_arr ) {
 
    maug_mzero( buf_mem, sizeof( g_test_vec_arr_ser ) );
 
-   retval = mfile_open_write( "chkvecar", &ser_mem );
+   retval = open_temp( "chkvecar", &ser_mem );
    /*
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_vec_ser ), &ser_mem );
@@ -279,7 +279,7 @@ START_TEST( test_mser_vector_write_arr ) {
       mdata_vector_free( &(vec_test[i]) );
    }
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 }
 END_TEST
 
@@ -322,7 +322,7 @@ START_TEST( test_mser_table_read ) {
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 
    mdata_table_lock( &tab_test );
    mdata_table_lock( &tab_gen );
@@ -371,7 +371,7 @@ START_TEST( test_mser_table_read_arr ) {
       (uint8_t*)&value_buf, sizeof( size_t ), &ser_sz );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 
    for( i = 0 ; VEC_ARR_LOOPS > i ; i++ ) {
       ck_assert( !mdata_table_is_locked( &(tab_test[i]) ) );
@@ -407,7 +407,7 @@ START_TEST( test_mser_table_write ) {
 
    maug_mzero( buf_mem, sizeof( g_test_tab_ser ) );
 
-   retval = mfile_open_write( "chktab", &ser_mem );
+   retval = open_temp( "chktab", &ser_mem );
    /*
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_tab_ser ), &ser_mem );
@@ -425,7 +425,7 @@ START_TEST( test_mser_table_write ) {
 
    mdata_table_free( &tab_test );
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 }
 END_TEST
 
@@ -442,7 +442,7 @@ START_TEST( test_mser_table_write_arr ) {
 
    maug_mzero( buf_mem, sizeof( g_test_tab_arr_ser ) );
 
-   retval = mfile_open_write( "chktabar", &ser_mem );
+   retval = open_temp( "chktabar", &ser_mem );
    /*
    retval = mfile_lock_buffer(
       buf_mem, sizeof( g_test_tab_ser ), &ser_mem );
@@ -463,7 +463,7 @@ START_TEST( test_mser_table_write_arr ) {
       mdata_table_free( &tab_test[i] );
    }
 
-   mfile_close( &ser_mem );
+   close_temp( &ser_mem );
 }
 END_TEST
 

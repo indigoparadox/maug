@@ -86,14 +86,14 @@ START_TEST( test_mfil_file_cursor ) {
    MERROR_RETVAL retval = MERROR_OK;
    mfile_t test_file;
 
-   retval = mfile_open_write( "chkfile", &test_file );
+   retval = open_temp( "chkfile", &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
    test_file.write_block( &test_file, g_test_mem, _i );
 
    ck_assert_int_eq( test_file.cursor( &test_file ), _i );
 
-   mfile_close( &test_file );
+   close_temp( &test_file );
 }
 END_TEST
 

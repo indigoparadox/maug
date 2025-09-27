@@ -204,6 +204,7 @@ struct MFILE_CADDY {
    uint8_t flags;
    /*! \brief Size of the current file/buffer in bytes. */
    off_t sz;
+   char filename[MAUG_PATH_SZ_MAX + 1];
    mfile_has_bytes_t has_bytes;
    mfile_cursor_t cursor;
    mfile_read_byte_t read_byte;
@@ -609,6 +610,12 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    /* Call the platform-specific actual file opener from mrapifil.h. */
    retval = mfile_plt_open_read( filename, p_file );
 
+   if( MERROR_OK == retval ) {
+      /* Store filename. */
+      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX );
+      maug_strncpy( p_file->filename, filename, MAUG_PATH_SZ_MAX );
+   }
+
    return retval;
 }
 
@@ -618,6 +625,12 @@ MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    retval = mfile_plt_open_write( filename, p_file );
+
+   if( MERROR_OK == retval ) {
+      /* Store filename. */
+      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX );
+      maug_strncpy( p_file->filename, filename, MAUG_PATH_SZ_MAX );
+   }
 
    return retval;
 }

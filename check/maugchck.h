@@ -6,7 +6,15 @@
 #  include <mfakechk.h>
 #else
 #  include <check.h>
-#endif /* MAUG_OS_WIN */
+#endif /* MAUG_FAKECHECK */
+
+#if defined( RETROFLAT_OS_UNIX )
+#define TMP_PATH "/tmp/"
+#elif defined( RETROFLAT_OS_DOS ) || defined( RETROFLAT_OS_WIN )
+#define TMP_PATH "C:/temp"
+#else
+#error "don't know temporary path!"
+#endif /* MAUG_OS_UNIX || MAUG_OS_WIN */
 
 #include <maug.h>
 #include <mlisps.h>
@@ -20,6 +28,10 @@
    f( mlsp ) \
    f( mfil ) \
    f( mser )
+
+MERROR_RETVAL open_temp( const char* filename, mfile_t* p_file );
+
+void close_temp( mfile_t* p_file );
 
 #endif /* !MAUGCHCK_H */
 
