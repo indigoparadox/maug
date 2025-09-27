@@ -568,7 +568,7 @@ MAUG_MHANDLE mdata_strpool_extract(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE out_h = (MAUG_MHANDLE)NULL;
-   size_t out_sz = 0, str_sz = 0;
+   size_t str_sz = 0;
    char* out_tmp = NULL;
    int autolock = 0;
    char* str_src = NULL;
@@ -586,33 +586,6 @@ MAUG_MHANDLE mdata_strpool_extract(
    }
 
    str_sz = maug_strlen( str_src );
-#if 0
-   /* This seems to be broken on mac68k (strpool_sz is always 0!) */
-   out_sz = mdata_strpool_get_sz( sp, idx );
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
-      "strpool str sz: " SIZE_T_FMT " stored, " SIZE_T_FMT " strlen",
-      out_sz, maug_strlen( str_src ) );
-#endif /* MDATA_TRACE_LVL */
-
-   /* assert( out_sz >= str_sz ); */
-   if( out_sz < str_sz ) {
-      error_printf(
-         "stored size " SIZE_T_FMT " does not match measured size: " SIZE_T_FMT,
-         out_sz, str_sz );
-      retval = MERROR_OVERFLOW;
-      goto cleanup;
-   }
-
-   out_h = maug_malloc( out_sz + 1, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
-
-   maug_mlock( out_h, out_tmp );
-   maug_cleanup_if_null_lock( char*, out_tmp );
-
-   maug_mzero( out_tmp, out_sz + 1 );
-   maug_strncpy( out_tmp, str_src, out_sz );
-#endif
 
    out_h = maug_malloc( str_sz + 1, 1 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
@@ -621,7 +594,10 @@ MAUG_MHANDLE mdata_strpool_extract(
    maug_cleanup_if_null_lock( char*, out_tmp );
 
    maug_mzero( out_tmp, str_sz + 1 );
-   maug_strncpy( out_tmp, str_src, str_sz );
+
+   /* memcpy is faster, here, since we know the allocated size was succesful.
+    */
+   memcpy( out_tmp, str_src, str_sz );
 
 cleanup:
 
