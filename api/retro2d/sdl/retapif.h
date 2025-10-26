@@ -2,6 +2,8 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+#ifndef RETROFLAT_OPENGL
+
 static SDL_Surface* _retroflat_sdl_load_bitmap( retroflat_asset_path path ) {
    MERROR_RETVAL retval = MERROR_OK;
    SDL_Surface* bmp_out = NULL;
@@ -48,6 +50,8 @@ cleanup:
 
    return bmp_out;
 }
+
+#endif /* !RETROFLAT_OPENGL */
 
 /* === */
 
