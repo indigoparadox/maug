@@ -43,10 +43,6 @@ CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/small3dl
 
 endif
 
-OBJDIR_GCC_UNIX_ALLEGRO=obj/gcc-$(shell uname -s)-allegro
-OBJDIR_GCC_UNIX_GLUT=obj/gcc-$(shell uname -s)-glut
-OBJDIR_GCC_UNIX_XLIB=obj/gcc-$(shell uname -s)-xlib
-
 # ---
 
 # General utility macro to be called below to pick up the application icon
@@ -166,7 +162,7 @@ else
 CFLAGS_GCC_UNIX_SDL += -I"$(MAUG_ROOT)/api/file/unix"
 endif
 
-OBJDIR_GCC_UNIX_SDL := obj/gcc-$$(shell uname -s)-sdl$$(SDL_VER_UNIX)
+OBJDIR_GCC_UNIX_SDL := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-sdl$$(SDL_VER_UNIX)
 
 # = Make Icons =
 
@@ -204,6 +200,8 @@ $$(warning could not find pkg-config for allegro!)
 endif
 
 # TODO: Use allegro font API.
+
+OBJDIR_GCC_UNIX_ALLEGRO := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-allegro
 
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
@@ -262,6 +260,8 @@ $$(error could not find pkg-config for gl!)
 endif
 endif
 
+OBJDIR_GCC_UNIX_GLUT := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-glut
+
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
 	-DRETROSND_API_ALSA \
@@ -316,6 +316,8 @@ ifeq ("$$(shell pkg-config x11 --libs 2>/dev/null)","")
 # Make this only a warning, in case we're compiling for other targets.
 $$(warning could not find pkg-config for x11!)
 endif
+
+OBJDIR_GCC_UNIX_XLIB := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-xlib
 
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/xlib \
