@@ -911,7 +911,11 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
+#ifdef RETROFLAT_API_WIN16
+   return GetTickCount();
+#else
    return timeGetTime() >> 3;
+#endif /* RETROFLAT_API_WIN16 */
 }
 
 /* === */
