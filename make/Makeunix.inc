@@ -170,7 +170,7 @@ $$(eval $$(call TGT_ICO_UNIX_SDL,$(1),$$(OBJDIR_GCC_UNIX_SDL)))
 
 # = Actual Build Targets =
 
-$(1).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(shell uname -m).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_SDL)
 
@@ -180,7 +180,7 @@ $$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $$(MAUG_DEPS) $$(OBJDIR_GCC_UNIX_SDL)/ico/sdl
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).sdl
+CLEAN_TARGETS += $(1).$$(shell uname -m).sdl
 
 endef
 
@@ -228,7 +228,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
 endif
 
-$(1).ale: \
+$(1).$$(shell uname -m).ale: \
 $$(addprefix $$(OBJDIR_GCC_UNIX_ALLEGRO)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_ALLEGRO)
@@ -239,7 +239,7 @@ $$(OBJDIR_GCC_UNIX_ALLEGRO)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_ALLEGRO) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).ale
+CLEAN_TARGETS += $(1).$$(shell uname -m).ale
 
 endef
 
@@ -287,7 +287,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_GLUT += -lasound
 endif
 
-$(1).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(shell uname -m).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_GLUT)
 
@@ -297,7 +297,7 @@ $$(OBJDIR_GCC_UNIX_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_GLUT) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).glut
+CLEAN_TARGETS += $(1).$$(shell uname -m).glut
 
 endef
 
@@ -343,7 +343,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	LDFLAGS_GCC_UNIX_XLIB += -lasound
 endif
 
-$(1).xlib: $$(addprefix $$(OBJDIR_GCC_UNIX_XLIB)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(shell uname -m).xlib: $$(addprefix $$(OBJDIR_GCC_UNIX_XLIB)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_XLIB)
 
@@ -353,7 +353,7 @@ $$(OBJDIR_GCC_UNIX_XLIB)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_XLIB) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).xlib
+CLEAN_TARGETS += $(1).$$(shell uname -m).xlib
 
 endef
 
