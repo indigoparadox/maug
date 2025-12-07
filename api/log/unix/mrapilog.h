@@ -75,8 +75,7 @@ MERROR_RETVAL logging_init() {
 #  ifdef LOG_TO_FILE
    g_log_file = fopen( LOG_FILE_NAME, "w" );
    if( NULL == g_log_file ) {
-      retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
-         "Error", "Unable to initiate logging!" );
+      maug_critical_error( "Unable to initiate logging!" );
       retval = MERROR_FILE;
    }
 #  endif /* LOG_FILE_NAME */

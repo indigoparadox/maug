@@ -52,6 +52,10 @@ typedef void (*retroflat_rect_cb)(
    retroflat_blit_t* target, const RETROFLAT_COLOR color,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
 
+typedef void (*retroflat_ellipse_cb)(
+   retroflat_blit_t* target, const RETROFLAT_COLOR color,
+   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
+
 typedef MERROR_RETVAL (*retroflat_blit_bitmap_cb)(
    retroflat_blit_t* target, retroflat_blit_t* src,
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
@@ -77,6 +81,9 @@ retroflat_line_cb SEG_MGLOBAL retroflat_2d_line RETROFLT_CB_INIT;
 
 RETROFLT_CB_EXTERN
 retroflat_rect_cb SEG_MGLOBAL retroflat_2d_rect RETROFLT_CB_INIT;
+
+RETROFLT_CB_EXTERN
+retroflat_ellipse_cb SEG_MGLOBAL retroflat_2d_ellipse RETROFLT_CB_INIT;
 
 RETROFLT_CB_EXTERN
 retroflat_blit_bitmap_cb SEG_MGLOBAL retroflat_2d_blit_bitmap RETROFLT_CB_INIT;

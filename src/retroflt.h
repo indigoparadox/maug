@@ -2492,6 +2492,7 @@ MERROR_RETVAL retroflat_init(
    retroflat_2d_px = (retroflat_px_cb)retro3d_texture_px;
    retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
    retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+   retroflat_2d_ellipse = (retroflat_ellipse_cb)retrosoft_ellipse;
    retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retro3d_texture_blit;
    retroflat_2d_load_bitmap =
       (retroflat_load_bitmap_cb)retro3d_texture_load_bitmap;
@@ -2503,9 +2504,11 @@ MERROR_RETVAL retroflat_init(
    /* TODO: Work retrosoft routines to use retroflat_blit_t */
    retroflat_2d_line = (retroflat_line_cb)retrosoft_line;
    retroflat_2d_rect = (retroflat_rect_cb)retrosoft_rect;
+   retroflat_2d_ellipse = (retroflat_ellipse_cb)retrosoft_ellipse;
 #        else
    retroflat_2d_line = (retroflat_line_cb)retroflat_line;
    retroflat_2d_rect = (retroflat_rect_cb)retroflat_rect;
+   retroflat_2d_ellipse = (retroflat_ellipse_cb)retroflat_ellipse;
 #        endif /* RETROFLAT_SOFT_SHAPES */
    retroflat_2d_blit_bitmap = (retroflat_blit_bitmap_cb)retroflat_blit_bitmap;
    retroflat_2d_load_bitmap = (retroflat_load_bitmap_cb)retroflat_load_bitmap;
@@ -2962,6 +2965,12 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags ) {
 }
 
 #endif
+
+/* === */
+
+void maug_critical_error( const char* msg ) {
+   retroflat_message( RETROFLAT_MSG_FLAG_ERROR, "Error", msg );
+}
 
 /* === */
 

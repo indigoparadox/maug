@@ -9,6 +9,15 @@
  */
 
 /**
+ * \brief Display an error dialog. This is a minimal function that can be called
+ *        early on (e.g. in the logging API).
+ *
+ * This is a rare example of an exception to layering, so that critical early 
+ * components can display an urgent dialog using higher-level later components.
+ */
+void maug_critical_error( const char* msg );
+
+/**
  * \addtogroup maug_error_retvals Return Values
  * \{
  */

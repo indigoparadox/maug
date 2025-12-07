@@ -825,7 +825,7 @@ static void retrogui_redraw_LISTBOX(
             ctl->base.w, h, RETROFLAT_FLAGS_FILL );
          fg_color = ctl->base.sel_fg;
 
-         retroflat_ellipse(
+         retroflat_2d_ellipse(
             gui->draw_bmp, ctl->base.sel_fg,
             gui->x + ctl->base.x,
             gui->y + ctl->base.y + item_y,
