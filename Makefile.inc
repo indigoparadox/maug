@@ -23,7 +23,9 @@ ifneq ("$(RETROFLAT_SOUND)","1")
 	DEFINES_WATCOM += -DRETROFLAT_NO_SOUND
 endif
 
-GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell git -C $(MAUG_ROOT) rev-parse HEAD)\""
+MAUG_UNIX := $(shell uname -s -m | tr ' ' '_')
+
+GLOBAL_DEFINES += -DRETROFLAT_COMMIT_HASH="\"$(shell git -C $(MAUG_ROOT) rev-parse HEAD)\"" -DMAUG_UNIX="\"$(MAUG_UNIX)\""
 
 CFLAGS_GCC := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
 CFLAGS_GCC64 := $(GLOBAL_DEFINES) $(INCLUDES_GCC) $(DEFINES_GCC)
@@ -203,17 +205,17 @@ ifeq ("$$(shell which tar 2>/dev/null)","")
 $$(error could not find tar!)
 endif
 
-$(1)_tgz.$$(shell uname -m).dst: $(2)
+$(1)_tgz.$$(MAUG_UNIX).dst: $(2)
 	mkdir -v -p $$@
 	for f in $$^; do \
 		mkdir -v -p "$$@/`dirname $$$$f`"; \
 		cp -v -R $$$$f "$$@/$$$$f"; \
 	done
 
-$(1).$$(shell uname -m).tgz: $(1)_tgz.$$(shell uname -m).dst
+$(1).$$(MAUG_UNIX).tgz: $(1)_tgz.$$(MAUG_UNIX).dst
 	tar -cvzf $$@ $$<
 
-CLEAN_TARGETS += $(1)_tgz.$$(shell uname -m).dst $(1).$$(shell uname -m).tgz
+CLEAN_TARGETS += $(1)_tgz.$$(MAUG_UNIX).dst $(1).$$(MAUG_UNIX).tgz
 
 endef
 

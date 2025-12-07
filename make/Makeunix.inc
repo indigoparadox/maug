@@ -162,7 +162,7 @@ else
 CFLAGS_GCC_UNIX_SDL += -I"$(MAUG_ROOT)/api/file/unix"
 endif
 
-OBJDIR_GCC_UNIX_SDL := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-sdl$$(SDL_VER_UNIX)
+OBJDIR_GCC_UNIX_SDL := obj/gcc-$$(MAUG_UNIX)-sdl$$(SDL_VER_UNIX)
 
 # = Make Icons =
 
@@ -170,7 +170,7 @@ $$(eval $$(call TGT_ICO_UNIX_SDL,$(1),$$(OBJDIR_GCC_UNIX_SDL)))
 
 # = Actual Build Targets =
 
-$(1).$$(shell uname -m).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(MAUG_UNIX).sdl: $$(addprefix $$(OBJDIR_GCC_UNIX_SDL)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_SDL)
 
@@ -180,7 +180,7 @@ $$(OBJDIR_GCC_UNIX_SDL)/%.o: %.c | $$(MAUG_DEPS) $$(OBJDIR_GCC_UNIX_SDL)/ico/sdl
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_SDL) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).$$(shell uname -m).sdl
+CLEAN_TARGETS += $(1).$$(MAUG_UNIX).sdl
 
 endef
 
@@ -201,7 +201,7 @@ endif
 
 # TODO: Use allegro font API.
 
-OBJDIR_GCC_UNIX_ALLEGRO := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-allegro
+OBJDIR_GCC_UNIX_ALLEGRO := obj/gcc-$$(MAUG_UNIX)-allegro
 
 CFLAGS_GCC_UNIX_ALLEGRO := \
 	-DRETROFLAT_API_ALLEGRO $$(shell pkg-config allegro --cflags) \
@@ -228,7 +228,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
 endif
 
-$(1).$$(shell uname -m).ale: \
+$(1).$$(MAUG_UNIX).ale: \
 $$(addprefix $$(OBJDIR_GCC_UNIX_ALLEGRO)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_ALLEGRO)
@@ -239,7 +239,7 @@ $$(OBJDIR_GCC_UNIX_ALLEGRO)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_ALLEGRO) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).$$(shell uname -m).ale
+CLEAN_TARGETS += $(1).$$(MAUG_UNIX).ale
 
 endef
 
@@ -260,7 +260,7 @@ $$(error could not find pkg-config for gl!)
 endif
 endif
 
-OBJDIR_GCC_UNIX_GLUT := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-glut
+OBJDIR_GCC_UNIX_GLUT := obj/gcc-$$(MAUG_UNIX)-glut
 
 CFLAGS_GCC_UNIX_GLUT := -DRETROFLAT_API_GLUT $(shell pkg-config gl --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/glut -I$(MAUG_ROOT)/api/input/glut \
@@ -287,7 +287,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_GCC_UNIX_GLUT += -lasound
 endif
 
-$(1).$$(shell uname -m).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(MAUG_UNIX).glut: $$(addprefix $$(OBJDIR_GCC_UNIX_GLUT)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_GLUT)
 
@@ -297,7 +297,7 @@ $$(OBJDIR_GCC_UNIX_GLUT)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_GLUT) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).$$(shell uname -m).glut
+CLEAN_TARGETS += $(1).$$(MAUG_UNIX).glut
 
 endef
 
@@ -317,7 +317,7 @@ ifeq ("$$(shell pkg-config x11 --libs 2>/dev/null)","")
 $$(warning could not find pkg-config for x11!)
 endif
 
-OBJDIR_GCC_UNIX_XLIB := obj/gcc-$$(shell uname -s -m | tr ' ' '_')-xlib
+OBJDIR_GCC_UNIX_XLIB := obj/gcc-$$(MAUG_UNIX)-xlib
 
 CFLAGS_GCC_UNIX_XLIB := -DRETROFLAT_API_XLIB $(shell pkg-config x11 --cflags) \
 	-I$(MAUG_ROOT)/api/retro2d/xlib -I$(MAUG_ROOT)/api/input/xlib \
@@ -343,7 +343,7 @@ ifeq ("$$(RETROFLAT_SOUND)","1")
 	LDFLAGS_GCC_UNIX_XLIB += -lasound
 endif
 
-$(1).$$(shell uname -m).xlib: $$(addprefix $$(OBJDIR_GCC_UNIX_XLIB)/,$$(subst .c,.o,$$(C_FILES)))
+$(1).$$(MAUG_UNIX).xlib: $$(addprefix $$(OBJDIR_GCC_UNIX_XLIB)/,$$(subst .c,.o,$$(C_FILES)))
 	$$(CC_GCC) -o $$@ $$^ \
 		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_XLIB)
 
@@ -353,7 +353,7 @@ $$(OBJDIR_GCC_UNIX_XLIB)/%.o: %.c | $$(MAUG_DEPS)
 		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_XLIB) \
 		$$(CFLAGS_OPT_GCC)
 
-CLEAN_TARGETS += $(1).$$(shell uname -m).xlib
+CLEAN_TARGETS += $(1).$$(MAUG_UNIX).xlib
 
 endef
 
