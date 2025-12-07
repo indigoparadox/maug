@@ -203,17 +203,17 @@ ifeq ("$$(shell which tar 2>/dev/null)","")
 $$(error could not find tar!)
 endif
 
-$(1)_tgz.dst: $(2)
+$(1)_tgz.$$(shell uname -m).dst: $(2)
 	mkdir -v -p $$@
 	for f in $$^; do \
 		mkdir -v -p "$$@/`dirname $$$$f`"; \
 		cp -v -R $$$$f "$$@/$$$$f"; \
 	done
 
-$(1).tgz: $(1)_tgz.dst
+$(1).$$(shell uname -m).tgz: $(1)_tgz.$$(shell uname -m).dst
 	tar -cvzf $$@ $$<
 
-CLEAN_TARGETS += $(1)_tgz.dst $(1).tgz
+CLEAN_TARGETS += $(1)_tgz.$$(shell uname -m).dst $(1).$$(shell uname -m).tgz
 
 endef
 
