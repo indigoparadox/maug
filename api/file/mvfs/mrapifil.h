@@ -24,7 +24,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    while( NULL != gc_mvfs_data[i] ) {
       if( 0 == strcmp( filename, gc_mvfs_filenames[i] ) ) {
-         debug_printf( MFILE_TRACE_LVL,
+         debug_printf( MFILE_SEEK_TRACE_LVL,
             "found filename \"%s\" at VFS index: " SIZE_T_FMT
             " (size: " OFF_T_FMT " bytes)",
                filename, i, *(gc_mvfs_lens[i]) );
