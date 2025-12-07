@@ -140,7 +140,8 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
 
    /* Add asset prefix and extension as appropriate. */
    retval = retroflat_build_filename_path(
-      asset_name, filename_path, MAUG_PATH_SZ_MAX + 1, flags );
+      asset_name, RETROFLAT_BITMAP_EXT, filename_path,
+      MAUG_PATH_SZ_MAX + 1, flags );
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 

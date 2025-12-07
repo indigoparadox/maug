@@ -320,7 +320,7 @@ TGTWINSDL=$(TGT_WATCOM386_WIN_SDL)
 define TGT_WATCOM_WIN_WIN16
 
 CFLAGS_WATCOM_WIN_WIN16 += \
-	-zm -ml -DMAUG_DOS_MEM_L \
+	-zm -zc -sg -ml -DMAUG_DOS_MEM_L \
 	-4 -bt=windows -i=$(WATCOM)/h/win -DRETROFLAT_API_WIN16 \
 	-i=$(MAUG_ROOT)/api/retro2d/win -i=$(MAUG_ROOT)/api/input/win \
 	-i=$(MAUG_ROOT)/api/file/unix -i=$(MAUG_ROOT)/api/log/unix \
@@ -328,8 +328,6 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 	-i=$(MAUG_ROOT)/api/serial/asn1
 
 LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate
-
-# MVFS is deliberately not supported on this platform! Too little memory!
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win

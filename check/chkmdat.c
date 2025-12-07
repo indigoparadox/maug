@@ -264,7 +264,7 @@ END_TEST
 
 START_TEST( test_mdat_strpool_extract ) {
    struct MDATA_STRPOOL sp_test;
-   MAUG_MHANDLE ex_test_h = NULL;
+   MAUG_MHANDLE ex_test_h = (MAUG_MHANDLE)NULL;
    char* ex_test = NULL;
    mdata_strpool_idx_t idx = 0;
 

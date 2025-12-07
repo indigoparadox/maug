@@ -282,7 +282,7 @@ void mfile_close( mfile_t* p_file );
 off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
    size_t cursor = 0;
    cursor = p_file->cursor( p_file );
-   if( 0 <= cursor ) {
+   if( p_file->sz > cursor ) {
 #if MFILE_READ_TRACE_LVL > 0
       debug_printf( MFILE_READ_TRACE_LVL,
          "file has " OFF_T_FMT " bytes left...",

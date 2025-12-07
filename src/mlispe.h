@@ -1294,7 +1294,7 @@ static MERROR_RETVAL _mlisp_preempt(
 
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
 
-   if( 0 <= n->token_idx ) {
+   if( 0 < n->token_idx ) {
       mdata_strpool_lock( &(parser->strpool) );
 #if MLISP_EXEC_TRACE_LVL > 0
       debug_printf( MLISP_EXEC_TRACE_LVL,
