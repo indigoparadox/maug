@@ -1806,7 +1806,7 @@ static void retrogui_redraw_IMAGE(
          ctl->IMAGE.instance );
    } else
 #     endif /* RETROGXC_PRESENT */
-   if( retroflat_2d_bitmap_ok( gui->draw_bmp ) ) {
+   if( retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) ) {
       /* If no cached image (or cache), try to draw the stored image. */
       retroflat_2d_blit_bitmap(
          gui->draw_bmp,
@@ -1833,6 +1833,8 @@ static MERROR_RETVAL retrogui_push_IMAGE( union RETROGUI_CTL* ctl ) {
 #if RETROGUI_TRACE_LVL > 0
    debug_printf( RETROGUI_TRACE_LVL, "pushing IMAGE control..." );
 #endif /* RETROGUI_TRACE_LVL */
+
+   assert( !retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) );
 
    /* TODO: Copy non-cached image. */
 
@@ -2968,18 +2970,33 @@ MERROR_RETVAL retrogui_set_ctl_image_blit(
             (blit_w < ctl_img_w || blit_h < ctl_img_h)
          ) {
             retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
-            retval = retroflat_2d_create_bitmap(
-               blit_w, blit_h, &(ctl->IMAGE.image), 0 );
-            maug_cleanup_if_not_ok();
          }
 
+#if RETROGUI_TRACE_LVL > 0
+         debug_printf( RETROGUI_TRACE_LVL,
+            "creating control " RETROGUI_IDC_FMT " image: %u, %u",
+            idc, blit_w, blit_h );
+#endif /* RETROGUI_TRACE_LVL */
+
+         /* Create the new image to blit to. */
+         retval = retroflat_2d_create_bitmap(
+            blit_w, blit_h, &(ctl->IMAGE.image), 0 );
+         maug_cleanup_if_not_ok();
+
+         retroflat_2d_lock_bitmap( &(ctl->IMAGE.image) );
+
+#if RETROGUI_TRACE_LVL > 0
+         debug_printf( RETROGUI_TRACE_LVL,
+            "blitting control " RETROGUI_IDC_FMT " image from: %p", idc, blit );
+#endif /* RETROGUI_TRACE_LVL */
+
          /* Blit the new image over the old one. */
-         /* TODO: Do we need to lock for this? */
          retroflat_2d_blit_bitmap(
             &(ctl->IMAGE.image),
             blit,
             0, 0, 0, 0, blit_w, blit_h,
             ctl->IMAGE.instance );
+         retroflat_2d_release_bitmap( &(ctl->IMAGE.image) );
       } else {
 
       }

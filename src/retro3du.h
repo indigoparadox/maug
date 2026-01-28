@@ -287,13 +287,17 @@ MERROR_RETVAL retro3d_texture_blit(
 
    assert( NULL != target );
 
+   assert( (void*)0xdeadbeef != target );
+
    /* Blit to texture. */
 
    assert( NULL != target->bytes );
 
+   assert( (void*)0xdeadbeef != target->bytes );
+
    /* TODO: Some kind of source-autolock? */
    assert( !retro3d_texture_locked( src ) );
-   maug_mlock( target->bytes_h, src->bytes );
+   maug_mlock( src->bytes_h, src->bytes );
    for( y_iter = 0 ; h > y_iter ; y_iter++ ) {
       /* TODO: Handle transparency! */
       memcpy(
