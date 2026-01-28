@@ -526,6 +526,14 @@ MERROR_RETVAL retrogui_set_ctl_image(
    struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags );
 
 /**
+ * \brief Blit the given image onto the control, ensuring that the size is
+ *        sufficient to hold it.
+ */
+MERROR_RETVAL retrogui_set_ctl_image_blit(
+   struct RETROGUI* gui, retrogui_idc_t idc, retroflat_blit_t* blit,
+   uint8_t flags );
+
+/**
  * \brief Set the current progress level displayed by a FILLBAR-type
  *        RETROGUI_CTL.
  * \param idc Unique identifier index of the control to adjust.
@@ -1781,29 +1789,34 @@ static void retrogui_redraw_IMAGE(
 #  else
 
 #     if defined( RETROGXC_PRESENT )
-   if( 0 > ctl->IMAGE.image_cache_id ) {
-      return;
-   }
+   if( 0 <= ctl->IMAGE.image_cache_id ) {
+      /* Draw the image from the cache if there is one. */
+
 #if RETROGUI_TRACE_LVL > 0
-   debug_printf( RETROGUI_TRACE_LVL,
-      "redrawing image ctl " RETROGUI_IDC_FMT ", cache ID " SSIZE_T_FMT "...",
-      ctl->base.idc, ctl->IMAGE.image_cache_id );
+      debug_printf( RETROGUI_TRACE_LVL,
+         "redrawing image ctl " RETROGUI_IDC_FMT
+         ", cache ID " SSIZE_T_FMT "...",
+         ctl->base.idc, ctl->IMAGE.image_cache_id );
 #endif /* RETROGUI_TRACE_LVL */
-   retrogxc_blit_bitmap(
-      gui->draw_bmp,
-      ctl->IMAGE.image_cache_id,
-#     else
-   if( !retroflat_2d_bitmap_ok( gui->draw_bmp ) ) {
-      return;
-   }
-   retroflat_2d_blit_bitmap(
-      gui->draw_bmp,
-      &(ctl->IMAGE.image),
+      retrogxc_blit_bitmap(
+         gui->draw_bmp,
+         ctl->IMAGE.image_cache_id,
+         ctl->IMAGE.src_x, ctl->IMAGE.src_y,
+         gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
+         ctl->IMAGE.instance );
+   } else
 #     endif /* RETROGXC_PRESENT */
-      ctl->IMAGE.src_x, ctl->IMAGE.src_y,
-      gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
-      ctl->IMAGE.instance );
-#  endif
+   if( retroflat_2d_bitmap_ok( gui->draw_bmp ) ) {
+      /* If no cached image (or cache), try to draw the stored image. */
+      retroflat_2d_blit_bitmap(
+         gui->draw_bmp,
+         &(ctl->IMAGE.image),
+         ctl->IMAGE.src_x, ctl->IMAGE.src_y,
+         gui->x + ctl->base.x, gui->y + ctl->base.y, ctl->base.w, ctl->base.h,
+         ctl->IMAGE.instance );
+   }
+
+#  endif /* RETROGUI_NATIVE_WIN */
 
    return;
 }
@@ -1835,11 +1848,19 @@ static MERROR_RETVAL retrogui_sz_IMAGE(
    retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_GUI;
+
+   *p_w = 0;
+   *p_h = 0;
+
 #     ifdef RETROGXC_PRESENT
    retval = retrogxc_bitmap_wh( ctl->IMAGE.image_cache_id, p_w, p_h );
    maug_cleanup_if_not_ok();
-#     else
-   if( !retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) ) {
+#     endif /* RETROGXC_PRESENT */
+
+   if(
+      0 == *p_w && 0 == *p_h &&
+      !retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) )
+   ) {
       error_printf( "image not assigned!" );
       retval = MERROR_GUI;
       goto cleanup;
@@ -1847,7 +1868,6 @@ static MERROR_RETVAL retrogui_sz_IMAGE(
 
    *p_w = retroflat_2d_bitmap_w( &(ctl->IMAGE.image) );
    *p_h = retroflat_2d_bitmap_h( &(ctl->IMAGE.image) );
-#     endif /* RETROGXC_PRESENT */
 
 cleanup:
 
@@ -1865,9 +1885,9 @@ static MERROR_RETVAL retrogui_pos_IMAGE(
 }
 
 static void retrogui_destroy_IMAGE( union RETROGUI_CTL* ctl ) {
-#  ifndef RETROGXC_PRESENT
-   retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
-#  endif /* RETROGXC_PRESENT */
+   if( retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) ) {
+      retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
+   }
 }
 
 static MERROR_RETVAL retrogui_init_IMAGE( union RETROGUI_CTL* ctl ) {
@@ -2866,18 +2886,102 @@ MERROR_RETVAL retrogui_set_ctl_image(
 
    /* Perform the actual update. */
    if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
+      /* Cleanup existing image. */
+#  ifdef RETROGXC_PRESENT
+      ctl->IMAGE.image_cache_id = -1;
+#  endif /* RETROGXC_PRESENT */
+      if( retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) ) {
+         retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
+      }
+
+      /* Load the replacement image. */
       if( NULL != path ) {
 #  if defined( RETROGXC_PRESENT )
          ctl->IMAGE.image_cache_id = retrogxc_load_bitmap( path, flags );
-#  else
+#  else /* Only use a normal image if cache not present! */
          retroflat_2d_load_bitmap( path, &(ctl->IMAGE.image), flags );
 #  endif /* RETROGXC_PRESENT */
-      } else {
-#  ifdef RETROGXC_PRESENT
+      }
+   } else {
+      error_printf( "invalid control type! no image!" );
+      goto cleanup;
+   }
+
+   /* New text! Redraw! */
+   gui->flags |= RETROGUI_FLAGS_DIRTY;
+
+cleanup:
+
+   if( autolock ) {
+      mdata_vector_unlock( &(gui->ctls) );
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrogui_set_ctl_image_blit(
+   struct RETROGUI* gui, retrogui_idc_t idc, retroflat_blit_t* blit,
+   uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   union RETROGUI_CTL* ctl = NULL;
+   int autolock = 0;
+   retroflat_pxxy_t ctl_img_w, ctl_img_h, blit_w, blit_h;
+
+   if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
+      mdata_vector_lock( &(gui->ctls) );
+      autolock = 1;
+   }
+
+#if RETROGUI_TRACE_LVL > 0
+   debug_printf( RETROGUI_TRACE_LVL,
+      "setting control " RETROGUI_IDC_FMT " image to: %p", idc, blit );
+#endif /* RETROGUI_TRACE_LVL */
+
+   /* Figure out the control to update. */
+   ctl = _retrogui_get_ctl_by_idc( gui, idc );
+   if( NULL == ctl ) {
+      /* Elaborate on error from _retrogui_get_ctl_by_idc(). */
+      error_printf( "could not set control image!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Perform the actual update. */
+   if( RETROGUI_CTL_TYPE_IMAGE == ctl->base.type ) {
+      if( NULL != blit ) {
+         /* Cleanup any existing image. */
+#  if defined( RETROGXC_PRESENT )
          ctl->IMAGE.image_cache_id = -1;
-#  else
-         retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
 #  endif /* RETROGXC_PRESENT */
+
+         ctl_img_w = retroflat_2d_bitmap_w( &(ctl->IMAGE.image) );
+         ctl_img_h = retroflat_2d_bitmap_h( &(ctl->IMAGE.image) );
+         blit_w = retroflat_2d_bitmap_w( blit );
+         blit_h = retroflat_2d_bitmap_h( blit );
+
+         /* Only cleanup a normal image if it's smaller than the one to blit. */
+         if(
+            retroflat_2d_bitmap_ok( &(ctl->IMAGE.image) ) &&
+            (blit_w < ctl_img_w || blit_h < ctl_img_h)
+         ) {
+            retroflat_2d_destroy_bitmap( &(ctl->IMAGE.image) );
+            retval = retroflat_2d_create_bitmap(
+               blit_w, blit_h, &(ctl->IMAGE.image), 0 );
+            maug_cleanup_if_not_ok();
+         }
+
+         /* Blit the new image over the old one. */
+         /* TODO: Do we need to lock for this? */
+         retroflat_2d_blit_bitmap(
+            &(ctl->IMAGE.image),
+            blit,
+            0, 0, 0, 0, blit_w, blit_h,
+            ctl->IMAGE.instance );
+      } else {
+
       }
    } else {
       error_printf( "invalid control type! no image!" );
