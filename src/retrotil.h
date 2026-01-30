@@ -182,6 +182,7 @@ struct RETROTILE_TILE_DEF {
    retrotile_coord_t warp_y;
    /*! \brief Dummy field; do not serialize fields after this! */
    int8_t no_serial;
+   RETROFLAT_COLOR color;
 #ifdef RETROFLAT_3D
    /* TODO: Work this into retrogxc? */
    struct RETRO3DP_MODEL model;
@@ -189,6 +190,7 @@ struct RETROTILE_TILE_DEF {
 #ifdef RETROGXC_PRESENT
    ssize_t image_cache_id;
 #else
+   /* TODO: Don't exclude this if the cache is disabled; see retrogui image ctl. */
    struct RETROFLAT_BITMAP image;
 #endif /* RETROGXC_PRESENT */
 };
@@ -846,6 +848,22 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             debug_printf(
                RETROTILE_TRACE_LVL, "set tile " SIZE_T_FMT " warp_y: %d",
                parser->tileset_id_cur, tile_def->warp_y );
+#endif /* RETROTILE_TRACE_LVL */
+
+         } else if( 0 == strncmp( "color", parser->last_prop_name, 7 ) ) {
+
+#define RETROFLAT_COLOR_TABLE_TILPRP( idx, name_l, name_u, r, g, b, cgc, cgd ) \
+            } else if( 0 == strncmp( token, #name_l, token_sz ) ) { \
+               tile_def->color = RETROFLAT_COLOR_ ## name_u;
+
+            if( 0 ) {
+            RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_TILPRP );
+            }
+
+#if RETROTILE_TRACE_LVL > 0
+            debug_printf(
+               RETROTILE_TRACE_LVL, "set tile " SIZE_T_FMT " color: %d",
+               parser->tileset_id_cur, tile_def->color );
 #endif /* RETROTILE_TRACE_LVL */
 
          }
