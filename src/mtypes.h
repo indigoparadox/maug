@@ -140,6 +140,8 @@ typedef UInt32 maug_ms_t;
 
 #elif defined( MAUG_OS_PSX )
 
+#include <sys/types.h>
+
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef short int16_t;

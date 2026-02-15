@@ -33,7 +33,7 @@ DEFINES_GCC_PSX_PSN += -DRETROFLAT_OS_PSX -DRETROFLAT_API_PSN -DRETROFLAT_NO_CLI
 INCLUDES_GCC_PSX_PSN += \
 	-I$(MAUG_ROOT)/api/retro2d/psn00b -I$(MAUG_ROOT)/api/input/psn00b \
 	-I$(MAUG_ROOT)/api/file/psn00b -I$(MAUG_ROOT)/api/log/psn00b \
-	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/font/psn00b -I$(MAUG_ROOT)/api/mem/unix \
 	-I$(MAUG_ROOT)/api/serial/asn1
 
 CFLAGS_GCC_PSX_PSN := $$(DEFINES_GCC_PSX_PSN) $$(INCLUDES_GCC_PSX_PSN)
@@ -64,7 +64,44 @@ obj/psx/%.o: %.c | $$(MAUG_DEPS_PSX)
 $(1)psx.exe: obj/psx/$(1).elf
 	elf2x -q $$< $$@
 
-CLEAN_TARGETS += $(1)psx.iso $(1)psx.exe
+obj/psx/$(1)psx.map: obj/psx/$(1).elf
+	/usr/mipsel-none-elf/bin/mipsel-none-elf-nm -f posix -l -n $$< >$$@
+
+obj/psx/system.cnf:
+	# Generate the system.cnf.
+	echo BOOT=cdrom:\$(1)psx.exe\;1 >> $$@
+	echo TCB=4 >> $$@
+	echo EVENT=10 >> $$@
+	echo STACK=801FFFF0 >> $$@
+
+obj/psx/iso.xml: obj/psx/system.cnf
+	# Generate the iso.xml.
+	echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>" > $$@
+	echo "<iso_project>" >> $$@
+	echo "	<track type=\"data\">" >> $$@
+	echo "		<identifiers" >> $$@
+	echo "			system			=\"PLAYSTATION\"" >> $$@
+	echo "			volume			=\"`echo $(1) | tr [:lower:] [:upper:]`\"" >> $$@
+	echo "			volume_set		=\"`echo $(1) | tr [:lower:] [:upper:]`\"" >> $$@
+	echo "			publisher		=\"MAUG\"" >> $$@
+	echo "			data_preparer	=\"PSN00BSDK $$$${PSN00BSDK_VERSION}\"" >> $$@
+	echo "			application		=\"PLAYSTATION\"" >> $$@
+	echo "			copyright		=\"README.TXT;1\"" >> $$@
+	echo "		/>" >> $$@
+	echo "		<directory_tree>" >> $$@
+	echo "			<file name=\"SYSTEM.CNF\"		type=\"data\" source=\"system.cnf\" />" >> $$@
+	echo "			<file name=\"`echo $(1) | tr [:lower:] [:upper:]`PSX.EXE\"	type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
+	for f in $(2); do echo "			<file name=\"$$$$f\"	type=\"data\" source=\"../../$$$$f\" />" >> $$@; done
+	echo "" >> $$@
+	echo "			<dummy sectors=\"1024\"/>" >> $$@
+	echo "		</directory_tree>" >> $$@
+	echo "	</track>" >> $$@
+	echo "</iso_project>" >> $$@
+
+$(1)psx.cue $(1)psx.bin: $(1)psx.exe obj/psx/$(1)psx.map obj/psx/iso.xml
+	mkpsxiso -y -o $(1)psx.bin -c $(1)psx.cue obj/psx/iso.xml
+
+CLEAN_TARGETS += $(1)psx.bin $(1)psx.cue $(1)psx.exe
 
 endef
 

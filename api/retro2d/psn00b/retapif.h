@@ -7,8 +7,36 @@ static MERROR_RETVAL retroflat_init_platform(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO */
-#  pragma message( "warning: init_platform not implemented" )
+   /* Force screen size. */
+   args->screen_w = 256;
+   args->screen_h = 192;
+
+   /*
+   g_retroflat_state->buffer.w = 256;
+   g_retroflat_state->buffer.h = 192;
+   */
+
+   /* Setup PSX graphics. */
+   ResetGraph( 0 );
+   SetDefDispEnv(
+      &(g_retroflat_state->platform.disp[0]), 0, 0,
+      args->screen_w, args->screen_h );
+   SetDefDispEnv(
+      &(g_retroflat_state->platform.disp[1]), 0,
+      args->screen_h, args->screen_w, args->screen_h );
+   SetDefDrawEnv(
+      &(g_retroflat_state->platform.draw[0]), 0,
+      args->screen_h, args->screen_w, args->screen_h );
+   SetDefDrawEnv(
+      &(g_retroflat_state->platform.draw[1]), 0,
+      0, args->screen_w, args->screen_h );
+   setRGB0( &(g_retroflat_state->platform.draw[0]), 0, 0, 127 );
+   setRGB0( &(g_retroflat_state->platform.draw[1]), 0, 0, 127 );
+   g_retroflat_state->platform.draw[0].isbg = 1;
+   g_retroflat_state->platform.draw[1].isbg = 1;
+   PutDispEnv( &(g_retroflat_state->platform.disp[0]) );
+   PutDrawEnv( &(g_retroflat_state->platform.draw[0]) );
+   g_retroflat_state->platform.buffer_idx = 0;
 
    return retval;
 }
@@ -99,8 +127,19 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO */
-#  pragma message( "warning: draw_release not implemented" )
+   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      DrawSync( 0 );
+      VSync( 0 );
+      g_retroflat_state->platform.buffer_idx =
+         !(g_retroflat_state->platform.buffer_idx);
+      PutDispEnv(
+         &(g_retroflat_state->platform.disp[
+            g_retroflat_state->platform.buffer_idx]) );
+      PutDrawEnv(
+         &(g_retroflat_state->platform.draw[
+            g_retroflat_state->platform.buffer_idx]) );
+      SetDispMask( 1 );
+   }
 
    return retval;
 }

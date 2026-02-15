@@ -7,6 +7,10 @@
  * \brief RetroFlat platform definition header.
  */
 
+#include <psxetc.h>
+#include <psxgte.h>
+#include <psxgpu.h>
+
 #define RETROPLAT_PRESENT 1
 
 #define RETROFLAT_SOFT_VIEWPORT
@@ -112,6 +116,9 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
+   DISPENV disp[2];
+   DRAWENV draw[2];
+   int buffer_idx;
 };
 
 #endif /* !RETPLTD_H */
