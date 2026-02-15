@@ -334,7 +334,9 @@ void retrofont_string_indent(
             str[i] >= font->first_glyph + font->glyphs_count
          )
       ) {
+#if RETROFONT_TRACE_LVL > 0
          error_printf( "invalid character: 0x%02x", str[i] );
+#endif /* RETROFONT_TRACE_LVL */
          continue;
       }
 
