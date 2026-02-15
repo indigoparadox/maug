@@ -217,7 +217,7 @@ size_t retrofont_sz_from_filename( const char* font_name ) {
       glyph_h_buf[0] = *p_c;
    }
 
-   glyph_h = atoi( glyph_h_buf );
+   glyph_h = maug_atou32( glyph_h_buf, 9, 10 );
 
    debug_printf(
       RETROFONT_TRACE_LVL, "detected glyph height: " SIZE_T_FMT, glyph_h );

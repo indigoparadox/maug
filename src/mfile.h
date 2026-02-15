@@ -12,7 +12,8 @@
 
 #if !defined( MFILE_MMAP ) && \
    !defined( RETROFLAT_API_WINCE ) && \
-   !defined( RETROFLAT_API_PALM )
+   !defined( RETROFLAT_API_PALM ) && \
+   !defined( RETROFLAT_API_PSN )
 #  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 

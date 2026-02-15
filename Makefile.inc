@@ -127,6 +127,7 @@ include maug/make/Makewii.inc
 include maug/make/Makenx.inc
 include maug/make/Makeos2.inc
 include maug/make/Makemac.inc
+include maug/make/Makepsx.inc
 include maug/make/Makeplug.inc
 
 # ---

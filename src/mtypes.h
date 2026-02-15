@@ -138,6 +138,21 @@ typedef UInt32 maug_ms_t;
 
 #define MS_FMT U32_FMT
 
+#elif defined( MAUG_OS_PSX )
+
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef long int32_t;
+typedef unsigned long uint32_t;
+typedef unsigned long off_t;
+typedef int32_t ssize_t;
+
+typedef uint32_t maug_ms_t;
+
+#define MS_FMT U32_FMT
+
 #elif defined( MAUG_OS_WIN )
 
 typedef signed char int8_t;

@@ -13,7 +13,7 @@
  */
 
 /* Needed for PI constant. */
-#include <math.h>
+/* #include <math.h> */
 
 #ifndef MFIX_PRECISION
 #  define MFIX_PRECISION (1000.0f)
