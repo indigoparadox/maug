@@ -2045,7 +2045,11 @@ MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4] =
 MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4] =
    { -1, 0, 1,  0 };
 
+#     ifdef RETROFLAT_STATE_ON_STACK
+struct RETROFLAT_STATE SEG_MGLOBAL g_retroflat_state_stack;
+#     else
 MAUG_MHANDLE SEG_MGLOBAL g_retroflat_state_h = (MAUG_MHANDLE)NULL;
+#     endif /* RETROFLAT_STATE_ON_STACK */
 struct RETROFLAT_STATE* SEG_MGLOBAL g_retroflat_state = NULL;
 
 #  define RETROFLAT_COLOR_TABLE_CONSTS( idx, name_l, name_u, r, g, b, cgac, cgad ) \
@@ -2548,6 +2552,9 @@ MERROR_RETVAL retroflat_init(
 
    debug_printf( 1, "initializing global state..." );
 
+#     ifdef RETROFLAT_STATE_ON_STACK
+   g_retroflat_state = &g_retroflat_state_stack;
+#     else
    g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
    if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
@@ -2563,6 +2570,8 @@ MERROR_RETVAL retroflat_init(
       retval = MERROR_ALLOC;
       goto cleanup;
    }
+#     endif /* RETROFLAT_STATE_ON_STACK */
+
    maug_mzero( g_retroflat_state, sizeof( struct RETROFLAT_STATE ) );
 
    retroflat_heartbeat_set( 1000, 2 );
@@ -2683,8 +2692,8 @@ MERROR_RETVAL retroflat_init(
    debug_printf( 1, "retroflat: setting config..." );
 
    /* Set the assets path. */
-   maug_mzero( g_retroflat_state->assets_path, MAUG_PATH_SZ_MAX + 1 );
    if( NULL != args->assets_path ) {
+      maug_mzero( g_retroflat_state->assets_path, MAUG_PATH_SZ_MAX + 1 );
       maug_strncpy( g_retroflat_state->assets_path,
          args->assets_path, MAUG_PATH_SZ_MAX );
    }
@@ -2874,8 +2883,10 @@ void retroflat_shutdown( int retval ) {
 
    retroflat_shutdown_platform( retval );
 
+#ifndef RETROFLAT_STATE_ON_STACK
    maug_munlock( g_retroflat_state_h, g_retroflat_state );
    maug_mfree( g_retroflat_state_h );
+#endif /* !RETROFLAT_STATE_ON_STACK */
 
 }
 

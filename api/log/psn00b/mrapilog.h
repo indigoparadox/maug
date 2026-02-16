@@ -38,7 +38,9 @@ void logging_shutdown();
 
 MERROR_RETVAL logging_init() {
    MERROR_RETVAL retval = MERROR_OK;
+   /*
    AddSIO( 115200 );
+   */
    return retval;
 }
 

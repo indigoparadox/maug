@@ -18,26 +18,32 @@ static MERROR_RETVAL retroflat_init_platform(
 
    /* Setup PSX graphics. */
    ResetGraph( 0 );
+   SetVideoMode( 0 );
    SetDefDispEnv(
       &(g_retroflat_state->platform.disp[0]), 0, 0,
       args->screen_w, args->screen_h );
    SetDefDispEnv(
       &(g_retroflat_state->platform.disp[1]), 0, args->screen_h,
       args->screen_w, args->screen_h );
-   SetDefDrawEnv(
-      &(g_retroflat_state->platform.draw[0]), 0, args->screen_h,
-      args->screen_w, args->screen_h );
-   SetDefDrawEnv(
-      &(g_retroflat_state->platform.draw[1]), 0, 0,
-      args->screen_w, args->screen_h );
-   SetDispMask( 1 );
-   setRGB0( &(g_retroflat_state->platform.draw[0]), 0, 0, 127 );
-   setRGB0( &(g_retroflat_state->platform.draw[1]), 0, 0, 127 );
-   g_retroflat_state->platform.draw[0].isbg = 1;
-   g_retroflat_state->platform.draw[1].isbg = 1;
+
+   retroflat_create_bitmap(
+      args->screen_w, args->screen_h, &(g_retroflat_state->buffer),
+      RETROFLAT_FLAGS_SCREEN_BUFFER );
+
+   setRGB0( &(g_retroflat_state->buffer.draw[0]), 0, 0, 127 );
+   setRGB0( &(g_retroflat_state->buffer.draw[1]), 0, 0, 127 );
+   g_retroflat_state->buffer.draw[0].isbg = 1;
+   g_retroflat_state->buffer.draw[1].isbg = 1;
    PutDispEnv( &(g_retroflat_state->platform.disp[0]) );
-   PutDrawEnv( &(g_retroflat_state->platform.draw[0]) );
-   g_retroflat_state->platform.buffer_idx = 0;
+   PutDrawEnv( &(g_retroflat_state->buffer.draw[0]) );
+   SetDispMask( 1 );
+
+   /* Setup color constants. */
+#  define RETROFLAT_COLOR_TABLE_PSX_RGBS_INIT( idx, name_l, name_u, ir, ig, ib, cgac, cgad ) \
+      g_retroflat_state->palette[idx].r = ir; \
+      g_retroflat_state->palette[idx].g = ig; \
+      g_retroflat_state->palette[idx].b = ib;
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_PSX_RGBS_INIT )
 
    /* Setup the counter to provide a monotonic clock. */
    ResetRCnt( RCntCNT2 );
@@ -121,8 +127,32 @@ uint32_t retroflat_get_rand() {
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
 
-   /* TODO */
-#  pragma message( "warning: draw_lock not implemented" )
+   if( NULL == bmp ) {
+      bmp = retroflat_screen_buffer();
+   }
+
+   if( retroflat_screen_buffer() == bmp ) {
+      PutDispEnv( &(g_retroflat_state->platform.disp[bmp->draw_idx]) );
+   }
+
+   /* Assign the active drawing env to the given bitmap. */
+   /* TODO: Create stack! */
+   /* TODO: Draw current top of stack before locking this bitmap. */
+   /* 
+   DrawOTag( g_retroflat_state->platform.ot );
+   DrawSync( 0 );
+   */
+   PutDrawEnv( &(bmp->draw[bmp->draw_idx]) );
+
+   /* Clear and setup the draw operations ordering table.
+    * Use the current drawing screen's primative/ordering buffers, even if this
+    * is an offscreen bitmap.
+    */
+   ClearOTag(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
+      RETROFLAT_PSX_OT_LEN );
+   g_retroflat_state->platform.next_prim =
+      g_retroflat_state->platform.prim_buff[g_retroflat_state->buffer.draw_idx];
 
    return retval;
 }
@@ -132,20 +162,21 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
-      debug_printf( 1, "releasing %d", retroflat_get_ms() );
-      debug_printf( 1, "releasing 2 %d", retroflat_get_ms() );
-      DrawSync( 0 );
-      debug_printf( 1, "released %d", retroflat_get_ms() );
-      VSync( 0 );
-      PutDispEnv(
-         &(g_retroflat_state->platform.disp[
-            g_retroflat_state->platform.buffer_idx]) );
-      PutDrawEnv(
-         &(g_retroflat_state->platform.draw[
-            g_retroflat_state->platform.buffer_idx]) );
-      g_retroflat_state->platform.buffer_idx =
-         !(g_retroflat_state->platform.buffer_idx);
+   if( NULL == bmp ) {
+      bmp = retroflat_screen_buffer();
+   }
+
+   /* Draw any remaining operations to the released bitmap. */
+   DrawOTag(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx] );
+   /* DrawSync( 0 ); */
+
+   if( retroflat_screen_buffer() == bmp ) {
+      /* Wait for GPU to finish drawing. */
+      /* VSync( 0 ); */
+
+      /* Flip the screen buffer index for the next screen-draw. */
+      bmp->draw_idx ^= 1;
    }
 
    return retval;
@@ -186,8 +217,9 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
-   /* TODO */
-#  pragma message( "warning: create_bitmap not implemented" )
+   /* Setup drawenv defaults. */
+   SetDefDrawEnv( &(bmp_out->draw[0]), 0, h, w, h );
+   SetDefDrawEnv( &(bmp_out->draw[1]), 0, 0, w, h );
 
    return retval;
 }
@@ -260,9 +292,13 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
-#  pragma message( "warning: rect not implemented" )
-
+   /* TODO
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   } else { */
+   retroflat_line( target, color_idx, x, y, x + w, y, 0 );
+   retroflat_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+   retroflat_line( target, color_idx, x, y + h, x + w, y + h, 0 );
+   retroflat_line( target, color_idx, x, y, x, y + h, 0 );
 }
 
 /* === */
@@ -271,6 +307,7 @@ void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
 ) {
+   LINE_F2* line = (LINE_F2*)(g_retroflat_state->platform.next_prim);
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -280,8 +317,21 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
-#  pragma message( "warning: line not implemented" )
+   setLineF2( line );
+   setRGB0( line,
+      g_retroflat_state->palette[color_idx].r,
+      g_retroflat_state->palette[color_idx].g,
+      g_retroflat_state->palette[color_idx].b );
+   setXY2( line, x1, y1, x2, y2 );
+
+   g_retroflat_state->platform.next_prim += sizeof( LINE_F2 );
+
+   /* Add the draw packet for this line from the primitive buffer to the
+    * ordering table.
+    */
+   AddPrim(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
+      line );
 
 }
 
@@ -291,7 +341,6 @@ void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
-
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -300,9 +349,7 @@ void retroflat_ellipse(
       target = retroflat_screen_buffer();
    }
 
-   /* TODO */
-#  pragma message( "warning: ellipse not implemented" )
-
+   retrosoft_ellipse( target, color_idx, x, y, w, h, flags );
 }
 
 /* === */

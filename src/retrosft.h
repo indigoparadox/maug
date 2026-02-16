@@ -277,7 +277,11 @@ void retrosoft_ellipse(
           * those! Performance!
           */
 
+#ifdef RETROSOFT_HARD_LINES
+         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+#else
          retrosoft_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+#endif /* RETROSOFT_HARD_LINES */
       }
 
       /* Keep shrinking and filling if required. */

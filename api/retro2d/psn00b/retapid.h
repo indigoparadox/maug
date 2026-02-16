@@ -18,6 +18,16 @@
 
 #define RETROFLAT_SOFT_VIEWPORT
 
+#define RETROFLAT_PSX_OT_LEN 1
+
+#define RETROFLAT_PSX_PRIM_BUF_SZ 8192
+
+#define RETROFLAT_PSX_CIRCLE_SEGMENTS 24
+
+#define RETROSOFT_PRESENT
+
+#define RETROSOFT_HARD_LINES
+
 /**
  * \addtogroup maug_retroflt_bitmap
  * \{
@@ -34,6 +44,10 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   DRAWENV draw[2];
+   int draw_idx;
+   retroflat_pxxy_t w;
+   retroflat_pxxy_t h;
 };
 
 /**
@@ -105,7 +119,11 @@ struct RETROFLAT_BITMAP {
  */
 
 /*! \brief Example, should be replaced with platform-specific type. */
-typedef int RETROFLAT_COLOR_DEF;
+typedef struct {
+   int r;
+   int g;
+   int b;
+} RETROFLAT_COLOR_DEF;
 
 /*! \} */ /* maug_retroflt_color */
 
@@ -120,8 +138,9 @@ struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    DISPENV disp[2];
-   DRAWENV draw[2];
-   int buffer_idx;
+   uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
+   uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
+   uint8_t* next_prim;
 };
 
 #endif /* !RETPLTD_H */
