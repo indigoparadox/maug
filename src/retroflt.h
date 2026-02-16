@@ -1075,17 +1075,33 @@ struct RETROFLAT_ARGS {
    char* assets_path;
    /*! \brief Relative path of local config file (if not using registry). */
    char* config_path;
-#  if !defined( RETROFLAT_NO_CLI_SZ )
+   /**
+    * \brief Desired screen or window width in pixels.
+    * 
+    * This is also used by retroflat_init_platform() on consoles to force a
+    * native resolution.
+    */
    int screen_w;
-   /*! \brief Desired screen or window height in pixels. */
+   /**
+    * \brief Desired screen or window height in pixels.
+    * 
+    * This is also used by retroflat_init_platform() on consoles to force a
+    * native resolution.
+    */
    int screen_h;
    /*! \brief Desired window X position in pixels. */
    int screen_x;
    /*! \brief Desired window Y position in pixels. */
    int screen_y;
    int screen_scale;
+   /**
+    * \brief Desired colors (2, 4, or 16, for now).
+    * \TODO Implement command-line argument for this. Currently it's just used
+    *       so platforms without a CLI (i.e. consoles) can force their native
+    *       colors.
+    */
+   int screen_colors;
    int joystick_id;
-#  endif /* RETROFLAT_NO_CLI_SZ */
    struct RETROFLAT_PLATFORM_ARGS platform;
 #  ifndef RETROFLAT_NO_SOUND
    struct RETROFLAT_SOUND_ARGS sound;
@@ -1595,7 +1611,7 @@ struct RETROFLAT_STATE {
    char                    assets_path[MAUG_PATH_SZ_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
    struct RETROFLAT_BITMAP buffer;
-   int scale;
+   int screen_scale;
 
 #  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION ) || \
 defined( RETROVDP_C )
@@ -2634,7 +2650,7 @@ MERROR_RETVAL retroflat_init(
    retval = maug_parse_args( argc, argv );
    maug_cleanup_if_not_ok();
 
-#  else
+#  endif /* !RETROFLAT_NO_CLI */
 
    if( 0 == args->screen_w ) {
       args->screen_w = RETROFLAT_DEFAULT_SCREEN_W;
@@ -2646,20 +2662,17 @@ MERROR_RETVAL retroflat_init(
       debug_printf( 1, "setting arg screen_h to default: %d",
          args->screen_h );
    }
-   args->joystick_id = -1;
-
-#  endif /* !RETROFLAT_NO_CLI */
-
-#  if !defined( RETROFLAT_NO_CLI_SZ )
-   /* Set default, so that this is never zero, to avoid division by zero. */
-   if( 0 < args->screen_scale ) {
-      debug_printf( 1, "setting screen scale to: %d", args->screen_scale );
-      g_retroflat_state->scale = args->screen_scale;
-   } else {
-      debug_printf( 1, "setting screen scale to default: 1" );
-      g_retroflat_state->scale = 1;
+   if( 0 == args->screen_scale ) {
+      args->screen_scale = 1;
+      debug_printf( 1, "setting arg screen_scale to default: %d",
+         args->screen_scale );
    }
-#  endif /* !RETROFLAT_NO_CLI_SZ */
+   if( 0 == args->screen_colors ) {
+      args->screen_colors = 16;
+      debug_printf( 1, "setting arg screen_colors to default: %d",
+         args->screen_colors );
+   }
+   args->joystick_id = -1;
 
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
@@ -2687,24 +2700,45 @@ MERROR_RETVAL retroflat_init(
 
 #  if !defined( RETROFLAT_NO_CLI_SZ )
    /* Setup intended screen size. */
+   g_retroflat_state->screen_scale = args->screen_scale;
    g_retroflat_state->screen_v_w = args->screen_w;
    g_retroflat_state->screen_v_h = args->screen_h;
    g_retroflat_state->screen_w = args->screen_w *
-      g_retroflat_state->scale;
+      g_retroflat_state->screen_scale;
    g_retroflat_state->screen_h = args->screen_h *
-      g_retroflat_state->scale;
-#  endif /* RETROFLAT_NO_CLI_SZ */
-
-   /* == Platform-Specific Init == */
+      g_retroflat_state->screen_scale;
+   g_retroflat_state->screen_colors = args->screen_colors;
 
    debug_printf( 3, "attempting to initialize platform with: " 
       SIZE_T_FMT "x" SIZE_T_FMT " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
-      ")",
+      ") and " SIZE_T_FMT " colors",
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
-      g_retroflat_state->screen_w, g_retroflat_state->screen_h );
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      g_retroflat_state->screen_colors );
+#  endif /* !RETROFLAT_NO_CLI_SZ */
+
+   /* == Platform-Specific Init == */
 
    retval = retroflat_init_platform( argc, argv, args );
    maug_cleanup_if_not_ok();
+
+#  if defined( RETROFLAT_NO_CLI_SZ )
+   g_retroflat_state->screen_scale = args->screen_scale;
+   g_retroflat_state->screen_v_w = args->screen_w;
+   g_retroflat_state->screen_v_h = args->screen_h;
+   g_retroflat_state->screen_w = args->screen_w *
+      g_retroflat_state->screen_scale;
+   g_retroflat_state->screen_h = args->screen_h *
+      g_retroflat_state->screen_scale;
+   g_retroflat_state->screen_colors = args->screen_colors;
+
+   debug_printf( 3, "initialized platform with: " 
+      SIZE_T_FMT "x" SIZE_T_FMT " pixels (scaled to " SIZE_T_FMT "x" SIZE_T_FMT 
+      ") and " SIZE_T_FMT " colors",
+      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+      g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      g_retroflat_state->screen_colors );
+#  endif /* RETROFLAT_NO_CLI_SZ */
 
    retval = retroflat_init_input( args );
    maug_cleanup_if_not_ok();

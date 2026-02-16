@@ -70,22 +70,16 @@ static MERROR_RETVAL retroflat_init_platform(
    srand( ticks_to_microsecs( gettime() ) );
 
    /* Make sure screen size agrees in all state fields. */
-   g_retroflat_state->screen_v_w =
+   args->screen_w =
       g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
       g_retroflat_state->platform.rmode->fbWidth :
       g_retroflat_state->platform.rmode->fbWidth / 2;
-   g_retroflat_state->screen_v_h =
+   args->screen_h =
       g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
       g_retroflat_state->platform.rmode->xfbHeight :
       g_retroflat_state->platform.rmode->xfbHeight / 2;
-   g_retroflat_state->screen_w = g_retroflat_state->screen_v_w;
-   g_retroflat_state->screen_h = g_retroflat_state->screen_v_h;
-   g_retroflat_state->buffer.w = g_retroflat_state->screen_v_w;
-   g_retroflat_state->buffer.h = g_retroflat_state->screen_v_h;
-
-   /* Setup screen colors. */
-   g_retroflat_state->scale = 1;
-   g_retroflat_state->screen_colors = 16;
+   g_retroflat_state->buffer.w = args->screen_w;
+   g_retroflat_state->buffer.h = args->screen_h;
 
 cleanup:
 

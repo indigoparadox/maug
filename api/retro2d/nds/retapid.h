@@ -10,6 +10,8 @@
 
 #define RETROFLAT_NDS_FLAG_CHANGE_BG   0x02
 
+#define RETROFLAT_NO_CLI_SZ
+
 /* == Nintendo DS == */
 
 #  include <nds.h>

@@ -10,9 +10,6 @@ static MERROR_RETVAL retroflat_init_platform(
    time_t tm;
    int screen_w, screen_h;
 
-   /* TODO: Add some flexibility for simulating lower-color platforms. */
-   g_retroflat_state->screen_colors = 16;
-
    g_retroflat_state->platform.display = XOpenDisplay( NULL );
    if( NULL == g_retroflat_state->platform.display ) {
       error_printf( "unable to open display" );

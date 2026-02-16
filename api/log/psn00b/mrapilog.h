@@ -53,12 +53,14 @@ void _internal_debug_printf(
    int lvl, const char* src, size_t line, const char* fmt, ...
 ) {
    va_list vargs;
+   char message[255] = { 0 };
 
    va_start( vargs, fmt );
 
    if( 0 > lvl || lvl >= DEBUG_THRESHOLD ) {
       printf( "(%d) %s: " SIZE_T_FMT ": ", lvl, src, line );
-      /* vprintf( fmt, vargs ); */
+      maug_vsnprintf( message, 254, fmt, vargs );
+      printf( "%s", message );
       printf( NEWLINE_STR );
    }
 

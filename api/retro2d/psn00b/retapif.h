@@ -8,12 +8,12 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Force screen size. */
-   args->screen_w = 256;
-   args->screen_h = 192;
+   args->screen_w = 320;
+   args->screen_h = 240;
 
    /*
-   g_retroflat_state->buffer.w = 256;
-   g_retroflat_state->buffer.h = 192;
+   g_retroflat_state->buffer.w = 320;
+   g_retroflat_state->buffer.h = 240;
    */
 
    /* Setup PSX graphics. */
@@ -22,14 +22,15 @@ static MERROR_RETVAL retroflat_init_platform(
       &(g_retroflat_state->platform.disp[0]), 0, 0,
       args->screen_w, args->screen_h );
    SetDefDispEnv(
-      &(g_retroflat_state->platform.disp[1]), 0,
-      args->screen_h, args->screen_w, args->screen_h );
+      &(g_retroflat_state->platform.disp[1]), 0, args->screen_h,
+      args->screen_w, args->screen_h );
    SetDefDrawEnv(
-      &(g_retroflat_state->platform.draw[0]), 0,
-      args->screen_h, args->screen_w, args->screen_h );
+      &(g_retroflat_state->platform.draw[0]), 0, args->screen_h,
+      args->screen_w, args->screen_h );
    SetDefDrawEnv(
-      &(g_retroflat_state->platform.draw[1]), 0,
-      0, args->screen_w, args->screen_h );
+      &(g_retroflat_state->platform.draw[1]), 0, 0,
+      args->screen_w, args->screen_h );
+   SetDispMask( 1 );
    setRGB0( &(g_retroflat_state->platform.draw[0]), 0, 0, 127 );
    setRGB0( &(g_retroflat_state->platform.draw[1]), 0, 0, 127 );
    g_retroflat_state->platform.draw[0].isbg = 1;
@@ -37,6 +38,11 @@ static MERROR_RETVAL retroflat_init_platform(
    PutDispEnv( &(g_retroflat_state->platform.disp[0]) );
    PutDrawEnv( &(g_retroflat_state->platform.draw[0]) );
    g_retroflat_state->platform.buffer_idx = 0;
+
+   /* Setup the counter to provide a monotonic clock. */
+   ResetRCnt( RCntCNT2 );
+   SetRCnt( RCntCNT2, 0xffff, 0 );
+   StartRCnt( RCntCNT2 );
 
    return retval;
 }
@@ -100,8 +106,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   /* TODO */
-#  pragma message( "warning: get_ms not implemented" )
+   return GetRCnt( RCntCNT2 );
 }
 
 /* === */
@@ -128,17 +133,19 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
+      debug_printf( 1, "releasing %d", retroflat_get_ms() );
+      debug_printf( 1, "releasing 2 %d", retroflat_get_ms() );
       DrawSync( 0 );
+      debug_printf( 1, "released %d", retroflat_get_ms() );
       VSync( 0 );
-      g_retroflat_state->platform.buffer_idx =
-         !(g_retroflat_state->platform.buffer_idx);
       PutDispEnv(
          &(g_retroflat_state->platform.disp[
             g_retroflat_state->platform.buffer_idx]) );
       PutDrawEnv(
          &(g_retroflat_state->platform.draw[
             g_retroflat_state->platform.buffer_idx]) );
-      SetDispMask( 1 );
+      g_retroflat_state->platform.buffer_idx =
+         !(g_retroflat_state->platform.buffer_idx);
    }
 
    return retval;

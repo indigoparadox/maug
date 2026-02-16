@@ -207,8 +207,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    /* Always get mouse state, e.g. for hover detection. */
    SDL_GetMouseState( &mouse_x, &mouse_y );
-   input->mouse_x = mouse_x / g_retroflat_state->scale;
-   input->mouse_y = mouse_y / g_retroflat_state->scale;
+   input->mouse_x = mouse_x / g_retroflat_state->screen_scale;
+   input->mouse_y = mouse_y / g_retroflat_state->screen_scale;
 
    SDL_PollEvent( &event );
 
@@ -327,8 +327,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
       /* Begin dragging. */
 
-      input->mouse_x = event.button.x / g_retroflat_state->scale;
-      input->mouse_y = event.button.y / g_retroflat_state->scale;
+      input->mouse_x = event.button.x / g_retroflat_state->screen_scale;
+      input->mouse_y = event.button.y / g_retroflat_state->screen_scale;
 
       /* Differentiate which button was clicked. */
       if( SDL_BUTTON_LEFT == event.button.button ) {

@@ -8,10 +8,13 @@
  */
 
 #include <psxetc.h>
+#include <psxapi.h>
 #include <psxgte.h>
 #include <psxgpu.h>
 
 #define RETROPLAT_PRESENT 1
+
+#define RETROFLAT_NO_CLI_SZ
 
 #define RETROFLAT_SOFT_VIEWPORT
 

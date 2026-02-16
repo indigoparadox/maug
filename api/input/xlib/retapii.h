@@ -155,8 +155,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          /* A button we don't recognize, so don't set coords. */
          goto cleanup;
       }
-      input->mouse_x = event.xbutton.x / g_retroflat_state->scale;
-      input->mouse_y = event.xbutton.y / g_retroflat_state->scale;
+      input->mouse_x = event.xbutton.x / g_retroflat_state->screen_scale;
+      input->mouse_y = event.xbutton.y / g_retroflat_state->screen_scale;
    }
 
 cleanup:
