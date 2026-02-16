@@ -2,6 +2,18 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+void _retroflat_psx_clear_buffers() {
+   /* Clear and setup the draw operations ordering table.
+    * Use the current drawing screen's primative/ordering buffers, even if this
+    * is an offscreen bitmap.
+    */
+   ClearOTag(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
+      RETROFLAT_PSX_OT_LEN );
+   g_retroflat_state->platform.next_prim =
+      g_retroflat_state->platform.prim_buff[g_retroflat_state->buffer.draw_idx];
+}
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -17,6 +29,7 @@ static MERROR_RETVAL retroflat_init_platform(
    */
 
    /* Setup PSX graphics. */
+   debug_printf( 1, "setting up GPU..." );
    ResetGraph( 0 );
    SetVideoMode( 0 );
    SetDefDispEnv(
@@ -26,16 +39,16 @@ static MERROR_RETVAL retroflat_init_platform(
       &(g_retroflat_state->platform.disp[1]), 0, args->screen_h,
       args->screen_w, args->screen_h );
 
+   debug_printf( 1, "creating screen buffer..." );
    retroflat_create_bitmap(
       args->screen_w, args->screen_h, &(g_retroflat_state->buffer),
       RETROFLAT_FLAGS_SCREEN_BUFFER );
 
-   setRGB0( &(g_retroflat_state->buffer.draw[0]), 0, 0, 127 );
-   setRGB0( &(g_retroflat_state->buffer.draw[1]), 0, 0, 127 );
-   g_retroflat_state->buffer.draw[0].isbg = 1;
-   g_retroflat_state->buffer.draw[1].isbg = 1;
    PutDispEnv( &(g_retroflat_state->platform.disp[0]) );
    PutDrawEnv( &(g_retroflat_state->buffer.draw[0]) );
+
+   _retroflat_psx_clear_buffers();
+
    SetDispMask( 1 );
 
    /* Setup color constants. */
@@ -46,6 +59,7 @@ static MERROR_RETVAL retroflat_init_platform(
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_PSX_RGBS_INIT )
 
    /* Setup the counter to provide a monotonic clock. */
+   debug_printf( 1, "setting up tick timer..." );
    ResetRCnt( RCntCNT2 );
    SetRCnt( RCntCNT2, 0xffff, 0 );
    StartRCnt( RCntCNT2 );
@@ -100,11 +114,8 @@ void retroflat_set_title( const char* format, ... ) {
 
    /* Build the title. */
    va_start( vargs, format );
-   maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
-   maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
-   /* TODO */
-#  pragma message( "warning: set_title not implemented" )
+   /* Don't do anything! */
 
    va_end( vargs );
 }
@@ -144,15 +155,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    */
    PutDrawEnv( &(bmp->draw[bmp->draw_idx]) );
 
-   /* Clear and setup the draw operations ordering table.
-    * Use the current drawing screen's primative/ordering buffers, even if this
-    * is an offscreen bitmap.
-    */
-   ClearOTag(
-      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
-      RETROFLAT_PSX_OT_LEN );
-   g_retroflat_state->platform.next_prim =
-      g_retroflat_state->platform.prim_buff[g_retroflat_state->buffer.draw_idx];
+   _retroflat_psx_clear_buffers();
 
    return retval;
 }
@@ -220,6 +223,10 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* Setup drawenv defaults. */
    SetDefDrawEnv( &(bmp_out->draw[0]), 0, h, w, h );
    SetDefDrawEnv( &(bmp_out->draw[1]), 0, 0, w, h );
+   setRGB0( &(bmp_out->draw[0]), 0, 0, 0 );
+   setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
+   bmp_out->draw[0].isbg = 1;
+   bmp_out->draw[1].isbg = 1;
 
    return retval;
 }
