@@ -30,7 +30,12 @@
 
 #define RETROSOFT_PRESENT
 
+/* Force software drawing to rely on hardware lines. */
 #define RETROSOFT_HARD_LINES
+
+#define RETROGUI_NO_TEXTBOX
+
+#  define RETROCON_DISABLE 1
 
 #define RCntMdTARGET (1 << 3)
 #define RCntMdDIV8 (1 << 6)
