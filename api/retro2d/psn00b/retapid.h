@@ -20,13 +20,20 @@
 
 #define RETROFLAT_PSX_OT_LEN 1
 
-#define RETROFLAT_PSX_PRIM_BUF_SZ 8192
+#ifndef RETROFLAT_PSX_PRIM_BUF_SZ
+#  define RETROFLAT_PSX_PRIM_BUF_SZ 8192
+#endif /* !RETROFLAT_PSX_PRIM_BUF_SZ */
 
-#define RETROFLAT_PSX_CIRCLE_SEGMENTS 24
+#ifndef RETROFLAT_PSX_CIRCLE_SEGMENTS
+#  define RETROFLAT_PSX_CIRCLE_SEGMENTS 16
+#endif /* !RETROFLAT_PSX_CIRCLE_SEGMENTS */
 
 #define RETROSOFT_PRESENT
 
 #define RETROSOFT_HARD_LINES
+
+#define RCntMdTARGET (1 << 3)
+#define RCntMdDIV8 (1 << 6)
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -141,9 +148,10 @@ struct RETROFLAT_PLATFORM {
    uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
    uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
    uint8_t* next_prim;
-   retroflat_ms_t last_ticks;
-   retroflat_ms_t ms;
-
+   size_t used_prim;
+   int32_t ms;
+   /*! \brief LCG rand state. */
+   uint32_t rand_state;
 };
 
 #endif /* !RETPLTD_H */

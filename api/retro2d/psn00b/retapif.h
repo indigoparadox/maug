@@ -3,15 +3,59 @@
 #define RETPLTF_H
 
 void _retroflat_psx_clear_buffers() {
-   /* Clear and setup the draw operations ordering table.
+   /* Clear and setup the draw operations ordering table and primitive buffer.
     * Use the current drawing screen's primative/ordering buffers, even if this
     * is an offscreen bitmap.
     */
+   /* We're not using a reverse buffer here since this is for 2D! */
    ClearOTag(
       g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
       RETROFLAT_PSX_OT_LEN );
    g_retroflat_state->platform.next_prim =
       g_retroflat_state->platform.prim_buff[g_retroflat_state->buffer.draw_idx];
+   g_retroflat_state->platform.used_prim = 0;
+}
+
+void _retroflat_psx_draw_buffers() {
+   DrawOTag(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx] );
+
+   /* Wait for drawing to complete. */
+   DrawSync( 0 );
+}
+
+void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
+
+   if(
+      RETROFLAT_PSX_PRIM_BUF_SZ <=
+      g_retroflat_state->platform.used_prim + prim_sz
+   ) {
+      /* The primitive buffer filled up! So draw it and then clear it so it's
+       * ready for more!
+       */
+      error_printf( "primitive buffer exceeded! flushing!" );
+      _retroflat_psx_draw_buffers();
+      _retroflat_psx_clear_buffers();
+      return;
+   }
+
+   g_retroflat_state->platform.next_prim += prim_sz;
+   g_retroflat_state->platform.used_prim += prim_sz;
+   /*
+   debug_printf( 1, "primitive buffer used: " SIZE_T_FMT, 
+      g_retroflat_state->platform.used_prim );
+   */
+
+   /* Add the draw packet for this line from the primitive buffer to the
+    * ordering table.
+    */
+   AddPrim(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
+      prim );
+}
+
+void _retroflat_psx_timer2_isr() {
+   g_retroflat_state->platform.ms++;
 }
 
 static MERROR_RETVAL retroflat_init_platform(
@@ -32,6 +76,18 @@ static MERROR_RETVAL retroflat_init_platform(
    debug_printf( 1, "setting up GPU..." );
    ResetGraph( 0 );
    SetVideoMode( 0 );
+
+   /* Setup the counter to provide a monotonic clock. */
+   debug_printf( 1, "setting up tick timer..." );
+   EnterCriticalSection();
+	InterruptCallback( IRQ_TIMER2, &_retroflat_psx_timer2_isr );
+   ResetRCnt( RCntCNT2 );
+   SetRCnt(
+      RCntCNT2, 0xffff, RCntMdINTR | RCntMdSC | RCntMdDIV8 | RCntMdTARGET );
+   StartRCnt( RCntCNT2 );
+	ExitCriticalSection();
+
+   /* Setup the screen display and drawing buffers. */
    SetDefDispEnv(
       &(g_retroflat_state->platform.disp[0]), 0, 0,
       args->screen_w, args->screen_h );
@@ -49,6 +105,7 @@ static MERROR_RETVAL retroflat_init_platform(
 
    _retroflat_psx_clear_buffers();
 
+   /* Show the screen. */
    SetDispMask( 1 );
 
    /* Setup color constants. */
@@ -58,11 +115,8 @@ static MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->palette[idx].b = ib;
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_PSX_RGBS_INIT )
 
-   /* Setup the counter to provide a monotonic clock. */
-   debug_printf( 1, "setting up tick timer..." );
-   ResetRCnt( RCntCNT2 );
-   SetRCnt( RCntCNT2, 0xffff, 0 );
-   StartRCnt( RCntCNT2 );
+   /* Seed the RNG based on how long it took to get this far. */
+   g_retroflat_state->platform.rand_state = retroflat_get_ms();
 
    return retval;
 }
@@ -70,8 +124,7 @@ static MERROR_RETVAL retroflat_init_platform(
 /* === */
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
-   /* TODO */
-#  pragma message( "warning: shutdown not implemented" )
+   /* Nothing to do! Shutdown is power-off! */
 }
 
 /* === */
@@ -123,14 +176,19 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   return GetRCnt( RCntCNT2 );
+   retroflat_ms_t ms = g_retroflat_state->platform.ms;
+
+   /* debug_printf( 1, "ms: %d", ms ); */
+
+   return ms;
 }
 
 /* === */
 
 uint32_t retroflat_get_rand() {
-   /* TODO */
-#  pragma message( "warning: get_rand not implemented" )
+   /* LCG based on "Numerical Recipes" chapter 7.1. */
+   g_retroflat_state->platform.rand_state * 1664525 + 1013904233;
+   return g_retroflat_state->platform.rand_state;
 }
 
 /* === */
@@ -150,8 +208,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    /* TODO: Create stack! */
    /* TODO: Draw current top of stack before locking this bitmap. */
    /* 
-   DrawOTag( g_retroflat_state->platform.ot );
-   DrawSync( 0 );
+   _retroflat_psx_draw_buffers();
    */
    PutDrawEnv( &(bmp->draw[bmp->draw_idx]) );
 
@@ -170,16 +227,14 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    /* Draw any remaining operations to the released bitmap. */
-   DrawOTag(
-      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx] );
-   /* DrawSync( 0 ); */
+   _retroflat_psx_draw_buffers();
 
    if( retroflat_screen_buffer() == bmp ) {
       /* Wait for GPU to finish drawing. */
-      /* VSync( 0 ); */
+      VSync( 0 );
 
       /* Flip the screen buffer index for the next screen-draw. */
-      bmp->draw_idx ^= 1;
+      bmp->draw_idx = !(bmp->draw_idx);
    }
 
    return retval;
@@ -331,15 +386,7 @@ void retroflat_line(
       g_retroflat_state->palette[color_idx].b );
    setXY2( line, x1, y1, x2, y2 );
 
-   g_retroflat_state->platform.next_prim += sizeof( LINE_F2 );
-
-   /* Add the draw packet for this line from the primitive buffer to the
-    * ordering table.
-    */
-   AddPrim(
-      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
-      line );
-
+   _retroflat_psx_add_prim( line, sizeof( LINE_F2 ) );
 }
 
 /* === */
@@ -356,6 +403,9 @@ void retroflat_ellipse(
       target = retroflat_screen_buffer();
    }
 
+   /* TODO
+   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   } else { */
    retrosoft_ellipse( target, color_idx, x, y, w, h, flags );
 }
 

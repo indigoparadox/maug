@@ -38,9 +38,9 @@ void logging_shutdown();
 
 MERROR_RETVAL logging_init() {
    MERROR_RETVAL retval = MERROR_OK;
-   /*
+#ifdef RETROFLAT_PSX_LOG_SERIAL
    AddSIO( 115200 );
-   */
+#endif /* RETROFLAT_PSX_LOG_SERIAL */
    return retval;
 }
 
