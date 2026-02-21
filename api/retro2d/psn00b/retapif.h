@@ -2,6 +2,8 @@
 #ifndef RETPLTF_H
 #define RETPLTF_H
 
+static volatile int32_t g_ms;
+
 void _retroflat_psx_clear_buffers() {
    /* Clear and setup the draw operations ordering table and primitive buffer.
     * Use the current drawing screen's primative/ordering buffers, even if this
@@ -55,7 +57,8 @@ void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
 }
 
 void _retroflat_psx_timer2_isr() {
-   g_retroflat_state->platform.ms++;
+   /* Increment ms timer. */
+   g_ms++;
 }
 
 static MERROR_RETVAL retroflat_init_platform(
@@ -176,7 +179,7 @@ void retroflat_set_title( const char* format, ... ) {
 /* === */
 
 retroflat_ms_t retroflat_get_ms() {
-   retroflat_ms_t ms = g_retroflat_state->platform.ms;
+   retroflat_ms_t ms = g_ms;
 
    /* debug_printf( 1, "ms: %d", ms ); */
 
@@ -187,7 +190,7 @@ retroflat_ms_t retroflat_get_ms() {
 
 uint32_t retroflat_get_rand() {
    /* LCG based on "Numerical Recipes" chapter 7.1. */
-   g_retroflat_state->platform.rand_state * 1664525 + 1013904233;
+   g_retroflat_state->platform.rand_state *= 1664525 + 1013904233;
    return g_retroflat_state->platform.rand_state;
 }
 
