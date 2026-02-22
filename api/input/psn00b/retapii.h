@@ -48,8 +48,8 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    InitPAD(
-      g_retroflat_state->input.padbuff[0], 34,
-      g_retroflat_state->input.padbuff[1], 34 );
+      &(g_retroflat_state->input.padbuff[0][0]), 34,
+      &(g_retroflat_state->input.padbuff[1][0]), 34 );
    StartPAD();
    ChangeClearPAD( 0 );
 
@@ -58,14 +58,12 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    RETROFLAT_IN_KEY key_out = 0;
-   uint16_t pad_status = *(uint16_t*)&(g_retroflat_state->input.padbuff[0][2]);
-
-   assert( NULL != input );
+   PADTYPE* pad = (PADTYPE*)&(g_retroflat_state->input.padbuff[0][0]);
 
    input->key_flags = 0;
 
    #define retroflat_psx_buttons_poll_down( b ) \
-      } else if( !((b) & pad_status) ) { \
+      } else if( !((b) & pad->btn) ) { \
          return b;
 
    if( 0 ) {
