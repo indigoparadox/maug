@@ -61,6 +61,12 @@ void _retroflat_psx_timer2_isr() {
    g_ms++;
 }
 
+void _retroflat_psx_dbg_constrain( retroflat_pxxy_t x, retroflat_pxxy_t y ) {
+#if RETRO2D_TRACE_LVL > 0
+   error_printf( "attempted offscreen draw: %d, %d", x, y );
+#endif /* RETRO2D_TRACE_LVL */
+}
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
@@ -285,6 +291,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
    bmp_out->draw[0].isbg = 1;
    bmp_out->draw[1].isbg = 1;
+   bmp_out->w = w;
+   bmp_out->h = h;
 
    return retval;
 }
@@ -295,6 +303,8 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
    /* TODO */
 #  pragma message( "warning: destroy_bitmap not implemented" )
+
+   bmp->sz = 0;
 
 }
 
@@ -335,7 +345,8 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_constrain_px( x, y, target,
+      _retroflat_psx_dbg_constrain( x, y ); return );
 
    /* TODO */
 #  pragma message( "warning: px not implemented" )
@@ -381,6 +392,11 @@ void retroflat_line(
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+
+   retroflat_constrain_px( x1, y1, target,
+      _retroflat_psx_dbg_constrain( x1, y1 ); return );
+   retroflat_constrain_px( x2, y2, target,
+      _retroflat_psx_dbg_constrain( x2, y2 ); return );
 
    setLineF2( line );
    setRGB0( line,

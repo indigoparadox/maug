@@ -66,7 +66,8 @@ struct RETROFLAT_BITMAP {
  * \relates RETROFLAT_BITMAP
  * \brief Check to see if a bitmap is loaded.
  */
-#  define retroflat_bitmap_ok( bitmap ) (1)
+#  define retroflat_bitmap_ok( bmp ) \
+      ((bmp)->sz == sizeof( struct RETROFLAT_BITMAP ))
 
 /**
  * \relates RETROFLAT_BITMAP
@@ -79,14 +80,14 @@ struct RETROFLAT_BITMAP {
  * \brief Get the width of this bitmap using underlying mechanisms.
  * \warn The bitmap must be valid!
  */
-#  define retroflat_bitmap_w( bmp ) (0)
+#  define retroflat_bitmap_w( bmp ) ((bmp)->w)
 
 /**
  * \relates RETROFLAT_BITMAP
  * \brief Get the height of this bitmap using underlying mechanisms.
  * \warn The bitmap must be valid!
  */
-#  define retroflat_bitmap_h( bmp ) (0)
+#  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 
 /*! \} */ /* maug_retroflt_bitmap */
 

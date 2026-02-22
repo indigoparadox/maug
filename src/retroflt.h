@@ -1856,7 +1856,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
  */
 #define retroflat_constrain_px( x, y, bmp, retact ) \
    if( \
-      x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) \
+      x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+      0 > x || 0 > y \
    ) { retact; }
 
 /*! \} */ /* maug_retroflt_bitmap */
