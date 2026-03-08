@@ -996,7 +996,8 @@ MERROR_RETVAL retrotile_parser_parse_token(
 
          assert( 0 == tiles[parser->layer_tile_iter] );
 
-         tiles[parser->layer_tile_iter] = atoi( token );
+         tiles[parser->layer_tile_iter] = maug_atou32(
+            token, token_sz, 10 );
 
       }
       parser->layer_tile_iter++;
@@ -1042,7 +1043,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
       } else if( MTILESTATE_HEIGHT == parser->mstate ) {
          if( 0 == parser->pass ) {
             /* Need this to allocate on pass 1. */
-            parser->tiles_h = atoi( token );
+            parser->tiles_h = maug_atou32( token, token_sz, 10 );
 #if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "tilemap height: " SIZE_T_FMT,
@@ -1054,7 +1055,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
       } else if( MTILESTATE_WIDTH == parser->mstate ) {
          if( 0 == parser->pass ) {
             /* Need this to allocate on pass 1. */
-            parser->tiles_w = atoi( token );
+            parser->tiles_w = maug_atou32( token, token_sz, 10 );
 #if RETROTILE_TRACE_LVL > 0
             debug_printf(
                RETROTILE_TRACE_LVL, "tilemap width: " SIZE_T_FMT,
