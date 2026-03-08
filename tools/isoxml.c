@@ -6,15 +6,18 @@
 
 #define NAME_SZ_MAX 255
 
+#define NODE_FLAG_ROOT 0x01
+#define NODE_FLAG_DIR 0x02
+
 struct ISO_NODE {
-   int active;
+   unsigned char flags;
    char name[NAME_SZ_MAX];
    char path[NAME_SZ_MAX];
    struct ISO_NODE* child;
    struct ISO_NODE* sibling;
 };
 
-void isoxml_print( struct ISO_NODE* node, int is_root ) {
+void isoxml_print( struct ISO_NODE* node ) {
    size_t i = 0;
 
    if( NULL == node ) {
@@ -35,26 +38,28 @@ void isoxml_print( struct ISO_NODE* node, int is_root ) {
 #ifdef DEBUG
       fprintf( stderr, "printing children for: %s\n", node->name );
 #endif /* DEBUG */
-      isoxml_print( node->child, 0 );
+      isoxml_print( node->child );
 #ifdef DEBUG
       fprintf( stderr, "done printing children for: %s\n", node->name );
 #endif /* DEBUG */
+      if(
+         NODE_FLAG_ROOT != (NODE_FLAG_ROOT & node->flags)
+      ) {
+         printf( "</dir>\n" );
+      }
    } else {
-      printf( "<file name=\"%s\" type=\"data\" source=\"%s\" />\n", node->name, node->path );
+      /* Prepend ../.. to get us out of obj/psx dir. */
+      printf( "<file name=\"%s\" type=\"data\" source=\"../../%s\" />\n", node->name, node->path );
    }
 
    if( NULL != node->sibling ) {
 #ifdef DEBUG
       fprintf( stderr, "printing sibling for: %s (%p)\n", node->name, node->sibling );
 #endif /* DEBUG */
-      isoxml_print( node->sibling, 0 );
+      isoxml_print( node->sibling );
 #ifdef DEBUG
       fprintf( stderr, "done printing sibling for: %s\n", node->name );
 #endif /* DEBUG */
-   } else {
-      if( !is_root ) {
-         printf( "</dir>\n" );
-      }
    }
 }
 
@@ -138,6 +143,7 @@ struct ISO_NODE* isoxml_insert(
 
    if( NULL != slash_pos ) {
       /* There are children, so descend! */
+      iter_node->flags |= NODE_FLAG_DIR;
       return isoxml_insert(
          p_all, iter_node, p_ct, p_ct_max, slash_pos + 1, path_full );
    }
@@ -154,7 +160,8 @@ int main( int argc, char* argv[] ) {
    iso_all = calloc( sizeof( struct ISO_NODE ), iso_ct_max );
    assert( NULL != iso_all );
 
-   iso_all[0].active = 1;
+   iso_all[0].flags |= NODE_FLAG_ROOT;
+   iso_all[0].flags |= NODE_FLAG_DIR;
 
    for( i = 1 ; argc > i ; i++ ) {
       isoxml_insert(
@@ -169,7 +176,7 @@ int main( int argc, char* argv[] ) {
 
    }
 
-   isoxml_print( &(iso_all[0]), 1 );
+   isoxml_print( &(iso_all[0]) );
 
    free( iso_all );
 
