@@ -80,7 +80,7 @@ obj/psx/system.cnf:
 	echo EVENT=10 >> $$@
 	echo STACK=801FFFF0 >> $$@
 
-obj/psx/iso.xml: obj/psx/system.cnf
+obj/psx/iso.xml: obj/psx/system.cnf obj/psx/isoxml
 	# Generate the iso.xml.
 	echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>" > $$@
 	echo "<iso_project>" >> $$@
@@ -96,15 +96,18 @@ obj/psx/iso.xml: obj/psx/system.cnf
 	echo "		/>" >> $$@
 	echo "		<directory_tree>" >> $$@
 	echo "			<file name=\"SYSTEM.CNF\"		type=\"data\" source=\"system.cnf\" />" >> $$@
-	echo "			<file name=\"`echo $(1) | tr [:lower:] [:upper:]`PSX.EXE\"	type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
-	for f in $(2); do echo "			<file name=\"$$$$f\"	type=\"data\" source=\"../../$$$$f\" />" >> $$@; done
+	./obj/psx/isoxml $(2) >> $$@
 	echo "" >> $$@
 	echo "			<dummy sectors=\"1024\"/>" >> $$@
 	echo "		</directory_tree>" >> $$@
 	echo "	</track>" >> $$@
 	echo "</iso_project>" >> $$@
 
-$(1)psx.cue $(1)psx.bin: $(1)psx.exe obj/psx/$(1)psx.map obj/psx/iso.xml
+obj/psx/isoxml: $(MAUG_ROOT)/tools/isoxml.c
+	gcc -o $$@ $$<
+
+$(1)psx.cue $(1)psx.bin: \
+$(1)psx.exe obj/psx/$(1)psx.map obj/psx/iso.xml
 	mkpsxiso -y -o $(1)psx.bin -c $(1)psx.cue obj/psx/iso.xml
 
 CLEAN_TARGETS += $(1)psx.bin $(1)psx.cue $(1)psx.exe
