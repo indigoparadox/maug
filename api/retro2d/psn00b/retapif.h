@@ -196,7 +196,11 @@ retroflat_ms_t retroflat_get_ms() {
 
 uint32_t retroflat_get_rand() {
    /* LCG based on "Numerical Recipes" chapter 7.1. */
-   g_retroflat_state->platform.rand_state *= 1664525 + 1013904233;
+   g_retroflat_state->platform.rand_state =
+      g_retroflat_state->platform.rand_state * 1664525 + 1013904233;
+   debug_printf( 1, "rand: %u (%u)",
+      g_retroflat_state->platform.rand_state,
+      g_retroflat_state->platform.rand_state % 4 );
    return g_retroflat_state->platform.rand_state;
 }
 
