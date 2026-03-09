@@ -398,7 +398,7 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_ALL_CAPS 0x02
 
 /**
- * \brief Flag for retroflat_create_bitmap() to create a WinG-backed bitmap.
+ * \brief Flag for retroflat_create_bitmap() to create a VRAM-backed bitmap.
  *
  * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
  * is screen-backed.
@@ -870,6 +870,8 @@ typedef int8_t retroflat_dir8_t;
 typedef size_t retroflat_pxxy_t;
 
 #define PXXY_FMT SIZE_T_FMT
+
+#define PXXY_MAX SIZE_MAX
 
 struct RETROFLAT_ARGS;
 

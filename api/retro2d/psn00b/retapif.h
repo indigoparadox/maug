@@ -286,12 +286,22 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
    /* Setup drawenv defaults. */
-   SetDefDrawEnv( &(bmp_out->draw[0]), 0, h, w, h );
-   SetDefDrawEnv( &(bmp_out->draw[1]), 0, 0, w, h );
+   if(
+      RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+   ) {
+      /* Setup two drawenvs stacked on the far left of VRAM. */
+      SetDefDrawEnv( &(bmp_out->draw[0]), 0, h, w, h );
+      SetDefDrawEnv( &(bmp_out->draw[1]), 0, 0, w, h );
+      setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
+      bmp_out->draw[1].isbg = 1;
+      bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+   } else {
+      /* TODO: Find space for this bitmap in VRAM. */
+
+      /* TODO: Setup a single drawenv where we found space for this bitmap. */
+   }
    setRGB0( &(bmp_out->draw[0]), 0, 0, 0 );
-   setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
    bmp_out->draw[0].isbg = 1;
-   bmp_out->draw[1].isbg = 1;
    bmp_out->w = w;
    bmp_out->h = h;
 
