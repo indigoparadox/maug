@@ -100,7 +100,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       debug_printf( 1, "checking pt " SIZE_T_FMT " (%u, %u)...",
          i, pt_i->x, pt_i->y );
       
-      if( retroflat_screen_w() - iter_x < w || iter_y >= best_y ) {
+      if( RETROFLAT_PSX_VRAM_W - iter_x < w || iter_y >= best_y ) {
          /* We can't fit this bitmap in VRAM! */
          debug_printf( 1, "cannot fit %ux%u in current pack...", w, h );
          break;
@@ -121,7 +121,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
          }
       }
 
-      if( iter_y >= best_y || retroflat_screen_h() - iter_y < h ) {
+      if( iter_y >= best_y || RETROFLAT_PSX_VRAM_H - iter_y < h ) {
          continue;
       }
 
@@ -152,7 +152,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       /* Don't insert bottom-right if it's in the middle of a left wall. */
       best_x < g_retroflat_state->platform.osb_pts[best_j].x :
       /* Don't insert bottom-right if it butts up against VRAM end. */
-      best_x < retroflat_screen_w();
+      best_x < RETROFLAT_PSX_VRAM_W;
    debug_printf( 1, "inserting %d points...", insert_bottom_right + 1 );
 
    /* Make sure we haven't used up our points allocation. */
@@ -235,14 +235,6 @@ static MERROR_RETVAL retroflat_init_platform(
       RCntCNT2, 0xffff, RCntMdINTR | RCntMdSC | RCntMdDIV8 | RCntMdTARGET );
    StartRCnt( RCntCNT2 );
 	ExitCriticalSection();
-
-   /* Setup the screen display and drawing buffers. */
-   SetDefDispEnv(
-      &(g_retroflat_state->platform.disp[0]), 0, 0,
-      args->screen_w, args->screen_h );
-   SetDefDispEnv(
-      &(g_retroflat_state->platform.disp[1]), 0, args->screen_h,
-      args->screen_w, args->screen_h );
 
    debug_printf( 1, "creating screen buffer..." );
    retroflat_create_bitmap(
@@ -420,30 +412,63 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   retroflat_pxxy_t x1 = 0,
+      y1 = 0,
+      x2 = 0,
+      y2 = 0;
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
+   /* Try to allocate space on the VRAM "canvas" for the main drawing buffer of
+    * this bitmap.
+    */
+   retval = _retroflat_psx_fit_vram( w, h, &x1, &y1 );
+   maug_cleanup_if_not_ok();
+
+   debug_printf( 1, "creating %dx%d bitmap at %d, %d in VRAM...",
+      w, h, x1, y1 );
+
+   SetDefDrawEnv( &(bmp_out->draw[0]), x1, y1, w, h );
+
    /* Setup drawenv defaults. */
    if(
       RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
    ) {
-      /* Setup two drawenvs stacked on the far left of VRAM. */
-      SetDefDrawEnv( &(bmp_out->draw[0]), 0, h, w, h );
-      SetDefDrawEnv( &(bmp_out->draw[1]), 0, 0, w, h );
+      /* Try to allocate space in VRAM for the "alternate" buffer for page
+       * flipping.
+       */
+      /* TODO: Remove main bitmap if this fails, too. (But that should never
+       *       happen!
+       */
+      retval = _retroflat_psx_fit_vram( w, h, &x2, &y2 );
+      maug_cleanup_if_not_ok();
+
+      debug_printf( 1, "creating %dx%d alternate buffer at %d, %d in VRAM...",
+         w, h, x2, y2 );
+
+      /* Setup drawenv for alternate buffer. */
+      SetDefDrawEnv( &(bmp_out->draw[1]), x2, y2, w, h );
       setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
+
+      /* Setup the screen display buffer environments.
+       * Note that 0 uses 1's coords and 1 uses 0's coords, so that 0 is
+       * showing while 1 is drawing and vice-versa.
+       */
+      SetDefDispEnv( &(g_retroflat_state->platform.disp[1]), x1, y1, w, h );
+      SetDefDispEnv( &(g_retroflat_state->platform.disp[0]), x2, y2, w, h );
+
+      /* Setup bitmap system data. */
       bmp_out->draw[1].isbg = 1;
       bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
-   } else {
-      /* TODO: Find space for this bitmap in VRAM. */
-
-      /* TODO: Setup a single drawenv where we found space for this bitmap. */
    }
    setRGB0( &(bmp_out->draw[0]), 0, 0, 0 );
    bmp_out->draw[0].isbg = 1;
    bmp_out->w = w;
    bmp_out->h = h;
+
+cleanup:
 
    return retval;
 }

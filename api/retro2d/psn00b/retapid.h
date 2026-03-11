@@ -32,6 +32,9 @@
 #  define RETROFLAT_PSX_OSB_PTS_CT_MAX 128
 #endif /* RETROFLAT_PSX_OSB_PTS_CT_MAX */
 
+#define RETROFLAT_PSX_VRAM_W 1024
+#define RETROFLAT_PSX_VRAM_H 512
+
 #define RETROSOFT_PRESENT
 
 /* Force software drawing to rely on hardware lines. */
@@ -61,6 +64,12 @@ struct RETROFLAT_BITMAP {
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
    DRAWENV draw[2];
+   /**
+    * \brief Current drawing buffer idx.
+    * \note This is only used for the RETROFLAT_FLAGS_SCREEN_BUFFER bitmap.
+    *       It is the *drawing* index, which means it selects which buffer is
+    *       being *drawn to*! (The other is being shown at this time!)
+    */
    int draw_idx;
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
