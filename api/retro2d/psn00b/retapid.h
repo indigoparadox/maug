@@ -28,6 +28,10 @@
 #  define RETROFLAT_PSX_CIRCLE_SEGMENTS 16
 #endif /* !RETROFLAT_PSX_CIRCLE_SEGMENTS */
 
+#ifndef RETROFLAT_PSX_OSB_PTS_CT_MAX
+#  define RETROFLAT_PSX_OSB_PTS_CT_MAX 128
+#endif /* RETROFLAT_PSX_OSB_PTS_CT_MAX */
+
 #define RETROSOFT_PRESENT
 
 /* Force software drawing to rely on hardware lines. */
@@ -147,6 +151,11 @@ struct RETROFLAT_PLATFORM_ARGS {
    uint8_t flags;
 };
 
+struct RETROFLAT_PSX_OSB_PT {
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+};
+
 struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
@@ -157,6 +166,8 @@ struct RETROFLAT_PLATFORM {
    size_t used_prim;
    /*! \brief LCG rand state. */
    uint32_t rand_state;
+   struct RETROFLAT_PSX_OSB_PT osb_pts[RETROFLAT_PSX_OSB_PTS_CT_MAX];
+   size_t osb_pts_ct;
 };
 
 #endif /* !RETPLTD_H */

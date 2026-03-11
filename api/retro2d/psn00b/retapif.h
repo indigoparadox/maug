@@ -67,6 +67,146 @@ void _retroflat_psx_dbg_constrain( retroflat_pxxy_t x, retroflat_pxxy_t y ) {
 #endif /* RETRO2D_TRACE_LVL */
 }
 
+MERROR_RETVAL _retroflat_psx_fit_vram(
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   retroflat_pxxy_t* p_x, retroflat_pxxy_t* p_y
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t i = 0,
+      j = 0,
+      best_i = PXXY_MAX,
+      best_j = 0,
+      insert_bottom_right = 0,
+      removed_pts_ct = 0;
+   retroflat_pxxy_t iter_x = 0,
+      iter_y = 0,
+      best_x = UINT16_MAX,
+      best_y = UINT16_MAX,
+      new_best_y = 0;
+   struct RETROFLAT_PSX_OSB_PT* pt_i = NULL;
+   struct RETROFLAT_PSX_OSB_PT* pt_j = NULL;
+
+   if( 0 == g_retroflat_state->platform.osb_pts_ct ) {
+      /* Initialize the point array if none exist. */
+      g_retroflat_state->platform.osb_pts[0].x = 0;
+      g_retroflat_state->platform.osb_pts[0].y = 0;
+      g_retroflat_state->platform.osb_pts_ct = 1;
+   }
+
+   for( i = 0 ; g_retroflat_state->platform.osb_pts_ct > i ; i++ ) {
+      pt_i = &(g_retroflat_state->platform.osb_pts[i]);
+      iter_x = pt_i->x;
+      iter_y = pt_i->y;
+      debug_printf( 1, "checking pt " SIZE_T_FMT " (%u, %u)...",
+         i, pt_i->x, pt_i->y );
+      
+      if( retroflat_screen_w() - iter_x < w || iter_y >= best_y ) {
+         /* We can't fit this bitmap in VRAM! */
+         debug_printf( 1, "cannot fit %ux%u in current pack...", w, h );
+         break;
+      }
+
+      for( j = i + 1 ; g_retroflat_state->platform.osb_pts_ct > j ; j++ ) {
+         debug_printf( 1, "against pt " SIZE_T_FMT "...", i );
+         pt_j = &(g_retroflat_state->platform.osb_pts[j]);
+
+         if( iter_x + w <= pt_j->x ) {
+            /* We cannot reach the next point. */
+            break;
+         }
+
+         if( iter_y < pt_j->y ) {
+            /* Raise Y to avoid clobbering this point. */
+            iter_y = pt_j->y;
+         }
+      }
+
+      if( iter_y >= best_y || retroflat_screen_h() - iter_y < h ) {
+         continue;
+      }
+
+      /* If we made it this far, this point is our best bet! */
+      best_i = i;
+      best_j = j;
+      debug_printf( 1, "best i: " SIZE_T_FMT "; best j: " SIZE_T_FMT,
+         best_i, best_j );
+      best_x = iter_x;
+      best_y = iter_y;
+   }
+
+   if( PXXY_MAX == best_i ) {
+      error_printf( "%ux%u will not fit in VRAM!", w, h );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Determine number of points to remove by distance between corner points
+    * found above.
+    */
+   removed_pts_ct = best_j - best_i;
+   assert( 1 <= best_j );
+   new_best_y = g_retroflat_state->platform.osb_pts[best_j - 1].y;
+   debug_printf( 1, "removing %d points...", removed_pts_ct );
+   insert_bottom_right =
+      best_j < g_retroflat_state->platform.osb_pts_ct ?
+      /* Don't insert bottom-right if it's in the middle of a left wall. */
+      best_x < g_retroflat_state->platform.osb_pts[best_j].x :
+      /* Don't insert bottom-right if it butts up against VRAM end. */
+      best_x < retroflat_screen_w();
+   debug_printf( 1, "inserting %d points...", insert_bottom_right + 1 );
+
+   /* Make sure we haven't used up our points allocation. */
+   if( insert_bottom_right + 1 >= RETROFLAT_PSX_OSB_PTS_CT_MAX ) {
+      error_printf( "too many skyline points in VRAM!" );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   /* Add space or remove points determined above. */
+   if( insert_bottom_right + 1 > removed_pts_ct ) {
+      /* Insert space for new point(s). */
+      i = g_retroflat_state->platform.osb_pts_ct - 1;
+      j = i + ((insert_bottom_right + 1) - removed_pts_ct);
+      /* TODO: Can we use memmove() here? */
+      for( ; i >= best_j ; --i, --j ) {
+         memcpy(
+            &(g_retroflat_state->platform.osb_pts[j]),
+            &(g_retroflat_state->platform.osb_pts[i]),
+            sizeof( struct RETROFLAT_PSX_OSB_PT ) );
+      }
+      g_retroflat_state->platform.osb_pts_ct += 
+         ((insert_bottom_right + 1) - removed_pts_ct);
+   } else if( insert_bottom_right + 1 < removed_pts_ct ) {
+      /* Remove overlapped points. */
+      i = best_j;
+      j = i - (removed_pts_ct - (insert_bottom_right + 1));
+      /* TODO: Can we use memmove() here? */
+      for( ; i < g_retroflat_state->platform.osb_pts_ct ; i++, j++ ) {
+         memcpy(
+            &(g_retroflat_state->platform.osb_pts[j]),
+            &(g_retroflat_state->platform.osb_pts[i]),
+            sizeof( struct RETROFLAT_PSX_OSB_PT ) );
+      }
+      g_retroflat_state->platform.osb_pts_ct -=
+         (removed_pts_ct - (insert_bottom_right + 1));
+   }
+
+   /* Perform the actual insertion(s) at the new best point. */
+   g_retroflat_state->platform.osb_pts[best_i].x = best_x;
+   g_retroflat_state->platform.osb_pts[best_i].y = best_y + h;
+   if( insert_bottom_right ) {
+      g_retroflat_state->platform.osb_pts[best_i + 1].x = best_x + w;
+      g_retroflat_state->platform.osb_pts[best_i + 1].y = new_best_y;
+   }
+
+   *p_x = best_x;
+   *p_y = best_y;
+
+cleanup:
+
+   return retval;
+}
+
 static MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
