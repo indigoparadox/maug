@@ -80,8 +80,8 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       removed_pts_ct = 0;
    retroflat_pxxy_t iter_x = 0,
       iter_y = 0,
-      best_x = UINT16_MAX,
-      best_y = UINT16_MAX,
+      best_x = PXXY_MAX,
+      best_y = PXXY_MAX,
       new_best_y = 0;
    struct RETROFLAT_PSX_OSB_PT* pt_i = NULL;
    struct RETROFLAT_PSX_OSB_PT* pt_j = NULL;
