@@ -327,9 +327,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
       /* Begin dragging. */
 
-      input->mouse_x = event.button.x / g_retroflat_state->screen_scale;
-      input->mouse_y = event.button.y / g_retroflat_state->screen_scale;
-
       /* Differentiate which button was clicked. */
       if( SDL_BUTTON_LEFT == event.button.button ) {
          key_out = RETROFLAT_MOUSE_B_LEFT;
