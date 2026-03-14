@@ -418,10 +418,6 @@ MERROR_RETVAL retroflat_create_bitmap(
    size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   retroflat_pxxy_t x1 = 0,
-      y1 = 0,
-      x2 = 0,
-      y2 = 0;
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
@@ -430,13 +426,15 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* Try to allocate space on the VRAM "canvas" for the main drawing buffer of
     * this bitmap.
     */
-   retval = _retroflat_psx_fit_vram( w, h, &x1, &y1 );
+   retval = _retroflat_psx_fit_vram(
+      w, h, &(bmp_out->vram_x[0]), &(bmp_out->vram_y[0]) );
    maug_cleanup_if_not_ok();
 
    debug_printf( 1, "creating %dx%d bitmap at %d, %d in VRAM...",
-      w, h, x1, y1 );
+      w, h, bmp_out->vram_x[0], bmp_out->vram_y[0] );
 
-   SetDefDrawEnv( &(bmp_out->draw[0]), x1, y1, w, h );
+   SetDefDrawEnv(
+      &(bmp_out->draw[0]), bmp_out->vram_x[0], bmp_out->vram_y[0], w, h );
 
    /* Setup drawenv defaults. */
    if(
@@ -448,22 +446,26 @@ MERROR_RETVAL retroflat_create_bitmap(
       /* TODO: Remove main bitmap if this fails, too. (But that should never
        *       happen!
        */
-      retval = _retroflat_psx_fit_vram( w, h, &x2, &y2 );
+      retval = _retroflat_psx_fit_vram(
+         w, h, &(bmp_out->vram_x[1]), &(bmp_out->vram_y[1]) );
       maug_cleanup_if_not_ok();
 
       debug_printf( 1, "creating %dx%d alternate buffer at %d, %d in VRAM...",
-         w, h, x2, y2 );
+         w, h, bmp_out->vram_x[1], bmp_out->vram_y[1] );
 
       /* Setup drawenv for alternate buffer. */
-      SetDefDrawEnv( &(bmp_out->draw[1]), x2, y2, w, h );
+      SetDefDrawEnv(
+         &(bmp_out->draw[1]), bmp_out->vram_x[1], bmp_out->vram_y[1], w, h );
       setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
 
       /* Setup the screen display buffer environments.
        * Note that 0 uses 1's coords and 1 uses 0's coords, so that 0 is
        * showing while 1 is drawing and vice-versa.
        */
-      SetDefDispEnv( &(g_retroflat_state->platform.disp[1]), x1, y1, w, h );
-      SetDefDispEnv( &(g_retroflat_state->platform.disp[0]), x2, y2, w, h );
+      SetDefDispEnv( &(g_retroflat_state->platform.disp[1]),
+         bmp_out->vram_x[0], bmp_out->vram_y[0], w, h );
+      SetDefDispEnv( &(g_retroflat_state->platform.disp[0]),
+         bmp_out->vram_x[1], bmp_out->vram_y[1], w, h );
 
       /* Setup bitmap system data. */
       bmp_out->draw[1].isbg = 1;
@@ -498,11 +500,33 @@ MERROR_RETVAL retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   RECT src_rect;
+
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+#if 0
+   POLY_FT4* blit = (POLY_FT4*)(g_retroflat_state->platform.next_prim);
 
    assert( NULL != src );
 
-   /* TODO */
-#  pragma message( "warning: blit_bitmap not implemented" )
+   setPolyFT4( blit );
+   setRGB0( blit, 128, 128, 128 ); /* Eliminate tint. */
+   setXY4( blit, d_x, d_y, d_x + w, d_y, d_x, d_y + h, d_x + w, d_y + h );
+   setUV4( blit, s_x, s_y, s_x + w, s_y, s_x, s_y + h, s_x + w, s_y + h );
+
+   _retroflat_psx_add_prim( blit, sizeof( POLY_FT4 ) );
+#endif
+
+   src_rect.x = src->vram_x[0] + s_x;
+   src_rect.y = src->vram_y[0] + s_y;
+   src_rect.w = w;
+   src_rect.h = h;
+
+   MoveImage( &src_rect,
+      target->vram_x[target->draw_idx] + d_x,
+      target->vram_y[target->draw_idx] + d_y );
 
    return retval;
 }

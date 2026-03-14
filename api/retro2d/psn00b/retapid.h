@@ -75,6 +75,8 @@ struct RETROFLAT_BITMAP {
    int draw_idx;
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
+   retroflat_pxxy_t vram_x[2];
+   retroflat_pxxy_t vram_y[2];
 };
 
 /**
