@@ -37,6 +37,17 @@
 #define RETROFLAT_PSX_VRAM_W 1024
 #define RETROFLAT_PSX_VRAM_H 512
 
+/* PlayStation VRAM is divided into 16x2 pages, but the leftmost are reserved
+ * for display buffers in our setup.
+ */
+#define RETROFLAT_PSX_VRAM_PG_CT 22
+#define RETROFLAT_PSX_VRAM_PG_CT_W 11
+#define RETROFLAT_PSX_VRAM_PG_CT_H 2
+
+/* Each VRAM page is 64x256. */
+#define RETROFLAT_PSX_VRAM_PG_PX_W 64
+#define RETROFLAT_PSX_VRAM_PG_PX_H 256
+
 #define RETROSOFT_PRESENT
 
 /* Force software drawing to rely on hardware lines. */
@@ -180,8 +191,12 @@ struct RETROFLAT_PLATFORM {
    size_t used_prim;
    /*! \brief LCG rand state. */
    uint32_t rand_state;
-   struct RETROFLAT_PSX_OSB_PT osb_pts[RETROFLAT_PSX_OSB_PTS_CT_MAX];
-   size_t osb_pts_ct;
+   /*! \brief Skyline points inventory.
+    * \note Each sprite page in VRAM maintains its own skyline!
+    */
+   struct RETROFLAT_PSX_OSB_PT osb_pts
+      [RETROFLAT_PSX_VRAM_PG_CT][RETROFLAT_PSX_OSB_PTS_CT_MAX];
+   size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT];
 };
 
 #endif /* !RETPLTD_H */
