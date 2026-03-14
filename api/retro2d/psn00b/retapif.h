@@ -27,6 +27,7 @@ void _retroflat_psx_draw_buffers() {
 }
 
 void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
+   uint32_t ot[RETROFLAT_PSX_OT_LEN];
 
    if(
       RETROFLAT_PSX_PRIM_BUF_SZ <=
@@ -35,7 +36,9 @@ void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
       /* The primitive buffer filled up! So draw it and then clear it so it's
        * ready for more!
        */
+#if RETRO2D_TRACE_LVL > 0
       error_printf( "primitive buffer exceeded! flushing!" );
+#endif /* RETRO2D_TRACE_LVL */
       _retroflat_psx_draw_buffers();
       _retroflat_psx_clear_buffers();
       return;
@@ -51,7 +54,7 @@ void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
    /* Add the draw packet for this line from the primitive buffer to the
     * ordering table.
     */
-   AddPrim(
+   addPrim(
       g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
       prim );
 }
@@ -497,6 +500,8 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    size_t x, size_t y, uint8_t flags
 ) {
+   TILE* px = (TILE*)(g_retroflat_state->platform.next_prim);
+
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -514,9 +519,16 @@ void retroflat_px(
    retroflat_constrain_px( x, y, target,
       _retroflat_psx_dbg_constrain( x, y ); return );
 
-   /* TODO */
-#  pragma message( "warning: px not implemented" )
-
+   /* Draw a single-pixel rect with the GPU. */
+   /* maug_mzero( px, sizeof( TILE ) ); */
+   setTile( px );
+   setRGB0( px,
+      g_retroflat_state->palette[color_idx].r,
+      g_retroflat_state->palette[color_idx].g,
+      g_retroflat_state->palette[color_idx].b );
+   setXY0( px, x, y );
+   setWH( px, 1, 1 );
+   _retroflat_psx_add_prim( px, sizeof( TILE ) );
 }
 
 /* === */
@@ -525,6 +537,7 @@ void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
 ) {
+   TILE* rect = NULL;
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -534,13 +547,30 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
-   /* TODO
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-   } else { */
-   retroflat_line( target, color_idx, x, y, x + w, y, 0 );
-   retroflat_line( target, color_idx, x + w, y, x + w, y + h, 0 );
-   retroflat_line( target, color_idx, x, y + h, x + w, y + h, 0 );
-   retroflat_line( target, color_idx, x, y, x, y + h, 0 );
+      retroflat_constrain_px( x, y, target,
+         _retroflat_psx_dbg_constrain( x, y ); return );
+      retroflat_constrain_px( x + w, y + h, target,
+         _retroflat_psx_dbg_constrain( x + w, y + h ); return );
+
+      /* Draw a filled rect with the GPU. */
+      rect = (TILE*)(g_retroflat_state->platform.next_prim);
+      /* maug_mzero( rect, sizeof( TILE ) ); */
+      setTile( rect );
+      setRGB0( rect,
+         g_retroflat_state->palette[color_idx].r,
+         g_retroflat_state->palette[color_idx].g,
+         g_retroflat_state->palette[color_idx].b );
+      setXY0( rect, x, y );
+      setWH( rect, w, h );
+      _retroflat_psx_add_prim( rect, sizeof( TILE ) );
+   } else {
+      /* Draw 4 lines with the GPU to simulate a hollow rect. */
+      retroflat_line( target, color_idx, x, y, x + w, y, 0 );
+      retroflat_line( target, color_idx, x + w, y, x + w, y + h, 0 );
+      retroflat_line( target, color_idx, x, y + h, x + w, y + h, 0 );
+      retroflat_line( target, color_idx, x, y, x, y + h, 0 );
+   }
 }
 
 /* === */
@@ -564,6 +594,7 @@ void retroflat_line(
    retroflat_constrain_px( x2, y2, target,
       _retroflat_psx_dbg_constrain( x2, y2 ); return );
 
+   /* maug_mzero( line, sizeof( LINE_F2 ) ); */
    setLineF2( line );
    setRGB0( line,
       g_retroflat_state->palette[color_idx].r,
