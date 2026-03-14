@@ -35,6 +35,7 @@ MERROR_RETVAL mfile_psx_cache_block(
     */
    file_plus_lba_offset = CdPosToInt( &(p_file->h.file.cdf.pos) ) + lba_offset;
 
+   /* Wait for the CD-ROM to be ready if needed. */
    while( MFILE_PSX_CD_BUSY == MFILE_PSX_CD_BUSY & CdStatus() ) {
       CdControl( CdlNop, 0, 0 ); /* Refresh CD status. */
 #if MFILE_SEEK_TRACE_LVL > 0
@@ -51,6 +52,9 @@ MERROR_RETVAL mfile_psx_cache_block(
       p_file->filename, CdPosToInt( &(p_file->h.file.cdf.pos) ), lba_offset );
 #endif /* MFILE_SEEK_TRACE_LVL */
 
+   /* Move the CD-ROM laser to the desired sector and copy the sector contents
+    * into the sector cache buffer.
+    */
    CdIntToPos( file_plus_lba_offset, &sector_pos );
    CdControl( CdlSetloc, &sector_pos, 0 );
    CdRead( 1, (uint32_t*)(p_file->h.file.sector_buffer), CdlModeSpeed );
@@ -61,6 +65,9 @@ MERROR_RETVAL mfile_psx_cache_block(
       goto cleanup;
    }
 
+   /* Make a note of the sector the cache buffer is caching so that we can
+    * expire and refill it later if needed.
+    */
    p_file->h.file.sector_lba_offset = lba_offset;
 
 cleanup:
@@ -85,6 +92,7 @@ MERROR_RETVAL mfile_file_read_block(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    off_t sector_byte_offset = 0,
+      copy_sz = 0,
       i = 0,
       buffer_i = 0;
 
@@ -106,19 +114,18 @@ MERROR_RETVAL mfile_file_read_block(
          maug_cleanup_if_not_ok();
       }
 
-      /* TODO: Maybe be a bit more efficient, here? With memcpy? */
-      sector_byte_offset = p_file->h.file.cursor % MFILE_PSX_SECTOR_SZ;
-      /* Read each byte of the cached sector into the buffer until the sector
-       * is out of bytes or the buffer is full.
+      /* Read the cached sector into the buffer until the sector is out of
+       * bytes or the buffer is full.
        */
-      for(
-         i = sector_byte_offset ;
-         MFILE_PSX_SECTOR_SZ > i && buffer_i < buffer_sz ;
-         i++
-      ) {
-         buffer[buffer_i++] = p_file->h.file.sector_buffer[i];
-         p_file->h.file.cursor++;
-      }
+      sector_byte_offset = p_file->h.file.cursor % MFILE_PSX_SECTOR_SZ;
+      copy_sz = MFILE_PSX_SECTOR_SZ - sector_byte_offset > buffer_sz ?
+         buffer_sz : MFILE_PSX_SECTOR_SZ - sector_byte_offset;
+      memcpy(
+         &(buffer[buffer_i]),
+         &(p_file->h.file.sector_buffer[sector_byte_offset]),
+         copy_sz );
+      p_file->h.file.cursor += copy_sz;
+      buffer_i += copy_sz;
    }
 
 cleanup:
@@ -172,11 +179,12 @@ MERROR_RETVAL mfile_file_read_line(
          maug_cleanup_if_not_ok();
       }
 
-      /* TODO: Maybe be a bit more efficient, here? With memcpy? */
-      sector_byte_offset = p_file->h.file.cursor % MFILE_PSX_SECTOR_SZ;
       /* Read each byte of the cached sector into the buffer until the sector
        * is out of bytes or the buffer is full.
+       *
+       * We can't use memcpy here since we're looking for \n bytes!
        */
+      sector_byte_offset = p_file->h.file.cursor % MFILE_PSX_SECTOR_SZ;
       for(
          i = sector_byte_offset ;
          MFILE_PSX_SECTOR_SZ > i && buffer_i < buffer_sz ;
@@ -245,12 +253,6 @@ MERROR_RETVAL mfile_plt_init() {
    /* Perform actual CD-ROM init. */
    debug_printf( 1, "initializing CD-ROM..." );
    CdInit();
-   /*
-   while( 1 ) {
-      CdControl( CdlNop, 0, 0 );
-      debug_printf( 1, "CD status: 0x%08x", CdStatus() );
-   }
-   */
    debug_printf( 1, "CD-ROM initialized!" );
 
    return MERROR_OK;
