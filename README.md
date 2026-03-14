@@ -136,6 +136,7 @@ The following targets are currently available (possibly among others):
 |TGT\_CECL\_WINCE\_MIPS    | Windows CE   | VC     | WinCE     |              |
 |TGT\_CECL\_WINCE\_X86     | Windows CE   | VC     | WinCE     |              |
 |TGTMAC68K                 | MacOS 6      | Retro68| Toolbox   | Monochrome   |
+|TGTPSXPSN                 | PlayStation  | psn00b | psn00b    |              |
 
 ### retroflt
 
