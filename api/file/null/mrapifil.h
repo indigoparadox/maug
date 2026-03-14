@@ -11,6 +11,7 @@ union MFILE_HANDLE {
 off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
    
    /* TODO */
+#  pragma message( "warning: file_cursor not implemented" )
 
    return 0;
 }
@@ -31,6 +32,7 @@ MERROR_RETVAL mfile_file_read_block(
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
    /* TODO */
+#  pragma message( "warning: file_read_block not implemented" )
 
    return retval;
 }
@@ -43,6 +45,7 @@ MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos ) {
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
    /* TODO */
+#  pragma message( "warning: file_seek not implemented" )
 
    return retval;
 }
@@ -57,6 +60,7 @@ MERROR_RETVAL mfile_file_read_line(
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
 
    /* TODO */
+#  pragma message( "warning: file_read_line not implemented" )
 
    return retval;
 }
@@ -75,6 +79,7 @@ MERROR_RETVAL mfile_file_vprintf(
    }
 
    /* TODO */
+#  pragma message( "warning: file_vprintf not implemented" )
 
    return retval;
 }
@@ -90,7 +95,8 @@ MERROR_RETVAL mfile_file_write_block(
       return MERROR_FILE;
    }
 
-   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
+   /* TODO */
+#  pragma message( "warning: file_write_block not implemented" )
 
    return retval;
 }
@@ -100,6 +106,7 @@ MERROR_RETVAL mfile_file_write_block(
 MERROR_RETVAL mfile_plt_init() {
    
    /* TODO */
+#  pragma message( "warning: init not implemented" )
 
    return MERROR_OK;
 }
@@ -110,6 +117,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* TODO */
+#  pragma message( "warning: open_read not implemented" )
 
    return retval;
 }
@@ -120,6 +128,7 @@ MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* TODO */
+#  pragma message( "warning: open_write not implemented" )
 
    return retval;
 }
@@ -128,6 +137,7 @@ MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
 
 void mfile_plt_close( mfile_t* p_file ) {
    /* TODO */
+#  pragma message( "warning: close not implemented" )
 }
 
 #endif /* !MAUG_API_FIL_H_DEFS */
