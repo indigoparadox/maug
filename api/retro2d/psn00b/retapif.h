@@ -6,7 +6,7 @@ static volatile int32_t g_ms;
 
 void _retroflat_psx_clear_buffers() {
    /* Clear and setup the draw operations ordering table and primitive buffer.
-    * Use the current drawing screen's primative/ordering buffers, even if this
+    * Use the current drawing screen's primitive/ordering buffers, even if this
     * is an offscreen bitmap.
     */
    /* We're not using a reverse buffer here since this is for 2D! */
@@ -19,6 +19,12 @@ void _retroflat_psx_clear_buffers() {
 }
 
 void _retroflat_psx_draw_buffers() {
+
+   addPrims(
+      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
+      g_retroflat_state->platform.prim_buff[g_retroflat_state->buffer.draw_idx],
+      g_retroflat_state->platform.last_prim );
+
    DrawOTag(
       g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx] );
 
@@ -27,7 +33,11 @@ void _retroflat_psx_draw_buffers() {
 }
 
 void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
-   uint32_t ot[RETROFLAT_PSX_OT_LEN];
+   
+   /* Build the primitive buffer in FIFO order since this is 2D. The native
+    * addPrim() macros assume we want LIFO because 3D, but we do not! So
+    * we have to manually link the list of OTags to send to the GPU.
+    */
 
    if(
       RETROFLAT_PSX_PRIM_BUF_SZ <=
@@ -44,19 +54,22 @@ void _retroflat_psx_add_prim( void* prim, size_t prim_sz ) {
       return;
    }
 
-   g_retroflat_state->platform.next_prim += prim_sz;
-   g_retroflat_state->platform.used_prim += prim_sz;
-   /*
-   debug_printf( 1, "primitive buffer used: " SIZE_T_FMT, 
-      g_retroflat_state->platform.used_prim );
-   */
-
-   /* Add the draw packet for this line from the primitive buffer to the
-    * ordering table.
+   /* Link the last primitive in the linked list to the next available
+    * primitive spot.
     */
-   addPrim(
-      g_retroflat_state->platform.ot[retroflat_screen_buffer()->draw_idx],
-      prim );
+   setaddr( g_retroflat_state->platform.next_prim,
+      g_retroflat_state->platform.next_prim + prim_sz );
+
+   /* Increment the primitive buffer "last" pointer to the current "next"
+    * (which is now the last-used) and the "next" pointer to the next available
+    * spot.
+    */
+   g_retroflat_state->platform.last_prim =
+      g_retroflat_state->platform.next_prim;
+   g_retroflat_state->platform.next_prim += prim_sz;
+
+   /* Track the bytes of used primitive buffer from 0 for bounds checks. */
+   g_retroflat_state->platform.used_prim += prim_sz;
 }
 
 void _retroflat_psx_timer2_isr() {

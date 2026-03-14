@@ -173,6 +173,7 @@ struct RETROFLAT_PLATFORM {
    DISPENV disp[2];
    uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
    uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
+   uint8_t* last_prim;
    uint8_t* next_prim;
    size_t used_prim;
    /*! \brief LCG rand state. */
