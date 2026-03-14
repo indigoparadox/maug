@@ -500,6 +500,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   DR_TPAGE* tpage = NULL;
+   SPRT_16* sprite = NULL;
    RECT src_rect;
 
    if( NULL == target ) {
@@ -519,14 +521,41 @@ MERROR_RETVAL retroflat_blit_bitmap(
    _retroflat_psx_add_prim( blit, sizeof( POLY_FT4 ) );
 #endif
 
-   src_rect.x = src->vram_x[0] + s_x;
-   src_rect.y = src->vram_y[0] + s_y;
-   src_rect.w = w;
-   src_rect.h = h;
+   if( 0 < instance ) {
 
-   MoveImage( &src_rect,
-      target->vram_x[target->draw_idx] + d_x,
-      target->vram_y[target->draw_idx] + d_y );
+      /* Change the GPU texture page to the source page. */
+      tpage = (DR_TPAGE*)(g_retroflat_state->platform.next_prim);
+      setDrawTPage(
+         tpage,
+         0,
+         0, 
+         getTPage( 0, 0, src->vram_x[0] + s_x, src->vram_y[0] + s_y )
+      );
+      _retroflat_psx_add_prim( tpage, sizeof( DR_TPAGE ) );
+
+      /* Draw the actual source sprite. */
+      sprite = (SPRT_16*)(g_retroflat_state->platform.next_prim);
+      setSprt( sprite );
+      setRGB0( sprite, 128, 128, 128 ); /* Eliminate tint. */
+      setXY0( sprite, d_x, d_y );
+      setUV0( sprite, s_x, s_y );
+      /*
+      sprite->tpage =
+         getTPage( 0, 1, src->vram_x[0] + s_x, src->vram_y[0] + s_y );
+      */
+      _retroflat_psx_add_prim( sprite, sizeof( SPRT_16 ) );
+
+   } else {
+      /* Draw a static tile. */
+      src_rect.x = src->vram_x[0] + s_x;
+      src_rect.y = src->vram_y[0] + s_y;
+      src_rect.w = w;
+      src_rect.h = h;
+
+      MoveImage( &src_rect,
+         target->vram_x[target->draw_idx] + d_x,
+         target->vram_y[target->draw_idx] + d_y );
+   }
 
    return retval;
 }
@@ -557,7 +586,6 @@ void retroflat_px(
       _retroflat_psx_dbg_constrain( x, y ); return );
 
    /* Draw a single-pixel rect with the GPU. */
-   /* maug_mzero( px, sizeof( TILE ) ); */
    setTile( px );
    setRGB0( px,
       g_retroflat_state->palette[color_idx].r,
@@ -592,7 +620,6 @@ void retroflat_rect(
 
       /* Draw a filled rect with the GPU. */
       rect = (TILE*)(g_retroflat_state->platform.next_prim);
-      /* maug_mzero( rect, sizeof( TILE ) ); */
       setTile( rect );
       setRGB0( rect,
          g_retroflat_state->palette[color_idx].r,
@@ -631,7 +658,6 @@ void retroflat_line(
    retroflat_constrain_px( x2, y2, target,
       _retroflat_psx_dbg_constrain( x2, y2 ); return );
 
-   /* maug_mzero( line, sizeof( LINE_F2 ) ); */
    setLineF2( line );
    setRGB0( line,
       g_retroflat_state->palette[color_idx].r,
