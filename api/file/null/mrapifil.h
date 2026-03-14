@@ -95,7 +95,7 @@ MERROR_RETVAL mfile_file_write_block(
       return MERROR_FILE;
    }
 
-   /* TODO */
+   /* TODO: Implement insert rather than replace like in UNIX mfile API. */
 #  pragma message( "warning: file_write_block not implemented" )
 
    return retval;

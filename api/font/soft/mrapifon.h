@@ -136,6 +136,10 @@ MERROR_RETVAL retrofont_load(
    font->glyph_h = glyph_h;
    font->glyph_sz = glyph_h * glyph_w_bytes;
 
+#if RETROFONT_TRACE_LVL > 0
+         debug_printf( RETROFONT_TRACE_LVL, "reading glyphs..." );
+#endif /* RETROFONT_TRACE_LVL */
+
    while( font_file.has_bytes( &font_file ) ) {
       retval = retrofont_read_line( &font_file, line, &line_bytes );
       if( MERROR_WAIT != retval && MERROR_PARSE != retval ) {

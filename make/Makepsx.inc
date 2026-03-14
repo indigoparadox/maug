@@ -96,6 +96,7 @@ obj/psx/iso.xml: obj/psx/system.cnf obj/psx/isoxml
 	echo "		/>" >> $$@
 	echo "		<directory_tree>" >> $$@
 	echo "			<file name=\"SYSTEM.CNF\"		type=\"data\" source=\"system.cnf\" />" >> $$@
+	echo "			<file name=\"`echo $(1)psx.exe | tr [:lower:] [:upper:]`\"		type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
 	./obj/psx/isoxml $(2) >> $$@
 	echo "" >> $$@
 	echo "			<dummy sectors=\"1024\"/>" >> $$@

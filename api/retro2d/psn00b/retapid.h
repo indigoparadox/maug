@@ -12,11 +12,13 @@
 #include <psxgte.h>
 #include <psxgpu.h>
 
-#define RETROPLAT_PRESENT 1
+#define RETROPLAT_PRESENT
 
 #define RETROFLAT_NO_CLI_SZ
 
 #define RETROFLAT_SOFT_VIEWPORT
+
+#define RETROFLAT_LOAD_BITMAP_GENERIC
 
 #define RETROFLAT_PSX_OT_LEN 1
 
