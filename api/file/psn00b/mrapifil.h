@@ -36,7 +36,7 @@ MERROR_RETVAL mfile_psx_cache_block(
    file_plus_lba_offset = CdPosToInt( &(p_file->h.file.cdf.pos) ) + lba_offset;
 
    /* Wait for the CD-ROM to be ready if needed. */
-   while( MFILE_PSX_CD_BUSY == MFILE_PSX_CD_BUSY & CdStatus() ) {
+   while( MFILE_PSX_CD_BUSY == (MFILE_PSX_CD_BUSY & CdStatus()) ) {
       CdControl( CdlNop, 0, 0 ); /* Refresh CD status. */
 #if MFILE_SEEK_TRACE_LVL > 0
       debug_printf(
@@ -93,7 +93,6 @@ MERROR_RETVAL mfile_file_read_block(
    MERROR_RETVAL retval = MERROR_OK;
    off_t sector_byte_offset = 0,
       copy_sz = 0,
-      i = 0,
       buffer_i = 0;
 
    assert( MFILE_CADDY_TYPE_FILE == p_file->type );
@@ -285,7 +284,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    filepath[i_out++] = '1';
 
    /* Wait for CD-ROM if needed. */
-   while( MFILE_PSX_CD_BUSY == MFILE_PSX_CD_BUSY & CdStatus() ) {
+   while( MFILE_PSX_CD_BUSY == (MFILE_PSX_CD_BUSY & CdStatus()) ) {
       CdControl( CdlNop, 0, 0 );
 #if MFILE_SEEK_TRACE_LVL > 0
       debug_printf(
