@@ -75,7 +75,7 @@ obj/psx/$(1)psx.map: obj/psx/$(1).elf
 
 obj/psx/system.cnf:
 	# Generate the system.cnf.
-	echo BOOT=cdrom:\$(1)psx.exe\;1 >> $$@
+	echo BOOT=cdrom:\$(1).exe\;1 >> $$@
 	echo TCB=4 >> $$@
 	echo EVENT=10 >> $$@
 	echo STACK=801FFFF0 >> $$@
@@ -96,7 +96,7 @@ obj/psx/iso.xml: obj/psx/system.cnf obj/psx/isoxml
 	echo "		/>" >> $$@
 	echo "		<directory_tree>" >> $$@
 	echo "			<file name=\"SYSTEM.CNF\"		type=\"data\" source=\"system.cnf\" />" >> $$@
-	echo "			<file name=\"`echo $(1)psx.exe | tr [:lower:] [:upper:]`\"		type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
+	echo "			<file name=\"`echo $(1).exe | tr [:lower:] [:upper:]`\"		type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
 	./obj/psx/isoxml $(2) >> $$@
 	echo "" >> $$@
 	echo "			<dummy sectors=\"1024\"/>" >> $$@
