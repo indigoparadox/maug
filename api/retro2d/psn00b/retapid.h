@@ -23,7 +23,7 @@
 #define RETROFLAT_PSX_OT_LEN 1
 
 #ifndef RETROFLAT_PSX_PRIM_BUF_SZ
-#  define RETROFLAT_PSX_PRIM_BUF_SZ 81920
+#  define RETROFLAT_PSX_PRIM_BUF_SZ 16384
 #endif /* !RETROFLAT_PSX_PRIM_BUF_SZ */
 
 #ifndef RETROFLAT_PSX_CIRCLE_SEGMENTS
@@ -99,6 +99,11 @@ struct RETROFLAT_BITMAP {
    /*! \brief Y coordinate on the given VRAM page. */
    retroflat_pxxy_t vram_off_y[2];
    int page[2];
+   uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
+   uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
+   uint8_t* last_prim[2];
+   uint8_t* next_prim[2];
+   size_t used_prim[2];
 };
 
 /**
@@ -195,11 +200,6 @@ struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    DISPENV disp[2];
-   uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
-   uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
-   uint8_t* last_prim[2];
-   uint8_t* next_prim[2];
-   size_t used_prim[2];
    /*! \brief LCG rand state. */
    uint32_t rand_state;
    /*! \brief Skyline points inventory.

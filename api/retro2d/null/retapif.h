@@ -173,7 +173,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    if(
       RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
    ) {
-      return;
+      return MERROR_GUI;
    }
 
    /* TODO */
