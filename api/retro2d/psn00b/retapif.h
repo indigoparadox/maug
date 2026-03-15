@@ -622,7 +622,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    DR_TPAGE* tpage = NULL;
-   SPRT_16* sprite = NULL;
+   SPRT* sprite = NULL;
    RECT src_rect;
 
    if( NULL == target ) {
@@ -666,16 +666,17 @@ MERROR_RETVAL retroflat_blit_bitmap(
       _retroflat_psx_add_prim( tpage, sizeof( DR_TPAGE ) );
 
       /* Draw the actual source sprite. */
-      sprite = (SPRT_16*)(g_retroflat_state->platform.next_prim);
-      setSprt16( sprite );
+      sprite = (SPRT*)(g_retroflat_state->platform.next_prim);
+      setSprt( sprite );
       setRGB0( sprite, 128, 128, 128 ); /* Eliminate tint. */
       setXY0( sprite, d_x, d_y );
       setUV0( sprite, src->vram_off_x[0] + s_x, src->vram_off_y[0] +  s_y );
+      setWH( sprite, w, h );
       /*
       sprite->tpage =
          getTPage( 0, 1, src->vram_x[0] + s_x, src->vram_y[0] + s_y );
       */
-      _retroflat_psx_add_prim( sprite, sizeof( SPRT_16 ) );
+      _retroflat_psx_add_prim( sprite, sizeof( SPRT) );
    }
 
    return retval;
