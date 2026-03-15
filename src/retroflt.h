@@ -1612,7 +1612,7 @@ struct RETROFLAT_STATE {
    char                    config_path[MAUG_PATH_SZ_MAX + 1];
    char                    assets_path[MAUG_PATH_SZ_MAX + 1];
    /*! \brief Off-screen buffer bitmap. */
-   struct RETROFLAT_BITMAP buffer;
+   /* struct RETROFLAT_BITMAP buffer; */
    int screen_scale;
 
 #  if defined( RETROFLAT_VDP ) || defined( DOCUMENTATION ) || \

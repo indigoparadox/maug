@@ -80,30 +80,31 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
-   DRAWENV draw[2];
+   DRAWENV draw;
    /**
     * \brief Current drawing buffer idx.
     * \note This is only used for the RETROFLAT_FLAGS_SCREEN_BUFFER bitmap.
     *       It is the *drawing* index, which means it selects which buffer is
     *       being *drawn to*! (The other is being shown at this time!)
     */
-   int draw_idx;
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
    /*! \brief X coordinate of the VRAM page on which this is. */
-   retroflat_pxxy_t vram_pg_x[2];
+   retroflat_pxxy_t vram_pg_x;
    /*! \brief Y coordinate of the VRAM page on which this is. */
-   retroflat_pxxy_t vram_pg_y[2];
+   retroflat_pxxy_t vram_pg_y;
    /*! \brief X coordinate on the given VRAM page. */
-   retroflat_pxxy_t vram_off_x[2];
+   retroflat_pxxy_t vram_off_x;
    /*! \brief Y coordinate on the given VRAM page. */
-   retroflat_pxxy_t vram_off_y[2];
-   int page[2];
-   uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
-   uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
-   uint8_t* last_prim[2];
-   uint8_t* next_prim[2];
-   size_t used_prim[2];
+   retroflat_pxxy_t vram_off_y;
+   int page;
+   uint32_t ot[RETROFLAT_PSX_OT_LEN];
+   uint8_t prim_buff[RETROFLAT_PSX_PRIM_BUF_SZ];
+   uint8_t* last_prim;
+   uint8_t* next_prim;
+   size_t used_prim;
+   struct RETROFLAT_BITMAP* alt_page;
+   uint8_t disp_idx;
 };
 
 /**
@@ -142,7 +143,7 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 /*! \brief Get the direct screen buffer or the VDP buffer if a VDP is loaded. */
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() (g_retroflat_psx_screen_buffer_ptr)
 
 /*! \brief Lock a surface for pixel drawing if needed. */
 #  define retroflat_px_lock( bmp )
@@ -216,7 +217,15 @@ struct RETROFLAT_PLATFORM {
    size_t osb_bmps[RETROFLAT_PSX_VRAM_PG_CT + 1];
    DRAWENV* draw_stack[RETROFLAT_PSX_DRAW_STACK_CT_MAX];
    size_t draw_stack_ct;
+   struct RETROFLAT_BITMAP buffer1;
+   struct RETROFLAT_BITMAP buffer2;
 };
+
+#ifdef RETROFLT_C
+struct RETROFLAT_BITMAP* g_retroflat_psx_screen_buffer_ptr = NULL;
+#else
+extern struct RETROFLAT_BITMAP* g_retroflat_psx_screen_buffer_ptr;
+#endif /* RETROFLT_C */
 
 #endif /* !RETPLTD_H */
 

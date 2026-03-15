@@ -10,21 +10,22 @@ void _retroflat_psx_clear_buffers( struct RETROFLAT_BITMAP* bmp ) {
     * is an offscreen bitmap.
     */
    /* We're not using a reverse buffer here since this is for 2D! */
-   ClearOTag( bmp->ot[bmp->draw_idx], RETROFLAT_PSX_OT_LEN );
-   bmp->next_prim[bmp->draw_idx] = bmp->prim_buff[bmp->draw_idx];
-   bmp->used_prim[bmp->draw_idx] = 0;
+   ClearOTag( bmp->ot, RETROFLAT_PSX_OT_LEN );
+   bmp->next_prim = bmp->prim_buff;
+   bmp->used_prim = 0;
 }
 
 void _retroflat_psx_draw_buffers( struct RETROFLAT_BITMAP* bmp ) {
 
-   addPrims(
-      bmp->ot[bmp->draw_idx],
-      bmp->prim_buff[bmp->draw_idx],
-      bmp->last_prim[bmp->draw_idx] );
-
-   DrawOTag( bmp->ot[bmp->draw_idx] );
+   /* Add the bitmap's draw primitive linked list to the GPU draw queue and
+    * then draw that queue!
+    */
+   addPrims( bmp->ot, bmp->prim_buff, bmp->last_prim );
+   DrawOTag( bmp->ot );
 
    /* Wait for drawing to complete. */
+   /* TODO Move this to clear_buffers and add draw_buffers after every add_prim. */
+   /* TODO uint8_t* last_drawn; */
    DrawSync( 0 );
 }
 
@@ -37,23 +38,22 @@ void _retroflat_psx_add_prim(
     * we have to manually link the list of OTags to send to the GPU.
     */
 
-   setaddr(
-      bmp->next_prim[bmp->draw_idx], bmp->next_prim[bmp->draw_idx] + prim_sz );
+   setaddr( bmp->next_prim, bmp->next_prim + prim_sz );
 
    /* Increment the primitive buffer "last" pointer to the current "next"
     * (which is now the last-used) and the "next" pointer to the next available
     * spot.
     */
-   bmp->last_prim[bmp->draw_idx] = bmp->next_prim[bmp->draw_idx];
-   bmp->next_prim[bmp->draw_idx] += prim_sz;
+   bmp->last_prim = bmp->next_prim;
+   bmp->next_prim += prim_sz;
 
    /* Track the bytes of used primitive buffer from 0 for bounds checks. */
-   bmp->used_prim[bmp->draw_idx] += prim_sz;
+   bmp->used_prim += prim_sz;
 }
 
 void* _retroflat_psx_next_prim( struct RETROFLAT_BITMAP* bmp, size_t prim_sz ) {
    if(
-      RETROFLAT_PSX_PRIM_BUF_SZ <= bmp->used_prim[bmp->draw_idx] + prim_sz
+      RETROFLAT_PSX_PRIM_BUF_SZ <= bmp->used_prim + prim_sz
    ) {
       /* The primitive buffer filled up! So draw it and then clear it so it's
        * ready for more!
@@ -65,7 +65,7 @@ void* _retroflat_psx_next_prim( struct RETROFLAT_BITMAP* bmp, size_t prim_sz ) {
       _retroflat_psx_clear_buffers( bmp );
    }
 
-   return bmp->next_prim[bmp->draw_idx];
+   return bmp->next_prim;
 }
 
 void _retroflat_psx_timer2_isr() {
@@ -339,11 +339,55 @@ static MERROR_RETVAL retroflat_init_platform(
    debug_printf( RETRO2D_TRACE_LVL, "creating screen buffer..." );
 #endif /* RETRO2D_TRACE_LVL */
    retroflat_create_bitmap(
-      args->screen_w, args->screen_h, &(g_retroflat_state->buffer),
+      args->screen_w, args->screen_h, &(g_retroflat_state->platform.buffer1),
       RETROFLAT_FLAGS_SCREEN_BUFFER );
+   retroflat_create_bitmap(
+      args->screen_w, args->screen_h, &(g_retroflat_state->platform.buffer2),
+      RETROFLAT_FLAGS_SCREEN_BUFFER );
+   
+   /* Setup screen buffer 1. */
+   g_retroflat_state->platform.buffer1.vram_pg_x = 1024 - args->screen_w;
+   g_retroflat_state->platform.buffer1.vram_pg_y = 0;
+   g_retroflat_state->platform.buffer1.alt_page =
+      &(g_retroflat_state->platform.buffer2);
+   g_retroflat_state->platform.buffer1.disp_idx = 0;
+   g_retroflat_state->platform.buffer1.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+   SetDefDrawEnv(
+      &(g_retroflat_state->platform.buffer1.draw),
+      g_retroflat_state->platform.buffer1.vram_pg_x,
+      g_retroflat_state->platform.buffer1.vram_pg_y,
+      args->screen_w, args->screen_h );
 
+   /* Setup screen buffer 2. */
+   g_retroflat_state->platform.buffer2.vram_pg_x = 1024 - args->screen_w;
+   g_retroflat_state->platform.buffer2.vram_pg_y = args->screen_h;
+   g_retroflat_state->platform.buffer2.alt_page =
+      &(g_retroflat_state->platform.buffer1);
+   g_retroflat_state->platform.buffer2.disp_idx = 1;
+   g_retroflat_state->platform.buffer2.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+   SetDefDrawEnv(
+      &(g_retroflat_state->platform.buffer2.draw),
+      g_retroflat_state->platform.buffer2.vram_pg_x,
+      g_retroflat_state->platform.buffer2.vram_pg_y,
+      args->screen_w, args->screen_h );
+
+   g_retroflat_psx_screen_buffer_ptr = &(g_retroflat_state->platform.buffer1);
+
+   /* Setup the screen display buffer environments.
+      * Note that 0 uses 1's coords and 1 uses 0's coords, so that 0 is
+      * showing while 1 is drawing and vice-versa.
+      */
+   SetDefDispEnv( &(g_retroflat_state->platform.disp[1]),
+      g_retroflat_state->platform.buffer1.vram_pg_x,
+      g_retroflat_state->platform.buffer1.vram_pg_y,
+      args->screen_w, args->screen_h );
+   SetDefDispEnv( &(g_retroflat_state->platform.disp[0]),
+      g_retroflat_state->platform.buffer2.vram_pg_x,
+      g_retroflat_state->platform.buffer2.vram_pg_y,
+      args->screen_w, args->screen_h );
+ 
    PutDispEnv( &(g_retroflat_state->platform.disp[0]) );
-   PutDrawEnv( &(g_retroflat_state->buffer.draw[0]) );
+   PutDrawEnv( &(retroflat_screen_buffer()->draw) );
 
    /* Show the screen. */
    SetDispMask( 1 );
@@ -442,7 +486,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    if( retroflat_screen_buffer() == bmp ) {
       /* Flip the display buffer to the one *not* being locked for drawing! */
-      PutDispEnv( &(g_retroflat_state->platform.disp[bmp->draw_idx]) );
+      PutDispEnv( &(g_retroflat_state->platform.disp[bmp->disp_idx]) );
    }
 
    /* Assign the active drawing env to the given bitmap. */
@@ -453,8 +497,8 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    */
    g_retroflat_state->platform.draw_stack
       [g_retroflat_state->platform.draw_stack_ct++] =
-         &(bmp->draw[bmp->draw_idx]);
-   PutDrawEnv( &(bmp->draw[bmp->draw_idx]) );
+         &(bmp->draw);
+   PutDrawEnv( &(bmp->draw) );
 
    _retroflat_psx_clear_buffers( bmp );
 
@@ -479,7 +523,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       VSync( 0 );
 
       /* Flip the screen buffer index for the next screen-draw. */
-      bmp->draw_idx = !(bmp->draw_idx);
+      retroflat_screen_buffer() = bmp->alt_page;
    }
 
    assert( 0 < g_retroflat_state->draw_stack_ct );
@@ -519,79 +563,34 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* Setup drawenv defaults. */
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
    ) {
-
-      /* The screen buffers are created in a fixed area at the far right of
-       * VRAM.
-       */
-      bmp_out->vram_pg_x[0] = 1024 - w;
-      bmp_out->vram_pg_y[0] = 0;
-#if RETRO2D_TRACE_LVL > 0
-      debug_printf(
-         RETRO2D_TRACE_LVL, "creating %dx%d screen buffer at %d, %d in VRAM...",
-         w, h, bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0] );
-#endif /* RETRO2D_TRACE_LVL */
-
-      SetDefDrawEnv(
-         &(bmp_out->draw[0]),
-         bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0], w, h );
-
-      /* Try to allocate space in VRAM for the "alternate" buffer for page
-       * flipping.
-       */
-      bmp_out->vram_pg_x[1] = 1024 - w;
-      bmp_out->vram_pg_y[1] = h;
-#if RETRO2D_TRACE_LVL > 0
-      debug_printf( RETRO2D_TRACE_LVL,
-         "creating %dx%d alternate buffer at %d, %d in VRAM...",
-         w, h, bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1] );
-#endif /* RETRO2D_TRACE_LVL */
-
-      /* Setup drawenv for alternate buffer. */
-      SetDefDrawEnv(
-         &(bmp_out->draw[1]),
-         bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1], w, h );
-      setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
-
-      /* Setup the screen display buffer environments.
-       * Note that 0 uses 1's coords and 1 uses 0's coords, so that 0 is
-       * showing while 1 is drawing and vice-versa.
-       */
-      SetDefDispEnv( &(g_retroflat_state->platform.disp[1]),
-         bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0], w, h );
-      SetDefDispEnv( &(g_retroflat_state->platform.disp[0]),
-         bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1], w, h );
-
-      /* Setup bitmap system data. */
-      bmp_out->draw[1].isbg = 1;
-      bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
-   } else {
-
       /* Try to allocate space on the VRAM "canvas" for the main drawing buffer
        * of this bitmap.
        */
       retval = _retroflat_psx_fit_vram(
-         w, h, &(bmp_out->vram_pg_x[0]), &(bmp_out->vram_pg_y[0]),
-         &(bmp_out->vram_off_x[0]), &(bmp_out->vram_off_y[0]),
-         &(bmp_out->page[0]) );
+         w, h, &(bmp_out->vram_pg_x), &(bmp_out->vram_pg_y),
+         &(bmp_out->vram_off_x), &(bmp_out->vram_off_y),
+         &(bmp_out->page) );
       maug_cleanup_if_not_ok();
 
 #if RETRO2D_TRACE_LVL > 0
       debug_printf( RETRO2D_TRACE_LVL,
          "creating %dx%d bitmap at (%d + %d), (%d + %d) in VRAM...",
-         w, h, bmp_out->vram_pg_x[0], bmp_out->vram_off_x[0],
-         bmp_out->vram_pg_y[0], bmp_out->vram_off_y[0] );
+         w, h, bmp_out->vram_pg_x, bmp_out->vram_off_x,
+         bmp_out->vram_pg_y, bmp_out->vram_off_y );
 #endif /* RETRO2D_TRACE_LVL */
 
       SetDefDrawEnv(
-         &(bmp_out->draw[0]),
-         bmp_out->vram_pg_x[0] + bmp_out->vram_off_x[0],
-         bmp_out->vram_pg_y[0] + bmp_out->vram_off_y[0], w, h );
+         &(bmp_out->draw),
+         bmp_out->vram_pg_x + bmp_out->vram_off_x,
+         bmp_out->vram_pg_y + bmp_out->vram_off_y, w, h );
 
    }
-   setRGB0( &(bmp_out->draw[0]), 0, 0, 0 );
-   bmp_out->draw[0].isbg = 1;
+   setRGB0( &(bmp_out->draw), 0, 0, 0 );
+   /*
+   bmp_out->draw.isbg = 1;
+   */
    bmp_out->w = w;
    bmp_out->h = h;
    if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -624,19 +623,19 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    /* If the page is empty, then reset the points so it can be allocated
     * again.
     */
-   g_retroflat_state->platform.osb_bmps[bmp->page[0]]--;
+   g_retroflat_state->platform.osb_bmps[bmp->page]--;
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
       "bitmap removed from page %d, %d bitmaps remaining on page",
-      bmp->page, g_retroflat_state->platform.osb_bmps[bmp->page[0]] );
+      bmp->page, g_retroflat_state->platform.osb_bmps[bmp->page] );
 #endif /* RETRO2D_TRACE_LVL */
 
-   if( 0 >= g_retroflat_state->platform.osb_bmps[bmp->page[0]] ) {
-      g_retroflat_state->platform.osb_pts_ct[bmp->page[0]] = 0;
+   if( 0 >= g_retroflat_state->platform.osb_bmps[bmp->page] ) {
+      g_retroflat_state->platform.osb_pts_ct[bmp->page] = 0;
 
 #if RETRO2D_TRACE_LVL > 0
-   debug_printf( RETRO2D_TRACE_LVL, "bitmap page %d reset!", bmp->page[0] );
+   debug_printf( RETRO2D_TRACE_LVL, "bitmap page %d reset!", bmp->page );
 #endif /* RETRO2D_TRACE_LVL */
    }
 
@@ -679,16 +678,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #endif
 
    if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
-      src_rect.x = src->vram_pg_x[0] + src->vram_off_x[0] + s_x;
-      src_rect.y = src->vram_pg_y[0] + src->vram_off_y[0] + s_y;
+      src_rect.x = src->vram_pg_x + src->vram_off_x + s_x;
+      src_rect.y = src->vram_pg_y + src->vram_off_y + s_y;
       src_rect.w = w;
       src_rect.h = h;
 
       MoveImage( &src_rect,
-         target->vram_pg_x[target->draw_idx] +
-            target->vram_off_x[target->draw_idx] + d_x,
-         target->vram_pg_y[target->draw_idx] +
-            target->vram_off_y[target->draw_idx] + d_y );
+         target->vram_pg_x +
+            target->vram_off_x + d_x,
+         target->vram_pg_y +
+            target->vram_off_y + d_y );
 
    } else {
       /* Change the GPU texture page to the source's sprite page. */
@@ -698,7 +697,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
          tpage,
          2,
          1, 
-         getTPage( 2, 1, src->vram_pg_x[0], src->vram_pg_y[0] )
+         getTPage( 2, 1, src->vram_pg_x, src->vram_pg_y )
       );
       _retroflat_psx_add_prim( target, tpage, sizeof( DR_TPAGE ) );
 
@@ -710,7 +709,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
          setRGB0( sprite16, 128, 128, 128 ); /* Eliminate tint. */
          setXY0( sprite16, d_x, d_y );
          setUV0(
-            sprite16, src->vram_off_x[0] + s_x, src->vram_off_y[0] +  s_y );
+            sprite16, src->vram_off_x + s_x, src->vram_off_y +  s_y );
          _retroflat_psx_add_prim( target, sprite16, sizeof( SPRT_16 ) );
 
       } else {
@@ -718,7 +717,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
          setSprt( sprite );
          setRGB0( sprite, 128, 128, 128 ); /* Eliminate tint. */
          setXY0( sprite, d_x, d_y );
-         setUV0( sprite, src->vram_off_x[0] + s_x, src->vram_off_y[0] +  s_y );
+         setUV0( sprite, src->vram_off_x + s_x, src->vram_off_y +  s_y );
          setWH( sprite, w, h );
          _retroflat_psx_add_prim( target, sprite, sizeof( SPRT ) );
       }
