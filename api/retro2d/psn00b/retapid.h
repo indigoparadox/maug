@@ -98,6 +98,7 @@ struct RETROFLAT_BITMAP {
    retroflat_pxxy_t vram_off_x[2];
    /*! \brief Y coordinate on the given VRAM page. */
    retroflat_pxxy_t vram_off_y[2];
+   int page[2];
 };
 
 /**
@@ -207,6 +208,12 @@ struct RETROFLAT_PLATFORM {
    struct RETROFLAT_PSX_OSB_PT osb_pts
       [RETROFLAT_PSX_VRAM_PG_CT + 1][RETROFLAT_PSX_OSB_PTS_CT_MAX];
    size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT + 1];
+   /**
+    * \brief Number of bitmaps in each page.
+    *
+    * \note When this hits zero, the page OSB points is reset.
+    */
+   size_t osb_bmps[RETROFLAT_PSX_VRAM_PG_CT + 1];
    DRAWENV* draw_stack[RETROFLAT_PSX_DRAW_STACK_CT_MAX];
    size_t draw_stack_ct;
 };

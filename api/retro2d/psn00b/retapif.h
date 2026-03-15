@@ -103,7 +103,8 @@ void _retroflat_psx_dbg_constrain( retroflat_pxxy_t x, retroflat_pxxy_t y ) {
 MERROR_RETVAL _retroflat_psx_fit_vram(
    retroflat_pxxy_t w, retroflat_pxxy_t h,
    retroflat_pxxy_t* p_pg_x, retroflat_pxxy_t* p_pg_y,
-   retroflat_pxxy_t* p_off_x, retroflat_pxxy_t* p_off_y
+   retroflat_pxxy_t* p_off_x, retroflat_pxxy_t* p_off_y,
+   int* p_page
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
@@ -119,10 +120,11 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       new_best_y = 0;
    struct RETROFLAT_PSX_OSB_PT* pt_i = NULL;
    struct RETROFLAT_PSX_OSB_PT* pt_j = NULL;
-   int page = -1,
-       page_iter = 0,
+   int page_iter = 0,
        page_w = 0,
        page_h = 0;
+
+   *p_page = -1;
 
    for(
       /* Iter +1 for the special "big page" at the end! */
@@ -213,21 +215,21 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
 
       if( PXXY_MAX == best_i ) {
 #if RETRO2D_TRACE_LVL > 0
-         error_printf( "%ux%u will not fit on page %d", w, h );
+         error_printf( "%ux%u will not fit on page %d", w, h, page_iter );
 #endif /* RETRO2D_TRACE_LVL */
       } else {
-         page = page_iter;
+         *p_page = page_iter;
 #if RETRO2D_TRACE_LVL > 0
-         debug_printf( RETRO2D_TRACE_LVL, "VRAM page %d selected...", page );
-         if( RETROFLAT_PSX_VRAM_PG_CT == page ) {
-            debug_printf( RETRO2D_TRACE_LVL, "big page!", page );
+         debug_printf( RETRO2D_TRACE_LVL, "VRAM page %d selected...", *p_page );
+         if( RETROFLAT_PSX_VRAM_PG_CT == *p_page ) {
+            debug_printf( RETRO2D_TRACE_LVL, "big page!", *p_page );
          }
 #endif /* RETRO2D_TRACE_LVL */
          break;
       }
    }
 
-   if( 0 > page ) {
+   if( 0 > *p_page ) {
       /* No page selected! */
       error_printf( "insufficient VRAM to load offscreen image!" );
       retval = MERROR_GUI;
@@ -239,14 +241,14 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
     */
    removed_pts_ct = best_j - best_i;
    assert( 1 <= best_j );
-   new_best_y = g_retroflat_state->platform.osb_pts[page][best_j - 1].y;
+   new_best_y = g_retroflat_state->platform.osb_pts[*p_page][best_j - 1].y;
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "removing %d points...", removed_pts_ct );
 #endif /* RETRO2D_TRACE_LVL */
    insert_bottom_right =
-      best_j < g_retroflat_state->platform.osb_pts_ct[page] ?
+      best_j < g_retroflat_state->platform.osb_pts_ct[*p_page] ?
       /* Don't insert bottom-right if it's in the middle of a left wall. */
-      best_x < g_retroflat_state->platform.osb_pts[page][best_j].x :
+      best_x < g_retroflat_state->platform.osb_pts[*p_page][best_j].x :
       /* Don't insert bottom-right if it butts up against VRAM end. */
       best_x < page_w;
 #if RETRO2D_TRACE_LVL > 0
@@ -258,47 +260,51 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
    if( insert_bottom_right + 1 >= RETROFLAT_PSX_OSB_PTS_CT_MAX ) {
       error_printf( "too many skyline points in VRAM!" );
       retval = MERROR_GUI;
+      *p_page = -1;
       goto cleanup;
    }
 
    /* Add space or remove points determined above. */
    if( insert_bottom_right + 1 > removed_pts_ct ) {
       /* Insert space for new point(s). */
-      i = g_retroflat_state->platform.osb_pts_ct[page] - 1;
+      i = g_retroflat_state->platform.osb_pts_ct[*p_page] - 1;
       j = i + ((insert_bottom_right + 1) - removed_pts_ct);
       /* TODO: Can we use memmove() here? */
       for( ; i >= best_j ; --i, --j ) {
          memcpy(
-            &(g_retroflat_state->platform.osb_pts[page][j]),
-            &(g_retroflat_state->platform.osb_pts[page][i]),
+            &(g_retroflat_state->platform.osb_pts[*p_page][j]),
+            &(g_retroflat_state->platform.osb_pts[*p_page][i]),
             sizeof( struct RETROFLAT_PSX_OSB_PT ) );
       }
-      g_retroflat_state->platform.osb_pts_ct[page] += 
+      g_retroflat_state->platform.osb_pts_ct[*p_page] += 
          ((insert_bottom_right + 1) - removed_pts_ct);
    } else if( insert_bottom_right + 1 < removed_pts_ct ) {
       /* Remove overlapped points. */
       i = best_j;
       j = i - (removed_pts_ct - (insert_bottom_right + 1));
       /* TODO: Can we use memmove() here? */
-      for( ; i < g_retroflat_state->platform.osb_pts_ct[page] ; i++, j++ ) {
+      for( ; i < g_retroflat_state->platform.osb_pts_ct[*p_page] ; i++, j++ ) {
          memcpy(
-            &(g_retroflat_state->platform.osb_pts[page][j]),
-            &(g_retroflat_state->platform.osb_pts[page][i]),
+            &(g_retroflat_state->platform.osb_pts[*p_page][j]),
+            &(g_retroflat_state->platform.osb_pts[*p_page][i]),
             sizeof( struct RETROFLAT_PSX_OSB_PT ) );
       }
-      g_retroflat_state->platform.osb_pts_ct[page] -=
+      g_retroflat_state->platform.osb_pts_ct[*p_page] -=
          (removed_pts_ct - (insert_bottom_right + 1));
    }
 
    /* Perform the actual insertion(s) at the new best point. */
-   g_retroflat_state->platform.osb_pts[page][best_i].x = best_x;
-   g_retroflat_state->platform.osb_pts[page][best_i].y = best_y + h;
+   g_retroflat_state->platform.osb_pts[*p_page][best_i].x = best_x;
+   g_retroflat_state->platform.osb_pts[*p_page][best_i].y = best_y + h;
    if( insert_bottom_right ) {
-      g_retroflat_state->platform.osb_pts[page][best_i + 1].x = best_x + w;
-      g_retroflat_state->platform.osb_pts[page][best_i + 1].y = new_best_y;
+      g_retroflat_state->platform.osb_pts[*p_page][best_i + 1].x = best_x + w;
+      g_retroflat_state->platform.osb_pts[*p_page][best_i + 1].y = new_best_y;
    }
 
-   if( RETROFLAT_PSX_VRAM_PG_CT == page ) {
+   /* Increment the number of bitmaps on this page. */
+   g_retroflat_state->platform.osb_bmps[*p_page]++;
+
+   if( RETROFLAT_PSX_VRAM_PG_CT == *p_page ) {
       /* We're on the big page! */
       *p_pg_x = (RETROFLAT_PSX_VRAM_PG_CT_W * RETROFLAT_PSX_VRAM_PG_PX_W);
       *p_off_x = best_x;
@@ -308,11 +314,11 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
    } else {
       /* We're on a normal page. */
       *p_pg_x =
-         (page % RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_W;
+         (*p_page % RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_W;
       *p_off_x = best_x;
       /* [sic] Add pixel ROW for each page! So CT_W is intended here! */
       *p_pg_y =
-         (page / RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_H;
+         (*p_page / RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_H;
       *p_off_y = best_y;
    }
 
@@ -590,7 +596,8 @@ MERROR_RETVAL retroflat_create_bitmap(
        */
       retval = _retroflat_psx_fit_vram(
          w, h, &(bmp_out->vram_pg_x[0]), &(bmp_out->vram_pg_y[0]),
-         &(bmp_out->vram_off_x[0]), &(bmp_out->vram_off_y[0]) );
+         &(bmp_out->vram_off_x[0]), &(bmp_out->vram_off_y[0]),
+         &(bmp_out->page[0]) );
       maug_cleanup_if_not_ok();
 
 #if RETRO2D_TRACE_LVL > 0
@@ -623,10 +630,36 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-   /* TODO */
-#  pragma message( "warning: destroy_bitmap not implemented" )
+   if( NULL == bmp ) {
+      bmp = retroflat_screen_buffer();
+   }
 
+   /* Mark the bitmap as invalid. */
    bmp->sz = 0;
+
+   if( retroflat_screen_buffer() == bmp ) {
+      /* The rest only applies to non-screen-buffer bitmaps. */
+      return;
+   }
+
+   /* If the page is empty, then reset the points so it can be allocated
+    * again.
+    */
+   g_retroflat_state->platform.osb_bmps[bmp->page[0]]--;
+
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL,
+      "bitmap removed from page %d, %d bitmaps remaining on page",
+      bmp->page, g_retroflat_state->platform.osb_bmps[bmp->page[0]] );
+#endif /* RETRO2D_TRACE_LVL */
+
+   if( 0 >= g_retroflat_state->platform.osb_bmps[bmp->page[0]] ) {
+      g_retroflat_state->platform.osb_pts_ct[bmp->page[0]] = 0;
+
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "bitmap page %d reset!", bmp->page[0] );
+#endif /* RETRO2D_TRACE_LVL */
+   }
 
 }
 
