@@ -22,6 +22,8 @@
 
 #define RETROFLAT_PSX_OT_LEN 1
 
+#define RETROFLAT_PSX_FLAG_NOWAIT 0x01
+
 #ifndef RETROFLAT_PSX_PRIM_BUF_SZ
 #  define RETROFLAT_PSX_PRIM_BUF_SZ 16384
 #endif /* !RETROFLAT_PSX_PRIM_BUF_SZ */
@@ -100,6 +102,14 @@ struct RETROFLAT_BITMAP {
    int page;
    uint32_t ot[RETROFLAT_PSX_OT_LEN];
    uint8_t prim_buff[RETROFLAT_PSX_PRIM_BUF_SZ];
+   /**
+    * \brief First primitive to draw on next draw_prims call.
+    *
+    * \note This is different from prim_buff because the GPU might still be
+    *       drawing earlier primitives for this bitmap, so this is the first
+    *       non-already-sent primitive.
+    */
+   uint8_t* first_prim;
    uint8_t* last_prim;
    uint8_t* next_prim;
    size_t used_prim;

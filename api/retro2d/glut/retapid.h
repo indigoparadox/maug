@@ -62,7 +62,7 @@ struct RETROFLAT_BITMAP {
 #  endif /* RETROFLAT_VDP */
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() (NULL)
 #  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_quit( retval_in ) glutDestroyWindow( glutGetWindow() )
 #  define END_OF_MAIN()

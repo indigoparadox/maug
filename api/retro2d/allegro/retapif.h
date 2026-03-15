@@ -108,10 +108,10 @@ MERROR_RETVAL retroflat_init_platform(
 #        endif
 #     endif /* RETROFLAT_OS_DOS */
 
-   g_retroflat_state->buffer.b = 
+   retroflat_screen_buffer()->b = 
       create_bitmap( args->screen_w, args->screen_h );
    maug_cleanup_if_null(
-      BITMAP*, g_retroflat_state->buffer.b, RETROFLAT_ERROR_GRAPHICS );
+      BITMAP*, retroflat_screen_buffer()->b, RETROFLAT_ERROR_GRAPHICS );
 
 cleanup:
 
@@ -126,7 +126,7 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
       clear_keybuf();
    }
 
-   retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+   retroflat_destroy_bitmap( retroflat_screen_buffer() );
 }
 
 /* === */
@@ -212,7 +212,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    /* Flip the buffer. */
-   blit( g_retroflat_state->buffer.b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
+   blit( retroflat_screen_buffer()->b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
 
    /* Release the screen. */
    release_screen();

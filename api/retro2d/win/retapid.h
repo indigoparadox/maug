@@ -272,11 +272,13 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 #     define retroflat_screen_buffer() \
          (NULL == g_retroflat_state->vdp_buffer ? \
-         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+         &(g_retroflat_state->platform.screen_buffer) : \
+         g_retroflat_state->vdp_buffer)
 
 #  else
 
-#     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#     define retroflat_screen_buffer() \
+         (&(g_retroflat_state->platform.screen_buffer))
 
 #  endif /* RETROFLAT_VDP */
 
@@ -333,6 +335,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    HWND                 window;
    int16_t              last_idc; /* Last clicked button. */
+   struct RETROFLAT_BITMAP screen_buffer;
 #  ifdef RETROFLAT_SCREENSAVER
    HWND                 parent;
 #  endif /* RETROFLAT_SCREENSAVER */

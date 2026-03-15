@@ -77,7 +77,8 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 /*! \brief Get the direct screen buffer or the VDP buffer if a VDP is loaded. */
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 
 /*! \brief Lock a surface for pixel drawing if needed. */
 #  define retroflat_px_lock( bmp )
@@ -122,6 +123,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 };
 
 struct RETROFLAT_PLATFORM {
+   struct RETROFLAT_BITMAP screen_buffer;
    uint8_t flags;
    WindowPtr win;
    GrafPort* port_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];

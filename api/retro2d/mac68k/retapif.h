@@ -116,7 +116,7 @@ static MERROR_RETVAL retroflat_init_platform(
 #ifndef RETROFLAT_MAC_NO_DBLBUF
    retval = retroflat_create_bitmap(
       args->screen_w, args->screen_h,
-      &(g_retroflat_state->buffer), RETROFLAT_FLAGS_OPAQUE );
+      &(g_retroflat_state->platform.screen_buffer), RETROFLAT_FLAGS_OPAQUE );
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
@@ -129,7 +129,7 @@ cleanup:
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    /* TODO */
 #ifndef RETROFLAT_MAC_NO_DBLBUF
-   retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+   retroflat_destroy_bitmap( &(g_retroflat_state->platform.screen_buffer) );
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
    FlushEvents( everyEvent, -1 );
 }
@@ -351,7 +351,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       }
    } else {
 #else
-      bmp = &(g_retroflat_state->buffer);
+      bmp = &(g_retroflat_state->platform.screen_buffer);
    }
 #endif /* RETROFLAT_MAC_NO_DBLBUF */
       bmp->flags |= RETROFLAT_MAC_FLAG_BITMAP_LOCKED;
@@ -427,20 +427,24 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          GetGWorld( &prev_gworld, &prev_gdhandle );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
 
-         LockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+         LockPixels( GetGWorldPixMap(
+            g_retroflat_state->platform.screen_buffer.gworld ) );
          CopyBits(
-            (BitMap*)*(GetGWorldPixMap( g_retroflat_state->buffer.gworld )),
-            (BitMap*)*(((CGrafPtr)GetWindowPort( g_retroflat_state->platform.win ))->portPixMap),
+            (BitMap*)*(GetGWorldPixMap(
+               g_retroflat_state->platform.screen_buffer.gworld )),
+            (BitMap*)*(((CGrafPtr)GetWindowPort(
+               g_retroflat_state->platform.win ))->portPixMap),
             &bufbounds,
             &bufbounds,
             srcCopy, nil );
 
          SetGWorld( prev_gworld, prev_gdhandle );
-         UnlockPixels( GetGWorldPixMap( g_retroflat_state->buffer.gworld ) );
+         UnlockPixels( GetGWorldPixMap(
+            g_retroflat_state->platform.screen_buffer.gworld ) );
       } else {
          /* Flip B&W buffer. */
          CopyBits(
-            &(g_retroflat_state->buffer.bitmap),
+            &(g_retroflat_state->platform.screen_buffer.bitmap),
             &(g_retroflat_state->platform.win->portBits),
             &bufbounds, &bufbounds, srcCopy, NULL );
       }
@@ -600,7 +604,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
                g_retroflat_state->platform.win ))->portPixMap);
       } else {
 #  else
-         target = &(g_retroflat_state->buffer);
+         target = &(g_retroflat_state->platform.screen_buffer);
 #  endif /* RETROFLAT_MAC_NO_DBLBUF */
          lockpix = 1;
          LockPixels( GetGWorldPixMap( src->gworld ) );
@@ -623,7 +627,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  ifdef RETROFLAT_MAC_NO_DBLBUF
          target_port = g_retroflat_state->platform.win;
 #else
-         target_port = g_retroflat_state->buffer.port;
+         target_port = g_retroflat_state->platform.screen_buffer.port;
 #  endif /* RETROFLAT_MAC_NO_DBLBUF */
       } else {
          target_port = target->port;

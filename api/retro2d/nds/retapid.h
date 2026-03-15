@@ -123,7 +123,8 @@ typedef int RETROFLAT_COLOR_DEF;
 
 #  define retroflat_screen_w() (256)
 #  define retroflat_screen_h() (192)
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 #  define retroflat_root_win() (NULL) /* TODO */
 
 #  define END_OF_MAIN()
@@ -144,6 +145,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 
 struct RETROFLAT_PLATFORM {
    uint8_t              flags;
+   struct RETROFLAT_BITMAP screen_buffer;
    uint16_t*            sprite_frames[RETROFLAT_NDS_SPRITES_ACTIVE];
    struct RETROFLAT_BITMAP* oam_entries[RETROFLAT_NDS_SPRITES_ACTIVE];
    int16_t              oam_dx[RETROFLAT_NDS_SPRITES_ACTIVE];
