@@ -442,6 +442,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( retroflat_screen_buffer() == bmp ) {
+      /* Flip the display buffer to the one *not* being locked for drawing! */
       PutDispEnv( &(g_retroflat_state->platform.disp[bmp->draw_idx]) );
    }
 
@@ -451,6 +452,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    /* 
    _retroflat_psx_draw_buffers();
    */
+   g_retroflat_state->platform.draw_stack
+      [g_retroflat_state->platform.draw_stack_ct++] =
+         &(bmp->draw[bmp->draw_idx]);
    PutDrawEnv( &(bmp->draw[bmp->draw_idx]) );
 
    _retroflat_psx_clear_buffers();
@@ -476,6 +480,13 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
       /* Flip the screen buffer index for the next screen-draw. */
       bmp->draw_idx = !(bmp->draw_idx);
+   }
+
+   assert( 0 < g_retroflat_state->draw_stack_ct );
+   g_retroflat_state->platform.draw_stack_ct--;
+   if( 0 < g_retroflat_state->platform.draw_stack_ct ) {
+      PutDrawEnv( g_retroflat_state->platform.draw_stack
+         [g_retroflat_state->platform.draw_stack_ct] );
    }
 
    return retval;

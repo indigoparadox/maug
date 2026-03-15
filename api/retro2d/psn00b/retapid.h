@@ -50,6 +50,8 @@
 #define RETROFLAT_PSX_VRAM_PG_PX_W 64
 #define RETROFLAT_PSX_VRAM_PG_PX_H 256
 
+#define RETROFLAT_PSX_DRAW_STACK_CT_MAX 10
+
 #define RETROSOFT_PRESENT
 
 /* Force software drawing to rely on hardware lines. */
@@ -205,6 +207,8 @@ struct RETROFLAT_PLATFORM {
    struct RETROFLAT_PSX_OSB_PT osb_pts
       [RETROFLAT_PSX_VRAM_PG_CT + 1][RETROFLAT_PSX_OSB_PTS_CT_MAX];
    size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT + 1];
+   DRAWENV* draw_stack[RETROFLAT_PSX_DRAW_STACK_CT_MAX];
+   size_t draw_stack_ct;
 };
 
 #endif /* !RETPLTD_H */
