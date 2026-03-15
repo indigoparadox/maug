@@ -534,14 +534,17 @@ mdata_strpool_idx_t mdata_strpool_find(
    while( i < strpool->str_sz ) {
       p_str_iter_sz = (size_t*)&(strpool_p[i]);
       if(
-         0 == strncmp( &(strpool_p[i + sizeof( size_t )]), str, str_sz + 1 )
+         0 == maug_strncmp(
+            &(strpool_p[i + sizeof( size_t )]), str, str_sz + 1 )
       ) {
          /* String found. Advance past the size before returning. */
          i += sizeof( size_t );
 #if MDATA_STRPOOL_TRACE_LVL > 0
          debug_printf( MDATA_STRPOOL_TRACE_LVL,
-            "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\"",
-            i, *p_str_iter_sz, &(strpool_p[i]) );
+            "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\" "
+            "to match " SIZE_T_FMT "-byte token: %s",
+            i, *p_str_iter_sz, &(strpool_p[i]),
+            str_sz, str );
 #endif /* MDATA_STRPOOL_TRACE_LVL */
 
          goto cleanup;
