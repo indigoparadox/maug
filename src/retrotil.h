@@ -597,8 +597,8 @@ static void retrotile_parser_match_token(
       if(
          /* Make sure tokens match. */
          maug_strlen( gc_retrotile_mstate_tokens[j] ) != token_sz ||
-         0 != strncmp(
-            token, gc_retrotile_mstate_tokens[j], token_sz
+         0 != maug_strncmp(
+            token, gc_retrotile_mstate_tokens[j], token_sz + 1
          )
       ) {
          j++;
@@ -774,14 +774,14 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
 
 #if RETROTILE_TRACE_LVL > 0
          #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
-            } else if( 0 == strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
+            } else if( 0 == maug_strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
                tile_def->tile_class = RETROTILE_CLASS_ ## A; \
                debug_printf( RETROTILE_TRACE_LVL, \
                   "set tile " SIZE_T_FMT " type: " #a " (%u)", \
                   parser->tileset_id_cur, tile_def->tile_class );
 #else
          #define RETROTILE_CLASS_TABLE_SET( A, a, i ) \
-            } else if( 0 == strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
+            } else if( 0 == maug_strncmp( #a, token, maug_strlen( #a ) + 1 ) ) { \
                tile_def->tile_class = RETROTILE_CLASS_ ## A;
 #endif /* RETROTILE_TRACE_LVL */
 
@@ -825,7 +825,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
             struct RETROTILE_TILE_DEF );
          assert( NULL != tile_def );
 
-         if( 0 == strncmp( "warp_dest", parser->last_prop_name, 10 ) ) {
+         if( 0 == maug_strncmp( "warp_dest", parser->last_prop_name, 10 ) ) {
             maug_mzero( tile_def->warp_dest, RETROTILE_NAME_SZ_MAX );
             maug_strncpy( tile_def->warp_dest, token, RETROTILE_NAME_SZ_MAX );
 #if RETROTILE_TRACE_LVL > 0
@@ -834,7 +834,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur, tile_def->warp_dest );
 #endif /* RETROTILE_TRACE_LVL */
 
-         } else if( 0 == strncmp( "warp_x", parser->last_prop_name, 7 ) ) {
+         } else if( 0 == maug_strncmp( "warp_x", parser->last_prop_name, 7 ) ) {
             tile_def->warp_x = maug_atos32( token, token_sz );
 #if RETROTILE_TRACE_LVL > 0
             debug_printf(
@@ -842,7 +842,7 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur, tile_def->warp_x );
 #endif /* RETROTILE_TRACE_LVL */
 
-         } else if( 0 == strncmp( "warp_y", parser->last_prop_name, 7 ) ) {
+         } else if( 0 == maug_strncmp( "warp_y", parser->last_prop_name, 7 ) ) {
             tile_def->warp_y = maug_atos32( token, token_sz );
 #if RETROTILE_TRACE_LVL > 0
             debug_printf(
@@ -850,10 +850,10 @@ MERROR_RETVAL retrotile_parser_parse_tiledef_token(
                parser->tileset_id_cur, tile_def->warp_y );
 #endif /* RETROTILE_TRACE_LVL */
 
-         } else if( 0 == strncmp( "color", parser->last_prop_name, 7 ) ) {
+         } else if( 0 == maug_strncmp( "color", parser->last_prop_name, 7 ) ) {
 
 #define RETROFLAT_COLOR_TABLE_TILPRP( idx, name_l, name_u, r, g, b, cgc, cgd ) \
-            } else if( 0 == strncmp( token, #name_l, token_sz ) ) { \
+            } else if( 0 == maug_strncmp( token, #name_l, token_sz ) ) { \
                tile_def->color = RETROFLAT_COLOR_ ## name_u;
 
             if( 0 ) {
@@ -1070,7 +1070,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
 
       } else if( MTILESTATE_LAYER_CLASS == parser->mstate ) {
          /* TODO: Use the class table to create layers for e.g. crops, items. */
-         if( 0 == strncmp( "mobile", token, 7 ) ) {
+         if( 0 == maug_strncmp( "mobile", token, 7 ) ) {
 #if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL,
                "layer " SIZE_T_FMT " type: mobile",
@@ -1104,7 +1104,7 @@ MERROR_RETVAL retrotile_parser_parse_token(
 
       } else if( MTILESTATE_PROP_VAL == parser->mstate ) {
          /* We're dealing with properties of the tilemap. */
-         if( 0 == strncmp( parser->last_prop_name, "name", 5 ) ) {
+         if( 0 == maug_strncmp( parser->last_prop_name, "name", 5 ) ) {
 #if RETROTILE_TRACE_LVL > 0
             debug_printf( RETROTILE_TRACE_LVL, "tilemap name: %s", token );
 #endif /* RETROTILE_TRACE_LVL */
@@ -1214,11 +1214,11 @@ MERROR_RETVAL retrotile_json_close_obj(
 int retrotile_parse_prop_type( const char* token, size_t token_sz ) {
    int out = RETROTILE_PROP_TYPE_OTHER;
 
-   if( 0 == strncmp( "string", token, 7 ) ) {
+   if( 0 == maug_strncmp( "string", token, 7 ) ) {
       out = RETROTILE_PROP_TYPE_STRING;
-   } else if( 0 == strncmp( "file", token, 5 ) ) {
+   } else if( 0 == maug_strncmp( "file", token, 5 ) ) {
       out = RETROTILE_PROP_TYPE_FILE;
-   } else if( 0 == strncmp( "int", token, 4 ) ) {
+   } else if( 0 == maug_strncmp( "int", token, 4 ) ) {
       out = RETROTILE_PROP_TYPE_INT;
    }
 
@@ -1235,18 +1235,18 @@ mfix_t retrotile_static_rotation_from_dir( const char* dir ) {
    }
 
    /* Translate dir into rotation value. */
-   if( 0 == strncmp( dir, "NW", 2 ) ) {
+   if( 0 == maug_strncmp( dir, "NW", 3 ) ) {
       static_rotate_out = mfix_from_f( 90.0f );
-   } else if( 0 == strncmp( dir, "SW", 2 ) ) {
+   } else if( 0 == maug_strncmp( dir, "SW", 3 ) ) {
       static_rotate_out = mfix_from_f( 180.0f ); 
-   } else if( 0 == strncmp( dir, "SE", 2 ) ) {
+   } else if( 0 == maug_strncmp( dir, "SE", 3 ) ) {
       static_rotate_out = mfix_from_f( 270.0f );
 
-   } else if( 0 == strncmp( dir, "W", 1 ) ) {
+   } else if( 0 == maug_strncmp( dir, "W", 2 ) ) {
       static_rotate_out = mfix_from_f( 90.0f );
-   } else if( 0 == strncmp( dir, "S", 1 ) ) {
+   } else if( 0 == maug_strncmp( dir, "S", 2 ) ) {
       static_rotate_out = mfix_from_f( 180.0f );
-   } else if( 0 == strncmp( dir, "E", 1 ) ) {
+   } else if( 0 == maug_strncmp( dir, "E", 2 ) ) {
       static_rotate_out = mfix_from_f( 270.0f );
 
    } else {

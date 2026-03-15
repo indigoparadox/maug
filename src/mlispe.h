@@ -1791,7 +1791,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       "%u: eval token: \"%s\" (strlen: " SIZE_T_FMT "r/" SIZE_T_FMT "d)",
       exec->uid, strpool_token, token_sz, maug_strlen( strpool_token ) );
 #endif /* MLISP_EXEC_TRACE_LVL */
-   if( 0 == strncmp( strpool_token, "begin", token_sz ) ) {
+   if( 0 == maug_strncmp( strpool_token, "begin", token_sz + 1 ) ) {
       /* Fake env node e to signal step_iter() to place/cleanup stack frame. */
       e_out->type = MLISP_TYPE_BEGIN;
 
