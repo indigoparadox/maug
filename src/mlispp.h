@@ -214,28 +214,28 @@ static MERROR_RETVAL _mlisp_ast_set_child_token(
    assert( 0 < token_sz );
 
    /* Setup flags based on token name. */
-   if( 0 == strncmp( strpool_token, "lambda", token_sz + 1 ) ) {
+   if( 0 == strncmp( strpool_token, "lambda", 7 ) ) {
       /* Special node: lambda. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: LAMBDA",
          strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_LAMBDA;
 
-   } else if( 0 == strncmp( strpool_token, "if", token_sz + 1 ) ) {
+   } else if( 0 == strncmp( strpool_token, "if", 3 ) ) {
       /* Special node: if. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: IF",
          strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_IF;
 
-   } else if( 0 == strncmp( strpool_token, "begin", token_sz + 1 ) ) {
+   } else if( 0 == strncmp( strpool_token, "begin", 6 ) ) {
       /* Special node: begin. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: BEGIN",
          strpool_token, token_sz );
       n->flags |= MLISP_AST_FLAG_BEGIN;
 
-   } else if( 0 == strncmp( strpool_token, "define", token_sz + 1 ) ) {
+   } else if( 0 == strncmp( strpool_token, "define", 7 ) ) {
       /* Special node: define. */
       debug_printf( MLISP_PARSE_TRACE_LVL,
          "setting node \"%s\" (" SIZE_T_FMT ") flag: DEFINE",
