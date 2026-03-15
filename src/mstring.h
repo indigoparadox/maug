@@ -132,6 +132,13 @@ MERROR_RETVAL maug_str_c2p(
 
 /* TODO: void maug_strtou32( const char* str, */
 
+/**
+ * \brief Trivial implementation of strncmp().
+ *
+ * \note This was implemented due to the permissiveness of strncmp() on
+ *       *some* platforms breaking functionality. Inconsistency is a problem
+ *       with critical functions like this!
+ */
 int maug_strncmp( const char* str1, const char* str2, size_t sz );
 
 #ifdef MAUG_NO_STDLIB
