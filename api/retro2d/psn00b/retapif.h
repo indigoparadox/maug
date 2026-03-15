@@ -680,6 +680,12 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
 #if 0
    POLY_FT4* blit = (POLY_FT4*)(g_retroflat_state->platform.next_prim);
 
@@ -791,6 +797,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       retroflat_constrain_px( x, y, target,
          _retroflat_psx_dbg_constrain( x, y ); return );
@@ -832,6 +844,12 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x1, y1, target,
       _retroflat_psx_dbg_constrain( x1, y1 ); return );
    retroflat_constrain_px( x2, y2, target,
@@ -859,6 +877,12 @@ void retroflat_ellipse(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    /* TODO
