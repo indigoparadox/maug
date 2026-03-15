@@ -37,11 +37,13 @@
 #define RETROFLAT_PSX_VRAM_W 1024
 #define RETROFLAT_PSX_VRAM_H 512
 
-/* PlayStation VRAM is divided into 16x2 pages, but the leftmost are reserved
- * for display buffers in our setup.
+/* PlayStation VRAM is divided into 16x2 pages, but the leftmost 5 pages are
+ * reserved for display buffers in our setup. We also reserve 4 pages between
+ * the normal pages and screen buffers to merge into a "big page" for tilemaps
+ * or similar.
  */
-#define RETROFLAT_PSX_VRAM_PG_CT 22
-#define RETROFLAT_PSX_VRAM_PG_CT_W 11
+#define RETROFLAT_PSX_VRAM_PG_CT 18
+#define RETROFLAT_PSX_VRAM_PG_CT_W 9
 #define RETROFLAT_PSX_VRAM_PG_CT_H 2
 
 /* Each VRAM page is 64x256. */
@@ -86,8 +88,14 @@ struct RETROFLAT_BITMAP {
    int draw_idx;
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
-   retroflat_pxxy_t vram_x[2];
-   retroflat_pxxy_t vram_y[2];
+   /*! \brief X coordinate of the VRAM page on which this is. */
+   retroflat_pxxy_t vram_pg_x[2];
+   /*! \brief Y coordinate of the VRAM page on which this is. */
+   retroflat_pxxy_t vram_pg_y[2];
+   /*! \brief X coordinate on the given VRAM page. */
+   retroflat_pxxy_t vram_off_x[2];
+   /*! \brief Y coordinate on the given VRAM page. */
+   retroflat_pxxy_t vram_off_y[2];
 };
 
 /**
@@ -195,8 +203,8 @@ struct RETROFLAT_PLATFORM {
     * \note Each sprite page in VRAM maintains its own skyline!
     */
    struct RETROFLAT_PSX_OSB_PT osb_pts
-      [RETROFLAT_PSX_VRAM_PG_CT][RETROFLAT_PSX_OSB_PTS_CT_MAX];
-   size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT];
+      [RETROFLAT_PSX_VRAM_PG_CT + 1][RETROFLAT_PSX_OSB_PTS_CT_MAX];
+   size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT + 1];
 };
 
 #endif /* !RETPLTD_H */

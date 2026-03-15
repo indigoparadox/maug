@@ -85,7 +85,8 @@ void _retroflat_psx_dbg_constrain( retroflat_pxxy_t x, retroflat_pxxy_t y ) {
 
 MERROR_RETVAL _retroflat_psx_fit_vram(
    retroflat_pxxy_t w, retroflat_pxxy_t h,
-   retroflat_pxxy_t* p_x, retroflat_pxxy_t* p_y
+   retroflat_pxxy_t* p_pg_x, retroflat_pxxy_t* p_pg_y,
+   retroflat_pxxy_t* p_off_x, retroflat_pxxy_t* p_off_y
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0,
@@ -102,9 +103,24 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
    struct RETROFLAT_PSX_OSB_PT* pt_i = NULL;
    struct RETROFLAT_PSX_OSB_PT* pt_j = NULL;
    int page = -1,
-       page_iter = 0;
+       page_iter = 0,
+       page_w = 0,
+       page_h = 0;
 
-   for( page_iter = 0 ; RETROFLAT_PSX_VRAM_PG_CT > page_iter ; page_iter++ ) {
+   for(
+      /* Iter +1 for the special "big page" at the end! */
+      page_iter = 0 ; RETROFLAT_PSX_VRAM_PG_CT + 1 > page_iter ; page_iter++
+   ) {
+      if( RETROFLAT_PSX_VRAM_PG_CT == page_iter ) {
+         /* Select "big page." */
+         page_w = RETROFLAT_PSX_VRAM_PG_PX_W * 2;
+         page_h = RETROFLAT_PSX_VRAM_PG_PX_H * 2;
+      } else {
+         /* Select a normal-sized page. */
+         page_w = RETROFLAT_PSX_VRAM_PG_PX_W;
+         page_h = RETROFLAT_PSX_VRAM_PG_PX_H;
+      }
+
       if( 0 == g_retroflat_state->platform.osb_pts_ct[page_iter] ) {
          /* Initialize the point array if none exist. */
          g_retroflat_state->platform.osb_pts[page_iter][0].x = 0;
@@ -117,15 +133,26 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
          g_retroflat_state->platform.osb_pts_ct[page_iter] > i ;
          i++
       ) {
+         /* These do more than save space... we have to modify iter_* later,
+          * so let's make copies of them here so we don't clobber the points
+          * we're comparing against until we know the page we're using and
+          * what fits!
+          */
          pt_i = &(g_retroflat_state->platform.osb_pts[page_iter][i]);
          iter_x = pt_i->x;
          iter_y = pt_i->y;
-         debug_printf( 1, "checking pt " SIZE_T_FMT " (%u, %u)...",
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf(
+            RETRO2D_TRACE_LVL, "checking pt " SIZE_T_FMT " (%u, %u)...",
             i, pt_i->x, pt_i->y );
-         
-         if( RETROFLAT_PSX_VRAM_PG_PX_W - iter_x < w || iter_y >= best_y ) {
+#endif /* RETRO2D_TRACE_LVL */
+
+         if( page_w - iter_x < w || iter_y >= best_y ) {
             /* We can't fit this bitmap in VRAM! */
-            debug_printf( 1, "cannot fit %ux%u in current pack...", w, h );
+#if RETRO2D_TRACE_LVL > 0
+            debug_printf( RETRO2D_TRACE_LVL,
+               "cannot fit %ux%u in current pack...", w, h );
+#endif /* RETRO2D_TRACE_LVL */
             break;
          }
 
@@ -134,7 +161,10 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
             g_retroflat_state->platform.osb_pts_ct[page_iter] > j ;
             j++
          ) {
-            debug_printf( 1, "against pt " SIZE_T_FMT "...", i );
+#if RETRO2D_TRACE_LVL > 0
+            debug_printf( RETRO2D_TRACE_LVL,
+               "against pt " SIZE_T_FMT "...", i );
+#endif /* RETRO2D_TRACE_LVL */
             pt_j = &(g_retroflat_state->platform.osb_pts[page_iter][j]);
 
             if( iter_x + w <= pt_j->x ) {
@@ -148,15 +178,18 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
             }
          }
 
-         if( iter_y >= best_y || RETROFLAT_PSX_VRAM_PG_PX_H - iter_y < h ) {
+         if( iter_y >= best_y || page_h - iter_y < h ) {
             continue;
          }
 
          /* If we made it this far, this point is our best bet! */
          best_i = i;
          best_j = j;
-         debug_printf( 1, "best i: " SIZE_T_FMT "; best j: " SIZE_T_FMT,
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL,
+            "best i: " SIZE_T_FMT "; best j: " SIZE_T_FMT,
             best_i, best_j );
+#endif /* RETRO2D_TRACE_LVL */
          best_x = iter_x;
          best_y = iter_y;
       }
@@ -168,8 +201,12 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       } else {
          page = page_iter;
 #if RETRO2D_TRACE_LVL > 0
-         debug_printf( RETRO2D_TRACE_LVL, "page %d selected..." page );
+         debug_printf( RETRO2D_TRACE_LVL, "VRAM page %d selected...", page );
+         if( RETROFLAT_PSX_VRAM_PG_CT == page ) {
+            debug_printf( RETRO2D_TRACE_LVL, "big page!", page );
+         }
 #endif /* RETRO2D_TRACE_LVL */
+         break;
       }
    }
 
@@ -194,7 +231,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       /* Don't insert bottom-right if it's in the middle of a left wall. */
       best_x < g_retroflat_state->platform.osb_pts[page][best_j].x :
       /* Don't insert bottom-right if it butts up against VRAM end. */
-      best_x < RETROFLAT_PSX_VRAM_PG_PX_W;
+      best_x < page_w;
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
       "inserting %d points...", insert_bottom_right + 1 );
@@ -244,11 +281,23 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       g_retroflat_state->platform.osb_pts[page][best_i + 1].y = new_best_y;
    }
 
-   *p_x = ((page % RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_W)
-      + best_x;
-   /* [sic] Add pixel ROW for each page! So CT_W is intended here! */
-   *p_y = ((page / RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_H)
-      + best_y;
+   if( RETROFLAT_PSX_VRAM_PG_CT == page ) {
+      /* We're on the big page! */
+      *p_pg_x = (RETROFLAT_PSX_VRAM_PG_CT_W * RETROFLAT_PSX_VRAM_PG_PX_W);
+      *p_off_x = best_x;
+      *p_pg_y = 0;
+      *p_off_y = best_y;
+
+   } else {
+      /* We're on a normal page. */
+      *p_pg_x =
+         (page % RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_W;
+      *p_off_x = best_x;
+      /* [sic] Add pixel ROW for each page! So CT_W is intended here! */
+      *p_pg_y =
+         (page / RETROFLAT_PSX_VRAM_PG_CT_W) * RETROFLAT_PSX_VRAM_PG_PX_H;
+      *p_off_y = best_y;
+   }
 
 cleanup:
 
@@ -284,7 +333,9 @@ static MERROR_RETVAL retroflat_init_platform(
    StartRCnt( RCntCNT2 );
 	ExitCriticalSection();
 
-   debug_printf( 1, "creating screen buffer..." );
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL, "creating screen buffer..." );
+#endif /* RETRO2D_TRACE_LVL */
    retroflat_create_bitmap(
       args->screen_w, args->screen_h, &(g_retroflat_state->buffer),
       RETROFLAT_FLAGS_SCREEN_BUFFER );
@@ -463,25 +514,33 @@ MERROR_RETVAL retroflat_create_bitmap(
       /* The screen buffers are created in a fixed area at the far right of
        * VRAM.
        */
-      bmp_out->vram_x[0] = 1024 - w;
-      bmp_out->vram_y[0] = 0;
-      debug_printf( 1, "creating %dx%d screen buffer at %d, %d in VRAM...",
-         w, h, bmp_out->vram_x[0], bmp_out->vram_y[0] );
+      bmp_out->vram_pg_x[0] = 1024 - w;
+      bmp_out->vram_pg_y[0] = 0;
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf(
+         RETRO2D_TRACE_LVL, "creating %dx%d screen buffer at %d, %d in VRAM...",
+         w, h, bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0] );
+#endif /* RETRO2D_TRACE_LVL */
 
       SetDefDrawEnv(
-         &(bmp_out->draw[0]), bmp_out->vram_x[0], bmp_out->vram_y[0], w, h );
+         &(bmp_out->draw[0]),
+         bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0], w, h );
 
       /* Try to allocate space in VRAM for the "alternate" buffer for page
        * flipping.
        */
-      bmp_out->vram_x[1] = 1024 - w;
-      bmp_out->vram_y[1] = h;
-      debug_printf( 1, "creating %dx%d alternate buffer at %d, %d in VRAM...",
-         w, h, bmp_out->vram_x[1], bmp_out->vram_y[1] );
+      bmp_out->vram_pg_x[1] = 1024 - w;
+      bmp_out->vram_pg_y[1] = h;
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL,
+         "creating %dx%d alternate buffer at %d, %d in VRAM...",
+         w, h, bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1] );
+#endif /* RETRO2D_TRACE_LVL */
 
       /* Setup drawenv for alternate buffer. */
       SetDefDrawEnv(
-         &(bmp_out->draw[1]), bmp_out->vram_x[1], bmp_out->vram_y[1], w, h );
+         &(bmp_out->draw[1]),
+         bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1], w, h );
       setRGB0( &(bmp_out->draw[1]), 0, 0, 0 );
 
       /* Setup the screen display buffer environments.
@@ -489,9 +548,9 @@ MERROR_RETVAL retroflat_create_bitmap(
        * showing while 1 is drawing and vice-versa.
        */
       SetDefDispEnv( &(g_retroflat_state->platform.disp[1]),
-         bmp_out->vram_x[0], bmp_out->vram_y[0], w, h );
+         bmp_out->vram_pg_x[0], bmp_out->vram_pg_y[0], w, h );
       SetDefDispEnv( &(g_retroflat_state->platform.disp[0]),
-         bmp_out->vram_x[1], bmp_out->vram_y[1], w, h );
+         bmp_out->vram_pg_x[1], bmp_out->vram_pg_y[1], w, h );
 
       /* Setup bitmap system data. */
       bmp_out->draw[1].isbg = 1;
@@ -502,20 +561,30 @@ MERROR_RETVAL retroflat_create_bitmap(
        * of this bitmap.
        */
       retval = _retroflat_psx_fit_vram(
-         w, h, &(bmp_out->vram_x[0]), &(bmp_out->vram_y[0]) );
+         w, h, &(bmp_out->vram_pg_x[0]), &(bmp_out->vram_pg_y[0]),
+         &(bmp_out->vram_off_x[0]), &(bmp_out->vram_off_y[0]) );
       maug_cleanup_if_not_ok();
 
-      debug_printf( 1, "creating %dx%d bitmap at %d, %d in VRAM...",
-         w, h, bmp_out->vram_x[0], bmp_out->vram_y[0] );
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL,
+         "creating %dx%d bitmap at (%d + %d), (%d + %d) in VRAM...",
+         w, h, bmp_out->vram_pg_x[0], bmp_out->vram_off_x[0],
+         bmp_out->vram_pg_y[0], bmp_out->vram_off_y[0] );
+#endif /* RETRO2D_TRACE_LVL */
 
       SetDefDrawEnv(
-         &(bmp_out->draw[0]), bmp_out->vram_x[0], bmp_out->vram_y[0], w, h );
+         &(bmp_out->draw[0]),
+         bmp_out->vram_pg_x[0] + bmp_out->vram_off_x[0],
+         bmp_out->vram_pg_y[0] + bmp_out->vram_off_y[0], w, h );
 
    }
    setRGB0( &(bmp_out->draw[0]), 0, 0, 0 );
    bmp_out->draw[0].isbg = 1;
    bmp_out->w = w;
    bmp_out->h = h;
+   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+      bmp_out-> flags |= RETROFLAT_FLAGS_OPAQUE;
+   }
 
 cleanup:
 
@@ -562,27 +631,41 @@ MERROR_RETVAL retroflat_blit_bitmap(
    _retroflat_psx_add_prim( blit, sizeof( POLY_FT4 ) );
 #endif
 
-   /* Change the GPU texture page to the source page. */
-   tpage = (DR_TPAGE*)(g_retroflat_state->platform.next_prim);
-   setDrawTPage(
-      tpage,
-      2,
-      1, 
-      getTPage( 2, 1, src->vram_x[0] + s_x, src->vram_y[0] + s_y )
-   );
-   _retroflat_psx_add_prim( tpage, sizeof( DR_TPAGE ) );
+   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+      src_rect.x = src->vram_pg_x[0] + src->vram_off_x[0] + s_x;
+      src_rect.y = src->vram_pg_y[0] + src->vram_off_y[0] + s_y;
+      src_rect.w = w;
+      src_rect.h = h;
 
-   /* Draw the actual source sprite. */
-   sprite = (SPRT_16*)(g_retroflat_state->platform.next_prim);
-   setSprt( sprite );
-   setRGB0( sprite, 128, 128, 128 ); /* Eliminate tint. */
-   setXY0( sprite, d_x, d_y );
-   setUV0( sprite, s_x, s_y );
-   /*
-   sprite->tpage =
-      getTPage( 0, 1, src->vram_x[0] + s_x, src->vram_y[0] + s_y );
-   */
-   _retroflat_psx_add_prim( sprite, sizeof( SPRT_16 ) );
+      MoveImage( &src_rect,
+         target->vram_pg_x[target->draw_idx] +
+            target->vram_off_x[target->draw_idx] + d_x,
+         target->vram_pg_y[target->draw_idx] +
+            target->vram_off_y[target->draw_idx] + d_y );
+
+   } else {
+      /* Change the GPU texture page to the source's sprite page. */
+      tpage = (DR_TPAGE*)(g_retroflat_state->platform.next_prim);
+      setDrawTPage(
+         tpage,
+         2,
+         1, 
+         getTPage( 2, 1, src->vram_pg_x[0], src->vram_pg_y[0] )
+      );
+      _retroflat_psx_add_prim( tpage, sizeof( DR_TPAGE ) );
+
+      /* Draw the actual source sprite. */
+      sprite = (SPRT_16*)(g_retroflat_state->platform.next_prim);
+      setSprt16( sprite );
+      setRGB0( sprite, 128, 128, 128 ); /* Eliminate tint. */
+      setXY0( sprite, d_x, d_y );
+      setUV0( sprite, src->vram_off_x[0] + s_x, src->vram_off_y[0] +  s_y );
+      /*
+      sprite->tpage =
+         getTPage( 0, 1, src->vram_x[0] + s_x, src->vram_y[0] + s_y );
+      */
+      _retroflat_psx_add_prim( sprite, sizeof( SPRT_16 ) );
+   }
 
    return retval;
 }
