@@ -512,8 +512,6 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    }
 
    if( retroflat_screen_buffer() == bmp ) {
-      /* Flip the display buffer to the one *not* being locked for drawing! */
-      PutDispEnv( &(g_retroflat_state->platform.disp[bmp->disp_idx]) );
    }
 
    /* Assign the active drawing env to the given bitmap. */
@@ -536,6 +534,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
+   RECT screen_rect;
 
    if( NULL == bmp ) {
       bmp = retroflat_screen_buffer();
@@ -546,11 +545,27 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    _retroflat_psx_clear_buffers( bmp, 0 );
 
    if( retroflat_screen_buffer() == bmp ) {
+
+      screen_rect.x = retroflat_screen_buffer()->vram_pg_x;
+      screen_rect.y = retroflat_screen_buffer()->vram_pg_y;
+      screen_rect.w = retroflat_screen_w();
+      screen_rect.h = retroflat_screen_h();
+
       /* Wait for GPU to finish drawing. */
       VSync( 0 );
 
-      /* Flip the screen buffer index for the next screen-draw. */
+      /* Flip the screen buffer for the next screen-draw. */
       retroflat_screen_buffer() = bmp->alt_page;
+
+      /* Flip the display buffer to the one *not* being locked for drawing! */
+      PutDispEnv( &(g_retroflat_state->platform.disp[bmp->disp_idx]) );
+
+      /* Synchronize the contents of the next frame about to be drawn with the
+       * frame just put out for display, for consistency.
+       */
+      MoveImage( &screen_rect,
+         retroflat_screen_buffer()->vram_pg_x,
+         retroflat_screen_buffer()->vram_pg_y );
    }
 
    assert( 0 < g_retroflat_state->draw_stack_ct );
