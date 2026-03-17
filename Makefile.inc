@@ -45,6 +45,14 @@ ifeq ($(DEBUG_THRESHOLD),)
 	DEBUG_THRESHOLD := 1
 endif
 
+ifeq ("$(FORCE_OPT)", "1")
+	CFLAGS_WATCOM += -ot
+	CFLAGS_WATCOM386 += -ot
+	CFLAGS_GCC += -O2
+	CFLAGS_GCC64 += -O2
+	CFLAGS_CECL += /O2
+endif
+
 # Build debug unless release specified.
 ifeq ("$(BUILD)","RELEASE")
 	CFLAGS_WATCOM += -ot
