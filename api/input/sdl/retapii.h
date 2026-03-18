@@ -194,10 +194,10 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 /* === */
 
 RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
-   int eres = 0;
    SDL_Event event;
    RETROFLAT_IN_KEY key_out = 0;
-   int mouse_x, mouse_y;
+   int mouse_x = 0,
+      mouse_y = 0;
 
    assert( NULL != input );
 
@@ -215,7 +215,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    switch( event.type ) {
    case SDL_QUIT:
       /* Handle SDL window close. */
+#if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "quit event!" );
+#endif /* RETROINPUT_TRACE_LVL */
       retroflat_quit( 0 );
       break;
 
@@ -226,8 +228,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       }
       */
       /* TODO: Work out mappings for XBox controller. */
+#if RETROINPUT_TRACE_LVL > 0
       debug_printf(
          RETROINPUT_TRACE_LVL, "gamebutton: %d", event.jbutton.button );
+#endif /* RETROINPUT_TRACE_LVL */
 
 #  elif defined( RETROFLAT_API_SDL2 )
    case SDL_CONTROLLERBUTTONDOWN:
@@ -263,10 +267,14 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.prev_pad = key_out;
       g_retroflat_state->input.prev_pad_delay = RETROFLAT_PREV_PAD_DELAY;
 
+#if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "pad button: %d", key_out );
+#endif /* RETROINPUT_TRACE_LVL */
 
-      /* Flush event buffer to improve responsiveness. */
-      while( (eres = SDL_PollEvent( &event )) );
+#  if !defined( RETROFLAT_API_SDL1 )
+      SDL_FlushEvents( SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP );
+#  endif /* !RETROFLAT_API_SDL1 */
+
       break;
 
    /* Detect button release for repeat emulation. */
@@ -281,7 +289,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       g_retroflat_state->input.prev_pad_delay = 0;
 
 #  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+#if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "pad button reset to 0" );
+#endif /* RETROINPUT_TRACE_LVL */
       break;
 
    case SDL_KEYDOWN:
@@ -290,7 +300,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) ||
          event.key.keysym.sym != g_retroflat_state->input.prev_key
       ) {
+#if RETROINPUT_TRACE_LVL > 0
          debug_printf( RETROINPUT_TRACE_LVL, "key: %d", event.key.keysym.sym );
+#endif /* RETROINPUT_TRACE_LVL */
          key_out = event.key.keysym.sym;
          g_retroflat_state->input.prev_key = event.key.keysym.sym;
       }
@@ -310,8 +322,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
       }
 
+#  if !defined( RETROFLAT_API_SDL1 )
       /* Flush event buffer to improve responsiveness. */
-      while( (eres = SDL_PollEvent( &event )) );
+      SDL_FlushEvents( SDL_KEYDOWN, SDL_KEYUP );
+#  endif /* !RETROFLAT_API_SDL1 */
       break;
 
    case SDL_KEYUP:
@@ -339,8 +353,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          g_retroflat_state->input.mouse_state = RETROFLAT_MOUSE_B_RIGHT;
       }
 
+#  if !defined( RETROFLAT_API_SDL1 )
       /* Flush key buffer to improve responsiveness. */
-      /*while( (eres = SDL_PollEvent( &event )) );*/
+      SDL_FlushEvents( SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP );
+#  endif /* !RETROFLAT_API_SDL1 */
       break;
 
 #  if !defined( RETROFLAT_API_SDL1 )
