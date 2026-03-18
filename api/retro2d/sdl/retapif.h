@@ -176,6 +176,10 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   if( NULL == g_retroflat_state->platform.buffer.surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Error initializing SDL buffer surface: %s", SDL_GetError() );
+   }
    g_retroflat_state->platform.scale_rect.x = 0;
    g_retroflat_state->platform.scale_rect.y = 0;
    g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
@@ -823,6 +827,9 @@ cleanup:
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       /* TODO: Are these masks right? */
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   if( NULL == bmp_out->surface ) {
+      error_printf( "could not create surface: %s", SDL_GetError() );
+   }
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -834,6 +841,9 @@ cleanup:
    /* Convert new surface to texture. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
       g_retroflat_state->platform.buffer.renderer, bmp_out->surface );
+   if( NULL == bmp_out->texture ) {
+      error_printf( "could not create texture: %s", SDL_GetError() );
+   }
    maug_cleanup_if_null(
       SDL_Texture*, bmp_out->texture, MERROR_GUI );
       
@@ -972,6 +982,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
          SDL_TEXTUREACCESS_STREAMING,
          retroflat_bitmap_w( src ),
          retroflat_bitmap_h( src ) );
+      if( NULL == tmp_tex ) {
+         error_printf(
+            "could not create temporary texture: %s", SDL_GetError() );
+         retval = MERROR_GUI;
+      }
       SDL_UpdateTexture(
          tmp_tex, NULL, src->surface->pixels, src->surface->pitch );
       retroflat_draw_release( src );
