@@ -127,7 +127,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
       /* Iter +1 for the special "big page" at the end! */
       page_iter = 0 ; RETROFLAT_PSX_VRAM_PG_CT + 1 > page_iter ; page_iter++
    ) {
-      if( RETROFLAT_PSX_VRAM_PG_CT == page_iter ) {
+      if( RETROFLAT_PSX_VRAM_PG_BIG_IDX == page_iter ) {
          /* Select "big page." */
          page_w = RETROFLAT_PSX_VRAM_PG_PX_W * 2;
          page_h = RETROFLAT_PSX_VRAM_PG_PX_H * 2;
@@ -218,7 +218,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
          *p_page = page_iter;
 #if RETRO2D_TRACE_LVL > 0
          debug_printf( RETRO2D_TRACE_LVL, "VRAM page %d selected...", *p_page );
-         if( RETROFLAT_PSX_VRAM_PG_CT == *p_page ) {
+         if( RETROFLAT_PSX_VRAM_PG_BIG_IDX == *p_page ) {
             debug_printf( RETRO2D_TRACE_LVL, "big page!", *p_page );
          }
 #endif /* RETRO2D_TRACE_LVL */
@@ -301,7 +301,7 @@ MERROR_RETVAL _retroflat_psx_fit_vram(
    /* Increment the number of bitmaps on this page. */
    g_retroflat_state->platform.osb_bmps[*p_page]++;
 
-   if( RETROFLAT_PSX_VRAM_PG_CT == *p_page ) {
+   if( RETROFLAT_PSX_VRAM_PG_BIG_IDX == *p_page ) {
       /* We're on the big page! */
       *p_pg_x = (RETROFLAT_PSX_VRAM_PG_CT_W * RETROFLAT_PSX_VRAM_PG_PX_W);
       *p_off_x = best_x;
