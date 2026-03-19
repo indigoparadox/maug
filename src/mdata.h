@@ -1330,12 +1330,19 @@ MERROR_RETVAL mdata_table_set(
 
    idx_key = mdata_vector_append(
       &(t->data_cols[0]), &key_tmp, sizeof( struct MDATA_TABLE_KEY ) );
-   assert( 0 <= idx_key );
+   if( 0 > idx_key ) {
+      error_printf( "error appending table key: %d", idx_key );
+      retval = merror_sz_to_retval( idx_key );
+   }
 
    /* TODO: Atomicity: remove key if value fails! */
 
    idx_val = mdata_vector_append( &(t->data_cols[1]), value, value_sz );
    assert( 0 <= idx_val );
+   if( 0 > idx_val ) {
+      error_printf( "error appending table value: %d", idx_val );
+      retval = merror_sz_to_retval( idx_val );
+   }
 
 cleanup:
 

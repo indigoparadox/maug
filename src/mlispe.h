@@ -1584,7 +1584,9 @@ static MERROR_RETVAL _mlisp_step_lambda(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_lambda_child_idx = NULL;
+#if MLISP_EXEC_TRACE_LVL > 0
    size_t* p_args_child_idx = NULL;
+#endif /* MLISP_EXEC_TRACE_LVL */
    struct MLISP_AST_NODE* n = NULL;
    size_t* p_n_last_lambda = NULL;
    ssize_t append_retval = 0;
@@ -1648,11 +1650,14 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
       /* Get the current args node child index. */
       assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-      p_args_child_idx = mdata_vector_get(
+#if MLISP_EXEC_TRACE_LVL > 0
+      p_args_child_idx = 
+#endif /* MLISP_EXEC_TRACE_LVL */
+      mdata_vector_get(
          &(exec->per_node_child_idx),
          n->ast_idx_children[*p_lambda_child_idx], size_t );
-      assert( NULL != p_args_child_idx );
 #if MLISP_EXEC_TRACE_LVL > 0
+      assert( NULL != p_args_child_idx );
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "%u: child idx for args AST node " SIZE_T_FMT ": " SIZE_T_FMT,
          exec->uid, *p_lambda_child_idx, *p_args_child_idx );
@@ -2285,7 +2290,11 @@ MERROR_RETVAL mlisp_step_lambda(
 #endif /* MLISP_EXEC_TRACE_LVL */
 
    n = mdata_vector_get( &(parser->ast), lambda_idx, struct MLISP_AST_NODE );
-   assert( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) );
+   if( MLISP_AST_FLAG_LAMBDA != (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
+      error_printf( "invalid node %d: not a lambda!", lambda_idx );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
 
    /* Jump execution to the lambda on next iter. */
    retval = _mlisp_step_lambda( parser, lambda_idx, exec );

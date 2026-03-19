@@ -871,7 +871,9 @@ cleanup:
       mdata_vector_unlock( &(ctl->LISTBOX.list) );
    }
 
-   assert( MERROR_OK == retval );
+   if( MERROR_OK != retval ) {
+      error_printf( "error drawing LISTBOX: %d", retval );
+   }
 
 #  endif
 

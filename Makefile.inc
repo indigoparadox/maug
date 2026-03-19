@@ -61,7 +61,7 @@ ifeq ("$(BUILD)","RELEASE")
 	CFLAGS_GCC64 += -O2
 	CFLAGS_CECL += /O2 /D "NDEBUG" /W1 /ML
 else
-	CFLAGS_GCC_WARN := -Wall -Wno-sign-compare
+	CFLAGS_GCC_WARN := -Wall -Wno-sign-compare -Wno-strict-aliasing
 
 	CFLAGS_WATCOM += -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)
 	CFLAGS_WATCOM386 += -d3 -db -DDEBUG_LOG -DDEBUG -DDEBUG_THRESHOLD=$(DEBUG_THRESHOLD)
@@ -90,8 +90,8 @@ ifeq ("$(PEDANTIC)","1")
 endif
 
 ifeq ("$(WERROR)","1")
-	CFLAGS_GCC += -Werror -Wsign-compare
-	CFLAGS_GCC64 += -Werror -Wsign-compare
+	CFLAGS_GCC += -Werror -Wsign-compare -Wno-strict-aliasing
+	CFLAGS_GCC64 += -Werror -Wsign-compare -Wno-strict-aliasing
 	CFLAGS_WATCOM += -we
 	CFLAGS_WATCOM386 += -we
 endif
