@@ -272,10 +272,7 @@
    } \
    \
    /* Allocate new string space. */ \
-   dest_ctl. field ## _h = maug_malloc( str_sz + 1, 1 ); \
-   debug_printf( RETROGUI_TRACE_LVL, \
-      "allocated str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, dest_ctl. field ## _h ); \
+   maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
    maug_mlock( dest_ctl. field ## _h, str_tmp ); \
    maug_cleanup_if_null_lock( char*, str_tmp ); \
    \
@@ -1561,8 +1558,7 @@ static MERROR_RETVAL retrogui_push_TEXTBOX( union RETROGUI_CTL* ctl ) {
       "clearing textbox " RETROGUI_IDC_FMT " buffer...", ctl->base.idc );
 #endif /* RETROGUI_TRACE_LVL */
    assert( (MAUG_MHANDLE)NULL == ctl->TEXTBOX.text_h );
-   ctl->TEXTBOX.text_h = maug_malloc( RETROGUI_CTL_TEXT_SZ_MAX + 1, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, ctl->TEXTBOX.text_h );
+   maug_malloc_test( ctl->TEXTBOX.text_h, RETROGUI_CTL_TEXT_SZ_MAX + 1, 1 );
    ctl->TEXTBOX.text_sz_max = RETROGUI_CTL_TEXT_SZ_MAX;
 
    maug_mlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
@@ -2799,8 +2795,7 @@ MERROR_RETVAL retrogui_set_ctl_text(
    }
 
    /* Perform the buffer substitutions. */
-   buffer_h = maug_malloc( 1, buffer_sz + 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
+   maug_malloc_test( buffer_h, 1, buffer_sz + 1 );
 
    assert( 0 < buffer_sz );
 

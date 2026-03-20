@@ -1273,8 +1273,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    char* filename_ext = NULL;
 
    /* Initialize parser. */
-   parser_h = maug_malloc( 1, sizeof( struct RETROTILE_PARSER ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, parser_h );
+   maug_malloc_test( parser_h, 1, sizeof( struct RETROTILE_PARSER ) );
 
    maug_mlock( parser_h, parser );
    maug_cleanup_if_null_alloc( struct RETROTILE_PARSER*, parser );
@@ -1658,8 +1657,7 @@ MERROR_RETVAL retrotile_gen_diamond_square_iter(
        */
       if( NULL == data ) {
          /* An internal struct needs to be allocated before initialization. */
-         data_ds_h = maug_malloc( 1, sizeof( struct RETROTILE_DATA_DS ) );
-         maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_ds_h );
+         maug_malloc_test( data_ds_h, 1, sizeof( struct RETROTILE_DATA_DS ) );
          free_ds_data = 1;
          maug_mlock( data_ds_h, data_ds );
          maug_cleanup_if_null_alloc( struct RETROTILE_DATA_DS*, data_ds );
@@ -1874,9 +1872,8 @@ MERROR_RETVAL retrotile_gen_voronoi_iter(
       }
    }
 
-   temp_grid_h = maug_malloc(
-      sizeof( retroflat_tile_t ), t->tiles_w * t->tiles_h );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, temp_grid_h );
+   maug_malloc_test(
+      temp_grid_h, sizeof( retroflat_tile_t ), t->tiles_w * t->tiles_h );
 
    maug_mlock( temp_grid_h, temp_grid );
    maug_cleanup_if_null_alloc( retroflat_tile_t*, temp_grid );
@@ -2242,8 +2239,7 @@ MERROR_RETVAL retrotile_alloc(
       w, h, layers_count, tilemap_sz );
 #endif /* RETROTILE_TRACE_LVL */
 
-   *p_tilemap_h = maug_malloc( 1, tilemap_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_tilemap_h );
+   maug_malloc_test( *p_tilemap_h, 1, tilemap_sz );
 
    maug_mlock( *p_tilemap_h, tilemap );
    maug_cleanup_if_null_alloc( struct RETROTILE*, tilemap );

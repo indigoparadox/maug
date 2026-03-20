@@ -602,8 +602,7 @@ MAUG_MHANDLE mdata_strpool_extract(
 
    str_sz = maug_strlen( str_src );
 
-   out_h = maug_malloc( str_sz + 1, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
+   maug_malloc_test( out_h, str_sz + 1, 1 );
 
    maug_mlock( out_h, out_tmp );
    maug_cleanup_if_null_lock( char*, out_tmp );
@@ -740,8 +739,7 @@ MERROR_RETVAL mdata_strpool_alloc(
          alloc_sz );
 #endif /* MDATA_STRPOOL_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == strpool->str_h );
-      strpool->str_h = maug_malloc( alloc_sz, 1 );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
+      maug_malloc_test( strpool->str_h, alloc_sz, 1 );
       strpool->str_sz_max = alloc_sz;
 
    } else if( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
@@ -980,8 +978,7 @@ MERROR_RETVAL mdata_vector_copy(
       v_src->ct_max, v_src->item_sz );
 #endif /* MDATA_VECTOR_TRACE_LVL */
    assert( (MAUG_MHANDLE)NULL == v_dest->data_h );
-   v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
+   maug_malloc_test( v_dest->data_h, v_src->ct_max, v_src->item_sz );
 
    mdata_vector_lock( v_dest );
    mdata_vector_lock( v_src );
@@ -1038,10 +1035,8 @@ MERROR_RETVAL mdata_vector_alloc(
          v->ct_max, item_sz );
 #endif /* MDATA_VECTOR_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == v->data_h );
-      v->data_h = maug_malloc( v->ct_max, item_sz );
-      assert( 0 < item_sz );
+      maug_malloc_test( v->data_h, v->ct_max, item_sz );
       v->item_sz = item_sz;
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
       /* Zero out the new space. */
       mdata_vector_lock( v );

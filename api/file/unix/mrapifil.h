@@ -278,7 +278,7 @@ MERROR_RETVAL mfile_file_write_block(
             " bytes from " SIZE_T_FMT " to " SIZE_T_FMT,
          end_buf_sz, cursor, p_f->sz );
 #endif /* MFILE_WRITE_TRACE_LVL */
-      end_buf_h = maug_malloc( end_buf_sz, 1 );
+      maug_malloc_test( end_buf_h, end_buf_sz, 1 );
       maug_mlock( end_buf_h, end_buf );
       read = fread( end_buf, 1, end_buf_sz, p_f->h.file );
       if( read < end_buf_sz ) {

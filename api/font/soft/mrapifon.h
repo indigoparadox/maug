@@ -115,10 +115,9 @@ MERROR_RETVAL retrofont_load(
 #endif /* RETROFONT_TRACE_LVL */
 
    /* Alloc enough for each glyph, plus the size of the font header. */
-   *p_font_h = maug_malloc( 1,
+   maug_malloc_test( *p_font_h, 1,
       sizeof( struct RETROFONT ) +
-      (glyph_h * glyph_w_bytes * (1 + glyphs_count)) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_font_h );
+         (glyph_h * glyph_w_bytes * (1 + glyphs_count)) );
 
 #if RETROFONT_TRACE_LVL > 0
    debug_printf( RETROFONT_TRACE_LVL, "allocated font %s: " SIZE_T_FMT " bytes",

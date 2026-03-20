@@ -559,8 +559,7 @@ ssize_t retrowin_push_win(
       win.gui_p = gui;
    } else {
       win.gui_p = NULL;
-      win.gui_h = maug_malloc( 1, sizeof( struct RETROGUI ) );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, win.gui_h );
+      maug_malloc_test( win.gui_h, 1, sizeof( struct RETROGUI ) );
 
       win.flags |= RETROWIN_FLAG_INIT_GUI;
 

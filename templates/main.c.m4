@@ -55,8 +55,7 @@ int main( int argc, char** argv ) {
       goto cleanup;
    }
 
-   data_h = maug_malloc( 1, sizeof( struct dataa(TEMPLATE) ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, data_h );
+   maug_malloc_test( data_h, 1, sizeof( struct dataa(TEMPLATE) ) );
    maug_mlock( data_h, data );
    maug_cleanup_if_null_alloc( struct dataa(TEMPLATE)*, data );
    maug_mzero( data, sizeof( struct dataa(TEMPLATE) ) );

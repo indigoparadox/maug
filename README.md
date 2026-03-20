@@ -6,6 +6,10 @@ Augmented minimal standard library for C89 and legacy compilers.
 
 Current maug-based projects may be found under [The maug topic on GitHub](https://github.com/topics/maug)!
 
+## Breaking Changes
+
+- 2026/03/20 - `maug_malloc` no longer exists and has been replaced with `maug_malloc_test`, which accepts the handle as its first arg, and shunts to the `cleanup` label with `retval` `MERROR_ALLOC` if the allocator returns `NULL`.
+
 ## Requirements
 
 ### All Platforms

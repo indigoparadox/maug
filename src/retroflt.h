@@ -2558,13 +2558,7 @@ MERROR_RETVAL retroflat_init(
 #     ifdef RETROFLAT_STATE_ON_STACK
    g_retroflat_state = &g_retroflat_state_stack;
 #     else
-   g_retroflat_state_h = maug_malloc( 1, sizeof( struct RETROFLAT_STATE ) );
-   if( (MAUG_MHANDLE)NULL == g_retroflat_state_h ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Could not allocate global state!" );
-      retval = MERROR_ALLOC;
-      goto cleanup;
-   }
+   maug_malloc_test( g_retroflat_state_h, 1, sizeof( struct RETROFLAT_STATE ) );
 
    maug_mlock( g_retroflat_state_h, g_retroflat_state );
    if( NULL == g_retroflat_state ) {
@@ -2782,12 +2776,11 @@ MERROR_RETVAL retroflat_init(
    debug_printf( 1, "allocating refresh grid (%d tiles...)",
       g_retroflat_state->viewport.screen_tile_w *
       g_retroflat_state->viewport.screen_tile_h );
-   g_retroflat_state->viewport.refresh_grid_h = maug_malloc(
+   maug_malloc_test(
+      g_retroflat_state->viewport.refresh_grid_h,
       (g_retroflat_state->viewport.screen_tile_w + 2) *
       (g_retroflat_state->viewport.screen_tile_h + 2),
       sizeof( retroflat_tile_t ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE,
-      g_retroflat_state->viewport.refresh_grid_h );
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  ifdef RETROFLAT_VDP

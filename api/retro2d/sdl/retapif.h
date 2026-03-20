@@ -16,9 +16,7 @@ static SDL_Surface* _retroflat_sdl_load_bitmap( retroflat_asset_path path ) {
    maug_cleanup_if_not_ok();
 
    /* Create a memory buffer. */
-   buffer_h = maug_malloc( 1, bmp_file.sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
-
+   maug_malloc_test( buffer_h, 1, bmp_file.sz );
    maug_mlock( buffer_h, buffer );
    maug_cleanup_if_null_lock( uint8_t*, buffer );
 
