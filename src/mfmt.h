@@ -705,10 +705,10 @@ MERROR_RETVAL mfmt_get_px_ptr(
       debug_printf( 1, "allocating decompression buffer..." );
 
       /* Create a temporary memory buffer and decompress into it. */
-      *p_px_h = maug_malloc(
+      maug_malloc_test(
+         *p_px_h,
          header_bmp_info->width,
          header_bmp_info->height );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_px_h );
 
       retval = mfmt_decode_rle(
          p_bmp_in, px_offset, header_bmp_info->img_sz,

@@ -52,9 +52,7 @@ MERROR_RETVAL retrofont_load(
       goto cleanup;
    }
 
-   *p_font_h = maug_malloc( 1, sizeof( struct RETROFONT ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_font_h );
-
+   maug_malloc_test( *p_font_h, 1, sizeof( struct RETROFONT ) );
    maug_mlock( *p_font_h, font );
    maug_cleanup_if_null_lock( struct RETROFONT*, font );
 

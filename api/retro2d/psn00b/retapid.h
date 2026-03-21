@@ -12,21 +12,49 @@
 #include <psxgte.h>
 #include <psxgpu.h>
 
-#define RETROPLAT_PRESENT 1
+#define RETROPLAT_PRESENT
 
 #define RETROFLAT_NO_CLI_SZ
 
 #define RETROFLAT_SOFT_VIEWPORT
 
+#define RETROFLAT_LOAD_BITMAP_GENERIC
+
 #define RETROFLAT_PSX_OT_LEN 1
 
+#define RETROFLAT_PSX_FLAG_NOWAIT 0x01
+
 #ifndef RETROFLAT_PSX_PRIM_BUF_SZ
-#  define RETROFLAT_PSX_PRIM_BUF_SZ 8192
+#  define RETROFLAT_PSX_PRIM_BUF_SZ 16384
 #endif /* !RETROFLAT_PSX_PRIM_BUF_SZ */
 
 #ifndef RETROFLAT_PSX_CIRCLE_SEGMENTS
 #  define RETROFLAT_PSX_CIRCLE_SEGMENTS 16
 #endif /* !RETROFLAT_PSX_CIRCLE_SEGMENTS */
+
+#ifndef RETROFLAT_PSX_OSB_PTS_CT_MAX
+#  define RETROFLAT_PSX_OSB_PTS_CT_MAX 128
+#endif /* RETROFLAT_PSX_OSB_PTS_CT_MAX */
+
+#define RETROFLAT_PSX_VRAM_W 1024
+#define RETROFLAT_PSX_VRAM_H 512
+
+/* PlayStation VRAM is divided into 16x2 pages, but the leftmost 5 pages are
+ * reserved for display buffers in our setup. We also reserve 4 pages between
+ * the normal pages and screen buffers to merge into a "big page" for tilemaps
+ * or similar.
+ */
+#define RETROFLAT_PSX_VRAM_PG_CT 18
+#define RETROFLAT_PSX_VRAM_PG_CT_W 9
+#define RETROFLAT_PSX_VRAM_PG_CT_H 2
+
+#define RETROFLAT_PSX_VRAM_PG_BIG_IDX (RETROFLAT_PSX_VRAM_PG_CT)
+
+/* Each VRAM page is 64x256. */
+#define RETROFLAT_PSX_VRAM_PG_PX_W 64
+#define RETROFLAT_PSX_VRAM_PG_PX_H 256
+
+#define RETROFLAT_PSX_DRAW_STACK_CT_MAX 10
 
 #define RETROSOFT_PRESENT
 
@@ -56,10 +84,39 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
-   DRAWENV draw[2];
-   int draw_idx;
+   DRAWENV draw;
+   /**
+    * \brief Current drawing buffer idx.
+    * \note This is only used for the RETROFLAT_FLAGS_SCREEN_BUFFER bitmap.
+    *       It is the *drawing* index, which means it selects which buffer is
+    *       being *drawn to*! (The other is being shown at this time!)
+    */
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
+   /*! \brief X coordinate of the VRAM page on which this is. */
+   retroflat_pxxy_t vram_pg_x;
+   /*! \brief Y coordinate of the VRAM page on which this is. */
+   retroflat_pxxy_t vram_pg_y;
+   /*! \brief X coordinate on the given VRAM page. */
+   retroflat_pxxy_t vram_off_x;
+   /*! \brief Y coordinate on the given VRAM page. */
+   retroflat_pxxy_t vram_off_y;
+   int page;
+   uint32_t ot[RETROFLAT_PSX_OT_LEN];
+   uint8_t prim_buff[RETROFLAT_PSX_PRIM_BUF_SZ];
+   /**
+    * \brief First primitive to draw on next draw_prims call.
+    *
+    * \note This is different from prim_buff because the GPU might still be
+    *       drawing earlier primitives for this bitmap, so this is the first
+    *       non-already-sent primitive.
+    */
+   uint8_t* first_prim;
+   uint8_t* last_prim;
+   uint8_t* next_prim;
+   size_t used_prim;
+   struct RETROFLAT_BITMAP* alt_page;
+   uint8_t disp_idx;
 };
 
 /**
@@ -98,7 +155,7 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 /*! \brief Get the direct screen buffer or the VDP buffer if a VDP is loaded. */
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() (g_retroflat_psx_screen_buffer_ptr)
 
 /*! \brief Lock a surface for pixel drawing if needed. */
 #  define retroflat_px_lock( bmp )
@@ -147,17 +204,40 @@ struct RETROFLAT_PLATFORM_ARGS {
    uint8_t flags;
 };
 
+struct RETROFLAT_PSX_OSB_PT {
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+};
+
 struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    DISPENV disp[2];
-   uint32_t ot[2][RETROFLAT_PSX_OT_LEN];
-   uint8_t prim_buff[2][RETROFLAT_PSX_PRIM_BUF_SZ];
-   uint8_t* next_prim;
-   size_t used_prim;
    /*! \brief LCG rand state. */
    uint32_t rand_state;
+   /*! \brief Skyline points inventory.
+    * \note Each sprite page in VRAM maintains its own skyline!
+    */
+   struct RETROFLAT_PSX_OSB_PT osb_pts
+      [RETROFLAT_PSX_VRAM_PG_CT + 1][RETROFLAT_PSX_OSB_PTS_CT_MAX];
+   size_t osb_pts_ct[RETROFLAT_PSX_VRAM_PG_CT + 1];
+   /**
+    * \brief Number of bitmaps in each page.
+    *
+    * \note When this hits zero, the page OSB points is reset.
+    */
+   size_t osb_bmps[RETROFLAT_PSX_VRAM_PG_CT + 1];
+   DRAWENV* draw_stack[RETROFLAT_PSX_DRAW_STACK_CT_MAX];
+   size_t draw_stack_ct;
+   struct RETROFLAT_BITMAP buffer1;
+   struct RETROFLAT_BITMAP buffer2;
 };
+
+#ifdef RETROFLT_C
+struct RETROFLAT_BITMAP* g_retroflat_psx_screen_buffer_ptr = NULL;
+#else
+extern struct RETROFLAT_BITMAP* g_retroflat_psx_screen_buffer_ptr;
+#endif /* RETROFLT_C */
 
 #endif /* !RETPLTD_H */
 

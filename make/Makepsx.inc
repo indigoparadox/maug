@@ -15,12 +15,12 @@ endif
 
 # Setup PSX-specific flags.
 
-DEFINES_GCC_PSX += -DRETROFLAT_OS_PSX -DRETROFLAT_NO_VIEWPORT_REFRESH -DPSN00BSDK=1 -DNDEBUG=1
+DEFINES_GCC_PSX += -DRETROFLAT_OS_PSX -DRETROFLAT_NO_VIEWPORT_REFRESH -DPSN00BSDK=1 -DNDEBUG=1 -DRETROANI_DISABLE
 
 INCLUDES_GCC_PSX += -I$(PSN00B_ROOT)/include/libpsn00b
 
 CFLAGS_GCC_PSX := $(DEFINES_GCC_PSX) $(INCLUDES_GCC_PSX) \
-	-Wa,--strip-local-absolute -ffreestanding -fno-builtin -nostdlib -fdata-sections -ffunction-sections -fsigned-char -fno-strict-overflow -fdiagnostics-color=always -msoft-float -march=r3000 -mtune=r3000 -mabi=32 -mno-mt -mno-llsc -O2 -G8 -fno-pic -mno-abicalls -mgpopt -mno-extern-sdata
+	-Wa,--strip-local-absolute -ffreestanding -fno-builtin -nostdlib -fdata-sections -ffunction-sections -fsigned-char -fno-strict-overflow -fdiagnostics-color=always -msoft-float -march=r3000 -mtune=r3000 -mabi=32 -mno-mt -mno-llsc -G8 -fno-pic -mno-abicalls -mgpopt -mno-extern-sdata
 
 LDFLAGS_GCC_PSX_FRONT := -T$(PSN00B_ROOT)/lib/libpsn00b/ldscripts/exe.ld -nostdlib -Wl,-gc-sections -G8 -static
 LDFLAGS_GCC_PSX_BACK := -lgcc $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxgpu_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxgte_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxspu_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxcd_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxpress_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxsio_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxetc_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libpsxapi_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libsmd_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/liblzp_exe_gprel.a $(PSN00B_ROOT)/lib/libpsn00b/debug/libc_exe_gprel.a -lgcc
@@ -63,7 +63,7 @@ $$(addprefix obj/psx/,$$(subst .c,.o,$$(C_FILES_PSX)))
 obj/psx/%.o: %.c | $$(MAUG_DEPS)
 	$$(MD) $$(dir $$@)
 	$$(CC_GCC_PSX) -c $$< -o $$@ \
-		$$(INCLUDES_GCC) $$(DEFINES_GCC) $$(GLOBAL_DEFINES) \
+		$$(subst -pg,,$$(CFLAGS_GCC)) \
 		$$(CFLAGS_GCC_PSX) $$(CFLAGS_OPT_GCC_PSX) $$(CFLAGS_GCC_PSX_PSN) \
 		$$(CFLAGS_OPT_GCC)
 
@@ -75,7 +75,7 @@ obj/psx/$(1)psx.map: obj/psx/$(1).elf
 
 obj/psx/system.cnf:
 	# Generate the system.cnf.
-	echo BOOT=cdrom:\$(1)psx.exe\;1 >> $$@
+	echo BOOT=cdrom:\$(1).exe\;1 >> $$@
 	echo TCB=4 >> $$@
 	echo EVENT=10 >> $$@
 	echo STACK=801FFFF0 >> $$@
@@ -96,6 +96,7 @@ obj/psx/iso.xml: obj/psx/system.cnf obj/psx/isoxml
 	echo "		/>" >> $$@
 	echo "		<directory_tree>" >> $$@
 	echo "			<file name=\"SYSTEM.CNF\"		type=\"data\" source=\"system.cnf\" />" >> $$@
+	echo "			<file name=\"`echo $(1).exe | tr [:lower:] [:upper:]`\"		type=\"data\" source=\"../../$(1)psx.exe\" />" >> $$@
 	./obj/psx/isoxml $(2) >> $$@
 	echo "" >> $$@
 	echo "			<dummy sectors=\"1024\"/>" >> $$@

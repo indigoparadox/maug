@@ -93,9 +93,11 @@ struct RETROFLAT_BITMAP {
 #  ifdef RETROFLAT_VDP
 #     define retroflat_screen_buffer() \
          (NULL == g_retroflat_state->vdp_buffer ? \
-         &(g_retroflat_state->buffer) : g_retroflat_state->vdp_buffer)
+         &(g_retroflat_state->platform.buffer) : \
+         g_retroflat_state->vdp_buffer)
 #  else
-#     define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#     define retroflat_screen_buffer() \
+         (&(g_retroflat_state->platform.buffer))
 #  endif /* RETROFLAT_VDP */
 #  define retroflat_root_win() (NULL) /* TODO */
 
@@ -151,6 +153,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
+   struct RETROFLAT_BITMAP buffer;
 #  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_NO_SDL1_SCALING )
    /* The real screen buffer, if scaling is enabled. Things are drawn onto
     * g_retroflat_state->buffer (technically the actual scaling buffer) before

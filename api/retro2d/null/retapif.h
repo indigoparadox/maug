@@ -166,6 +166,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return MERROR_GUI;
+   }
+
    /* TODO */
 #  pragma message( "warning: blit_bitmap not implemented" )
 
@@ -214,6 +224,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    /* TODO */
 #  pragma message( "warning: rect not implemented" )
 
@@ -234,6 +250,12 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
    /* TODO */
 #  pragma message( "warning: line not implemented" )
 
@@ -252,6 +274,12 @@ void retroflat_ellipse(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
    }
 
    /* TODO */

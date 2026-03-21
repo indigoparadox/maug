@@ -811,7 +811,7 @@ INPUT                  = \
    src/retrogxc.h \
    src/merror.h \
    src/uprintf.h \
-   src/mmem.h \
+   api/unix/mmem.h \
    src/retrotil.h \
    api/null/retpltd.h \
    src/mlispe.h \

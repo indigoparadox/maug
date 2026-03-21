@@ -30,9 +30,10 @@ static MERROR_RETVAL retroflat_init_platform(
 
    VIDEO_Init();
    g_retroflat_state->platform.rmode = VIDEO_GetPreferredMode( NULL );
-   g_retroflat_state->buffer.bits = MEM_K0_TO_K1( SYS_AllocateFramebuffer(
+   g_retroflat_state->platform.screen_buffer.bits =
+      MEM_K0_TO_K1( SYS_AllocateFramebuffer(
       g_retroflat_state->platform.rmode ) );
-   if( NULL == g_retroflat_state->buffer.bits ) {
+   if( NULL == g_retroflat_state->platform.screen_buffer.bits ) {
       error_printf( "could not setup framebuffer memory!" );
       retval = MERROR_ALLOC;
       goto cleanup;
@@ -41,7 +42,7 @@ static MERROR_RETVAL retroflat_init_platform(
    /* Setup rest of video config. */
    debug_printf( 1, "setting up video configuration..." );
 
-   VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
+   VIDEO_SetNextFramebuffer( g_retroflat_state->platform.screen_buffer.bits );
    VIDEO_SetBlack( FALSE );
    VIDEO_Configure( g_retroflat_state->platform.rmode );
    VIDEO_SetPostRetraceCallback( NULL );
@@ -78,8 +79,8 @@ static MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.rmode->viTVMode & VI_NON_INTERLACE ?
       g_retroflat_state->platform.rmode->xfbHeight :
       g_retroflat_state->platform.rmode->xfbHeight / 2;
-   g_retroflat_state->buffer.w = args->screen_w;
-   g_retroflat_state->buffer.h = args->screen_h;
+   g_retroflat_state->platform.screen_buffer.w = args->screen_w;
+   g_retroflat_state->platform.screen_buffer.h = args->screen_h;
 
 cleanup:
 
@@ -128,17 +129,8 @@ void retroflat_message(
 /* === */
 
 void retroflat_set_title( const char* format, ... ) {
-   char title[RETROFLAT_TITLE_MAX + 1];
    va_list vargs;
-
-   /* Build the title. */
    va_start( vargs, format );
-   maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
-   maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
-
-   /* TODO */
-#  pragma message( "warning: set_title not implemented" )
-
    va_end( vargs );
 }
 
@@ -156,12 +148,13 @@ uint32_t retroflat_get_rand() {
 
 /* === */
 
-int retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
+MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    int retval = RETROFLAT_OK;
 
    if( NULL == bmp || retroflat_screen_buffer() == bmp ) {
       VIDEO_WaitVSync();
-      VIDEO_SetNextFramebuffer( g_retroflat_state->buffer.bits );
+      VIDEO_SetNextFramebuffer(
+         g_retroflat_state->platform.screen_buffer.bits );
    }
 
    return retval;
@@ -176,7 +169,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       /* Wait for vsync and then flip the screen buffer. */
       VIDEO_Flush();
       /*
-      DCFlushRange( g_retroflat_state->buffer.bits,
+      DCFlushRange( g_retroflat_state->platform.screen_buffer.bits,
          4 * g_retroflat_state->screen_w * g_retroflat_state->screen_h );
       */
       g_retroflat_state->platform.flags ^= RETROFLAT_WII_FLAG_FRAME_ODD;

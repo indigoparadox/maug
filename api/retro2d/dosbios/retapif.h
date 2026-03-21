@@ -121,9 +121,10 @@ static MERROR_RETVAL retroflat_init_platform(
       args->screen_colors = 4;
       args->screen_w = 320;
       args->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xB8000000L;
-      g_retroflat_state->buffer.w = 320;
-      g_retroflat_state->buffer.h = 200;
+      g_retroflat_state->platform.screen_buffer.px =
+         (uint8_t SEG_FAR*)0xB8000000L;
+      g_retroflat_state->platform.screen_buffer.w = 320;
+      g_retroflat_state->platform.screen_buffer.h = 200;
       break;
 
    case RETROFLAT_SCREEN_MODE_VGA:
@@ -131,10 +132,11 @@ static MERROR_RETVAL retroflat_init_platform(
       args->screen_colors = 4;
       args->screen_w = 320;
       args->screen_h = 200;
-      g_retroflat_state->buffer.px = (uint8_t SEG_FAR*)0xA0000000L;
-      g_retroflat_state->buffer.w = 320;
-      g_retroflat_state->buffer.h = 200;
-      g_retroflat_state->buffer.sz = 320 * 200;
+      g_retroflat_state->platform.screen_buffer.px =
+         (uint8_t SEG_FAR*)0xA0000000L;
+      g_retroflat_state->platform.screen_buffer.w = 320;
+      g_retroflat_state->platform.screen_buffer.h = 200;
+      g_retroflat_state->platform.screen_buffer.sz = 320 * 200;
       break;
 
    default:
@@ -447,7 +449,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != src );
 
    if( NULL == target ) {
-      target = &(g_retroflat_state->buffer);
+      target = &(g_retroflat_state->platform.screen_buffer);
    }
 
    /* DOS BIOS not setup for hardware scrolling. */
@@ -546,21 +548,21 @@ void retroflat_px(
          color = g_retroflat_state->platform.cga_dither_table[color_idx];
       }
 
-      if( target != &(g_retroflat_state->buffer) ) {
+      if( target != &(g_retroflat_state->platform.screen_buffer) ) {
          /* TODO: Memory bitmap. */
 
       } else if( y & 0x01 ) {
          /* 0x2000 = difference between even/odd CGA planes. */
-         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] &=
+         g_retroflat_state->platform.screen_buffer.px[0x2000 + screen_byte_offset] &=
             /* 0x03 = 2-bit pixel mask. */
             ~(0x03 << screen_bit_offset);
-         g_retroflat_state->buffer.px[0x2000 + screen_byte_offset] |= 
+         g_retroflat_state->platform.screen_buffer.px[0x2000 + screen_byte_offset] |= 
             ((color & 0x03) << screen_bit_offset);
       } else {
          /* 0x03 = 2-bit pixel mask. */
-         g_retroflat_state->buffer.px[screen_byte_offset] &= 
+         g_retroflat_state->platform.screen_buffer.px[screen_byte_offset] &= 
             ~(0x03 << screen_bit_offset);
-         g_retroflat_state->buffer.px[screen_byte_offset] |=
+         g_retroflat_state->platform.screen_buffer.px[screen_byte_offset] |=
             /* 0x03 = 2-bit pixel mask. */
             ((color & 0x03) << screen_bit_offset);
       }

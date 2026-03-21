@@ -169,8 +169,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    tex->bpp = 24;
 
    /* Allocate a space for the bitmap palette. */
-   bmp_palette_h = maug_malloc( 4, header_bmp.info.palette_ncolors );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_palette_h );
+   maug_malloc_test( bmp_palette_h, 4, header_bmp.info.palette_ncolors );
 
    maug_mlock( bmp_palette_h, bmp_palette );
    maug_cleanup_if_null_alloc( uint32_t*, bmp_palette );
@@ -183,8 +182,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
 
    /* Allocate a space for the bitmap pixels. */
    bmp_px_sz = header_bmp.info.width * header_bmp.info.height;
-   bmp_px_h = maug_malloc( 1, bmp_px_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, bmp_px_h );
+   maug_malloc_test( bmp_px_h, 1, bmp_px_sz );
 
    maug_mlock( bmp_px_h, bmp_px );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_px );
@@ -199,8 +197,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
    /* Allocate buffer for unpacking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       tex->w, tex->h );
-   tex->bytes_h = maug_malloc( tex->w * tex->h, 4 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, tex->bytes_h );
+   maug_malloc_test( tex->bytes_h, tex->w * tex->h, 4 );
 
    maug_mlock( tex->bytes_h, tex->bytes );
    maug_cleanup_if_null_alloc( uint8_t*, tex->bytes );
@@ -338,8 +335,7 @@ MERROR_RETVAL retro3d_texture_create(
    /* TODO: Overflow checking. */
    debug_printf( 0, "creating bitmap: " SIZE_T_FMT " x " SIZE_T_FMT,
       tex->w, tex->h );
-   tex->bytes_h =
-      maug_malloc( tex->w * tex->h, 4 );
+   maug_malloc_test( tex->bytes_h, tex->w * tex->h, 4 );
    maug_cleanup_if_null_alloc( MAUG_MHANDLE, tex->bytes_h );
 
    maug_mlock( tex->bytes_h, tex->bytes );

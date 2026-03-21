@@ -10,9 +10,21 @@
  * \file mdata.h
  */
 
-#ifndef MDATA_TRACE_LVL
-#  define MDATA_TRACE_LVL 0
-#endif /* !MDATA_TRACE_LVL */
+#ifndef MDATA_LOCK_TRACE_LVL
+#  define MDATA_LOCK_TRACE_LVL 0
+#endif /* !MDATA_LOCK_TRACE_LVL */
+
+#ifndef MDATA_STRPOOL_TRACE_LVL
+#  define MDATA_STRPOOL_TRACE_LVL 0
+#endif /* !MDATA_STRPOOL_TRACE_LVL */
+
+#ifndef MDATA_VECTOR_TRACE_LVL
+#  define MDATA_VECTOR_TRACE_LVL 0
+#endif /* !MDATA_VECTOR_TRACE_LVL */
+
+#ifndef MDATA_TABLE_TRACE_LVL
+#  define MDATA_TABLE_TRACE_LVL 0
+#endif /* !MDATA_TABLE_TRACE_LVL */
 
 #ifndef MDATA_TABLE_KEY_SZ_MAX
 #  define MDATA_TABLE_KEY_SZ_MAX 8
@@ -256,12 +268,12 @@ void mdata_table_free( struct MDATA_TABLE* t );
 
 /*! \} */
 
-#if MDATA_TRACE_LVL > 0
-#  define mdata_debug_printf( fmt, ... ) \
-      debug_printf( MDATA_TRACE_LVL, fmt, __VA_ARGS__ );
+#if MDATA_LOCK_TRACE_LVL > 0
+#  define mdata_debug_lock_printf( fmt, ... ) \
+      debug_printf( MDATA_LOCK_TRACE_LVL, fmt, __VA_ARGS__ );
 #else
-#  define mdata_debug_printf( fmt, ... )
-#endif /* MDATA_TRACE_LVL */
+#  define mdata_debug_lock_printf( fmt, ... )
+#endif /* MDATA_LOCK_TRACE_LVL */
 
 /**
  * \addtogroup mdata_strpool
@@ -275,7 +287,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
    (MDATA_STRPOOL_FLAG_IS_LOCKED & (sp)->flags))
 
 #define mdata_strpool_lock( sp ) \
-   mdata_debug_printf( "locking strpool %p...", sp ); \
+   mdata_debug_lock_printf( "locking strpool %p...", sp ); \
    if( NULL != (sp)->str_p ) { \
       error_printf( "str_p not null! double lock?" ); \
       retval = MERROR_ALLOC; \
@@ -286,7 +298,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
    (sp)->flags |= MDATA_STRPOOL_FLAG_IS_LOCKED;
 
 #define mdata_strpool_unlock( sp ) \
-   mdata_debug_printf( "unlocking strpool %p...", sp ); \
+   mdata_debug_lock_printf( "unlocking strpool %p...", sp ); \
    if( NULL != (sp)->str_p ) { \
       maug_munlock( (sp)->str_h, (sp)->str_p ); \
       (sp)->flags &= ~MDATA_STRPOOL_FLAG_IS_LOCKED; \
@@ -319,14 +331,14 @@ void mdata_table_free( struct MDATA_TABLE* t );
  */
 #define mdata_vector_lock( v ) \
    if( (MAUG_MHANDLE)NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
-      mdata_debug_printf( "locking empty vector..." ); \
+      mdata_debug_lock_printf( "locking empty vector..." ); \
       (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
    } else if( \
       mdata_vector_get_flag( v, MDATA_VECTOR_FLAG_REFCOUNT ) && \
       0 < (v)->locks \
    ) { \
       (v)->locks++; \
-      mdata_debug_printf( "vector " #v " locks: " SSIZE_T_FMT, (v)->locks ); \
+      mdata_debug_lock_printf( "vector " #v " locks: " SSIZE_T_FMT, (v)->locks ); \
    } else { \
       /* assert( !mdata_vector_is_locked( v ) ); */ \
       if( mdata_vector_is_locked( v ) ) { \
@@ -342,7 +354,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
       maug_mlock( (v)->data_h, (v)->data_bytes ); \
       maug_cleanup_if_null_lock( uint8_t*, (v)->data_bytes ); \
       (v)->flags |= MDATA_VECTOR_FLAG_IS_LOCKED; \
-      mdata_debug_printf( "locked vector " #v ); \
+      mdata_debug_lock_printf( "locked vector " #v ); \
    }
 
 /**
@@ -352,7 +364,7 @@ void mdata_table_free( struct MDATA_TABLE* t );
  */
 #define mdata_vector_unlock( v ) \
    if( (MAUG_MHANDLE)NULL == (v)->data_h && NULL == (v)->data_bytes ) { \
-      mdata_debug_printf( "locking empty vector..." ); \
+      mdata_debug_lock_printf( "locking empty vector..." ); \
       (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
    } else { \
       if( \
@@ -360,14 +372,14 @@ void mdata_table_free( struct MDATA_TABLE* t );
          0 < (v)->locks \
       ) { \
          (v)->locks--; \
-         mdata_debug_printf( "vector " #v " locks: " SSIZE_T_FMT, \
+         mdata_debug_lock_printf( "vector " #v " locks: " SSIZE_T_FMT, \
             (v)->locks ); \
       } \
       if( 0 == (v)->locks && NULL != (v)->data_bytes ) { \
          assert( mdata_vector_is_locked( v ) ); \
          maug_munlock( (v)->data_h, (v)->data_bytes ); \
          (v)->flags &= ~MDATA_VECTOR_FLAG_IS_LOCKED; \
-         mdata_debug_printf( "unlocked vector " #v ); \
+         mdata_debug_lock_printf( "unlocked vector " #v ); \
       } \
    }
 
@@ -522,25 +534,28 @@ mdata_strpool_idx_t mdata_strpool_find(
    while( i < strpool->str_sz ) {
       p_str_iter_sz = (size_t*)&(strpool_p[i]);
       if(
-         0 == strncmp( &(strpool_p[i + sizeof( size_t )]), str, str_sz + 1 )
+         0 == maug_strncmp(
+            &(strpool_p[i + sizeof( size_t )]), str, str_sz + 1 )
       ) {
          /* String found. Advance past the size before returning. */
          i += sizeof( size_t );
-#if MDATA_TRACE_LVL > 0
-         debug_printf( MDATA_TRACE_LVL,
-            "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\"",
-            i, *p_str_iter_sz, &(strpool_p[i]) );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_STRPOOL_TRACE_LVL > 0
+         debug_printf( MDATA_STRPOOL_TRACE_LVL,
+            "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\" "
+            "to match " SIZE_T_FMT "-byte token: %s",
+            i, *p_str_iter_sz, &(strpool_p[i]),
+            str_sz, str );
+#endif /* MDATA_STRPOOL_TRACE_LVL */
 
          goto cleanup;
-#if MDATA_TRACE_LVL > 0
+#if MDATA_STRPOOL_TRACE_LVL > 0
       } else {
-         debug_printf( MDATA_TRACE_LVL,
+         debug_printf( MDATA_STRPOOL_TRACE_LVL,
             "skipping strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT
                " bytes): \"%s\"",
             i + sizeof( size_t ), *p_str_iter_sz,
                &(strpool_p[i + sizeof( size_t )]) );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
       }
       i += *p_str_iter_sz;
    }
@@ -587,8 +602,7 @@ MAUG_MHANDLE mdata_strpool_extract(
 
    str_sz = maug_strlen( str_src );
 
-   out_h = maug_malloc( str_sz + 1, 1 );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, out_h );
+   maug_malloc_test( out_h, str_sz + 1, 1 );
 
    maug_mlock( out_h, out_tmp );
    maug_cleanup_if_null_lock( char*, out_tmp );
@@ -642,11 +656,11 @@ mdata_strpool_idx_t mdata_strpool_append(
       idx_p_out = mdata_strpool_find( strpool, str, str_sz );
       if( 0 < idx_p_out ) {
          /* Found, or error returned. */
-#if MDATA_TRACE_LVL > 0
-         debug_printf( MDATA_TRACE_LVL,
+#if MDATA_STRPOOL_TRACE_LVL > 0
+         debug_printf( MDATA_STRPOOL_TRACE_LVL,
             "found duplicate string for add at index: " SSIZE_T_FMT,
             idx_p_out );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
          goto cleanup;
       }
    }
@@ -656,12 +670,12 @@ mdata_strpool_idx_t mdata_strpool_append(
       mdata_strpool_padding( str_sz );
    assert( 0 == alloc_sz % sizeof( size_t ) );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_STRPOOL_TRACE_LVL > 0
+   debug_printf( MDATA_STRPOOL_TRACE_LVL,
       "adding size_t (" SIZE_T_FMT " bytes) + string %s (" SIZE_T_FMT
          " bytes) + 1 NULL + " SIZE_T_FMT " bytes padding to strpool...",
       sizeof( size_t ), str, str_sz, mdata_strpool_padding( str_sz ) );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
 
    retval = mdata_strpool_alloc( strpool, alloc_sz );
    maug_cleanup_if_not_ok();
@@ -669,11 +683,11 @@ mdata_strpool_idx_t mdata_strpool_append(
    maug_mlock( strpool->str_h, strpool_p );
    maug_cleanup_if_null_alloc( char*, strpool_p );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_LOCK_TRACE_LVL > 0
+   debug_printf( MDATA_LOCK_TRACE_LVL,
       "strpool (" SIZE_T_FMT " bytes) locked to: %p",
       strpool->str_sz, strpool_p );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_LOCK_TRACE_LVL */
 
    /* Add this string at the end of the string pool. */
    maug_strncpy(
@@ -687,10 +701,11 @@ mdata_strpool_idx_t mdata_strpool_append(
 
    idx_p_out = strpool->str_sz + sizeof( size_t );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL, "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
+#if MDATA_STRPOOL_TRACE_LVL > 0
+   debug_printf( MDATA_STRPOOL_TRACE_LVL,
+      "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
       strpool->str_sz, &(strpool_p[idx_p_out]) );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
 
    /* Set the string pool cursor to the next available spot. */
    strpool->str_sz += alloc_sz;
@@ -717,23 +732,24 @@ MERROR_RETVAL mdata_strpool_alloc(
    MAUG_MHANDLE str_h_new = (MAUG_MHANDLE)NULL;
 
    if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
-#if MDATA_TRACE_LVL > 0
+#if MDATA_STRPOOL_TRACE_LVL > 0
       debug_printf(
-         MDATA_TRACE_LVL, "creating string pool of " SIZE_T_FMT " chars...",
+         MDATA_STRPOOL_TRACE_LVL,
+         "creating string pool of " SIZE_T_FMT " chars...",
          alloc_sz );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == strpool->str_h );
-      strpool->str_h = maug_malloc( alloc_sz, 1 );
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, strpool->str_h );
+      maug_malloc_test( strpool->str_h, alloc_sz, 1 );
       strpool->str_sz_max = alloc_sz;
 
    } else if( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
       while( strpool->str_sz_max <= strpool->str_sz + alloc_sz ) {
-#if MDATA_TRACE_LVL > 0
+#if MDATA_STRPOOL_TRACE_LVL > 0
          debug_printf(
-            MDATA_TRACE_LVL, "enlarging string pool to " SIZE_T_FMT "...",
+            MDATA_STRPOOL_TRACE_LVL,
+            "enlarging string pool to " SIZE_T_FMT "...",
             strpool->str_sz_max * 2 );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_STRPOOL_TRACE_LVL */
          maug_mrealloc_test(
             str_h_new, strpool->str_h, strpool->str_sz_max, (size_t)2 );
          strpool->str_sz_max *= 2;
@@ -777,11 +793,11 @@ ssize_t mdata_vector_append(
 
    if( NULL != item ) {
       /* Copy provided item. */
-#if MDATA_TRACE_LVL > 0
+#if MDATA_VECTOR_TRACE_LVL > 0
       debug_printf(
-         MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
+         MDATA_VECTOR_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT,
          idx_out );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
 
       memcpy( _mdata_vector_item_ptr( v, idx_out ), item, item_sz );
    }
@@ -831,21 +847,22 @@ ssize_t mdata_vector_insert(
    mdata_vector_lock( v );
 
    for( i = v->ct ; idx < i ; i-- ) {
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL,
+#if MDATA_VECTOR_TRACE_LVL > 0
+      debug_printf( MDATA_VECTOR_TRACE_LVL,
          "copying vector item " SSIZE_T_FMT " to " SSIZE_T_FMT "...",
          i - 1, i );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
       memcpy(
          _mdata_vector_item_ptr( v, i ),
          _mdata_vector_item_ptr( v, i - 1),
          item_sz );
    }
 
-#if MDATA_TRACE_LVL > 0
+#if MDATA_VECTOR_TRACE_LVL > 0
    debug_printf(
-      MDATA_TRACE_LVL, "inserting into vector at index: " SIZE_T_FMT, idx );
-#endif /* MDATA_TRACE_LVL */
+      MDATA_VECTOR_TRACE_LVL,
+      "inserting into vector at index: " SIZE_T_FMT, idx );
+#endif /* MDATA_VECTOR_TRACE_LVL */
    if( NULL != item ) {
       /* Copy provided item. */
       memcpy( _mdata_vector_item_ptr( v, idx ), item, item_sz );
@@ -887,20 +904,21 @@ MERROR_RETVAL mdata_vector_remove( struct MDATA_VECTOR* v, size_t idx ) {
       goto cleanup;
    }
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL, "removing vector item: " SIZE_T_FMT, idx );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_VECTOR_TRACE_LVL > 0
+   debug_printf( MDATA_VECTOR_TRACE_LVL,
+      "removing vector item: " SIZE_T_FMT, idx );
+#endif /* MDATA_VECTOR_TRACE_LVL */
 
    assert( 0 < v->item_sz );
 
    mdata_vector_lock( v );
 
    for( i = idx ; v->ct > i + 1 ; i++ ) {
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL,
+#if MDATA_VECTOR_TRACE_LVL > 0
+      debug_printf( MDATA_VECTOR_TRACE_LVL,
          "shifting " SIZE_T_FMT "-byte vector item " SIZE_T_FMT " up by 1...",
          v->item_sz, i );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
       memcpy(
          &(v->data_bytes[i * v->item_sz]),
          &(v->data_bytes[(i + 1) * v->item_sz]),
@@ -920,11 +938,11 @@ cleanup:
 
 void* mdata_vector_get_void( const struct MDATA_VECTOR* v, size_t idx ) {
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_VECTOR_TRACE_LVL > 0
+   debug_printf( MDATA_VECTOR_TRACE_LVL,
       "getting vector item " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       idx, v->ct );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
 
    assert( 0 == v->ct || NULL != v->data_bytes );
 
@@ -954,14 +972,13 @@ MERROR_RETVAL mdata_vector_copy(
    v_dest->ct_max = v_src->ct_max;
    v_dest->ct = v_src->ct;
    v_dest->item_sz = v_src->item_sz;
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_VECTOR_TRACE_LVL > 0
+   debug_printf( MDATA_VECTOR_TRACE_LVL,
       "copying " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
       v_src->ct_max, v_src->item_sz );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
    assert( (MAUG_MHANDLE)NULL == v_dest->data_h );
-   v_dest->data_h = maug_malloc( v_src->ct_max, v_src->item_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, v_dest->data_h );
+   maug_malloc_test( v_dest->data_h, v_src->ct_max, v_src->item_sz );
 
    mdata_vector_lock( v_dest );
    mdata_vector_lock( v_src );
@@ -999,29 +1016,27 @@ MERROR_RETVAL mdata_vector_alloc(
       assert( 0 == v->ct_max );
 
       if( 0 < item_ct_init ) {
-#if MDATA_TRACE_LVL > 0
-         debug_printf( MDATA_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
+#if MDATA_VECTOR_TRACE_LVL > 0
+         debug_printf( MDATA_VECTOR_TRACE_LVL, "setting step sz: " SIZE_T_FMT,
             item_ct_init );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
          v->ct_step = item_ct_init;
       } else if( 0 == v->ct_step ) {
-#if MDATA_TRACE_LVL > 0
-         debug_printf( MDATA_TRACE_LVL, "setting step sz: %d",
+#if MDATA_VECTOR_TRACE_LVL > 0
+         debug_printf( MDATA_VECTOR_TRACE_LVL, "setting step sz: %d",
             MDATA_VECTOR_INIT_STEP_SZ );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
          v->ct_step = MDATA_VECTOR_INIT_STEP_SZ;
       }
       v->ct_max = v->ct_step;
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL,
+#if MDATA_VECTOR_TRACE_LVL > 0
+      debug_printf( MDATA_VECTOR_TRACE_LVL,
          "creating " SIZE_T_FMT " vector of " SIZE_T_FMT "-byte nodes...",
          v->ct_max, item_sz );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
       assert( (MAUG_MHANDLE)NULL == v->data_h );
-      v->data_h = maug_malloc( v->ct_max, item_sz );
-      assert( 0 < item_sz );
+      maug_malloc_test( v->data_h, v->ct_max, item_sz );
       v->item_sz = item_sz;
-      maug_cleanup_if_null_alloc( MAUG_MHANDLE, v->data_h );
 
       /* Zero out the new space. */
       mdata_vector_lock( v );
@@ -1038,10 +1053,11 @@ MERROR_RETVAL mdata_vector_alloc(
       }
 
       /* Perform the resize. */
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL, "enlarging vector to " SIZE_T_FMT "...",
+#if MDATA_VECTOR_TRACE_LVL > 0
+      debug_printf( MDATA_VECTOR_TRACE_LVL,
+         "enlarging vector to " SIZE_T_FMT "...",
          new_ct );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_VECTOR_TRACE_LVL */
       maug_mrealloc_test( data_h_new, v->data_h, new_ct, item_sz );
       
       /* Zero out the new space. */
@@ -1157,6 +1173,11 @@ ssize_t _mdata_table_hunt_index(
          key_sz = MDATA_TABLE_KEY_SZ_MAX;
       }
       key_hash = mdata_hash( key, key_sz );
+
+#if MDATA_TABLE_TRACE_LVL > 0
+      debug_printf( MDATA_TABLE_TRACE_LVL,
+         "searching for key: %s (%u)", key, key_hash );
+#endif /* MDATA_TABLE_TRACE_LVL */
    }
 
    /* Compare the key to what we have. */
@@ -1169,9 +1190,9 @@ ssize_t _mdata_table_hunt_index(
          key_iter->hash == key_hash &&
          key_iter->string_sz == key_sz
       ) {
-#if MDATA_TRACE_LVL > 0
-         debug_printf( MDATA_TRACE_LVL, "found value for key: %s", key );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_TABLE_TRACE_LVL > 0
+         debug_printf( MDATA_TABLE_TRACE_LVL, "found value for key: %s", key );
+#endif /* MDATA_TABLE_TRACE_LVL */
          return i;
       }
    }
@@ -1194,10 +1215,10 @@ static MERROR_RETVAL _mdata_table_replace(
    if(
       key->hash == caddy->key->hash && key->string_sz == caddy->key->string_sz
    ) {
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL,
+#if MDATA_TABLE_TRACE_LVL > 0
+      debug_printf( MDATA_TABLE_TRACE_LVL,
          "replacing table data for key %s (%u)...", key->string, key->hash );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_TABLE_TRACE_LVL */
       memcpy( data, caddy->data, data_sz );
       retval = MERROR_FILE;
    }
@@ -1222,9 +1243,9 @@ MERROR_RETVAL mdata_table_iter(
    }
 
    if( !mdata_table_is_locked( t ) ) {
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL, "engaging table autolock..." );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_LOCK_TRACE_LVL > 0
+      debug_printf( MDATA_LOCK_TRACE_LVL, "engaging table autolock..." );
+#endif /* MDATA_LOCK_TRACE_LVL */
       mdata_table_lock( t );
       autolock = 1;
    }
@@ -1281,11 +1302,11 @@ MERROR_RETVAL mdata_table_set(
    key_tmp.string_sz = strlen( key_tmp.string );
    key_tmp.hash = mdata_hash( key_tmp.string, key_tmp.string_sz );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_TABLE_TRACE_LVL > 0
+   debug_printf( MDATA_TABLE_TRACE_LVL,
       "attempting to set key %s (%u) to " SIZE_T_FMT "-byte value...",
       key_tmp.string, key_tmp.hash, value_sz );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_TABLE_TRACE_LVL */
 
    caddy.key = &key_tmp;
    caddy.data = value;
@@ -1304,12 +1325,19 @@ MERROR_RETVAL mdata_table_set(
 
    idx_key = mdata_vector_append(
       &(t->data_cols[0]), &key_tmp, sizeof( struct MDATA_TABLE_KEY ) );
-   assert( 0 <= idx_key );
+   if( 0 > idx_key ) {
+      error_printf( "error appending table key: %d", idx_key );
+      retval = merror_sz_to_retval( idx_key );
+   }
 
    /* TODO: Atomicity: remove key if value fails! */
 
    idx_val = mdata_vector_append( &(t->data_cols[1]), value, value_sz );
    assert( 0 <= idx_val );
+   if( 0 > idx_val ) {
+      error_printf( "error appending table value: %d", idx_val );
+      retval = merror_sz_to_retval( idx_val );
+   }
 
 cleanup:
 
@@ -1327,17 +1355,17 @@ MERROR_RETVAL mdata_table_unset(
    int autolock = 0;
    ssize_t idx = 0;
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL, "unsetting table key: %s", key );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_TABLE_TRACE_LVL > 0
+   debug_printf( MDATA_TABLE_TRACE_LVL, "unsetting table key: %s", key );
+#endif /* MDATA_TABLE_TRACE_LVL */
 
    /* Autolock is fine to have for unset, as there is no returned pointer to
     * preserve.
     */
    if( !mdata_table_is_locked( t ) ) {
-#if MDATA_TRACE_LVL > 0
-      debug_printf( MDATA_TRACE_LVL, "autolocking table vectors" );
-#endif /* MDATA_TRACE_LVL */
+#if MDATA_LOCK_TRACE_LVL > 0
+      debug_printf( MDATA_LOCK_TRACE_LVL, "autolocking table vectors" );
+#endif /* MDATA_LOCK_TRACE_LVL */
       assert( !mdata_vector_is_locked( &(t->data_cols[0]) ) );
       assert( !mdata_vector_is_locked( &(t->data_cols[1]) ) );
       mdata_table_lock( t );
@@ -1374,11 +1402,6 @@ void* mdata_table_get_void( const struct MDATA_TABLE* t, const char* key ) {
 
    assert( mdata_table_is_locked( t ) );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
-      "searching for key: %s (%u)", key, key_hash );
-#endif /* MDATA_TRACE_LVL */
-
    idx = _mdata_table_hunt_index( t, key, 0, 0 );
    if( 0 > idx ) {
       retval = MERROR_OVERFLOW;
@@ -1407,10 +1430,10 @@ void* mdata_table_hash_get_void(
 
    assert( mdata_table_is_locked( t ) );
 
-#if MDATA_TRACE_LVL > 0
-   debug_printf( MDATA_TRACE_LVL,
+#if MDATA_TABLE_TRACE_LVL > 0
+   debug_printf( MDATA_TABLE_TRACE_LVL,
       "searching for hash %u (" SIZE_T_FMT ")", key_hash, key_sz );
-#endif /* MDATA_TRACE_LVL */
+#endif /* MDATA_TABLE_TRACE_LVL */
 
    idx = _mdata_table_hunt_index( t, NULL, key_hash, key_sz );
    if( 0 > idx ) {

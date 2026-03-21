@@ -267,8 +267,8 @@ MERROR_RETVAL retroflat_init_platform(
    args->screen_w = 256;
    args->screen_h = 192;
 
-   g_retroflat_state->buffer.w = 256;
-   g_retroflat_state->buffer.h = 192;
+   g_retroflat_state->platform.screen_buffer.w = 256;
+   g_retroflat_state->platform.screen_buffer.h = 192;
 
    powerOn( POWER_ALL );
 

@@ -10,7 +10,7 @@ START_TEST( test_mfmt_decode_rle_4bit ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
 
-   check_rle_out_h = maug_malloc( 1, sizeof( gc_check_rle_raw ) );
+   maug_malloc_test( check_rle_out_h, 1, sizeof( gc_check_rle_raw ) );
    mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, gc_check_rle,
       sizeof( gc_check_rle ), &check_rle_file );
@@ -47,7 +47,7 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
    size_t i = 0;
    struct MFMT_STRUCT_BMPINFO header_bmp_info;
 
-   check_8bit_out_h = maug_malloc( 1, sizeof( gc_check_8bit ) );
+   maug_malloc_test( check_8bit_out_h, 1, sizeof( gc_check_8bit ) );
    mfile_lock_buffer(
       (MAUG_MHANDLE)NULL, gc_check_4bit,
       sizeof( gc_check_4bit ), &check_4bit_file );

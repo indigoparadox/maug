@@ -100,12 +100,13 @@ struct RETROFLAT_BITMAP {
    uint8_t SEG_FAR* mask;
 };
 
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 
 /* We only explicitly support screen modes with these dimensions anyway.
  */
-#  define retroflat_screen_w() (g_retroflat_state->buffer.w)
-#  define retroflat_screen_h() (g_retroflat_state->buffer.h)
+#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
+#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 /* TODO: DOS Keycodes */
 
@@ -193,6 +194,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 
 struct RETROFLAT_PLATFORM {
    retroflat_intfunc old_timer_interrupt;
+   struct RETROFLAT_BITMAP screen_buffer;
    uint8_t old_video_mode;
    uint8_t cga_color_table[16];
    uint8_t cga_dither_table[16];

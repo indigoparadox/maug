@@ -66,9 +66,7 @@ MERROR_RETVAL mgrid_pack_new_h( MAUG_MHANDLE* p_grid_pack_h ) {
       sizeof( struct MGRID_PACK ) );
 
    /* Allocate new grid. */
-   *p_grid_pack_h = maug_malloc( 1, sizeof( struct MGRID_PACK ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *p_grid_pack_h );
-
+   maug_malloc_test( *p_grid_pack_h, 1, sizeof( struct MGRID_PACK ) );
    maug_mlock( *p_grid_pack_h, grid_pack );
    maug_cleanup_if_null_alloc( struct MGRID_PACK*, grid_pack );
 
@@ -122,9 +120,7 @@ MERROR_RETVAL mgrid_pack_add_layer(
       " bytes) to grid pack...", w, h, pal_ncolors, grid_new_sz );
 
    /* Allocate space for the new layer. */
-   grid_pack_new_h = maug_mrealloc( *p_grid_pack_h, 1, grid_pack_new_sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, grid_pack_new_h );
-   *p_grid_pack_h = grid_pack_new_h;
+   maug_mrealloc_test( grid_pack_new_h, *p_grid_pack_h, 1, grid_pack_new_sz );
 
    maug_mlock( *p_grid_pack_h, grid_pack );
    maug_cleanup_if_null_alloc( struct MGRID_PACK*, grid_pack );

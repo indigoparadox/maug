@@ -76,8 +76,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       RETROSND_ARGS_FLAG_LIST_DEVS ==
       (RETROSND_ARGS_FLAG_LIST_DEVS & args->sound.flags)
    ) {
-      devs_list_buf_h = maug_malloc( 1, devs_list_buf_sz );
-
+      maug_malloc_test( devs_list_buf_h, 1, devs_list_buf_sz );
       maug_mlock( devs_list_buf_h, devs_list_buf );
       maug_strncpy( devs_list_buf, "MIDI devices:\n", devs_list_buf_sz );
       maug_munlock( devs_list_buf_h, devs_list_buf );
@@ -91,10 +90,8 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
          ) {
             /* Grow buffer if we need to. */
             devs_list_buf_sz *= 2;
-            devs_list_buf_new =
-               maug_mrealloc( devs_list_buf_h, 1, devs_list_buf_sz );
-            maug_cleanup_if_null_alloc( MAUG_MHANDLE, devs_list_buf_new );
-            devs_list_buf_h = devs_list_buf_new;
+            maug_mrealloc_test(
+               devs_list_buf_new, devs_list_buf_h, 1, devs_list_buf_sz );
          }
          assert( devs_list_buf_sz + 2 + maug_strlen( midi_caps.szPname )
             > devs_list_buf_sz );

@@ -8,8 +8,10 @@ typedef HGLOBAL MAUG_MHANDLE;
 #  define MMEM_TRACE_LVL 0
 #endif /* !MMEM_TRACE_LVL */
 
-#  define maug_malloc( nmemb, sz ) \
-      GlobalAlloc( GMEM_MOVEABLE, (sz) * (nmemb) ); \
+#  define maug_malloc_test( handle, nmemb, sz ) \
+      maug_cleanup_if_lt_overflow( (sz) * (nmemb), sz ); \
+      handle = GlobalAlloc( GMEM_MOVEABLE, (sz) * (nmemb) ); \
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, handle ); \
       debug_printf( MMEM_TRACE_LVL, \
          "malloc ct: " SIZE_T_FMT ", sz: " SIZE_T_FMT " (" SIZE_T_FMT ")", \
          nmemb, sz, (sz) * (nmemb) );

@@ -204,8 +204,7 @@ retrogxc_asset_type_t retrogxc_loader_bitmap(
 
    assert( (MAUG_MHANDLE)NULL == *handle_p );
 
-   *handle_p = maug_malloc( 1, sizeof( retroflat_blit_t ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, *handle_p );
+   maug_malloc_test( *handle_p, 1, sizeof( retroflat_blit_t ) );
 
    maug_mlock( *handle_p, bitmap );
    maug_cleanup_if_null_alloc( retroflat_blit_t*, bitmap );

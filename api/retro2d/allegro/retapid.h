@@ -50,7 +50,8 @@ typedef int RETROFLAT_COLOR_DEF;
       retroflat_screen_h() : retroflat_allegro_bmp_h( bmp ))
 #  define retroflat_screen_w() (retroflat_allegro_screen_w())
 #  define retroflat_screen_h() (retroflat_allegro_screen_h())
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 #  define retroflat_root_win() (NULL) /* TODO */
 #  define retroflat_px_lock( bmp )
 #  define retroflat_px_release( bmp )
@@ -79,6 +80,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
+   struct RETROFLAT_BITMAP screen_buffer;
 };
 
 #endif /* !RETPLTD_H */

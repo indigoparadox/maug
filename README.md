@@ -6,6 +6,10 @@ Augmented minimal standard library for C89 and legacy compilers.
 
 Current maug-based projects may be found under [The maug topic on GitHub](https://github.com/topics/maug)!
 
+## Breaking Changes
+
+- 2026/03/20 - `maug_malloc` no longer exists and has been replaced with `maug_malloc_test`, which accepts the handle as its first arg, and shunts to the `cleanup` label with `retval` `MERROR_ALLOC` if the allocator returns `NULL`.
+
 ## Requirements
 
 ### All Platforms
@@ -136,6 +140,7 @@ The following targets are currently available (possibly among others):
 |TGT\_CECL\_WINCE\_MIPS    | Windows CE   | VC     | WinCE     |              |
 |TGT\_CECL\_WINCE\_X86     | Windows CE   | VC     | WinCE     |              |
 |TGTMAC68K                 | MacOS 6      | Retro68| Toolbox   | Monochrome   |
+|TGTPSXPSN                 | PlayStation  | psn00b | psn00b    |              |
 
 ### retroflt
 
@@ -161,39 +166,6 @@ Includes common types from stdint.h, guaranteed to be of the named size:
  * uint32\_t
 
 When using this header, do not include stdint.h. This header will include it if the current platform supports it. Otherwise, it will improvise.
-
-### uprintf
-
-`#include <uprintf.h>`
-
-An augmented printf for tracing, debugging, and error reporting.
-
-To use, include uprintf.h and call `logging\_init()` in program startup.
-
-Be sure to call `logging\_shutdown()` on program cleanup.
-
-Logging can then be performed by calling:
-
- * `debug\_printf( lvl, format, ... )` - Prints debug message.
-   * `lvl` - Immediacy level of debug message. See DEBUG\_THRESHOLD below.
-   * `format` - `printf()`-style format string.
-   * `...` - Variable arguments to `format`.
- * `error\_printf( format, ... )` - Prints to stderr.
-   * `format` - `printf()`-style format string.
-   * `...` - Variable arguments to `format`.
-
-uprintf's behavior can be modified by defining the following before inclusion:
-
-| Define            | Description                                             |
-| ------------------|---------------------------------------------------------|
-| platform\_file    | Type to use instead of stdlib's FILE for log ptr.       |
-| platform\_fopen   | Function to use instead of fopen() to create a log ptr. |
-| platform\_fclose  | Function to close log ptr.                              |
-| platform\_fflush  | Function to flush log ptr to buffer.                    |
-| platform\_fprintf | Function to print to log ptr with a format string.      |
-| DEBUG\_THRESHOLD  | debug\_printf() w/ this or higher lvl will be displayed.|
-| DEBUG\_LOG        | If defined, debug will be output to LOG\_FILE\_NAME.    |
-| ANCIENT\_C        | Use static functions where vararg macros unsupported.   |
 
 ## MVFS
 

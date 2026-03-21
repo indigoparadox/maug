@@ -6,7 +6,10 @@
 
 typedef Handle MAUG_MHANDLE;
 
-#  define maug_malloc( nmemb, sz ) NewHandle( (sz) * (nmemb) )
+#  define maug_malloc_test( handle, nmemb, sz ) \
+      maug_cleanup_if_lt_overflow( (sz) * (nmemb), sz ); \
+      handle = NewHandle( (sz) * (nmemb) ); \
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, handle );
 
 /**
  * \warn This does not test that reallocation was successful! Use

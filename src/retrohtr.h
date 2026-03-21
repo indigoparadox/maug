@@ -149,6 +149,7 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree );
 #ifdef RETROHTR_C
 
 ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
+   MERROR_RETVAL retval = MERROR_OK;
    uint8_t auto_unlocked = 0;
    ssize_t retidx = -1;
    MAUG_MHANDLE new_nodes_h = (MAUG_MHANDLE)NULL;
@@ -164,16 +165,8 @@ ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
    assert( (MAUG_MHANDLE)NULL != tree->nodes_h );
    if( tree->nodes_sz_max <= tree->nodes_sz + 1 ) {
       /* We've run out of nodes, so double the available number. */
-      /* TODO: Check for sz overflow. */
-      new_nodes_h = maug_mrealloc( tree->nodes_h, tree->nodes_sz_max * 2,
+      maug_mrealloc_test( new_nodes_h, tree->nodes_h, tree->nodes_sz_max * 2,
          sizeof( struct RETROHTR_RENDER_NODE ) );
-      if( (MAUG_MHANDLE)NULL == new_nodes_h ) {
-         error_printf(
-            "unable to reallocate " SIZE_T_FMT " nodes!",
-            tree->nodes_sz_max * 2 );
-         goto cleanup;
-      }
-      tree->nodes_h = new_nodes_h;
       tree->nodes_sz_max *= 2;
    }
 
@@ -202,6 +195,10 @@ cleanup:
    if( auto_unlocked ) {
       debug_printf( RETROHTR_TRACE_LVL, "auto-locking nodes..." );
       maug_mlock( tree->nodes_h, tree->nodes );
+   }
+
+   if( MERROR_OK != retval ) {
+      retidx = merror_retval_to_sz( retval );
    }
 
    return retidx;
@@ -1544,9 +1541,10 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree ) {
    tree->nodes_sz_max = MHTML_PARSER_TAGS_INIT_SZ;
    debug_printf( RETROHTR_TRACE_LVL,
       "allocating " SIZE_T_FMT " nodes...", tree->nodes_sz_max );
-   tree->nodes_h = maug_malloc(
-      tree->nodes_sz_max, sizeof( struct RETROHTR_RENDER_NODE ) );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, tree->nodes_h );
+   maug_malloc_test(
+      tree->nodes_h,
+      tree->nodes_sz_max,
+      sizeof( struct RETROHTR_RENDER_NODE ) );
 
    /* XXX
    r.w_max = retroflat_screen_w();

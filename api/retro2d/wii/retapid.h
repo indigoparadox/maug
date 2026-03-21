@@ -91,7 +91,8 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
 /*! \brief Get the direct screen buffer or the VDP buffer if a VDP is loaded. */
-#  define retroflat_screen_buffer() (&(g_retroflat_state->buffer))
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 
 /*! \brief Lock a surface for pixel drawing if needed. */
 #  define retroflat_px_lock( bmp ) \
@@ -142,6 +143,7 @@ struct RETROFLAT_PLATFORM {
    /*! \brief Example field to prevent empty struct. */
    uint8_t flags;
    GXRModeObj* rmode;
+   struct RETROFLAT_BITMAP screen_buffer;
 };
 
 #endif /* !RETPLTD_H */

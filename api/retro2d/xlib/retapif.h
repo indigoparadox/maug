@@ -56,26 +56,26 @@ static MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.window );
 
    /* Create the buffer. */
-   g_retroflat_state->buffer.bits_sz =
+   g_retroflat_state->platform.screen_buffer.bits_sz =
       g_retroflat_state->screen_w * g_retroflat_state->screen_h * 4;
-   g_retroflat_state->buffer.bits = calloc(
+   g_retroflat_state->platform.screen_buffer.bits = calloc(
       g_retroflat_state->screen_w * g_retroflat_state->screen_h, 4 );
-   if( NULL == g_retroflat_state->buffer.bits ) {
+   if( NULL == g_retroflat_state->platform.screen_buffer.bits ) {
       error_printf( "coult not allocate buffer bitmap!" );
       retval = MERROR_GUI;
       goto cleanup;
    }
-   g_retroflat_state->buffer.img = XCreateImage(
+   g_retroflat_state->platform.screen_buffer.img = XCreateImage(
       g_retroflat_state->platform.display, g_retroflat_state->platform.visual, 
       DefaultDepth(
          g_retroflat_state->platform.display,
          g_retroflat_state->platform.screen ),
       ZPixmap,
       0,
-      g_retroflat_state->buffer.bits,
+      g_retroflat_state->platform.screen_buffer.bits,
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h, 32, 0 );
-   if( NULL == g_retroflat_state->buffer.img ) {
+   if( NULL == g_retroflat_state->platform.screen_buffer.img ) {
       error_printf( "coult not allocate buffer image!" );
       retval = MERROR_GUI;
       goto cleanup;
@@ -99,8 +99,8 @@ cleanup:
 /* === */
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
-   if( NULL != g_retroflat_state->buffer.img ) {
-      XDestroyImage( g_retroflat_state->buffer.img );
+   if( NULL != g_retroflat_state->platform.screen_buffer.img ) {
+      XDestroyImage( g_retroflat_state->platform.screen_buffer.img );
    }
    /* if( NULL != g_buffer_bits ) {
       free( g_buffer_bits );
@@ -206,7 +206,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          DefaultGC(
             g_retroflat_state->platform.display,
             g_retroflat_state->platform.screen ),
-         g_retroflat_state->buffer.img,
+         g_retroflat_state->platform.screen_buffer.img,
          0, 0, 0, 0,
          g_retroflat_state->screen_w, g_retroflat_state->screen_h );
    }

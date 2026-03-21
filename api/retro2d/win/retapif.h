@@ -189,7 +189,9 @@ static LRESULT CALLBACK WndProc(
 #     else
 
          /* Setup the screen buffer. */
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+         if(
+            !retroflat_bitmap_ok( &(g_retroflat_state->platform.screen_buffer) )
+         ) {
 #if RETRO2D_TRACE_LVL > 0
             debug_printf( RETRO2D_TRACE_LVL,
                "retroflat: creating window buffer ("
@@ -202,9 +204,9 @@ static LRESULT CALLBACK WndProc(
             retroflat_create_bitmap(
                g_retroflat_state->screen_v_w,
                g_retroflat_state->screen_v_h,
-               &(g_retroflat_state->buffer),
+               &(g_retroflat_state->platform.screen_buffer),
                RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
-            if( (HDC)NULL == g_retroflat_state->buffer.hdc_b ) {
+            if( (HDC)NULL == g_retroflat_state->platform.screen_buffer.hdc_b ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not determine buffer device context!" );
                error_printf( "could not determine buffer device context!" );
@@ -214,7 +216,9 @@ static LRESULT CALLBACK WndProc(
             }
 
          }
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+         if(
+            !retroflat_bitmap_ok( &(g_retroflat_state->platform.screen_buffer) )
+         ) {
             retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                "Error", "Could not create screen buffer!" );
             error_printf( "could not create screen buffer!" );
@@ -239,7 +243,9 @@ static LRESULT CALLBACK WndProc(
 #     if !defined( RETROFLAT_OPENGL )
       case WM_PAINT:
 
-         if( !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
+         if(
+            !retroflat_bitmap_ok( &(g_retroflat_state->platform.screen_buffer) )
+         ) {
             error_printf( "screen buffer not ready!" );
             break;
          }
@@ -268,7 +274,7 @@ static LRESULT CALLBACK WndProc(
                0, 0,
                g_retroflat_state->screen_w,
                g_retroflat_state->screen_h,
-               g_retroflat_state->buffer.hdc_b,
+               g_retroflat_state->platform.screen_buffer.hdc_b,
                0, 0,
                g_retroflat_state->screen_w,
                g_retroflat_state->screen_h
@@ -288,7 +294,7 @@ static LRESULT CALLBACK WndProc(
             0, 0,
             g_retroflat_state->screen_w,
             g_retroflat_state->screen_h,
-            g_retroflat_state->buffer.hdc_b,
+            g_retroflat_state->platform.screen_buffer.hdc_b,
             0, 0,
             g_retroflat_state->screen_v_w,
             g_retroflat_state->screen_v_h,
@@ -309,8 +315,10 @@ static LRESULT CALLBACK WndProc(
 
       case WM_DESTROY:
 #ifndef RETROFLAT_OPENGL
-         if( retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ) {
-            DeleteObject( g_retroflat_state->buffer.b );
+         if(
+            retroflat_bitmap_ok( &(g_retroflat_state->platform.screen_buffer) )
+         ) {
+            DeleteObject( g_retroflat_state->platform.screen_buffer.b );
          }
 #endif /* !RETROFLAT_OPENGL */
          PostQuitMessage( 0 );
@@ -331,7 +339,8 @@ static LRESULT CALLBACK WndProc(
 #     ifdef RETROFLAT_OPENGL
             (HGLRC)NULL == g_retroflat_state->platform.hrc_win ||
 #     else
-            !retroflat_bitmap_ok( &(g_retroflat_state->buffer) ) ||
+            !retroflat_bitmap_ok(
+               &(g_retroflat_state->platform.screen_buffer) ) ||
 #     endif /* !RETROFLAT_OPENGL */
             hWnd != g_retroflat_state->platform.window
          ) {
@@ -522,7 +531,8 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* !RETROFLAT_API_WINCE */
 
    maug_mzero(
-      &(g_retroflat_state->buffer), sizeof( struct RETROFLAT_BITMAP ) );
+      &(g_retroflat_state->platform.screen_buffer),
+      sizeof( struct RETROFLAT_BITMAP ) );
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "retroflat: creating window class..." );
@@ -695,16 +705,16 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
    }
 
 #     ifndef RETROFLAT_OPENGL
-   if( (HDC)NULL != g_retroflat_state->buffer.hdc_b ) {
+   if( (HDC)NULL != g_retroflat_state->platform.screen_buffer.hdc_b ) {
       /* Return the default object into the HDC. */
       SelectObject(
-         g_retroflat_state->buffer.hdc_b,
-         g_retroflat_state->buffer.old_hbm_b );
-      DeleteDC( g_retroflat_state->buffer.hdc_b );
-      g_retroflat_state->buffer.hdc_b = (HDC)NULL;
+         g_retroflat_state->platform.screen_buffer.hdc_b,
+         g_retroflat_state->platform.screen_buffer.old_hbm_b );
+      DeleteDC( g_retroflat_state->platform.screen_buffer.hdc_b );
+      g_retroflat_state->platform.screen_buffer.hdc_b = (HDC)NULL;
 
       /* Destroy buffer bitmap! */
-      retroflat_destroy_bitmap( &(g_retroflat_state->buffer) );
+      retroflat_destroy_bitmap( &(g_retroflat_state->platform.screen_buffer) );
    }
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_WIN_BRRM )
@@ -952,7 +962,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
       /* TODO: Reconcile with VDP! */
       /* The HDC should be created already by WndProc. */
-      assert( (HDC)NULL != g_retroflat_state->buffer.hdc_b );
+      assert( (HDC)NULL != g_retroflat_state->platform.screen_buffer.hdc_b );
       goto cleanup;
 
 #     ifdef RETROFLAT_VDP

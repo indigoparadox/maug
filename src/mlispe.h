@@ -48,6 +48,14 @@
 #  define MLISP_EXEC_TRACE_LVL 0
 #endif /* !MLISP_EXEC_TRACE_LVL */
 
+#ifndef MLISP_ENV_TRACE_LVL
+#  define MLISP_ENV_TRACE_LVL 0
+#endif /* !MLISP_ENV_TRACE_LVL */
+
+#ifndef MLISP_LOCK_TRACE_LVL
+#  define MLISP_LOCK_TRACE_LVL 0
+#endif /* !MLISP_LOCK_TRACE_LVL */
+
 #ifndef MLISP_STACK_TRACE_LVL
 #  define MLISP_STACK_TRACE_LVL 0
 #endif /* !MLISP_STACK_TRACE_LVL */
@@ -261,11 +269,11 @@ static MERROR_RETVAL _mlisp_autolock(
    if( MLISP_AUTOLOCK_EXEC_ENV == (MLISP_AUTOLOCK_EXEC_ENV & mask) ) {
       for( env_iter = exec->env_select ; 0 <= env_iter ; env_iter-- ) {
          if( !mdata_table_is_locked( &(exec->env[env_iter]) ) ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-            debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+            debug_printf( MLISP_LOCK_TRACE_LVL,
                "%u: engaging autolock for exec env frame %d...",
                exec->uid, env_iter );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
             mdata_table_lock( &(exec->env[env_iter]) );
             autolock[env_iter] |= MLISP_AUTOLOCK_EXEC_ENV;
          }
@@ -275,10 +283,10 @@ static MERROR_RETVAL _mlisp_autolock(
       MLISP_AUTOLOCK_CHILD_IDX == (MLISP_AUTOLOCK_CHILD_IDX & mask) &&
       !mdata_vector_is_locked( &(exec->per_node_child_idx) )
    ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+      debug_printf( MLISP_LOCK_TRACE_LVL,
          "%u: engaging autolock for exec per-node child index...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
       mdata_vector_lock( &(exec->per_node_child_idx) );
       autolock[0] |= MLISP_AUTOLOCK_CHILD_IDX;
    }
@@ -286,10 +294,10 @@ static MERROR_RETVAL _mlisp_autolock(
       MLISP_AUTOLOCK_VISIT_CT == (MLISP_AUTOLOCK_VISIT_CT & mask) &&
       !mdata_vector_is_locked( &(exec->per_node_visit_ct) )
    ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+      debug_printf( MLISP_LOCK_TRACE_LVL,
          "%u: engaging autolock for per-node visit count...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
       mdata_vector_lock( &(exec->per_node_visit_ct) );
       autolock[0] |= MLISP_AUTOLOCK_VISIT_CT;
    }
@@ -297,10 +305,10 @@ static MERROR_RETVAL _mlisp_autolock(
       MLISP_AUTOLOCK_PARSER_AST == (MLISP_AUTOLOCK_PARSER_AST & mask) &&
       !mdata_vector_is_locked( &(parser->ast) )
    ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+      debug_printf( MLISP_LOCK_TRACE_LVL,
          "%u: engaging autolock for parser AST...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
       mdata_vector_lock( &(parser->ast) );
       autolock[0] |= MLISP_AUTOLOCK_PARSER_AST;
    }
@@ -310,10 +318,10 @@ static MERROR_RETVAL _mlisp_autolock(
       0 < mdata_table_ct( exec->global_env ) &&
       !mdata_table_is_locked( exec->global_env )
    ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+      debug_printf( MLISP_LOCK_TRACE_LVL,
          "%u: engaging autolock for global env...", exec->uid );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
       mdata_table_lock( exec->global_env );
       autolock[0] |= MLISP_AUTOLOCK_GLOBAL_ENV;
    }
@@ -670,11 +678,11 @@ MERROR_RETVAL mlisp_env_unset(
    maug_mzero( autolock, MLISP_EXEC_ENV_FRAME_CT_MAX );
 
    while( 0 <= env_iter ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_ENV_TRACE_LVL > 0
+      debug_printf( MLISP_ENV_TRACE_LVL,
          "%u: attempting to undefine %s in frame %d...",
          exec->uid, token, env_iter );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_ENV_TRACE_LVL */
 
       env = &(exec->env[env_iter]);
 
@@ -740,10 +748,10 @@ MERROR_RETVAL mlisp_env_set(
    /* Ignore the retval, since it doesn't really matter if this fails. */
    mdata_table_unset( env, token );
 
-#if MLISP_EXEC_TRACE_LVL > 0
+#if MLISP_ENV_TRACE_LVL > 0
 #  define _MLISP_TYPE_TABLE_ASGN( idx, ctype, name, const_name, fmt ) \
       case idx: \
-         debug_printf( MLISP_EXEC_TRACE_LVL, \
+         debug_printf( MLISP_ENV_TRACE_LVL, \
             "%u: setting env %d: \"%s\": #" fmt, \
             exec->uid, exec->env_select, token, (ctype)*((ctype*)data) ); \
          e.value.name = *((ctype*)data); \
@@ -753,7 +761,7 @@ MERROR_RETVAL mlisp_env_set(
       case idx: \
          e.value.name = *((ctype*)data); \
          break;
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_ENV_TRACE_LVL */
 
    /* Setup the new node to copy. */
    maug_mzero( &e, sizeof( struct MLISP_ENV_NODE ) );
@@ -767,29 +775,29 @@ MERROR_RETVAL mlisp_env_set(
 
    case 4 /* MLISP_TYPE_STR */:
       /* TODO: Don't use strpool for this! */
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_ENV_TRACE_LVL > 0
+      debug_printf( MLISP_ENV_TRACE_LVL,
          "%u: setting env %d: \"%s\": strpool(" SSIZE_T_FMT ")",
          exec->uid, exec->env_select, token, *((ssize_t*)data) );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_ENV_TRACE_LVL */
       e.value.strpool_idx = *((mdata_strpool_idx_t*)data);
       break;
 
    case 5 /* MLISP_TYPE_CB */:
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_ENV_TRACE_LVL > 0
+      debug_printf( MLISP_ENV_TRACE_LVL,
          "%u: setting env %d: \"%s\": 0x%p",
          exec->uid, exec->env_select, token, (mlisp_env_cb_t)data );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_ENV_TRACE_LVL */
       e.value.cb = (mlisp_env_cb_t)data;
       break;
 
    case 6 /* MLISP_TYPE_LAMBDA */:
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_ENV_TRACE_LVL > 0
+      debug_printf( MLISP_ENV_TRACE_LVL,
          "%u: setting env %d: \"%s\": node #" SSIZE_T_FMT,
          exec->uid, exec->env_select, token, *((mlisp_lambda_t*)data) );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_ENV_TRACE_LVL */
       e.value.lambda = *((mlisp_lambda_t*)data);
       break;
 
@@ -1576,7 +1584,9 @@ static MERROR_RETVAL _mlisp_step_lambda(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_lambda_child_idx = NULL;
+#if MLISP_EXEC_TRACE_LVL > 0
    size_t* p_args_child_idx = NULL;
+#endif /* MLISP_EXEC_TRACE_LVL */
    struct MLISP_AST_NODE* n = NULL;
    size_t* p_n_last_lambda = NULL;
    ssize_t append_retval = 0;
@@ -1640,11 +1650,14 @@ static MERROR_RETVAL _mlisp_step_lambda(
 
       /* Get the current args node child index. */
       assert( mdata_vector_is_locked( &(exec->per_node_child_idx) ) );
-      p_args_child_idx = mdata_vector_get(
+#if MLISP_EXEC_TRACE_LVL > 0
+      p_args_child_idx = 
+#endif /* MLISP_EXEC_TRACE_LVL */
+      mdata_vector_get(
          &(exec->per_node_child_idx),
          n->ast_idx_children[*p_lambda_child_idx], size_t );
-      assert( NULL != p_args_child_idx );
 #if MLISP_EXEC_TRACE_LVL > 0
+      assert( NULL != p_args_child_idx );
       debug_printf( MLISP_EXEC_TRACE_LVL,
          "%u: child idx for args AST node " SIZE_T_FMT ": " SIZE_T_FMT,
          exec->uid, *p_lambda_child_idx, *p_args_child_idx );
@@ -1783,7 +1796,7 @@ static MERROR_RETVAL _mlisp_eval_token_strpool(
       "%u: eval token: \"%s\" (strlen: " SIZE_T_FMT "r/" SIZE_T_FMT "d)",
       exec->uid, strpool_token, token_sz, maug_strlen( strpool_token ) );
 #endif /* MLISP_EXEC_TRACE_LVL */
-   if( 0 == strncmp( strpool_token, "begin", token_sz ) ) {
+   if( 0 == maug_strncmp( strpool_token, "begin", token_sz + 1 ) ) {
       /* Fake env node e to signal step_iter() to place/cleanup stack frame. */
       e_out->type = MLISP_TYPE_BEGIN;
 
@@ -1913,10 +1926,10 @@ static MERROR_RETVAL _mlisp_step_iter(
     * in one swoop without an unlock.
     */
    for( env_iter = exec->env_select ; 0 <= env_iter ; env_iter-- ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-      debug_printf( MLISP_EXEC_TRACE_LVL,
+#if MLISP_LOCK_TRACE_LVL > 0
+      debug_printf( MLISP_LOCK_TRACE_LVL,
          "%u: locking local env %d...", exec->uid, env_iter );
-#endif /* MLISP_EXEC_TRACE_LVL */
+#endif /* MLISP_LOCK_TRACE_LVL */
       mdata_table_lock( &(exec->env[env_iter]) );
    }
 
@@ -2277,7 +2290,11 @@ MERROR_RETVAL mlisp_step_lambda(
 #endif /* MLISP_EXEC_TRACE_LVL */
 
    n = mdata_vector_get( &(parser->ast), lambda_idx, struct MLISP_AST_NODE );
-   assert( MLISP_AST_FLAG_LAMBDA == (MLISP_AST_FLAG_LAMBDA & n->flags) );
+   if( MLISP_AST_FLAG_LAMBDA != (MLISP_AST_FLAG_LAMBDA & n->flags) ) {
+      error_printf( "invalid node %d: not a lambda!", lambda_idx );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
 
    /* Jump execution to the lambda on next iter. */
    retval = _mlisp_step_lambda( parser, lambda_idx, exec );

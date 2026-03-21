@@ -16,9 +16,7 @@ static SDL_Surface* _retroflat_sdl_load_bitmap( retroflat_asset_path path ) {
    maug_cleanup_if_not_ok();
 
    /* Create a memory buffer. */
-   buffer_h = maug_malloc( 1, bmp_file.sz );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, buffer_h );
-
+   maug_malloc_test( buffer_h, 1, bmp_file.sz );
    maug_mlock( buffer_h, buffer );
    maug_cleanup_if_null_lock( uint8_t*, buffer );
 
@@ -173,9 +171,13 @@ MERROR_RETVAL retroflat_init_platform(
    /* Insert a normal surface as the standard buffer that things draw to, so
     * those things can be scaled onto the scale buffer as the last step.
     */
-   g_retroflat_state->buffer.surface = SDL_CreateRGBSurface(
+   g_retroflat_state->platform.buffer.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   if( NULL == g_retroflat_state->platform.buffer.surface ) {
+      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
+         "Error", "Error initializing SDL buffer surface: %s", SDL_GetError() );
+   }
    g_retroflat_state->platform.scale_rect.x = 0;
    g_retroflat_state->platform.scale_rect.y = 0;
    g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
@@ -183,7 +185,7 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.scale_buffer = 
 #        else
    /* Do not insert the scale buffer if there is no scaling! */
-   g_retroflat_state->buffer.surface = 
+   g_retroflat_state->platform.buffer.surface = 
 #        endif /* !RETROFLAT_NO_SDL1_SCALING */
 #     endif /* !RETROFLAT_OPENGL */
    SDL_SetVideoMode(
@@ -197,7 +199,7 @@ MERROR_RETVAL retroflat_init_platform(
    );
 #     ifndef RETROFLAT_OPENGL
    maug_cleanup_if_null(
-      SDL_Surface*, g_retroflat_state->buffer.surface,
+      SDL_Surface*, g_retroflat_state->platform.buffer.surface,
       RETROFLAT_ERROR_GRAPHICS );
 #     endif /* !RETROFLAT_OPENGL */
 
@@ -233,16 +235,16 @@ MERROR_RETVAL retroflat_init_platform(
       RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the main renderer. */
-   g_retroflat_state->buffer.renderer = SDL_CreateRenderer(
+   g_retroflat_state->platform.buffer.renderer = SDL_CreateRenderer(
       g_retroflat_state->platform.window, -1,
       SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
    maug_cleanup_if_null(
-      SDL_Renderer*, g_retroflat_state->buffer.renderer,
+      SDL_Renderer*, g_retroflat_state->platform.buffer.renderer,
       RETROFLAT_ERROR_GRAPHICS );
 
    /* Create the buffer texture. */
-   g_retroflat_state->buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+   g_retroflat_state->platform.buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->platform.buffer.renderer,
          SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
          g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
 
@@ -268,7 +270,7 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
    if( NULL != g_retroflat_state ) {
 #     if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
-      SDL_FreeSurface( g_retroflat_state->buffer.surface );
+      SDL_FreeSurface( g_retroflat_state->platform.buffer.surface );
 #     elif defined( RETROFLAT_API_SDL2 )
       SDL_DestroyWindow( g_retroflat_state->platform.window );
 #     endif /* !RETROFLAT_API_SDL1 */
@@ -407,7 +409,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 #  if defined( RETROFLAT_OPENGL )
 
-   if( NULL != bmp && &(g_retroflat_state->buffer) != bmp ) {
+   if( NULL != bmp && &(g_retroflat_state->platform.buffer) != bmp ) {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
  
@@ -419,9 +421,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
     * retroflat_px_lock() for a proxy to SDL_LockSurface().
     */
 
-   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->platform.buffer) == bmp ) {
       /* Special case: Attempting to lock the screen. */
-      bmp = &(g_retroflat_state->buffer);
+      bmp = &(g_retroflat_state->platform.buffer);
 
       if(
          RETROFLAT_FLAGS_SCREEN_LOCK !=
@@ -457,8 +459,8 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
       /* Target is the screen buffer. */
       SDL_SetRenderTarget(
-         g_retroflat_state->buffer.renderer,
-         g_retroflat_state->buffer.texture );
+         g_retroflat_state->platform.buffer.renderer,
+         g_retroflat_state->platform.buffer.texture );
 
       goto cleanup;
 
@@ -486,7 +488,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
 #  ifdef RETROFLAT_OPENGL
 
-   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->platform.buffer) == bmp ) {
       /* SDL has its own OpenGL flip functions.*/
 #     if defined( RETROFLAT_API_SDL1 )
       SDL_GL_SwapBuffers();
@@ -501,9 +503,9 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    /* == SDL1 == */
 
-   if( NULL == bmp || &(g_retroflat_state->buffer) == bmp ) {
+   if( NULL == bmp || &(g_retroflat_state->platform.buffer) == bmp ) {
       /* Special case: Attempting to release the (real, non-VDP) screen. */
-      bmp = &(g_retroflat_state->buffer);
+      bmp = &(g_retroflat_state->platform.buffer);
 
       if(
          RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags)
@@ -529,7 +531,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
           * real screen buffer before flip.
           */
          SDL_SoftStretch(
-            g_retroflat_state->buffer.surface, NULL,
+            g_retroflat_state->platform.buffer.surface, NULL,
             g_retroflat_state->platform.scale_buffer,
             &(g_retroflat_state->platform.scale_rect) );
          SDL_Flip( g_retroflat_state->platform.scale_buffer );
@@ -554,11 +556,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif /* RETROFLAT_VDP */
    ) {
       /* Flip the screen. */
-      SDL_SetRenderTarget( g_retroflat_state->buffer.renderer, NULL );
+      SDL_SetRenderTarget( g_retroflat_state->platform.buffer.renderer, NULL );
       SDL_RenderCopyEx(
-         g_retroflat_state->buffer.renderer,
-         g_retroflat_state->buffer.texture, NULL, NULL, 0, NULL, 0 );
-      SDL_RenderPresent( g_retroflat_state->buffer.renderer );
+         g_retroflat_state->platform.buffer.renderer,
+         g_retroflat_state->platform.buffer.texture, NULL, NULL, 0, NULL, 0 );
+      SDL_RenderPresent( g_retroflat_state->platform.buffer.renderer );
 
       goto cleanup;
 
@@ -582,7 +584,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    assert( NULL != bmp->texture );
    SDL_DestroyTexture( bmp->texture );
    bmp->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->buffer.renderer, bmp->surface );
+      g_retroflat_state->platform.buffer.renderer, bmp->surface );
    maug_cleanup_if_null(
       SDL_Texture*, bmp->texture, MERROR_GUI );
 
@@ -747,7 +749,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    /* Create a texture from the surface. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->buffer.renderer, bmp_out->surface );
+      g_retroflat_state->platform.buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
       error_printf( "SDL unable to create texture: %s", SDL_GetError() );
       if(
@@ -823,6 +825,9 @@ cleanup:
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
       /* TODO: Are these masks right? */
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   if( NULL == bmp_out->surface ) {
+      error_printf( "could not create surface: %s", SDL_GetError() );
+   }
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -833,7 +838,10 @@ cleanup:
 
    /* Convert new surface to texture. */
    bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->buffer.renderer, bmp_out->surface );
+      g_retroflat_state->platform.buffer.renderer, bmp_out->surface );
+   if( NULL == bmp_out->texture ) {
+      error_printf( "could not create texture: %s", SDL_GetError() );
+   }
    maug_cleanup_if_null(
       SDL_Texture*, bmp_out->texture, MERROR_GUI );
       
@@ -972,6 +980,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
          SDL_TEXTUREACCESS_STREAMING,
          retroflat_bitmap_w( src ),
          retroflat_bitmap_h( src ) );
+      if( NULL == tmp_tex ) {
+         error_printf(
+            "could not create temporary texture: %s", SDL_GetError() );
+         retval = MERROR_GUI;
+      }
       SDL_UpdateTexture(
          tmp_tex, NULL, src->surface->pixels, src->surface->pitch );
       retroflat_draw_release( src );
@@ -1283,12 +1296,12 @@ void retroflat_resize_v() {
    g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
    */
 
-   assert( NULL != g_retroflat_state->buffer.texture );
-   SDL_DestroyTexture( g_retroflat_state->buffer.texture );
+   assert( NULL != g_retroflat_state->platform.buffer.texture );
+   SDL_DestroyTexture( g_retroflat_state->platform.buffer.texture );
 
    /* Create the buffer texture. */
-   g_retroflat_state->buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->buffer.renderer,
+   g_retroflat_state->platform.buffer.texture =
+      SDL_CreateTexture( g_retroflat_state->platform.buffer.renderer,
          SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
          g_retroflat_state->screen_w, g_retroflat_state->screen_h );
 
