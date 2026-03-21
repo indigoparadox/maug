@@ -368,7 +368,7 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer1.draw.isbg = 1;
    g_retroflat_state->platform.buffer1.alt_page =
       &(g_retroflat_state->platform.buffer2);
-   g_retroflat_state->platform.buffer1.disp_idx = 0;
+   g_retroflat_state->platform.buffer1.disp_idx = 1;
    g_retroflat_state->platform.buffer1.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer1.draw),
@@ -382,7 +382,7 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer2.draw.isbg = 1;
    g_retroflat_state->platform.buffer2.alt_page =
       &(g_retroflat_state->platform.buffer1);
-   g_retroflat_state->platform.buffer2.disp_idx = 1;
+   g_retroflat_state->platform.buffer2.disp_idx = 0;
    g_retroflat_state->platform.buffer2.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer2.draw),
