@@ -149,6 +149,7 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree );
 #ifdef RETROHTR_C
 
 ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
+   MERROR_RETVAL retval = MERROR_OK;
    uint8_t auto_unlocked = 0;
    ssize_t retidx = -1;
    MAUG_MHANDLE new_nodes_h = (MAUG_MHANDLE)NULL;
@@ -194,6 +195,10 @@ cleanup:
    if( auto_unlocked ) {
       debug_printf( RETROHTR_TRACE_LVL, "auto-locking nodes..." );
       maug_mlock( tree->nodes_h, tree->nodes );
+   }
+
+   if( MERROR_OK != retval ) {
+      retidx = merror_retval_to_sz( retval );
    }
 
    return retidx;
