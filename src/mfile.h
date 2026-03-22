@@ -125,11 +125,13 @@
  */
 
 /**
- * \brief Path/name used to load an asset from disk.
+ * \brief Path/name used to load an asset from disk or access other files.
  *
- * \note On some platforms, this may not be a string. Ideally, mfile() should
- *       handle all transformations of this type so that these cases may be
- *       handled on a per-platform basis.
+ * \note This may also be used as an index in MVFS. Regardless, it should always
+ *       be ::MAUG_PATH_SZ_MAX bytes long, including the NULL terminator!
+ *       Any attempt at manual intervention should only work with
+ *       MAUG_PATH_SZ_MAX - 1 bytes, as the last should always be the NULL
+ *       terminator!
  */
 typedef char maug_path[MAUG_PATH_SZ_MAX];
 

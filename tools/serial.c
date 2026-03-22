@@ -34,7 +34,7 @@
    f( char,                    18 ) \
    f( float,                   19 ) \
    f( mfix_t,                  20 ) \
-   f( retroflat_asset_path,    21 ) \
+   f( maug_path,               21 ) \
    f( retrotile_coord_t,       22 ) \
    f( mdata_strpool_idx_t,     23 ) \
    f( retroflat_dir4_t,        24 ) \
