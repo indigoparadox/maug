@@ -612,9 +612,13 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
    retval = mfile_plt_open_read( filename, p_file );
 
    if( MERROR_OK == retval ) {
-      /* Store filename. */
-      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX );
+      /* Store filename, chopping potentially too-long input and ensuring there
+       * is a NULL termination. */
+      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX + 1 );
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
       maug_strncpy( p_file->filename, filename, MAUG_PATH_SZ_MAX );
+#pragma GCC diagnostic pop
    }
 
    return retval;
