@@ -21,12 +21,12 @@ MAUGCHK_TABLE( MAUGCHK_PROTOS )
 
 MERROR_RETVAL open_temp( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char filename_path[MAUG_PATH_SZ_MAX + 1];
+   maug_path filename_path;
 
-   maug_mzero( filename_path, MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( filename_path, MAUG_PATH_SZ_MAX );
 
-   strncat( filename_path, TMP_PATH, MAUG_PATH_SZ_MAX );
-   strncat( filename_path, filename, MAUG_PATH_SZ_MAX );
+   strncat( filename_path, TMP_PATH, MAUG_PATH_SZ_MAX - 1 );
+   strncat( filename_path, filename, MAUG_PATH_SZ_MAX - 1 );
 
    remove( filename_path );
 

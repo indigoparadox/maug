@@ -32,23 +32,23 @@ MERROR_RETVAL mplug_load(
    const char* plugin_basename, mplug_mod_t* p_mod_exe
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char plugin_path[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   maug_path plugin_path = { 0 };
 #ifdef RETROFLAT_OS_WIN
    size_t i = 0;
 #  ifdef MAUG_WCHAR
-   wchar_t plugin_path_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   wchar_t plugin_path_w[MAUG_PATH_SZ_MAX] = { 0 };
 #  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
-   maug_mzero( plugin_path, MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( plugin_path, MAUG_PATH_SZ_MAX );
 
 #if defined( RETROFLAT_OS_UNIX )
-   maug_snprintf( plugin_path, MAUG_PATH_SZ_MAX, "%s.so", plugin_basename );
+   maug_snprintf( plugin_path, MAUG_PATH_SZ_MAX - 1, "%s.so", plugin_basename );
    *p_mod_exe = dlopen( plugin_path, RTLD_LAZY );
 #elif defined( RETROFLAT_OS_WIN )
    maug_snprintf(
-      plugin_path, MAUG_PATH_SZ_MAX, "%s.dll", plugin_basename );
-   for( i = 0 ; MAUG_PATH_SZ_MAX > i ; i++ ) {
+      plugin_path, MAUG_PATH_SZ_MAX - 1, "%s.dll", plugin_basename );
+   for( i = 0 ; MAUG_PATH_SZ_MAX - 1 > i ; i++ ) {
       if( '/' == plugin_path[i] ) {
          plugin_path[i] = '\\';
       }
@@ -56,7 +56,7 @@ MERROR_RETVAL mplug_load(
 #  ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
       CP_ACP, MB_PRECOMPOSED, plugin_path, -1,
-      plugin_path_w, MAUG_PATH_SZ_MAX
+      plugin_path_w, MAUG_PATH_SZ_MAX - 1
    ) ) {
       error_printf(
          "unable to convert wide path for module: %s", plugin_path );
@@ -94,24 +94,24 @@ MERROR_RETVAL mplug_call(
    MERROR_RETVAL retval = MERROR_OK;
    mplug_proc_t plugin_proc = (mplug_proc_t)NULL;
 #ifdef RETROFLAT_OS_WIN
-   char proc_name_ex[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   char proc_name_ex[MAUG_PATH_SZ_MAX] = { 0 };
 #  ifdef MAUG_WCHAR
-   wchar_t proc_name_ex_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   wchar_t proc_name_ex_w[MAUG_PATH_SZ_MAX] = { 0 };
 #  endif /* MAUG_WCHAR */
 #endif /* RETROFLAT_OS_WIN */
 
 #ifdef RETROFLAT_OS_UNIX
    plugin_proc = dlsym( mod_exe, proc_name );
 #elif defined( RETROFLAT_OS_WIN )
-   maug_mzero( proc_name_ex, MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( proc_name_ex, MAUG_PATH_SZ_MAX );
 
    /* Append a _ to the proc_name to match calling convention name scheme. */
-   maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX, "%s_", proc_name );
+   maug_snprintf( proc_name_ex, MAUG_PATH_SZ_MAX - 1, "%s_", proc_name );
 
 #  if defined( MAUG_WCHAR ) && defined( RETROFLAT_API_WINCE )
    if( 0 == MultiByteToWideChar(
       CP_ACP, MB_PRECOMPOSED, proc_name_ex, -1, proc_name_ex_w,
-      MAUG_PATH_SZ_MAX
+      MAUG_PATH_SZ_MAX - 1
    ) ) {
       error_printf( "could not create wide proc name!" );
       retval = MERROR_FILE;

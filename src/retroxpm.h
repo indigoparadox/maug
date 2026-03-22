@@ -16,7 +16,7 @@
  *       restrictive \ref maug_retroflt_bitmap rules.
  */
 MERROR_RETVAL retroflat_load_xpm(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   const maug_path filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
 #ifdef RETROFLAT_XPM
 #  ifdef RETROFLT_C
@@ -31,7 +31,7 @@ extern MAUG_CONST char* SEG_MCONST gc_xpm_filenames[];
 extern MAUG_CONST char** SEG_MCONST gc_xpm_data[];
 
 MERROR_RETVAL retroflat_load_xpm(
-   const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   const maug_path filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    RETROFLAT_COLOR color;
@@ -42,11 +42,11 @@ MERROR_RETVAL retroflat_load_xpm(
       bmp_h = 0,
       bmp_colors,
       bmp_bypp;
-   retroflat_asset_path filename_path;
+   maug_path filename_path;
 
    retval = retroflat_build_filename_path(
       filename, RETROFLAT_BITMAP_EXT, filename_path,
-      MAUG_PATH_SZ_MAX + 1, flags );
+      MAUG_PATH_SZ_MAX, flags );
    maug_cleanup_if_not_ok();
 
    debug_printf( RETROXPM_TRACE_LVL,

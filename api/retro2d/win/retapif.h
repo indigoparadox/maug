@@ -1073,7 +1073,7 @@ cleanup:
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
-   char filename_path[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_WIN16 )
    char* buf = NULL;
@@ -1083,14 +1083,14 @@ MERROR_RETVAL retroflat_load_bitmap(
    BITMAP bm;
 #  endif /* RETROFLAT_API_WIN32 */
 #  ifdef MAUG_WCHAR
-   wchar_t filename_path_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   wchar_t filename_path_w[MAUG_PATH_SZ_MAX] = { 0 };
 #  endif /* MAUG_WCHAR */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
       filename, RETROFLAT_BITMAP_EXT,
-      filename_path, MAUG_PATH_SZ_MAX + 1, flags );
+      filename_path, MAUG_PATH_SZ_MAX, flags );
    maug_cleanup_if_not_ok();
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
@@ -1186,7 +1186,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 #        ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
       CP_ACP, MB_PRECOMPOSED, filename_path, -1, filename_path_w,
-      MAUG_PATH_SZ_MAX
+      MAUG_PATH_SZ_MAX - 1
    ) ) {
       error_printf( "could not create wide filename path!" );
       retval = MERROR_FILE;

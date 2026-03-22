@@ -154,8 +154,8 @@ MERROR_RETVAL mserialize_mdata_strpool_idx_t(
 
 #ifndef MAUG_NO_RETRO
 
-MERROR_RETVAL mserialize_retroflat_asset_path(
-   mfile_t* ser_out, const retroflat_asset_path* p_ser_char, int array );
+MERROR_RETVAL mserialize_maug_path(
+   mfile_t* ser_out, const maug_path* p_ser_char, int array );
 
 MERROR_RETVAL mserialize_retrotile_coord_t(
    mfile_t* ser_out, const retrotile_coord_t* p_ser_int, int array );
@@ -235,8 +235,8 @@ MERROR_RETVAL mdeserialize_mdata_strpool_idx_t(
 
 #ifndef MAUG_NO_RETRO
 
-MERROR_RETVAL mdeserialize_retroflat_asset_path(
-   mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array, ssize_t* p_ser_sz );
+MERROR_RETVAL mdeserialize_maug_path(
+   mfile_t* ser_in, maug_path* p_ser_char, int array, ssize_t* p_ser_sz );
 
 MERROR_RETVAL mdeserialize_retrotile_coord_t(
    mfile_t* ser_in, retrotile_coord_t* p_ser_int, int array, ssize_t* p_ser_sz );

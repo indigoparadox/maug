@@ -261,12 +261,12 @@ MERROR_RETVAL mfile_plt_init() {
 
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-   char filepath[MAUG_PATH_SZ_MAX + 1];
+   maug_path filepath[MAUG_PATH_SZ_MAX];
    size_t i_out = 0,
       i_in = 0;
 
    /* Fix up filename for CD-ROM filesystem. */
-   maug_mzero( filepath, MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( filepath, MAUG_PATH_SZ_MAX );
    filepath[i_out++] = '\\';
    for( i_in = 0 ; strlen( filename ) > i_in ; i_in++ ) {
       if( '/' == filename[i_in] ) {

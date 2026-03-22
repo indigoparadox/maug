@@ -167,7 +167,7 @@ struct RETROTILE_TILE_DEF {
    /*! \brief Size of this struct (useful for serializing). */
    size_t sz;
    uint8_t flags;
-   retroflat_asset_path image_path;
+   maug_path image_path;
    size_t x;
    size_t y;
    uint16_t tile_class;
@@ -349,7 +349,7 @@ struct RETROTILE_PARSER {
    void* custom_token_cb_data;
    struct MJSON_PARSER jparser;
    struct MDATA_VECTOR* p_tile_defs;
-   char dirname[MAUG_PATH_SZ_MAX + 1];
+   maug_path dirname;
    uint16_t layer_class;
 };
 
@@ -432,7 +432,7 @@ mfix_t retrotile_static_rotation_from_dir( const char* dir );
  * \note This function ignores RETROFLAT_STATE::assets_path.
  */
 MERROR_RETVAL retrotile_parse_json_file(
-   const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
+   const maug_path dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs,
    mparser_wait_cb_t wait_cb, void* wait_data,
    mparser_parse_token_cb token_cb, void* token_cb_data, uint8_t passes,
@@ -516,7 +516,7 @@ MERROR_RETVAL retrotile_alloc(
    const char* tilemap_name, const char* tileset_name );
 
 void retrotile_format_asset_path(
-   retroflat_asset_path path_out, const char* afile,
+   maug_path path_out, const char* afile,
    struct RETROTILE_PARSER* parser );
 
 MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max );
@@ -1259,7 +1259,7 @@ mfix_t retrotile_static_rotation_from_dir( const char* dir ) {
 /* === */
 
 MERROR_RETVAL retrotile_parse_json_file(
-   const char* dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
+   const maug_path dirname, const char* filename, MAUG_MHANDLE* p_tilemap_h,
    struct MDATA_VECTOR* p_tile_defs, mparser_wait_cb_t wait_cb, void* wait_data,
    mparser_parse_token_cb token_cb, void* token_cb_data, uint8_t passes,
    uint8_t flags
@@ -1267,7 +1267,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    MERROR_RETVAL retval = MERROR_OK;
    MAUG_MHANDLE parser_h = (MAUG_MHANDLE)NULL;
    struct RETROTILE_PARSER* parser = NULL;
-   char filename_path[MAUG_PATH_SZ_MAX];
+   maug_path filename_path;
    mfile_t tile_file;
    char c;
    char* filename_ext = NULL;
@@ -1284,7 +1284,8 @@ MERROR_RETVAL retrotile_parse_json_file(
    parser->custom_token_cb = token_cb;
    parser->custom_token_cb_data = token_cb_data;
 
-   maug_strncpy( parser->dirname, dirname, MAUG_PATH_SZ_MAX );
+   retval = mfile_assign_path( parser->dirname, dirname, 0 );
+   maug_cleanup_if_not_ok();
 
    if( 2 > passes ) {
 #if RETROTILE_TRACE_LVL > 0
@@ -1297,10 +1298,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    parser->passes_max = passes;
 
    /* Setup filename path. */
-   maug_mzero( filename_path, MAUG_PATH_SZ_MAX );
-   /* TODO: Configurable path. */
-   maug_snprintf(
-      filename_path, MAUG_PATH_SZ_MAX, "%s/%s", dirname, filename );
+   retrotile_format_asset_path( filename_path, filename, parser );
 
 #if RETROTILE_TRACE_LVL > 0
    debug_printf( RETROTILE_TRACE_LVL, "opening %s...", filename_path );
@@ -2277,12 +2275,12 @@ cleanup:
 /* === */
 
 void retrotile_format_asset_path(
-   retroflat_asset_path path_out, const char* afile,
+   maug_path path_out, const char* afile,
    struct RETROTILE_PARSER* parser
 ) {
    /* Load the portrait. */
-   maug_mzero( path_out, MAUG_PATH_SZ_MAX + 1 );
-   maug_snprintf( path_out, MAUG_PATH_SZ_MAX, "%s/%s",
+   maug_mzero( path_out, MAUG_PATH_SZ_MAX );
+   maug_snprintf( path_out, MAUG_PATH_SZ_MAX - 1, "%s/%s",
       parser->dirname, afile );
 }
 

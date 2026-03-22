@@ -113,22 +113,21 @@ size_t retroflat_config_read(
 static MERROR_RETVAL retroflat_cli_c(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
+   MERROR_RETVAL retval = MERROR_OK;
    if( -1 == arg_c ) {
-      maug_mzero( g_retroflat_state->config_path, MAUG_PATH_SZ_MAX + 1 );
+      maug_mzero( g_retroflat_state->config_path, MAUG_PATH_SZ_MAX );
 
       if( NULL != args->config_path ) {
          debug_printf( 1, "setting config path to: %s", args->config_path );
-         maug_strncpy(
-            g_retroflat_state->config_path,
-            args->config_path, MAUG_PATH_SZ_MAX );
+         retval = mfile_assign_path(
+            g_retroflat_state->config_path, args->config_path, 0 );
+         maug_cleanup_if_not_ok();
       } else {
          debug_printf( 1, "setting config path to: %s%s",
             args->title, RETROFLAT_CONFIG_EXT );
-         maug_strncpy(
-            g_retroflat_state->config_path, args->title, MAUG_PATH_SZ_MAX );
-         strncat(
-            g_retroflat_state->config_path,
-            RETROFLAT_CONFIG_EXT, MAUG_PATH_SZ_MAX );
+         retval = mfile_assign_path(
+            g_retroflat_state->config_path, args->title, 0 );
+         maug_cleanup_if_not_ok();
       }
    } else if(
       0 == strncmp( MAUG_CLI_SIGIL "rfc", arg, MAUG_CLI_SIGIL_SZ + 4 )
@@ -136,9 +135,12 @@ static MERROR_RETVAL retroflat_cli_c(
       /* The next arg must be the new var. */
    } else {
       debug_printf( 1, "setting config path to: %s", arg );
-      maug_strncpy( g_retroflat_state->config_path, arg, MAUG_PATH_SZ_MAX );
+      retval = mfile_assign_path( g_retroflat_state->config_path, arg, 0 );
+      maug_cleanup_if_not_ok();
    }
-   return MERROR_OK;
+
+cleanup:
+   return retval;
 }
 
 #endif /* !MAUG_NO_CLI */
@@ -180,10 +182,10 @@ cleanup:
 
    /* == Win32 (Registry) == */
 
-   char key_path[MAUG_PATH_SZ_MAX + 1] = "SOFTWARE\\";
+   maug_path key_path = "SOFTWARE\\";
 
    /* TODO */
-   strncat( key_path, "RetroFlat", MAUG_PATH_SZ_MAX );
+   strncat( key_path, "RetroFlat", MAUG_PATH_SZ_MAX - 1 );
 
    /* TODO */
    if( ERROR_SUCCESS != RegOpenKey(

@@ -171,7 +171,7 @@ MERROR_RETVAL _mfile_plt_open(
    MERROR_RETVAL tok_retval = MERROR_OK;
    int16_t vol_ref = 0;
    size_t dir_idx = 0;
-   char dir_name[MAUG_PATH_SZ_MAX + 1];
+   maug_path dir_name;
    char pas_dir_name[MAUG_PATH_SZ_MAX + 2];
    CInfoPBRec pb;
    OSErr pb_err;
@@ -188,19 +188,19 @@ MERROR_RETVAL _mfile_plt_open(
     * the path up by '/' separators.
     */
    while( MERROR_OK == tok_retval ) {
-      maug_mzero( dir_name, MAUG_PATH_SZ_MAX + 1 );
+      maug_mzero( dir_name, MAUG_PATH_SZ_MAX );
       maug_mzero( pas_dir_name, MAUG_PATH_SZ_MAX + 2 );
 
       /* Get the current path token. */
       tok_retval = maug_tok_str(
          dir_idx, filename,
-         maug_strlen( filename ), dir_name, MAUG_PATH_SZ_MAX, "/" );
+         maug_strlen( filename ), dir_name, MAUG_PATH_SZ_MAX - 1, "/" );
 
       if( MERROR_OK == tok_retval ) {
          debug_printf( MFILE_SEEK_TRACE_LVL, "dir: %s", dir_name );
 
          /* Translate the path token into a pascal string. */
-         retval = maug_str_c2p( dir_name, pas_dir_name, MAUG_PATH_SZ_MAX + 1 );
+         retval = maug_str_c2p( dir_name, pas_dir_name, MAUG_PATH_SZ_MAX );
          maug_cleanup_if_not_ok_msg( "filename string too long!" );
 
          /* Get info for item represented by path token. */

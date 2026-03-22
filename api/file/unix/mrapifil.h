@@ -351,11 +351,11 @@ cleanup:
 /* === */
 
 MERROR_RETVAL mfile_plt_open_read(
-   const retroflat_asset_path filename, mfile_t* p_file
+   const maug_path filename, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t st_size = 0;
-   char filename_prefixed[MAUG_PATH_SZ_MAX + 1];
+   maug_path filename_prefixed;
 #  if defined( MFILE_MMAP )
    uint8_t* bytes_ptr = NULL;
    struct stat st;
@@ -366,12 +366,13 @@ MERROR_RETVAL mfile_plt_open_read(
    int stat_r = 0;
 #  endif /* !MAUG_NO_STAT */
 
-   maug_mzero( filename_prefixed, MAUG_PATH_SZ_MAX + 1 );
+   maug_mzero( filename_prefixed, MAUG_PATH_SZ_MAX );
 #  ifdef RETROFLAT_OS_NX
-   maug_snprintf( filename_prefixed, MAUG_PATH_SZ_MAX, "romfs:/%s", filename );
+   maug_snprintf(
+      filename_prefixed, MAUG_PATH_SZ_MAX - 1, "romfs:/%s", filename );
 #  else
    /* Generic case: no prefix. */
-   maug_snprintf( filename_prefixed, MAUG_PATH_SZ_MAX, "%s", filename );
+   maug_snprintf( filename_prefixed, MAUG_PATH_SZ_MAX - 1, "%s", filename );
 #  endif /* RETROFLAT_OS_NX */
 
 #  ifndef MAUG_NO_STAT
@@ -412,7 +413,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL mfile_plt_open_write(
-   const retroflat_asset_path filename, mfile_t* p_file
+   const maug_path filename, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    retval = _mfile_plt_open( 0, 0, filename, p_file );

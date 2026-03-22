@@ -189,7 +189,7 @@ MERROR_RETVAL retroani_set_target(
 MERROR_RETVAL retroani_set_string(
    struct MDATA_VECTOR* ani_stack, size_t a_idx,
    const char* str_in, size_t str_sz_in,
-   const retroflat_asset_path font_name_in,
+   const maug_path font_name_in,
    RETROFLAT_COLOR color_idx_in );
 
 /**
@@ -647,7 +647,7 @@ cleanup:
 MERROR_RETVAL retroani_set_string(
    struct MDATA_VECTOR* ani_stack, size_t a_idx,
    const char* str_in, size_t str_sz_in,
-   const retroflat_asset_path font_name_in,
+   const maug_path font_name_in,
    RETROFLAT_COLOR color_idx_in
 ) {
    MERROR_RETVAL retval = MERROR_OK;

@@ -22,7 +22,7 @@ struct RETROFLAT_SOUND_STATE {
    uint8_t io_timeout;
    uint8_t driver;
    struct RETROSND_ADLIB_VOICE* adlib_voices;
-   char sf_bank_filename[MAUG_PATH_SZ_MAX + 1];
+   maug_path sf_bank_filename;
 };
 
 #elif defined( RETROFLT_C )
@@ -204,7 +204,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    /* No bank file by default. */
    maug_mzero(
-      g_retroflat_state->sound.sf_bank_filename, MAUG_PATH_SZ_MAX + 1 );
+      g_retroflat_state->sound.sf_bank_filename, MAUG_PATH_SZ_MAX );
 
    if( 0 == args->sound.snd_io_base ) {
       /* Select default port. */
@@ -301,7 +301,7 @@ cleanup:
 
 void retrosnd_midi_set_sf_bank( const char* filename_in ) {
    maug_strncpy( g_retroflat_state->sound.sf_bank_filename, filename_in,
-      MAUG_PATH_SZ_MAX );
+      MAUG_PATH_SZ_MAX - 1 );
 }
 
 /* === */

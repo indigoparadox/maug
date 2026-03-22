@@ -1609,8 +1609,10 @@ struct RETROFLAT_STATE {
    MERROR_RETVAL           retval;
    /*! \brief \ref maug_retroflt_flags indicating current system status. */
    uint8_t                 retroflat_flags;
-   char                    config_path[MAUG_PATH_SZ_MAX + 1];
-   char                    assets_path[MAUG_PATH_SZ_MAX + 1];
+   maug_path               config_path;
+   maug_path               assets_path;
+   maug_path               saves_path;
+
    /*! \brief Off-screen buffer bitmap. */
    /* struct RETROFLAT_BITMAP buffer; */
    int screen_scale;
@@ -1737,7 +1739,7 @@ MERROR_RETVAL retroflat_loop(
 #  endif /* retroflat_loop */
 
 MERROR_RETVAL retroflat_build_filename_path(
-   const char* filename_in, const char* filename_ext,
+   const maug_path filename_in, const char* filename_ext,
    char* buffer_out, size_t buffer_out_sz, uint8_t flags );
 
 /**
@@ -2072,7 +2074,7 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
 /* === Function Definitions === */
 
 MERROR_RETVAL retroflat_build_filename_path(
-   const char* filename_in, const char* filename_ext,
+   const maug_path filename_in, const char* filename_ext,
    char* buffer_out, size_t buffer_out_sz, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -2087,11 +2089,15 @@ MERROR_RETVAL retroflat_build_filename_path(
    ) {
       /* TODO: Error checking. */
       maug_snprintf( buffer_out, buffer_out_sz - 1, "%s", filename_in );
-   } else {
+   } else if( NULL != filename_ext ) {
       /* TODO: Error checking. */
       maug_snprintf( buffer_out, buffer_out_sz - 1, "%s%c%s.%s",
          g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
          filename_in, filename_ext );
+   } else {
+      maug_snprintf( buffer_out, buffer_out_sz - 1, "%s%c%s",
+         g_retroflat_state->assets_path, RETROFLAT_PATH_SEP,
+         filename_in );
    }
 
    return retval;
@@ -2690,9 +2696,9 @@ MERROR_RETVAL retroflat_init(
 
    /* Set the assets path. */
    if( NULL != args->assets_path ) {
-      maug_mzero( g_retroflat_state->assets_path, MAUG_PATH_SZ_MAX + 1 );
+      maug_mzero( g_retroflat_state->assets_path, MAUG_PATH_SZ_MAX );
       maug_strncpy( g_retroflat_state->assets_path,
-         args->assets_path, MAUG_PATH_SZ_MAX );
+         args->assets_path, MAUG_PATH_SZ_MAX - 1 );
    }
 
 #  if defined( RETROFLAT_SCREENSAVER )
@@ -3099,7 +3105,7 @@ uint8_t retroflat_viewport_focus_generic(
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
-   char filename_path[MAUG_PATH_SZ_MAX + 1];
+   maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
    mfile_t bmp_file;
    struct MFMT_STRUCT_BMPFILE header_bmp;
@@ -3109,7 +3115,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
       filename, RETROFLAT_BITMAP_EXT, filename_path,
-      MAUG_PATH_SZ_MAX + 1, flags );
+      MAUG_PATH_SZ_MAX, flags );
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 

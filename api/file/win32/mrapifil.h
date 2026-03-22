@@ -187,12 +187,12 @@ static void _mfile_plt_open( const char* filename, mfile_t* p_file ) {
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  ifdef MAUG_WCHAR
-   wchar_t filename_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   wchar_t filename_w[MAUG_PATH_SZ_MAX] = { 0 };
 #  endif /* MAUG_WCHAR */
 
 #     ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
-      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX
+      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX - 1
    ) ) {
       error_printf( "could not create wide filename path!" );
       retval = MERROR_FILE;
@@ -234,12 +234,12 @@ cleanup:
 MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  ifdef MAUG_WCHAR
-   wchar_t filename_w[MAUG_PATH_SZ_MAX + 1] = { 0 };
+   wchar_t filename_w[MAUG_PATH_SZ_MAX] = { 0 };
 #  endif /* MAUG_WCHAR */
 
 #     ifdef MAUG_WCHAR
    if( 0 == MultiByteToWideChar(
-      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX
+      CP_ACP, MB_PRECOMPOSED, filename, -1, filename_w, MAUG_PATH_SZ_MAX - 1
    ) ) {
       error_printf( "could not create wide filename path!" );
       retval = MERROR_FILE;

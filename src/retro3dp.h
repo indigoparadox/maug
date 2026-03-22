@@ -679,11 +679,11 @@ cleanup:
 }
 
 MERROR_RETVAL retro3dp_parse_obj_file(
-   const char* filename, struct RETRO3DP_PARSER* parser,
+   const maug_path filename, struct RETRO3DP_PARSER* parser,
    struct RETRO3DP_MODEL* obj
 ) {
    int auto_parser = 0; /* Did we provision parser? */
-   char filename_path[MAUG_PATH_SZ_MAX + 1];
+   maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
    mfile_t obj_file;
    char c;
@@ -695,9 +695,9 @@ MERROR_RETVAL retro3dp_parse_obj_file(
    }
 
    /* Build the path to the obj. */
-   maug_mzero( filename_path, MAUG_PATH_SZ_MAX + 1 );
-   maug_snprintf( filename_path, MAUG_PATH_SZ_MAX, "%s%c%s",
-      g_retroflat_state->assets_path, RETROFLAT_PATH_SEP, filename );
+   retval = retroflat_build_filename_path(
+      filename, NULL, filename_path, MAUG_PATH_SZ_MAX, 0 );
+   maug_cleanup_if_not_ok();
 
    /* Open the file and allocate the buffer. */
    retval = mfile_open_read( filename_path, &obj_file );

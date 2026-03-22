@@ -126,8 +126,12 @@
 
 /**
  * \brief Path/name used to load an asset from disk.
+ *
+ * \note On some platforms, this may not be a string. Ideally, mfile() should
+ *       handle all transformations of this type so that these cases may be
+ *       handled on a per-platform basis.
  */
-typedef char retroflat_asset_path[MAUG_PATH_SZ_MAX + 1];
+typedef char maug_path[MAUG_PATH_SZ_MAX];
 
 /**
  * \brief Compare two asset paths. Return 0 if they're the same.
@@ -205,7 +209,7 @@ struct MFILE_CADDY {
    uint8_t flags;
    /*! \brief Size of the current file/buffer in bytes. */
    off_t sz;
-   char filename[MAUG_PATH_SZ_MAX];
+   maug_path filename;
    mfile_has_bytes_t has_bytes;
    mfile_cursor_t cursor;
    mfile_read_byte_t read_byte;
@@ -225,8 +229,12 @@ typedef struct MFILE_CADDY mfile_t;
  * \{
  */
 
+/**
+ * \brief Copy a ::maug_path from one place to another, safely observing
+ *        character limits, etc.
+ */
 MERROR_RETVAL mfile_assign_path(
-   retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags );
+   maug_path tgt, const maug_path src, uint8_t flags );
 
 /*! \} */
 
@@ -267,10 +275,10 @@ MERROR_RETVAL mfile_lock_buffer(
  * \param filename NULL-terminated path to file to open.
  */
 MERROR_RETVAL mfile_open_read(
-   const retroflat_asset_path filename, mfile_t* p_file );
+   const maug_path filename, mfile_t* p_file );
 
 MERROR_RETVAL mfile_open_write(
-   const retroflat_asset_path filename, mfile_t* p_file );
+   const maug_path filename, mfile_t* p_file );
 
 /**
  * \brief Close a file opened with mfile_open_read().
@@ -304,7 +312,7 @@ off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
 /* === */
 
 MERROR_RETVAL mfile_assign_path(
-   retroflat_asset_path tgt, const retroflat_asset_path src, uint8_t flags
+   maug_path tgt, const maug_path src, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char* ext_ptr = NULL;
@@ -609,7 +617,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL mfile_open_read(
-   const retroflat_asset_path filename, mfile_t* p_file
+   const maug_path filename, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -627,7 +635,7 @@ MERROR_RETVAL mfile_open_read(
 /* === */
 
 MERROR_RETVAL mfile_open_write(
-   const retroflat_asset_path filename, mfile_t* p_file
+   const maug_path filename, mfile_t* p_file
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 

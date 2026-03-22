@@ -447,8 +447,8 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mserialize_retroflat_asset_path(
-   mfile_t* ser_out, const retroflat_asset_path* p_ser_char, int array 
+MERROR_RETVAL mserialize_maug_path(
+   mfile_t* ser_out, const maug_path* p_ser_char, int array 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
@@ -1100,8 +1100,8 @@ cleanup:
    return retval;
 }
 
-MERROR_RETVAL mdeserialize_retroflat_asset_path(
-   mfile_t* ser_in, retroflat_asset_path* p_ser_char, int array,
+MERROR_RETVAL mdeserialize_maug_path(
+   mfile_t* ser_in, maug_path* p_ser_char, int array,
    ssize_t* p_ser_sz 
 ) {
    MERROR_RETVAL retval = MERROR_OK;

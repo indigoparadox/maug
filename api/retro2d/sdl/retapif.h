@@ -4,7 +4,7 @@
 
 #ifndef RETROFLAT_OPENGL
 
-static SDL_Surface* _retroflat_sdl_load_bitmap( retroflat_asset_path path ) {
+static SDL_Surface* _retroflat_sdl_load_bitmap( maug_path path ) {
    MERROR_RETVAL retval = MERROR_OK;
    SDL_Surface* bmp_out = NULL;
    SDL_RWops* rwo = NULL;
@@ -599,7 +599,7 @@ cleanup:
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
-   char filename_path[MAUG_PATH_SZ_MAX + 1];
+   maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
 #  if !defined( RETROFLAT_OPENGL )
    SDL_Surface* tmp_surface = NULL;
@@ -616,7 +616,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
    retval = retroflat_build_filename_path(
       filename, RETROFLAT_BITMAP_EXT, filename_path,
-      MAUG_PATH_SZ_MAX + 1, flags );
+      MAUG_PATH_SZ_MAX, flags );
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 

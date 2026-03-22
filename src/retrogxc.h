@@ -47,13 +47,13 @@
 typedef int8_t retrogxc_asset_type_t;
 
 typedef retrogxc_asset_type_t (*retrogxc_loader)(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
+   const maug_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
 struct RETROFLAT_CACHE_ASSET {
    uint8_t type;
    MAUG_MHANDLE handle;
-   retroflat_asset_path id;
+   maug_path id;
 };
 
 struct RETROGXC_FONT_PARMS {
@@ -69,23 +69,23 @@ void retrogxc_clear_cache();
 void retrogxc_shutdown();
 
 retrogxc_asset_type_t retrogxc_loader_bitmap(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
+   const maug_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
 retrogxc_asset_type_t retrogxc_loader_xpm(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
+   const maug_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
 retrogxc_asset_type_t retrogxc_loader_font(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p,
+   const maug_path res_p, MAUG_MHANDLE* handle_p,
    void* data, uint8_t flags );
 
 int16_t retrogxc_load_font(
-   const retroflat_asset_path font_name,
+   const maug_path font_name,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
 
 int16_t retrogxc_load_asset(
-   const retroflat_asset_path res_p, retrogxc_loader l, void* data,
+   const maug_path res_p, retrogxc_loader l, void* data,
    uint8_t flags );
 
 MERROR_RETVAL retrogxc_blit_bitmap(
@@ -196,7 +196,7 @@ void retrogxc_shutdown() {
 /* === */
 
 retrogxc_asset_type_t retrogxc_loader_bitmap(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, void* data,
+   const maug_path res_p, MAUG_MHANDLE* handle_p, void* data,
    uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -238,7 +238,7 @@ cleanup:
 #ifdef RETROFONT_PRESENT
 
 retrogxc_asset_type_t retrogxc_loader_font(
-   const retroflat_asset_path res_p, MAUG_MHANDLE* handle_p, void* data,
+   const maug_path res_p, MAUG_MHANDLE* handle_p, void* data,
    uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -267,7 +267,7 @@ cleanup:
 /* === */
 
 int16_t retrogxc_load_asset(
-   const retroflat_asset_path res_p, retrogxc_loader l, void* data,
+   const maug_path res_p, retrogxc_loader l, void* data,
    uint8_t flags
 ) {
    int16_t idx = RETROGXC_ERROR_CACHE_MISS,
@@ -439,7 +439,7 @@ cleanup:
 #ifdef RETROFONT_PRESENT
 
 int16_t retrogxc_load_font(
-   const retroflat_asset_path font_name,
+   const maug_path font_name,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count 
 ) {
    int16_t idx = -1;
