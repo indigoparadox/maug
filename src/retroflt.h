@@ -1738,6 +1738,8 @@ MERROR_RETVAL retroflat_loop(
    retroflat_loop_iter frame_iter, retroflat_loop_iter loop_iter, void* data );
 #  endif /* retroflat_loop */
 
+#define retroflat_get_assets_path() (g_retroflat_state->assets_path)
+
 MERROR_RETVAL retroflat_build_filename_path(
    const maug_path filename_in, const char* filename_ext,
    char* buffer_out, size_t buffer_out_sz, uint8_t flags );
