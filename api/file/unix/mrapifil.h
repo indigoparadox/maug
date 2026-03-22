@@ -350,7 +350,9 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
+MERROR_RETVAL mfile_plt_open_read(
+   const retroflat_asset_path filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t st_size = 0;
    char filename_prefixed[MAUG_PATH_SZ_MAX + 1];
@@ -409,7 +411,9 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mfile_plt_open_write( const char* filename, mfile_t* p_file ) {
+MERROR_RETVAL mfile_plt_open_write(
+   const retroflat_asset_path filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
    retval = _mfile_plt_open( 0, 0, filename, p_file );
    return retval;

@@ -205,7 +205,7 @@ struct MFILE_CADDY {
    uint8_t flags;
    /*! \brief Size of the current file/buffer in bytes. */
    off_t sz;
-   char filename[MAUG_PATH_SZ_MAX + 1];
+   char filename[MAUG_PATH_SZ_MAX];
    mfile_has_bytes_t has_bytes;
    mfile_cursor_t cursor;
    mfile_read_byte_t read_byte;
@@ -266,9 +266,11 @@ MERROR_RETVAL mfile_lock_buffer(
  * \brief Open a file and read it into memory or memory-map it.
  * \param filename NULL-terminated path to file to open.
  */
-MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file );
+MERROR_RETVAL mfile_open_read(
+   const retroflat_asset_path filename, mfile_t* p_file );
 
-MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file );
+MERROR_RETVAL mfile_open_write(
+   const retroflat_asset_path filename, mfile_t* p_file );
 
 /**
  * \brief Close a file opened with mfile_open_read().
@@ -307,7 +309,8 @@ MERROR_RETVAL mfile_assign_path(
    MERROR_RETVAL retval = MERROR_OK;
    char* ext_ptr = NULL;
 
-   maug_snprintf( tgt, MAUG_PATH_SZ_MAX, "%s", src );
+   maug_mzero( tgt, MAUG_PATH_SZ_MAX );
+   maug_snprintf( tgt, MAUG_PATH_SZ_MAX - 1, "%s", src );
 
    if( MFILE_ASSIGN_FLAG_TRIM_EXT == (MFILE_ASSIGN_FLAG_TRIM_EXT & flags) ) {
       ext_ptr = maug_strrchr( tgt, '.' );
@@ -605,20 +608,17 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
+MERROR_RETVAL mfile_open_read(
+   const retroflat_asset_path filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Call the platform-specific actual file opener from mrapifil.h. */
    retval = mfile_plt_open_read( filename, p_file );
 
    if( MERROR_OK == retval ) {
-      /* Store filename, chopping potentially too-long input and ensuring there
-       * is a NULL termination. */
-      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX + 1 );
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
-      maug_strncpy( p_file->filename, filename, MAUG_PATH_SZ_MAX );
-#pragma GCC diagnostic pop
+      /* Store filename. */
+      retval = mfile_assign_path( p_file->filename, filename, 0 );
    }
 
    return retval;
@@ -626,15 +626,16 @@ MERROR_RETVAL mfile_open_read( const char* filename, mfile_t* p_file ) {
 
 /* === */
 
-MERROR_RETVAL mfile_open_write( const char* filename, mfile_t* p_file ) {
+MERROR_RETVAL mfile_open_write(
+   const retroflat_asset_path filename, mfile_t* p_file
+) {
    MERROR_RETVAL retval = MERROR_OK;
 
    retval = mfile_plt_open_write( filename, p_file );
 
    if( MERROR_OK == retval ) {
       /* Store filename. */
-      maug_mzero( p_file->filename, MAUG_PATH_SZ_MAX );
-      maug_strncpy( p_file->filename, filename, MAUG_PATH_SZ_MAX );
+      retval = mfile_assign_path( p_file->filename, filename, 0 );
    }
 
    return retval;
