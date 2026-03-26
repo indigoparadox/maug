@@ -27,16 +27,23 @@
 /**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
  *        text as outline-only.
- * \todo This has not yet been implemented and is present for backward
- *       compatibility.
  */
 #define RETROFONT_FLAG_OUTLINE   0x04
+
+/**
+ * \brief Flag for retroflat_string() indicating a light-colored outline.
+ *
+ * \note This includes the flag RETROFONT_FLAG_OUTLINE for sizing purposes.
+ *       So it's not necessary to OR it with RETROFONT_FLAG_OUTLINE when
+ *       passing to e.g. retroflat_string_sz().
+ */
+#define RETROFONT_FLAG_OUTLINE_LIGHT   0x0c
 
 /**
  * \brief Flag for retroflat_string_sz() to return the size of the shortest
  *        line in a multi-line string.
  */
-#define RETROFONT_FLAG_SZ_MIN    0x08
+#define RETROFONT_FLAG_SZ_MIN    0x10
 
 /**
  * \brief Opaque data structure defined by each platform/API.

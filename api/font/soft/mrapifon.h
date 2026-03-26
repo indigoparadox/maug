@@ -271,7 +271,10 @@ static void retrofont_blit_glyph(
             ) {
                /* Draw outline pixel. */
                retroflat_2d_px( 
-                  target, RETROFLAT_COLOR_DARKBLUE,
+                  target,
+                  RETROFONT_FLAG_OUTLINE_LIGHT == 
+                  (RETROFONT_FLAG_OUTLINE_LIGHT & flags) ?
+                     RETROFLAT_COLOR_WHITE : RETROFLAT_COLOR_DARKBLUE,
                   x + x_iter, y + y_iter, 0 );
             }
 
