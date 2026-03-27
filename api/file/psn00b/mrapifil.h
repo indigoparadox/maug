@@ -262,26 +262,26 @@ MERROR_RETVAL mfile_plt_init() {
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
    maug_path filepath[MAUG_PATH_SZ_MAX];
-   size_t i_out = 0,
-      i_in = 0;
+   size_t i_in = 0;
+   char* filepath_p = (char*)filepath;
 
    /* Fix up filename for CD-ROM filesystem. */
    maug_mzero( filepath, MAUG_PATH_SZ_MAX );
-   filepath[i_out++] = '\\';
+   *(filepath_p++) = '\\';
    for( i_in = 0 ; strlen( filename ) > i_in ; i_in++ ) {
       if( '/' == filename[i_in] ) {
          /* Replace path separators with backslash. */
-         filepath[i_out++] = '\\';
+         *(filepath_p++) = '\\';
       } else if( 0x61 <= filename[i_in] && 0x7a >= filename[i_in] ) {
          /* Make filename uppercase for CD-ROM filesystem. */
-         filepath[i_out++] = filename[i_in] - 0x20;
+         *(filepath_p++) = filename[i_in] - 0x20;
       } else {
-         filepath[i_out++] = filename[i_in];
+         *(filepath_p++) = filename[i_in];
       }
    }
    /* Add file version. */
-   filepath[i_out++] = ';';
-   filepath[i_out++] = '1';
+   *(filepath_p++) = ';';
+   *(filepath_p++) = '1';
 
    /* Wait for CD-ROM if needed. */
    while( MFILE_PSX_CD_BUSY == (MFILE_PSX_CD_BUSY & CdStatus()) ) {
