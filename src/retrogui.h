@@ -315,7 +315,7 @@
    debug_printf( RETROGUI_TRACE_LVL, \
       "zeroed str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
    maug_strncpy( str_tmp, src_str, str_sz ); \
-   dest_ctl. field ## _sz = maug_strlen( str_tmp ); \
+   dest_ctl. field ## _sz = str_sz; \
    debug_printf( RETROGUI_TRACE_LVL, "copied str as: \"%s\"", str_tmp ); \
    maug_munlock( dest_ctl. field ## _h, str_tmp );
 
@@ -1225,7 +1225,6 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
    }
 
 #  else
-   size_t label_sz = 0;
    char* label_tmp = NULL;
 
 #if RETROGUI_TRACE_LVL > 0
@@ -1233,7 +1232,7 @@ static MERROR_RETVAL retrogui_push_BUTTON( union RETROGUI_CTL* ctl ) {
 #endif /* RETROGUI_TRACE_LVL */
 
    _retrogui_copy_str(
-      label, ctl->BUTTON.label, ctl->BUTTON, label_tmp, label_sz );
+      label, ctl->BUTTON.label, ctl->BUTTON, label_tmp, ctl->BUTTON.label_sz );
    ctl->BUTTON.label = NULL;
 #  endif
 
@@ -1770,7 +1769,6 @@ static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
    /* TODO */
 
 #  else
-   size_t label_sz = 0;
    char* label_tmp = NULL;
 
 #if RETROGUI_TRACE_LVL > 0
@@ -1778,7 +1776,7 @@ static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
 #endif /* RETROGUI_TRACE_LVL */
 
    _retrogui_copy_str(
-      label, ctl->LABEL.label, ctl->LABEL, label_tmp, label_sz );
+      label, ctl->LABEL.label, ctl->LABEL, label_tmp, ctl->LABEL.label_sz );
    ctl->LABEL.label = NULL;
    ctl->LABEL.shown_sz = 1;
    ctl->LABEL.show_ticks = 
@@ -2850,7 +2848,6 @@ MERROR_RETVAL retrogui_set_ctl_text(
    const char* fmt, ...
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t label_sz = 0;
    char* label_tmp = NULL;
    char* buffer = NULL;
    union RETROGUI_CTL* ctl = NULL;
@@ -2902,7 +2899,8 @@ MERROR_RETVAL retrogui_set_ctl_text(
       _retrogui_copy_str( label, buffer, ctl->BUTTON, label_tmp, buffer_sz );
    } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
       assert( NULL == ctl->LABEL.label );
-      _retrogui_copy_str( label, buffer, ctl->LABEL, label_tmp, label_sz );
+      _retrogui_copy_str(
+         label, buffer, ctl->LABEL, label_tmp, buffer_sz );
       ctl->LABEL.shown_sz = 1;
       ctl->LABEL.show_ticks =
          RETROGUI_LABEL_FLAG_SHOWINC_SLOW ==
@@ -2912,8 +2910,7 @@ MERROR_RETVAL retrogui_set_ctl_text(
 #ifndef RETROGUI_NO_TEXTBOX
    } else if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
       assert( NULL == ctl->TEXTBOX.text );
-      _retrogui_copy_str(
-         text, buffer, ctl->TEXTBOX, label_tmp, label_sz );
+      _retrogui_copy_str( text, buffer, ctl->TEXTBOX, label_tmp, buffer_sz );
       ctl->TEXTBOX.text_cur = 0;
 #endif /* !RETROGUI_NO_TEXTBOX */
    } else {
