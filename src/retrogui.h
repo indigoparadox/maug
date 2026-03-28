@@ -1934,11 +1934,15 @@ static void retrogui_redraw_FILLBAR(
    }
 
    retroflat_2d_rect(
-      gui->draw_bmp, ctl->base.bg_color, ctl->base.x + fill_w, ctl->base.y,
+      gui->draw_bmp, ctl->base.bg_color,
+      gui->x + ctl->base.x + fill_w,
+      gui->y + ctl->base.y,
       ctl->base.w - fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    retroflat_2d_rect(
-      gui->draw_bmp, ctl->base.fg_color, ctl->base.x, ctl->base.y,
+      gui->draw_bmp, ctl->base.fg_color,
+      gui->x + ctl->base.x, 
+      gui->y + ctl->base.y,
       fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    return;
@@ -2305,11 +2309,12 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
    MERROR_RETVAL retval = MERROR_OK;
    int autolock = 0;
 
-   /* OpenGL tends to call glClear on every frame, so always redraw! */
+#ifndef RETROWIN_NO_BITMAP
    if( RETROGUI_FLAGS_DIRTY != (RETROGUI_FLAGS_DIRTY & gui->flags) ) {
       /* Shortcut! */
       return MERROR_OK;
    }
+#endif /* !RETROWIN_NO_BITMAP */
 
    if( 0 == mdata_vector_ct( &(gui->ctls) ) ) {
       return MERROR_OK;

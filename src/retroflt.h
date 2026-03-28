@@ -212,6 +212,7 @@ typedef int16_t retroflat_tile_t;
  * | RETROFLAT_BITMAP_EXT   | Specify file extension for bitmap assets.        |
  * | RETROFLAT_NO_RESIZABLE | Disallow resizing the RetroFlat window.          |
  * | RETROFLAT_NO_BLANK_INIT| Do not blank screen on retroflat_ini().          |
+ * | RETROWIN_NO_BITMAP     | Do not compose windows in offscreen bitmaps.     |
  *
  * \page maug_retroflt_makefile_page RetroFlat Project Makefiles
  *

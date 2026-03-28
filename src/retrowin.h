@@ -102,7 +102,9 @@ struct RETROWIN {
    size_t y;
    MAUG_MHANDLE gui_h;
    struct RETROGUI* gui_p;
+#ifndef RETROWIN_NO_BITMAP
    retroflat_blit_t gui_bmp;
+#endif /* !RETROWIN_NO_BITMAP */
 };
 
 MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack );
@@ -162,9 +164,10 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
    case RETROWIN_FLAG_BORDER_NONE:
       retroflat_2d_rect(
          win->gui_p->draw_bmp, RETROFLAT_COLOR_BLACK,
-         0, 0,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+         win->gui_p->x,
+         win->gui_p->y,
+         win->gui_p->w,
+         win->gui_p->h,
          RETROFLAT_FLAGS_FILL );
       break;
 
@@ -172,27 +175,37 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROFLAT_COLOR_GRAY : RETROFLAT_COLOR_WHITE, 0, 0,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+            RETROFLAT_COLOR_GRAY : RETROFLAT_COLOR_WHITE,
+         win->gui_p->x,
+         win->gui_p->y,
+         win->gui_p->w,
+         win->gui_p->h,
          RETROFLAT_FLAGS_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 0, 0,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
+         win->gui_p->x,
+         win->gui_p->y,
+         win->gui_p->w,
+         win->gui_p->h,
          0 );
       if( 2 < retroflat_screen_colors() ) {
          /* Draw highlight lines only visible in >2-color mode. */
          retroflat_2d_line(
             win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
-            1, 1, retroflat_2d_bitmap_w( win->gui_p->draw_bmp ) - 2, 1, 0 );
+            win->gui_p->x + 1,
+            win->gui_p->y + 1,
+            win->gui_p->x + win->gui_p->w - 2,
+            win->gui_p-> y + 1, 0 );
          retroflat_2d_line(
             win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
-            1, 2, 1, retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 3, 0 );
+            win->gui_p->x + 1,
+            win->gui_p->y + 2,
+            win->gui_p->x + 1,
+            win->gui_p->y + win->gui_p->h - 3, 0 );
       }
       break;
 
@@ -200,30 +213,38 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROFLAT_COLOR_BLUE : RETROFLAT_COLOR_BLACK, 0, 0,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+            RETROFLAT_COLOR_BLUE : RETROFLAT_COLOR_BLACK,
+         win->gui_p->x,
+         win->gui_p->y,
+         win->gui_p->w,
+         win->gui_p->h,
          RETROFLAT_FLAGS_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 2, 2,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ) - 4,
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 4,
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
+         win->gui_p->x + 2,
+         win->gui_p->y + 2,
+         win->gui_p->w - 4,
+         win->gui_p->h - 4,
          0 );
       retroflat_2d_rect(
-         win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE, 1, 1,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ) - 2,
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ) - 2,
+         win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
+         win->gui_p->x + 1,
+         win->gui_p->y + 1,
+         win->gui_p->w - 2,
+         win->gui_p->h - 2,
          0 );
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
-            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK, 0, 0,
-         retroflat_2d_bitmap_w( win->gui_p->draw_bmp ),
-         retroflat_2d_bitmap_h( win->gui_p->draw_bmp ),
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
+         win->gui_p->x,
+         win->gui_p->y,
+         win->gui_p->w,
+         win->gui_p->h,
          0 );
       break;
    }
@@ -240,28 +261,42 @@ static MERROR_RETVAL _retrowin_redraw_win( struct RETROWIN* win ) {
       RETROWIN_FLAG_INIT_GUI != (RETROWIN_FLAG_INIT_GUI & win->flags) ||
       RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & win->flags) );
 
-   retroflat_2d_lock_bitmap( &(win->gui_bmp) );
-
    /* Dirty detection is in retrogui_redraw_ctls(). */
+
+#ifdef RETROWIN_NO_BITMAP
+   win->gui_p->draw_bmp = NULL;
+#else
+   retroflat_2d_lock_bitmap( &(win->gui_bmp) );
    win->gui_p->draw_bmp = &(win->gui_bmp);
+#endif /* RETROWIN_NO_BITMAP */
 
+#if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
-      "redrawing window " SIZE_T_FMT " (GUI %p)...", win->idc, win->gui_p );
+      "redrawing window " SIZE_T_FMT " (GUI %p) at "
+      SIZE_T_FMT ", " SIZE_T_FMT "...",
+      win->idc, win->gui_p, win->gui_p->x, win->gui_p->y );
+#endif /* RETROWIN_TRACE_LVL */
 
-   _retrowin_draw_border( win );
-
+#ifndef RETROWIN_NO_BITMAP
    /* This is a bit of a hack... Set X/Y to 0 so that we draw at the top
     * of the bitmap that will be used as a texture. Reset it below so input
     * detection works!
     */
    win->gui_p->x = 0;
    win->gui_p->y = 0;
-   retval = retrogui_redraw_ctls( win->gui_p );
+#endif /* !RETROWIN_NO_BITMAP */
+   retval = _retrowin_draw_border( win );
+   if( MERROR_OK == retval ) {
+      retval = retrogui_redraw_ctls( win->gui_p );
+   }
+#ifndef RETROWIN_NO_BITMAP
    win->gui_p->x = win->x;
    win->gui_p->y = win->y;
-   maug_cleanup_if_not_ok();
 
    retroflat_2d_release_bitmap( &(win->gui_bmp) );
+#endif /* !RETROWIN_NO_BITMAP */
+
+   maug_cleanup_if_not_ok();
 
 cleanup:
 
@@ -292,22 +327,29 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
 
       retrowin_lock_gui( win );
 
-      /* OpenGL tends to call glClear on every frame, so always redraw! */
+#ifndef RETROWIN_NO_BITMAP
       if( RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui_p->flags) ) {
+#endif /* !RETROWIN_NO_BITMAP */
+#if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
             "redrawing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT,
             i, win->idc );
+#endif /* RETROWIN_TRACE_LVL */
 
          /* Redraw the window bitmap, including controls. */
          retval = _retrowin_redraw_win( win );
          maug_cleanup_if_not_ok();
+#ifndef RETROWIN_NO_BITMAP
       }
+#endif /* !RETROWIN_NO_BITMAP */
 
+#ifndef RETROWIN_NO_BITMAP
       /* Always blit the finished window to the screen, to compensate for e.g.
        * the implicit screen-clearing of the engine loop.
        */
       retval = retroflat_2d_blit_win(
          &(win->gui_bmp), win->gui_p->x, win->gui_p->y );
+#endif /* !RETROWIN_NO_BITMAP */
 
       retrowin_unlock_gui( win );
    }
@@ -343,9 +385,11 @@ MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
 
       retrowin_lock_gui( win );
 
+#if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL,
          "refreshing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT,
          i, win->idc );
+#endif /* RETROWIN_TRACE_LVL */
 
       win->gui_p->flags |= RETROGUI_FLAGS_DIRTY;
 
@@ -394,9 +438,11 @@ retrogui_idc_t retrowin_poll_win_stack(
 
    retrowin_lock_gui( win );
    if( 0 != *p_input ) {
+#if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL,
          "polling window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
          win_idx, win->idc );
+#endif /* RETROWIN_TRACE_LVL */
    }
    idc_out = retrogui_poll_ctls( win->gui_p, p_input, input_evt );
    retrowin_unlock_gui( win );
@@ -472,7 +518,9 @@ void retrowin_free_win( struct RETROWIN* win ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    if( RETROWIN_FLAG_INIT_BMP == (RETROWIN_FLAG_INIT_BMP & win->flags) ) {
+#ifndef RETROWIN_NO_BITMAP
       retroflat_2d_destroy_bitmap( &(win->gui_bmp) );
+#endif /* !RETROWIN_NO_BITMAP */
       retrowin_lock_gui( win );
       win->gui_p->draw_bmp = NULL;
       retrowin_unlock_gui( win );
@@ -573,8 +621,10 @@ ssize_t retrowin_push_win(
       maug_cleanup_if_not_ok();
    }
 
+#ifndef RETROWIN_NO_BITMAP
    retval = retroflat_2d_create_bitmap( w, h, &(win.gui_bmp), 0 );
    maug_cleanup_if_not_ok();
+#endif /* !RETROWIN_NO_BITMAP */
 
    win.flags |= RETROWIN_FLAG_INIT_BMP;
 
@@ -590,11 +640,13 @@ ssize_t retrowin_push_win(
    win.idc = idc;
    win.flags |= flags;
 
+#if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
       "pushing window IDC " SIZE_T_FMT ", GUI %p: " SIZE_T_FMT "x" SIZE_T_FMT
       " @ " SIZE_T_FMT ", " SIZE_T_FMT,
       win.idc, win.gui_p,
       win.gui_p->w, win.gui_p->h, win.gui_p->x, win.gui_p->y );
+#endif /* RETROWIN_TRACE_LVL */
 
    retrowin_unlock_gui( &win );
 
@@ -630,8 +682,10 @@ MERROR_RETVAL retrowin_destroy_win(
    ssize_t i_free = -1;
    int autolock = 0;
 
+#if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
       "attempting to destroy window: " SIZE_T_FMT, idc );
+#endif /* RETROWIN_TRACE_LVL */
 
    if( !mdata_vector_is_locked( win_stack ) ) {
       mdata_vector_lock( win_stack );
@@ -646,14 +700,18 @@ MERROR_RETVAL retrowin_destroy_win(
       }
 
       if( !retrowin_win_is_active( win ) ) {
+#if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
             "window IDC " SIZE_T_FMT " found, but not active! (flags: 0x%02x)",
             idc, win->flags );
+#endif /* RETROWIN_TRACE_LVL */
          continue;
       }
 
+#if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL, "freeing window: " SIZE_T_FMT,
          win->idc );
+#endif /* RETROWIN_TRACE_LVL */
 
       retrowin_free_win( win );
 

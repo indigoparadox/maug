@@ -724,10 +724,10 @@ MERROR_RETVAL retroani_set_hole(
          PXXY_FMT ", " PXXY_FMT " (" PXXY_FMT " x " PXXY_FMT ")",
          i, x, y, w, h );
 
-      ani->hole.x = x;
-      ani->hole.y = y;
-      ani->hole.w = w;
-      ani->hole.h = h;
+      ani->hole.x = x - 1;
+      ani->hole.y = y - 1;
+      ani->hole.w = w + 2;
+      ani->hole.h = h + 2;
    }
 
 cleanup:
