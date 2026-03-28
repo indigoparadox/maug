@@ -84,9 +84,22 @@ int16_t retrogxc_load_font(
    const maug_path font_name,
    uint8_t glyph_h, uint16_t first_glyph, uint16_t glyphs_count );
 
+/**
+ * \brief Try to load an asset by file path. Return a cached copy if it's
+ *        already been loaded.
+ */
 int16_t retrogxc_load_asset(
    const maug_path res_p, retrogxc_loader l, void* data,
    uint8_t flags );
+
+/**
+ * \brief Retrive an asset for which we have a prior cached index.
+ *
+ * This should be quicker than retrogxc_load_asset(), which has to compare
+ * paths for prior loaded assets by looping.
+ */
+MAUG_MHANDLE retrogxc_get_asset(
+   size_t asset_idx, retrogxc_asset_type_t asset_type );
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    retroflat_blit_t* target, size_t bitmap_idx,
@@ -339,6 +352,48 @@ cleanup:
 
 /* === */
 
+MAUG_MHANDLE retrogxc_get_asset(
+   size_t asset_idx, retrogxc_asset_type_t asset_type
+) {
+   MAUG_MHANDLE handle_out = (MAUG_MHANDLE)NULL;
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROFLAT_CACHE_ASSET* asset = NULL;
+
+   assert( (MAUG_MHANDLE)NULL != gs_retrogxc_bitmaps.data_h );
+
+   mdata_vector_lock( &gs_retrogxc_bitmaps );
+
+   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= asset_idx ) {
+      error_printf( "invalid asset index: " SIZE_T_FMT, asset_idx );
+      goto cleanup;
+   }
+
+   asset = mdata_vector_get(
+      &gs_retrogxc_bitmaps, asset_idx, struct RETROFLAT_CACHE_ASSET );
+
+   if( asset_type != asset->type ) {
+      error_printf(
+         "index " SIZE_T_FMT
+         " not present in cache or not requested type %d (%d)!",
+         asset_idx, asset_type, asset->type );
+      goto cleanup;
+   }
+
+   handle_out = asset->handle;
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      handle_out = NULL;
+   }
+
+   mdata_vector_unlock( &gs_retrogxc_bitmaps );
+
+   return handle_out;
+}
+
+/* === */
+
 MERROR_RETVAL retrogxc_blit_bitmap(
    retroflat_blit_t* target, size_t bitmap_idx,
    size_t s_x, size_t s_y, size_t d_x, size_t d_y,
@@ -455,6 +510,8 @@ int16_t retrogxc_load_font(
 }
 
 /* === */
+
+/* TODO: Remove retrogxc_string_* functions and use retrogxc_get_asset()! */
 
 MERROR_RETVAL retrogxc_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,

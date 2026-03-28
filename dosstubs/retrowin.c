@@ -11,6 +11,8 @@
 #  define RETROW3D_C
 #  include <retrogui.h>
 #  include <retrowin.h>
+#  define RETRODLG_C
+#  include <retrodlg.h>
 #endif /* !RETROFLAT_NO_RETROGUI */
 #endif /* !MAUG_NO_RETRO */
 
