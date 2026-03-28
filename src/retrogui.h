@@ -35,7 +35,6 @@
  *       ctl.base.h = 20;
  *       ctl.base.fg_color = RETROFLAT_COLOR_WHITE;
  *       ctl.BUTTON.label = "Example\nLabel";
- *       ctl.BUTTON.label_sz = maug_strlen( ctl.BUTTON.label );
  *
  *       retval = retrogui_push_ctl( gui_p, &ctl );
  *       maug_cleanup_if_not_ok();
@@ -50,7 +49,6 @@
  *       ctl.base.w = 60;
  *       ctl.base.h = 20;
  *       ctl.BUTTON.label = "Test";
- *       ctl.BUTTON.label_sz = maug_strlen( ctl.BUTTON.label );
  *
  *       retval = retrogui_push_ctl( gui_p, &ctl );
  *       maug_cleanup_if_not_ok();
@@ -239,6 +237,23 @@
 #  define RETROGUI_DEBOUNCE_MAX_DEFAULT 100
 #endif /* !RETROGUI_DEBOUNCE_MAX_DEFAULT */
 
+#ifndef RETROGUI_LABEL_SHOW_TICKS_MAX
+/**
+ * \brief The number of ticks (frames) to count down before incrementing the
+ *        amount of text shown in a label if ::RETROGUI_LABEL_FLAG_SHOWINC is
+ *        defined.
+ */
+#  define RETROGUI_LABEL_SHOW_TICKS_MAX 2
+#endif /* !RETROGUI_LABEL_SHOW_TICKS_MAX */
+
+#ifndef RETROGUI_LABEL_SHOW_INC
+/**
+ * \brief The number of characters to increment the amount of text shown in a
+ *        label by if ::RETROGUI_LABEL_FLAG_SHOWINC is defined.
+ */
+#  define RETROGUI_LABEL_SHOW_INC 3
+#endif /* !RETROGUI_LABEL_SHOW_INC */
+
 /*! \} */ /* maug_retrogui_cfg */
 
 /**
@@ -253,6 +268,24 @@
  *        can/will be freed by retrogui_destroy().
  */
 #define RETROGUI_FLAGS_FONT_OWNED 0x02
+
+/**
+ * \relates RETROGUI_CTL
+ * \brief Flag for flags field in RETROGUI_CTL LABEL type indicating that the
+ *        label should be shown incrementally, as if a character is talking.
+ */
+#define RETROGUI_LABEL_FLAG_SHOWINC 0x02
+
+/**
+ * \relates RETROGUI_CTL
+ * \brief Flag for flags field in RETROGUI_CTL LABEL type indicating that the
+ *        label should be shown incrementally, as if a character is talking a
+ *        bit slowly.
+ *
+ * \note This flag has ::RETROGUI_LABEL_FLAG_SHOWINC built-in so that tests that
+ *       don't care about speed can just test for that.
+ */
+#define RETROGUI_LABEL_FLAG_SHOWINC_SLOW 0x06
 
 #define RETROGUI_FILLBAR_FLAG_SHOWNUM 0x02
 
@@ -282,6 +315,7 @@
    debug_printf( RETROGUI_TRACE_LVL, \
       "zeroed str sz for \"%s\": " SIZE_T_FMT, src_str, str_sz + 1 ); \
    maug_strncpy( str_tmp, src_str, str_sz ); \
+   dest_ctl. field ## _sz = maug_strlen( str_tmp ); \
    debug_printf( RETROGUI_TRACE_LVL, "copied str as: \"%s\"", str_tmp ); \
    maug_munlock( dest_ctl. field ## _h, str_tmp );
 
@@ -341,7 +375,7 @@ typedef int16_t retrogui_idc_t;
    f( 0, NONE, void* none; ) \
    f( 1, LISTBOX, struct MDATA_VECTOR list; size_t sel_idx; ) \
    f( 2, BUTTON, MAUG_MHANDLE label_h; char* label; size_t label_sz; int16_t push_frames; uint8_t font_flags; ) \
-   f( 3, LABEL, MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; ) \
+   f( 3, LABEL, uint8_t flags; MAUG_MHANDLE label_h; char* label; size_t label_sz; uint8_t font_flags; size_t shown_sz; int show_ticks; ) \
    f( 4, IMAGE, retroflat_blit_t image; ssize_t image_cache_id; int16_t instance; retroflat_pxxy_t src_x; retroflat_pxxy_t src_y; ) \
    f( 5, FILLBAR, uint8_t flags; uint16_t cur; uint16_t max; )
 
@@ -1646,6 +1680,7 @@ static retrogui_idc_t retrogui_key_LABEL(
 static void retrogui_redraw_LABEL(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
+   size_t show_sz = 0;
 
 #  if defined( RETROGUI_NATIVE_WIN )
    /* Do nothing. */
@@ -1666,13 +1701,47 @@ static void retrogui_redraw_LABEL(
       goto cleanup;
    }
 
+   if(
+      RETROGUI_LABEL_FLAG_SHOWINC ==
+      (RETROGUI_LABEL_FLAG_SHOWINC & ctl->LABEL.flags)
+   ) {
+      if( 0 < ctl->LABEL.show_ticks ) {
+         /* Increment timer to hold on this much of the label. */
+         ctl->LABEL.show_ticks--;
+         show_sz = ctl->LABEL.shown_sz;
+
+      } else {
+         /* Reset ticks counter. */
+         ctl->LABEL.show_ticks =
+            RETROGUI_LABEL_FLAG_SHOWINC_SLOW ==
+            (RETROGUI_LABEL_FLAG_SHOWINC_SLOW & ctl->LABEL.flags) ?
+               RETROGUI_LABEL_SHOW_TICKS_MAX * 2 :
+               RETROGUI_LABEL_SHOW_TICKS_MAX;
+
+         /* Work out how much of the label to show this time. */
+         show_sz = ctl->LABEL.shown_sz + RETROGUI_LABEL_SHOW_INC;
+         if( show_sz > ctl->LABEL.label_sz ) {
+            /* Trim down show size to label size. */
+            show_sz = ctl->LABEL.label_sz;
+         } else {
+            /* Not done showing yet! */
+            gui->flags |= RETROGUI_FLAGS_DIRTY;
+         }
+
+         /* Finalize whatever decision we came to above. */
+         ctl->LABEL.shown_sz = show_sz;
+      }
+
+   } else {
+      show_sz = ctl->LABEL.label_sz;
+   }
+
 #ifdef RETROGXC_PRESENT
    retrogxc_string(
 #else
    retrofont_string(
 #endif /* RETROGXC_PRESENT */
-      gui->draw_bmp, ctl->base.fg_color, ctl->LABEL.label,
-      ctl->LABEL.label_sz,
+      gui->draw_bmp, ctl->base.fg_color, ctl->LABEL.label, show_sz,
 #ifdef RETROGXC_PRESENT
       gui->font_idx,
 #else
@@ -1711,6 +1780,12 @@ static MERROR_RETVAL retrogui_push_LABEL( union RETROGUI_CTL* ctl ) {
    _retrogui_copy_str(
       label, ctl->LABEL.label, ctl->LABEL, label_tmp, label_sz );
    ctl->LABEL.label = NULL;
+   ctl->LABEL.shown_sz = 1;
+   ctl->LABEL.show_ticks = 
+      RETROGUI_LABEL_FLAG_SHOWINC_SLOW ==
+      (RETROGUI_LABEL_FLAG_SHOWINC_SLOW & ctl->LABEL.flags) ?
+         RETROGUI_LABEL_SHOW_TICKS_MAX * 2 :
+         RETROGUI_LABEL_SHOW_TICKS_MAX;
 #  endif
 
 cleanup:
@@ -2828,11 +2903,15 @@ MERROR_RETVAL retrogui_set_ctl_text(
    } else if( RETROGUI_CTL_TYPE_LABEL == ctl->base.type ) {
       assert( NULL == ctl->LABEL.label );
       _retrogui_copy_str( label, buffer, ctl->LABEL, label_tmp, label_sz );
+      ctl->LABEL.shown_sz = 1;
+      ctl->LABEL.show_ticks =
+         RETROGUI_LABEL_FLAG_SHOWINC_SLOW ==
+         (RETROGUI_LABEL_FLAG_SHOWINC_SLOW & ctl->LABEL.flags) ?
+            RETROGUI_LABEL_SHOW_TICKS_MAX * 2 :
+            RETROGUI_LABEL_SHOW_TICKS_MAX;
 #ifndef RETROGUI_NO_TEXTBOX
    } else if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
       assert( NULL == ctl->TEXTBOX.text );
-      /* This must always be the same and an lvalue! */
-      label_sz = RETROGUI_CTL_TEXT_SZ_MAX;
       _retrogui_copy_str(
          text, buffer, ctl->TEXTBOX, label_tmp, label_sz );
       ctl->TEXTBOX.text_cur = 0;
