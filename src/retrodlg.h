@@ -133,6 +133,7 @@ MERROR_RETVAL retrodlg_chat_show_ui(
       ctl.base.fg_color = RETROFLAT_COLOR_WHITE;
       ctl.LABEL.label = "";
       ctl.LABEL.label_sz = 0;
+      ctl.LABEL.flags = RETROGUI_LABEL_FLAG_SHOWINC;
 
       retval = retrogui_push_ctl( win->gui_p, &ctl );
       maug_cleanup_if_not_ok();

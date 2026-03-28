@@ -1708,6 +1708,9 @@ static void retrogui_redraw_LABEL(
          /* Increment timer to hold on this much of the label. */
          ctl->LABEL.show_ticks--;
          show_sz = ctl->LABEL.shown_sz;
+         if( ctl->LABEL.shown_sz < ctl->LABEL.label_sz ) {
+            gui->flags |= RETROGUI_FLAGS_DIRTY;
+         }
 
       } else {
          /* Reset ticks counter. */
@@ -2406,12 +2409,14 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
          gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_FLAGS_FILL );
    }
 
+   /* Mark the GUI dirty first so redraw can unmark it for animation! */
+   gui->flags &= ~RETROGUI_FLAGS_DIRTY;
+
    #define RETROGUI_CTL_TABLE_REDRAW( idx, c_name, c_fields ) \
       } else if( RETROGUI_CTL_TYPE_ ## c_name == ctl->base.type ) { \
-         /* Mark dirty first so redraw can unmark it for animation! */ \
-         gui->flags &= ~RETROGUI_FLAGS_DIRTY; \
          retrogui_redraw_ ## c_name( gui, ctl );
 
+   /* Iterate and redraw all controls. */
    for( i = 0 ; mdata_vector_ct( &(gui->ctls) ) > i ; i++ ) {
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
       if( 0 ) {
