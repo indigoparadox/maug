@@ -91,12 +91,6 @@ void _retroflat_psx_timer2_isr() {
    g_ms++;
 }
 
-void _retroflat_psx_dbg_constrain( retroflat_pxxy_t x, retroflat_pxxy_t y ) {
-#if RETRO2D_TRACE_LVL > 0
-   error_printf( "attempted offscreen draw: %d, %d", x, y );
-#endif /* RETRO2D_TRACE_LVL */
-}
-
 MERROR_RETVAL _retroflat_psx_fit_vram(
    retroflat_pxxy_t w, retroflat_pxxy_t h,
    retroflat_pxxy_t* p_pg_x, retroflat_pxxy_t* p_pg_y,
@@ -791,8 +785,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target,
-      _retroflat_psx_dbg_constrain( x, y ); return );
+   retroflat_constrain_px( x, y, target, return );
 
    px = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
 
@@ -831,10 +824,8 @@ void retroflat_rect(
    }
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      retroflat_constrain_px( x, y, target,
-         _retroflat_psx_dbg_constrain( x, y ); return );
-      retroflat_constrain_px( x + w, y + h, target,
-         _retroflat_psx_dbg_constrain( x + w, y + h ); return );
+      retroflat_constrain_px( x, y, target, return );
+      retroflat_constrain_px( x + w, y + h, target, return );
 
       /* Draw a filled rect with the GPU. */
       rect = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
@@ -878,10 +869,8 @@ void retroflat_line(
       return;
    }
 
-   retroflat_constrain_px( x1, y1, target,
-      _retroflat_psx_dbg_constrain( x1, y1 ); return );
-   retroflat_constrain_px( x2, y2, target,
-      _retroflat_psx_dbg_constrain( x2, y2 ); return );
+   retroflat_constrain_px( x1, y1, target, return );
+   retroflat_constrain_px( x2, y2, target, return );
 
    line = (LINE_F2*)(_retroflat_psx_next_prim( target, sizeof( LINE_F2 ) ));
 

@@ -1854,6 +1854,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
    size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
    int16_t instance );
 
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+#  define retroflat_constrain_px( x, y, bmp, retact ) \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
+         error_printf( "attempted offscreen draw: %d, %d", x, y ); \
+         retact; \
+      }
+#else
 /**
  * \brief Ensure x and y (which must be unsigned!) are inside image boundaries.
  *
@@ -1861,11 +1871,14 @@ MERROR_RETVAL retroflat_blit_bitmap(
  * retroflat_bitmap_h() macros being smart enough to measure the screen buffer
  * if bmp is NULL.
  */
-#define retroflat_constrain_px( x, y, bmp, retact ) \
-   if( \
-      x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-      0 > x || 0 > y \
-   ) { retact; }
+#  define retroflat_constrain_px( x, y, bmp, retact ) \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
+         retact; \
+      }
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
 
 /*! \} */ /* maug_retroflt_bitmap */
 

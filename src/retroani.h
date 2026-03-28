@@ -724,13 +724,10 @@ MERROR_RETVAL retroani_set_hole(
          PXXY_FMT ", " PXXY_FMT " (" PXXY_FMT " x " PXXY_FMT ")",
          i, x, y, w, h );
 
-      /* Setup the hole with a 1px buffer or the animation tends to clobber
-       * the window.
-       */
-      ani->hole.x = x - 1;
-      ani->hole.y = y - 1;
-      ani->hole.w = w + 2;
-      ani->hole.h = h + 2;
+      ani->hole.x = x;
+      ani->hole.y = y;
+      ani->hole.w = w;
+      ani->hole.h = h;
    }
 
 cleanup:

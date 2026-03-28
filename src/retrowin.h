@@ -214,10 +214,10 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
             RETROFLAT_COLOR_BLUE : RETROFLAT_COLOR_BLACK,
-         win->gui_p->x,
-         win->gui_p->y,
-         win->gui_p->w,
-         win->gui_p->h,
+         win->gui_p->x + 1,
+         win->gui_p->y + 1,
+         win->gui_p->w - 2,
+         win->gui_p->h - 2,
          RETROFLAT_FLAGS_FILL );
 
       /* Draw the border. */
@@ -225,26 +225,26 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
             RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
+         win->gui_p->x + 3,
+         win->gui_p->y + 3,
+         win->gui_p->w - 6,
+         win->gui_p->h - 6,
+         0 );
+      retroflat_2d_rect(
+         win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
          win->gui_p->x + 2,
          win->gui_p->y + 2,
          win->gui_p->w - 4,
          win->gui_p->h - 4,
          0 );
       retroflat_2d_rect(
-         win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
+         win->gui_p->draw_bmp,
+         2 < retroflat_screen_colors() ?
+            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
          win->gui_p->x + 1,
          win->gui_p->y + 1,
          win->gui_p->w - 2,
          win->gui_p->h - 2,
-         0 );
-      retroflat_2d_rect(
-         win->gui_p->draw_bmp,
-         2 < retroflat_screen_colors() ?
-            RETROGUI_COLOR_BORDER : RETROFLAT_COLOR_BLACK,
-         win->gui_p->x,
-         win->gui_p->y,
-         win->gui_p->w,
-         win->gui_p->h,
          0 );
       break;
    }
