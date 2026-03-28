@@ -39,20 +39,23 @@
 #define RETROFLAT_PSX_VRAM_W 1024
 #define RETROFLAT_PSX_VRAM_H 512
 
-/* PlayStation VRAM is divided into 16x2 pages, but the leftmost 5 pages are
- * reserved for display buffers in our setup. We also reserve 4 pages between
- * the normal pages and screen buffers to merge into a "big page" for tilemaps
- * or similar.
+/* PlayStation VRAM is divided into two rows of 64px-wide pages, but the 
+ * rightmost 5 pages in each row (320/64 = 5) are reserved for display buffers
+ * in our setup. We also reserve 4 pages (2 on each row) between the normal
+ * pages and screen buffers to merge into a "big page" for scratch.
  */
-#define RETROFLAT_PSX_VRAM_PG_CT 18
-#define RETROFLAT_PSX_VRAM_PG_CT_W 9
+#define RETROFLAT_PSX_VRAM_PG_CT_W (((RETROFLAT_PSX_VRAM_W - 320) / 64) - 2)
 #define RETROFLAT_PSX_VRAM_PG_CT_H 2
+#define RETROFLAT_PSX_VRAM_PG_CT (RETROFLAT_PSX_VRAM_PG_CT_W * 2)
 
-#define RETROFLAT_PSX_VRAM_PG_BIG_IDX (RETROFLAT_PSX_VRAM_PG_CT)
+/* Each VRAM page is 64x256 px in 16-bit, or 256x512 px in 4-bit. */
+#define RETROFLAT_PSX_VRAM_PG_PX_W_16 64
+#define RETROFLAT_PSX_VRAM_PG_PX_H_16 256
 
-/* Each VRAM page is 64x256. */
-#define RETROFLAT_PSX_VRAM_PG_PX_W 64
-#define RETROFLAT_PSX_VRAM_PG_PX_H 256
+#define RETROFLAT_PSX_VRAM_PG_PX_W_4 256
+#define RETROFLAT_PSX_VRAM_PG_PX_H_4 1024
+
+#define RETROFLAT_PSX_VRAM_SCRATCH_PG_X ((RETROFLAT_PSX_VRAM_W - 320) - 128)
 
 #define RETROFLAT_PSX_DRAW_STACK_CT_MAX 10
 
@@ -84,7 +87,7 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
-   DRAWENV draw;
+   DRAWENV* p_draw;
    /**
     * \brief Current drawing buffer idx.
     * \note This is only used for the RETROFLAT_FLAGS_SCREEN_BUFFER bitmap.
@@ -94,9 +97,9 @@ struct RETROFLAT_BITMAP {
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
    /*! \brief X coordinate of the VRAM page on which this is. */
-   retroflat_pxxy_t vram_pg_x;
+   retroflat_pxxy_t vram_pg_x_16;
    /*! \brief Y coordinate of the VRAM page on which this is. */
-   retroflat_pxxy_t vram_pg_y;
+   retroflat_pxxy_t vram_pg_y_16;
    /*! \brief X coordinate on the given VRAM page. */
    retroflat_pxxy_t vram_off_x;
    /*! \brief Y coordinate on the given VRAM page. */
@@ -231,6 +234,9 @@ struct RETROFLAT_PLATFORM {
    size_t draw_stack_ct;
    struct RETROFLAT_BITMAP buffer1;
    struct RETROFLAT_BITMAP buffer2;
+   DRAWENV scratch_draw;
+   DRAWENV buffer1_draw;
+   DRAWENV buffer2_draw;
 };
 
 #ifdef RETROFLT_C
