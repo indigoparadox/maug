@@ -114,6 +114,20 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack );
  */
 MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack );
 
+/**
+ * \brief Given the outputs of the input poller, check the controls on the
+ *        active window to see if the inputs trigger any of them.
+ * \param idc_active IDC of window to consider "active" as managed by your
+ *                   program.
+ * \param p_input Input key to process during polling (see note!)
+ * \param input_evt Input event to process during polling (see note!)
+ * \return IDC of triggered control or ::RETROGUI_IDC_NONE if none triggered.
+ *
+ * \note p_input and input_evt MUST be polled by retroflat_poll_input() before
+ *       passing to this function to determine what key has been pressed! The
+ *       poll function will then clear them if it handles them so spillover can
+ *       be handled by further processing in your program.
+ */
 retrogui_idc_t retrowin_poll_win_stack(
    struct MDATA_VECTOR* win_stack, retrogui_idc_t idc_active,
    RETROFLAT_IN_KEY* p_input, struct RETROFLAT_INPUT* input_evt );
@@ -425,7 +439,7 @@ retrogui_idc_t retrowin_poll_win_stack(
    win_idx = retrowin_get_by_idc( idc_active, win_stack );
    if( 0 > win_idx ) {
       /* No window found! */
-      error_printf( "polling invalid window!" );
+      error_printf( "polling missing window!" );
       goto cleanup;
    }
 
@@ -433,8 +447,8 @@ retrogui_idc_t retrowin_poll_win_stack(
    assert( NULL != win );
    assert( idc_active == win->idc );
    if( !retrowin_win_is_active( win ) ) {
-      /* Window not active! */
-      error_printf( "polling inactive window!" );
+      /* Window not initialized! */
+      error_printf( "polling uninitialized window!" );
       goto cleanup;
    }
 
