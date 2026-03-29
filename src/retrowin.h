@@ -128,6 +128,8 @@ ssize_t retrowin_get_win_stack_sel_idx(
 
 void retrowin_free_win( struct RETROWIN* win );
 
+MERROR_RETVAL retrowin_free_all_win( struct MDATA_VECTOR* win_stack );
+
 ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
 
 /**
@@ -541,6 +543,31 @@ cleanup:
    }
 
    maug_mzero( win, sizeof( struct RETROWIN ) );
+}
+
+/* === */
+
+MERROR_RETVAL retrowin_free_all_win( struct MDATA_VECTOR* win_stack ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   struct RETROWIN* win = NULL;
+
+   if( 0 < mdata_vector_ct( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      while( 0 < mdata_vector_ct( win_stack ) ) {
+         win = mdata_vector_get( win_stack, 0, struct RETROWIN );
+         assert( NULL != win );
+         retrowin_free_win( win );
+         mdata_vector_unlock( win_stack );
+         mdata_vector_remove( win_stack, 0 );
+         mdata_vector_lock( win_stack );
+      }
+      mdata_vector_unlock( win_stack );
+   }
+   mdata_vector_free( win_stack );
+
+cleanup:
+
+   return retval;
 }
 
 /* === */

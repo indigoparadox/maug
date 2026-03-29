@@ -27,19 +27,19 @@
 #endif /* !RETRODLG_IDC_CHAT_PORTRAIT */
 
 MERROR_RETVAL retrodlg_chat_update(
-   maug_path portrait_path, const char* msg, size_t msg_sz,
+   const maug_path portrait_path, const char* msg, size_t msg_sz,
    size_t chat_idc, struct MDATA_VECTOR* win_stack );
 
 MERROR_RETVAL retrodlg_chat_show_ui(
    retroflat_pxxy_t x, retroflat_pxxy_t y,
    retroflat_pxxy_t w, retroflat_pxxy_t h,
-   maug_path font_path, size_t chat_idc, uint8_t win_flags,
+   const maug_path font_path, size_t chat_idc, uint8_t win_flags,
    struct MDATA_VECTOR* win_stack );
 
 #ifdef RETRODLG_C
 
 MERROR_RETVAL retrodlg_chat_update(
-   maug_path portrait_path, const char* msg, size_t msg_sz,
+   const maug_path portrait_path, const char* msg, size_t msg_sz,
    size_t chat_idc, struct MDATA_VECTOR* win_stack
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -65,7 +65,7 @@ MERROR_RETVAL retrodlg_chat_update(
    retrowin_lock_gui( win );
 
    /* Update the GUI. */
-   if( NULL != msg ) {
+   if( NULL != msg && 0 < msg_sz ) {
       retrogui_set_ctl_text(
          win->gui_p, RETRODLG_IDC_CHAT_LABEL, msg_sz, "%s", msg );
    } else {
@@ -96,7 +96,7 @@ cleanup:
 MERROR_RETVAL retrodlg_chat_show_ui(
    retroflat_pxxy_t x, retroflat_pxxy_t y,
    retroflat_pxxy_t w, retroflat_pxxy_t h,
-   maug_path font_path, size_t chat_idc, uint8_t win_flags,
+   const maug_path font_path, size_t chat_idc, uint8_t win_flags,
    struct MDATA_VECTOR* win_stack
 ) {
    MERROR_RETVAL retval = MERROR_OK;

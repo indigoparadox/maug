@@ -131,6 +131,7 @@ union MAUG_MHANDLEPTR {
 #     define RETROHTR_C
 #     define RETROANI_C
 #     define RETROW3D_C
+#     define RETRODLG_C
 #     define RETROSND_C
 #     ifdef RETROFLAT_OPENGL
 #        define RETROGLU_C

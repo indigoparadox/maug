@@ -2879,13 +2879,10 @@ MERROR_RETVAL retrogui_set_ctl_text(
    /* Perform the buffer substitutions. */
    maug_malloc_test( buffer_h, 1, buffer_sz + 1 );
 
-   assert( 0 < buffer_sz );
-
+   /* Buffer is always at least 1 for \0. */
    maug_mlock( buffer_h, buffer );
    maug_cleanup_if_null_lock( char*, buffer );
    maug_mzero( buffer, buffer_sz + 1 );
-
-   assert( NULL != buffer );
 
    if( NULL == fmt ) {
       /* Zero the buffer. */
