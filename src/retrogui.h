@@ -1128,7 +1128,7 @@ static void retrogui_redraw_BUTTON(
    }
 
    retroflat_2d_rect(
-      gui->draw_bmp, bg_color, ctl->base.x, ctl->base.y,
+      gui->draw_bmp, bg_color, gui->x + ctl->base.x, gui->y + ctl->base.y,
       ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
 
    retroflat_2d_rect( gui->draw_bmp, border_color,
