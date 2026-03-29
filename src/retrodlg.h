@@ -72,7 +72,7 @@ MERROR_RETVAL retrodlg_chat_update(
       retrogui_set_ctl_text( win->gui_p, RETRODLG_IDC_CHAT_LABEL, 0, NULL );
    }
 
-   if( '\0' != portrait_path[0] ) {
+   if( NULL != msg && 0 < msg_sz ) {
       retrogui_set_ctl_image(
          win->gui_p, RETRODLG_IDC_CHAT_PORTRAIT, portrait_path, 0 );
    } else {

@@ -554,7 +554,8 @@ MERROR_RETVAL retrogui_set_ctl_text(
  * \return One of the \ref maug_error_retvals indicating operation result.
  */
 MERROR_RETVAL retrogui_set_ctl_image(
-   struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags );
+   struct RETROGUI* gui, retrogui_idc_t idc, const maug_path path,
+   uint8_t flags );
 
 /**
  * \brief Blit the given image onto the control, ensuring that the size is
@@ -2941,7 +2942,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogui_set_ctl_image(
-   struct RETROGUI* gui, retrogui_idc_t idc, const char* path, uint8_t flags
+   struct RETROGUI* gui, retrogui_idc_t idc, const maug_path path, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
@@ -2977,7 +2978,7 @@ MERROR_RETVAL retrogui_set_ctl_image(
       }
 
       /* Load the replacement image. */
-      if( NULL != path ) {
+      if( NULL != path && '\0' != path[0] ) {
 #  if defined( RETROGXC_PRESENT )
          ctl->IMAGE.image_cache_id = retrogxc_load_bitmap( path, flags );
 #  else /* Only use a normal image if cache not present! */
