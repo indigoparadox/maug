@@ -324,8 +324,8 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
 
    /* Force screen size. */
-   args->screen_w = 320;
-   args->screen_h = 240;
+   args->screen_w = RETROFLAT_PSX_SCREEN_W;
+   args->screen_h = RETROFLAT_PSX_SCREEN_H;
 
    /* Setup PSX graphics. */
    debug_printf( 1, "setting up GPU..." );
@@ -357,7 +357,7 @@ static MERROR_RETVAL retroflat_init_platform(
 #endif /* RETRO2D_TRACE_LVL */
    
    /* Setup screen buffer 1. */
-   g_retroflat_state->platform.buffer1.vram_pg_x = 1024 - args->screen_w;
+   g_retroflat_state->platform.buffer1.vram_pg_x = 0;
    g_retroflat_state->platform.buffer1.vram_pg_y = 0;
    g_retroflat_state->platform.buffer1.draw.isbg = 1;
    g_retroflat_state->platform.buffer1.alt_page =
@@ -371,7 +371,7 @@ static MERROR_RETVAL retroflat_init_platform(
       args->screen_w, args->screen_h );
 
    /* Setup screen buffer 2. */
-   g_retroflat_state->platform.buffer2.vram_pg_x = 1024 - args->screen_w;
+   g_retroflat_state->platform.buffer2.vram_pg_x = 0;
    g_retroflat_state->platform.buffer2.vram_pg_y = args->screen_h;
    g_retroflat_state->platform.buffer2.draw.isbg = 1;
    g_retroflat_state->platform.buffer2.alt_page =
@@ -610,6 +610,8 @@ MERROR_RETVAL retroflat_create_bitmap(
          &(bmp_out->page) );
       maug_cleanup_if_not_ok();
 
+      bmp_out->vram_pg_x += RETROFLAT_PSX_SCREEN_W;
+
 #if RETRO2D_TRACE_LVL > 0
       debug_printf( RETRO2D_TRACE_LVL,
          "creating %dx%d bitmap at (%d + %d), (%d + %d) in VRAM...",
@@ -696,6 +698,15 @@ MERROR_RETVAL retroflat_blit_bitmap(
    if(
       RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
    ) {
+      return MERROR_GUI;
+   }
+
+   if(
+      s_x + w > retroflat_bitmap_w( src ) ||
+      s_y + h > retroflat_bitmap_h( src )
+   ) {
+      error_printf( "attempting to blit from %d, %d %dx%d from %dx%d source!",
+         s_x, s_y, w, h, retroflat_bitmap_w( src ), retroflat_bitmap_h( src ) );
       return MERROR_GUI;
    }
 
@@ -825,7 +836,7 @@ void retroflat_rect(
 
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
       retroflat_constrain_px( x, y, target, return );
-      retroflat_constrain_px( x + w, y + h, target, return );
+      retroflat_constrain_px( x + w - 1, y + h - 1, target, return );
 
       /* Draw a filled rect with the GPU. */
       rect = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));

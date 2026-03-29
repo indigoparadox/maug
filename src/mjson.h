@@ -234,7 +234,7 @@ MERROR_RETVAL mjson_parse_c( struct MJSON_PARSER* parser, char c ) {
       if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
          if( MJSON_PSTATE_OBJECT_KEY == mjson_parser_pstate( parser ) ) {
             maug_strncpy(
-               parser->last_key, parser->base.token, MPARSER_TOKEN_SZ_MAX );
+               parser->last_key, parser->base.token, MPARSER_TOKEN_SZ_MAX + 1 );
 #if MJSON_TRACE_LVL > 0
             debug_printf(
                MJSON_TRACE_LVL, "encountered key: %s", parser->last_key );
