@@ -70,6 +70,9 @@
    parser->token_parser( \
       (parser)->token, (parser)->token_sz, (parser)->token_parser_arg )
 
+#define mlisp_parser_is_loaded( p ) (0 < mdata_vector_sz( &((p)->ast) ))
+
+
 /**
  * \brief Macro to check if a parser contains a valid AST ready to be
  *        executed.
@@ -463,15 +466,16 @@ MERROR_RETVAL mlisp_parse_c( struct MLISP_PARSER* parser, char c ) {
          && ')' != parser->base.last_c
          && '(' != parser->base.last_c
       ) {
-         assert( 0 < parser->base.token_sz );
-         debug_printf( MLISP_PARSE_TRACE_LVL,
-            "found symbol: %s (" SIZE_T_FMT ")",
-            parser->base.token, parser->base.token_sz );
+         if( 0 < parser->base.token_sz ) {
+            debug_printf( MLISP_PARSE_TRACE_LVL,
+               "found symbol: %s (" SIZE_T_FMT ")",
+               parser->base.token, parser->base.token_sz );
 
-         /* A raw token without parens terminated by whitespace can't have
-          * children, so just create a one-off.
-          */
-         _mlisp_ast_add_raw_token( parser );
+            /* A raw token without parens terminated by whitespace can't have
+            * children, so just create a one-off.
+            */
+            _mlisp_ast_add_raw_token( parser );
+         }
 
       } else if( MLISP_PSTATE_STRING == mlisp_parser_pstate( parser ) ) {
          retval = mlisp_parser_append_token( parser, c );
