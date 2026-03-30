@@ -299,13 +299,17 @@
       debug_printf( RETROGUI_TRACE_LVL, \
          "determined str sz of \"%s\": " SIZE_T_FMT, src_str, str_sz ); \
    } \
-   if( (MAUG_MHANDLE)NULL != dest_ctl. field ## _h ) { \
-      /* Free the existing string. */ \
-      maug_mfree( dest_ctl. field ## _h ); \
+   if( str_sz != dest_ctl. field ## _sz ) { \
+      debug_printf( RETROGUI_TRACE_LVL, \
+         "string size different; creating new buffer..." ); \
+      if( (MAUG_MHANDLE)NULL != dest_ctl. field ## _h ) { \
+         /* Free the existing string. */ \
+         maug_mfree( dest_ctl. field ## _h ); \
+      } \
+      \
+      /* Allocate new string space. */ \
+      maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
    } \
-   \
-   /* Allocate new string space. */ \
-   maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
    maug_mlock( dest_ctl. field ## _h, str_tmp ); \
    maug_cleanup_if_null_lock( char*, str_tmp ); \
    \
@@ -1409,6 +1413,8 @@ static retrogui_idc_t retrogui_key_TEXTBOX(
 
    default:
       assert( ctl->TEXTBOX.text_sz < ctl->TEXTBOX.text_sz_max );
+      debug_printf( 1, "cur: %d, sz: %d, sz_max: %d",
+         ctl->TEXTBOX.text_cur, ctl->TEXTBOX.text_sz, ctl->TEXTBOX.text_sz_max );
       retroflat_buffer_insert( c, 
          ctl->TEXTBOX.text,
          ctl->TEXTBOX.text_cur,
@@ -2910,11 +2916,45 @@ MERROR_RETVAL retrogui_set_ctl_text(
          (RETROGUI_LABEL_FLAG_SHOWINC_SLOW & ctl->LABEL.flags) ?
             RETROGUI_LABEL_SHOW_TICKS_MAX * 2 :
             RETROGUI_LABEL_SHOW_TICKS_MAX;
+
 #ifndef RETROGUI_NO_TEXTBOX
    } else if( RETROGUI_CTL_TYPE_TEXTBOX == ctl->base.type ) {
-      assert( NULL == ctl->TEXTBOX.text );
-      _retrogui_copy_str( text, buffer, ctl->TEXTBOX, label_tmp, buffer_sz );
+      /* This is slightly different from _retrogui_copy_str, as it handles
+       * the sz_max and sz_ fields independently for the TEXTBOX and allocates
+       * an extra byte for NULL at the end for safety.
+       */
+      if( buffer_sz > ctl->TEXTBOX.text_sz_max ) {
+#if RETROGUI_TRACE_LVL > 0
+         debug_printf( RETROGUI_TRACE_LVL,
+            "string size different; creating new buffer..." );
+#endif /* RETROGUI_TRACE_LVL */
+         if( (MAUG_MHANDLE)NULL != ctl->TEXTBOX.text_h ) {
+            /* Free the existing string. */
+            maug_mfree( ctl->TEXTBOX.text_h );
+         }
+
+         /* Allocate new string space. */
+         maug_malloc_test( ctl->TEXTBOX.text_h, buffer_sz + 1, 1 );
+
+         ctl->TEXTBOX.text_sz_max = buffer_sz;
+      }
+      ctl->TEXTBOX.text_sz = buffer_sz;
       ctl->TEXTBOX.text_cur = 0;
+      maug_mlock( ctl->TEXTBOX.text_h, label_tmp );
+      maug_cleanup_if_null_lock( char*, label_tmp );
+
+      /* Copy the string over. */
+      maug_mzero( label_tmp, buffer_sz + 1 );
+#if RETROGUI_TRACE_LVL > 0
+      debug_printf( RETROGUI_TRACE_LVL,
+         "zeroed str sz for \"%s\": " SIZE_T_FMT, buffer, buffer_sz + 1 );
+#endif /* RETROGUI_TRACE_LVL */
+      maug_strncpy( label_tmp, buffer, buffer_sz );
+#if RETROGUI_TRACE_LVL > 0
+      debug_printf( RETROGUI_TRACE_LVL, "copied str as: \"%s\"", label_tmp );
+#endif /* RETROGUI_TRACE_LVL */
+      maug_munlock( ctl->TEXTBOX.text_h, label_tmp );
+
 #endif /* !RETROGUI_NO_TEXTBOX */
    } else {
       error_printf( "invalid control type! no label!" );
