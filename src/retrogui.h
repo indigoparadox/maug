@@ -299,17 +299,17 @@
       debug_printf( RETROGUI_TRACE_LVL, \
          "determined str sz of \"%s\": " SIZE_T_FMT, src_str, str_sz ); \
    } \
-   if( str_sz != dest_ctl. field ## _sz ) { \
+   if( \
+      str_sz != dest_ctl. field ## _sz && \
+      (MAUG_MHANDLE)NULL != dest_ctl. field ## _h \
+   ) { \
       debug_printf( RETROGUI_TRACE_LVL, \
          "string size different; creating new buffer..." ); \
-      if( (MAUG_MHANDLE)NULL != dest_ctl. field ## _h ) { \
-         /* Free the existing string. */ \
-         maug_mfree( dest_ctl. field ## _h ); \
-      } \
-      \
-      /* Allocate new string space. */ \
-      maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
+      /* Free the existing string. */ \
+      maug_mfree( dest_ctl. field ## _h ); \
    } \
+   /* Allocate new string space. */ \
+   maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
    maug_mlock( dest_ctl. field ## _h, str_tmp ); \
    maug_cleanup_if_null_lock( char*, str_tmp ); \
    \
