@@ -81,6 +81,7 @@ struct MDATA_STRPOOL {
    uint8_t flags;
    MAUG_MHANDLE str_h;
    char* str_p;
+   size_t str_ct;
    size_t str_sz;
    size_t str_sz_max;
 };
@@ -148,6 +149,19 @@ struct MDATA_TABLE {
  * \addtogroup mdata_strpool
  * \{
  */
+
+/**
+ * \brief Get the native strpool index, given a linear index from 0 to 
+ *        mdata_strpool_ct().
+ *
+ * \note MDATA_STRPOOL normally returns the index of the first character of a
+ *       word for most of its functions. If you're e.g. trying to get a random
+ *       string from the strpool, this may be what you're looking for.
+ */
+ssize_t mdata_strpool_get_idx_from_linear(
+   struct MDATA_STRPOOL* sp, size_t linear );
+
+MERROR_RETVAL mdata_strpool_dump( struct MDATA_STRPOOL* sp );
 
 /**
  * \brief Verify if the given mdata_strpool_idx_t is valid in the given strpool.
@@ -280,6 +294,14 @@ void mdata_table_free( struct MDATA_TABLE* t );
  * \{
  */
 
+/**
+ * \brief Get the number of strings in a strpool.
+ */
+#define mdata_strpool_ct( sp ) ((sp)->str_ct)
+
+/**
+ * \brief Get the number of bytes allocated to a strpool.
+ */
 #define mdata_strpool_sz( sp ) ((sp)->str_sz_max)
 
 #define mdata_strpool_is_locked( sp ) \
@@ -304,12 +326,28 @@ void mdata_table_free( struct MDATA_TABLE* t );
       (sp)->flags &= ~MDATA_STRPOOL_FLAG_IS_LOCKED; \
    }
 
+/**
+ * \brief Get a string by the index of its first character in the strpool.
+ */
 #define mdata_strpool_get( sp, idx ) \
    ((idx >= 1 && idx < (sp)->str_sz) ? &((sp)->str_p[idx]) : NULL)
 
+/**
+ * \brief Get the size of a string in a MDATA_STRPOOL.
+ *
+ * \warning This requires the strpool to be locked before use!
+ * \note This returns the amount of space *allocated* for the string. This
+ *       may not be the value you expect due to padding to keep size_t values
+ *       aligned in memory, or if the string was allocated with too much space
+ *       in the first place!
+ */
 #define mdata_strpool_get_sz( sp, idx ) \
    ((idx >= sizeof( size_t ) && idx < (sp)->str_sz) ? \
       (size_t)(*(&((sp)->str_p[idx - sizeof( size_t )]))) : 0)
+
+#define mdata_strpool_get_len( sp, idx ) \
+   ((idx >= sizeof( size_t ) && idx < (sp)->str_sz) ? \
+      (maug_strlen( &((sp)->str_p[idx]) )) : 0)
 
 #define mdata_strpool_padding( str_sz ) \
    (sizeof( size_t ) - ((str_sz + 1 /* NULL */) % sizeof( size_t )))
@@ -467,6 +505,73 @@ void mdata_table_free( struct MDATA_TABLE* t );
 
 #ifdef MDATA_C
 
+ssize_t mdata_strpool_get_idx_from_linear(
+   struct MDATA_STRPOOL* sp, size_t linear
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   ssize_t idx_out = 0;
+   size_t i_linear = 0;
+   size_t* p_str_iter_sz = NULL;
+   uint8_t autolock = 0;
+
+   /* Skip if we know the index is invalid. */
+   if( mdata_strpool_ct( sp ) <= linear ) {
+      error_printf( "linear idx " SIZE_T_FMT " exceeds " SIZE_T_FMT " strings!",
+         linear, mdata_strpool_ct( sp ) );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   if( !mdata_strpool_is_locked( sp ) ) {
+      mdata_strpool_lock( sp );
+      autolock = 1;
+   }
+
+   /* Iterate through strings, counting strings passed until we hit the
+    * desired linear index.
+    */
+   while( i_linear < linear ) {
+      p_str_iter_sz = (size_t*)&(sp->str_p[idx_out]);
+#if MDATA_STRPOOL_TRACE_LVL > 0
+      debug_printf( MDATA_STRPOOL_TRACE_LVL,
+         "skipping linear idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\"",
+         i_linear, *p_str_iter_sz,
+         &(strpool_p[i + sizeof( size_t )]) );
+#endif /* MDATA_STRPOOL_TRACE_LVL */
+      idx_out += *p_str_iter_sz;
+      i_linear++;
+      if( mdata_strpool_sz( sp ) <= idx_out ) {
+         error_printf( "invalid strpool! strings counted exceed bytes!" );
+         retval = MERROR_OVERFLOW;
+         goto cleanup;
+      }
+   }
+
+   /* String found. Advance past the size before returning. */
+   idx_out += sizeof( size_t );
+#if MDATA_STRPOOL_TRACE_LVL > 0
+   debug_printf( MDATA_STRPOOL_TRACE_LVL,
+      "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\" "
+      "to match " SIZE_T_FMT "-byte token: %s",
+      i, *p_str_iter_sz, &(sp->str_p[i]),
+      str_sz, str );
+#endif /* MDATA_STRPOOL_TRACE_LVL */
+
+cleanup:
+
+   if( autolock ) {
+      mdata_strpool_unlock( sp );
+   }
+
+   if( MERROR_OK != retval ) {
+      idx_out = merror_retval_to_sz( retval );
+   }
+
+   return idx_out;
+}
+
+/* === */
+
 MERROR_RETVAL mdata_strpool_check_idx(
    struct MDATA_STRPOOL* sp, mdata_strpool_idx_t idx
 ) {
@@ -497,20 +602,28 @@ cleanup:
 
 /* === */
 
-void mdata_strpool_dump( struct MDATA_STRPOOL* sp ) {
+MERROR_RETVAL mdata_strpool_dump( struct MDATA_STRPOOL* sp ) {
+   MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
-   char* strpool_p = NULL;
+   uint8_t autolock = 0;
 
-   maug_mlock( sp->str_h, strpool_p );
+   if( !mdata_strpool_is_locked( sp ) ) {
+      mdata_strpool_lock( sp );
+      autolock = 1;
+   }
 
    for( i = 0 ; mdata_strpool_sz( sp ) > i ; i++ ) {
-      printf( "0x%02x ", strpool_p[i] );
+      printf( "0x%02x ", sp->str_p[i] );
    }
    printf( "\n" );
 
-   if( NULL != strpool_p ) {
-      maug_munlock( sp->str_h, strpool_p );
+   if( autolock ) {
+      mdata_strpool_unlock( sp );
    }
+
+cleanup:
+
+   return retval;
 }
 
 /* === */
@@ -520,8 +633,8 @@ mdata_strpool_idx_t mdata_strpool_find(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    mdata_strpool_idx_t i = 0;
-   char* strpool_p = NULL;
    size_t* p_str_iter_sz = NULL;
+   uint8_t autolock = 0;
 
    if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
       error_printf( "strpool not allocated!" );
@@ -529,13 +642,16 @@ mdata_strpool_idx_t mdata_strpool_find(
       goto cleanup;
    }
 
-   maug_mlock( strpool->str_h, strpool_p );
+   if( !mdata_strpool_is_locked( strpool ) ) {
+      mdata_strpool_lock( strpool );
+      autolock = 1;
+   }
 
    while( i < strpool->str_sz ) {
-      p_str_iter_sz = (size_t*)&(strpool_p[i]);
+      p_str_iter_sz = (size_t*)&(strpool->str_p[i]);
       if(
          0 == maug_strncmp(
-            &(strpool_p[i + sizeof( size_t )]), str, str_sz + 1 )
+            &(strpool->str_p[i + sizeof( size_t )]), str, str_sz + 1 )
       ) {
          /* String found. Advance past the size before returning. */
          i += sizeof( size_t );
@@ -543,7 +659,7 @@ mdata_strpool_idx_t mdata_strpool_find(
          debug_printf( MDATA_STRPOOL_TRACE_LVL,
             "found strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT " bytes): \"%s\" "
             "to match " SIZE_T_FMT "-byte token: %s",
-            i, *p_str_iter_sz, &(strpool_p[i]),
+            i, *p_str_iter_sz, &(strpool->str_p[i]),
             str_sz, str );
 #endif /* MDATA_STRPOOL_TRACE_LVL */
 
@@ -554,7 +670,7 @@ mdata_strpool_idx_t mdata_strpool_find(
             "skipping strpool_idx: " SIZE_T_FMT " (" SIZE_T_FMT
                " bytes): \"%s\"",
             i + sizeof( size_t ), *p_str_iter_sz,
-               &(strpool_p[i + sizeof( size_t )]) );
+               &(strpool->str_p[i + sizeof( size_t )]) );
 #endif /* MDATA_STRPOOL_TRACE_LVL */
       }
       i += *p_str_iter_sz;
@@ -569,8 +685,8 @@ cleanup:
       i = 0;
    }
 
-   if( NULL != strpool_p ) {
-      maug_munlock( strpool->str_h, strpool_p );
+   if( autolock ) {
+      mdata_strpool_unlock( strpool );
    }
 
    return i;
@@ -636,7 +752,6 @@ mdata_strpool_idx_t mdata_strpool_append(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz, uint8_t flags
 ) {
    mdata_strpool_idx_t idx_p_out = 0;
-   char* strpool_p = NULL;
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_str_sz = NULL;
    size_t alloc_sz = 0;
@@ -644,6 +759,12 @@ mdata_strpool_idx_t mdata_strpool_append(
    if( 0 == str_sz ) {
       error_printf( "attempted to add zero-length string!" );
       retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   if( mdata_strpool_is_locked( strpool ) ) {
+      error_printf( "attempted to add string to locked strpool!" );
+      retval = MERROR_ALLOC;
       goto cleanup;
    }
 
@@ -680,23 +801,22 @@ mdata_strpool_idx_t mdata_strpool_append(
    retval = mdata_strpool_alloc( strpool, alloc_sz );
    maug_cleanup_if_not_ok();
 
-   maug_mlock( strpool->str_h, strpool_p );
-   maug_cleanup_if_null_alloc( char*, strpool_p );
+   mdata_strpool_lock( strpool );
 
 #if MDATA_LOCK_TRACE_LVL > 0
    debug_printf( MDATA_LOCK_TRACE_LVL,
       "strpool (" SIZE_T_FMT " bytes) locked to: %p",
-      strpool->str_sz, strpool_p );
+      strpool->str_sz, strpool->str_p );
 #endif /* MDATA_LOCK_TRACE_LVL */
 
    /* Add this string at the end of the string pool. */
    maug_strncpy(
-      &(strpool_p[strpool->str_sz + sizeof( size_t )]), str, str_sz );
-   strpool_p[strpool->str_sz + sizeof( size_t ) + str_sz] = '\0';
+      &(strpool->str_p[strpool->str_sz + sizeof( size_t )]), str, str_sz );
+   strpool->str_p[strpool->str_sz + sizeof( size_t ) + str_sz] = '\0';
 
    /* Add the size of the string to the strpool. */
    assert( 0 == strpool->str_sz % sizeof( size_t ) );
-   p_str_sz = (size_t*)&(strpool_p[strpool->str_sz]);
+   p_str_sz = (size_t*)&(strpool->str_p[strpool->str_sz]);
    *p_str_sz = alloc_sz;
 
    idx_p_out = strpool->str_sz + sizeof( size_t );
@@ -704,11 +824,13 @@ mdata_strpool_idx_t mdata_strpool_append(
 #if MDATA_STRPOOL_TRACE_LVL > 0
    debug_printf( MDATA_STRPOOL_TRACE_LVL,
       "set strpool_idx: " SIZE_T_FMT ": \"%s\"",
-      strpool->str_sz, &(strpool_p[idx_p_out]) );
+      strpool->str_sz, &(strpool->str_p[idx_p_out]) );
 #endif /* MDATA_STRPOOL_TRACE_LVL */
 
    /* Set the string pool cursor to the next available spot. */
    strpool->str_sz += alloc_sz;
+
+   strpool->str_ct++;
 
 cleanup:
 
@@ -716,8 +838,8 @@ cleanup:
       idx_p_out = 0;
    }
 
-   if( NULL != strpool_p ) {
-      maug_munlock( strpool->str_h, strpool_p );
+   if( NULL != strpool->str_p ) {
+      mdata_strpool_unlock( strpool );
    }
 
    return idx_p_out;

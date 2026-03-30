@@ -143,6 +143,7 @@ int maug_strncmp( const char* str1, const char* str2, size_t sz );
 
 /**
  * \brief Strip newlines and spaces off of the end of a string.
+ * \return New string length before NULL.
  */
 size_t maug_strnrstrip( char* str, size_t str_sz );
 
