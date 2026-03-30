@@ -52,6 +52,10 @@
 #  define MLISP_STEP_TRACE_LVL 0
 #endif /* !MLISP_STEP_TRACE_LVL */
 
+#ifndef MLISP_CMP_TRACE_LVL
+#  define MLISP_CMP_TRACE_LVL 0
+#endif /* !MLISP_CMP_TRACE_LVL */
+
 #ifndef MLISP_ENV_TRACE_LVL
 #  define MLISP_ENV_TRACE_LVL 0
 #endif /* !MLISP_ENV_TRACE_LVL */
@@ -1298,18 +1302,32 @@ static MERROR_RETVAL _mlisp_env_cb_ano(
          error_printf( "or: invalid boolean type: %d", val.type );
       }
 
-      if( val.value.boolean ) {
-#if MLISP_EXEC_TRACE_LVL > 0
-         debug_printf( MLISP_EXEC_TRACE_LVL, "%u: found TRUE in %s!",
-            exec->uid,
-            MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) ?
-            "or" : "and" );
-#endif /* MLISP_EXEC_TRACE_LVL */
-         val_out =
-            MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) ? 1 : 0;
+      if(
+         MLISP_ENV_FLAG_ANO_OR == (MLISP_ENV_FLAG_ANO_OR & flags) &&
+         val.value.boolean
+      ) {
+#if MLISP_CMP_TRACE_LVL > 0
+         debug_printf( MLISP_CMP_TRACE_LVL, "%u: found TRUE in OR compare!",
+            exec->uid );
+#endif /* MLISP_CMP_TRACE_LVL */
+         val_out = 1;
+         break;
+      } else if(
+         MLISP_ENV_FLAG_ANO_AND == (MLISP_ENV_FLAG_ANO_AND & flags) &&
+         !val.value.boolean
+      ) {
+#if MLISP_CMP_TRACE_LVL > 0
+         debug_printf( MLISP_CMP_TRACE_LVL, "%u: found FALSE in AND compare!",
+            exec->uid );
+#endif /* MLISP_CMP_TRACE_LVL */
+         val_out = 0;
+         break;
       }
    }
 
+#if MLISP_CMP_TRACE_LVL > 0
+   debug_printf( MLISP_CMP_TRACE_LVL, "compare result: %d", val_out );
+#endif /* MLISP_CMP_TRACE_LVL */
    retval = _mlisp_stack_push_mlisp_bool_t( exec, val_out );
 
 cleanup:
