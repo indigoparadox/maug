@@ -175,7 +175,7 @@ MERROR_RETVAL mfile_mem_vprintf(
 /**
  * \related MFILE_CADDY
  * \brief Insert provided buffer into the given file.
- * 
+ *
  * Note that this method *inserts* the given buffer into the file, shifting the
  * rest of the contents forward.
  */
@@ -349,7 +349,7 @@ MERROR_RETVAL mfile_file_read_int(
       debug_printf( MFILE_READ_TRACE_LVL, "reading integer forward" );
       /* Shrink the buffer moving right and read into it. */
       retval = p_file->read_block( p_file, buf, buf_sz );
- 
+
    } else {
       debug_printf( MFILE_READ_TRACE_LVL, "reading integer reversed" );
       /* Move to the end of the output buffer and read backwards. */
@@ -390,7 +390,7 @@ off_t mfile_mem_cursor( struct MFILE_CADDY* p_file ) {
 
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file ) {
    return p_file->sz - p_file->mem_cursor;
-} 
+}
 
 /* === */
 
@@ -417,7 +417,7 @@ static MERROR_RETVAL mfile_mem_lock( struct MFILE_CADDY* p_f ) {
 static void mfile_mem_release( struct MFILE_CADDY* p_f ) {
 
    assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
-   
+
    if( MFILE_FLAG_HANDLE_LOCKED == (MFILE_FLAG_HANDLE_LOCKED & p_f->flags) ) {
       maug_munlock( p_f->h.mem, p_f->mem_buffer );
       p_f->flags &= ~MFILE_FLAG_HANDLE_LOCKED;
@@ -481,15 +481,23 @@ MERROR_RETVAL mfile_mem_read_line(
 
    assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
 
+   /* Check for no bytes at the start, as the loop below won't trigger if so! */
+   if( !p_f->has_bytes( p_f ) ) {
+      error_printf( "file %s out of bytes!", p_f->filename );
+      retval = MERROR_FILE;
+      goto cleanup;
+   }
+
    while( i < buffer_sz - 1 && p_f->has_bytes( p_f ) ) {
       /* Check for potential overflow. */
       if( i + 1 >= buffer_sz ) {
-         error_printf( "overflow reading string from file!" );
+         error_printf( "overflow reading string from file %s!", p_f->filename );
          retval = MERROR_FILE;
          break;
       }
 
-      p_f->read_int( p_f, (uint8_t*)&(buffer[i]), 1, 0 );
+      retval = p_f->read_int( p_f, (uint8_t*)&(buffer[i]), 1, 0 );
+      maug_cleanup_if_not_ok();
       if( '\n' == buffer[i] ) {
          /* Break on newline and overwrite it below. */
          break;
@@ -501,6 +509,8 @@ MERROR_RETVAL mfile_mem_read_line(
 
    /* Append a null terminator. */
    buffer[i] = '\0';
+
+cleanup:
 
    return retval;
 }
@@ -585,7 +595,7 @@ MERROR_RETVAL mfile_lock_buffer(
       handle, p_file, handle_sz );
 
    maug_mzero( p_file, sizeof( struct MFILE_CADDY ) );
-   
+
    /* Determine if this is based on a handle or a pointer. */
    if( (MAUG_MHANDLE)NULL == handle && NULL != ptr ) {
       p_file->mem_buffer = ptr;
@@ -680,7 +690,7 @@ void mfile_close( mfile_t* p_file ) {
          p_file->type = 0;
       }
       break;
-      
+
    default:
       error_printf( "unknown file type: %d", (p_file)->type );
       break;

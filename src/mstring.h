@@ -772,12 +772,13 @@ cleanup:
 /* === */
 
 size_t maug_strnrstrip( char* str, size_t str_sz ) {
-   size_t i = 0;
+   ssize_t i = 0;
 
    /* Strip space off the back. */
    for(
       i = str_sz - 1 ;
-      ' ' == str[i] || '\r' == str[i] || '\n' == str[i] || '\0' == str[i] ;
+      0 <= i &&
+         (' ' == str[i] || '\r' == str[i] || '\n' == str[i] || '\0' == str[i]) ;
       i--
    ) {
       str[i] = '\0';
