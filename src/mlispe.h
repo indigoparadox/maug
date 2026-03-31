@@ -1041,15 +1041,12 @@ static MERROR_RETVAL _mlisp_env_cb_debug(
    maug_cleanup_if_not_ok();
 
 #  define _MLISP_TYPE_TABLE_DBG( idx, ctype, name, const_name, fmt ) \
-      case idx: \
+      } else if( idx == val.type ) { \
          debug_printf( 2, fmt, val.value.name ); \
-         break;
 
-   switch( val.type ) {
-   case MLISP_TYPE_STR:
+   if( MLISP_TYPE_STR == val.type ) {
       debug_printf( 2, "%s", mdata_strpool_extract(
          &(parser->strpool), val.value.strpool_idx ) );
-      break;
    MLISP_NUM_TYPE_TABLE( _MLISP_TYPE_TABLE_DBG )
    }
 
