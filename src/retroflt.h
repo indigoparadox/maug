@@ -640,11 +640,15 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 
 #ifndef RETROFLAT_DEFAULT_SCREEN_W
 #  define RETROFLAT_DEFAULT_SCREEN_W 320
-#endif /* RETROFLAT_DEFAULT_SCREEN_W */
+#endif /* !RETROFLAT_DEFAULT_SCREEN_W */
 
 #ifndef RETROFLAT_DEFAULT_SCREEN_H
 #  define RETROFLAT_DEFAULT_SCREEN_H 200
-#endif /* RETROFLAT_DEFAULT_SCREEN_H */
+#endif /* !RETROFLAT_DEFAULT_SCREEN_H */
+
+#ifndef RETROFLAT_DEFAULT_SCREEN_SCALE
+#  define RETROFLAT_DEFAULT_SCREEN_SCALE 1
+#endif /* !RETROFLAT_DEFAULT_SCREEN_SCALE */
 
 #define retroflat_on_resize( w, h ) \
    g_retroflat_state->screen_w = w; \
@@ -2691,7 +2695,7 @@ MERROR_RETVAL retroflat_init(
          args->screen_h );
    }
    if( 0 == args->screen_scale ) {
-      args->screen_scale = 1;
+      args->screen_scale = RETROFLAT_DEFAULT_SCREEN_SCALE;
       debug_printf( 1, "setting arg screen_scale to default: %d",
          args->screen_scale );
    }
