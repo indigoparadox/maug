@@ -307,9 +307,12 @@
          "string size different; creating new buffer..." ); \
       /* Free the existing string. */ \
       maug_mfree( dest_ctl. field ## _h ); \
+      dest_ctl. field ## _h = (MAUG_MHANDLE)NULL; \
    } \
-   /* Allocate new string space. */ \
-   maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
+   if( (MAUG_MHANDLE)NULL == dest_ctl. field ## _h ) { \
+      /* Allocate new string space if not allocated. */ \
+      maug_malloc_test( dest_ctl. field ## _h, str_sz + 1, 1 ); \
+   } \
    maug_mlock( dest_ctl. field ## _h, str_tmp ); \
    maug_cleanup_if_null_lock( char*, str_tmp ); \
    \
