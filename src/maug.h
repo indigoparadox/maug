@@ -127,7 +127,6 @@ union MAUG_MHANDLEPTR {
 #     define RETROGUI_C
 #     define RETROCON_C
 #     define RETROFNT_C
-#     define MCSSMERG_C
 #     define RETROHTR_C
 #     define RETROANI_C
 #     define RETROW3D_C

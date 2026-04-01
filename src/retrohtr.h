@@ -98,6 +98,21 @@ struct RETROHTR_RENDER_TREE {
 #define retrohtr_node_screen_y( tree, node_idx ) \
    ((tree)->nodes[node_idx].y)
 
+void retrohtr_merge_prop(
+   int p_id,
+   const char* prop_name,
+   size_t prop_sz,
+   size_t tag_type,
+   void* parent_prop, uint8_t* parent_prop_flags,
+   void* effect_prop, uint8_t* effect_prop_flags,
+   void* tag_prop, uint8_t* tag_prop_flags );
+
+void retrohtr_merge_styles(
+   struct MCSS_STYLE* effect_style,
+   struct MCSS_STYLE* parent_style,
+   struct MCSS_STYLE* tag_style,
+   size_t tag_type );
+
 MERROR_RETVAL retrohtr_tree_create(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    size_t x, size_t y, size_t w, size_t h,
@@ -148,6 +163,155 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree );
 
 #ifdef RETROHTR_C
 
+void retrohtr_merge_prop(
+   int p_id,
+   const char* prop_name,
+   size_t prop_sz,
+   size_t tag_type,
+   void* parent_prop, uint8_t* parent_prop_flags,
+   void* effect_prop, uint8_t* effect_prop_flags,
+   void* tag_prop, uint8_t* tag_prop_flags
+) {
+   if(
+      (
+         /* Only do inheritence for some special cases.
+          * e.g. We don't want to inherit width/height/X/etc! */
+         mcss_prop_is_heritable( p_id )
+      ) && (NULL != parent_prop && (
+         (
+            NULL != tag_prop &&
+            /* Parent is important and new property isn't. */
+            mcss_prop_is_active_flag( *parent_prop, IMPORTANT ) &&
+            /* TODO: Is not active OR important? */
+            !mcss_prop_is_important( *tag_prop ) &&
+            !mcss_prop_is_important( *effect_prop )
+         ) || (
+            NULL != tag_prop &&
+            /* New property is not active. */
+            !mcss_prop_is_active( *tag_prop ) &&
+            !mcss_prop_is_active( *effect_prop )
+         ) || (
+            /* No competition. */
+            NULL == tag_prop &&
+            !mcss_prop_is_active( *effect_prop )
+         )
+      ))
+   ) {
+      /* Inherit parent property. */
+      if( MCSS_PROP_BACKGROUND_COLOR == p_id ) {
+#if RETROHTR_TRACE_LVL > 0
+         debug_printf( RETROHTR_TRACE_LVL, "background color was %s",
+            0 <= *(RETROFLAT_COLOR*)effect_prop ?
+            gc_retroflat_color_names[*(RETROFLAT_COLOR*)effect_prop] : "NULL" );
+#endif /* RETROHTR_TRACE_LVL */
+      } else if( MCSS_PROP_COLOR == p_id ) {
+#if RETROHTR_TRACE_LVL > 0
+         debug_printf( RETROHTR_TRACE_LVL, "color was %s",
+            0 <= *(RETROFLAT_COLOR*)effect_prop ?
+            gc_retroflat_color_names[*(RETROFLAT_COLOR*)effect_prop] : "NULL" );
+#endif /* RETROHTR_TRACE_LVL */
+      }
+#if RETROHTR_TRACE_LVL > 0
+      debug_printf( RETROHTR_TRACE_LVL,
+         "%s using parent %s: " SSIZE_T_FMT,
+         gc_mhtml_tag_names[tag_type], prop_name, *(ssize_t*)parent_prop );
+#endif /* RETROHTR_TRACE_LVL */
+      memcpy( effect_prop, parent_prop, prop_sz );
+      *effect_prop_flags = *parent_prop_flags;
+      if( MCSS_PROP_BACKGROUND_COLOR == p_id ) {
+#if RETROHTR_TRACE_LVL > 0
+         debug_printf( RETROHTR_TRACE_LVL, "background color %s",
+            0 <= *(RETROFLAT_COLOR*)effect_prop ?
+            gc_retroflat_color_names[*(RETROFLAT_COLOR*)effect_prop] : "NULL" );
+#endif /* RETROHTR_TRACE_LVL */
+      } else if( MCSS_PROP_COLOR == p_id ) {
+#if RETROHTR_TRACE_LVL > 0
+         debug_printf( RETROHTR_TRACE_LVL, "color %s",
+            0 <= *(RETROFLAT_COLOR*)effect_prop ?
+            gc_retroflat_color_names[*(RETROFLAT_COLOR*)effect_prop] : "NULL" );
+#endif /* RETROHTR_TRACE_LVL */
+      }
+   } else if(
+      NULL != tag_prop &&
+      mcss_prop_is_active( *tag_prop )
+   ) {
+      /* Use new property. */
+#if RETROHTR_TRACE_LVL > 0
+      debug_printf( RETROHTR_TRACE_LVL, "%s using style %s: " SSIZE_T_FMT,
+         gc_mhtml_tag_names[tag_type], prop_name,
+         *(ssize_t*)tag_prop );
+      if( MCSS_PROP_COLOR == p_id ) {
+         debug_printf( RETROHTR_TRACE_LVL, "color %s",
+            0 <= *(RETROFLAT_COLOR*)effect_prop ?
+            gc_retroflat_color_names[*(RETROFLAT_COLOR*)effect_prop] : "NULL" );
+      }
+#endif /* RETROHTR_TRACE_LVL */
+      memcpy( effect_prop, tag_prop, prop_sz );
+      *effect_prop_flags = *tag_prop_flags;
+   }
+}
+
+/* === */
+
+void retrohtr_merge_styles(
+   struct MCSS_STYLE* effect_style,
+   struct MCSS_STYLE* parent_style,
+   struct MCSS_STYLE* tag_style,
+   size_t tag_type
+) {
+   /* At least one of these styles probably comes from the locked vector of the
+    * CSS styles parser, so... keep that in mind?
+    */
+
+   if(
+      MCSS_STYLE_FLAG_ACTIVE !=
+      (MCSS_STYLE_FLAG_ACTIVE & effect_style->flags)
+   ) {
+      mcss_style_init( effect_style );
+   }
+
+   /* Perform inheritence of special cases. */
+
+   #define MCSS_PROP_TABLE_MERGE( p_id, prop_n, prop_t, prop_p, def ) \
+      retrohtr_merge_prop( p_id, \
+         #prop_n, \
+         sizeof( prop_t ), \
+         tag_type, \
+         NULL != parent_style ? &(parent_style->prop_n) : NULL, \
+         NULL != parent_style ? &(parent_style->prop_n ## _flags) : 0, \
+         NULL != effect_style ? &(effect_style->prop_n) : NULL, \
+         NULL != effect_style ? &(effect_style->prop_n ## _flags) : 0, \
+         NULL != tag_style ? &(tag_style->prop_n) : NULL, \
+         NULL != tag_style ? &(tag_style->prop_n ## _flags) : 0 );
+
+   MCSS_PROP_TABLE( MCSS_PROP_TABLE_MERGE )
+
+   /* Apply defaults for display. */
+
+   if(
+      MCSS_PROP_FLAG_ACTIVE !=
+      (MCSS_PROP_FLAG_ACTIVE & effect_style->DISPLAY_flags)
+   ) {
+      /* Set the display property based on the tag's default. */
+
+      #define MHTML_TAG_TABLE_DISP( tag_id, tag_name, fields, disp ) \
+         } else if( tag_id == tag_type ) { \
+            effect_style->DISPLAY = MCSS_DISPLAY_ ## disp; \
+            debug_printf( RETROHTR_TRACE_LVL, "%s defaulting to %s DISPLAY", \
+               gc_mhtml_tag_names[tag_type], \
+               gc_mcss_display_names[effect_style->DISPLAY] );
+
+      if( 0 ) {
+      MHTML_TAG_TABLE( MHTML_TAG_TABLE_DISP )
+      }
+
+   }
+
+   return;
+}
+
+/* === */
+
 ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
    MERROR_RETVAL retval = MERROR_OK;
    uint8_t auto_unlocked = 0;
@@ -155,7 +319,9 @@ ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
    MAUG_MHANDLE new_nodes_h = (MAUG_MHANDLE)NULL;
 
    if( NULL != tree->nodes ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "auto-unlocking nodes..." );
+#endif /* RETROHTR_TRACE_LVL */
       maug_munlock( tree->nodes_h, tree->nodes );
       auto_unlocked = 1;
    }
@@ -179,9 +345,11 @@ ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
    }
 
    /* Zero out the last node, add it to the list, and return its index. */
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "zeroing node " SIZE_T_FMT " (of " SIZE_T_FMT ")...",
       tree->nodes_sz, tree->nodes_sz_max );
+#endif /* RETROHTR_TRACE_LVL */
    maug_mzero( &(tree->nodes[tree->nodes_sz]),
       sizeof( struct RETROHTR_RENDER_NODE ) );
    retidx = tree->nodes_sz;
@@ -193,7 +361,9 @@ ssize_t retrohtr_get_next_free_node( struct RETROHTR_RENDER_TREE* tree ) {
 cleanup:
 
    if( auto_unlocked ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "auto-locking nodes..." );
+#endif /* RETROHTR_TRACE_LVL */
       maug_mlock( tree->nodes_h, tree->nodes );
    }
 
@@ -203,6 +373,8 @@ cleanup:
 
    return retidx;
 }
+
+/* === */
 
 ssize_t retrohtr_add_node_child(
    struct RETROHTR_RENDER_TREE* tree, ssize_t node_parent_idx
@@ -234,7 +406,9 @@ ssize_t retrohtr_add_node_child(
 
    /* Add new child under current node. */
    if( 0 > retrohtr_node( tree, node_parent_idx )->first_child ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "adding first child..." );
+#endif /* RETROHTR_TRACE_LVL */
       assert( -1 == retrohtr_node( tree, node_parent_idx )->first_child );
       retrohtr_node( tree, node_parent_idx )->first_child = node_new_idx;
    } else {
@@ -253,6 +427,8 @@ cleanup:
    return node_new_idx;
 }
 
+/* === */
+
 MERROR_RETVAL retrohtr_tree_create(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    size_t x, size_t y, size_t w, size_t h,
@@ -264,8 +440,10 @@ MERROR_RETVAL retrohtr_tree_create(
    union MHTML_TAG* p_tag_iter = NULL;
    ssize_t tag_next_idx = 0;
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL, 
       "creating render node for tag: " SSIZE_T_FMT, tag_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
    mdata_vector_lock( &(parser->tags) );
 
@@ -285,8 +463,10 @@ MERROR_RETVAL retrohtr_tree_create(
       if( 0 > node_new_idx ) {
          goto cleanup;
       }
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL,
          "created initial root node: " SIZE_T_FMT, node_new_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
       node_idx = node_new_idx;
 
@@ -311,11 +491,13 @@ MERROR_RETVAL retrohtr_tree_create(
 
       retrohtr_node( tree, node_new_idx )->tag = tag_iter_idx;
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL,
          "rendering node " SSIZE_T_FMT " (%s) under node " SSIZE_T_FMT,
          node_new_idx,
          gc_mhtml_tag_names[p_tag_iter->base.type],
          node_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
       /* Tag-specific rendering preparations. */
       if( MHTML_TAG_TYPE_IMG == p_tag_iter->base.type ) {
@@ -325,8 +507,10 @@ MERROR_RETVAL retrohtr_tree_create(
             &(retrohtr_node( tree, node_new_idx )->bitmap),
             RETROFLAT_FLAGS_LITERAL_PATH | RETROFLAT_FLAGS_BITMAP_SILENT );
          if( MERROR_OK == retval ) {
+#if RETROHTR_TRACE_LVL > 0
             debug_printf( RETROHTR_TRACE_LVL, "loaded img: %s", 
                p_tag_iter->IMG.src );
+#endif /* RETROHTR_TRACE_LVL */
          } else {
             error_printf( "could not load img: %s", p_tag_iter->IMG.src );
          }
@@ -354,6 +538,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL retrohtr_apply_styles(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
    struct MCSS_STYLE* parent_style, struct MCSS_STYLE* effect_style,
@@ -366,8 +552,10 @@ MERROR_RETVAL retrohtr_apply_styles(
    struct MCSS_STYLE* style = NULL;
    union MHTML_TAG* p_tag_iter = NULL;
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "applying styles for tag: " SSIZE_T_FMT, tag_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
    assert( !mdata_vector_is_locked( &(parser->tags) ) );
    mdata_vector_lock( &(parser->styler.styles) );
@@ -399,10 +587,13 @@ MERROR_RETVAL retrohtr_apply_styles(
                p_tag_iter->base.classes_sz
             )
          ) {
+#if RETROHTR_TRACE_LVL > 0
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag class: %s",
                style->class );
+#endif /* RETROHTR_TRACE_LVL */
 
-            mcssmerge_styles( effect_style, parent_style, style, tag_type );
+            retrohtr_merge_styles(
+               effect_style, parent_style, style, tag_type );
          }
       }
    }
@@ -421,10 +612,13 @@ MERROR_RETVAL retrohtr_apply_styles(
                p_tag_iter->base.id_sz
             )
          ) {
+#if RETROHTR_TRACE_LVL > 0
             debug_printf( RETROHTR_TRACE_LVL, "found style for tag ID: %s",
                style->id );
+#endif /* RETROHTR_TRACE_LVL */
 
-            mcssmerge_styles( effect_style, parent_style, style, tag_type );
+            retrohtr_merge_styles(
+               effect_style, parent_style, style, tag_type );
          }
       }
    }
@@ -441,13 +635,15 @@ cleanup:
       &(parser->styler.styles), tag_style_idx, struct MCSS_STYLE );
 
    /* Make sure we have a root style. */
-   mcssmerge_styles( effect_style, parent_style, style, tag_type );
+   retrohtr_merge_styles( effect_style, parent_style, style, tag_type );
 
    mdata_vector_unlock( &(parser->tags) );
    mdata_vector_unlock( &(parser->styler.styles) );
 
    return retval;
 }
+
+/* === */
 
 static MERROR_RETVAL retrohtr_load_font(
    struct MCSS_PARSER* styler,
@@ -474,10 +670,12 @@ static MERROR_RETVAL retrohtr_load_font(
 
    mdata_strpool_lock( &(styler->strpool) );
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "loading font: %s (" SSIZE_T_FMT ")",
       mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
       effect_style->FONT_FAMILY );
+#endif /* RETROHTR_TRACE_LVL */
 
    if( 0 >= effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
@@ -505,6 +703,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 MERROR_RETVAL retrohtr_tree_gui(
    struct RETROHTR_RENDER_TREE* tree, struct MCSS_PARSER* styler,
    struct MCSS_STYLE* effect_style
@@ -516,7 +716,9 @@ MERROR_RETVAL retrohtr_tree_gui(
       RETROHTR_TREE_FLAG_GUI_ACTIVE ==
          (RETROHTR_TREE_FLAG_GUI_ACTIVE & tree->flags)
    ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "tree GUI already active!" );
+#endif /* RETROHTR_TRACE_LVL */
       goto cleanup;
    }
 
@@ -538,11 +740,15 @@ MERROR_RETVAL retrohtr_tree_gui(
 
    tree->flags |= RETROHTR_TREE_FLAG_GUI_ACTIVE;
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL, "tree GUI initialized!" );
+#endif /* RETROHTR_TRACE_LVL */
 
 cleanup:
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL retrohtr_tree_size(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
@@ -581,9 +787,11 @@ MERROR_RETVAL retrohtr_tree_size(
    /* position */
 
    if( mcss_prop_is_active( effect_style.POSITION ) ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL,
          "node " SSIZE_T_FMT ": applying %s positioning",
          node_idx, gc_mcss_position_names[effect_style.POSITION] );
+#endif /* RETROHTR_TRACE_LVL */
       /* TODO: MCSS_POS_NOTE: We'd like to get rid of this so all positioning
        *       is done through CSS... unfortunately, we only track the current
        *       and previous effective styles while working that out later, so
@@ -645,8 +853,10 @@ MERROR_RETVAL retrohtr_tree_size(
          &(retrohtr_node( tree, node_idx )->w),
          &(retrohtr_node( tree, node_idx )->h), 0 );
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          retrohtr_node( tree, node_idx )->w );
+#endif /* RETROHTR_TRACE_LVL */
 
       mdata_strpool_unlock( &(parser->strpool) );
 
@@ -681,7 +891,9 @@ MERROR_RETVAL retrohtr_tree_size(
       retrohtr_node( tree, node_idx )->w = ctl.base.w;
       retrohtr_node( tree, node_idx )->h = ctl.base.h;
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "initialized control for INPUT..." );
+#endif /* RETROHTR_TRACE_LVL */
 
       retrogui_push_ctl( &(tree->gui), &ctl );
 
@@ -694,8 +906,10 @@ MERROR_RETVAL retrohtr_tree_size(
             retroflat_bitmap_h( &(retrohtr_node( tree, node_idx )->bitmap) );
       }
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf( RETROHTR_TRACE_LVL, "TEXT w: " SIZE_T_FMT, 
          retrohtr_node( tree, node_idx )->w );
+#endif /* RETROHTR_TRACE_LVL */
 
    } else {
       /* Get sizing of child nodes. */
@@ -838,8 +1052,10 @@ MERROR_RETVAL retrohtr_tree_size(
       retrohtr_node( tree, node_idx )->h += effect_style.PADDING;
    }
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "setting node " SIZE_T_FMT " dirty...", node_idx );
+#endif /* RETROHTR_TRACE_LVL */
    retrohtr_node( tree, node_idx )->flags |= RETROHTR_NODE_FLAG_DIRTY;
 
 cleanup:
@@ -902,6 +1118,8 @@ static ssize_t retrohtr_find_prev_sibling_in_box_model(
 cleanup:
    return sibling_found_idx;
 }
+
+/* === */
 
 static MERROR_RETVAL retrohtr_mark_edge_child_nodes(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
@@ -981,6 +1199,8 @@ cleanup:
 
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL retrohtr_tree_pos(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
@@ -1225,8 +1445,10 @@ MERROR_RETVAL retrohtr_tree_pos(
       maug_cleanup_if_not_ok();
    }
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "setting node " SIZE_T_FMT " dirty...", node_idx );
+#endif /* RETROHTR_TRACE_LVL */
    retrohtr_node( tree, node_idx )->flags |= RETROHTR_NODE_FLAG_DIRTY;
  
 cleanup:
@@ -1246,6 +1468,8 @@ cleanup:
 
    return retval;
 }
+
+/* === */
 
 MERROR_RETVAL retrohtr_tree_draw(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
@@ -1316,8 +1540,10 @@ MERROR_RETVAL retrohtr_tree_draw(
 
    } else if( MHTML_TAG_TYPE_BODY == p_tag->base.type ) {
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf(
          RETROHTR_TRACE_LVL, "drawing BODY node " SIZE_T_FMT "...", node_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
       /* Draw body BG. */
       if( RETROFLAT_COLOR_NULL != node->bg ) {
@@ -1337,8 +1563,10 @@ MERROR_RETVAL retrohtr_tree_draw(
          goto cleanup;
       }
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf(
          RETROHTR_TRACE_LVL, "drawing IMG node " SIZE_T_FMT "...", node_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
       retroflat_blit_bitmap(
          NULL, &(retrohtr_node( tree, node_idx )->bitmap),
@@ -1353,8 +1581,9 @@ MERROR_RETVAL retrohtr_tree_draw(
 
    } else if( MHTML_TAG_TYPE_INPUT == p_tag->base.type ) {
 
-      debug_printf(
-         RETROHTR_TRACE_LVL, "setting tree GUI dirty..." );
+#if RETROHTR_TRACE_LVL > 0
+      debug_printf( RETROHTR_TRACE_LVL, "setting tree GUI dirty..." );
+#endif /* RETROHTR_TRACE_LVL */
 
       tree->gui.flags |= RETROGUI_FLAGS_DIRTY;
 
@@ -1363,11 +1592,13 @@ MERROR_RETVAL retrohtr_tree_draw(
          goto cleanup;
       }
 
+#if RETROHTR_TRACE_LVL > 0
       debug_printf(
          RETROHTR_TRACE_LVL, "drawing xs node " SIZE_T_FMT "...",
          /* gc_mhtml_tag_names[mhtml_tag( parser,
             retrohtr_node( tree, node_idx )->tag )->base.type], */
          node_idx );
+#endif /* RETROHTR_TRACE_LVL */
 
       retroflat_rect(
          NULL, node->bg,
@@ -1407,6 +1638,8 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 retrogui_idc_t retrohtr_tree_poll_ctls(
    struct RETROHTR_RENDER_TREE* tree,
    RETROFLAT_IN_KEY* input,
@@ -1428,8 +1661,10 @@ retrogui_idc_t retrohtr_tree_poll_ctls(
    idc = retrogui_poll_ctls( &(tree->gui), input, input_evt );
 
    if( 0 < idc ) {
+#if RETROHTR_TRACE_LVL > 0
       debug_printf(
          RETROHTR_TRACE_LVL, "setting node " SIZE_T_FMT " dirty...", idc );
+#endif /* RETROHTR_TRACE_LVL */
       retrohtr_node( tree, idc )->flags |= RETROHTR_NODE_FLAG_DIRTY;
    }
 
@@ -1439,6 +1674,8 @@ retrogui_idc_t retrohtr_tree_poll_ctls(
 
    return idc;
 }
+
+/* === */
 
 MERROR_RETVAL retrohtr_tree_dump(
    struct RETROHTR_RENDER_TREE* tree, struct MHTML_PARSER* parser,
@@ -1508,9 +1745,13 @@ cleanup:
    return retval;
 }
 
+/* === */
+
 void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
 
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL, "freeing render nodes..." );
+#endif /* RETROHTR_TRACE_LVL */
 
    /* TODO: Free bitmaps from img! */
 
@@ -1532,6 +1773,8 @@ void retrohtr_tree_free( struct RETROHTR_RENDER_TREE* tree ) {
    }
 }
 
+/* === */
+
 MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -1539,8 +1782,10 @@ MERROR_RETVAL retrohtr_tree_init( struct RETROHTR_RENDER_TREE* tree ) {
 
    /* Perform initial node allocation. */
    tree->nodes_sz_max = MHTML_PARSER_TAGS_INIT_SZ;
+#if RETROHTR_TRACE_LVL > 0
    debug_printf( RETROHTR_TRACE_LVL,
       "allocating " SIZE_T_FMT " nodes...", tree->nodes_sz_max );
+#endif /* RETROHTR_TRACE_LVL */
    maug_malloc_test(
       tree->nodes_h,
       tree->nodes_sz_max,

@@ -9,7 +9,6 @@
 #  endif
 #  include <retrogui.h>
 #  include <mhtml.h>
-#  include <mcssmerg.h>
 #  include <retrohtr.h>
 #endif /* !MAUG_NO_MHTML */
 
