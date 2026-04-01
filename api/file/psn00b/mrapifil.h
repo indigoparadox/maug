@@ -261,7 +261,7 @@ MERROR_RETVAL mfile_plt_init() {
 
 MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    MERROR_RETVAL retval = MERROR_OK;
-   maug_path filepath[MAUG_PATH_SZ_MAX];
+   maug_path filepath;
    size_t i_in = 0;
    char* filepath_p = (char*)filepath;
 

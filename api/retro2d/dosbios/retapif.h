@@ -308,7 +308,7 @@ cleanup:
 MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
-   maug_path filename_path[MAUG_PATH_SZ_MAX];
+   maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
    mfile_t bmp_file;
    struct MFMT_STRUCT_BMPFILE header_bmp;
