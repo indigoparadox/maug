@@ -827,6 +827,7 @@ MERROR_RETVAL retroflat_loop(
 #endif /* RETRO2D_TRACE_LVL */
       }
       retroflat_heartbeat_update();
+      retroflat_timer_handle();
    } while( WM_QUIT != msg.message && 0 < msg_retval );
 
 cleanup:

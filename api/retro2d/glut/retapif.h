@@ -10,6 +10,7 @@ void
 retroflat_glut_display( void ) {
    /* TODO: Work in frame_iter if provided. */
    retroflat_heartbeat_update();
+   retroflat_timer_handle();
    if( NULL != g_retroflat_state->loop_iter ) {
       g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
    }

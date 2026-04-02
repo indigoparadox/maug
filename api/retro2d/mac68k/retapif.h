@@ -204,6 +204,8 @@ MERROR_RETVAL retroflat_loop(
 
       retroflat_heartbeat_update();
 
+      retroflat_timer_handle();
+
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );

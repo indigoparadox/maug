@@ -754,6 +754,10 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #  define RETROFLAT_BMP_COLORS_SZ_MAX 256
 #endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
 
+#ifndef RETROFLAT_TIMER_CT_MAX
+#  define RETROFLAT_TIMER_CT_MAX 10
+#endif /* !RETROFLAT_TIMER_CT_MAX */
+
 /*! \} */ /* maug_retroflt_compiling */
 
 #define retroflat_wait_for_frame() \
@@ -1063,6 +1067,8 @@ struct RETROFLAT_3DTEX {
 #endif /* !retroflat_system_task */
 
 typedef maug_ms_t retroflat_ms_t;
+
+typedef void (*retroflat_timer_cb_t)( retroflat_ms_t time, void* data );
 
 #include "retrom2d.h"
 
@@ -1580,9 +1586,10 @@ uint8_t retroflat_viewport_focus_generic(
 
 /**
  * \relates RETROFLAT_STATE
- * \brief Check and update RETROFLAT_STATE::heartbeat_frame. This should be
- *        called in the API HAL on every iteration of the main loop (this is
- *        done automatically in the generic main loop).
+ * \brief Check and update RETROFLAT_STATE::heartbeat_frame.
+ *
+ * \note This should be called in the API HAL on every iteration of the main
+ *       loop (this is done automatically in the generic main loop).
  */
 #define retroflat_heartbeat_update() \
    /* Update the heartbeat animation frame. */ \
@@ -1721,6 +1728,15 @@ defined( RETROVDP_C )
 #  endif /* RETROFLAT_BMP_TEX */
 
    struct RETROFLAT_INPUT_STATE input;
+
+   /**
+    * \brief List of installable timers that should be tended every frame
+    *        with retroflat_handle_timers().
+    */
+   retroflat_timer_cb_t timers_cb[RETROFLAT_TIMER_CT_MAX];
+   retroflat_ms_t timers_at[RETROFLAT_TIMER_CT_MAX];
+   void* timers_data[RETROFLAT_TIMER_CT_MAX];
+   size_t timers_ct;
 
 #  ifndef RETROFLAT_NO_SOUND
    struct RETROFLAT_SOUND_STATE sound;
@@ -2048,6 +2064,19 @@ void retroflat_set_proc_resize(
 void retroflat_resize_v();
 
 /**
+ * \brief Add a timer callback to be executed at the given time.
+ * \return Index of the timer or merror_sz_to_retval() if error.
+ */
+ssize_t retroflat_timer_add(
+   retroflat_ms_t time, retroflat_timer_cb_t cb, void* data );
+
+/**
+ * \note This should be called in the API HAL on every iteration of the main
+ *       loop (this is done automatically in the generic main loop).
+ */
+void retroflat_timer_handle();
+
+/**
  * \addtogroup maug_retroflt_input
  * \{
  */
@@ -2219,6 +2248,8 @@ MERROR_RETVAL retroflat_loop_generic(
       }
 
       retroflat_heartbeat_update();
+
+      retroflat_timer_handle();
 
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
@@ -2948,6 +2979,61 @@ RETROFLAT_IN_KEY retroflat_repeat_input(
    }
 
    return key_out;
+}
+
+/* === */
+
+ssize_t retroflat_timer_add(
+   retroflat_ms_t at_time, retroflat_timer_cb_t cb, void* data
+) {
+   if( retroflat_get_ms() > at_time ) {
+      error_printf( "timer time is in the past!" );
+      return merror_retval_to_sz( MERROR_EXEC );
+   }
+
+   if( g_retroflat_state->timers_ct + 1 < RETROFLAT_TIMER_CT_MAX ) {
+      g_retroflat_state->timers_cb[g_retroflat_state->timers_ct] = cb;
+      g_retroflat_state->timers_at[g_retroflat_state->timers_ct] = at_time;
+      g_retroflat_state->timers_ct++;
+      return g_retroflat_state->timers_ct - 1;
+   }
+
+   error_printf( "too many timers!" );
+   return merror_retval_to_sz( MERROR_OVERFLOW );
+}
+
+/* === */
+
+void retroflat_timer_handle() {
+   size_t i = 0;
+   retroflat_ms_t time_now = 0;
+
+   time_now = retroflat_get_ms();
+
+   for( i = 0 ; g_retroflat_state->timers_ct > i ; i++ ) {
+      if( g_retroflat_state->timers_at[i] <= time_now ) {
+         g_retroflat_state->timers_cb[i](
+            time_now, g_retroflat_state->timers_data[i] );
+         memmove(
+            &(g_retroflat_state->timers_cb[i]),
+            &(g_retroflat_state->timers_cb[i + 1]),
+            sizeof( retroflat_timer_cb_t ) *
+               ((g_retroflat_state->timers_ct - i) - 1)
+         );
+         memmove(
+            &(g_retroflat_state->timers_at[i]),
+            &(g_retroflat_state->timers_at[i + 1]),
+            sizeof( retroflat_ms_t ) * ((g_retroflat_state->timers_ct - i) - 1)
+         );
+         memmove(
+            &(g_retroflat_state->timers_data[i]),
+            &(g_retroflat_state->timers_data[i + 1]),
+            sizeof( void* ) * ((g_retroflat_state->timers_ct - i) - 1)
+         );
+         g_retroflat_state->timers_ct--;
+         i--;
+      }
+   }
 }
 
 /* === */
