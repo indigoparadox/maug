@@ -704,14 +704,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
       return MERROR_GUI;
    }
 
-   if(
-      s_x + w > retroflat_bitmap_w( src ) ||
-      s_y + h > retroflat_bitmap_h( src )
-   ) {
-      error_printf( "attempting to blit from %d, %d %dx%d from %dx%d source!",
-         s_x, s_y, w, h, retroflat_bitmap_w( src ), retroflat_bitmap_h( src ) );
-      return MERROR_GUI;
-   }
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
 
 #if 0
    POLY_FT4* blit = (POLY_FT4*)(g_retroflat_state->platform.next_prim);

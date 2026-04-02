@@ -179,8 +179,13 @@ MERROR_RETVAL retroflat_blit_bitmap(
       return MERROR_GUI;
    }
 
-   retroflat_constrain_px( d_x, d_y, target, return MERROR_GUI );
-   retroflat_constrain_px( d_x + w, d_y + h, target, return MERROR_GUI );
+   /* TODO: This is only needed for a soft viewport... if the viewport can
+    * scroll then use that!
+    */
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
 
    /* TODO */
 #  pragma message( "warning: blit_bitmap not implemented" )

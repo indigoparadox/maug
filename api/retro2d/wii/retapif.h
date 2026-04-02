@@ -240,6 +240,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
+
    /* TODO */
 #  pragma message( "warning: blit_bitmap not implemented" )
 

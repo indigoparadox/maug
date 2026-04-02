@@ -455,10 +455,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = &(g_retroflat_state->platform.screen_buffer);
    }
 
-   if( retroflat_screen_buffer() == target ) {
-      retval = retroflat_viewport_px( &s_x, &s_x, &d_x, &d_y, &w, &h );
-      maug_cleanup_if_not_ok();
-   }
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_x, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
 
    /* DOS BIOS not setup for hardware scrolling. */
    /* TODO: Make exception if in EGA mode! */

@@ -302,18 +302,14 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* Allegro not setup for hardware scrolling. */
-   if(
-      0 > d_x || 0 > d_y ||
-      retroflat_bitmap_w( target ) + w <= d_x ||
-      retroflat_bitmap_h( target ) + h <= d_y
-   ) {
-      goto cleanup;
-   }
-
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
 
    assert( NULL != src );
    assert( NULL != target->b );

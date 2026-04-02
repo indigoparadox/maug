@@ -1916,7 +1916,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 /**
  * \brief Chop w/h down to fit inside viewport or just fail if it's impossible.
  */
-MERROR_RETVAL retroflat_viewport_px(
+MERROR_RETVAL retroflat_trim_px(
+   struct RETROFLAT_BITMAP* bitmap,
    int16_t instance,
    retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
    retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
@@ -3062,7 +3063,8 @@ void retroflat_timer_handle() {
 
 /* === */
 
-MERROR_RETVAL retroflat_viewport_px(
+MERROR_RETVAL retroflat_trim_px(
+   struct RETROFLAT_BITMAP* bitmap,
    int16_t instance,
    retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
    retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
@@ -3072,23 +3074,36 @@ MERROR_RETVAL retroflat_viewport_px(
    retroflat_pxxy_t trim_right = *d_x + *w;
    retroflat_pxxy_t viewport_bottom = 0;
    retroflat_pxxy_t viewport_right = 0;
+   retroflat_pxxy_t viewport_left = 0;
+   retroflat_pxxy_t viewport_top = 0;
 
-   if( RETROFLAT_INSTANCE_NULL == instance ) {
+   if( 
+      /* On the screen, constrain to the edges of the viewport. */
+      retroflat_screen_buffer() == bitmap &&
       /* Probably blitting a window or other element that can go anywhere. */
-      return MERROR_OK;
+      RETROFLAT_INSTANCE_NULL != instance
+   ) {
+      viewport_left = retroflat_viewport_screen_get_x();
+      viewport_top = retroflat_viewport_screen_get_y();
+      viewport_bottom =
+         (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
+      viewport_right =
+         (retroflat_viewport_screen_get_x() + retroflat_viewport_screen_w());
+
+   } else {
+      /* Constrain to the edges of the arbitrary bitmap. */
+      viewport_bottom = retroflat_bitmap_h( bitmap );
+      viewport_right = retroflat_bitmap_w( bitmap );
    }
 
-   viewport_bottom =
-      (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
-
-   if(
-      viewport_bottom < *d_y || trim_bottom < retroflat_viewport_screen_get_y()
-   ) {
-      error_printf( "attempted to blit bitmap way out of screen at %d, %d!",
+   if( viewport_bottom < *d_y || trim_bottom < viewport_top ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
          *d_x, *d_y );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
       return MERROR_GUI;
 
-   } else if( viewport_bottom < trim_bottom ) {
+   } else if( viewport_bottom <= trim_bottom ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
@@ -3097,30 +3112,27 @@ MERROR_RETVAL retroflat_viewport_px(
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *h -= (trim_bottom - viewport_bottom);
 
-   } else if( retroflat_viewport_screen_get_y() > *d_y ) {
+   } else if( viewport_top > *d_y ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
             SIZE_T_FMT,
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *h -= (retroflat_viewport_screen_get_y() - *d_y);
-      *s_y += (retroflat_viewport_screen_get_y() - *d_y);
-      *d_y += (retroflat_viewport_screen_get_y() - *d_y);
-      assert( retroflat_viewport_screen_get_y() == *d_y );
+      *h -= (viewport_top - *d_y);
+      *s_y += (viewport_top - *d_y);
+      *d_y += (viewport_top - *d_y);
+      assert( viewport_top == *d_y );
    }
 
-   viewport_right =
-      (retroflat_viewport_screen_get_x() + retroflat_viewport_screen_w());
-
-   if(
-      viewport_right < *d_x || trim_right < retroflat_viewport_screen_get_x()
-   ) {
-      error_printf( "attempted to blit bitmap way out of screen at %d, %d!",
+   if( viewport_right < *d_x || trim_right < viewport_left ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
          *d_x, *d_y );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
       return MERROR_GUI;
 
-   } else if( viewport_right < trim_right ) {
+   } else if( viewport_right <= trim_right ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
@@ -3129,17 +3141,17 @@ MERROR_RETVAL retroflat_viewport_px(
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *w -= (trim_right - viewport_right);
 
-   } else if( retroflat_viewport_screen_get_x() > *d_x ) {
+   } else if( viewport_left > *d_x ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
             SIZE_T_FMT,
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *w -= (retroflat_viewport_screen_get_x() - *d_x);
-      *s_x += (retroflat_viewport_screen_get_x() - *d_x);
-      *d_x += (retroflat_viewport_screen_get_x() - *d_x);
-      assert( retroflat_viewport_screen_get_x() == *d_x );
+      *w -= (viewport_left - *d_x);
+      *s_x += (viewport_left - *d_x);
+      *d_x += (viewport_left - *d_x);
+      assert( viewport_left == *d_x );
    }
 
    return MERROR_OK;

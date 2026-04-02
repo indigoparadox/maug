@@ -944,11 +944,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_screen_buffer() == target ) {
-      retval = retroflat_viewport_px(
-         instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
-      maug_cleanup_if_not_ok();
-   }
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
 
    src_rect.x = s_x;
    src_rect.y = s_y;

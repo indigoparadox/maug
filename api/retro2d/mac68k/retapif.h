@@ -598,6 +598,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
    SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
    SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
 
+   /* TODO: Implement quickdraw viewpoer OR trim_px() */
+
    if( 2 < g_retroflat_state->screen_colors ) {
       /* Use GWorlds. */
 

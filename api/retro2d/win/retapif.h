@@ -1504,6 +1504,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
+   /* Trim sprite to stay on-screen. */
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
+
    assert( !retroflat_bitmap_locked( src ) );
    assert( retroflat_bitmap_locked( target ) );
 
