@@ -232,7 +232,8 @@ MERROR_RETVAL retroflat_load_bitmap_px_cb(
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
