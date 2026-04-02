@@ -1917,6 +1917,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
  * \brief Chop w/h down to fit inside viewport or just fail if it's impossible.
  */
 MERROR_RETVAL retroflat_viewport_px(
+   int16_t instance,
    retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
    retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
    retroflat_pxxy_t* w, retroflat_pxxy_t* h );
@@ -3062,6 +3063,7 @@ void retroflat_timer_handle() {
 /* === */
 
 MERROR_RETVAL retroflat_viewport_px(
+   int16_t instance,
    retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
    retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
    retroflat_pxxy_t* w, retroflat_pxxy_t* h
@@ -3071,12 +3073,19 @@ MERROR_RETVAL retroflat_viewport_px(
    retroflat_pxxy_t viewport_bottom = 0;
    retroflat_pxxy_t viewport_right = 0;
 
+   if( RETROFLAT_INSTANCE_NULL == instance ) {
+      /* Probably blitting a window or other element that can go anywhere. */
+      return MERROR_OK;
+   }
+
    viewport_bottom =
       (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
 
    if(
       viewport_bottom < *d_y || trim_bottom < retroflat_viewport_screen_get_y()
    ) {
+      error_printf( "attempted to blit bitmap way out of screen at %d, %d!",
+         *d_x, *d_y );
       return MERROR_GUI;
 
    } else if( viewport_bottom < trim_bottom ) {
@@ -3107,6 +3116,8 @@ MERROR_RETVAL retroflat_viewport_px(
    if(
       viewport_right < *d_x || trim_right < retroflat_viewport_screen_get_x()
    ) {
+      error_printf( "attempted to blit bitmap way out of screen at %d, %d!",
+         *d_x, *d_y );
       return MERROR_GUI;
 
    } else if( viewport_right < trim_right ) {

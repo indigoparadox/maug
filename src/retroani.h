@@ -576,7 +576,7 @@ MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
    int8_t* p_y_offset = NULL;
    uint8_t* p_str_sz = NULL;
    char* str = NULL;
-   size_t str_height = 0;
+   retroflat_pxxy_t str_height = 0;
 
    p_y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
@@ -655,7 +655,7 @@ MERROR_RETVAL retroani_set_string(
    uint8_t* p_str_sz = NULL;
    char* str = NULL;
    struct RETROANI* ani = NULL;
-   size_t str_height = 0;
+   retroflat_pxxy_t str_height = 0;
 
    if( a_idx >= mdata_vector_ct( ani_stack ) ) {
       return MERROR_OVERFLOW;

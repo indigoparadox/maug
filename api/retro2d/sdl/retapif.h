@@ -945,7 +945,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    if( retroflat_screen_buffer() == target ) {
-      retval = retroflat_viewport_px( &s_x, &s_y, &d_x, &d_y, &w, &h );
+      retval = retroflat_viewport_px(
+         instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
       maug_cleanup_if_not_ok();
    }
 
