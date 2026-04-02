@@ -386,7 +386,8 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  if defined( RETROFLAT_API_WIN16 ) || defined( RETROFLAT_API_WIN32 )
@@ -437,7 +438,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    int16_t y_iter = 0,
@@ -454,13 +457,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    /* DOS BIOS not setup for hardware scrolling. */
    /* TODO: Make exception if in EGA mode! */
-   if(
-      0 > d_x || 0 > d_y ||
-      retroflat_bitmap_w( target ) + w <= d_x ||
-      retroflat_bitmap_h( target ) + h <= d_y
-   ) {
-      goto cleanup;
-   }
+   retroflat_constrain_px( d_x, d_y, target, return MERROR_GUI );
+   retroflat_constrain_px( s_x, s_y, target, return MERROR_GUI );
 
    switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
@@ -499,8 +497,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
       break;
    }
 
-cleanup:
-
    return retval;
 }
 
@@ -508,7 +504,7 @@ cleanup:
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
    uint16_t screen_byte_offset = 0,
       screen_bit_offset = 0;

@@ -39,24 +39,27 @@ MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_3DTEX* tex );
 
 void retro3d_texture_px(
    struct RETROFLAT_3DTEX* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags );
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_load_bitmap(
    const char* asset_name, struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
 MERROR_RETVAL retro3d_texture_blit(
    struct RETROFLAT_3DTEX* target, struct RETROFLAT_3DTEX* src,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance );
 
 MERROR_RETVAL retro3d_texture_create(
-   size_t w, size_t h, struct RETROFLAT_3DTEX* tex, uint8_t flags );
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_3DTEX* tex, uint8_t flags );
 
 void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex );
 
 void retro3d_texture_px(
    struct RETROFLAT_3DTEX* tex, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags );
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags );
 
 #endif /* RETROFLAT_BMP_TEX */
 
@@ -274,7 +277,9 @@ cleanup:
 
 MERROR_RETVAL retro3d_texture_blit(
    struct RETROFLAT_3DTEX* target, struct RETROFLAT_3DTEX* src,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -310,7 +315,8 @@ MERROR_RETVAL retro3d_texture_blit(
 /* === */
 
 MERROR_RETVAL retro3d_texture_create(
-   size_t w, size_t h, struct RETROFLAT_3DTEX* tex, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_3DTEX* tex, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -394,7 +400,7 @@ void retro3d_texture_destroy( struct RETROFLAT_3DTEX* tex ) {
 
 void retro3d_texture_px(
    struct RETROFLAT_3DTEX* tex, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
 
    if(

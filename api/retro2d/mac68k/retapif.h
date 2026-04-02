@@ -492,7 +492,8 @@ MERROR_RETVAL retroflat_load_bitmap_px_cb(
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int16_t width_bytes = 0;
@@ -577,7 +578,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -646,7 +649,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -674,7 +677,8 @@ void retroflat_px(
 
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
 ) {
    Rect r;
 
@@ -702,7 +706,8 @@ void retroflat_rect(
 
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags
 ) {
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -725,7 +730,8 @@ void retroflat_line(
 
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
 ) {
    Rect r;
 

@@ -677,7 +677,7 @@ static MERROR_RETVAL retrohtr_load_font(
       effect_style->FONT_FAMILY );
 #endif /* RETROHTR_TRACE_LVL */
 
-   if( 0 >= effect_style->FONT_FAMILY ) {
+   if( MDATA_STRPOOL_IDX_ERROR == effect_style->FONT_FAMILY ) {
       error_printf( "style has no font associated!" );
       /* TODO: Load fallback font? */
       retval = MERROR_GUI;
@@ -1507,7 +1507,7 @@ MERROR_RETVAL retrohtr_tree_draw(
    if( MHTML_TAG_TYPE_TEXT == p_tag->base.type ) {
 
       if(
-         0 > p_tag->TEXT.content_idx ||
+         MDATA_STRPOOL_IDX_ERROR == p_tag->TEXT.content_idx ||
 #ifdef RETROGXC_PRESENT
          0 > node->font_idx
 #else

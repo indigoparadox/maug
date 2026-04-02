@@ -68,6 +68,8 @@
 
 #define MDATA_STRPOOL_FLAG_DEDUPE 0x02
 
+#define MDATA_STRPOOL_IDX_ERROR 0
+
 typedef size_t mdata_strpool_idx_t;
 
 /**
@@ -632,13 +634,13 @@ mdata_strpool_idx_t mdata_strpool_find(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   mdata_strpool_idx_t i = 0;
+   mdata_strpool_idx_t i = MDATA_STRPOOL_IDX_ERROR;
    size_t* p_str_iter_sz = NULL;
    uint8_t autolock = 0;
 
    if( (MAUG_MHANDLE)NULL == strpool->str_h ) {
       error_printf( "strpool not allocated!" );
-      i = 0;
+      i = MDATA_STRPOOL_IDX_ERROR;
       goto cleanup;
    }
 
@@ -677,12 +679,12 @@ mdata_strpool_idx_t mdata_strpool_find(
    }
 
    /* String not found. */
-   i = 0;
+   i = MDATA_STRPOOL_IDX_ERROR;
 
 cleanup:
 
    if( MERROR_OK != retval ) {
-      i = 0;
+      i = MDATA_STRPOOL_IDX_ERROR;
    }
 
    if( autolock ) {
@@ -751,7 +753,7 @@ cleanup:
 mdata_strpool_idx_t mdata_strpool_append(
    struct MDATA_STRPOOL* strpool, const char* str, size_t str_sz, uint8_t flags
 ) {
-   mdata_strpool_idx_t idx_p_out = 0;
+   mdata_strpool_idx_t idx_p_out = MDATA_STRPOOL_IDX_ERROR;
    MERROR_RETVAL retval = MERROR_OK;
    size_t* p_str_sz = NULL;
    size_t alloc_sz = 0;
@@ -835,7 +837,7 @@ mdata_strpool_idx_t mdata_strpool_append(
 cleanup:
 
    if( MERROR_OK != retval ) {
-      idx_p_out = 0;
+      idx_p_out = MDATA_STRPOOL_IDX_ERROR;
    }
 
    if( NULL != strpool->str_p ) {

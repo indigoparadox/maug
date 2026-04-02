@@ -1355,7 +1355,8 @@ uint8_t retroflat_viewport_move_x_generic( int16_t x );
 uint8_t retroflat_viewport_move_y_generic( int16_t y );
 
 uint8_t retroflat_viewport_focus_generic(
-   size_t x1, size_t y1, size_t range, size_t speed );
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed );
 
 #  define retroflat_viewport_screen_x_generic( world_x ) \
    (g_retroflat_state->viewport.screen_x + \
@@ -1829,7 +1830,8 @@ MERROR_RETVAL retroflat_load_bitmap(
    const char* filename, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags );
 
 /**
  * \brief Unload a bitmap from a ::RETROFLAT_BITMAP struct. The struct, itself,
@@ -1855,15 +1857,14 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bitmap );
  */
 MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance );
 
 #ifdef RETROFLAT_TRACE_CONSTRAIN
 #  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
+      if( x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) ) { \
          error_printf( "attempted offscreen draw: %d, %d", x, y ); \
          retact; \
       }
@@ -1876,10 +1877,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
  * if bmp is NULL.
  */
 #  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
+      if( x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) ) { \
          retact; \
       }
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
@@ -1906,7 +1904,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp );
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   size_t x, size_t y, uint8_t flags );
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags );
 
 #ifdef RETROFLAT_SOFT_SHAPES
 #  ifdef RETROFLAT_OPENGL
@@ -1939,7 +1937,8 @@ void retroflat_px(
  */
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags );
 
 /**
  * \brief Draw an ellipse onto the target ::RETROFLAT_BITMAP.
@@ -1953,7 +1952,8 @@ void retroflat_rect(
  */
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags );
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags );
 
 #endif /* RETROFLAT_SOFT_SHAPES */
 
@@ -1975,7 +1975,8 @@ void retroflat_ellipse(
  */
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags );
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags );
 
 #endif /* RETROFLAT_SOFT_LINES */
 
@@ -1995,7 +1996,8 @@ void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
  */
 void retroflat_string_sz(
    struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str, size_t* w_out, size_t* h_out, uint8_t flags );
+   const char* font_str,
+   retroflat_pxxy_t* w_out, retroflat_pxxy_t* h_out, uint8_t flags );
 
 /**
  * \brief Draw a text string at the specified location in the specified font
@@ -2016,7 +2018,8 @@ void retroflat_string_sz(
  */
 void retroflat_string(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str, int16_t x_orig, int16_t y_orig,
+   const char* str, int str_sz, const char* font_str,
+   retroflat_pxxy_t x_orig, retroflat_pxxy_t y_orig,
    uint8_t flags );
 
 /* TODO: Documentation! */
@@ -3089,7 +3092,8 @@ uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
 /* === */
 
 uint8_t retroflat_viewport_focus_generic(
-   size_t x1, size_t y1, size_t range, size_t speed
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed
 ) {
    uint8_t moved = 0,
       new_moved = 0;

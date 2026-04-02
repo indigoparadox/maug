@@ -1259,7 +1259,8 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  ifndef RETROFLAT_OPENGL
@@ -1457,7 +1458,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    MERROR_RETVAL retval = 0;
@@ -1567,7 +1570,7 @@ cleanup:
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -1627,7 +1630,8 @@ void retroflat_px(
 
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
 ) {
 #  if !defined( RETROFLAT_OPENGL )
    HBRUSH old_brush = (HBRUSH)NULL;
@@ -1641,6 +1645,9 @@ void retroflat_rect(
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
+
+   retroflat_constrain_px( x, y, target, return );
+   retroflat_constrain_px( x + w, y + h, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -1684,7 +1691,8 @@ void retroflat_rect(
 
 void retroflat_line(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t flags
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags
 ) {
 #  if !defined( RETROFLAT_OPENGL )
    HPEN pen = (HPEN)NULL;
@@ -1699,6 +1707,9 @@ void retroflat_line(
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
+
+   retroflat_constrain_px( x1, y1, target, return );
+   retroflat_constrain_px( x2, y2, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -1744,7 +1755,8 @@ void retroflat_line(
 
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   int16_t x, int16_t y, int16_t w, int16_t h, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
 ) {
 #  if !defined( RETROFLAT_OPENGL )
    HPEN old_pen = (HPEN)NULL;
@@ -1758,6 +1770,9 @@ void retroflat_ellipse(
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
+
+   retroflat_constrain_px( x, y, target, return );
+   retroflat_constrain_px( x + w, y + h, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 

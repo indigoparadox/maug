@@ -114,7 +114,9 @@ static void _retroflat_nds_change_bg() {
 
 static void _retroflat_nds_blit_sprite(
    struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    int tile_idx = 0,
@@ -182,7 +184,9 @@ cleanup:
 
 void _retroflat_nds_blit_tiles(
    struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    uint16_t* bg_map = NULL;
    int tile_idx = 0,
@@ -496,7 +500,8 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -545,7 +550,9 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_blit_bitmap(
    struct RETROFLAT_BITMAP* target, struct RETROFLAT_BITMAP* src,
-   size_t s_x, size_t s_y, int16_t d_x, int16_t d_y, size_t w, size_t h,
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -590,7 +597,7 @@ cleanup:
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
    uint16_t* px_ptr = NULL;
    size_t metatile_idx = 0,
@@ -753,7 +760,8 @@ uint8_t retroflat_viewport_move_y( int16_t y ) {
 /* === */
 
 uint8_t retroflat_viewport_focus(
-   size_t x1, size_t y1, size_t range, size_t speed
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed
 ) {
    return retroflat_viewport_focus_generic( x1, y1, range, speed );
 }
