@@ -28,14 +28,14 @@
 struct RETROHTR_RENDER_NODE {
    uint8_t flags;
    /* TODO: Maybe get rid of these and replace them with MCSS_STYLE node? */
-   ssize_t x;
-   ssize_t y;
-   size_t w;
-   size_t h;
-   size_t m_l;
-   size_t m_r;
-   size_t m_t;
-   size_t m_b;
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
+   retroflat_pxxy_t w;
+   retroflat_pxxy_t h;
+   retroflat_pxxy_t m_l;
+   retroflat_pxxy_t m_r;
+   retroflat_pxxy_t m_t;
+   retroflat_pxxy_t m_b;
    uint8_t pos;
    uint8_t pos_flags;
    uint8_t edge;
@@ -115,7 +115,8 @@ void retrohtr_merge_styles(
 
 MERROR_RETVAL retrohtr_tree_create(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
-   size_t x, size_t y, size_t w, size_t h,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    ssize_t tag_idx, ssize_t node_idx, size_t d );
 
 /**
@@ -431,7 +432,8 @@ cleanup:
 
 MERROR_RETVAL retrohtr_tree_create(
    struct MHTML_PARSER* parser, struct RETROHTR_RENDER_TREE* tree,
-   size_t x, size_t y, size_t w, size_t h,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
    ssize_t tag_idx, ssize_t node_idx, size_t d
 ) {
    ssize_t node_new_idx = -1;
