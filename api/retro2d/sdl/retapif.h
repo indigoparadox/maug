@@ -944,6 +944,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
+   if( retroflat_screen_buffer() == target ) {
+      retval = retroflat_viewport_px( d_x, d_y, &w, &h );
+      maug_cleanup_if_not_ok();
+   }
+
    src_rect.x = s_x;
    src_rect.y = s_y;
    src_rect.w = w;
@@ -1001,6 +1006,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
 #     endif /* !RETROFLAT_API_SDL1 */
+
+cleanup:
 
 #  endif
 

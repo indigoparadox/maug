@@ -455,10 +455,13 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = &(g_retroflat_state->platform.screen_buffer);
    }
 
+   if( retroflat_screen_buffer() == target ) {
+      retval = retroflat_viewport_px( d_x, d_y, &w, &h );
+      maug_cleanup_if_not_ok();
+   }
+
    /* DOS BIOS not setup for hardware scrolling. */
    /* TODO: Make exception if in EGA mode! */
-   retroflat_constrain_px( d_x, d_y, target, return MERROR_GUI );
-   retroflat_constrain_px( s_x, s_y, target, return MERROR_GUI );
 
    switch( g_retroflat_state->platform.screen_mode ) {
    case RETROFLAT_SCREEN_MODE_VGA:
@@ -496,6 +499,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
       retval = MERROR_GUI;
       break;
    }
+
+cleanup:
 
    return retval;
 }

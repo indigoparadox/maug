@@ -1141,14 +1141,14 @@ struct RETROFLAT_ARGS {
 struct RETROFLAT_VIEWPORT {
    /**
     * \brief X position of the viewport in real screen memory in pixels.
-    *        Should only be retrieved through retroflat_viewport_screen_x() and
-    *        set through retroflat_viewport_set_pos_size().
+    *        Should only be retrieved through retroflat_viewport_screen_get_x()
+    *        and set through retroflat_viewport_set_pos_size().
     * */
    int16_t screen_x;
    /**
     * \brief Y position of the viewport in real screen memory in pixels.
-    *        Should only be retrieved through retroflat_viewport_screen_y() and
-    *        set through retroflat_viewport_set_pos_size()
+    *        Should only be retrieved through retroflat_viewport_screen_get_y()
+    *        and set through retroflat_viewport_set_pos_size()
     * */
    int16_t screen_y;
    /**
@@ -1372,6 +1372,12 @@ uint8_t retroflat_viewport_focus_generic(
    (g_retroflat_state->viewport.screen_y + \
       ((world_y) - retroflat_viewport_world_y()))
 
+#  define retroflat_viewport_screen_get_x_generic() \
+   (g_retroflat_state->viewport.screen_x)
+
+#  define retroflat_viewport_screen_get_y_generic() \
+   (g_retroflat_state->viewport.screen_y)
+
 #endif /* !DOCUMENTATION */
 
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
@@ -1555,6 +1561,12 @@ uint8_t retroflat_viewport_focus_generic(
  */
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
+
+#  define retroflat_viewport_screen_get_x() \
+   retroflat_viewport_screen_get_x_generic()
+
+#  define retroflat_viewport_screen_get_y() \
+   retroflat_viewport_screen_get_y_generic()
 
 #  ifndef RETROFLAT_VIEWPORT_OVERRIDE_MOVE
 #     define retroflat_viewport_move_x( x ) \
@@ -1897,6 +1909,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
          retact; \
       }
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
+
+/**
+ * \brief Chop w/h down to fit inside viewport or just fail if it's impossible.
+ *
+ * \note Since retroflat_pxxy_t is unsigned, stuff drawn to the left/top of
+ *       the viewport should always vanish!
+ */
+MERROR_RETVAL retroflat_viewport_px(
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t* w, retroflat_pxxy_t* h );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -3034,6 +3056,52 @@ void retroflat_timer_handle() {
          i--;
       }
    }
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_viewport_px(
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t* w, retroflat_pxxy_t* h
+) {
+   retroflat_pxxy_t trim_bottom = y + *h;
+   retroflat_pxxy_t trim_right = x + *w;
+   retroflat_pxxy_t viewport_bottom = 0;
+   retroflat_pxxy_t viewport_right = 0;
+
+   viewport_bottom =
+      (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
+
+   if( viewport_bottom < y || y < retroflat_viewport_screen_get_y() ) {
+      return MERROR_GUI;
+
+   } else if( viewport_bottom < trim_bottom ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf(
+         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
+            SIZE_T_FMT,
+         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
+      *h -= (trim_bottom - viewport_bottom);
+   }
+
+   viewport_right =
+      (retroflat_viewport_screen_get_x() + retroflat_viewport_screen_w());
+
+   if( viewport_right < x || x < retroflat_viewport_screen_get_x() ) {
+      return MERROR_GUI;
+
+   } else if( viewport_right < trim_right ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf(
+         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
+            SIZE_T_FMT,
+         trim_right - viewport_right, trim_right, viewport_right );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
+      *w -= (trim_right - viewport_right);
+   }
+
+   return MERROR_OK;
 }
 
 /* === */
