@@ -507,8 +507,16 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
+   /*
    assert( 0 == w % 8 );
    assert( 0 == h % 8 );
+   */
+   if( 0 != w % 8 || 0 != h % 8 ) {
+      error_printf( "bitmap size %d x %d not divisible by 8!", w, h );
+      retval = MERROR_GUI;
+      while( 1 );
+      goto cleanup;
+   }
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 

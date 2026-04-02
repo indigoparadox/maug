@@ -27,6 +27,10 @@ define TGTNDSLIBN
 
 CFLAGS_GCC_NDS := $$(DEFINES_GCC_NDS) $$(INCLUDES_GCC_NDS) --sysroot $(DEVKITARM)/arm-none-eabi -march=armv5te -mtune=arm946e-s -ffunction-sections -fdata-sections
 
+ifneq ("$(BUILD)","RELEASE")
+CFLAGS_GCC_NDS += -ggdb
+endif
+
 # Setup CFLAGS_GCC_NDS_LIBNDS
 
 DEFINES_GCC_NDS_LIBNDS += -DRETROFLAT_API_LIBNDS -DRETROFLAT_API_CALICO \
