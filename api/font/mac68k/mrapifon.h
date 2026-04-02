@@ -88,8 +88,9 @@ cleanup:
 void retrofont_string_indent(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t x, size_t y,
-   size_t max_w, size_t max_h, size_t indent, uint8_t flags
+   MAUG_MHANDLE font_h, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t indent,
+   uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    unsigned char str_buf[128];

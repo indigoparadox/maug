@@ -262,7 +262,8 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retroflat_create_bitmap(
-   size_t w, size_t h, struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
+   retroflat_pxxy_t w, retroflat_pxxy_t h,
+   struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
@@ -335,7 +336,7 @@ cleanup:
 
 void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   size_t x, size_t y, uint8_t flags
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {

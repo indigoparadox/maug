@@ -236,7 +236,8 @@ uint8_t retroflat_viewport_move_y( int16_t y );
  *          or problems may occur!
  */
 uint8_t retroflat_viewport_focus(
-   size_t x1, size_t y1, size_t range, size_t speed );
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed );
 
 /**
  * \brief Return the screenspace X coordinate at which something at the given
@@ -251,6 +252,12 @@ uint8_t retroflat_viewport_focus(
  */
 #  define retroflat_viewport_screen_y( world_y ) \
    retroflat_viewport_screen_y_generic( world_y )
+
+#  define retroflat_viewport_screen_get_x() \
+   retroflat_viewport_screen_get_x_generic()
+
+#  define retroflat_viewport_screen_get_y() \
+   retroflat_viewport_screen_get_y_generic()
 
 #  define retroflat_system_task() pmMainLoop();
 
