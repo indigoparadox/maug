@@ -876,7 +876,7 @@ typedef int8_t retroflat_dir8_t;
  * \todo Make this signed when most of the library uses it. Right now, it
  *       causes too many issues with passed references.
  */
-typedef size_t retroflat_pxxy_t;
+typedef int16_t retroflat_pxxy_t;
 
 #define PXXY_FMT SIZE_T_FMT
 
@@ -1144,63 +1144,63 @@ struct RETROFLAT_VIEWPORT {
     *        Should only be retrieved through retroflat_viewport_screen_get_x()
     *        and set through retroflat_viewport_set_pos_size().
     * */
-   int16_t screen_x;
+   retroflat_pxxy_t screen_x;
    /**
     * \brief Y position of the viewport in real screen memory in pixels.
     *        Should only be retrieved through retroflat_viewport_screen_get_y()
     *        and set through retroflat_viewport_set_pos_size()
     * */
-   int16_t screen_y;
+   retroflat_pxxy_t screen_y;
    /**
     * \brief The X offset, in pixels, of the viewport on the world tilemap.
     *        Should only be retrieved through retroflat_viewport_world_x() and
     *        set through retroflat_viewport_set_world_pos().
     */
-   int16_t world_x;
+   retroflat_pxxy_t world_x;
    /**
     * \brief The Y offset, in pixels, of the viewport on the world tilemap.
     *        Should only be retrieved through retroflat_viewport_world_y() and
     *        set through retroflat_viewport_set_world_pos().
     */
-   int16_t world_y;
+   retroflat_pxxy_t world_y;
    /**
     * \brief The width of the entire world tilemap in pixels.
     *        Should only be retrieved through retroflat_viewport_world_w() and
     *        set through retroflat_viewport_set_world().
     */
-   int16_t world_w;
+   retroflat_pxxy_t world_w;
    /**
     * \brief The height of the entire world tilemap in pixels.
     *        Should only be retrieved through retroflat_viewport_world_h() and
     *        set through retroflat_viewport_set_world().
     */
-   int16_t world_h;
+   retroflat_pxxy_t world_h;
    /**
     * \brief Viewport width in pixels.
     *        Should only be retrieved through retroflat_viewport_screen_w() and
     *        set through retroflat_viewport_set_pos_size().
     */
-   uint16_t screen_w;
+   retroflat_pxxy_t screen_w;
    /**
     * \brief Viewport height in pixels.
     *        Should only be retrieved through retroflat_viewport_screen_w() and
     *        set through retroflat_viewport_set_pos_size().
     */
-   uint16_t screen_h;
+   retroflat_pxxy_t screen_h;
    /**
     * \brief Difference between viewport width and screen width in pixels.
     *        Should only be retrieved through
     *        retroflat_viewport_screen_w_remainder() and
     *        calculated through retroflat_viewport_set_pos_size().
     */
-   uint16_t screen_w_remainder;
+   retroflat_pxxy_t screen_w_remainder;
    /**
     * \brief Difference between viewport height and screen height in pixels.
     *        Should only be retrieved through
     *        retroflat_viewport_screen_h_remainder() and
     *        calculated through retroflat_viewport_set_pos_size().
     */
-   uint16_t screen_h_remainder;
+   retroflat_pxxy_t screen_h_remainder;
    /**
     * \brief The number of tiles across that fit in the viewport.
     *        Should only be retrieved through
@@ -1892,7 +1892,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 #ifdef RETROFLAT_TRACE_CONSTRAIN
 #  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) ) { \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
          error_printf( "attempted offscreen draw: %d, %d", x, y ); \
          retact; \
       }
@@ -1912,12 +1915,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
 /**
  * \brief Chop w/h down to fit inside viewport or just fail if it's impossible.
- *
- * \note Since retroflat_pxxy_t is unsigned, stuff drawn to the left/top of
- *       the viewport should always vanish!
  */
 MERROR_RETVAL retroflat_viewport_px(
-   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
+   retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
    retroflat_pxxy_t* w, retroflat_pxxy_t* h );
 
 /*! \} */ /* maug_retroflt_bitmap */
@@ -3061,18 +3062,21 @@ void retroflat_timer_handle() {
 /* === */
 
 MERROR_RETVAL retroflat_viewport_px(
-   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
+   retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
    retroflat_pxxy_t* w, retroflat_pxxy_t* h
 ) {
-   retroflat_pxxy_t trim_bottom = y + *h;
-   retroflat_pxxy_t trim_right = x + *w;
+   retroflat_pxxy_t trim_bottom = *d_y + *h;
+   retroflat_pxxy_t trim_right = *d_x + *w;
    retroflat_pxxy_t viewport_bottom = 0;
    retroflat_pxxy_t viewport_right = 0;
 
    viewport_bottom =
       (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
 
-   if( viewport_bottom < y || y < retroflat_viewport_screen_get_y() ) {
+   if(
+      viewport_bottom < *d_y || trim_bottom < retroflat_viewport_screen_get_y()
+   ) {
       return MERROR_GUI;
 
    } else if( viewport_bottom < trim_bottom ) {
@@ -3083,12 +3087,26 @@ MERROR_RETVAL retroflat_viewport_px(
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *h -= (trim_bottom - viewport_bottom);
+
+   } else if( retroflat_viewport_screen_get_y() > *d_y ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf(
+         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
+            SIZE_T_FMT,
+         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
+      *h -= (retroflat_viewport_screen_get_y() - *d_y);
+      *s_y += (retroflat_viewport_screen_get_y() - *d_y);
+      *d_y += (retroflat_viewport_screen_get_y() - *d_y);
+      assert( retroflat_viewport_screen_get_y() == *d_y );
    }
 
    viewport_right =
       (retroflat_viewport_screen_get_x() + retroflat_viewport_screen_w());
 
-   if( viewport_right < x || x < retroflat_viewport_screen_get_x() ) {
+   if(
+      viewport_right < *d_x || trim_right < retroflat_viewport_screen_get_x()
+   ) {
       return MERROR_GUI;
 
    } else if( viewport_right < trim_right ) {
@@ -3099,6 +3117,18 @@ MERROR_RETVAL retroflat_viewport_px(
          trim_right - viewport_right, trim_right, viewport_right );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *w -= (trim_right - viewport_right);
+
+   } else if( retroflat_viewport_screen_get_x() > *d_x ) {
+#ifdef RETROFLAT_TRACE_CONSTRAIN
+      error_printf(
+         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
+            SIZE_T_FMT,
+         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
+#endif /* RETROFLAT_TRACE_CONSTRAIN */
+      *w -= (retroflat_viewport_screen_get_x() - *d_x);
+      *s_x += (retroflat_viewport_screen_get_x() - *d_x);
+      *d_x += (retroflat_viewport_screen_get_x() - *d_x);
+      assert( retroflat_viewport_screen_get_x() == *d_x );
    }
 
    return MERROR_OK;

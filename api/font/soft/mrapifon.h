@@ -220,7 +220,8 @@ cleanup:
 
 static void retrofont_blit_glyph(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
-   char c, struct RETROFONT* font, size_t x, size_t y, uint8_t flags
+   char c, struct RETROFONT* font,
+   retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
    uint8_t* glyph = retrofont_glyph_at( font, c );
    int16_t x_iter, y_iter, y_start, y_end, x_end, x_pen_down = -1;
@@ -300,8 +301,9 @@ static void retrofont_blit_glyph(
 void retrofont_string_indent(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   MAUG_MHANDLE font_h, size_t x, size_t y,
-   size_t max_w, size_t max_h, size_t x_iter, uint8_t flags
+   MAUG_MHANDLE font_h, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t x_iter,
+   uint8_t flags
 ) {
    size_t i = 0;
    size_t y_iter = y;

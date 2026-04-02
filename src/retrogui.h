@@ -586,7 +586,7 @@ MERROR_RETVAL retrogui_set_ctl_level(
    uint8_t flags );
 
 MERROR_RETVAL retrogui_init_ctl(
-   union RETROGUI_CTL* ctl, uint8_t type, size_t idc );
+   union RETROGUI_CTL* ctl, uint8_t type, retrogui_idc_t idc );
 
 /**
  * \relates RETROGUI
@@ -664,7 +664,7 @@ MAUG_CONST char* SEG_MCONST gc_retrogui_ctl_names[] = {
 #endif /* RETROGUI_TRACE_TOKENS */
 
 static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
-   struct RETROGUI* gui, size_t idc );
+   struct RETROGUI* gui, retrogui_idc_t idc );
 
 /* === Control: NONE === */
 
@@ -2110,7 +2110,7 @@ static MERROR_RETVAL retrogui_init_FILLBAR( union RETROGUI_CTL* ctl ) {
 /* === Static Internal Functions === */
 
 static union RETROGUI_CTL* _retrogui_get_ctl_by_idc(
-   struct RETROGUI* gui, size_t idc
+   struct RETROGUI* gui, retrogui_idc_t idc
 ) {
    size_t i = 0;
    union RETROGUI_CTL* ctl = NULL;
@@ -2447,7 +2447,8 @@ cleanup:
 
 MERROR_RETVAL retrogui_pos_ctl(
    struct RETROGUI* gui, retrogui_idc_t idc,
-   size_t x, size_t y, size_t w, size_t h
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    union RETROGUI_CTL* ctl = NULL;
@@ -3196,7 +3197,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogui_init_ctl(
-   union RETROGUI_CTL* ctl, uint8_t type, size_t idc
+   union RETROGUI_CTL* ctl, uint8_t type, retrogui_idc_t idc
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 

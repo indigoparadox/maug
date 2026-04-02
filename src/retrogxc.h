@@ -103,25 +103,27 @@ MAUG_MHANDLE retrogxc_get_asset(
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    retroflat_blit_t* target, size_t bitmap_idx,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y,
-   size_t w, size_t h, int16_t instance );
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, int16_t instance );
 
 MERROR_RETVAL retrogxc_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   size_t font_idx, size_t x, size_t y,
-   size_t max_w, size_t max_h, uint8_t flags );
+   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, uint8_t flags );
 
 MERROR_RETVAL retrogxc_string_indent(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   size_t font_idx, size_t x, size_t y,
-   size_t max_w, size_t max_h, size_t indent, uint8_t flags );
+   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t indent,
+   uint8_t flags );
 
 MERROR_RETVAL retrogxc_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   size_t font_idx, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags );
+   size_t font_idx, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* out_w_p, retroflat_pxxy_t* out_h_p, uint8_t flags );
 
 MERROR_RETVAL retrogxc_bitmap_wh(
    size_t bitmap_idx, retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h );
@@ -396,8 +398,9 @@ cleanup:
 
 MERROR_RETVAL retrogxc_blit_bitmap(
    retroflat_blit_t* target, size_t bitmap_idx,
-   size_t s_x, size_t s_y, size_t d_x, size_t d_y,
-   size_t w, size_t h, int16_t instance
+   retroflat_pxxy_t s_x, retroflat_pxxy_t s_y,
+   retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
@@ -516,8 +519,8 @@ int16_t retrogxc_load_font(
 MERROR_RETVAL retrogxc_string(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   size_t font_idx, size_t x, size_t y,
-   size_t max_w, size_t max_h, uint8_t flags
+   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, uint8_t flags
 ) {
 
    return retrogxc_string_indent(
@@ -529,8 +532,9 @@ MERROR_RETVAL retrogxc_string(
 MERROR_RETVAL retrogxc_string_indent(
    retroflat_blit_t* target, RETROFLAT_COLOR color,
    const char* str, size_t str_sz,
-   size_t font_idx, size_t x, size_t y,
-   size_t max_w, size_t max_h, size_t indent, uint8_t flags
+   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t indent,
+   uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
@@ -569,8 +573,8 @@ cleanup:
 
 MERROR_RETVAL retrogxc_string_sz(
    retroflat_blit_t* target, const char* str, size_t str_sz,
-   size_t font_idx, size_t max_w, size_t max_h,
-   size_t* out_w_p, size_t* out_h_p, uint8_t flags
+   size_t font_idx, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
+   retroflat_pxxy_t* out_w_p, retroflat_pxxy_t* out_h_p, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
