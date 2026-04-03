@@ -97,9 +97,9 @@
 
 struct RETROWIN {
    uint8_t flags;
-   size_t idc;
-   size_t x;
-   size_t y;
+   retrogui_idc_t idc;
+   retroflat_pxxy_t x;
+   retroflat_pxxy_t y;
    MAUG_MHANDLE gui_h;
    struct RETROGUI* gui_p;
 #ifndef RETROWIN_NO_BITMAP
@@ -144,7 +144,8 @@ void retrowin_free_win( struct RETROWIN* win );
 
 MERROR_RETVAL retrowin_free_all_win( struct MDATA_VECTOR* win_stack );
 
-ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
+ssize_t retrowin_get_by_idc(
+   retrogui_idc_t idc, struct MDATA_VECTOR* win_stack );
 
 /**
  * \brief Create a new window on the given win_stack.
@@ -156,8 +157,9 @@ ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack );
  */
 ssize_t retrowin_push_win(
    struct RETROGUI* gui, struct MDATA_VECTOR* win_stack,
-   size_t idc, const char* font_filename,
-   size_t x, size_t y, size_t w, size_t h, uint8_t flags );
+   retrogui_idc_t idc, const maug_path font_filename,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags );
 
 /**
  * \brief Destroy the given window's resources and remove it from the window
@@ -165,7 +167,7 @@ ssize_t retrowin_push_win(
  * \param idc Identifier (NOT index) of the window to destroy.
  */
 MERROR_RETVAL retrowin_destroy_win(
-   struct MDATA_VECTOR* win_stack, size_t idc );
+   struct MDATA_VECTOR* win_stack, retrogui_idc_t idc );
 
 #ifdef RETROW3D_C
 
@@ -348,7 +350,7 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
 #endif /* !RETROWIN_NO_BITMAP */
 #if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
-            "redrawing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT,
+            "redrawing window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
             i, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
 
@@ -403,7 +405,7 @@ MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
 
 #if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL,
-         "refreshing window idx " SIZE_T_FMT ", IDC " SIZE_T_FMT,
+         "refreshing window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
          i, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
 
@@ -586,7 +588,9 @@ cleanup:
 
 /* === */
 
-ssize_t retrowin_get_by_idc( size_t idc, struct MDATA_VECTOR* win_stack ) {
+ssize_t retrowin_get_by_idc(
+   retrogui_idc_t idc, struct MDATA_VECTOR* win_stack
+) {
    ssize_t idx_out = -1;
    int autolock = 0;
    size_t i = 0;
@@ -627,16 +631,28 @@ cleanup:
 
 ssize_t retrowin_push_win(
    struct RETROGUI* gui, struct MDATA_VECTOR* win_stack,
-   size_t idc, const char* font_filename,
-   size_t x, size_t y, size_t w, size_t h, uint8_t flags
+   retrogui_idc_t idc, const maug_path font_filename,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    struct RETROWIN win;
    ssize_t idx_out = -1;
 
+   if(
+      0 > x || 0 > y ||
+      retroflat_screen_w() < x + w || retroflat_screen_h() < y + h
+   ) {
+      error_printf( "attempting to create window with IDC " RETROGUI_IDC_FMT
+         " offscreen at %d, %d (%d x %d)", idc, x, y, w, h );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    idx_out = retrowin_get_by_idc( idc, win_stack );
    if( 0 <= idx_out ) {
-      error_printf( "window IDC " SIZE_T_FMT " already exists!", idc );
+      error_printf( "window IDC " RETROGUI_IDC_FMT " already exists!", idc );
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -683,8 +699,8 @@ ssize_t retrowin_push_win(
 
 #if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
-      "pushing window IDC " SIZE_T_FMT ", GUI %p: " SIZE_T_FMT "x" SIZE_T_FMT
-      " @ " SIZE_T_FMT ", " SIZE_T_FMT,
+      "pushing window IDC " RETROGUI_IDC_FMT ", GUI %p: "
+         SIZE_T_FMT "x" SIZE_T_FMT " @ " SIZE_T_FMT ", " SIZE_T_FMT,
       win.idc, win.gui_p,
       win.gui_p->w, win.gui_p->h, win.gui_p->x, win.gui_p->y );
 #endif /* RETROWIN_TRACE_LVL */
@@ -715,7 +731,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrowin_destroy_win(
-   struct MDATA_VECTOR* win_stack, size_t idc
+   struct MDATA_VECTOR* win_stack, retrogui_idc_t idc
 ) {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
@@ -743,7 +759,8 @@ MERROR_RETVAL retrowin_destroy_win(
       if( !retrowin_win_is_active( win ) ) {
 #if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
-            "window IDC " SIZE_T_FMT " found, but not active! (flags: 0x%02x)",
+            "window IDC " RETROGUI_IDC_FMT
+               " found, but not active! (flags: 0x%02x)",
             idc, win->flags );
 #endif /* RETROWIN_TRACE_LVL */
          continue;

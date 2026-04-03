@@ -533,7 +533,7 @@ MERROR_RETVAL retrogui_push_ctl(
  * calling retrogui_destroy() on this ::RETROGUI.
  */
 MERROR_RETVAL retrogui_set_font(
-   struct RETROGUI* gui, const char* font_path );
+   struct RETROGUI* gui, const maug_path font_path );
 
 #ifndef RETROGUI_NO_TEXTBOX
 
@@ -2685,7 +2685,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogui_set_font(
-   struct RETROGUI* gui, const char* font_path
+   struct RETROGUI* gui, const maug_path font_path
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
