@@ -878,9 +878,9 @@ typedef int8_t retroflat_dir8_t;
  */
 typedef int16_t retroflat_pxxy_t;
 
-#define PXXY_FMT SIZE_T_FMT
+#define PXXY_FMT "%d"
 
-#define PXXY_MAX SIZE_MAX
+#define PXXY_MAX INT16_MAX
 
 struct RETROFLAT_ARGS;
 
