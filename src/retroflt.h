@@ -1896,7 +1896,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
          x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
          0 > x || 0 > y \
       ) { \
-         error_printf( "attempted offscreen draw: %d, %d", x, y ); \
+         error_printf( "attempted draw at %d, %d, out of bounds %d x %d", \
+            x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
          retact; \
       }
 #else
@@ -1908,7 +1909,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
  * if bmp is NULL.
  */
 #  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) ) { \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
          retact; \
       }
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
