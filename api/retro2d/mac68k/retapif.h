@@ -312,6 +312,10 @@ uint32_t retroflat_get_rand() {
 MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = RETROFLAT_OK;
 
+   /* TODO: GetPort seems to not get the port? Or this logic is broken.
+    *       But the stack doesn't work! Needs fixing!
+    */
+
    if(
       g_retroflat_state->platform.port_stack_ct + 1 <
       RETROFLAT_M68K_PORT_STACK_MAX_CT
@@ -324,13 +328,20 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
             &(g_retroflat_state->platform.gdhandle_stack[
                g_retroflat_state->platform.port_stack_ct]) );
          debug_printf( RETRO2D_TRACE_LVL,
-            "stowed previous gworld %p to stack idx: %d",
+            "stowed previous gworld 0x%p to stack idx: %d",
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.port_stack_ct );
       } else {
          GetPort( &(g_retroflat_state->platform.port_stack[
             g_retroflat_state->platform.port_stack_ct]) );
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL,
+            "stowed previous port 0x%p to stack idx: %d",
+            g_retroflat_state->platform.gworld_stack[
+               g_retroflat_state->platform.port_stack_ct],
+            g_retroflat_state->platform.port_stack_ct );
+#endif /* RETRO2D_TRACE_LVL */
       }
       g_retroflat_state->platform.port_stack_ct++;
    } else {
@@ -348,6 +359,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
          debug_printf( RETRO2D_TRACE_LVL, "setting new gworld: window" );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
       } else {
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL, "setting new port: window" );
+#endif /* RETRO2D_TRACE_LVL */
          SetPort( g_retroflat_state->platform.win );
       }
    } else {
@@ -360,9 +374,12 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       if( 2 < g_retroflat_state->screen_colors ) {
          LockPixels( GetGWorldPixMap( bmp->gworld ) );
          debug_printf( RETRO2D_TRACE_LVL,
-            "setting new gworld: %p", bmp->gworld );
+            "setting new gworld: 0x%p", bmp->gworld );
          SetGWorld( bmp->gworld, nil );
       } else {
+#if RETRO2D_TRACE_LVL > 0
+         debug_printf( RETRO2D_TRACE_LVL, "setting new port: 0x%p", bmp->port );
+#endif /* RETRO2D_TRACE_LVL */
          SetPort( bmp->port );
       }
 #ifdef RETROFLAT_MAC_NO_DBLBUF
@@ -392,7 +409,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       g_retroflat_state->platform.port_stack_ct--;
       if( 2 < g_retroflat_state->screen_colors ) {
          debug_printf( RETRO2D_TRACE_LVL,
-            "restoring previous gworld %p from stack idx: %d",
+            "restoring previous gworld 0x%p from stack idx: %d",
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.port_stack_ct );
@@ -704,6 +721,13 @@ void retroflat_rect(
 ) {
    Rect r;
 
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL,
+      "drawing " PXXY_FMT " x " PXXY_FMT " rect at " PXXY_FMT ", " PXXY_FMT
+         " with flags: %02x",
+      w, h, x, y, flags );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
+
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -718,7 +742,15 @@ void retroflat_rect(
       return;
    }
 
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL, "constraint complete!" );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
+
    retroflat_mac_bwcolor( color_idx );
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL, "selected color: %d", color_idx );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 
    PenSize( 1, 1 );
    SetRect( &r, x, y, x + w, y + h );
@@ -728,6 +760,10 @@ void retroflat_rect(
    } else {
       FrameRect( &r );
    }
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL, "rect complete!" );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 }
 
 /* === */
@@ -737,6 +773,13 @@ void retroflat_line(
    retroflat_pxxy_t x1, retroflat_pxxy_t y1,
    retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags
 ) {
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL,
+      "drawing line from " PXXY_FMT ", " PXXY_FMT " to " PXXY_FMT ", " PXXY_FMT
+         " with flags: %02x",
+      x1, y1, x2, y2, flags );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -755,6 +798,10 @@ void retroflat_line(
 
    MoveTo( x1, y1 );
    LineTo( x2, y2 );
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL, "line complete!" );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 }
 
 /* === */
