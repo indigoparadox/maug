@@ -654,8 +654,11 @@ void maug_vsnprintf(
 
             case 'p':
                spec.p = va_arg( vargs, void* );
-
+#ifdef __GNUC__
+               maug_bufspec( spec.p, 16, maug_utoa, uintptr_t, uintptr_t );
+#else
                maug_bufspec( spec.p, 16, maug_utoa, int, int );
+#endif /* __GNUC__ */
                break;
 
             case 'c':

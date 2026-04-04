@@ -71,6 +71,16 @@ defined( __WATCOMC__ ) || defined( __BORLANDC__ )
 
 /* Helpful type-related constants. */
 
+#if defined( M_I86 )
+#  define MAUG_MPTR_SZ 16
+#elif defined( M_I386 ) || defined( __386__ )
+#  define MAUG_MPTR_SZ 32
+#elif defined( _WIN64 ) || defined( __x86_64__ ) || defined( __ppc64__ )
+#  define MAUG_MPTR_SZ 64
+#else
+   #error "unable to determine pointer size!"
+#endif
+
 #ifdef __GNUC__
 #  ifdef __EMSCRIPTEN__ /* __SIZE_WIDTH__ == 64 */
 #     define SIZE_T_FMT "%lu"
