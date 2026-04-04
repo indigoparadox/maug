@@ -95,6 +95,10 @@
       (win)->flags &= ~RETROWIN_FLAG_GUI_LOCKED; \
    }
 
+#define retrowin_gui_is_locked( win ) \
+   (RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & (win)->flags) && \
+   RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & (win)->flags))
+
 struct RETROWIN {
    uint8_t flags;
    retrogui_idc_t idc;
@@ -173,10 +177,16 @@ MERROR_RETVAL retrowin_destroy_win(
 
 static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
    MERROR_RETVAL retval = MERROR_OK;
+   uint8_t autolock_gui = 0;
 
-   assert(
-      RETROWIN_FLAG_INIT_GUI != (RETROWIN_FLAG_INIT_GUI & win->flags) ||
-      RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & win->flags) );
+#if RETROWIN_TRACE_LVL > 0
+   debug_printf( RETROWIN_TRACE_LVL, "drawing window border..." );
+#endif /* RETROWIN_TRACE_LVL */
+
+   if( !retrowin_gui_is_locked( win ) ) {
+      retrowin_lock_gui( win );
+      autolock_gui = 1;
+   }
 
    switch( RETROWIN_FLAG_BORDER_MASK & win->flags ) {
    case RETROWIN_FLAG_BORDER_NONE:
@@ -267,6 +277,16 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
       break;
    }
 
+#if RETROWIN_TRACE_LVL > 0
+   debug_printf( RETROWIN_TRACE_LVL, "drawing window border complete!" );
+#endif /* RETROWIN_TRACE_LVL */
+
+cleanup:
+
+   if( autolock_gui ) {
+      retrowin_unlock_gui( win );
+   }
+
    return retval;
 }
 
@@ -274,10 +294,12 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
 
 static MERROR_RETVAL _retrowin_redraw_win( struct RETROWIN* win ) {
    MERROR_RETVAL retval = MERROR_OK;
+   uint8_t autolock_gui = 0;
 
-   assert(
-      RETROWIN_FLAG_INIT_GUI != (RETROWIN_FLAG_INIT_GUI & win->flags) ||
-      RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & win->flags) );
+   if( !retrowin_gui_is_locked( win ) ) {
+      retrowin_lock_gui( win );
+      autolock_gui = 1;
+   }
 
    /* Dirty detection is in retrogui_redraw_ctls(). */
 
@@ -290,9 +312,9 @@ static MERROR_RETVAL _retrowin_redraw_win( struct RETROWIN* win ) {
 
 #if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
-      "redrawing window " SIZE_T_FMT " (GUI %p) at "
-      SIZE_T_FMT ", " SIZE_T_FMT "...",
-      win->idc, win->gui_p, win->gui_p->x, win->gui_p->y );
+      "redrawing window IDC " RETROGUI_IDC_FMT " at "
+      PXXY_FMT ", " PXXY_FMT "...",
+      win->idc, win->gui_p->x, win->gui_p->y );
 #endif /* RETROWIN_TRACE_LVL */
 
 #ifndef RETROWIN_NO_BITMAP
@@ -316,7 +338,18 @@ static MERROR_RETVAL _retrowin_redraw_win( struct RETROWIN* win ) {
 
    maug_cleanup_if_not_ok();
 
+#if RETROWIN_TRACE_LVL > 0
+   debug_printf( RETROWIN_TRACE_LVL,
+      "redraw of window IDC " RETROGUI_IDC_FMT " at "
+      PXXY_FMT ", " PXXY_FMT " complete!",
+      win->idc, win->gui_p->x, win->gui_p->y );
+#endif /* RETROWIN_TRACE_LVL */
+
 cleanup:
+
+   if( autolock_gui ) {
+      retrowin_unlock_gui( win );
+   }
 
    return retval;
 }
@@ -327,13 +360,16 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    struct RETROWIN* win = NULL;
+   uint8_t autolock_stack = 0;
 
    if( 0 == mdata_vector_ct( win_stack ) ) {
       goto cleanup;
    }
 
-   assert( !mdata_vector_is_locked( win_stack ) );
-   mdata_vector_lock( win_stack );
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock_stack = 1;
+   }
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
       win = mdata_vector_get( win_stack, i, struct RETROWIN );
@@ -350,7 +386,7 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
 #endif /* !RETROWIN_NO_BITMAP */
 #if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
-            "redrawing window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
+            "redrawing window idx " SIZE_T_FMT " with IDC " RETROGUI_IDC_FMT,
             i, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
 
@@ -370,11 +406,24 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
 #endif /* !RETROWIN_NO_BITMAP */
 
       retrowin_unlock_gui( win );
+
+#if RETROWIN_TRACE_LVL > 0
+      debug_printf( RETROWIN_TRACE_LVL,
+         "redraw of window idx " SIZE_T_FMT " with IDC " RETROGUI_IDC_FMT
+            " complete!",
+         i, win->idc );
+#endif /* RETROWIN_TRACE_LVL */
    }
+
+#if RETROWIN_TRACE_LVL > 0
+      debug_printf( RETROWIN_TRACE_LVL, "redraw of all windows complete!" );
+#endif /* RETROWIN_TRACE_LVL */
 
 cleanup:
 
-   mdata_vector_unlock( win_stack );
+   if( autolock_stack ) {
+      mdata_vector_unlock( win_stack );
+   }
 
    return retval;
 }
@@ -385,13 +434,16 @@ MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
    MERROR_RETVAL retval = MERROR_OK;
    size_t i = 0;
    struct RETROWIN* win = NULL;
+   uint8_t autolock_stack = 0;
 
    if( 0 == mdata_vector_ct( win_stack ) ) {
       goto cleanup;
    }
 
-   assert( !mdata_vector_is_locked( win_stack ) );
-   mdata_vector_lock( win_stack );
+   if( !mdata_vector_is_locked( win_stack ) ) {
+      mdata_vector_lock( win_stack );
+      autolock_stack = 1;
+   }
 
    for( i = 0 ; mdata_vector_ct( win_stack ) > i ; i++ ) {
       win = mdata_vector_get( win_stack, i, struct RETROWIN );
@@ -405,7 +457,7 @@ MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
 
 #if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL,
-         "refreshing window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
+         "refreshing window idx " SIZE_T_FMT " with IDC " RETROGUI_IDC_FMT,
          i, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
 
@@ -416,7 +468,9 @@ MERROR_RETVAL retrowin_refresh_win_stack( struct MDATA_VECTOR* win_stack ) {
 
 cleanup:
 
-   mdata_vector_unlock( win_stack );
+   if( autolock_stack ) {
+      mdata_vector_unlock( win_stack );
+   }
 
    return retval;
 }
@@ -458,7 +512,7 @@ retrogui_idc_t retrowin_poll_win_stack(
    if( 0 != *p_input ) {
 #if RETROWIN_TRACE_LVL > 0
       debug_printf( RETROWIN_TRACE_LVL,
-         "polling window idx " SIZE_T_FMT ", IDC " RETROGUI_IDC_FMT,
+         "polling window idx " SIZE_T_FMT " with IDC " RETROGUI_IDC_FMT,
          win_idx, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
    }
@@ -651,7 +705,8 @@ ssize_t retrowin_push_win(
 
    idx_out = retrowin_get_by_idc( idc, win_stack );
    if( 0 <= idx_out ) {
-      error_printf( "window IDC " RETROGUI_IDC_FMT " already exists!", idc );
+      error_printf(
+         "window with IDC " RETROGUI_IDC_FMT " already exists!", idc );
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -663,19 +718,34 @@ ssize_t retrowin_push_win(
    if( NULL != gui ) {
       win.gui_p = gui;
    } else {
+#if RETROWIN_TRACE_LVL > 0
+      debug_printf( RETROWIN_TRACE_LVL,
+         "creating self-owned GUI for window with IDC " RETROGUI_IDC_FMT ": "
+         PXXY_FMT "x" PXXY_FMT " @ " PXXY_FMT ", " PXXY_FMT,
+         idc, w, h, x, y );
+#endif /* RETROWIN_TRACE_LVL */
+
       win.gui_p = NULL;
       maug_malloc_test( win.gui_h, 1, sizeof( struct RETROGUI ) );
 
       win.flags |= RETROWIN_FLAG_INIT_GUI;
 
+      debug_printf( RETROWIN_TRACE_LVL, "x0" );
+
       /* Prepare gui_p for use as if it had just been assigned. */
       retrowin_lock_gui( &win );
+
+      debug_printf( RETROWIN_TRACE_LVL, "x1" );
 
       retval = retrogui_init( win.gui_p );
       maug_cleanup_if_not_ok();
 
+      debug_printf( RETROWIN_TRACE_LVL, "x2" );
+
       retval = retrogui_set_font( win.gui_p, font_filename );
       maug_cleanup_if_not_ok();
+
+      debug_printf( RETROWIN_TRACE_LVL, "x3" );
    }
 
 #ifndef RETROWIN_NO_BITMAP
@@ -699,10 +769,9 @@ ssize_t retrowin_push_win(
 
 #if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
-      "pushing window IDC " RETROGUI_IDC_FMT ", GUI %p: "
-         SIZE_T_FMT "x" SIZE_T_FMT " @ " SIZE_T_FMT ", " SIZE_T_FMT,
-      win.idc, win.gui_p,
-      win.gui_p->w, win.gui_p->h, win.gui_p->x, win.gui_p->y );
+      "pushing window with IDC " RETROGUI_IDC_FMT ": "
+         PXXY_FMT "x" PXXY_FMT " @ " PXXY_FMT ", " PXXY_FMT,
+      win.idc, win.gui_p->w, win.gui_p->h, win.gui_p->x, win.gui_p->y );
 #endif /* RETROWIN_TRACE_LVL */
 
    retrowin_unlock_gui( &win );
@@ -741,7 +810,7 @@ MERROR_RETVAL retrowin_destroy_win(
 
 #if RETROWIN_TRACE_LVL > 0
    debug_printf( RETROWIN_TRACE_LVL,
-      "attempting to destroy window: " SIZE_T_FMT, idc );
+      "attempting to destroy window with IDC " RETROGUI_IDC_FMT, idc );
 #endif /* RETROWIN_TRACE_LVL */
 
    if( !mdata_vector_is_locked( win_stack ) ) {
@@ -759,7 +828,7 @@ MERROR_RETVAL retrowin_destroy_win(
       if( !retrowin_win_is_active( win ) ) {
 #if RETROWIN_TRACE_LVL > 0
          debug_printf( RETROWIN_TRACE_LVL,
-            "window IDC " RETROGUI_IDC_FMT
+            "window with IDC " RETROGUI_IDC_FMT
                " found, but not active! (flags: 0x%02x)",
             idc, win->flags );
 #endif /* RETROWIN_TRACE_LVL */
@@ -767,8 +836,8 @@ MERROR_RETVAL retrowin_destroy_win(
       }
 
 #if RETROWIN_TRACE_LVL > 0
-      debug_printf( RETROWIN_TRACE_LVL, "freeing window: " SIZE_T_FMT,
-         win->idc );
+      debug_printf( RETROWIN_TRACE_LVL,
+         "freeing window with IDC " RETROGUI_IDC_FMT, win->idc );
 #endif /* RETROWIN_TRACE_LVL */
 
       retrowin_free_win( win );
