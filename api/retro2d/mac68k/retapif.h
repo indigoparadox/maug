@@ -639,9 +639,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       goto cleanup;
    }
 
+   /*
    retval = retroflat_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
+   */
 
    SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
    SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
@@ -746,11 +748,13 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   /*
    if(
       MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
+   */
 
 #if RETRO2D_DRAW_TRACE_LVL > 0
    debug_printf( RETRO2D_DRAW_TRACE_LVL,
