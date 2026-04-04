@@ -327,21 +327,23 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
                g_retroflat_state->platform.port_stack_ct]),
             &(g_retroflat_state->platform.gdhandle_stack[
                g_retroflat_state->platform.port_stack_ct]) );
+#if RETRO2D_LOCK_TRACE_LVL > 0
          debug_printf( RETRO2D_TRACE_LVL,
             "stowed previous gworld 0x%p to stack idx: %d",
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.port_stack_ct );
+#endif /* RETRO2D_LOCK_TRACE_LVL */
       } else {
          GetPort( &(g_retroflat_state->platform.port_stack[
             g_retroflat_state->platform.port_stack_ct]) );
-#if RETRO2D_TRACE_LVL > 0
-         debug_printf( RETRO2D_TRACE_LVL,
+#if RETRO2D_LOCK_TRACE_LVL > 0
+         debug_printf( RETRO2D_LOCK_TRACE_LVL,
             "stowed previous port 0x%p to stack idx: %d",
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.port_stack_ct );
-#endif /* RETRO2D_TRACE_LVL */
+#endif /* RETRO2D_LOCK_TRACE_LVL */
       }
       g_retroflat_state->platform.port_stack_ct++;
    } else {
@@ -359,9 +361,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
          debug_printf( RETRO2D_TRACE_LVL, "setting new gworld: window" );
          SetGWorld( GetWindowPort( g_retroflat_state->platform.win ), nil );
       } else {
-#if RETRO2D_TRACE_LVL > 0
-         debug_printf( RETRO2D_TRACE_LVL, "setting new port: window" );
-#endif /* RETRO2D_TRACE_LVL */
+#if RETRO2D_LOCK_TRACE_LVL > 0
+         debug_printf( RETRO2D_LOCK_TRACE_LVL, "setting new port: window" );
+#endif /* RETRO2D_LOCK_TRACE_LVL */
          SetPort( g_retroflat_state->platform.win );
       }
    } else {
@@ -377,9 +379,10 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
             "setting new gworld: 0x%p", bmp->gworld );
          SetGWorld( bmp->gworld, nil );
       } else {
-#if RETRO2D_TRACE_LVL > 0
-         debug_printf( RETRO2D_TRACE_LVL, "setting new port: 0x%p", bmp->port );
-#endif /* RETRO2D_TRACE_LVL */
+#if RETRO2D_LOCK_TRACE_LVL > 0
+         debug_printf(
+            RETRO2D_LOCK_TRACE_LVL, "setting new port: 0x%p", bmp->port );
+#endif /* RETRO2D_LOCK_TRACE_LVL */
          SetPort( bmp->port );
       }
 #ifdef RETROFLAT_MAC_NO_DBLBUF
@@ -408,11 +411,13 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
        */
       g_retroflat_state->platform.port_stack_ct--;
       if( 2 < g_retroflat_state->screen_colors ) {
-         debug_printf( RETRO2D_TRACE_LVL,
+#if RETRO2D_LOCK_TRACE_LVL > 0
+         debug_printf( RETRO2D_LOCK_TRACE_LVL,
             "restoring previous gworld 0x%p from stack idx: %d",
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
             g_retroflat_state->platform.port_stack_ct );
+#endif /* RETRO2D_LOCK_TRACE_LVL */
          SetGWorld(
             g_retroflat_state->platform.gworld_stack[
                g_retroflat_state->platform.port_stack_ct],
@@ -420,6 +425,13 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
                g_retroflat_state->platform.port_stack_ct] );
       } else {
          /* Re-set old port stowed in lock. */
+#if RETRO2D_LOCK_TRACE_LVL > 0
+         debug_printf( RETRO2D_LOCK_TRACE_LVL,
+            "restoring previous port 0x%p from stack idx: %d",
+            g_retroflat_state->platform.port_stack[
+               g_retroflat_state->platform.port_stack_ct],
+            g_retroflat_state->platform.port_stack_ct );
+#endif /* RETRO2D_LOCK_TRACE_LVL */
          SetPort( g_retroflat_state->platform.port_stack[
             g_retroflat_state->platform.port_stack_ct] );
       }
