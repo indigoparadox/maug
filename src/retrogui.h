@@ -533,7 +533,7 @@ MERROR_RETVAL retrogui_push_ctl(
  * calling retrogui_destroy() on this ::RETROGUI.
  */
 MERROR_RETVAL retrogui_set_font(
-   struct RETROGUI* gui, const char* font_path );
+   struct RETROGUI* gui, const maug_path font_path );
 
 #ifndef RETROGUI_NO_TEXTBOX
 
@@ -2395,6 +2395,10 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
    MERROR_RETVAL retval = MERROR_OK;
    int autolock = 0;
 
+#if RETROGUI_TRACE_LVL > 0
+   debug_printf( RETROGUI_TRACE_LVL, "redrawing controls..." );
+#endif /* RETROGUI_TRACE_LVL */
+
 #ifndef RETROWIN_NO_BITMAP
    if( RETROGUI_FLAGS_DIRTY != (RETROGUI_FLAGS_DIRTY & gui->flags) ) {
       /* Shortcut! */
@@ -2433,6 +2437,11 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_REDRAW )
       }
    }
+
+#if RETROGUI_TRACE_LVL > 0
+   debug_printf( RETROGUI_TRACE_LVL, "redrawing controls complete!" );
+#endif /* RETROGUI_TRACE_LVL */
+
 
 cleanup:
 
@@ -2685,7 +2694,7 @@ cleanup:
 /* === */
 
 MERROR_RETVAL retrogui_set_font(
-   struct RETROGUI* gui, const char* font_path
+   struct RETROGUI* gui, const maug_path font_path
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 

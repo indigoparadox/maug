@@ -195,19 +195,19 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
  *       own header that takes over graphics stuff in OPENGL mode? */
 #  ifdef RETROFLAT_OPENGL
 #     define retroflat_bitmap_w( bmp ) \
-         (NULL == (bmp) ? \
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
             g_retroflat_state->screen_v_w : ((bmp)->tex.w))
 #     define retroflat_bitmap_h( bmp ) \
-         (NULL == (bmp) ? \
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
             g_retroflat_state->screen_v_h : ((bmp)->tex.h))
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
 
 #  else
 #     define retroflat_bitmap_w( bmp ) \
-         (NULL == (bmp) ? \
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
             g_retroflat_state->screen_v_w : ((bmp)->bmi.header.biWidth))
 #     define retroflat_bitmap_h( bmp ) \
-         (NULL == (bmp) ? \
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
             g_retroflat_state->screen_v_h : ((bmp)->bmi.header.biHeight))
 #     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 

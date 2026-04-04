@@ -126,7 +126,7 @@ struct RETROFLAT_PLATFORM {
    struct RETROFLAT_BITMAP screen_buffer;
    uint8_t flags;
    WindowPtr win;
-   GrafPort* port_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
+   GrafPtr port_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
    size_t port_stack_ct;
    GWorldPtr gworld_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
    GDHandle gdhandle_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];

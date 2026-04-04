@@ -10,6 +10,11 @@
 #  define UPRINTF_BUFFER_SZ_MAX 1024
 #endif /* !UPRINTF_BUFFER_SZ_MAX */
 
+#if !defined( MAUG_NO_RETRO ) && !defined( DOCUMENTATION )
+void retroflat_message(
+   uint8_t flags, const char* title, const char* format, ... );
+#endif /* !MAUG_NO_RETRO && !DOCUMENTATION */
+
 #if !defined( MFILE_MMAP ) && \
    !defined( RETROFLAT_API_WINCE ) && \
    !defined( RETROFLAT_API_PALM ) && \

@@ -13,9 +13,9 @@
  *  \brief Tools for making common animations and effects.
  */
 
-#ifndef RETROANI_DEFAUL_MSPF
-#  define RETROANI_DEFAUL_MSPF 100
-#endif /* !RETROANI_DEFAUL_MSPF */
+#ifndef RETROANI_DEFAULT_MSPF
+#  define RETROANI_DEFAULT_MSPF 100
+#endif /* !RETROANI_DEFAULT_MSPF */
 
 #ifndef RETROANI_TRACE_LVL
 #  define RETROANI_TRACE_LVL 0
@@ -154,32 +154,6 @@ struct RETROANI {
 /*! \brief Callback to call on active animations for every frame. */
 typedef MERROR_RETVAL (*RETROANI_CB)( struct RETROANI* a );
 
-#ifdef RETROANI_DISABLE
-
-#  define retroani_set_target( ani_stack, a_idx, target ) (MERROR_OK)
-
-#  define retroani_set_string( ani_stack, a_idx, str_in, str_sz_in, font_name_in, color_idx_in ) (MERROR_OK)
-
-#  define retroani_set_hole( ani_stack, flags, x, y, w, h ) (MERROR_OK)
-
-#  define retroani_set_colors( ani_stack, a_idx, c1, c2, c3, c4 ) (MERROR_OK)
-
-#  define retroani_create( ani_stack, type, flags, x, y, w, h ) (-1)
-
-#  define retroani_tesselate( a, y_orig )
-
-#  define retroani_frame( ani_stack, flags ) (MERROR_OK)
-
-#  define retroani_pause( ani_stack, flags ) (MERROR_OK)
-
-#  define retroani_resume( ani_stack, flags ) (MERROR_OK)
-
-#  define retroani_stop( ani, idx ) (MERROR_OK)
-
-#  define retroani_stop_all( ani_stack ) (MERROR_OK)
-
-#else
-
 MERROR_RETVAL retroani_set_target(
    struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target );
 
@@ -253,14 +227,12 @@ MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani, size_t idx );
  */
 MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack );
 
-#endif /* RETROANI_DISABLE */
-
 #define RETROANI_CB_TABLE_DRAW_PROTOTYPES( idx, name ) \
    MERROR_RETVAL retroani_draw_ ## name( struct RETROANI* );
 
 RETROANI_CB_TABLE( RETROANI_CB_TABLE_DRAW_PROTOTYPES )
 
-#if defined( RETROANI_C ) && !defined( RETROANI_DISABLE )
+#if defined( RETROANI_C )
 
 #define RETROANI_CB_TABLE_LIST( idx, name ) retroani_draw_ ## name,
 
@@ -283,6 +255,7 @@ MERROR_RETVAL retroani_draw_CIRCLE( struct RETROANI* a ) {
 }
 
 MERROR_RETVAL retroani_draw_FIRE( struct RETROANI* a ) {
+#ifndef RETROANI_DISABLE
    int8_t x = 0,
       next_x = 0,
       y = 0;
@@ -341,6 +314,7 @@ MERROR_RETVAL retroani_draw_FIRE( struct RETROANI* a ) {
 
    /* Only tesselate the bottom row. */
    retroani_tesselate( a, a->h - RETROFLAT_TILE_H );
+#endif /* !RETROANI_DISABLE */
 
    return MERROR_OK;
 }
@@ -348,6 +322,7 @@ MERROR_RETVAL retroani_draw_FIRE( struct RETROANI* a ) {
 /* === */
 
 MERROR_RETVAL retroani_draw_SNOW( struct RETROANI* a ) {
+#ifndef RETROANI_DISABLE
    int16_t
       x = 0,
       y = 0,
@@ -396,6 +371,7 @@ MERROR_RETVAL retroani_draw_SNOW( struct RETROANI* a ) {
    }
 
    retroani_tesselate( a, 0 );
+#endif /* !RETROANI_DISABLE */
 
    return MERROR_OK;
 }
@@ -403,6 +379,7 @@ MERROR_RETVAL retroani_draw_SNOW( struct RETROANI* a ) {
 /* === */
 
 MERROR_RETVAL retroani_draw_CLOUDS( struct RETROANI* a ) {
+#ifndef RETROANI_DISABLE
    int8_t row_start_idx = 0,
       row_start_last = 0,
       row_col_end_buffer = 0, /* Last pixel wrapped off row end. */
@@ -566,6 +543,7 @@ MERROR_RETVAL retroani_draw_CLOUDS( struct RETROANI* a ) {
    }
 
    retroani_tesselate( a, 0 );
+#endif /* !RETROANI_DISABLE */
 
    return MERROR_OK;
 }
@@ -573,6 +551,7 @@ MERROR_RETVAL retroani_draw_CLOUDS( struct RETROANI* a ) {
 /* === */
 
 MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
+#ifndef RETROANI_DISABLE
    int8_t* p_y_offset = NULL;
    uint8_t* p_str_sz = NULL;
    char* str = NULL;
@@ -606,6 +585,7 @@ MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
       /* Move the text up half a line until it would leave the animation. */
       *p_y_offset += str_height;
    }
+#endif /* !RETROANI_DISABLE */
 
    return MERROR_OK;
 }
@@ -623,6 +603,7 @@ MERROR_RETVAL retroani_set_target(
    struct MDATA_VECTOR* ani_stack, size_t a_idx, retroflat_blit_t* target
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    struct RETROANI* ani = NULL;
 
    if( a_idx >= mdata_vector_ct( ani_stack ) ) {
@@ -638,6 +619,7 @@ MERROR_RETVAL retroani_set_target(
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -651,6 +633,7 @@ MERROR_RETVAL retroani_set_string(
    RETROFLAT_COLOR color_idx_in
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    int8_t* p_y_offset = NULL;
    uint8_t* p_str_sz = NULL;
    char* str = NULL;
@@ -692,6 +675,7 @@ MERROR_RETVAL retroani_set_string(
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -704,6 +688,7 @@ MERROR_RETVAL retroani_set_hole(
    retroflat_pxxy_t w, retroflat_pxxy_t h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    size_t i = 0;
    struct RETROANI* ani = NULL;
 
@@ -724,15 +709,16 @@ MERROR_RETVAL retroani_set_hole(
          PXXY_FMT ", " PXXY_FMT " (" PXXY_FMT " x " PXXY_FMT ")",
          i, x, y, w, h );
 
-      ani->hole.x = x + 1;
-      ani->hole.y = y + 1;
-      ani->hole.w = w + 2;
-      ani->hole.h = h + 2;
+      ani->hole.x = x;
+      ani->hole.y = y;
+      ani->hole.w = w + 1;
+      ani->hole.h = h + 1;
    }
 
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 
@@ -746,6 +732,7 @@ MERROR_RETVAL retroani_set_colors(
    RETROFLAT_COLOR c4
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    struct RETROANI* ani = NULL;
 
    if( a_idx >= mdata_vector_ct( ani_stack ) ) {
@@ -764,6 +751,7 @@ MERROR_RETVAL retroani_set_colors(
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -775,6 +763,7 @@ ssize_t retroani_create(
    uint8_t type, uint16_t flags, int16_t x, int16_t y, int16_t w, int16_t h
 ) {
    ssize_t idx_out = -1;
+#ifndef RETROANI_DISABLE
    struct RETROANI ani_new;
 
    debug_printf( RETROANI_TRACE_LVL,
@@ -789,7 +778,7 @@ ssize_t retroani_create(
    ani_new.type = type;
    ani_new.target = NULL;
    ani_new.next_frame_ms = 0;
-   ani_new.mspf = RETROANI_DEFAUL_MSPF;
+   ani_new.mspf = RETROANI_DEFAULT_MSPF;
    maug_mzero( ani_new.tile, RETROANI_TILE_SZ );
    maug_mzero( &(ani_new.hole), sizeof( struct RETROANI_HOLE ) );
 
@@ -810,6 +799,7 @@ ssize_t retroani_create(
       debug_printf( RETROANI_TRACE_LVL,
          "created animation at idx: " SSIZE_T_FMT, idx_out );
    }
+#endif /* !RETROANI_DISABLE */
 
    return idx_out;
 }
@@ -817,6 +807,7 @@ ssize_t retroani_create(
 /* === */
 
 void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
+#ifndef RETROANI_DISABLE
    int8_t
       /* Address of the current pixel rel to top-left corner of tile. */
       x = 0,
@@ -904,12 +895,14 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
    }
 
    retroflat_px_release( a->target );
+#endif /* !RETROANI_DISABLE */
 }
 
 /* === */
 
 MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    ssize_t i = 0; /* So i can be -1 if we delete the first ani. */
    uint32_t now_ms = 0;
    struct RETROANI* ani = NULL;
@@ -951,12 +944,14 @@ MERROR_RETVAL retroani_frame( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
 
 MERROR_RETVAL retroani_pause( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    size_t i = 0;
    struct RETROANI* ani = NULL;
 
@@ -976,6 +971,7 @@ MERROR_RETVAL retroani_pause( struct MDATA_VECTOR* ani_stack, uint16_t flags ) {
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -986,6 +982,7 @@ MERROR_RETVAL retroani_resume(
    struct MDATA_VECTOR* ani_stack, uint16_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    size_t i = 0;
    struct RETROANI* ani = NULL;
 
@@ -1005,6 +1002,7 @@ MERROR_RETVAL retroani_resume(
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -1013,6 +1011,7 @@ cleanup:
 
 MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani_stack, size_t idx ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    struct RETROANI* ani = NULL;
 
    if(
@@ -1029,6 +1028,7 @@ MERROR_RETVAL retroani_stop( struct MDATA_VECTOR* ani_stack, size_t idx ) {
 cleanup:
 
    mdata_vector_unlock( ani_stack );
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }
@@ -1037,6 +1037,7 @@ cleanup:
 
 MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROANI_DISABLE
    size_t i = 0;
 
    if( 0 == mdata_vector_ct( ani_stack ) ) {
@@ -1051,6 +1052,7 @@ MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack ) {
    mdata_vector_free( ani_stack );
 
 cleanup:
+#endif /* !RETROANI_DISABLE */
 
    return retval;
 }

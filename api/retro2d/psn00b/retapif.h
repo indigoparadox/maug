@@ -770,6 +770,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
       /* _retroflat_psx_draw_buffers( target ); */
    }
 
+cleanup:
+
    return retval;
 }
 

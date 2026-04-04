@@ -1652,6 +1652,10 @@ void retroflat_rect(
       return;
    }
 
+   /* Windows rect is inclusive. */
+   w -= 1;
+   h -= 1;
+
    retroflat_constrain_px( x, y, target, return );
    retroflat_constrain_px( x + w, y + h, target, return );
 

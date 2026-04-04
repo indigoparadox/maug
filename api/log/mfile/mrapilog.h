@@ -117,10 +117,12 @@ void error_printf( const char* fmt, ... ) {
 MERROR_RETVAL logging_init() {
    MERROR_RETVAL retval = MERROR_OK;
    retval = mfile_open_write( LOG_FILE_NAME, &g_log_file );
+#ifndef MAUG_NO_RETRO
    if( MERROR_OK != retval ) {
       retroflat_message( 1, /* RETROFLAT_MSG_FLAG_ERROR */
          "Error", "Unable to initiate logging!" );
    }
+#endif /* !MAUG_NO_RETRO */
    return retval;
 }
 

@@ -327,7 +327,7 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 	-i=$(MAUG_ROOT)/api/font/win -i=$(MAUG_ROOT)/api/mem/win \
 	-i=$(MAUG_ROOT)/api/serial/asn1
 
-LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate
+LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate option stack=16k
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win

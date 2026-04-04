@@ -878,15 +878,23 @@ typedef int8_t retroflat_dir8_t;
  */
 typedef int16_t retroflat_pxxy_t;
 
-#define PXXY_FMT SIZE_T_FMT
+#define PXXY_FMT "%d"
 
-#define PXXY_MAX SIZE_MAX
+#define PXXY_MAX INT16_MAX
 
 struct RETROFLAT_ARGS;
 
 #ifndef RETRO2D_TRACE_LVL
 #  define RETRO2D_TRACE_LVL 0
 #endif /* !RETRO2D_TRACE_LVL */
+
+#ifndef RETRO2D_DRAW_TRACE_LVL
+#  define RETRO2D_DRAW_TRACE_LVL 0
+#endif /* !RETRO2D_DRAW_TRACE_LVL */
+
+#ifndef RETRO2D_LOCK_TRACE_LVL
+#  define RETRO2D_LOCK_TRACE_LVL 0
+#endif /* !RETRO2D_LOCK_TRACE_LVL */
 
 #ifndef RETROFLAT_NO_SOUND
 
@@ -1896,7 +1904,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
          x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
          0 > x || 0 > y \
       ) { \
-         error_printf( "attempted offscreen draw: %d, %d", x, y ); \
+         error_printf( "attempted draw at %d, %d, out of bounds %d x %d", \
+            x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
          retact; \
       }
 #else
@@ -1908,7 +1917,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
  * if bmp is NULL.
  */
 #  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) ) { \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
          retact; \
       }
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
@@ -3120,7 +3132,9 @@ MERROR_RETVAL retroflat_trim_px(
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *h -= (viewport_top - *d_y);
-      *s_y += (viewport_top - *d_y);
+      if( NULL != s_y ) {
+         *s_y += (viewport_top - *d_y);
+      }
       *d_y += (viewport_top - *d_y);
       assert( viewport_top == *d_y );
    }
@@ -3149,9 +3163,15 @@ MERROR_RETVAL retroflat_trim_px(
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *w -= (viewport_left - *d_x);
-      *s_x += (viewport_left - *d_x);
+      if( NULL != s_x ) {
+         *s_x += (viewport_left - *d_x);
+      }
       *d_x += (viewport_left - *d_x);
       assert( viewport_left == *d_x );
+   }
+
+   if( 0 == w && 0 == h ) {
+      return MERROR_GUI;
    }
 
    return MERROR_OK;

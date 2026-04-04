@@ -910,6 +910,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != src );
 
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      retval = MERROR_GUI;
       return retval;
    }
 
@@ -1124,6 +1125,12 @@ void retroflat_rect(
       return;
    }
 
+   if(
+      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
+   ) {
+      return;
+   }
+
 #  if defined( RETROFLAT_OPENGL )
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
@@ -1142,6 +1149,12 @@ void retroflat_rect(
 
    if(
       RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      return;
+   }
+
+   if(
+      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
@@ -1208,9 +1221,7 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
