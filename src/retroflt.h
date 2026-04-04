@@ -3170,6 +3170,10 @@ MERROR_RETVAL retroflat_trim_px(
       assert( viewport_left == *d_x );
    }
 
+   if( 0 == w && 0 == h ) {
+      return MERROR_GUI;
+   }
+
    return MERROR_OK;
 }
 

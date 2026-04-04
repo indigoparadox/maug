@@ -533,10 +533,11 @@ MERROR_RETVAL retroflat_create_bitmap(
    GWorldPtr prev_gworld;
    GDHandle prev_gdhandle;
 
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
-      "creating bitmap of " SIZE_T_FMT "x" SIZE_T_FMT " with " SIZE_T_FMT
-         " colors...",
+      "creating bitmap of " PXXY_FMT "x" PXXY_FMT " with %d colors...",
       w, h, g_retroflat_state->screen_colors );
+#endif /* RETRO2D_TRACE_LVL */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
@@ -585,7 +586,11 @@ MERROR_RETVAL retroflat_create_bitmap(
       SetPort( prev_port );
    }
 
+   bmp_out->flags = flags;
+
+#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "bitmap created successfully!" );
+#endif /* RETRO2D_TRACE_LVL */
 
 cleanup:
 
@@ -733,13 +738,6 @@ void retroflat_rect(
 ) {
    Rect r;
 
-#if RETRO2D_DRAW_TRACE_LVL > 0
-   debug_printf( RETRO2D_DRAW_TRACE_LVL,
-      "drawing " PXXY_FMT " x " PXXY_FMT " rect at " PXXY_FMT ", " PXXY_FMT
-         " with flags: %02x",
-      w, h, x, y, flags );
-#endif /* RETRO2D_DRAW_TRACE_LVL */
-
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -755,14 +753,13 @@ void retroflat_rect(
    }
 
 #if RETRO2D_DRAW_TRACE_LVL > 0
-   debug_printf( RETRO2D_DRAW_TRACE_LVL, "constraint complete!" );
+   debug_printf( RETRO2D_DRAW_TRACE_LVL,
+      "drawing " PXXY_FMT " x " PXXY_FMT " rect at " PXXY_FMT ", " PXXY_FMT
+         " with flags: %02x",
+      w, h, x, y, flags );
 #endif /* RETRO2D_DRAW_TRACE_LVL */
 
    retroflat_mac_bwcolor( color_idx );
-
-#if RETRO2D_DRAW_TRACE_LVL > 0
-   debug_printf( RETRO2D_DRAW_TRACE_LVL, "selected color: %d", color_idx );
-#endif /* RETRO2D_DRAW_TRACE_LVL */
 
    PenSize( 1, 1 );
    SetRect( &r, x, y, x + w, y + h );
@@ -786,13 +783,6 @@ void retroflat_line(
    retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags
 ) {
 
-#if RETRO2D_DRAW_TRACE_LVL > 0
-   debug_printf( RETRO2D_DRAW_TRACE_LVL,
-      "drawing line from " PXXY_FMT ", " PXXY_FMT " to " PXXY_FMT ", " PXXY_FMT
-         " with flags: %02x",
-      x1, y1, x2, y2, flags );
-#endif /* RETRO2D_DRAW_TRACE_LVL */
-
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
    }
@@ -803,6 +793,13 @@ void retroflat_line(
 
    retroflat_constrain_px( x1, y1, target, return );
    retroflat_constrain_px( x2, y2, target, return );
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL,
+      "drawing line from " PXXY_FMT ", " PXXY_FMT " to " PXXY_FMT ", " PXXY_FMT
+         " with flags: %02x",
+      x1, y1, x2, y2, flags );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 
    retroflat_mac_bwcolor( color_idx );
 
@@ -846,6 +843,10 @@ void retroflat_ellipse(
    } else {
       FrameOval( &r );
    }
+
+#if RETRO2D_DRAW_TRACE_LVL > 0
+   debug_printf( RETRO2D_DRAW_TRACE_LVL, "ellipse complete!" );
+#endif /* RETRO2D_DRAW_TRACE_LVL */
 }
 
 /* === */
