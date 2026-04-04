@@ -99,6 +99,12 @@ else
 CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/log/unix
 endif
 
+ifeq ("$$(RETROFLAT_VDP)","1")
+CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
+#LDFLAGS_GCC_UNIX_SDL += -ldl
+SDL_VER_UNIX := 1
+endif
+
 # Setup version-specific requirements.
 ifeq ("$$(SDL_VER_UNIX)","1")
 
@@ -121,12 +127,6 @@ endif
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_API_SDL1 $$(shell pkg-config sdl --cflags)
 
 LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl --libs)
-
-ifeq ("$$(RETROFLAT_VDP)","1")
-	CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_VDP
-	#LDFLAGS_GCC_UNIX_SDL += -ldl
-	SDL_VER_UNIX := 1
-endif
 
 else
 

@@ -2,6 +2,11 @@
 #ifndef MAUG_H
 #define MAUG_H
 
+#ifdef RETROVDP_C
+/* Make utility functions available to the VDP library. */
+#  define MAUG_C
+#endif /* RETROVDP_C */
+
 #ifndef MAUG_NO_LEGACY
 #  include <mlegacy.h>
 #endif /* !MAUG_NO_LEGACY */
