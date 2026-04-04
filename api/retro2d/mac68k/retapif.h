@@ -62,7 +62,6 @@ static MERROR_RETVAL retroflat_init_platform(
    MERROR_RETVAL retval = MERROR_OK;
    Rect r = { 0, 0, 0, 0 };
    unsigned char title_buf[128];
-   long cqd_result = 0;
 
 #ifndef RETROFLAT_API_CARBON
    InitGraf( &qd.thePort );
@@ -595,6 +594,21 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+   ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
+   retval = retroflat_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   maug_cleanup_if_not_ok();
+
    SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
    SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
 
@@ -604,7 +618,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
       /* Use GWorlds. */
 
 #  ifdef RETROFLAT_MAC_NO_DBLBUF
-      if( NULL == target || retroflat_screen_buffer() == target ) {
+      if( retroflat_screen_buffer() == target ) {
          src_pm_c = *(GetGWorldPixMap( src->gworld ));
          target_pm_c = 
             *(((CGrafPtr)GetWindowPort(
@@ -630,7 +644,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
       /* Old-timey bitmaps. */
 
       /* Half-lock the source to copy from. */
-      if( NULL == target || retroflat_screen_buffer() == target ) {
+      if( retroflat_screen_buffer() == target ) {
 #  ifdef RETROFLAT_MAC_NO_DBLBUF
          target_port = g_retroflat_state->platform.win;
 #else
@@ -645,6 +659,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
          &(src->bitmap), &(target_port->portBits),
          &src_r, &dest_r, srcCopy, NULL );
    }
+
+cleanup:
 
    return retval;
 }
@@ -669,6 +685,8 @@ void retroflat_px(
       return;
    }
 
+   retroflat_constrain_px( x, y, target, return );
+
    retroflat_mac_bwcolor( color_idx );
 
    PenSize( 1, 1 );
@@ -692,6 +710,12 @@ void retroflat_rect(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
+   ) {
+      return;
    }
 
    retroflat_mac_bwcolor( color_idx );
@@ -722,6 +746,9 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
+   retroflat_constrain_px( x1, y1, target, return );
+   retroflat_constrain_px( x2, y2, target, return );
+
    retroflat_mac_bwcolor( color_idx );
 
    PenSize( 1, 1 );
@@ -746,6 +773,9 @@ void retroflat_ellipse(
    if( NULL == target ) {
       target = retroflat_screen_buffer();
    }
+
+   retroflat_constrain_px( x, y, target, return );
+   retroflat_constrain_px( x + w, y + h, target, return );
 
    retroflat_mac_bwcolor( color_idx );
 

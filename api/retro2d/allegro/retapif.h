@@ -254,6 +254,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       retval = MERROR_GUI;
    }
 
+   bmp_out->flags = flags;
+
 cleanup:
 
    return retval;
@@ -270,6 +272,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
+
+   bmp_out->flags = flags;
 
    bmp_out->b = create_bitmap( w, h );
    maug_cleanup_if_null( BITMAP*, bmp_out->b, MERROR_GUI );
@@ -307,6 +311,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    /* Trim sprite to stay on-screen. */
    retval = retroflat_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
@@ -316,14 +325,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != target->b );
    assert( NULL != src->b );
 
-   if(
-      0 == s_x && 0 == s_y &&
-      ((-1 == w && -1 == h ) || (src->b->w == w && src->b->h == h))
-   ) {
-      draw_sprite( target->b, src->b, d_x, d_y );
+   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+      masked_blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
    } else {
-      /* Handle partial blit. */
-      /* TODO: Can we determine if there was an error? */
       blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
    }
 
@@ -347,9 +351,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
@@ -375,8 +377,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+      return;
+   }
+
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
@@ -409,9 +415,7 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
 
@@ -438,11 +442,12 @@ void retroflat_ellipse(
       target = retroflat_screen_buffer();
    }
 
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
+
+   retroflat_constrain_px( x, y, target, return );
+   retroflat_constrain_px( x + w, y + h, target, return );
 
    /* == Allegro == */
 

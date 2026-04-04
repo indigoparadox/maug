@@ -3124,7 +3124,9 @@ MERROR_RETVAL retroflat_trim_px(
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *h -= (viewport_top - *d_y);
-      *s_y += (viewport_top - *d_y);
+      if( NULL != s_y ) {
+         *s_y += (viewport_top - *d_y);
+      }
       *d_y += (viewport_top - *d_y);
       assert( viewport_top == *d_y );
    }
@@ -3153,7 +3155,9 @@ MERROR_RETVAL retroflat_trim_px(
          trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
 #endif /* RETROFLAT_TRACE_CONSTRAIN */
       *w -= (viewport_left - *d_x);
-      *s_x += (viewport_left - *d_x);
+      if( NULL != s_x ) {
+         *s_x += (viewport_left - *d_x);
+      }
       *d_x += (viewport_left - *d_x);
       assert( viewport_left == *d_x );
    }
