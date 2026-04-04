@@ -572,9 +572,11 @@ void maug_vsnprintf(
    int spec_is_long = 0;
    int spec_digits = 0;
 
-#  define maug_bufspec( spec_val, spec_base, spec_conv ) \
+#  define maug_bufspec( spec_val, spec_base, spec_conv, spec_c, spec_c_long ) \
       /* Print padding. */ \
-      spec_digits = maug_digits( spec_val, spec_base ); \
+      spec_digits = maug_digits( \
+         spec_is_long ? (spec_c_long)(spec_val) : (spec_c)(spec_val), \
+         spec_base ); \
       if( \
          spec_digits < buffer_sz - buffer_idx && \
          pad_len < buffer_sz - buffer_idx \
@@ -584,7 +586,8 @@ void maug_vsnprintf(
             buffer, buffer_idx, buffer_sz, cleanup ); \
          /* Print number. */ \
          buffer_idx += spec_conv( \
-            spec_val, &(buffer[buffer_idx]), buffer_sz - buffer_idx, \
+            spec_is_long ? (spec_c_long)(spec_val) : (spec_c)(spec_val), \
+            &(buffer[buffer_idx]), buffer_sz - buffer_idx, \
             spec_base ); \
       } else { \
          /* Not enough space! */ \
@@ -620,7 +623,7 @@ void maug_vsnprintf(
                   spec.u = va_arg( vargs, unsigned int );
                }
                
-               maug_bufspec( spec.u, 10, maug_utoa );
+               maug_bufspec( spec.u, 10, maug_utoa, uint32_t, unsigned int );
                break;
 
             case 'd':
@@ -630,19 +633,29 @@ void maug_vsnprintf(
                   spec.d = va_arg( vargs, int );
                }
                
-               maug_bufspec( spec.d, 10, maug_itoa );
+               maug_bufspec( spec.d, 10, maug_itoa, long int, int );
                break;
 
             case 'z':
                spec.z = va_arg( vargs, size_t );
                
-               maug_bufspec( spec.z, 10, maug_ztoa );
+               maug_bufspec( spec.z, 10, maug_ztoa, size_t, size_t );
                break;
 
             case 'x':
-               spec.d = va_arg( vargs, int );
+               if( spec_is_long ) {
+                  spec.u = va_arg( vargs, uint32_t );
+               } else {
+                  spec.u = va_arg( vargs, unsigned int );
+               }
 
-               maug_bufspec( spec.u, 16, maug_utoa );
+               maug_bufspec( spec.u, 16, maug_utoa, uint32_t, unsigned int );
+               break;
+
+            case 'p':
+               spec.p = va_arg( vargs, void* );
+
+               maug_bufspec( spec.p, 16, maug_utoa, int, int );
                break;
 
             case 'c':
