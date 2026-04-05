@@ -1490,7 +1490,7 @@ MERROR_RETVAL retrohtr_tree_draw(
 
       if(
          MDATA_STRPOOL_IDX_ERROR == p_tag->TEXT.content_idx ||
-         retrogxc_cachable_is_loaded( &(node->font) )
+         !retrogxc_cachable_is_loaded( &(node->font) )
       ) {
          goto cleanup;
       }
@@ -1505,11 +1505,7 @@ MERROR_RETVAL retrohtr_tree_draw(
 
       mdata_strpool_lock( &(parser->strpool) );
 
-#ifdef RETROGXC_PRESENT
-      retrogxc_string(
-#else
       retrofont_string(
-#endif /* RETROGXC_PRESENT */
          NULL, node->fg,
          mdata_strpool_get( &(parser->strpool), p_tag->TEXT.content_idx ),
          p_tag->TEXT.content_sz, font_h,
