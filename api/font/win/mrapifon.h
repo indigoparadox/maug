@@ -87,6 +87,11 @@ void retrofont_string_indent(
       str_sz = maug_strlen( str );
    }
 
+   if( 0 == str_sz ) {
+      /* Short-circuit if no actual text! */
+      return;
+   }
+
    /* Setup drawing params. */
    old_font = SelectObject( target->hdc_b, (HFONT)font_h );
    SetTextColor( target->hdc_b, g_retroflat_state->palette[color] );
