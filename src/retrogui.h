@@ -479,20 +479,14 @@ struct RETROGUI {
    retroflat_blit_t* draw_bmp;
    retroflat_ms_t debounce_next;
    retroflat_ms_t debounce_max;
-#ifdef RETROGXC_PRESENT
-   ssize_t font_idx;
-#else
    /**
     * \brief Font used to draw any attached RETROGUI_CTL.
     *
     * This should be set with retrogui_set_font(), and will be automatically
     * freed by retrogui_destroy() if it is. If it is set by manual assignment,
     * then it will *not* be freed by retrogui_destroy().
-    *
-    * \warning This field is not present if \ref maug_retrogxc is loaded!
     */
-   MAUG_MHANDLE font_h;
-#endif /* RETROGXC_PRESENT */
+   union RETROGXC_CACHABLE font;
 };
 
 MERROR_RETVAL retrogui_push_listbox_item(
@@ -735,6 +729,7 @@ static retrogui_idc_t retrogui_click_LISTBOX(
       h = 0;
    int autolock = 0;
    char* list_i = NULL;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
 #  if defined( RETROGUI_NATIVE_WIN )
    /* Do nothing. */
@@ -752,14 +747,15 @@ static retrogui_idc_t retrogui_click_LISTBOX(
 
       /* TODO: Use retrogui_sz_LISTBOX() instead? */
 #ifdef RETROGXC_PRESENT
-      retrogxc_string_sz(
-         gui->draw_bmp, list_i, 0, gui->font_idx,
-         ctl->base.w, ctl->base.h, &w, &h, 0 );
+      font_h = retrogxc_get_asset(
+         gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
-      retrofont_string_sz(
-         gui->draw_bmp, list_i, 0, gui->font_h,
-         ctl->base.w, ctl->base.h, &w, &h, 0 );
+      font_h = gui->font.handle;
 #endif /* RETROGXC_PRESENT */
+      retrofont_string_sz(
+         gui->draw_bmp, list_i, 0, font_h,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
 
       if(
          (retroflat_pxxy_t)(input_evt->mouse_y) < 
@@ -832,6 +828,7 @@ static void retrogui_redraw_LISTBOX(
    int autolock = 0;
    char* list_i = NULL;
    MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
    
 #  if defined( RETROGUI_NATIVE_WIN )
    /* TODO: InvalidateRect()? */
@@ -852,14 +849,15 @@ static void retrogui_redraw_LISTBOX(
       list_i =
          (char*)mdata_vector_get( &(ctl->LISTBOX.list), i, retrogui_list_t );
 #ifdef RETROGXC_PRESENT
-      retrogxc_string_sz(
-         gui->draw_bmp, list_i, 0, gui->font_idx,
-         ctl->base.w, ctl->base.h, &w, &h, 0 );
+      font_h = retrogxc_get_asset(
+         gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
-      retrofont_string_sz(
-         gui->draw_bmp, list_i, 0, gui->font_h,
-         ctl->base.w, ctl->base.h, &w, &h, 0 );
+      font_h = gui->font.handle;
 #endif /* RETROGXC_PRESENT */
+      retrofont_string_sz(
+         gui->draw_bmp, list_i, 0, font_h,
+         ctl->base.w, ctl->base.h, &w, &h, 0 );
 #if RETROGUI_TRACE_LVL > 0
       debug_printf( RETROGUI_TRACE_LVL,
          "str height for \"%s\": " SIZE_T_FMT, list_i, h );
@@ -884,20 +882,18 @@ static void retrogui_redraw_LISTBOX(
       }
 
 #ifdef RETROGXC_PRESENT
-      retrogxc_string(
-         gui->draw_bmp, fg_color, list_i, 0, gui->font_idx,
-         gui->x + ctl->base.x +
-            RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
-         gui->y + ctl->base.y + item_y,
-         0, 0, 0 );
+      font_h = retrogxc_get_asset(
+         gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
+      font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
       retrofont_string(
-         gui->draw_bmp, fg_color, list_i, 0, gui->font_h,
+         gui->draw_bmp, fg_color, list_i, 0, font_h,
          gui->x + ctl->base.x +
             RETROGUI_CTL_LISTBOX_CURSOR_RADIUS + RETROGUI_PADDING,
          gui->y + ctl->base.y + item_y,
          0, 0, 0 );
-#endif /* RETROGXC_PRESENT */
 
       i++;
       /* Track the item height separately in case the item is multi-line. */
@@ -1117,6 +1113,7 @@ static void retrogui_redraw_BUTTON(
    RETROFLAT_COLOR bg_color = ctl->base.bg_color;
    RETROFLAT_COLOR push_shadow_color = RETROFLAT_COLOR_DARKGRAY;
    RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    if( ctl->base.idc == gui->focus ) {
       /* Assign selected color if focused. */
@@ -1178,30 +1175,20 @@ static void retrogui_redraw_BUTTON(
       
    /* Grab the string size and use it to center the text in the control. */
 #ifdef RETROGXC_PRESENT
-   retrogxc_string_sz(
+   font_h = retrogxc_get_asset(
+      gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      goto cleanup;
+   }
 #else
+   font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string_sz(
-#endif /* RETROGXC_PRESENT */
-      gui->draw_bmp, ctl->BUTTON.label, 0,
-#ifdef RETROGXC_PRESENT
-      gui->font_idx,
-#else
-      gui->font_h,
-#endif /* RETROGXC_PRESENT */
-      /* TODO: Pad max client area. */
+      gui->draw_bmp, ctl->BUTTON.label, 0, font_h,
       ctl->base.w, ctl->base.h, &w, &h, ctl->BUTTON.font_flags );
 
-#ifdef RETROGXC_PRESENT
-   retrogxc_string(
-#else
    retrofont_string(
-#endif /* RETROGXC_PRESENT */
-      gui->draw_bmp, fg_color, ctl->BUTTON.label, 0,
-#ifdef RETROGXC_PRESENT
-      gui->font_idx,
-#else
-      gui->font_h,
-#endif /* RETROGXC_PRESENT */
+      gui->draw_bmp, fg_color, ctl->BUTTON.label, 0, font_h,
       gui->x + ctl->base.x + ((ctl->base.w >> 1) - (w >> 1)) + text_offset,
       gui->y + ctl->base.y + ((ctl->base.h >> 1) - (h >> 1)) + text_offset,
       /* TODO: Pad max client area. */
@@ -1255,6 +1242,7 @@ static MERROR_RETVAL retrogui_sz_BUTTON(
    retroflat_pxxy_t max_w, retroflat_pxxy_t max_h
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    assert( NULL != ctl );
    assert( NULL == ctl->BUTTON.label );
@@ -1265,22 +1253,15 @@ static MERROR_RETVAL retrogui_sz_BUTTON(
 
    /* Get the size of the text-based GUI item. */
 #ifdef RETROGXC_PRESENT
-   retrogxc_string_sz(
+   font_h = retrogxc_get_asset(
+      gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
+   font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string_sz(
-#endif /* RETROGXC_PRESENT */
-      NULL,
-      ctl->BUTTON.label,
-      0,
-#ifdef RETROGXC_PRESENT
-      gui->font_idx,
-#else
-      gui->font_h,
-#endif /* RETROGXC_PRESENT */
-      max_w - 8,
-      max_h - 8,
-      p_w,
-      p_h, ctl->BUTTON.font_flags );
+      NULL, ctl->BUTTON.label, 0, font_h,
+      max_w - 8, max_h - 8, p_w, p_h, ctl->BUTTON.font_flags );
 
    /* Add space for borders and stuff. */
    *p_w += RETROGUI_BTN_LBL_PADDED_X;
@@ -1446,6 +1427,7 @@ static void retrogui_redraw_TEXTBOX(
    RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
    retroflat_pxxy_t cursor_x = 0,
       cursor_y = 0;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    /* Adjust shadow colors for monochrome. */
    if( 2 >= retroflat_screen_colors() ) {
@@ -1493,30 +1475,24 @@ static void retrogui_redraw_TEXTBOX(
    }
 
 #ifdef RETROGXC_PRESENT
-   retrogxc_string(
-      gui->draw_bmp, ctl->base.fg_color,
-      ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_idx,
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
-
-   /* Get the line size for cursor placement below. */
-   retrogxc_string_sz(
-      gui->draw_bmp, ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_idx,
-      ctl->base.w, ctl->base.h, &cursor_x, &cursor_y, RETROFONT_FLAG_SZ_MIN );
+   font_h = retrogxc_get_asset(
+      gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      goto cleanup;
+   }
 #else
+   font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string(
       gui->draw_bmp, ctl->base.fg_color,
-      ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_h,
+      ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, font_h,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h, 0 );
 
    /* Get the line size for cursor placement below. */
    retrofont_string_sz(
-      gui->draw_bmp, ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, gui->font_h,
+      gui->draw_bmp, ctl->TEXTBOX.text, ctl->TEXTBOX.text_cur, font_h,
       ctl->base.w, ctl->base.h, &cursor_x, &cursor_y, RETROFONT_FLAG_SZ_MIN );
-#endif /* RETROGXC_PRESENT */
-
-cleanup:
 
    if( cursor_x + RETROGUI_CTL_TEXT_CUR_WH >= ctl->base.w ) {
       cursor_x = 0;
@@ -1541,36 +1517,32 @@ cleanup:
 
    if( NULL != ctl->TEXTBOX.text ) {
       /* Draw the text that comes after the cursor. */
- #ifdef RETROGXC_PRESENT
-   retrogxc_string_indent(
-      gui->draw_bmp, ctl->base.fg_color,
-      &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
-      /* Chop off chars from first half. */
-      strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
-      gui->font_idx,
-      gui->x + ctl->base.x + RETROGUI_PADDING,
-      /* Post-cursor line beings on cursor line. */
-      gui->y + ctl->base.y + RETROGUI_PADDING + cursor_y,
-      ctl->base.w, ctl->base.h,
-      cursor_x + RETROGUI_CTL_TEXT_CUR_WH, 0 );
+#ifdef RETROGXC_PRESENT
+   font_h = retrogxc_get_asset(
+      gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      goto cleanup;
+   }
 #else
+   font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string_indent(
       gui->draw_bmp, ctl->base.fg_color,
       &(ctl->TEXTBOX.text[ctl->TEXTBOX.text_cur]),
       /* Chop off chars from first half. */
-      strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur,
-      gui->font_h,
+      strlen( ctl->TEXTBOX.text ) - ctl->TEXTBOX.text_cur, font_h,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       /* Post-cursor line beings on cursor line. */
       gui->y + ctl->base.y + RETROGUI_PADDING + cursor_y,
       ctl->base.w, ctl->base.h,
       cursor_x + RETROGUI_CTL_TEXT_CUR_WH, 0 );
-#endif /* RETROGXC_PRESENT */
   
       maug_munlock( ctl->TEXTBOX.text_h, ctl->TEXTBOX.text );
    }
 
    gui->flags |= RETROGUI_FLAGS_DIRTY; /* Mark dirty for blink animation. */
+
+cleanup:
 
 #  endif
 
@@ -1690,18 +1662,13 @@ static void retrogui_redraw_LABEL(
    struct RETROGUI* gui, union RETROGUI_CTL* ctl
 ) {
    size_t show_sz = 0;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
 #  if defined( RETROGUI_NATIVE_WIN )
    /* Do nothing. */
 #  else
 
    /* Draw text. */
-
-#ifdef RETROGXC_PRESENT
-   assert( 0 <= gui->font_idx );
-#else
-   assert( (MAUG_MHANDLE)NULL != gui->font_h );
-#endif /* RETROGXC_PRESENT */
 
    assert( NULL == ctl->LABEL.label );
    maug_mlock( ctl->LABEL.label_h, ctl->LABEL.label );
@@ -1749,16 +1716,16 @@ static void retrogui_redraw_LABEL(
    }
 
 #ifdef RETROGXC_PRESENT
-   retrogxc_string(
+   font_h = retrogxc_get_asset(
+      gui->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      goto cleanup;
+   }
 #else
+   font_h = gui->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string(
-#endif /* RETROGXC_PRESENT */
-      gui->draw_bmp, ctl->base.fg_color, ctl->LABEL.label, show_sz,
-#ifdef RETROGXC_PRESENT
-      gui->font_idx,
-#else
-      gui->font_h,
-#endif /* RETROGXC_PRESENT */
+      gui->draw_bmp, ctl->base.fg_color, ctl->LABEL.label, show_sz, font_h,
       gui->x + ctl->base.x + RETROGUI_PADDING,
       gui->y + ctl->base.y + RETROGUI_PADDING, ctl->base.w, ctl->base.h,
       ctl->LABEL.font_flags );
@@ -2410,6 +2377,11 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       return MERROR_OK;
    }
 
+   if( !retrogxc_cachable_is_loaded( &(gui->font) ) ) {
+      error_printf( "no font has been defined for GUI %p!", gui );
+      return MERROR_GUI;
+   }
+
    if( !mdata_vector_is_locked( &((gui)->ctls) ) ) {
       mdata_vector_lock( &(gui->ctls) );
       autolock = 1;
@@ -2524,7 +2496,7 @@ MERROR_RETVAL retrogui_push_ctl(
    assert( 0 < ctl->base.idc );
 
 #ifdef RETROGXC_PRESENT
-   if( 0 > gui->font_idx ) {
+   if( 0 > gui->font.cache_idx ) {
 #else
    if( (MAUG_MHANDLE)NULL == gui->font_h ) {
 #endif /* RETROGXC_PRESENT */
@@ -2699,9 +2671,9 @@ MERROR_RETVAL retrogui_set_font(
    MERROR_RETVAL retval = MERROR_OK;
 
 #ifdef RETROGXC_PRESENT
-   gui->font_idx = retrogxc_load_font( font_path, 0, 33, 93 );
+   gui->font.cache_idx = retrogxc_load_font( font_path, 0, 33, 93 );
    maug_cleanup_if_lt(
-      gui->font_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
+      gui->font.cache_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
 #else
    retval = retrofont_load( font_path, &(gui->font_h), 0, 33, 93 );
    maug_cleanup_if_not_ok();

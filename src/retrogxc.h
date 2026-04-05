@@ -27,6 +27,10 @@
 
 #define RETROGXC_PRESENT 1
 
+#undef retrogxc_cachable_is_loaded
+#define retrogxc_cachable_is_loaded( cachable ) \
+   (0 <= (cachable)->cache_idx)
+
 #ifndef RETROGXC_INITIAL_SZ
 #  define RETROGXC_INITIAL_SZ 16
 #endif /* !RETROGXC_INITIAL_SZ */

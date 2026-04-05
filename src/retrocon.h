@@ -182,7 +182,7 @@ MERROR_RETVAL retrocon_init(
 
    /* TODO: Parse font height from filename and only load printable glyphs. */
 #ifdef RETROGXC_PRESENT
-   con->gui.font_idx = retrogxc_load_font( font_name, 0, 33, 93 );
+   con->gui.font.cache_idx = retrogxc_load_font( font_name, 0, 33, 93 );
 #else
    retval = retrofont_load( font_name, &(con->gui.font_h), 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */

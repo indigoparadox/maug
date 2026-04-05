@@ -119,7 +119,24 @@ union MAUG_MHANDLEPTR {
 #  define MSERIAL_C
 #endif /* MAUG_C */
 
+/**
+ * \brief Can hold a \ref maug_retrogxc reference or a ::MAUG_MHANDLE. Mostly
+ *        used internally to retroflat to maintain struct compatibility between
+ *        programs that use the cache and programs that do not.
+ */
+union RETROGXC_CACHABLE {
+   ssize_t cache_idx;
+   MAUG_MHANDLE handle;
+};
+
+/**
+ * \note Also see redefinition in retrogxc.h!
+ */
+#define retrogxc_cachable_is_loaded( cachable ) \
+   ((MAUG_MHANDLE)NULL != (cachable)->handle)
+
 #ifndef MAUG_NO_RETRO
+
 #  ifdef MAUG_C
 #     define RETROFLT_C
 #  endif /* MAUG_C */

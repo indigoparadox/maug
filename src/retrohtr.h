@@ -41,11 +41,7 @@ struct RETROHTR_RENDER_NODE {
    uint8_t edge;
    RETROFLAT_COLOR bg;
    RETROFLAT_COLOR fg;
-#ifdef RETROGXC_PRESENT
-   ssize_t font_idx;
-#else
-   MAUG_MHANDLE font_h;
-#endif /* RETROGXC_PRESENT */
+   union RETROGXC_CACHABLE font;
    ssize_t tag;
    /*! \brief Index of container's render node in ::RETROHTR_RENDER_TREE. */
    ssize_t parent;
@@ -389,7 +385,7 @@ ssize_t retrohtr_add_node_child(
    }
 
 #ifdef RETROGXC_PRESENT
-   retrohtr_node( tree, node_new_idx )->font_idx = -1;
+   retrohtr_node( tree, node_new_idx )->font.cache_idx = -1;
 #endif /* RETROGXC_PRESENT */
    retrohtr_node( tree, node_new_idx )->parent = node_parent_idx;
    retrohtr_node( tree, node_new_idx )->first_child = -1;
@@ -649,24 +645,14 @@ cleanup:
 
 static MERROR_RETVAL retrohtr_load_font(
    struct MCSS_PARSER* styler,
-#ifdef RETROGXC_PRESENT
-   ssize_t* font_idx_p,
-#else
-   MAUG_MHANDLE* font_h_p,
-#endif /* RETROGXC_PRESENT */
+   union RETROGXC_CACHABLE* font,
    struct MCSS_STYLE* effect_style
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-#ifdef RETROGXC_PRESENT
-   if( 0 <= *font_idx_p ) {
+   if( retrogxc_cachable_is_loaded( font ) ) {
       error_printf( "tried to load font but font already loaded, idx: "
-         SSIZE_T_FMT, *font_idx_p );
-#else
-   if( (MAUG_MHANDLE)NULL != *font_h_p ) {
-      error_printf( "tried to load font but font already loaded, p: %p",
-         *font_h_p );
-#endif /* RETROGXC_PRESENT */
+         SSIZE_T_FMT, font->cache_idx );
       goto cleanup;
    }
 
@@ -688,14 +674,14 @@ static MERROR_RETVAL retrohtr_load_font(
 
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
-   *font_idx_p =
+   font->cache_idx =
       retrogxc_load_font(
          mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
          0, 33, 93 );
 #else
    retval = retrofont_load(
          mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
-         font_h_p, 0, 33, 93 );
+         &(font->handle), 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
 
 cleanup:
@@ -732,11 +718,7 @@ MERROR_RETVAL retrohtr_tree_gui(
 
    retval = retrohtr_load_font(
       styler,
-#ifdef RETROGXC_PRESENT
-      &(tree->gui.font_idx),
-#else
-      &(tree->gui.font_h),
-#endif /* RETROGXC_PRESENT */
+      &(tree->gui.font),
       effect_style );
    maug_cleanup_if_not_ok();
 
@@ -769,6 +751,7 @@ MERROR_RETVAL retrohtr_tree_size(
    union RETROGUI_CTL ctl;
    union MHTML_TAG* p_tag_iter = NULL;
    union MHTML_TAG* p_tag_node = NULL;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    if( NULL == retrohtr_node( tree, node_idx ) ) {
       goto cleanup;
@@ -823,32 +806,28 @@ MERROR_RETVAL retrohtr_tree_size(
    /* Font is heritable, so load it for all nodes even if we don't use it. */
    retval = retrohtr_load_font(
       &(parser->styler),
-#ifdef RETROGXC_PRESENT
-      &(retrohtr_node( tree, node_idx )->font_idx),
-#else
-      &(retrohtr_node( tree, node_idx )->font_h),
-#endif /* RETROGXC_PRESENT */
+      &(retrohtr_node( tree, node_idx )->font),
       &effect_style );
    maug_cleanup_if_not_ok();
 
    if( 0 <= tag_idx && MHTML_TAG_TYPE_TEXT == p_tag_iter->base.type ) {
       /* Get text size to use in calculations below. */
 
+#ifdef RETROGXC_PRESENT
+      font_h = retrogxc_get_asset(
+         retrohtr_node( tree, node_idx )->font.cache_idx,
+         RETROGXC_ASSET_TYPE_FONT );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
+#else
+      font_h = retrohtr_node( tree, node_idx )->font.handle;
+#endif /* RETROGXC_PRESENT */
+
       mdata_strpool_lock( &(parser->strpool) );
 
-#ifdef RETROGXC_PRESENT
-      retrogxc_string_sz(
-#else
       retrofont_string_sz(
-#endif /* RETROGXC_PRESENT */
          NULL,
          mdata_strpool_get( &(parser->strpool), p_tag_iter->TEXT.content_idx ),
-         p_tag_iter->TEXT.content_sz,
-#ifdef RETROGXC_PRESENT
-         retrohtr_node( tree, node_idx )->font_idx,
-#else
-         retrohtr_node( tree, node_idx )->font_h,
-#endif /* RETROGXC_PRESENT */
+         p_tag_iter->TEXT.content_sz, font_h,
          /* Constrain node text size to parent size. */
          retrohtr_node_parent( tree, node_idx )->w,
          retrohtr_node_parent( tree, node_idx )->h,
@@ -1480,6 +1459,7 @@ MERROR_RETVAL retrohtr_tree_draw(
    union MHTML_TAG* p_tag = NULL;
    struct RETROHTR_RENDER_NODE* node = NULL;
    MERROR_RETVAL retval = MERROR_OK;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    node = retrohtr_node( tree, node_idx );
 
@@ -1510,14 +1490,18 @@ MERROR_RETVAL retrohtr_tree_draw(
 
       if(
          MDATA_STRPOOL_IDX_ERROR == p_tag->TEXT.content_idx ||
-#ifdef RETROGXC_PRESENT
-         0 > node->font_idx
-#else
-         (MAUG_MHANDLE)NULL == node->font_h
-#endif /* RETROGXC_PRESENT */
+         retrogxc_cachable_is_loaded( &(node->font) )
       ) {
          goto cleanup;
       }
+
+#ifdef RETROGXC_PRESENT
+      font_h = retrogxc_get_asset(
+         node->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+      maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
+#else
+      font_h = nod->font.handle;
+#endif /* RETROGXC_PRESENT */
 
       mdata_strpool_lock( &(parser->strpool) );
 
@@ -1528,12 +1512,7 @@ MERROR_RETVAL retrohtr_tree_draw(
 #endif /* RETROGXC_PRESENT */
          NULL, node->fg,
          mdata_strpool_get( &(parser->strpool), p_tag->TEXT.content_idx ),
-         p_tag->TEXT.content_sz,
-#ifdef RETROGXC_PRESENT
-         node->font_idx,
-#else
-         node->font_h,
-#endif /* RETROGXC_PRESENT */
+         p_tag->TEXT.content_sz, font_h,
          retrohtr_node_screen_x( tree, node_idx ),
          retrohtr_node_screen_y( tree, node_idx ),
          node->w, node->h, 0 );
@@ -1710,27 +1689,19 @@ MERROR_RETVAL retrohtr_tree_dump(
       strcat( indents, "   " );
    }
 
+#if RETROHTR_TRACE_LVL > 0
    /* Print the debug line. */
    debug_printf(
-      1,
+      RETROHTR_TRACE_LVL,
       "%s" SSIZE_T_FMT " (tag %s): x: " SSIZE_T_FMT ", y: " SSIZE_T_FMT
-      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ") f: "
-#ifdef RETROGXC_PRESENT
-      SSIZE_T_FMT,
-#else
-      "%p",
-#endif /* RETROGXC_PRESENT */
+      " (" SSIZE_T_FMT " x " SSIZE_T_FMT ")",
       indents, node_idx,
       0 <= tree->nodes[node_idx].tag ?
          gc_mhtml_tag_names[p_tag_iter->base.type] : "ROOT",
       tree->nodes[node_idx].x, tree->nodes[node_idx].y,
-      tree->nodes[node_idx].w, tree->nodes[node_idx].h,
-#ifdef RETROGXC_PRESENT
-      tree->nodes[node_idx].font_idx
-#else
-      tree->nodes[node_idx].font_h
-#endif /* RETROGXC_PRESENT */
+      tree->nodes[node_idx].w, tree->nodes[node_idx].h
    );
+#endif /* RETROHTR_TRACE_LVL */
 
    mdata_vector_unlock( &(parser->tags) );
 
