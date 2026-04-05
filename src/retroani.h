@@ -141,11 +141,7 @@ struct RETROANI {
    int8_t tile[RETROANI_TILE_SZ];
    retroflat_blit_t* target;
    retroflat_ms_t next_frame_ms;
-#ifdef RETROGXC_PRESENT
-   ssize_t font_idx;
-#else
-   MAUG_MHANDLE font_h;
-#endif /* RETROGXC_PRESENT */
+   union RETROGXC_CACHABLE font;
    uint16_t mspf;
    struct RETROANI_HOLE hole;
    RETROFLAT_COLOR colors[RETROANI_COLOR_CT_MAX];
@@ -556,6 +552,7 @@ MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
    uint8_t* p_str_sz = NULL;
    char* str = NULL;
    retroflat_pxxy_t str_height = 0;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    p_y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
@@ -565,20 +562,22 @@ MERROR_RETVAL retroani_draw_STRING( struct RETROANI* ani ) {
       return MERROR_EXEC;
    }
 
-   /* Draw the animation text. */
 #ifdef RETROGXC_PRESENT
-   retrogxc_string_sz(
-      ani->target, str, *p_str_sz,
-      ani->font_idx, ani->w, ani->h, NULL, &str_height, 0 );
-   retrogxc_string(
-      ani->target, ani->colors[0], str, *p_str_sz, ani->font_idx,
+   font_h = retrogxc_get_asset( ani->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
 #else
+   font_h = ani->font.handle;
+#endif /* RETROGXC_PRESENT */
+   if( (MAUG_MHANDLE)NULL == font_h ) {
+      error_printf( "no font specified for text animation!" );
+      return MERROR_GUI;
+   }
+
+   /* Draw the animation text. */
    retrofont_string_sz(
       ani->target, str, *p_str_sz,
-      ani->font_h, ani->w, ani->h, NULL, &str_height, 0 );
+      font_h, ani->w, ani->h, NULL, &str_height, 0 );
    retrofont_string(
-      ani->target, ani->colors[0], str, *p_str_sz, ani->font_h,
-#endif /* RETROGXC_PRESENT */
+      ani->target, ani->colors[0], str, *p_str_sz, font_h,
       ani->x, ani->y + ani->h - (*p_y_offset), ani->w, ani->h, 0 );
 
    if( 0 == retroflat_heartbeat() ) {
@@ -639,6 +638,7 @@ MERROR_RETVAL retroani_set_string(
    char* str = NULL;
    struct RETROANI* ani = NULL;
    retroflat_pxxy_t str_height = 0;
+   MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
    if( a_idx >= mdata_vector_ct( ani_stack ) ) {
       return MERROR_OVERFLOW;
@@ -656,16 +656,17 @@ MERROR_RETVAL retroani_set_string(
    assert( RETROANI_TYPE_STRING == ani->type ); */
  
 #ifdef RETROGXC_PRESENT
-   ani->font_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
-   retrogxc_string_sz(
-      ani->target, str, str_sz_in,
-      ani->font_idx, ani->w, ani->h, NULL, &str_height, 0 );
+   ani->font.cache_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
+   font_h = retrogxc_get_asset( ani->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
+   retval = retrofont_load( font_name_in, &(ani->font.handle), 0, 33, 93 );
+   maug_cleanup_if_not_ok();
+   font_h = ani->font.handle;
+#endif /* RETROGXC_PRESENT */
    retrofont_string_sz(
       ani->target, str, *p_str_sz,
-      ani->font_h, ani->w, ani->h, NULL, &str_height, 0 );
-   retval = retrofont_load( font_name_in, &(ani->font_h), 0, 33, 93 );
-#endif /* RETROGXC_PRESENT */
+      font_h, ani->w, ani->h, NULL, &str_height, 0 );
 
    maug_strncpy( str, str_in, RETROANI_TEXT_MAX_SZ - 1 );
    *p_str_sz = str_sz_in;
