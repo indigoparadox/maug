@@ -488,7 +488,7 @@ retro3dp_parse_obj_token( struct RETRO3DP_PARSER* parser ) {
          assert( NULL != MATERIAL );
          debug_printf( RETRO3DP_TRACE_LVL,
             "%s vs %s", MATERIAL->name, parser->base.token );
-         if( 0 == strncmp(
+         if( 0 == maug_strncmp(
             MATERIAL->name, parser->base.token, RETRO3DP_MATERIAL_NAME_SZ_MAX
          ) ) {
             debug_printf( RETRO3DP_TRACE_LVL, "using material: \"%s\" (%d)",
@@ -520,7 +520,7 @@ retro3dp_parse_obj_token( struct RETRO3DP_PARSER* parser ) {
       /* Check against generic tokens. */
       while( '\0' != g_retro3dp_token_strings[i][0] ) {
          if(
-            0 == strncmp(
+            0 == maug_strncmp(
                parser->base.token, g_retro3dp_token_strings[i],
                maug_strlen( g_retro3dp_token_strings[i] ) + 1 )
          ) {

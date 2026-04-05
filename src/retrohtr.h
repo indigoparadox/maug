@@ -583,7 +583,7 @@ MERROR_RETVAL retrohtr_apply_styles(
 
          if(
             NULL != style &&
-            0 == strncmp(
+            0 == maug_strncmp(
                p_tag_iter->base.classes,
                style->class,
                p_tag_iter->base.classes_sz
@@ -608,7 +608,7 @@ MERROR_RETVAL retrohtr_apply_styles(
 
          if(
             NULL != style &&
-            0 == strncmp(
+            0 == maug_strncmp(
                p_tag_iter->base.id,
                style->id,
                p_tag_iter->base.id_sz

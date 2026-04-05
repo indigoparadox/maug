@@ -2419,7 +2419,7 @@ static MERROR_RETVAL retrosnd_cli_rsl(
 ) {
    if(
       0 <= arg_c &&
-      0 == strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rsl", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       args->sound.flags |= RETROSND_ARGS_FLAG_LIST_DEVS;
    }
@@ -2448,7 +2448,7 @@ static MERROR_RETVAL retroflat_cli_rfx(
          args->screen_x = 0;
       }
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfx", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       /* The next arg must be the new var. */
    } else {
@@ -2465,7 +2465,7 @@ static MERROR_RETVAL retroflat_cli_rfy(
          args->screen_y = 0;
       }
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfy", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       /* The next arg must be the new var. */
    } else {
@@ -2484,7 +2484,7 @@ static MERROR_RETVAL retroflat_cli_rfw(
             args->screen_w );
       }
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfw", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       /* The next arg must be the new var. */
    } else {
@@ -2505,7 +2505,7 @@ static MERROR_RETVAL retroflat_cli_rfh(
             args->screen_h );
       }
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfh", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfh", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       /* The next arg must be the new var. */
    } else {
@@ -2522,7 +2522,7 @@ static MERROR_RETVAL retroflat_cli_rfh(
 static MERROR_RETVAL retroflat_cli_vdp(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
-   if( 0 == strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
+   if( 0 == maug_strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* Next arg is VDP args str. */
    } else {
       maug_strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
@@ -2538,7 +2538,7 @@ static MERROR_RETVAL retroflat_cli_u(
    if( 0 > arg_c ) {
       args->flags &= ~RETROFLAT_FLAGS_UNLOCK_FPS;
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       debug_printf( 1, "unlocking FPS..." );
       args->flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
@@ -2556,7 +2556,7 @@ static MERROR_RETVAL retroflat_cli_rfj(
       debug_printf( 1, "setting arg joystick_id to default: %d",
          args->joystick_id );
    } else if(
-      0 == strncmp( MAUG_CLI_SIGIL "rfj", arg, MAUG_CLI_SIGIL_SZ + 4 )
+      0 == maug_strncmp( MAUG_CLI_SIGIL "rfj", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       /* The next arg must be the new var. */
    } else {

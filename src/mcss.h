@@ -261,7 +261,7 @@ MERROR_RETVAL mcss_push_prop_key( struct MCSS_PARSER* parser ) {
    i = 0;
    while( '\0' != gc_mcss_prop_names[i][0] ) {
       if(
-         0 == strncmp(
+         0 == maug_strncmp(
             gc_mcss_prop_names[i], parser->base.token,
             maug_strlen( gc_mcss_prop_names[i] ) + 1 )
       ) {
@@ -297,7 +297,7 @@ MERROR_RETVAL mcss_style_position(
       if(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
-         0 == strncmp(
+         0 == maug_strncmp(
             gc_mcss_position_names[i], parser->base.token,
             maug_strlen( gc_mcss_position_names[i] ) + 1 )
       ) {
@@ -331,7 +331,7 @@ MERROR_RETVAL mcss_style_display(
       if(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
-         0 == strncmp(
+         0 == maug_strncmp(
             gc_mcss_display_names[i], parser->base.token,
             maug_strlen( gc_mcss_display_names[i] ) + 1 )
       ) {
@@ -365,7 +365,7 @@ MERROR_RETVAL mcss_style_color(
       if(
          /* Don't use sz check here because we might've shrunk token with
           * ! check above. */
-         0 == strncmp(
+         0 == maug_strncmp(
             gc_mcss_color_names[i], parser->base.token,
             maug_strlen( gc_mcss_color_names[i] ) + 1 )
       ) {
@@ -419,7 +419,7 @@ MERROR_RETVAL mcss_style_size_t(
 
    mparser_token_upper( &((parser)->base), i );
 
-   if( 0 == strncmp( "AUTO", parser->base.token, 5 ) ) {
+   if( 0 == maug_strncmp( "AUTO", parser->base.token, 5 ) ) {
       parser->prop_flags |= MCSS_PROP_FLAG_AUTO;
    }
 
@@ -526,7 +526,8 @@ MERROR_RETVAL mcss_parser_flush( struct MCSS_PARSER* parser ) {
       if(
          /* TODO: Break this out to make it more resilient. */
          NULL != maug_strchr( parser->base.token, '!' ) &&
-         0 == strncmp( "!important", maug_strchr( parser->base.token, '!' ), 10 )
+         0 == maug_strncmp(
+            "!important", maug_strchr( parser->base.token, '!' ), 10 )
       ) {
          debug_printf( MCSS_TRACE_LVL, "marking value !important..." );
          parser->prop_flags |= MCSS_PROP_FLAG_IMPORTANT;
