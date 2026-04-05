@@ -111,24 +111,6 @@ MERROR_RETVAL retrogxc_blit_bitmap(
    retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
    retroflat_pxxy_t w, retroflat_pxxy_t h, int16_t instance );
 
-MERROR_RETVAL retrogxc_string(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, uint8_t flags );
-
-MERROR_RETVAL retrogxc_string_indent(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t indent,
-   uint8_t flags );
-
-MERROR_RETVAL retrogxc_string_sz(
-   retroflat_blit_t* target, const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
-   retroflat_pxxy_t* out_w_p, retroflat_pxxy_t* out_h_p, uint8_t flags );
-
 MERROR_RETVAL retrogxc_bitmap_wh(
    size_t bitmap_idx, retroflat_pxxy_t* p_w, retroflat_pxxy_t* p_h );
 
@@ -514,103 +496,6 @@ int16_t retrogxc_load_font(
    idx = retrogxc_load_asset( font_name, retrogxc_loader_font, &parms, 0 );
 
    return idx;
-}
-
-/* === */
-
-/* TODO: Remove retrogxc_string_* functions and use retrogxc_get_asset()! */
-
-MERROR_RETVAL retrogxc_string(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, uint8_t flags
-) {
-
-   return retrogxc_string_indent(
-      target, color, str, str_sz, font_idx, x, y, max_w, max_h, 0, flags );
-}
-
-/* === */
-
-MERROR_RETVAL retrogxc_string_indent(
-   retroflat_blit_t* target, RETROFLAT_COLOR color,
-   const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t max_w, retroflat_pxxy_t max_h, retroflat_pxxy_t indent,
-   uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* asset = NULL;
-
-   mdata_vector_lock( &gs_retrogxc_bitmaps );
-
-   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= font_idx ) {
-      error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
-      retval = MERROR_OVERFLOW;
-      goto cleanup;
-   }
-
-   asset = mdata_vector_get(
-      &gs_retrogxc_bitmaps, font_idx, struct RETROFLAT_CACHE_ASSET );
-
-   if( RETROGXC_ASSET_TYPE_FONT != asset->type ) {
-      error_printf(
-         "index " SIZE_T_FMT " not present in cache or not font (%d)!",
-         font_idx, asset->type );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   retrofont_string_indent(
-      target, color, str, str_sz, asset->handle, x, y, max_w, max_h,
-      indent, flags );
-
-cleanup:
-
-   mdata_vector_unlock( &gs_retrogxc_bitmaps );
-
-   return retval;
-}
-
-/* === */
-
-MERROR_RETVAL retrogxc_string_sz(
-   retroflat_blit_t* target, const char* str, size_t str_sz,
-   size_t font_idx, retroflat_pxxy_t max_w, retroflat_pxxy_t max_h,
-   retroflat_pxxy_t* out_w_p, retroflat_pxxy_t* out_h_p, uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-   struct RETROFLAT_CACHE_ASSET* asset = NULL;
-
-   mdata_vector_lock( &gs_retrogxc_bitmaps );
-
-   if( mdata_vector_ct( &gs_retrogxc_bitmaps ) <= font_idx ) {
-      error_printf( "invalid font index: " SIZE_T_FMT, font_idx );
-      retval = MERROR_OVERFLOW;
-      goto cleanup;
-   }
-
-   asset = mdata_vector_get(
-      &gs_retrogxc_bitmaps, font_idx, struct RETROFLAT_CACHE_ASSET );
-
-   if( RETROGXC_ASSET_TYPE_FONT != asset->type ) {
-      error_printf(
-         "index " SIZE_T_FMT " not present in cache or not font (%d)!",
-         font_idx, asset->type );
-      retval = MERROR_FILE;
-      goto cleanup;
-   }
-
-   retrofont_string_sz(
-      target, str, str_sz, asset->handle,
-      max_w, max_h, out_w_p, out_h_p, flags );
-
-cleanup:
-
-   mdata_vector_unlock( &gs_retrogxc_bitmaps );
-
-   return retval;
 }
 
 #endif /* RETROFONT_PRESENT */
