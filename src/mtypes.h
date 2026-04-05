@@ -73,9 +73,10 @@ defined( __WATCOMC__ ) || defined( __BORLANDC__ )
 
 #if defined( M_I86 )
 #  define MAUG_MPTR_SZ 16
-#elif defined( M_I386 ) || defined( __386__ )
+#elif defined( M_I386 ) || defined( __386__ ) || __SIZEOF_POINTER__ == 4
 #  define MAUG_MPTR_SZ 32
-#elif defined( _WIN64 ) || defined( __x86_64__ ) || defined( __ppc64__ )
+#elif defined( _WIN64 ) || defined( __x86_64__ ) || defined( __ppc64__ ) || \
+__SIZEOF_POINTER__ == 8
 #  define MAUG_MPTR_SZ 64
 #else
    #error "unable to determine pointer size!"
