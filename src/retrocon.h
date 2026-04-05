@@ -184,7 +184,7 @@ MERROR_RETVAL retrocon_init(
 #ifdef RETROGXC_PRESENT
    con->gui.font.cache_idx = retrogxc_load_font( font_name, 0, 33, 93 );
 #else
-   retval = retrofont_load( font_name, &(con->gui.font_h), 0, 33, 93 );
+   retval = retrofont_load( font_name, &(con->gui.font.handle), 0, 33, 93 );
 #endif /* RETROGXC_PRESENT */
    maug_cleanup_if_not_ok();
 
@@ -494,7 +494,7 @@ cleanup:
 
 void retrocon_shutdown( struct RETROCON* con ) {
 #ifndef RETROGXC_PRESENT
-   retrofont_free( &(con->gui.font_h) );
+   retrofont_free( &(con->gui.font.handle) );
 #endif /* !RETROGXC_PRESENT */
    retrogui_destroy( &(con->gui) );
 }

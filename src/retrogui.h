@@ -2495,17 +2495,6 @@ MERROR_RETVAL retrogui_push_ctl(
 
    assert( 0 < ctl->base.idc );
 
-#ifdef RETROGXC_PRESENT
-   if( 0 > gui->font.cache_idx ) {
-#else
-   if( (MAUG_MHANDLE)NULL == gui->font_h ) {
-#endif /* RETROGXC_PRESENT */
-      retroflat_message(
-         RETROFLAT_MSG_FLAG_ERROR, "Error", "GUI font not loaded!" );
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
    /* TODO: Hunt for control IDC and fail if duplicate found! */
 
 #if RETROGUI_TRACE_LVL > 0
@@ -2675,7 +2664,14 @@ MERROR_RETVAL retrogui_set_font(
    maug_cleanup_if_lt(
       gui->font.cache_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
 #else
-   retval = retrofont_load( font_path, &(gui->font_h), 0, 33, 93 );
+   if(
+      RETROGUI_FLAGS_FONT_OWNED == (RETROGUI_FLAGS_FONT_OWNED & gui->flags) &&
+      (MAUG_MHANDLE)NULL != gui->font.handle
+   ) {
+      debug_printf( RETROGUI_TRACE_LVL, "freeing existing GUI font..." );
+      maug_mfree( gui->font.handle );
+   }
+   retval = retrofont_load( font_path, &(gui->font.handle), 0, 33, 93 );
    maug_cleanup_if_not_ok();
 #endif /* RETROGXC_PRESENT */
 
@@ -3247,7 +3243,7 @@ MERROR_RETVAL retrogui_destroy( struct RETROGUI* gui ) {
 
 #  ifndef RETROGXC_PRESENT
    if( RETROGUI_FLAGS_FONT_OWNED == (RETROGUI_FLAGS_FONT_OWNED & gui->flags) ) {
-      maug_mfree( gui->font_h );
+      maug_mfree( gui->font.handle );
    }
 #  endif /* !RETROGXC_PRESENT */
 
