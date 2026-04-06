@@ -1049,7 +1049,7 @@ MERROR_RETVAL retroani_stop_all( struct MDATA_VECTOR* ani_stack ) {
 #ifndef RETROANI_DISABLE
    size_t i = 0;
 
-   if( 0 == mdata_vector_ct( ani_stack ) ) {
+   if( 0 == mdata_vector_sz( ani_stack ) ) {
       return MERROR_OK;
    }
 
