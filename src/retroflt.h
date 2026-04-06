@@ -444,6 +444,12 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
 
 /**
+ * \relates RETROFLAT_STATE
+ * \brief Assume all ::RETROGXC_CACHABLE are cache indexes and not handles.
+ */
+#define RETROFLAT_FLAGS_USE_GXC  0x40
+
+/**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
  * \brief These flags can be passed to retroflat_message() to indicate the
  *        type of message being conveyed.

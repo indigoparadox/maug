@@ -674,14 +674,21 @@ static MERROR_RETVAL retrohtr_load_font(
 
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
-   font->cache_idx =
-      retrogxc_load_font(
-         mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
-         0, 33, 93 );
-#else
+   if(
+      RETROFLAT_FLAGS_USE_GXC ==
+      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+   ) {
+      font->cache_idx =
+         retrogxc_load_font(
+            mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
+            0, 33, 93 );
+   } else {
+#endif /* RETROGXC_PRESENT */
    retval = retrofont_load(
          mdata_strpool_get( &(styler->strpool), effect_style->FONT_FAMILY ),
          &(font->handle), 0, 33, 93 );
+#ifdef RETROGXC_PRESENT
+   }
 #endif /* RETROGXC_PRESENT */
 
 cleanup:

@@ -2660,10 +2660,15 @@ MERROR_RETVAL retrogui_set_font(
    MERROR_RETVAL retval = MERROR_OK;
 
 #ifdef RETROGXC_PRESENT
-   gui->font.cache_idx = retrogxc_load_font( font_path, 0, 33, 93 );
-   maug_cleanup_if_lt(
-      gui->font.cache_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
-#else
+   if(
+      RETROFLAT_FLAGS_USE_GXC ==
+      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+   ) {
+      gui->font.cache_idx = retrogxc_load_font( font_path, 0, 33, 93 );
+      maug_cleanup_if_lt(
+         gui->font.cache_idx, (ssize_t)0, SSIZE_T_FMT, MERROR_GUI );
+   } else {
+#endif /* RETROGXC_PRESENT */
    if(
       RETROGUI_FLAGS_FONT_OWNED == (RETROGUI_FLAGS_FONT_OWNED & gui->flags) &&
       (MAUG_MHANDLE)NULL != gui->font.handle
@@ -2673,6 +2678,8 @@ MERROR_RETVAL retrogui_set_font(
    }
    retval = retrofont_load( font_path, &(gui->font.handle), 0, 33, 93 );
    maug_cleanup_if_not_ok();
+#ifdef RETROGXC_PRESENT
+   }
 #endif /* RETROGXC_PRESENT */
 
    gui->flags |= RETROGUI_FLAGS_FONT_OWNED;

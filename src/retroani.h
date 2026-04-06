@@ -650,20 +650,28 @@ MERROR_RETVAL retroani_set_string(
 
    p_y_offset = (int8_t*)&(ani->tile[RETROANI_TEXT_HEADER_Y_OFFSET]);
    str = (char*)&(ani->tile[RETROANI_TEXT_HEADER_STR]);
-   p_str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]),
+   p_str_sz = (uint8_t*)&(ani->tile[RETROANI_TEXT_HEADER_STR_SZ]);
 
    /* assert( RETROANI_TEXT_MAX_SZ > *p_str_sz );
    assert( RETROANI_TYPE_STRING == ani->type ); */
  
 #ifdef RETROGXC_PRESENT
-   ani->font.cache_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
-   font_h = retrogxc_get_asset( ani->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
-   maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
-#else
+   if(
+      RETROFLAT_FLAGS_USE_GXC ==
+      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+   ) {
+      ani->font.cache_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
+      font_h =
+         retrogxc_get_asset( ani->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
+   } else {
+#endif /* RETROGXC_PRESENT */
    retval = retrofont_load( font_name_in, &(ani->font.handle), 0, 33, 93 );
    maug_cleanup_if_not_ok();
    font_h = ani->font.handle;
+#ifdef RETROGXC_PRESENT
+   }
 #endif /* RETROGXC_PRESENT */
+   maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
    retrofont_string_sz(
       ani->target, str, *p_str_sz,
       font_h, ani->w, ani->h, NULL, &str_height, 0 );

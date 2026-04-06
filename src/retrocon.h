@@ -180,16 +180,11 @@ MERROR_RETVAL retrocon_init(
    retval = retrogui_init( &(con->gui) );
    maug_cleanup_if_not_ok();
 
-   /* TODO: Parse font height from filename and only load printable glyphs. */
-#ifdef RETROGXC_PRESENT
-   con->gui.font.cache_idx = retrogxc_load_font( font_name, 0, 33, 93 );
-#else
-   retval = retrofont_load( font_name, &(con->gui.font.handle), 0, 33, 93 );
-#endif /* RETROGXC_PRESENT */
+   retval = retrogui_set_font( &(con->gui), font_name );
    maug_cleanup_if_not_ok();
 
    con->sbuffer_color = RETROFLAT_COLOR_DARKBLUE;
-   con->lbuffer_color = RETROFLAT_COLOR_BLACK;
+   con->lbuffer_color = RETROFLAT_COLOR_DARKBLUE;
    con->gui.x = x;
    con->gui.y = y;
    con->gui.w = w;
@@ -202,7 +197,7 @@ MERROR_RETVAL retrocon_init(
       ctl.base.y = 5;
       ctl.base.w = con->gui.w - 10;
       ctl.base.h = 20; /* TODO: Dynamic height based on font. */
-      ctl.base.fg_color = RETROFLAT_COLOR_BLACK;
+      ctl.base.fg_color = RETROFLAT_COLOR_DARKBLUE;
 
       retval = retrogui_push_ctl( &(con->gui), &ctl );
       maug_cleanup_if_not_ok();
