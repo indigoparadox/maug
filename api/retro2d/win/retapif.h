@@ -328,9 +328,14 @@ static LRESULT CALLBACK WndProc(
          /* Handle resize message. */
          retroflat_on_resize( LOWORD( lParam ), HIWORD( lParam ) );
          if( NULL != g_retroflat_state->on_resize ) {
-            g_retroflat_state->on_resize(
+            if( MERROR_OK != g_retroflat_state->on_resize(
                LOWORD( lParam ), HIWORD( lParam ),
-               g_retroflat_state->on_resize_data );
+               g_retroflat_state->on_resize_data
+            ) ) {
+               retroflat_message(
+                  RETROFLAT_MSG_FLAG_ERROR, "Error", "Error during resize!" );
+               retroflat_quit( MERROR_GUI );
+            }
          }
          break;
 
@@ -365,6 +370,23 @@ static LRESULT CALLBACK WndProc(
 
       case WM_COMMAND:
          g_retroflat_state->platform.last_idc = LOWORD( wParam );
+         break;
+
+      case WM_ACTIVATE:
+         if( NULL != g_retroflat_state->on_focus ) {
+            g_retroflat_state->last_focus_flags =
+               (WA_ACTIVE == (WA_ACTIVE & LOWORD( wParam )) ? \
+                  RETROFLAT_FOCUS_FLAG_ACTIVE : 0) | 
+               (HIWORD( wParam ) ? 0 : RETROFLAT_FOCUS_FLAG_VISIBLE);
+            if( MERROR_OK != g_retroflat_state->on_focus(
+               g_retroflat_state->last_focus_flags,
+               g_retroflat_state->on_focus_data
+            ) ) {
+               retroflat_message(
+                  RETROFLAT_MSG_FLAG_ERROR, "Error", "Error during focus!" );
+               retroflat_quit( MERROR_GUI );
+            }
+         }
          break;
 
       default:

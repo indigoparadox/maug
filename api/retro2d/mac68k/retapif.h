@@ -179,6 +179,18 @@ MERROR_RETVAL retroflat_loop(
          g_retroflat_state->input.key_code = 
             (event.message & keyCodeMask) >> 8;
          break;
+
+      case activateEvt:
+         g_retroflat_state->last_focus_flags =
+            (event.modifiers & activeFlag ? RETROFLAT_FOCUS_FLAG_ACTIVE : 0)
+                  | RETROFLAT_FOCUS_FLAG_VISIBLE;
+         if( NULL != g_retroflat_state->on_focus ) {
+            retval = g_retroflat_state->on_focus(
+               g_retroflat_state->last_focus_flags,
+               g_retroflat_state->on_focus_data );
+            maug_cleanup_if_not_ok();
+         }
+         break;
       }
 
       if(

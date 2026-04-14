@@ -415,5 +415,14 @@ void retroflat_resize_v() {
    /* Platform does not support resizing. */
 }
 
+/* === */
+
+uint8_t retroflat_focus_platform() {
+
+#  pragma message( "warning: focus_platform not implemented" )
+
+   return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
 #endif /* !RETPLTF_H */
 

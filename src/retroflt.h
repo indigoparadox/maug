@@ -521,8 +521,21 @@ typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
 /*! \} */ /* maug_retroflt_vdp */
 
+/**
+ * \addtogroup maug_retroflt_platform
+ * \{
+ */
+
 typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
    uint16_t new_w, uint16_t new_h, void* data );
+
+#define RETROFLAT_FOCUS_FLAG_ACTIVE 0x01
+
+#define RETROFLAT_FOCUS_FLAG_VISIBLE 0x02
+
+typedef MERROR_RETVAL (*retroflat_proc_focus_t)( uint8_t flags, void* data );
+
+/*! \} */ /* maug_retroflt_platform */
 
 /**
  * \relates RETROFLAT_ARGS
@@ -1732,8 +1745,15 @@ defined( RETROVDP_C )
     */
    uint8_t heartbeat_max;
 
+   /*! \brief Should be set with retroflat_set_proc_resize(). */
    retroflat_proc_resize_t on_resize;
    void* on_resize_data;
+
+   /*! \brief Should be set with retroflat_set_proc_focus(). */
+   retroflat_proc_focus_t on_focus;
+   void* on_focus_data;
+   /*! \brief Used internally to track whether to call on_focus(). */
+   uint8_t last_focus_flags;
 
 #ifndef RETROFLAT_BMP_TEX
    /*! \brief Index of available colors, initialized on platform init. */
@@ -2089,22 +2109,22 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb );
 /*! \} */ /* maug_retroflt_bitmap */
 
 /**
+ * \addtogroup maug_retroflt_platform RetroFlat Platform Function API
+ * \brief Callbacks for handling platform events like focus/size changes.
+ * \{
+ */
+
+/**
  * \brief Set the procedure to call when the window is resized (on platforms
  *        that support resizing).
  * \param on_resize_in Procedure to call when window is resized.
  * \param data_in Data to pass to on_resize_in.
  *
- * If this is not set, no procedure is called. Some platforms may stretch the
- * "virtual" screen to fill the physical window.
+ * \note If this is not set, no procedure is called. Some platforms may stretch
+ *       the "virtual" screen to fill the physical window.
  */
 void retroflat_set_proc_resize(
    retroflat_proc_resize_t on_resize_in, void* data_in );
-
-/**
- * \brief Platform-specific function to resize virtual screen to match
- *        physical window size.
- */
-void retroflat_resize_v();
 
 /**
  * \brief Add a timer callback to be executed at the given time.
@@ -2114,10 +2134,46 @@ ssize_t retroflat_timer_add(
    retroflat_ms_t time, retroflat_timer_cb_t cb, void* data );
 
 /**
- * \note This should be called in the API HAL on every iteration of the main
- *       loop (this is done automatically in the generic main loop).
+ * \brief Set the procedure to call when the window gains or loses focus (on
+ *        platforms that support multitasking).
+ * \param on_focus_in Procedure to call when window gains/loses focus.
+ * \param data_in Data to pass to on_focus_in.
+ *
+ * \note If this is not set, no procedure is called when focus changes.
+ */
+void retroflat_set_proc_focus(
+   retroflat_proc_focus_t on_focus_in, void* data_in );
+
+/**
+ * \addtogroup maug_retroflt_platform_handler Platform-Specific Handlers
+ * \brief These are called internally from the platform API.
+ *
+ * \warning These facilitate the functioning of the \ref maug_retroflt_platform
+ *          internally and should not be defined or used by individual programs.
+ * \{
+ */
+
+/**
+ * \brief Platform-specific function to get current focus flags for the generic
+ *        loop.
+ */
+uint8_t retroflat_focus_platform();
+
+/**
+ * \brief Platform-specific function to resize virtual screen to match
+ *        physical window size.
+ */
+void retroflat_resize_v();
+
+/**
+ * \brief This should be called in the API HAL on every iteration of the main
+ *        loop (this is done automatically in the generic main loop).
  */
 void retroflat_timer_handle();
+
+/*! \} */ /* maug_retroflt_platform_handler */
+
+/*! \} */ /* maug_retroflt_platform */
 
 /**
  * \addtogroup maug_retroflt_input
@@ -2293,6 +2349,17 @@ MERROR_RETVAL retroflat_loop_generic(
       retroflat_heartbeat_update();
 
       retroflat_timer_handle();
+
+      if(
+         NULL != g_retroflat_state->on_focus &&
+         g_retroflat_state->last_focus_flags != retroflat_focus_platform()
+      ) {
+         g_retroflat_state->last_focus_flags = retroflat_focus_platform();
+         retval = g_retroflat_state->on_focus(
+            g_retroflat_state->last_focus_flags,
+            g_retroflat_state->on_focus_data );
+         maug_cleanup_if_not_ok();
+      }
 
       if( NULL != g_retroflat_state->frame_iter ) {
          /* Run the frame iterator once per FPS tick. */
@@ -3282,6 +3349,15 @@ void retroflat_set_proc_resize(
 ) {
    g_retroflat_state->on_resize = on_resize_in;
    g_retroflat_state->on_resize_data = data_in;
+}
+
+/* === */
+
+void retroflat_set_proc_focus(
+   retroflat_proc_focus_t on_focus_in, void* data_in
+) {
+   g_retroflat_state->on_focus = on_focus_in;
+   g_retroflat_state->on_focus_data = data_in;
 }
 
 /* === */

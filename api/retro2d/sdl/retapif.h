@@ -1332,5 +1332,48 @@ void retroflat_resize_v() {
 #  endif /* RETROFLAT_API_SDL2 */
 }
 
+/* === */
+
+uint8_t retroflat_focus_platform() {
+#ifdef RETROFLAT_API_SDL1
+   uint8_t app_state = 0;
+#else
+   uint32_t app_state = 0;
+#endif /* RETROFLAT_API_SDL1 */
+   uint8_t app_state_out = 0;
+
+#ifdef RETROFLAT_API_SDL1
+   app_state = SDL_GetAppState();
+#else
+   app_state = SDL_GetWindowFlags( g_retroflat_state->platform.window );
+#endif /* RETROFLAT_API_SDL1 */
+
+   if(
+#ifdef RETROFLAT_API_SDL1
+      SDL_APPINPUTFOCUS == (SDL_APPINPUTFOCUS & app_state)
+#else
+      SDL_WINDOW_INPUT_FOCUS == (SDL_WINDOW_INPUT_FOCUS & app_state)
+#endif /* RETROFLAT_API_SDL1 */
+   ) {
+      app_state_out |= RETROFLAT_FOCUS_FLAG_ACTIVE;
+   }
+
+   if(
+#ifdef RETROFLAT_API_SDL1
+      SDL_APPACTIVE == (SDL_APPACTIVE & app_state)
+#else
+      SDL_WINDOW_SHOWN == (SDL_WINDOW_SHOWN & app_state)
+#endif /* RETROFLAT_API_SDL1 */
+   ) {
+      app_state_out |= RETROFLAT_FOCUS_FLAG_VISIBLE;
+   }
+
+   if( app_state_out != g_retroflat_state->last_focus_flags ) {
+      debug_printf( 1, "focus state: %02x", app_state_out );
+   }
+
+   return app_state_out;
+}
+
 #endif /* !RETPLTF_H */
 

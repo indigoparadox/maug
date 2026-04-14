@@ -774,5 +774,12 @@ uint8_t retroflat_viewport_focus(
    return retroflat_viewport_focus_generic( x1, y1, range, speed );
 }
 
+/* === */
+
+uint8_t retroflat_focus_platform() {
+   /* Platform does not support focus. */
+   return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
 #endif /* !RETPLTF_H */
 

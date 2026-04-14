@@ -165,6 +165,7 @@ struct RETROFLAT_PLATFORM {
 #  elif !defined( RETROFLAT_API_SDL1 )
    SDL_Window*          window;
 #  endif /* !RETROFLAT_API_SDL1 */
+   uint8_t focus;
 };
 
 #endif /* !RETPLTD_H */

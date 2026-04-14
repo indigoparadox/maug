@@ -159,6 +159,7 @@ typedef short int16_t;
 typedef unsigned short uint16_t;
 typedef long int32_t;
 typedef unsigned long uint32_t;
+typedef unsigned int uintptr_t;
 typedef unsigned long off_t;
 typedef int32_t ssize_t;
 

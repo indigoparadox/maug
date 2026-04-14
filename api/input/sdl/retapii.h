@@ -215,6 +215,7 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    switch( event.type ) {
    case SDL_QUIT:
       /* Handle SDL window close. */
+      /* TODO: Handle this like on_focus, allowing program to reject quit. */
 #if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "quit event!" );
 #endif /* RETROINPUT_TRACE_LVL */
@@ -360,6 +361,9 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    case SDL_WINDOWEVENT:
       switch( event.window.event ) {
       case SDL_WINDOWEVENT_RESIZED:
+         /* TODO: Move the callback handling to the main loop. Just set a flag
+          *       here to note to call it.
+          */
          retroflat_on_resize( event.window.data1, event.window.data2 );
          if( NULL != g_retroflat_state->on_resize ) {
             g_retroflat_state->on_resize(
