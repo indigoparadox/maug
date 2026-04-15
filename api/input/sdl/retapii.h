@@ -215,11 +215,16 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    switch( event.type ) {
    case SDL_QUIT:
       /* Handle SDL window close. */
-      /* TODO: Handle this like on_focus, allowing program to reject quit. */
 #if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "quit event!" );
 #endif /* RETROINPUT_TRACE_LVL */
-      retroflat_quit( 0 );
+      if(
+         NULL == g_retroflat_state->on_quit ||
+         MERROR_PREEMPT != g_retroflat_state->on_quit(
+            g_retroflat_state->on_quit_data
+      ) ) {
+         retroflat_quit( 0 );
+      }
       break;
 
 #  ifdef RETROFLAT_API_SDL1

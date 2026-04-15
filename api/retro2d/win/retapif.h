@@ -231,13 +231,8 @@ static LRESULT CALLBACK WndProc(
          break;
 
       case WM_CLOSE:
-#     if defined( RETROFLAT_OPENGL )
-         wglMakeCurrent( g_retroflat_state->platform.hdc_win, NULL );
-         wglDeleteContext( g_retroflat_state->platform.hrc_win );
-#     endif /* RETROFLAT_OPENGL */
-
          /* Quit on window close. */
-         retroflat_quit( 0 );
+         retroflat_soft_quit( 0 );
          break;
 
 #     if !defined( RETROFLAT_OPENGL )
@@ -314,14 +309,17 @@ static LRESULT CALLBACK WndProc(
          return 1;
 
       case WM_DESTROY:
-#ifndef RETROFLAT_OPENGL
+#if defined( RETROFLAT_OPENGL )
+         wglMakeCurrent( g_retroflat_state->platform.hdc_win, NULL );
+         wglDeleteContext( g_retroflat_state->platform.hrc_win );
+#else
          if(
             retroflat_bitmap_ok( &(g_retroflat_state->platform.screen_buffer) )
          ) {
             DeleteObject( g_retroflat_state->platform.screen_buffer.b );
          }
-#endif /* !RETROFLAT_OPENGL */
-         PostQuitMessage( 0 );
+#endif /* RETROFLAT_OPENGL */
+         retroflat_quit( 0 );
          break;
 
       case WM_SIZE:

@@ -450,6 +450,12 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_FLAGS_USE_GXC  0x40
 
 /**
+ * \relates RETROFLAT_STATE
+ * \brief Window closing has requested an orderly quit.
+ */
+#define RETROFLAT_FLAGS_QUIT_REQUESTED 0x80
+
+/**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
  * \brief These flags can be passed to retroflat_message() to indicate the
  *        type of message being conveyed.
@@ -534,6 +540,12 @@ typedef MERROR_RETVAL (*retroflat_proc_resize_t)(
 #define RETROFLAT_FOCUS_FLAG_VISIBLE 0x02
 
 typedef MERROR_RETVAL (*retroflat_proc_focus_t)( uint8_t flags, void* data );
+
+/**
+ * \brief Callback to call when window closing is attempted. Should return
+ *        MERROR_PREEMPT to defer or MERROR_OK to continue closing.
+ */
+typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 
 /*! \} */ /* maug_retroflt_platform */
 
@@ -1755,6 +1767,10 @@ defined( RETROVDP_C )
    /*! \brief Used internally to track whether to call on_focus(). */
    uint8_t last_focus_flags;
 
+   /*! \brief Should be set with retroflat_set_proc_focus(). */
+   retroflat_proc_quit_t on_quit;
+   void* on_quit_data;
+
 #ifndef RETROFLAT_BMP_TEX
    /*! \brief Index of available colors, initialized on platform init. */
    RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
@@ -2145,6 +2161,17 @@ void retroflat_set_proc_focus(
    retroflat_proc_focus_t on_focus_in, void* data_in );
 
 /**
+ * \brief Set the procedure to call when the window is attempted to be closed
+ *        (on platforms that support windows).
+ * \param on_quit_in Procedure to call when window gains/loses focus.
+ * \param data_in Data to pass to on_quit_in.
+ *
+ * \note If this is not set, no procedure is called when focus changes.
+ */
+void retroflat_set_proc_quit(
+   retroflat_proc_quit_t on_quit_in, void* data_in );
+
+/**
  * \addtogroup maug_retroflt_platform_handler Platform-Specific Handlers
  * \brief These are called internally from the platform API.
  *
@@ -2152,6 +2179,19 @@ void retroflat_set_proc_focus(
  *          internally and should not be defined or used by individual programs.
  * \{
  */
+
+/**
+ * \brief Call the quit callback if defined and only try to quit if the callback
+ *        doesn't return MERROR_PREEMPT.
+ */
+#define retroflat_soft_quit( retval ) \
+   if( \
+      NULL == g_retroflat_state->on_quit || \
+      MERROR_PREEMPT != g_retroflat_state->on_quit( \
+         g_retroflat_state->on_quit_data \
+   ) ) { \
+      retroflat_quit( retval ); \
+   }
 
 /**
  * \brief Platform-specific function to get current focus flags for the generic
@@ -3358,6 +3398,15 @@ void retroflat_set_proc_focus(
 ) {
    g_retroflat_state->on_focus = on_focus_in;
    g_retroflat_state->on_focus_data = data_in;
+}
+
+/* === */
+
+void retroflat_set_proc_quit(
+   retroflat_proc_quit_t on_quit_in, void* data_in
+) {
+   g_retroflat_state->on_quit = on_quit_in;
+   g_retroflat_state->on_quit_data = data_in;
 }
 
 /* === */
