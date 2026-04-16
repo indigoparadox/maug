@@ -28,7 +28,9 @@
 /* TODO: Implement Quickdraw viewport. */
 #define RETROFLAT_SOFT_VIEWPORT
 
-#define RETROFLAT_LOAD_BITMAP_GENERIC 1
+#define RETROFLAT_LOAD_BITMAP_GENERIC
+
+#define RETROFLAT_NO_GENERIC_LOOP
 
 #  ifdef RETROFLAT_OPENGL
 #     error "opengl support not implemented for PC BIOS"

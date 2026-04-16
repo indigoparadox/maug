@@ -490,5 +490,27 @@ void retroflat_resize_v() {
    /* TODO */
 }
 
+/* === */
+
+uint8_t retroflat_focus_platform() {
+#ifdef RETROFLAT_OS_WIN
+   HWND hwnd = win_get_window();
+   uint8_t flags_out = 0;
+
+   if( !IsIconic( hwnd ) ) {
+      flags_out |= RETROFLAT_FOCUS_FLAG_VISIBLE;
+   }
+
+   if( GetForegroundWindow() != hwnd ) {
+      flags_out |= RETROFLAT_FOCUS_FLAG_ACTIVE;
+   }
+
+   return flags_out;
+#else
+   /* Platform does not support focus. */
+   return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+#endif  /* RETROFLAT_OS_WIN | RETROFLAT_OS_UNIX */
+}
+
 #endif /* !RETPLTF_H */
 
