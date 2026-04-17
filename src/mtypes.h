@@ -191,6 +191,7 @@ typedef unsigned long off_t;
 #  if defined( MAUG_OS_DOS_REAL )
 typedef uint16_t maug_ms_t;
 #define MS_FMT U16_FMT
+
 #  else
 typedef uint32_t maug_ms_t;
 #define MS_FMT U32_FMT
@@ -210,6 +211,42 @@ typedef uint32_t GLuint;
 typedef uint32_t off_t;
 typedef int32_t ssize_t;
 #endif /* MAUG_ANCIENT_C */
+
+#ifndef INT8_MIN
+#  define INT8_MIN (-128)
+#endif /* !INT8_MIN */
+
+#ifndef INT16_MIN
+#  define INT16_MIN (-32767-1)
+#endif /* !INT16_MIN */
+
+#ifndef INT32_MIN
+#  define INT32_MIN (-2147483647-1)
+#endif /* !INT32_MIN */
+
+#ifndef INT8_MAX
+#  define INT8_MAX (127)
+#endif /* !INT8_MAX */
+
+#ifndef INT16_MAX
+#  define INT16_MAX (32767)
+#endif /* !INT16_MAX */
+
+#ifndef INT32_MAX
+#  define INT32_MAX (2147483647)
+#endif /* !INT32_MAX */
+
+#ifndef UINT8_MAX
+#  define UINT8_MAX (255)
+#endif /* UINT8_MAX */
+
+#ifndef UINT16_MAX
+#  define UINT16_MAX (65535)
+#endif /* UINT16_MAX */
+
+#ifndef UINT32_MAX
+#  define UINT32_MAX (4294967295U)
+#endif /* UINT32_MAX */
 
 /*! \} */
 
