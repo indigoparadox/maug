@@ -3329,7 +3329,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_vdp_lock( &(g_retroflat_state->platform.buffer) );
+      retroflat_vdp_lock( &(g_retroflat_state->platform.screen_buffer) );
       retroflat_vdp_lock( g_retroflat_state->vdp_buffer );
    }
 
@@ -3340,7 +3340,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_vdp_release( &(g_retroflat_state->platform.buffer) );
+      retroflat_vdp_release( &(g_retroflat_state->platform.screen_buffer) );
       retroflat_vdp_release( g_retroflat_state->vdp_buffer );
    }
 
