@@ -16,7 +16,7 @@ include maug/Makefile.inc
 # Target-specific options.
 .PHONY: clean
 
-all: template.sdl dexea(template) wexea(template) ntexea(template) template.html
+all: template.$(MAUG_UNIX).sdl dexea(template) wexea(template) ntexea(template) template.html
 
 # MacOS
 

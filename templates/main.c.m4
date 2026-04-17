@@ -57,7 +57,7 @@ int main( int argc, char** argv ) {
 
    maug_malloc_test( data_h, 1, sizeof( struct dataa(TEMPLATE) ) );
    maug_mlock( data_h, data );
-   maug_cleanup_if_null_alloc( struct dataa(TEMPLATE)*, data );
+   maug_cleanup_if_null_lock( struct dataa(TEMPLATE)*, data );
    maug_mzero( data, sizeof( struct dataa(TEMPLATE) ) );
 
    /* === Main Loop === */
@@ -72,7 +72,7 @@ cleanup:
       maug_munlock( data_h, data );
    }
 
-   if( NULL != data_h ) {
+   if( (MAUG_MHANDLE)NULL != data_h ) {
       maug_mfree( data_h );
    }
 
