@@ -1507,7 +1507,7 @@ MERROR_RETVAL retrohtr_tree_draw(
          node->font.cache_idx, RETROGXC_ASSET_TYPE_FONT );
       maug_cleanup_if_null_alloc( MAUG_MHANDLE, font_h );
 #else
-      font_h = nod->font.handle;
+      font_h = node->font.handle;
 #endif /* RETROGXC_PRESENT */
 
       mdata_strpool_lock( &(parser->strpool) );

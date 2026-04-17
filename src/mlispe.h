@@ -2264,11 +2264,9 @@ MERROR_RETVAL mlisp_step(
          (MLISP_DEBUG_TRACE * 5) - maug_strlen( trace_str ),
          SIZE_T_FMT ", ", exec->trace[i] );
    }
-#if MLISP_STEP_TRACE_LVL > 0
    debug_printf( MLISP_STEP_TRACE_LVL,
       "%u: " MLISP_TRACE_SIGIL " HBEXEC (%u): %s",
       exec->uid, ms_end - ms_start, trace_str );
-#endif /* MLISP_STEP_TRACE_LVL */
 #endif /* MLISP_DEBUG_TRACE */
   
 cleanup:
