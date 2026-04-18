@@ -198,9 +198,11 @@ MERROR_RETVAL retroflat_init_platform(
 #     else
       8, /* For paletted images. */
 #     endif /* RETROFLAT_OPENGL */
-      SDL_DOUBLEBUF | SDL_SWSURFACE
+      SDL_DOUBLEBUF | SDL_RESIZABLE
 #     ifdef RETROFLAT_OPENGL
       | SDL_HWSURFACE | SDL_OPENGL
+#     else
+      | SDL_SWSURFACE
 #     endif /* RETROFLAT_OPENGL */
    );
 
