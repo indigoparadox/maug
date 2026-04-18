@@ -566,6 +566,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->surface = SDL_CreateRGBSurface( 0, w, h, 8, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
+   SDL_SetColors( /* TODO: Sync colors with screen throughout lifecycle? */
+      bmp_out->surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
@@ -695,10 +698,6 @@ void retroflat_px(
 ) {
 #  ifndef RETROFLAT_OPENGL
    int offset = 0;
-   uint8_t* px_1 = NULL;
-   uint16_t* px_2 = NULL;
-   uint32_t* px_4 = NULL;
-   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
 #  endif /* !RETROFLAT_OPENGL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
@@ -727,139 +726,19 @@ void retroflat_px(
 
    /* == SDL1 == */
 
-   retroflat_px_lock( target );
+   /* retroflat_px_lock( target ); */
 
    assert( 0 < target->autolock_refs );
+   assert( 1 == target->surface->format->BytesPerPixel );
 
-   offset = (y * target->surface->pitch) +
-      (x * target->surface->format->BytesPerPixel);
+   offset = (y * target->surface->pitch) + x;
 
-   switch( target->surface->format->BytesPerPixel ) {
-   case 4:
-      px_4 = (uint32_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_4 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
+   ((uint8_t*)(target->surface->pixels))[offset] = color_idx;
 
-   case 2:
-      px_2 = (uint16_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_2 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
-
-   case 1:
-      px_1 = (uint8_t*)&(((uint8_t*)(target->surface->pixels))[offset]);
-      *px_1 =
-         SDL_MapRGB( target->surface->format, color->r, color->g, color->b );
-      break;
-   }
-
-   retroflat_px_release( target );
+   /* retroflat_px_release( target ); */
 
 #  endif /* RETROFLAT_OPENGL */
 }
-
-/* === */
-
-#  ifndef RETROFLAT_SOFT_SHAPES
-
-void retroflat_rect(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
-) {
-#  if defined( RETROFLAT_OPENGL )
-   float aspect_ratio = 0,
-      screen_x = 0,
-      screen_y = 0,
-      screen_w = 0,
-      screen_h = 0;
-#  endif /* RETROFLAT_API_WIN16 || RETROFLAT_API_WIN32 */
-
-   if( RETROFLAT_COLOR_NULL == color_idx ) {
-      return;
-   }
-
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
-   }
-
-   if(
-      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
-   ) {
-      return;
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
-#if 0
-   assert( NULL != target );
-
-   /* Draw the rect onto the given 2D texture. */
-   retrosoft_rect( target, color_idx, x, y, w, h, flags );
-#endif
-
-#  else
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-   if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
-   ) {
-      return;
-   }
-
-   if(
-      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
-   ) {
-      return;
-   }
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   area.x = x;
-   area.y = y;
-   area.w = w;
-   area.h = h;
-
-   SDL_SetRenderDrawColor(
-      target->renderer, color->r, color->g, color->b, 255 );
-
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      SDL_RenderFillRect( target->renderer, &area );
-   } else {
-      SDL_RenderDrawRect( target->renderer, &area );
-   }
-
-#  endif /* RETROFLAT_OPENGL */
-}
-
-#  endif /* !RETROFLAT_SOFT_SHAPES */
-
-/* === */
-
-#  ifndef RETROFLAT_SOFT_SHAPES
-
-void retroflat_ellipse(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   retroflat_pxxy_t x, retroflat_pxxy_t y,
-   retroflat_pxxy_t w, retroflat_pxxy_t h, uint8_t flags
-) {
-   if( RETROFLAT_COLOR_NULL == color ) {
-      return;
-   }
-
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
-   }
-
-   retrosoft_ellipse( target, color, x, y, w, h, flags );
-}
-
-#  endif /* !RETROFLAT_SOFT_SHAPES */
 
 /* === */
 
