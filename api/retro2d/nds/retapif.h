@@ -78,8 +78,8 @@ static void _retroflat_nds_change_bg() {
          g_retroflat_state->platform.bg_bmp->tiles_len );
 
       /* Using extended palettes as a workaround for ImageMagick palette
-      * issues.
-      */
+       * issues.
+       */
       dmaCopy(
          g_retroflat_state->platform.bg_bmp->pal,
          &VRAM_E_EXT_PALETTE[0][0],
@@ -90,24 +90,6 @@ static void _retroflat_nds_change_bg() {
       /* Tell bank E it can use the extended palettes, now. */
       vramSetBankE( VRAM_E_BG_EXT_PALETTE );
    }
-
-#if 0
-   /* Update window tiles. */
-   if(
-      g_window_bmp_changed && NULL != g_window_tiles && NULL != g_window_bmp
-   ) {
-      dmaCopy( g_window_bmp->grit->tiles, bgGetGfxPtr( g_window_id ),
-         g_window_bmp->grit->tiles_sz );
-
-      /* Using extended palettes as a workaround for ImageMagick palette
-         * issues.
-         */
-      dmaCopy( g_window_bmp->grit->palette, &VRAM_E_EXT_PALETTE[1][0],
-         g_window_bmp->grit->palette_sz );
-
-      g_window_bmp_changed = 0;
-   }
-#endif
 }
 
 /* === */
@@ -208,30 +190,15 @@ void _retroflat_nds_blit_tiles(
       g_retroflat_state->platform.flags |= RETROFLAT_NDS_FLAG_CHANGE_BG;
    }
 
-   /* Hide window tiles if a tilemap tile was drawn more recently. */
-   /*
-   g_window_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x] = 0;
-   g_window_tiles[(tile_y * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] = 0;
-   g_window_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x] = 0;
-   g_window_tiles[((tile_y + 1) * RETROFLAT_NDS_BG_W_TILES) + tile_x + 1] = 0;
-   */
-
-   /* TODO: Fill block with transparency on px layer in front. */
-   /* graphics_draw_block( d_x, d_y, TILE_W, TILE_H, 0 ); */
-   /*
-   retroflat_rect(
-      NULL, RETROFLAT_COLOR_BLACK, d_x, d_y, w, h,
-      RETROFLAT_FLAGS_FILL ); */
-
    /* DS tiles are 8x8, so each tile is split up into 4, so compensate! */
    /* tile_idx = src->tile_offset * 4; */
 
    tile_idx = (
-      ((s_y >> 4) * (retroflat_bitmap_w( src ) >> 4)) +
-      (s_x >> 4));
+      ((s_y / 16) * (retroflat_bitmap_w( src ) / 16)) +
+      (s_x / 16));
 
    tile_idx *= 4;
-
+   
    /* debug_printf( 1, "tile_idx: %d", tile_idx ); */
 
    bg_map = bgGetMapPtr( g_retroflat_state->platform.bg_id );
@@ -339,21 +306,20 @@ MERROR_RETVAL retroflat_init_platform(
    /* Allocate sprite frame memory. */
    for( i = 0 ; RETROFLAT_NDS_SPRITES_ACTIVE > i ; i++ ) {
       g_retroflat_state->platform.sprite_frames[i] = oamAllocateGfx(
-         RETROFLAT_NDS_OAM_ACTIVE, SpriteSize_16x16, SpriteColorFormat_256Color );
+         RETROFLAT_NDS_OAM_ACTIVE, SpriteSize_16x16,
+         SpriteColorFormat_256Color );
    }
 
 #  endif /* RETROFLAT_OPENGL */
 
 #ifdef RETROFLAT_API_CALICO
    cpuStartTiming( 0 );
-   /* Setup the timer. */
+
+   consoleDemoInit();
 #else
+   /* Setup the timer. */
    TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024;
    TIMER1_CR = TIMER_ENABLE | TIMER_CASCADE;
-#endif /* RETROFLAT_API_CALICO */
-
-#ifdef RETROFLAT_API_CALICO
-   consoleDemoInit();
 #endif /* RETROFLAT_API_CALICO */
 
    return retval;
@@ -406,7 +372,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL != bmp && retroflat_screen_buffer() != bmp ) {
 
-#if defined( RETROFLAT_OPENGL )
+#ifdef RETROFLAT_OPENGL
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
 #endif /* RETROFLAT_OPENGL */
 
@@ -507,10 +473,6 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   /*
-   assert( 0 == w % 8 );
-   assert( 0 == h % 8 );
-   */
    if( 0 != w % 8 || 0 != h % 8 ) {
       error_printf( "bitmap size %d x %d not divisible by 8!", w, h );
       retval = MERROR_GUI;
@@ -590,7 +552,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
       _retroflat_nds_blit_sprite( src, s_x, s_y, d_x, d_y, w, h, instance );
    } else if( 0 > instance ) {
       tile_id = instance * -1;
-         _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
+      _retroflat_nds_blit_tiles( src, s_x, s_y, d_x, d_y, w, h );
    } else {
       /* TODO: Break up the image we've been passed into tiles and draw it
        *       as wide/tall as we need to. */
@@ -680,10 +642,12 @@ void retroflat_px(
       /* Get the index of the pixel within the subtile... again, logical. */
       px_idx = ((px_y % 8) * 8) + (px_x % 8);
 
-      debug_printf( RETROFLAT_PLATFORM_TRACE_LVL,
+#if RETRO2D_TRACE_LVL > 0
+      debug_printf( RETRO2D_TRACE_LVL,
          "px: metatile_idx: " SIZE_T_FMT ", px_x: " SIZE_T_FMT ", px_y: "
          SIZE_T_FMT ", subtile: " SIZE_T_FMT,
          metatile_idx, px_x, px_y, subtile_idx );
+#endif /* RETRO2D_TRACE_LVL */
 
       tiles8[
          (metatile_idx * 256 /* Pixels in a metatile */) +
