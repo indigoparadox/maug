@@ -93,7 +93,7 @@ MERROR_RETVAL retroflat_vdp_flip( struct RETROFLAT_STATE* state ) {
 
 #if defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
    data->ntsc.data = state->vdp_buffer->surface->pixels;
-   data->crt.out = state->platform.screen_buffer.surface->pixels;
+   data->crt.out = state->platform.screen_surface->pixels;
    data->ntsc.format = CRT_PIX_FORMAT_RGBA;
 #else
    assert( NULL != state->vdp_buffer->bits );

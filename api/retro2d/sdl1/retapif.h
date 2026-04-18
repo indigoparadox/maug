@@ -49,9 +49,9 @@ cleanup:
    return bmp_out;
 }
 
-#endif /* !RETROFLAT_OPENGL */
-
 /* === */
+
+#endif /* !RETROFLAT_OPENGL */
 
 MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
@@ -166,10 +166,8 @@ MERROR_RETVAL retroflat_init_platform(
 #     endif /* RETROFLAT_SDL_ICO */
 
 #     ifndef RETROFLAT_OPENGL
-#        ifndef RETROFLAT_NO_SDL1_SCALING
-   /* Insert a normal surface as the standard buffer that things draw to, so
-    * those things can be scaled onto the scale buffer as the last step.
-    */
+
+   /* Create our first-stage buffer, which gets drawn on directly. */
    g_retroflat_state->platform.screen_buffer.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       8, 0, 0, 0, 0 );
@@ -180,24 +178,29 @@ MERROR_RETVAL retroflat_init_platform(
    SDL_SetColors(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+
+#        ifndef RETROFLAT_NO_SDL1_SCALING
+   /* Insert a normal surface as the standard buffer that things draw to, so
+    * those things can be scaled onto the scale buffer as the last step.
+    */
    g_retroflat_state->platform.scale_rect.x = 0;
    g_retroflat_state->platform.scale_rect.y = 0;
    g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
    g_retroflat_state->platform.scale_rect.h = g_retroflat_state->screen_h;
-   g_retroflat_state->platform.scale_buffer = 
-#        else
-   /* Do not insert the scale buffer if there is no scaling! */
-   g_retroflat_state->platform.screen_buffer.surface = 
+   g_retroflat_state->platform.scale_surface = SDL_CreateRGBSurface(
+      0, g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      8, 0, 0, 0, 0 );
+   SDL_SetColors(
+      g_retroflat_state->platform.scale_surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 #        endif /* !RETROFLAT_NO_SDL1_SCALING */
+
 #     endif /* !RETROFLAT_OPENGL */
+
    g_retroflat_state->platform.screen_surface = SDL_SetVideoMode(
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h,
-#     ifdef RETROFLAT_OPENGL
       info->vfmt->BitsPerPixel,
-#     else
-      8, /* For paletted images. */
-#     endif /* RETROFLAT_OPENGL */
       SDL_DOUBLEBUF | SDL_RESIZABLE
 #     ifdef RETROFLAT_OPENGL
       | SDL_HWSURFACE | SDL_OPENGL
@@ -416,22 +419,31 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
-#     if defined( RETROFLAT_VDP )
-         retroflat_vdp_call( "retroflat_vdp_flip" );
-#     endif /* RETROFLAT_VDP */
-
 #     ifdef RETROFLAT_NO_SDL1_SCALING
-         SDL_Flip( bmp->surface );
+         /* Blit the 8-bit indexed working buffer directly onto the 32-bit
+          * screen.
+          */
+         SDL_Blit(
+            g_retroflat_state->platform.screen_buffer.surface, NULL,
+            g_retroflat_state->platform.screen_surface,
 #     else
          /* Do the scaled blit from the intermediate scaling buffer to the
           * real screen buffer before flip.
           */
          SDL_SoftStretch(
             g_retroflat_state->platform.screen_buffer.surface, NULL,
-            g_retroflat_state->platform.scale_buffer,
+            g_retroflat_state->platform.scale_surface,
             &(g_retroflat_state->platform.scale_rect) );
-         SDL_Flip( g_retroflat_state->platform.scale_buffer );
+         SDL_BlitSurface(
+            g_retroflat_state->platform.scale_surface, NULL,
+            g_retroflat_state->platform.screen_surface, NULL );
 #     endif /* RETROFLAT_NO_SDL1_SCALING */
+
+#     if defined( RETROFLAT_VDP )
+         retroflat_vdp_call( "retroflat_vdp_flip" );
+#     endif /* RETROFLAT_VDP */
+
+         SDL_Flip( g_retroflat_state->platform.screen_surface );
       }
 
    } else {
@@ -562,13 +574,24 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* == SDL1 == */
 
-   /* Create 8-bit paletted image. */
-   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h, 8, 0, 0, 0, 0 );
+   /* Create image surface. */
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
+      /* If we get the screen buffer flag, it's probably from the VDP creation,
+       * so use a 32-bit image capable of effects rather than an 8-bit paletted
+       * image. The init callback calls SDL_CreateRGBSurface() directly.
+       */
+      RETROFLAT_FLAGS_SCREEN_BUFFER ==
+         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) ? 32 : 8,
+      0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
-   SDL_SetColors( /* TODO: Sync colors with screen throughout lifecycle? */
-      bmp_out->surface,
-      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+   if(
+      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+   ) {
+      SDL_SetColors( /* TODO: Sync colors with screen throughout lifecycle? */
+         bmp_out->surface,
+         g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+   }
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
@@ -797,11 +820,14 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    g_retroflat_state->palette[idx].b = (rgb & 0xff0000) >> 16;
 
    SDL_SetColors(
-      g_retroflat_state->platform.screen_surface,
-      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
-   SDL_SetColors(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+
+#     ifndef RETROFLAT_NO_SDL1_SCALING
+   SDL_SetColors(
+      g_retroflat_state->platform.scale_surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+#     endif /* !RETROFLAT_NO_SDL1_SCALING */
 
 #  endif
 

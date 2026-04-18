@@ -3019,7 +3019,8 @@ MERROR_RETVAL retroflat_init(
       struct RETROFLAT_BITMAP*, g_retroflat_state->vdp_buffer );
    retval = retroflat_create_bitmap(
       g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
-      g_retroflat_state->vdp_buffer, RETROFLAT_FLAGS_OPAQUE );
+      g_retroflat_state->vdp_buffer,
+      RETROFLAT_FLAGS_OPAQUE | RETROFLAT_FLAGS_SCREEN_BUFFER );
    maug_cleanup_if_not_ok();
 
    debug_printf( 1, "initializing VDP..." );

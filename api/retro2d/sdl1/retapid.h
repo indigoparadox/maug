@@ -143,7 +143,7 @@ struct RETROFLAT_PLATFORM {
     * before being scaled onto the screen. This is necessary for e.g. WASM,
     * where we can't otherwise easily scale the screen.
     */
-   SDL_Surface* scale_buffer;
+   SDL_Surface* scale_surface;
    SDL_Rect scale_rect;
 #  endif /* !RETROFLAT_NO_SDL1_SCALING */
    uint8_t focus;
