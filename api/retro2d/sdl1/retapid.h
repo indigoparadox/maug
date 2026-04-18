@@ -30,13 +30,7 @@
 #     define RETROFLAT_SOFT_LINES
 #  endif /* !RETROFLAT_SOFT_LINES */
 
-#  ifdef RETROFLAT_API_SDL1
-#     define RETROFLAT_VDP_LIB_NAME "rvdpsdl1"
-#  elif defined( RETROFLAT_API_SDL2 )
-#     define RETROFLAT_VDP_LIB_NAME "rvdpsdl2"
-#  else
-#     error "rvdp .so undefined!"
-#  endif
+#  define RETROFLAT_VDP_LIB_NAME "rvdpsdl1"
 
 struct RETROFLAT_BITMAP {
 #  ifdef RETROFLAT_BMP_TEX
@@ -50,11 +44,6 @@ struct RETROFLAT_BITMAP {
    ssize_t autolock_refs;
 #     endif /* RETROFLAT_API_SDL1 */
 #  endif /* RETROFLAT_OPENGL */
-#  ifdef RETROFLAT_API_SDL2
-   /* SDL2 texture pointers. */
-   SDL_Texture* texture;
-   SDL_Renderer* renderer;
-#  endif /* RETROFLAT_API_SDL2 */
 };
 
 #  ifdef RETROFLAT_OPENGL
@@ -69,6 +58,7 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->tex.bytes)
 
 #  else
+
 #     define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
@@ -76,14 +66,8 @@ struct RETROFLAT_BITMAP {
 #     define retroflat_bitmap_h( bmp ) \
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
-
-#     if defined( RETROFLAT_API_SDL1 )
-#        define retroflat_bitmap_locked( bmp ) \
-            (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
-
-#     elif defined( RETROFLAT_API_SDL2 )
-#        define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
-#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
+#     define retroflat_bitmap_locked( bmp ) \
+         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
 
 #  endif /* RETROFLAT_OPENGL */
 
@@ -101,7 +85,14 @@ struct RETROFLAT_BITMAP {
 #  endif /* RETROFLAT_VDP */
 #  define retroflat_root_win() (NULL) /* TODO */
 
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+#  ifdef RETROFLAT_OPENGL
+
+/* Pixel lock does not apply to OpenGL textures. */
+#     define retroflat_px_lock( bmp )
+#     define retroflat_px_release( bmp )
+
+#  else
+
 /* Special pixel lock JUST for SDL1 surfaces. */
 #     define retroflat_px_lock( bmp ) \
          if( NULL != bmp ) { \
@@ -118,11 +109,8 @@ struct RETROFLAT_BITMAP {
 #        define retroflat_vdp_lock( bmp ) retroflat_px_lock( bmp )
 #        define retroflat_vdp_release( bmp ) retroflat_px_release( bmp )
 #     endif /* RETROFLAT_VDP */
-#  else
-/* Pixel lock above does not apply to SDL2 surfaces or bitmap textures. */
-#     define retroflat_px_lock( bmp )
-#     define retroflat_px_release( bmp )
-#  endif
+
+#  endif /* RETROFLAT_OPENGL */
 
 #  define retroflat_quit( retval_in ) \
       debug_printf( 1, "quit called, retval: %d", retval_in ); \

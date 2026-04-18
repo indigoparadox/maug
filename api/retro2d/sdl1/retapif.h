@@ -74,10 +74,6 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* == Platform-Specific Init == */
 
-#  if defined( RETROFLAT_API_SDL1 )
-
-   /* == SDL1 == */
-
    /* Random seed. */
    srand( time( NULL ) );
 
@@ -203,62 +199,6 @@ MERROR_RETVAL retroflat_init_platform(
       RETROFLAT_ERROR_GRAPHICS );
 #     endif /* !RETROFLAT_OPENGL */
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   srand( time( NULL ) );
-
-   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER ) ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error", "Error initializing SDL: %s", SDL_GetError() );
-      retval = RETROFLAT_ERROR_ENGINE;
-      goto cleanup;
-   }
-
-   /* Setup color palettes. */
-#     ifndef RETROFLAT_OPENGL
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-            g_retroflat_state->palette[idx].r = rd; \
-            g_retroflat_state->palette[idx].g = gd; \
-            g_retroflat_state->palette[idx].b = bd;
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
-#     endif /* !RETROFLAT_OPENGL */
-
-   /* Create the main window. */
-   g_retroflat_state->platform.window = SDL_CreateWindow( args->title,
-      SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      g_retroflat_state->screen_w,
-      g_retroflat_state->screen_h, RETROFLAT_WIN_FLAGS );
-   maug_cleanup_if_null(
-      SDL_Window*, g_retroflat_state->platform.window,
-      RETROFLAT_ERROR_GRAPHICS );
-
-   /* Create the main renderer. */
-   g_retroflat_state->platform.screen_buffer.renderer = SDL_CreateRenderer(
-      g_retroflat_state->platform.window, -1,
-      SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE );
-   maug_cleanup_if_null(
-      SDL_Renderer*, g_retroflat_state->platform.screen_buffer.renderer,
-      RETROFLAT_ERROR_GRAPHICS );
-
-   /* Create the buffer texture. */
-   g_retroflat_state->platform.screen_buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->platform.screen_buffer.renderer,
-         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-         g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
-
-#     ifdef RETROFLAT_SDL_ICO
-   debug_printf( 1, "setting SDL window icon..." );
-   icon = SDL_LoadBMP_RW(
-      SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
-      obj_ico_sdl_ico_bmp_len ), 1 );
-   maug_cleanup_if_null( SDL_Surface*, icon, MERROR_GUI );
-   SDL_SetWindowIcon( g_retroflat_state->platform.window, icon );
-#     endif /* RETROFLAT_SDL_ICO */
-
-#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
-
 cleanup:
 
    return retval;
@@ -269,11 +209,7 @@ cleanup:
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
    if( NULL != g_retroflat_state ) {
-#     if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
       SDL_FreeSurface( g_retroflat_state->platform.screen_buffer.surface );
-#     elif defined( RETROFLAT_API_SDL2 )
-      SDL_DestroyWindow( g_retroflat_state->platform.window );
-#     endif /* !RETROFLAT_API_SDL1 */
    }
 
    SDL_Quit();
@@ -312,35 +248,15 @@ void retroflat_message(
 ) {
    char msg_out[RETROFLAT_MSG_MAX + 1];
    va_list vargs;
-#  ifdef RETROFLAT_API_SDL2
-   uint32_t sdl_msg_flags = 0;
-#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN ))
+#  ifdef RETROFLAT_OS_WIN
    uint32_t win_msg_flags = 0;
-#  endif
+#  endif /* RETROFLAT_OS_WIN */
 
    maug_mzero( msg_out, RETROFLAT_MSG_MAX + 1 );
    va_start( vargs, format );
    maug_vsnprintf( msg_out, RETROFLAT_MSG_MAX, format, vargs );
 
-#  if defined( RETROFLAT_API_SDL2 )
-   switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
-   case RETROFLAT_MSG_FLAG_ERROR:
-      sdl_msg_flags = SDL_MESSAGEBOX_ERROR;
-      break;
-
-   case RETROFLAT_MSG_FLAG_INFO:
-      sdl_msg_flags = SDL_MESSAGEBOX_INFORMATION;
-      break;
-
-   case RETROFLAT_MSG_FLAG_WARNING:
-      sdl_msg_flags = SDL_MESSAGEBOX_WARNING;
-      break;
-   }
-
-   SDL_ShowSimpleMessageBox(
-      sdl_msg_flags, title, msg_out, g_retroflat_state->platform.window );
-
-#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_WIN ))
+#  ifdef RETROFLAT_OS_WIN
    switch( (flags & RETROFLAT_MSG_FLAG_TYPE_MASK) ) {
    case RETROFLAT_MSG_FLAG_ERROR:
       win_msg_flags |= MB_ICONSTOP;
@@ -357,7 +273,7 @@ void retroflat_message(
 
    MessageBox( retroflat_root_win(), msg_out, title, win_msg_flags );
 
-#  elif (defined( RETROFLAT_API_SDL1 ) && defined( RETROFLAT_OS_UNIX ))
+#  elif defined( RETROFLAT_OS_UNIX )
 
    /* TODO */
    error_printf( "%s", msg_out );
@@ -380,11 +296,7 @@ void retroflat_set_title( const char* format, ... ) {
    maug_mzero( title, RETROFLAT_TITLE_MAX + 1 );
    maug_vsnprintf( title, RETROFLAT_TITLE_MAX, format, vargs );
 
-#if defined( RETROFLAT_API_SDL1 )
    SDL_WM_SetCaption( title, NULL );
-#elif defined( RETROFLAT_API_SDL2 )
-   SDL_SetWindowTitle( g_retroflat_state->platform.window, title );
-#  endif /* RETROFLAT_API_SDL */
 
    va_end( vargs );
 }
@@ -413,7 +325,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
  
-#  elif defined( RETROFLAT_API_SDL1 )
+#  else
 
    /* == SDL1 == */
 
@@ -446,37 +358,7 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       bmp->flags |= RETROFLAT_FLAGS_LOCK;
    }
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   if(
-      NULL == bmp
-#     ifdef RETROFLAT_VDP
-      && NULL == g_retroflat_state->vdp_buffer
-#     endif /* RETROFLAT_VDP */
-   ) {
-
-      /* Target is the screen buffer. */
-      SDL_SetRenderTarget(
-         g_retroflat_state->platform.screen_buffer.renderer,
-         g_retroflat_state->platform.screen_buffer.texture );
-
-      goto cleanup;
-
-#     ifdef RETROFLAT_VDP
-   } else if( NULL == bmp && NULL != g_retroflat_state->vdp_buffer ) {
-      /* Lock the VDP buffer for drawing. */
-      bmp = g_retroflat_state->vdp_buffer;
-#     endif /* RETROFLAT_VDP */
-   }
-
-   assert( NULL == bmp->renderer );
-   assert( NULL != bmp->surface );
-   bmp->renderer = SDL_CreateSoftwareRenderer( bmp->surface );
-
-cleanup:
-#endif /* RETROFLAT_API */
+#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -490,16 +372,12 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    if( NULL == bmp || &(g_retroflat_state->platform.screen_buffer) == bmp ) {
       /* SDL has its own OpenGL flip functions.*/
-#     if defined( RETROFLAT_API_SDL1 )
       SDL_GL_SwapBuffers();
-#     elif defined( RETROFLAT_API_SDL2 )
-      SDL_GL_SwapWindow( g_retroflat_state->platform.window );
-#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
    } else {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
 
-#  elif defined( RETROFLAT_API_SDL1 )
+#  else
 
    /* == SDL1 == */
 
@@ -545,51 +423,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       SDL_UnlockSurface( bmp->surface );
    }
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   if( 
-      NULL == bmp
-#     ifdef RETROFLAT_VDP
-      && NULL == g_retroflat_state->vdp_buffer
-#     endif /* RETROFLAT_VDP */
-   ) {
-      /* Flip the screen. */
-      SDL_SetRenderTarget( g_retroflat_state->platform.screen_buffer.renderer, NULL );
-      SDL_RenderCopyEx(
-         g_retroflat_state->platform.screen_buffer.renderer,
-         g_retroflat_state->platform.screen_buffer.texture, NULL, NULL, 0, NULL, 0 );
-      SDL_RenderPresent( g_retroflat_state->platform.screen_buffer.renderer );
-
-      goto cleanup;
-
-#     ifdef RETROFLAT_VDP
-   } else if( NULL == bmp && NULL != g_retroflat_state->vdp_buffer ) {
-      bmp = g_retroflat_state->vdp_buffer;
-#     endif /* RETROFLAT_VDP */
-   }
-
-   /* It's a bitmap. */
-
-   /* Scrap the software renderer. */
-   /* SDL_RenderPresent( bmp->renderer ); */
-   SDL_DestroyRenderer( bmp->renderer );
-   bmp->renderer = NULL;
-
-   /* Scrap the old texture and recreate it from the updated surface. */
-   /* The renderer should be a software renderer pointing to the surface,
-    * created in retroflat_lock() above.
-    */
-   assert( NULL != bmp->texture );
-   SDL_DestroyTexture( bmp->texture );
-   bmp->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->platform.screen_buffer.renderer, bmp->surface );
-   maug_cleanup_if_null(
-      SDL_Texture*, bmp->texture, MERROR_GUI );
-
-cleanup:
-#  endif /* RETROFLAT_API_ALLEGRO */
+#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -604,13 +438,6 @@ MERROR_RETVAL retroflat_load_bitmap(
 #  if !defined( RETROFLAT_OPENGL )
    SDL_Surface* tmp_surface = NULL;
 #  endif /* !RETROFLAT_OPENGL */
-#  if defined( RETROFLAT_API_SDL2 )
-   /* Need these to do the brute-force pixel conversion below. */
-   int color_idx = 0,
-      x = 0,
-      y = 0;
-   RETROFLAT_COLOR_DEF* color = NULL;
-#  endif /* RETROFLAT_API_SDL2 */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -633,7 +460,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       filename_path, &(bmp_out->tex), flags );
    */
 
-#  elif defined( RETROFLAT_API_SDL1 )
+#  else
 
    /* == SDL1 == */
 
@@ -682,95 +509,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       SDL_FreeSurface( tmp_surface );
    }
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "loading bitmap: %s", filename_path );
-
-   bmp_out->renderer = NULL;
-   
-   tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
-   if( NULL == tmp_surface ) {
-      error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      }
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
-   /* Create a screen-format bitmap to hold the final bitmap. */
-
-   bmp_out->surface = SDL_CreateRGBSurface( 0, tmp_surface->w, tmp_surface->h,
-      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
-   if( NULL == bmp_out->surface ) {
-      error_printf( "SDL unable to create screen bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to create screen bitmap: %s", SDL_GetError() );
-      }
-      retval = MERROR_GUI;
-      goto cleanup;
-   }
-
-   /* Perform this brute-force pixel conversion to convert the 16-color
-    * indexed image to depth that can be readily converted to a textre.
-    */
-   /* TODO: Break this out to its own helper function? */
-   SDL_LockSurface( bmp_out->surface );
-   for( y = 0 ; tmp_surface->h > y ; y++ ) {
-      for( x = 0 ; tmp_surface->w > x ; x++ ) {
-         color_idx = ((uint8_t*)(tmp_surface->pixels))[y * tmp_surface->w + x];
-         color = &(g_retroflat_state->palette[color_idx]);
-         ((uint32_t*)(bmp_out->surface->pixels))[y * tmp_surface->w + x] =
-            SDL_MapRGB(
-               bmp_out->surface->format, color->r, color->g, color->b );
-      }
-   }
-   SDL_UnlockSurface( bmp_out->surface );
-
-   SDL_FreeSurface( tmp_surface );
-
-   /* Setup color-keying if not opaque. */
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-         SDL_MapRGB( bmp_out->surface->format,
-            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-   }
-
-   /* Create a texture from the surface. */
-   bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->platform.screen_buffer.renderer, bmp_out->surface );
-   if( NULL == bmp_out->texture ) {
-      error_printf( "SDL unable to create texture: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to create texture: %s", SDL_GetError() );
-      }
-      retval = MERROR_GUI;
-      if( NULL != bmp_out->surface ) {
-         SDL_FreeSurface( bmp_out->surface );
-         bmp_out->surface = NULL;
-      }
-      goto cleanup;
-   }
-
-   debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
-      "successfully loaded bitmap: %s", filename_path );
-
-#  endif
+#  endif /* RETROFLAT_OPENGL */
 
 cleanup:
 
@@ -799,7 +538,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
    */
 
-#  elif defined( RETROFLAT_API_SDL1 )
+#  else
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
@@ -816,38 +555,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    }
 
 cleanup:
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
-
-   /* == SDL2 == */
-
-   /* Create surface. */
-   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
-      /* TODO: Are these masks right? */
-      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
-   if( NULL == bmp_out->surface ) {
-      error_printf( "could not create surface: %s", SDL_GetError() );
-   }
-   maug_cleanup_if_null(
-      SDL_Surface*, bmp_out->surface, MERROR_GUI );
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
-         SDL_MapRGB( bmp_out->surface->format,
-            RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
-   }
-
-   /* Convert new surface to texture. */
-   bmp_out->texture = SDL_CreateTextureFromSurface(
-      g_retroflat_state->platform.screen_buffer.renderer, bmp_out->surface );
-   if( NULL == bmp_out->texture ) {
-      error_printf( "could not create texture: %s", SDL_GetError() );
-   }
-   maug_cleanup_if_null(
-      SDL_Texture*, bmp_out->texture, MERROR_GUI );
-      
-cleanup:
-#  endif
+#  endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -868,22 +576,15 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    retro3d_texture_destroy( &(bmp->tex) );
    */
 
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  else
 
    assert( NULL != bmp );
    assert( NULL != bmp->surface );
 
-#     ifndef RETROFLAT_API_SDL1
-   assert( NULL != bmp->texture );
-
-   SDL_DestroyTexture( bmp->texture );
-   bmp->texture = NULL;
-#     endif /* !RETROFLAT_API_SDL1 */
-
    SDL_FreeSurface( bmp->surface );
    bmp->surface = NULL;
 
-#  endif
+#  endif /* RETROFLAT_OPENGL */
 
 }
 
@@ -897,15 +598,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
+#  ifndef  RETROFLAT_OPENGL
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
-#  elif defined( RETROFLAT_API_SDL2 ) && !defined( RETROFLAT_OPENGL )
-   SDL_Rect src_rect = { s_x, s_y, w, h };
-   SDL_Rect dest_rect = { d_x, d_y, w, h };
-   SDL_Texture* tmp_tex = NULL;
-   int is_screen = 0;
-#  endif /* RETROFLAT_API_SDL2 || RETROFLAT_API_SDL1 */
+#  endif /* !RETROFLAT_OPENGL */
 
    assert( NULL != src );
 
@@ -934,14 +630,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
    */
 
-#  elif defined( RETROFLAT_API_SDL1 ) || defined( RETROFLAT_API_SDL2 )
+#  else
 
    /* == SDL == */
 
    if( NULL == target || retroflat_screen_buffer() == target ) {
-#     if !defined( RETROFLAT_API_SDL1 )
-      is_screen = 1;
-#     endif /* !RETROFLAT_API_SDL1 */
       target = retroflat_screen_buffer();
    }
 
@@ -959,7 +652,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
    dest_rect.w = w;
    dest_rect.h = h;
 
-#     ifdef RETROFLAT_API_SDL1
    assert( 0 == src->autolock_refs );
    assert( 0 == target->autolock_refs );
 
@@ -969,44 +661,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
       error_printf( "could not blit surface: %s", SDL_GetError() );
       retval = MERROR_GUI;
    }
-#     else
-
-   assert( retroflat_bitmap_locked( target ) );
-   
-   if( is_screen ) {
-      tmp_tex = src->texture;
-   } else {
-      assert( !retroflat_bitmap_locked( src ) );
-      retroflat_draw_lock( src );
-      /* This little roundabout song-and-dance allows us to copy from a surface
-       * updated by a software renderer (off-screen bitmap) onto another
-       * software renderer (off-screen bitmap) without getting the dreaded
-       * "Texture was not created with this renderer" error.
-       */
-      tmp_tex = SDL_CreateTexture(
-         target->renderer,
-         SDL_GetWindowPixelFormat( g_retroflat_state->platform.window ),
-         SDL_TEXTUREACCESS_STREAMING,
-         retroflat_bitmap_w( src ),
-         retroflat_bitmap_h( src ) );
-      if( NULL == tmp_tex ) {
-         error_printf(
-            "could not create temporary texture: %s", SDL_GetError() );
-         retval = MERROR_GUI;
-      }
-      SDL_UpdateTexture(
-         tmp_tex, NULL, src->surface->pixels, src->surface->pitch );
-      retroflat_draw_release( src );
-   }
-
-   retval = SDL_RenderCopy(
-      target->renderer, tmp_tex, &src_rect, &dest_rect );
-   if( 0 != retval ) {
-      error_printf( "could not blit surface: %s", SDL_GetError() );
-      retval = MERROR_GUI;
-   }
-
-#     endif /* !RETROFLAT_API_SDL1 */
 
 cleanup:
 
@@ -1021,16 +675,13 @@ void retroflat_px(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
    retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
-#  if defined( RETROFLAT_OPENGL )
-#  elif defined( RETROFLAT_API_SDL1 )
+#  ifndef RETROFLAT_OPENGL
    int offset = 0;
    uint8_t* px_1 = NULL;
    uint16_t* px_2 = NULL;
    uint32_t* px_4 = NULL;
    RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
-#  elif defined( RETROFLAT_API_SDL2 )
-   RETROFLAT_COLOR_DEF* color = &(g_retroflat_state->palette[color_idx]);
-#  endif /* RETROFLAT_API_SDL1 */
+#  endif /* !RETROFLAT_OPENGL */
 
    if( RETROFLAT_COLOR_NULL == color_idx ) {
       return;
@@ -1054,7 +705,7 @@ void retroflat_px(
    retro3d_texture_px( &(target->tex), color_idx, x, y, flags );
    */
 
-#  elif defined( RETROFLAT_API_SDL1 )
+#  else
 
    /* == SDL1 == */
 
@@ -1086,16 +737,6 @@ void retroflat_px(
    }
 
    retroflat_px_release( target );
-
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   SDL_SetRenderDrawColor(
-      target->renderer,  color->r, color->g, color->b, 255 );
-   SDL_RenderDrawPoint( target->renderer, x, y );
 
 #  endif /* RETROFLAT_OPENGL */
 }
@@ -1182,62 +823,6 @@ void retroflat_rect(
 
 /* === */
 
-#  ifndef RETROFLAT_SOFT_LINES
-
-void retroflat_line(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color_idx,
-   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
-   retroflat_pxxy_t x2, retroflat_pxxy_t y2, uint8_t flags
-) {
-#  if !defined( RETROFLAT_OPENGL )
-   MERROR_RETVAL retval = MERROR_OK;
-   RETROFLAT_COLOR_DEF color = g_retroflat_state->palette[color_idx];
-#  endif /* !RETROFLAT_OPENGL */
-
-   if( RETROFLAT_COLOR_NULL == color_idx ) {
-      return;
-   }
-
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
-   }
-
-#  if defined( RETROFLAT_OPENGL )
-
-   debug_printf( RETRO2D_TRACE_LVL, "called retroflat_line()!" );
-#if 0
-   if( NULL == target || retroflat_screen_buffer() == target ) {
-      /* TODO: Draw line in ortho. */
-   } else {
-      retrosoft_line( target, color_idx, x1, y1, x2, y2, flags );
-   }
-#endif
-
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   /* == SDL2 == */
-
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
-      return;
-   }
-
-   assert( retroflat_bitmap_locked( target ) );
-
-   SDL_SetRenderDrawColor(
-      target->renderer, color->r, color->g, color->b, 255 );
-   SDL_RenderDrawLine( target->renderer, x1, y1, x2, y2 );
- 
-#  endif /* RETROFLAT_OPENGL */
-}
-
-#  endif /* !RETROFLAT_SOFT_LINES */
-
-/* === */
-
 #  ifndef RETROFLAT_SOFT_SHAPES
 
 void retroflat_ellipse(
@@ -1269,13 +854,6 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
    *p_rgb |= (g_retroflat_state->tex_palette[idx][1] & 0xff) << 8;
    *p_rgb |= (g_retroflat_state->tex_palette[idx][2] & 0xff) << 16;
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   *p_rgb = 0;
-   *p_rgb |= g_retroflat_state->palette[idx].b & 0xff;
-   *p_rgb |= ((g_retroflat_state->palette[idx].g & 0xff) << 8);
-   *p_rgb |= ((g_retroflat_state->palette[idx].r & 0xff) << 16);
-
 #  else
 #     pragma message( "warning: get palette not implemented" )
 #  endif
@@ -1297,12 +875,6 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
    g_retroflat_state->tex_palette[idx][2] = (rgb & 0xff0000) >> 16;
 
-#  elif defined( RETROFLAT_API_SDL2 )
-
-   g_retroflat_state->palette[idx].b = rgb & 0xff;
-   g_retroflat_state->palette[idx].g = (rgb & 0xff00) >> 8;
-   g_retroflat_state->palette[idx].r = (rgb & 0xff0000) >> 16;
-
 #  else
 #     pragma message( "warning: set palette not implemented" )
 #  endif
@@ -1313,58 +885,22 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 /* === */
 
 void retroflat_resize_v() {
-#  if defined( RETROFLAT_API_SDL2 )
-
-   /*
-   g_retroflat_state->screen_v_w = g_retroflat_state->screen_w;
-   g_retroflat_state->screen_v_h = g_retroflat_state->screen_h;
-   */
-
-   assert( NULL != g_retroflat_state->platform.screen_buffer.texture );
-   SDL_DestroyTexture( g_retroflat_state->platform.screen_buffer.texture );
-
-   /* Create the buffer texture. */
-   g_retroflat_state->platform.screen_buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->platform.screen_buffer.renderer,
-         SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-         g_retroflat_state->screen_w, g_retroflat_state->screen_h );
-
-#  endif /* RETROFLAT_API_SDL2 */
+   /* TODO */
 }
 
 /* === */
 
 uint8_t retroflat_focus_platform() {
-#ifdef RETROFLAT_API_SDL1
    uint8_t app_state = 0;
-#else
-   uint32_t app_state = 0;
-#endif /* RETROFLAT_API_SDL1 */
    uint8_t app_state_out = 0;
 
-#ifdef RETROFLAT_API_SDL1
    app_state = SDL_GetAppState();
-#else
-   app_state = SDL_GetWindowFlags( g_retroflat_state->platform.window );
-#endif /* RETROFLAT_API_SDL1 */
 
-   if(
-#ifdef RETROFLAT_API_SDL1
-      SDL_APPINPUTFOCUS == (SDL_APPINPUTFOCUS & app_state)
-#else
-      SDL_WINDOW_INPUT_FOCUS == (SDL_WINDOW_INPUT_FOCUS & app_state)
-#endif /* RETROFLAT_API_SDL1 */
-   ) {
+   if( SDL_APPINPUTFOCUS == (SDL_APPINPUTFOCUS & app_state) ) {
       app_state_out |= RETROFLAT_FOCUS_FLAG_ACTIVE;
    }
 
-   if(
-#ifdef RETROFLAT_API_SDL1
-      SDL_APPACTIVE == (SDL_APPACTIVE & app_state)
-#else
-      SDL_WINDOW_SHOWN == (SDL_WINDOW_SHOWN & app_state)
-#endif /* RETROFLAT_API_SDL1 */
-   ) {
+   if( SDL_APPACTIVE == (SDL_APPACTIVE & app_state) ) {
       app_state_out |= RETROFLAT_FOCUS_FLAG_VISIBLE;
    }
 
