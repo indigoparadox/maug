@@ -46,8 +46,8 @@ typedef RGB RETROFLAT_COLOR_DEF;
       retroflat_screen_w() : ((bmp)->b->w))
 #  define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? \
       retroflat_screen_h() : ((bmp)->b->h))
-#  define retroflat_screen_w() (retroflat_allegro_screen_w())
-#  define retroflat_screen_h() (retroflat_allegro_screen_h())
+#  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
+#  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 #  define retroflat_screen_buffer() \
       (&(g_retroflat_state->platform.screen_buffer))
 #  define retroflat_root_win() (NULL) /* TODO */

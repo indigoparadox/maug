@@ -4,14 +4,6 @@
 
 static volatile retroflat_ms_t g_ms = 0;
 
-size_t retroflat_allegro_screen_w() {
-   return SCREEN_W;
-}
-
-size_t retroflat_allegro_screen_h() {
-   return SCREEN_H;
-}
-
 /* Allegro-specific callbacks for init, below. */
 
 void retroflat_on_ms_tick() {
@@ -69,7 +61,9 @@ MERROR_RETVAL retroflat_init_platform(
    if( 
       /* TODO: Set window position. */
       set_gfx_mode(
-         GFX_AUTODETECT_WINDOWED, args->screen_w, args->screen_h, 0, 0 )
+         GFX_AUTODETECT_WINDOWED,
+         args->screen_w * args->screen_scale,
+         args->screen_h * args->screen_scale, 0, 0 )
    ) {
 #     endif /* RETROFLAT_OS_DOS */
 
@@ -210,8 +204,19 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       goto cleanup;
    }
 
-   /* Flip the buffer. */
-   blit( retroflat_screen_buffer()->b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
+   if(
+      g_retroflat_state->screen_w != g_retroflat_state->screen_v_w ||
+      g_retroflat_state->screen_h != g_retroflat_state->screen_v_h
+   ) {
+      stretch_blit(
+         retroflat_screen_buffer()->b, screen,
+         0, 0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
+         0, 0, SCREEN_W, SCREEN_H );
+   } else {
+      /* Flip the buffer. */
+      blit(
+         retroflat_screen_buffer()->b, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H );
+   }
 
    /* Release the screen. */
    release_screen();
@@ -443,11 +448,20 @@ void retroflat_ellipse(
       return;
    }
 
+   /* Ellipses in allegro seem to be a bit wonky and need adjustment to match
+    * expected sizing from other platforms.
+    */
+
+   /*
    if( MERROR_OK != retroflat_trim_px(
       target, 0, NULL, NULL, &x, &y, &w, &h
    ) ) {
       return;
    }
+   */
+
+   w -= 1;
+   h -= 1;
 
    /* == Allegro == */
 
