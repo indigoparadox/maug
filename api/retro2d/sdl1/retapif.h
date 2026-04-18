@@ -117,11 +117,14 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* Setup color palettes. */
 #     ifndef RETROFLAT_OPENGL
+
 #        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
             g_retroflat_state->palette[idx].r = rd; \
             g_retroflat_state->palette[idx].g = gd; \
             g_retroflat_state->palette[idx].b = bd;
+
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
+
 #     endif /* RETROFLAT_OPENGL */
 
 #     ifdef RETROFLAT_OPENGL
@@ -169,11 +172,14 @@ MERROR_RETVAL retroflat_init_platform(
     */
    g_retroflat_state->platform.screen_buffer.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
-      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+      8, 0, 0, 0, 0 );
    if( NULL == g_retroflat_state->platform.screen_buffer.surface ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL buffer surface: %s", SDL_GetError() );
    }
+   SDL_SetColors(
+      g_retroflat_state->platform.screen_buffer.surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
    g_retroflat_state->platform.scale_rect.x = 0;
    g_retroflat_state->platform.scale_rect.y = 0;
    g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
@@ -184,16 +190,24 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.screen_buffer.surface = 
 #        endif /* !RETROFLAT_NO_SDL1_SCALING */
 #     endif /* !RETROFLAT_OPENGL */
-   SDL_SetVideoMode(
+   g_retroflat_state->platform.screen_surface = SDL_SetVideoMode(
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h,
-      info->vfmt->BitsPerPixel,
-      SDL_DOUBLEBUF | SDL_HWSURFACE | SDL_ANYFORMAT
 #     ifdef RETROFLAT_OPENGL
-      | SDL_OPENGL
+      info->vfmt->BitsPerPixel,
+#     else
+      8, /* For paletted images. */
+#     endif /* RETROFLAT_OPENGL */
+      SDL_DOUBLEBUF | SDL_SWSURFACE
+#     ifdef RETROFLAT_OPENGL
+      | SDL_HWSURFACE | SDL_OPENGL
 #     endif /* RETROFLAT_OPENGL */
    );
+
 #     ifndef RETROFLAT_OPENGL
+   SDL_SetColors(
+      g_retroflat_state->platform.screen_surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
    maug_cleanup_if_null(
       SDL_Surface*, g_retroflat_state->platform.screen_buffer.surface,
       RETROFLAT_ERROR_GRAPHICS );
@@ -544,8 +558,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* == SDL1 == */
 
-   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h,
-      RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
+   /* Create 8-bit paletted image. */
+   bmp_out->surface = SDL_CreateRGBSurface( 0, w, h, 8, 0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
@@ -855,7 +869,12 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
    *p_rgb |= (g_retroflat_state->tex_palette[idx][2] & 0xff) << 16;
 
 #  else
-#     pragma message( "warning: get palette not implemented" )
+
+   *p_rgb = 0;
+   *p_rgb |= g_retroflat_state->palette[idx].r & 0xff;
+   *p_rgb |= (g_retroflat_state->palette[idx].g & 0xff) << 8;
+   *p_rgb |= (g_retroflat_state->palette[idx].b & 0xff) << 16;
+
 #  endif
 
 }
@@ -865,18 +884,42 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   debug_printf( 3,
-      "setting texture palette #%u to " X32_FMT "...",
-      idx, rgb );
+   if( RETROFLAT_COLORS_CT_MAX <= idx ) {
+      error_printf( "invalid color index: %u", idx );
+      return MERROR_GUI;
+   }
 
 #  ifdef RETROFLAT_BMP_TEX
+
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL,
+      "setting texture palette #%u to " X32_FMT "...",
+      idx, rgb );
+#endif /* RETRO2D_TRACE_LVL */
 
    g_retroflat_state->tex_palette[idx][0] = rgb & 0xff;
    g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
    g_retroflat_state->tex_palette[idx][2] = (rgb & 0xff0000) >> 16;
 
 #  else
-#     pragma message( "warning: set palette not implemented" )
+
+#if RETRO2D_TRACE_LVL > 0
+   debug_printf( RETRO2D_TRACE_LVL,
+      "setting palette #%u to " X32_FMT "...",
+      idx, rgb );
+#endif /* RETRO2D_TRACE_LVL */
+
+   g_retroflat_state->palette[idx].r = rgb & 0xff;
+   g_retroflat_state->palette[idx].g = (rgb & 0xff00) >> 8;
+   g_retroflat_state->palette[idx].b = (rgb & 0xff0000) >> 16;
+
+   SDL_SetColors(
+      g_retroflat_state->platform.screen_surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+   SDL_SetColors(
+      g_retroflat_state->platform.screen_buffer.surface,
+      g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+
 #  endif
 
    return retval;

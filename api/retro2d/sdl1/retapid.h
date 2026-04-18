@@ -8,10 +8,6 @@
 
 #  include <time.h> /* For srand() */
 
-#  ifndef RETROFLAT_SDL_BPP
-#     define RETROFLAT_SDL_BPP 32
-#  endif /* !RETROFLAT_SDL_BPP */
-
 #  if defined( RETROFLAT_OS_WASM )
 #     include <emscripten.h>
 #  endif /* RETROFLAT_OS_WASM */
@@ -142,7 +138,8 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
    struct RETROFLAT_BITMAP screen_buffer;
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_NO_SDL1_SCALING )
+   SDL_Surface* screen_surface;
+#  ifndef RETROFLAT_NO_SDL1_SCALING
    /* The real screen buffer, if scaling is enabled. Things are drawn onto
     * g_retroflat_state->screen_buffer (technically the actual scaling buffer)
     * before being scaled onto the screen. This is necessary for e.g. WASM,
@@ -150,9 +147,7 @@ struct RETROFLAT_PLATFORM {
     */
    SDL_Surface* scale_buffer;
    SDL_Rect scale_rect;
-#  elif !defined( RETROFLAT_API_SDL1 )
-   SDL_Window*          window;
-#  endif /* !RETROFLAT_API_SDL1 */
+#  endif /* !RETROFLAT_NO_SDL1_SCALING */
    uint8_t focus;
 };
 

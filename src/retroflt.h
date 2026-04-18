@@ -327,7 +327,7 @@ typedef int8_t RETROFLAT_COLOR;
 
 #  define RETROFLAT_COLOR_NULL (-1)
 
-#  define RETROFLAT_COLORS_SZ 16
+#  define RETROFLAT_COLORS_CT 16
 
 /*! \} */
 
@@ -781,9 +781,9 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 #  define RETROFLAT_PATH_SEP '/'
 #endif /* RETROFLAT_OS_DOS */
 
-#ifndef RETROFLAT_BMP_COLORS_SZ_MAX
-#  define RETROFLAT_BMP_COLORS_SZ_MAX 256
-#endif /* !RETROFLAT_BMP_COLORS_SZ_MAX */
+#ifndef RETROFLAT_COLORS_CT_MAX
+#  define RETROFLAT_COLORS_CT_MAX 256
+#endif /* !RETROFLAT_COLORS_CT_MAX */
 
 #ifndef RETROFLAT_TIMER_CT_MAX
 #  define RETROFLAT_TIMER_CT_MAX 10
@@ -1773,7 +1773,7 @@ defined( RETROVDP_C )
 
 #ifndef RETROFLAT_BMP_TEX
    /*! \brief Index of available colors, initialized on platform init. */
-   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_SZ];
+   RETROFLAT_COLOR_DEF     palette[RETROFLAT_COLORS_CT_MAX];
 #endif /* !RETROFLAT_BMP_TEX */
 
    retroflat_loop_iter  loop_iter;
@@ -1786,7 +1786,7 @@ defined( RETROVDP_C )
     * these colors are used to manipulate textures passed through
     * retroflat_bitmap_*().
     */
-   RETROFLAT_TEX_COLOR_DEF tex_palette[RETROFLAT_COLORS_SZ];
+   RETROFLAT_TEX_COLOR_DEF tex_palette[RETROFLAT_COLORS_CT_MAX];
 #  endif /* RETROFLAT_BMP_TEX */
 
    struct RETROFLAT_INPUT_STATE input;
