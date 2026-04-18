@@ -1287,7 +1287,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 #  ifndef RETROFLAT_OPENGL
    int i = 0;
 #     ifndef RETROFLAT_API_WINCE
-   PALETTEENTRY palette[RETROFLAT_BMP_COLORS_SZ_MAX];
+   PALETTEENTRY palette[RETROFLAT_COLORS_CT_MAX];
 #     endif /* !RETROFLAT_API_WINCE */
 #  endif /* !RETROFLAT_OPENGL */
 
@@ -1358,8 +1358,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    /* TODO: How should we setup the palette in Windows CE? */
    GetSystemPaletteEntries(
       g_retroflat_state->platform.hdc_win, 0,
-      RETROFLAT_BMP_COLORS_SZ_MAX, palette );
-   for( i = 0 ; RETROFLAT_BMP_COLORS_SZ_MAX > i ; i++ ) {
+      RETROFLAT_COLORS_CT_MAX, palette );
+   for( i = 0 ; RETROFLAT_COLORS_CT_MAX > i ; i++ ) {
       bmp_out->bmi.colors[i].rgbRed = palette[i].peRed;
       bmp_out->bmi.colors[i].rgbGreen = palette[i].peGreen;
       bmp_out->bmi.colors[i].rgbBlue = palette[i].peBlue;
@@ -1676,8 +1676,11 @@ void retroflat_rect(
    w -= 1;
    h -= 1;
 
-   retroflat_constrain_px( x, y, target, return );
-   retroflat_constrain_px( x + w, y + h, target, return );
+   if( MERROR_OK != retroflat_trim_px(
+      target, 0, NULL, NULL, &x, &y, &w, &h
+   ) ) {
+      return;
+   }
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -1737,9 +1740,6 @@ void retroflat_line(
    if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
       return;
    }
-
-   retroflat_constrain_px( x1, y1, target, return );
-   retroflat_constrain_px( x2, y2, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -1801,8 +1801,11 @@ void retroflat_ellipse(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
-   retroflat_constrain_px( x + w, y + h, target, return );
+   if( MERROR_OK != retroflat_trim_px(
+      target, 0, NULL, NULL, &x, &y, &w, &h
+   ) ) {
+      return;
+   }
 
 #  if defined( RETROFLAT_OPENGL )
 
