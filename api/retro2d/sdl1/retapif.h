@@ -222,9 +222,11 @@ cleanup:
 
 void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 
+#ifndef RETROFLAT_OPENGL
    if( NULL != g_retroflat_state ) {
       SDL_FreeSurface( g_retroflat_state->platform.screen_buffer.surface );
    }
+#endif /* !RETROFLAT_OPENGL */
 
    SDL_Quit();
 }
