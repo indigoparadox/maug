@@ -1348,7 +1348,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    bmp_out->bmi.header.biSize = sizeof( BITMAPINFOHEADER );
    bmp_out->bmi.header.biPlanes = 1;
    bmp_out->bmi.header.biCompression = BI_RGB;
-   bmp_out->bmi.header.biBitCount = 32;
+   bmp_out->bmi.header.biBitCount = 8;
    bmp_out->bmi.header.biSizeImage = w * h * 4;
 #     ifdef RETROFLAT_WING
    }
