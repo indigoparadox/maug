@@ -12,14 +12,6 @@ size_t retroflat_allegro_screen_h() {
    return SCREEN_H;
 }
 
-size_t retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp ) {
-   return bmp->b->w;
-}
-
-size_t retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp ) {
-   return bmp->b->w;
-}
-
 /* Allegro-specific callbacks for init, below. */
 
 void retroflat_on_ms_tick() {
@@ -65,6 +57,9 @@ MERROR_RETVAL retroflat_init_platform(
    /* TODO: More fine-grained color depth handling. */
    g_retroflat_state->screen_colors = 16;
 
+   /* Use palette mode to enable setting colors. */
+   set_color_depth( 8 );
+
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
    if(
@@ -83,10 +78,14 @@ MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
-#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, r, g, b, cgac, cgad ) \
-         g_retroflat_state->palette[i] = makecol( r, g, b );
+#     define RETROFLAT_COLOR_TABLE_ALLEGRO_INIT( i, name_l, name_u, ri, gi, bi, cgac, cgad ) \
+         g_retroflat_state->palette[i].r = ri / 4; \
+         g_retroflat_state->palette[i].g = gi / 4; \
+         g_retroflat_state->palette[i].b = bi / 4;
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_ALLEGRO_INIT )
+
+   set_palette( g_retroflat_state->palette );
 
    LOCK_FUNCTION( retroflat_on_close_button );
    set_close_button_callback( retroflat_on_close_button );
@@ -359,7 +358,7 @@ void retroflat_px(
 
    /* == Allegro == */
 
-   putpixel( target->b, x, y, g_retroflat_state->palette[color_idx] );
+   putpixel( target->b, x, y, color_idx );
 }
 
 /* === */
@@ -391,11 +390,9 @@ void retroflat_rect(
 
    assert( NULL != target->b );
    if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
-      rectfill( target->b, x, y, x + w, y + h,
-         g_retroflat_state->palette[color_idx] );
+      rectfill( target->b, x, y, x + w, y + h, color_idx );
    } else {
-      rect( target->b, x, y, x + w, y + h,
-         g_retroflat_state->palette[color_idx] );
+      rect( target->b, x, y, x + w, y + h, color_idx );
    }
 }
 
@@ -446,8 +443,11 @@ void retroflat_ellipse(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
-   retroflat_constrain_px( x + w, y + h, target, return );
+   if( MERROR_OK != retroflat_trim_px(
+      target, 0, NULL, NULL, &x, &y, &w, &h
+   ) ) {
+      return;
+   }
 
    /* == Allegro == */
 
@@ -468,8 +468,10 @@ void retroflat_ellipse(
 
 void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
-   /* TODO */
-#  pragma message( "warning: get palette not implemented" )
+   *p_rgb = 0;
+   *p_rgb |= (g_retroflat_state->palette[idx].r & 0xff) * 4;
+   *p_rgb |= ((g_retroflat_state->palette[idx].g & 0xff) << 8) * 4;
+   *p_rgb |= ((g_retroflat_state->palette[idx].b & 0xff) << 16) * 4;
 
 }
 
@@ -478,8 +480,11 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   /* TODO */
-#  pragma message( "warning: set palette not implemented" )
+   g_retroflat_state->palette[idx].r = (rgb & 0xff) / 4;
+   g_retroflat_state->palette[idx].g = ((rgb & 0xff00) >> 8) / 4;
+   g_retroflat_state->palette[idx].b = ((rgb & 0xff0000) >> 16) / 4;
+
+   set_palette( g_retroflat_state->palette );
 
    return retval;
 }

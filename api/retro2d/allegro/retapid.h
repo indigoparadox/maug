@@ -16,9 +16,7 @@
 
 /* == Allegro == */
 
-#  ifdef MAUG_C
-#     include <allegro.h>
-#  endif /* MAUG_C */
+#  include <allegro.h>
 
 #include <time.h> /* For srand() */
 
@@ -40,14 +38,14 @@ struct RETROFLAT_BITMAP {
    BITMAP* b;
 };
 
-typedef int RETROFLAT_COLOR_DEF;
+typedef RGB RETROFLAT_COLOR_DEF;
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) (0)
 #  define retroflat_bitmap_w( bmp ) (NULL == (bmp) ? \
-      retroflat_screen_w() : retroflat_allegro_bmp_w( bmp ))
+      retroflat_screen_w() : ((bmp)->b->w))
 #  define retroflat_bitmap_h( bmp ) (NULL == (bmp) ? \
-      retroflat_screen_h() : retroflat_allegro_bmp_h( bmp ))
+      retroflat_screen_h() : ((bmp)->b->h))
 #  define retroflat_screen_w() (retroflat_allegro_screen_w())
 #  define retroflat_screen_h() (retroflat_allegro_screen_h())
 #  define retroflat_screen_buffer() \
