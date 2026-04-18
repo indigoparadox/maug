@@ -87,11 +87,7 @@
 #define RETROFLAT_PAD_X             (-20)
 #define RETROFLAT_PAD_Y             (-21)
 
-#ifdef RETROFLAT_API_SDL2
-typedef int32_t RETROFLAT_IN_KEY;
-#elif defined( RETROFLAT_API_SDL1 )
 typedef int16_t RETROFLAT_IN_KEY;
-#endif /* RETROFLAT_API_SDL2 */
 
 struct RETROFLAT_INPUT_STATE {
    uint8_t flags;
@@ -99,51 +95,17 @@ struct RETROFLAT_INPUT_STATE {
    RETROFLAT_IN_KEY prev_pad;
    int prev_pad_delay;
    RETROFLAT_IN_KEY prev_key;
-#ifdef RETROFLAT_API_SDL2
-   SDL_GameController* pad;
-#elif defined( RETROFLAT_API_SDL1 )
    SDL_Joystick* pad;
-#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 };
 
 #elif defined( RETROFLT_C )
 
-#  ifdef RETROFLAT_API_SDL2
-
-MERROR_RETVAL _retroflat_sdl_init_joystick( int joystick_id ) {
-   assert( 0 <= joystick_id );
-   if( 1 > SDL_NumJoysticks() ) {
-      error_printf( "no gamepad connected!" );
-
-   } else if( SDL_IsGameController( joystick_id ) ) {
-      g_retroflat_state->input.pad =
-         SDL_GameControllerOpen( joystick_id );
-      if( NULL == g_retroflat_state->input.pad ) {
-         error_printf( "unable to open gamepad: %s", SDL_GetError() );
-      } else {
-         debug_printf( 1, "initialized gamepad: %d", joystick_id );
-         return MERROR_OK;
-      }
-
-   } else {
-      error_printf( "joystick %d is not a known gamepad!", joystick_id );
-   }
-
-   return MERROR_USR;
-}
-
-#  endif
-
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_API_SDL2 )
-   size_t i = 0;
-#  endif /* RETROFLAT_API_SDL2 */
 
    g_retroflat_state->retroflat_flags |= 
       (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
 
-#  ifdef RETROFLAT_API_SDL1
    /* Setup key repeat. */
    if(
       RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
@@ -168,25 +130,6 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
          debug_printf( 1, "initialized gamepad: %d", args->joystick_id );
       }
    }
-
-#  elif defined( RETROFLAT_API_SDL2 )
-   if(
-      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
-   ) {
-      debug_printf( 2, "key repeat enabled" );
-   }
-
-   /* Break this out so it can be shared with insertion detection below. */
-   if( 0 > args->joystick_id ) {
-      for( i = 0 ; SDL_NumJoysticks() > i ; i++ ) {
-         if( MERROR_OK == _retroflat_sdl_init_joystick( i ) ) {
-            break;
-         }
-      }
-   } else {
-      _retroflat_sdl_init_joystick( args->joystick_id );
-   }
-#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 
    return retval;
 }
@@ -227,7 +170,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       }
       break;
 
-#  ifdef RETROFLAT_API_SDL1
    case SDL_JOYBUTTONDOWN:
       /*
       switch( event.jbutton.button ) {
@@ -239,37 +181,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          RETROINPUT_TRACE_LVL, "gamebutton: %d", event.jbutton.button );
 #endif /* RETROINPUT_TRACE_LVL */
 
-#  elif defined( RETROFLAT_API_SDL2 )
-   case SDL_CONTROLLERBUTTONDOWN:
-      switch( event.cbutton.button ) {
-      case SDL_CONTROLLER_BUTTON_DPAD_UP:
-         key_out = RETROFLAT_PAD_UP; break;
-      case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-         key_out = RETROFLAT_PAD_DOWN; break;
-      case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-         key_out = RETROFLAT_PAD_RIGHT; break;
-      case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-         key_out = RETROFLAT_PAD_LEFT; break;
-      case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
-         key_out = RETROFLAT_PAD_SHOULDER_L; break;
-      case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
-         key_out = RETROFLAT_PAD_SHOULDER_R; break;
-      case SDL_CONTROLLER_BUTTON_START:
-         key_out = RETROFLAT_PAD_START; break;
-      case SDL_CONTROLLER_BUTTON_BACK:
-         key_out = RETROFLAT_PAD_SELECT; break;
-      case SDL_CONTROLLER_BUTTON_A:
-         key_out = RETROFLAT_PAD_A; break;
-      case SDL_CONTROLLER_BUTTON_B:
-         key_out = RETROFLAT_PAD_B; break;
-      case SDL_CONTROLLER_BUTTON_X:
-         key_out = RETROFLAT_PAD_X; break;
-      case SDL_CONTROLLER_BUTTON_Y:
-         key_out = RETROFLAT_PAD_Y; break;
-      }
-
-#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
-
       g_retroflat_state->input.prev_pad = key_out;
       g_retroflat_state->input.prev_pad_delay = RETROFLAT_PREV_PAD_DELAY;
 
@@ -277,24 +188,13 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
       debug_printf( RETROINPUT_TRACE_LVL, "pad button: %d", key_out );
 #endif /* RETROINPUT_TRACE_LVL */
 
-#  if !defined( RETROFLAT_API_SDL1 )
-      SDL_FlushEvents( SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP );
-#  endif /* !RETROFLAT_API_SDL1 */
-
       break;
 
    /* Detect button release for repeat emulation. */
-#  ifdef RETROFLAT_API_SDL1
    case SDL_JOYBUTTONUP:
       g_retroflat_state->input.prev_pad = 0;
       g_retroflat_state->input.prev_pad_delay = 0;
 
-#  elif defined( RETROFLAT_API_SDL2 )
-   case SDL_CONTROLLERBUTTONUP:
-      g_retroflat_state->input.prev_pad = 0;
-      g_retroflat_state->input.prev_pad_delay = 0;
-
-#  endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
 #if RETROINPUT_TRACE_LVL > 0
       debug_printf( RETROINPUT_TRACE_LVL, "pad button reset to 0" );
 #endif /* RETROINPUT_TRACE_LVL */
@@ -328,10 +228,6 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          input->key_flags |= RETROFLAT_INPUT_MOD_ALT;
       }
 
-#  if !defined( RETROFLAT_API_SDL1 )
-      /* Flush event buffer to improve responsiveness. */
-      SDL_FlushEvents( SDL_KEYDOWN, SDL_KEYUP );
-#  endif /* !RETROFLAT_API_SDL1 */
       break;
 
    case SDL_KEYUP:
@@ -356,29 +252,19 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          g_retroflat_state->input.mouse_state = RETROFLAT_MOUSE_B_RIGHT;
       }
 
-#  if !defined( RETROFLAT_API_SDL1 )
-      /* Flush key buffer to improve responsiveness. */
-      SDL_FlushEvents( SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP );
-#  endif /* !RETROFLAT_API_SDL1 */
       break;
 
-#  if !defined( RETROFLAT_API_SDL1 )
-   case SDL_WINDOWEVENT:
-      switch( event.window.event ) {
-      case SDL_WINDOWEVENT_RESIZED:
-         /* TODO: Move the callback handling to the main loop. Just set a flag
-          *       here to note to call it.
-          */
-         retroflat_on_resize( event.window.data1, event.window.data2 );
-         if( NULL != g_retroflat_state->on_resize ) {
-            g_retroflat_state->on_resize(
-               event.window.data1, event.window.data2,
-               g_retroflat_state->on_resize_data );
-         }
-         break;
+   case SDL_VIDEORESIZE:
+      /* TODO: Move the callback handling to the main loop. Just set a flag
+         *       here to note to call it.
+         */
+      retroflat_on_resize( event.resize.w, event.resize.h );
+      if( NULL != g_retroflat_state->on_resize ) {
+         g_retroflat_state->on_resize(
+            event.resize.w, event.resize.h,
+            g_retroflat_state->on_resize_data );
       }
       break;
-#  endif /* !RETROFLAT_API_SDL1 */
 
    default:
       /* Check for mouse dragging if mouse was previously held down. */

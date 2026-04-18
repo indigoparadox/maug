@@ -682,8 +682,8 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 #endif /* !RETROFLAT_DEFAULT_SCREEN_SCALE */
 
 #define retroflat_on_resize( w, h ) \
-   g_retroflat_state->screen_w = w; \
-   g_retroflat_state->screen_h = h;
+   g_retroflat_state->screen_w = (w); \
+   g_retroflat_state->screen_h = (h);
 
 /**
  * \addtogroup maug_retroflt_drawing
