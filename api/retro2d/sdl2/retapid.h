@@ -17,9 +17,6 @@
 #  endif /* RETROFLAT_OS_WASM */
 
 #  include <SDL.h>
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
-#     include <SDL_getenv.h>
-#  endif /* RETROFLAT_API_SDL1 */
 
 #  if !defined( RETROFLAT_SOFT_SHAPES )
 #     define RETROFLAT_SOFT_SHAPES
@@ -45,19 +42,13 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
    SDL_Surface* surface;
-#     ifdef RETROFLAT_API_SDL1
-   /* SDL1 autolock counter. */
-   ssize_t autolock_refs;
-#     endif /* RETROFLAT_API_SDL1 */
-#  endif /* RETROFLAT_OPENGL */
-#  ifdef RETROFLAT_API_SDL2
+#  endif /* RETROFLAT_BMP_TEX */
    /* SDL2 texture pointers. */
    SDL_Texture* texture;
    SDL_Renderer* renderer;
-#  endif /* RETROFLAT_API_SDL2 */
 };
 
-#  ifdef RETROFLAT_OPENGL
+#  ifdef RETROFLAT_BMP_TEX
 #     define retroflat_bitmap_w( bmp ) \
          (NULL == (bmp) || \
             (NULL == (bmp)->tex.bytes_h && NULL == (bmp)->tex.bytes) ? \
@@ -77,15 +68,9 @@ struct RETROFLAT_BITMAP {
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
 
-#     if defined( RETROFLAT_API_SDL1 )
-#        define retroflat_bitmap_locked( bmp ) \
-            (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+#     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
 
-#     elif defined( RETROFLAT_API_SDL2 )
-#        define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
-#     endif /* RETROFLAT_API_SDL1 || RETROFLAT_API_SDL2 */
-
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_BMP_TEX */
 
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
@@ -101,28 +86,9 @@ struct RETROFLAT_BITMAP {
 #  endif /* RETROFLAT_VDP */
 #  define retroflat_root_win() (NULL) /* TODO */
 
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OPENGL )
-/* Special pixel lock JUST for SDL1 surfaces. */
-#     define retroflat_px_lock( bmp ) \
-         if( NULL != bmp ) { \
-            (bmp)->autolock_refs++; \
-            SDL_LockSurface( (bmp)->surface ); \
-         }
-#     define retroflat_px_release( bmp ) \
-         if( NULL != bmp ) { \
-            assert( 0 < (bmp)->autolock_refs ); \
-            (bmp)->autolock_refs--; \
-            SDL_UnlockSurface( (bmp)->surface ); \
-         }
-#     ifdef RETROFLAT_VDP
-#        define retroflat_vdp_lock( bmp ) retroflat_px_lock( bmp )
-#        define retroflat_vdp_release( bmp ) retroflat_px_release( bmp )
-#     endif /* RETROFLAT_VDP */
-#  else
 /* Pixel lock above does not apply to SDL2 surfaces or bitmap textures. */
-#     define retroflat_px_lock( bmp )
-#     define retroflat_px_release( bmp )
-#  endif
+#  define retroflat_px_lock( bmp )
+#  define retroflat_px_release( bmp )
 
 #  define retroflat_quit( retval_in ) \
       debug_printf( 1, "quit called, retval: %d", retval_in ); \
@@ -145,7 +111,7 @@ struct RETROFLAT_BITMAP {
 typedef float RETROFLAT_COLOR_DEF[3];
 #else
 typedef SDL_Color RETROFLAT_COLOR_DEF;
-#  endif /* RETROFLAT_OPENGL */
+#  endif /* RETROFLAT_BMP_TEX */
 
 struct RETROFLAT_PLATFORM_ARGS {
    uint8_t flags;
@@ -154,17 +120,7 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
    struct RETROFLAT_BITMAP screen_buffer;
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_NO_SDL1_SCALING )
-   /* The real screen buffer, if scaling is enabled. Things are drawn onto
-    * g_retroflat_state->screen_buffer (technically the actual scaling buffer)
-    * before being scaled onto the screen. This is necessary for e.g. WASM,
-    * where we can't otherwise easily scale the screen.
-    */
-   SDL_Surface* scale_buffer;
-   SDL_Rect scale_rect;
-#  elif !defined( RETROFLAT_API_SDL1 )
    SDL_Window*          window;
-#  endif /* !RETROFLAT_API_SDL1 */
    uint8_t focus;
 };
 
