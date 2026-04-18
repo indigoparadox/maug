@@ -87,7 +87,7 @@ endif
 
 # = Determine Prerequisites =
 
-CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl \
+CFLAGS_GCC_UNIX_SDL += \
 	-I$(MAUG_ROOT)/api/input/sdl -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix
 
@@ -118,6 +118,8 @@ ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
 $$(warning could not find pkg-config for SDL_mixer 1.2!)
 endif
 
+CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl1
+
 ifeq ("$$(RETROFLAT_SOUND)","1")
 CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config SDL_mixer --cflags) \
 	-I$(MAUG_ROOT)/api/sound/sdl
@@ -139,6 +141,8 @@ ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
 # Make this only a warning, in case we're compiling for other targets.
 $$(warning could not find pkg-config for SDL_mixer 2!)
 endif
+
+CFLAGS_GCC_UNIX_SDL += -I$$(MAUG_ROOT)/api/retro2d/sdl2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
 CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --cflags) \
