@@ -13,9 +13,9 @@
 #  endif /* RETROFLAT_OS_WASM */
 
 #  include <SDL.h>
-#  if defined( RETROFLAT_API_SDL1 ) && !defined( RETROFLAT_OS_WASM )
+#  ifndef RETROFLAT_OS_WASM
 #     include <SDL_getenv.h>
-#  endif /* RETROFLAT_API_SDL1 */
+#  endif /* RETROFLAT_OS_WASM */
 
 #  if !defined( RETROFLAT_SOFT_SHAPES )
 #     define RETROFLAT_SOFT_SHAPES
@@ -35,10 +35,8 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    uint8_t flags;
    SDL_Surface* surface;
-#     ifdef RETROFLAT_API_SDL1
    /* SDL1 autolock counter. */
    ssize_t autolock_refs;
-#     endif /* RETROFLAT_API_SDL1 */
 #  endif /* RETROFLAT_OPENGL */
 };
 
