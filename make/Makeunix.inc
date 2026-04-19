@@ -107,18 +107,12 @@ ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
 # Make this only a warning, in case we're compiling for other targets.
 $$(warning could not find pkg-config for SDL 1.2!)
 endif
-ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
-# Make this only a warning, in case we're compiling for other targets.
-$$(warning could not find pkg-config for SDL_mixer 1.2!)
-endif
 
 CFLAGS_GCC_UNIX_SDL += \
 	-I$$(MAUG_ROOT)/api/retro2d/sdl1 -I$(MAUG_ROOT)/api/input/sdl1
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config SDL_mixer --cflags) \
-	-I$(MAUG_ROOT)/api/sound/sdl
-LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config SDL_mixer --libs)
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl1
 endif
 
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_API_SDL1 $$(shell pkg-config sdl --cflags)
@@ -132,18 +126,12 @@ ifeq ("$$(shell pkg-config sdl --libs 2>/dev/null)","")
 # Make this only a warning, in case we're compiling for other targets.
 $$(warning could not find pkg-config for SDL 2!)
 endif
-ifeq ("$$(shell pkg-config SDL_mixer --libs 2>/dev/null)","")
-# Make this only a warning, in case we're compiling for other targets.
-$$(warning could not find pkg-config for SDL_mixer 2!)
-endif
 
 CFLAGS_GCC_UNIX_SDL += \
 	-I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --cflags) \
-	-I$(MAUG_ROOT)/api/sound/sdl
-LDFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 SDL2_mixer --libs)
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl2
 endif
 
 CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --cflags) -DRETROFLAT_API_SDL2
