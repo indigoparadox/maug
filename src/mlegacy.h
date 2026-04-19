@@ -20,12 +20,6 @@
 #  define MAUG_NO_CLI
 #endif /* RETROFLAT_NO_CLI */
 
-#ifdef PATH_MAX
-#  define MAUG_PATH_SZ_MAX PATH_MAX
-#else
-#  define MAUG_PATH_SZ_MAX 255
-#endif /* PATH_MAX */
-
 #if defined( ANCIENT_C ) || defined( MAUG_ANCIENT_C )
 #define  UPRINTF_ANCIENT_C
 #endif /* ANCIENT_C */
