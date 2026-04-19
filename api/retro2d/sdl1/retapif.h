@@ -57,17 +57,17 @@ MERROR_RETVAL retroflat_init_platform(
    int argc, char* argv[], struct RETROFLAT_ARGS* args
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-#  if defined( RETROFLAT_SDL_ICO )
+#if defined( RETROFLAT_SDL_ICO )
    SDL_Surface* icon = NULL;
-#  endif /* RETROFLAT_SDL_ICO */
-#  if defined( RETROFLAT_API_SDL1 )
+#endif /* RETROFLAT_SDL_ICO */
+#if defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
    char sdl_video_parms[256] = "";
-#     if defined( RETROFLAT_OPENGL )
+#  if defined( RETROFLAT_OPENGL )
    int gl_retval = 0,
       gl_depth = 16;
-#     endif /* RETROFLAT_OPENGL */
-#  endif /* RETROFLAT_API_SDL1 */
+#  endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_API_SDL1 */
 
    /* TODO: Add some flexibility for simulating lower-color platforms. */
    g_retroflat_state->screen_colors = 16;
@@ -92,7 +92,7 @@ MERROR_RETVAL retroflat_init_platform(
    debug_printf( 3, "maximum window size: %ux%u",
       info->current_w, info->current_h );
 
-#     ifndef RETROFLAT_OS_WIN
+#ifndef RETROFLAT_OS_WIN
 
    /* TODO: Maximum screen size detection returns bogus values in Windows! */
 
@@ -113,30 +113,30 @@ MERROR_RETVAL retroflat_init_platform(
        args->screen_x, args->screen_y );
    putenv( sdl_video_parms );
 
-#     endif /* !RETROFLAT_OS_WIN */
+#endif /* !RETROFLAT_OS_WIN */
 
    /* Setup color palettes. */
-#     ifndef RETROFLAT_OPENGL
+#ifndef RETROFLAT_OPENGL
 
-#        define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
-            g_retroflat_state->palette[idx].r = rd; \
-            g_retroflat_state->palette[idx].g = gd; \
-            g_retroflat_state->palette[idx].b = bd;
+#  define RETROFLAT_COLOR_TABLE_SDL( idx, name_l, name_u, rd, gd, bd, cgac, cgad ) \
+      g_retroflat_state->palette[idx].r = rd; \
+      g_retroflat_state->palette[idx].g = gd; \
+      g_retroflat_state->palette[idx].b = bd;
 
    RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_SDL )
 
-#     endif /* RETROFLAT_OPENGL */
+#endif /* !RETROFLAT_OPENGL */
 
-#     ifdef RETROFLAT_OPENGL
+#ifdef RETROFLAT_OPENGL
    
-#        ifndef RETROFLAT_OS_WASM
+#  ifndef RETROFLAT_OS_WASM
    /* (This doesn't compile in emcc.) */
    if(
       RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
    ) {
       SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
    }
-#        endif /* !RETROFLAT_OS_WASM */
+#  endif /* !RETROFLAT_OS_WASM */
 
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
@@ -150,22 +150,22 @@ MERROR_RETVAL retroflat_init_platform(
       }
    } while( gl_retval );
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-#     endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_OPENGL */
 
    if( NULL != args->title ) {
       retroflat_set_title( args->title );
    }
 
-#     ifdef RETROFLAT_SDL_ICO
+#ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
    icon = SDL_LoadBMP_RW(
       SDL_RWFromConstMem( obj_ico_sdl_ico_bmp,
       obj_ico_sdl_ico_bmp_len ), 1 );
    maug_cleanup_if_null( SDL_Surface*, icon, MERROR_GUI );
    SDL_WM_SetIcon( icon, 0 ); /* TODO: Constant mask. */
-#     endif /* RETROFLAT_SDL_ICO */
+#endif /* RETROFLAT_SDL_ICO */
 
-#     ifndef RETROFLAT_OPENGL
+#ifndef RETROFLAT_OPENGL
 
    /* Create our first-stage buffer, which gets drawn on directly. */
    g_retroflat_state->platform.screen_buffer.surface = SDL_CreateRGBSurface(
@@ -179,44 +179,57 @@ MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 
-#        ifndef RETROFLAT_NO_SDL1_SCALING
+#  ifndef RETROFLAT_NO_SDL1_SCALING
    /* Insert a normal surface as the standard buffer that things draw to, so
     * those things can be scaled onto the scale buffer as the last step.
     */
-   g_retroflat_state->platform.scale_rect.x = 0;
-   g_retroflat_state->platform.scale_rect.y = 0;
-   g_retroflat_state->platform.scale_rect.w = g_retroflat_state->screen_w;
-   g_retroflat_state->platform.scale_rect.h = g_retroflat_state->screen_h;
-   g_retroflat_state->platform.scale_surface = SDL_CreateRGBSurface(
+   g_retroflat_state->platform.screen_scale.sz =
+      sizeof( struct RETROFLAT_BITMAP );
+   g_retroflat_state->platform.screen_scale.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_w, g_retroflat_state->screen_h,
       8, 0, 0, 0, 0 );
    SDL_SetColors(
-      g_retroflat_state->platform.scale_surface,
+      g_retroflat_state->platform.screen_scale.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
-#        endif /* !RETROFLAT_NO_SDL1_SCALING */
+#  endif /* !RETROFLAT_NO_SDL1_SCALING */
 
-#     endif /* !RETROFLAT_OPENGL */
+#endif /* !RETROFLAT_OPENGL */
 
-   g_retroflat_state->platform.screen_surface = SDL_SetVideoMode(
+   g_retroflat_state->platform.screen_final.sz =
+      sizeof( struct RETROFLAT_BITMAP );
+   g_retroflat_state->platform.screen_final.surface = SDL_SetVideoMode(
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h,
       info->vfmt->BitsPerPixel,
       SDL_DOUBLEBUF | SDL_RESIZABLE
-#     ifdef RETROFLAT_OPENGL
+#ifdef RETROFLAT_OPENGL
       | SDL_HWSURFACE | SDL_OPENGL
-#     else
+#else
       | SDL_SWSURFACE
-#     endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_OPENGL */
    );
 
-#     ifndef RETROFLAT_OPENGL
+#ifndef RETROFLAT_OPENGL
    SDL_SetColors(
-      g_retroflat_state->platform.screen_surface,
+      g_retroflat_state->platform.screen_final.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
    maug_cleanup_if_null(
       SDL_Surface*, g_retroflat_state->platform.screen_buffer.surface,
       RETROFLAT_ERROR_GRAPHICS );
-#     endif /* !RETROFLAT_OPENGL */
+
+#  ifdef RETROFLAT_VDP
+   g_retroflat_state->platform.screen_vdp.sz =
+      sizeof( struct RETROFLAT_BITMAP );
+   g_retroflat_state->platform.screen_vdp.surface = SDL_CreateRGBSurface(
+      0, g_retroflat_state->screen_w, g_retroflat_state->screen_h,
+      info->vfmt->BitsPerPixel, 0, 0, 0, 0 );
+   g_retroflat_state->vdp_buffer_in =
+      &(g_retroflat_state->platform.screen_vdp);
+   g_retroflat_state->vdp_buffer_out =
+      &(g_retroflat_state->platform.screen_final);
+#  endif /* RETROFLAT_VDP */
+
+#endif /* !RETROFLAT_OPENGL */
 
 cleanup:
 
@@ -230,6 +243,12 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 #ifndef RETROFLAT_OPENGL
    if( NULL != g_retroflat_state ) {
       SDL_FreeSurface( g_retroflat_state->platform.screen_buffer.surface );
+#  ifndef RETROFLAT_NO_SDL1_SCALING
+      SDL_FreeSurface( g_retroflat_state->platform.screen_scale.surface );
+#  endif /* RETROFLAT_NO_SDL1_SCALING */
+#  ifdef RETROFLAT_VDP
+      SDL_FreeSurface( g_retroflat_state->platform.screen_vdp.surface );
+#  endif /* RETROFLAT_VDP */
    }
 #endif /* !RETROFLAT_OPENGL */
 
@@ -388,8 +407,11 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROFLAT_NO_SDL1_SCALING
+   SDL_Rect scale_rect;
+#endif /* !RETROFLAT_NO_SDL1_SCALING */
 
-#  ifdef RETROFLAT_OPENGL
+#ifdef RETROFLAT_OPENGL
 
    if( NULL == bmp || &(g_retroflat_state->platform.screen_buffer) == bmp ) {
       /* SDL has its own OpenGL flip functions.*/
@@ -398,7 +420,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       debug_printf( RETRO2D_TRACE_LVL, "called retroflat_draw_lock()!" );
    }
 
-#  else
+#else
 
    /* == SDL1 == */
 
@@ -419,31 +441,50 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
             (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
 
-#     ifdef RETROFLAT_NO_SDL1_SCALING
+#  ifdef RETROFLAT_NO_SDL1_SCALING
          /* Blit the 8-bit indexed working buffer directly onto the 32-bit
           * screen.
           */
-         SDL_Blit(
+         SDL_BlitSurface(
             g_retroflat_state->platform.screen_buffer.surface, NULL,
-            g_retroflat_state->platform.screen_surface,
-#     else
+#     ifdef RETROFLAT_VDP
+            retroflat_vdp_available() ?
+               g_retroflat_state->platform.screen_vdp_in.surface :
+#     endif /* RETROFLAT_VDP */
+            g_retroflat_state->platform.screen_final.surface,
+            NULL );
+#  else
          /* Do the scaled blit from the intermediate scaling buffer to the
           * real screen buffer before flip.
           */
+         scale_rect.x = 0;
+         scale_rect.y = 0;
+         scale_rect.w = g_retroflat_state->screen_w;
+         scale_rect.h = g_retroflat_state->screen_h;
          SDL_SoftStretch(
             g_retroflat_state->platform.screen_buffer.surface, NULL,
-            g_retroflat_state->platform.scale_surface,
-            &(g_retroflat_state->platform.scale_rect) );
+            g_retroflat_state->platform.screen_scale.surface,
+            &scale_rect );
+
+         /* We need to do one more step since SDL_SoftStretch() can't cope with
+          * different bit depths. This gets us from 8-bit paletted to 32-bit
+          * real colors.
+          */
          SDL_BlitSurface(
-            g_retroflat_state->platform.scale_surface, NULL,
-            g_retroflat_state->platform.screen_surface, NULL );
-#     endif /* RETROFLAT_NO_SDL1_SCALING */
-
-#     if defined( RETROFLAT_VDP )
-         retroflat_vdp_call( "retroflat_vdp_flip" );
+            g_retroflat_state->platform.screen_scale.surface, NULL,
+#     ifdef RETROFLAT_VDP
+            retroflat_vdp_available() ?
+               g_retroflat_state->platform.screen_vdp.surface :
 #     endif /* RETROFLAT_VDP */
+            g_retroflat_state->platform.screen_final.surface,
+            NULL );
+#  endif /* RETROFLAT_NO_SDL1_SCALING */
 
-         SDL_Flip( g_retroflat_state->platform.screen_surface );
+#  if defined( RETROFLAT_VDP )
+         retroflat_vdp_call( "retroflat_vdp_flip" );
+#  endif /* RETROFLAT_VDP */
+
+         SDL_Flip( g_retroflat_state->platform.screen_final.surface );
       }
 
    } else {
@@ -453,7 +494,7 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       SDL_UnlockSurface( bmp->surface );
    }
 
-#  endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_OPENGL */
 
    return retval;
 }
@@ -825,7 +866,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 #     ifndef RETROFLAT_NO_SDL1_SCALING
    SDL_SetColors(
-      g_retroflat_state->platform.scale_surface,
+      g_retroflat_state->platform.screen_scale.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 #     endif /* !RETROFLAT_NO_SDL1_SCALING */
 

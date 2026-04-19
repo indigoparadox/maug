@@ -68,15 +68,8 @@ struct RETROFLAT_BITMAP {
 #  define retroflat_screen_w() (g_retroflat_state->screen_v_w)
 #  define retroflat_screen_h() (g_retroflat_state->screen_v_h)
 
-#  ifdef RETROFLAT_VDP
-#     define retroflat_screen_buffer() \
-         (NULL == g_retroflat_state->vdp_buffer ? \
-         &(g_retroflat_state->platform.screen_buffer) : \
-         g_retroflat_state->vdp_buffer)
-#  else
-#     define retroflat_screen_buffer() \
-         (&(g_retroflat_state->platform.screen_buffer))
-#  endif /* RETROFLAT_VDP */
+#  define retroflat_screen_buffer() \
+      (&(g_retroflat_state->platform.screen_buffer))
 #  define retroflat_root_win() (NULL) /* TODO */
 
 #  ifdef RETROFLAT_OPENGL
@@ -136,15 +129,17 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
    struct RETROFLAT_BITMAP screen_buffer;
-   SDL_Surface* screen_surface;
+   struct RETROFLAT_BITMAP screen_final;
+#  ifdef RETROFLAT_VDP
+   struct RETROFLAT_BITMAP screen_vdp;
+#  endif /* RETROFLAT_VDP */
 #  ifndef RETROFLAT_NO_SDL1_SCALING
    /* The real screen buffer, if scaling is enabled. Things are drawn onto
     * g_retroflat_state->screen_buffer (technically the actual scaling buffer)
     * before being scaled onto the screen. This is necessary for e.g. WASM,
     * where we can't otherwise easily scale the screen.
     */
-   SDL_Surface* scale_surface;
-   SDL_Rect scale_rect;
+   struct RETROFLAT_BITMAP screen_scale;
 #  endif /* !RETROFLAT_NO_SDL1_SCALING */
    uint8_t focus;
 };

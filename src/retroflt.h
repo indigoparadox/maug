@@ -525,6 +525,8 @@ struct RETROFLAT_STATE;
  */
 typedef MERROR_RETVAL (*retroflat_vdp_proc_t)( struct RETROFLAT_STATE* );
 
+#define retroflat_vdp_available() (NULL != g_retroflat_state->vdp_exe)
+
 /*! \} */ /* maug_retroflt_vdp */
 
 /**
@@ -1686,8 +1688,12 @@ defined( RETROVDP_C )
    /**
     * \brief A buffer assembled and passed to the \ref maug_retroflt_vdp for
     *        it to modify, or NULL if no VDP is loaded.
+    *
+    *        This buffer should be setup by the platform-specific API in its
+    *        init callback.
     */
-   struct RETROFLAT_BITMAP* vdp_buffer;
+   struct RETROFLAT_BITMAP* vdp_buffer_in;
+   struct RETROFLAT_BITMAP* vdp_buffer_out;
 #     ifdef RETROFLAT_OS_WIN
    HMODULE vdp_exe;
 #     else
@@ -1871,6 +1877,10 @@ void retroflat_shutdown( int retval );
  * \brief Call a function from the retroflat VDP.
  */
 MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
+
+uint8_t* retroflat_vdp_get_vdp_in();
+
+uint8_t* retroflat_vdp_get_vdp_out();
 
 /*! \} */ /* maug_retroflt_vdp */
 #  endif /* RETROFLAT_VDP || DOCUMENTATION */
@@ -3010,21 +3020,9 @@ MERROR_RETVAL retroflat_init(
       goto skip_vdp;
    }
 
-   /* Create intermediary screen buffer. */
-   debug_printf( 1, "creating VDP buffer, " SIZE_T_FMT " x " SIZE_T_FMT,
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
-   g_retroflat_state->vdp_buffer =
-      calloc( 1, sizeof( struct RETROFLAT_BITMAP ) );
-   maug_cleanup_if_null_alloc(
-      struct RETROFLAT_BITMAP*, g_retroflat_state->vdp_buffer );
-   retval = retroflat_create_bitmap(
-      g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
-      g_retroflat_state->vdp_buffer,
-      RETROFLAT_FLAGS_OPAQUE | RETROFLAT_FLAGS_SCREEN_BUFFER );
-   maug_cleanup_if_not_ok();
-
    debug_printf( 1, "initializing VDP..." );
    retval = retroflat_vdp_call( "retroflat_vdp_init" );
+   maug_cleanup_if_not_ok();
 
 skip_vdp:
 
@@ -3073,12 +3071,6 @@ void retroflat_shutdown( int retval ) {
 #     else
 #        error "dlclose undefined!"
 #     endif /* RETROFLAT_OS_UNIX || RETROFLAT_OS_WIN */
-   }
-
-   if( NULL != g_retroflat_state->vdp_buffer ) {
-      debug_printf( 1, "destroying VPD buffer..." );
-      retroflat_destroy_bitmap( g_retroflat_state->vdp_buffer );
-      free( g_retroflat_state->vdp_buffer );
    }
 #  endif /* RETROFLAT_VDP */
 
@@ -3321,7 +3313,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
    }
 
 #     ifdef RETROFLAT_OS_WIN
-   retroflat_draw_lock( g_retroflat_state->vdp_buffer );
+   retroflat_draw_lock( g_retroflat_state->vdp_buffer_in );
 #     endif /* RETROFLAT_OS_WIN */
 
    if(
@@ -3330,8 +3322,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_vdp_lock( &(g_retroflat_state->platform.screen_buffer) );
-      retroflat_vdp_lock( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_lock( g_retroflat_state->vdp_buffer_in );
+      retroflat_vdp_lock( g_retroflat_state->vdp_buffer_out );
    }
 
    retval = vdp_proc( g_retroflat_state );
@@ -3341,8 +3333,8 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
       RETROFLAT_VDP_FLAG_PXLOCK ==
          (RETROFLAT_VDP_FLAG_PXLOCK & g_retroflat_state->vdp_flags)
    ) {
-      retroflat_vdp_release( &(g_retroflat_state->platform.screen_buffer) );
-      retroflat_vdp_release( g_retroflat_state->vdp_buffer );
+      retroflat_vdp_release( g_retroflat_state->vdp_buffer_out );
+      retroflat_vdp_release( g_retroflat_state->vdp_buffer_in );
    }
 
 #     ifdef RETROFLAT_OS_WIN
