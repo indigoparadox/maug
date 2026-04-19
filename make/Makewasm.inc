@@ -7,7 +7,8 @@ ifneq ("$$(EMCC_CONFIG)","")
 	EMCC_EM_CONFIG := --em-config $$(EMCC_CONFIG)
 endif
 
-EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI -s USE_OGG=1 \
+EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI -DRETROFLAT_NO_VDP \
+	-s USE_OGG=1 \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix -I$(MAUG_ROOT)/api/serial/asn1
 
@@ -44,7 +45,7 @@ else
 	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2 -DRETROSND_API_SDL2 -I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl2 -DRETROSND_SAMPLE_44100
+	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl1 -DRETROSND_SAMPLE_44100
 endif
 
 endif
