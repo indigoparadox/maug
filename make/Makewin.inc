@@ -176,10 +176,6 @@ else
 	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/font/win
 endif
 
-ifeq ("$$(RETROFLAT_VDP)","1")
-	CFLAGS_WATCOM386_WIN_WIN32 += -DRETROFLAT_VDP
-endif
-
 ifeq ("$$(RETROFLAT_SOUND)","1")
 	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/sound/win
 endif
@@ -439,10 +435,6 @@ CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/mem/win
 
-ifeq ("$$(RETROFLAT_VDP)","1")
-	CFLAGS_GCC_WIN_WIN32 += -DRETROFLAT_VDP
-endif
-
 ifeq ("$$(FORCE_MVFS)","1")
 CFLAGS_GCC_WIN_WIN32 += -I"$(MAUG_ROOT)/api/file/mvfs"
 else
@@ -490,10 +482,6 @@ define TGT_GCC64_WIN_WIN32
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/retro2d/win \
 	-I$(MAUG_ROOT)/api/input/win -I$(MAUG_ROOT)/api/serial/asn1 \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/mem/win
-
-ifeq ("$$(RETROFLAT_VDP)","1")
-	CFLAGS_GCC64_WIN_WIN32 += -DRETROFLAT_VDP
-endif
 
 ifeq ("$$(FORCE_MVFS)","1")
 CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/file/mvfs

@@ -6,6 +6,11 @@
 
 #define RETROFLAT_SOFT_VIEWPORT
 
+#ifndef RETROFLAT_NO_VDP
+/* If we're not running on a console or something, enable VDP! */
+#  define RETROFLAT_VDP
+#endif /* !RETROFLAT_NO_VDP */
+
 #  include <time.h> /* For srand() */
 
 #  if defined( RETROFLAT_OS_WASM )

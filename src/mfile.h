@@ -38,7 +38,7 @@ void retroflat_message(
 
 #ifndef MAUG_PATH_SZ_MAX
 /*! \brief Maximum size allocated for asset paths. */
-#  define MAUG_PATH_SZ_MAX 256
+#  define MAUG_PATH_SZ_MAX 30
 #endif /* !MAUG_PATH_SZ_MAX */
 
 /**

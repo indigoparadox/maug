@@ -1706,7 +1706,7 @@ defined( RETROVDP_C )
     */
    void* vdp_data;
    /*! \brief CLI args passed with -vdp to the \ref maug_retroflt_vdp. */
-   char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX];
+   char vdp_args[RETROFLAT_VDP_ARGS_SZ_MAX + 1];
    /*! \brief Flags set by the \ref maug_retroflt_vdp. */
    uint8_t vdp_flags;
 #  endif /* RETROFLAT_VDP || DOCUMENTATION || RETROVDP_C */
@@ -2648,7 +2648,9 @@ static MERROR_RETVAL retroflat_cli_vdp(
    if( 0 == maug_strncmp( MAUG_CLI_SIGIL "vdp", arg, MAUG_CLI_SIGIL_SZ + 4 ) ) {
       /* Next arg is VDP args str. */
    } else {
-      maug_strncpy( g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
+      maug_mzero( g_retroflat_state->vdp_args, RETROFLAT_VDP_ARGS_SZ_MAX + 1 );
+      maug_strncpy(
+         g_retroflat_state->vdp_args, arg, RETROFLAT_VDP_ARGS_SZ_MAX );
       debug_printf( 1, "VDP args: %s", g_retroflat_state->vdp_args );
    }
    return MERROR_OK;
