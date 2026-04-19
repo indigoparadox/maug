@@ -150,7 +150,7 @@ struct RETROFLAT_INPUT_STATE {
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 
    g_retroflat_state->retroflat_flags |= 
-      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
+      (args->flags & RETROFLAT_STATE_FLAG_KEY_REPEAT);
    
    return MERROR_OK;
 }
@@ -166,8 +166,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
    input->key_flags = 0;
 
    if(
-      RETROFLAT_FLAGS_KEY_REPEAT ==
-      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
+      RETROFLAT_STATE_FLAG_KEY_REPEAT ==
+      (RETROFLAT_STATE_FLAG_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
       0 < g_retroflat_state->input.prev_key_delay
    ) {
       /* Delay processing any keys until repeat delay has expired. */
@@ -193,8 +193,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          debug_key() \
          if( \
             k == g_retroflat_state->input.prev_key && \
-            RETROFLAT_FLAGS_KEY_REPEAT != \
-            (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) \
+            RETROFLAT_STATE_FLAG_KEY_REPEAT != \
+            (RETROFLAT_STATE_FLAG_KEY_REPEAT & g_retroflat_state->retroflat_flags) \
          ) { \
             /* Skip repeated key. */ \
             debug_key_skip() \
@@ -256,8 +256,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
 #     ifdef RETROFLAT_SCREENSAVER
    if( 
-      (RETROFLAT_FLAGS_SCREENSAVER ==
-      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags))
+      (RETROFLAT_STATE_FLAG_SCREENSAVER ==
+      (RETROFLAT_STATE_FLAG_SCREENSAVER & g_retroflat_state->retroflat_flags))
       && 0 != key_out
    ) {
       /* retroflat_quit( 0 ); */

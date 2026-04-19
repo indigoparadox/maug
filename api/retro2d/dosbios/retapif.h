@@ -372,7 +372,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
 
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       retval = retroflat_bitmap_dos_transparency( bmp_out );
    }
 
@@ -473,8 +473,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
          }
          /* Blit the line. */
          if(
-            RETROFLAT_FLAGS_OPAQUE ==
-            (RETROFLAT_FLAGS_OPAQUE & src->flags)
+            RETROFLAT_BITMAP_FLAG_OPAQUE ==
+            (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags)
          ) {
             /* Copy line-by-line for speed. */
             _fmemcpy(
@@ -524,7 +524,7 @@ void retroflat_px(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }

@@ -66,7 +66,7 @@ struct RETROFLAT_BITMAP {
          (NULL == (bmp) || NULL == (bmp)->surface ? \
             g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
 #     define retroflat_bitmap_locked( bmp ) \
-         (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+         (RETROFLAT_BITMAP_FLAG_LOCK == (RETROFLAT_BITMAP_FLAG_LOCK & (bmp)->flags))
 
 #  endif /* RETROFLAT_OPENGL */
 
@@ -106,7 +106,7 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_quit( retval_in ) \
       debug_printf( 1, "quit called, retval: %d", retval_in ); \
-      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_RUNNING; \
       g_retroflat_state->retval = retval_in;
 
 #  define END_OF_MAIN()

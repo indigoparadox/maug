@@ -31,8 +31,8 @@ retroflat_glut_idle( void ) {
 
    now = retroflat_get_ms();
    if(
-      RETROFLAT_FLAGS_UNLOCK_FPS !=
-      (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
+      RETROFLAT_STATE_FLAG_UNLOCK_FPS !=
+      (RETROFLAT_STATE_FLAG_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
       now < g_retroflat_state->platform.retroflat_next
    ) {
       return;
@@ -67,7 +67,7 @@ MERROR_RETVAL retroflat_init_platform(
    glutInit( &argc, argv );
    glut_init_flags = GLUT_DEPTH | GLUT_RGBA;
    if(
-      RETROFLAT_FLAGS_UNLOCK_FPS != (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+      RETROFLAT_STATE_FLAG_UNLOCK_FPS != (RETROFLAT_STATE_FLAG_UNLOCK_FPS & args->flags)
    ) {
       glut_init_flags |= GLUT_DOUBLE;
    }
@@ -105,8 +105,8 @@ MERROR_RETVAL retroflat_loop(
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
 
    if(
-      RETROFLAT_FLAGS_RUNNING ==
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+      RETROFLAT_STATE_FLAG_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_RUNNING)
    ) {
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
@@ -114,7 +114,7 @@ MERROR_RETVAL retroflat_loop(
       goto cleanup;
    }
 
-   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_RUNNING;
 
    glutMainLoop();
    retval = g_retroflat_state->retval;
@@ -235,7 +235,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    /*
    assert( NULL != bmp_out );
 
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return MERROR_GUI;
    }
 
@@ -265,7 +265,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    MERROR_RETVAL retval = MERROR_OK;
 
    /*
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return MERROR_GUI;
    }
 
@@ -283,7 +283,7 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    assert( NULL != bmp );
 
    /*
-   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -305,7 +305,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    /*
    assert( NULL != src );
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return MERROR_GUI;
    }
 
@@ -327,7 +327,7 @@ void retroflat_px(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 

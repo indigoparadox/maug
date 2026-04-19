@@ -249,13 +249,9 @@ MERROR_RETVAL retroflat_load_bitmap(
 
    bmp_out->b = load_bitmap( filename_path, NULL );
    if( NULL == bmp_out->b ) {
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         allegro_message( "unable to load %s", filename_path );
-      }
+      error_printf( "unable to load bitmap %s", filename_path );
       retval = MERROR_GUI;
+      goto cleanup;
    }
 
    bmp_out->flags = flags;
@@ -315,7 +311,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -329,7 +325,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != target->b );
    assert( NULL != src->b );
 
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE !=
+      (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags)
+   ) {
       masked_blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
    } else {
       blit( src->b, target->b, s_x, s_y, d_x, d_y, w, h );
@@ -355,7 +354,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -381,7 +380,7 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -394,7 +393,7 @@ void retroflat_rect(
    /* == Allegro == */
 
    assert( NULL != target->b );
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       rectfill( target->b, x, y, x + w, y + h, color_idx );
    } else {
       rect( target->b, x, y, x + w, y + h, color_idx );
@@ -417,7 +416,7 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -444,7 +443,7 @@ void retroflat_ellipse(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -467,7 +466,7 @@ void retroflat_ellipse(
 
    assert( NULL != target->b );
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       /* >> 1 performs better than / 2 on lousy old DOS compilers. */
       ellipsefill(
          target->b, x + (w >> 1), y + (h >> 1), w >> 1, h >> 1, color );

@@ -166,7 +166,7 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 
 /* Create a brush and set it to the target HDC. */
 #     define retroflat_win_setup_brush( old_brush, target, color, flags ) \
-         if( RETROFLAT_FLAGS_FILL != (RETROFLAT_FLAGS_FILL & flags) ) { \
+         if( RETROFLAT_DRAW_FLAG_FILL != (RETROFLAT_DRAW_FLAG_FILL & flags) ) { \
             old_brush = \
                SelectObject( target->hdc_b, GetStockObject( NULL_BRUSH ) ); \
          } else { \
@@ -227,8 +227,8 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
    (bmp)->autolock_refs++; \
    if( \
       1 == (bmp)->autolock_refs && \
-      RETROFLAT_FLAGS_SCREEN_BUFFER != \
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER != \
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
       assert( NULL == (bmp)->bits ); \
       assert( (bmp)->bmi.header.biBitCount == 32 ); \
@@ -253,8 +253,8 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
    (bmp)->autolock_refs--; \
    if( \
       0 == (bmp)->autolock_refs && \
-      RETROFLAT_FLAGS_SCREEN_BUFFER != \
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & (bmp)->flags) \
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER != \
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & (bmp)->flags) \
    ) { \
       /* TODO: Causes alpha blending in mdemos? */ \
       if( \

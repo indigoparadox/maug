@@ -83,7 +83,7 @@ MERROR_RETVAL retro3d_texture_lock( struct RETROFLAT_3DTEX* tex ) {
    assert( NULL != tex->bytes_h );
    assert( !retro3d_texture_locked( tex ) );
 
-   tex->flags |= RETROFLAT_FLAGS_LOCK;
+   tex->flags |= RETROFLAT_BITMAP_FLAG_LOCK;
    maug_mlock( tex->bytes_h, tex->bytes );
 
    assert( retro3d_texture_locked( tex ) );
@@ -104,7 +104,7 @@ MERROR_RETVAL retro3d_texture_release( struct RETROFLAT_3DTEX* tex ) {
    assert( retro3d_texture_locked( tex ) );
 
 #ifndef RETRO3D_NO_TEXTURES
-   tex->flags &= ~RETROFLAT_FLAGS_LOCK;
+   tex->flags &= ~RETROFLAT_BITMAP_FLAG_LOCK;
 #  ifndef RETRO3D_NO_TEXTURE_LISTS
    assert( 0 < tex->id );
    assert( NULL != tex->bytes );
@@ -232,7 +232,7 @@ MERROR_RETVAL retro3d_texture_load_bitmap(
       tex->bytes[(i * 4) + 1] = bmp_g;
       tex->bytes[(i * 4) + 2] = bmp_b;
       if(
-         RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) &&
+         RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) &&
          RETROFLAT_TXP_R == bmp_r &&
          RETROFLAT_TXP_G == bmp_g &&
          RETROFLAT_TXP_B == bmp_b
@@ -347,7 +347,7 @@ MERROR_RETVAL retro3d_texture_create(
    maug_mlock( tex->bytes_h, tex->bytes );
    maug_cleanup_if_null_lock( uint8_t*, tex->bytes );
 
-   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       /* We can just blast the memory with zeros. */
       /* TODO: Overflow checking. */
       maug_mzero(
@@ -359,7 +359,7 @@ MERROR_RETVAL retro3d_texture_create(
        */
       retroflat_2d_rect(
          tex, RETROFLAT_COLOR_BLACK, 0, 0, tex->w, tex->h,
-         RETROFLAT_FLAGS_FILL );
+         RETROFLAT_DRAW_FLAG_FILL );
    }
 
    retval = retro3d_texture_platform_refresh( tex, RETRO3D_TEX_FLAG_GENERATE );
@@ -404,11 +404,13 @@ void retro3d_texture_px(
 ) {
 
    if(
-      tex->w <= x || tex->h <= y || RETROFLAT_FLAGS_BITMAP_RO ==
-         (RETROFLAT_FLAGS_BITMAP_RO & tex->flags)
+      tex->w <= x || tex->h <= y || RETROFLAT_BITMAP_FLAG_RO ==
+         (RETROFLAT_BITMAP_FLAG_RO & tex->flags)
    ) {
       return;
    }
+
+   retroflat_constrain_px( x, y, target, return );
 
    //assert( NULL != tex->bytes );
    /* assert( retro3d_texture_locked( target ) ); */
@@ -422,7 +424,8 @@ void retro3d_texture_px(
       g_retroflat_state->tex_palette[color_idx][2];
 
    if(
-      RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & tex->flags) ||
+      RETROFLAT_BITMAP_FLAG_OPAQUE ==
+      (RETROFLAT_BITMAP_FLAG_OPAQUE & tex->flags) ||
       RETROFLAT_COLOR_BLACK != color_idx
    ) {
       /* Set pixel as opaque. */

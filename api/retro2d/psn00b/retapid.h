@@ -95,9 +95,9 @@ struct RETROFLAT_BITMAP {
    DRAWENV draw;
    /**
     * \brief Current drawing buffer idx.
-    * \note This is only used for the RETROFLAT_FLAGS_SCREEN_BUFFER bitmap.
-    *       It is the *drawing* index, which means it selects which buffer is
-    *       being *drawn to*! (The other is being shown at this time!)
+    * \note This is only used for the RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER
+    *       bitmap. It is the *drawing* index, which means it selects which
+    *       buffer is being *drawn to*! (The other is being shown at this time!)
     */
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
@@ -177,7 +177,7 @@ struct RETROFLAT_BITMAP {
  */
 #  define retroflat_quit( retval_in ) \
       debug_printf( 1, "quit called, retval: %d", retval_in ); \
-      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_RUNNING; \
       g_retroflat_state->retval = retval_in;
 
 /*! \brief Defined for backward-compatibility with Allegro. */

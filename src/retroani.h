@@ -657,8 +657,8 @@ MERROR_RETVAL retroani_set_string(
  
 #ifdef RETROGXC_PRESENT
    if(
-      RETROFLAT_FLAGS_USE_GXC ==
-      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+      RETROFLAT_STATE_FLAG_USE_GXC ==
+      (RETROFLAT_STATE_FLAG_USE_GXC & g_retroflat_state->retroflat_flags)
    ) {
       ani->font.cache_idx = retrogxc_load_font( font_name_in, 0, 33, 93 );
       font_h =

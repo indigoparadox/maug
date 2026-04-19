@@ -347,10 +347,10 @@ static MERROR_RETVAL retroflat_init_platform(
 #endif /* RETRO2D_TRACE_LVL */
    retroflat_create_bitmap(
       args->screen_w, args->screen_h, &(g_retroflat_state->platform.buffer1),
-      RETROFLAT_FLAGS_SCREEN_BUFFER );
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER );
    retroflat_create_bitmap(
       args->screen_w, args->screen_h, &(g_retroflat_state->platform.buffer2),
-      RETROFLAT_FLAGS_SCREEN_BUFFER );
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER );
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "configuring screen buffer bitmaps..." );
@@ -363,7 +363,7 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer1.alt_page =
       &(g_retroflat_state->platform.buffer2);
    g_retroflat_state->platform.buffer1.disp_idx = 1;
-   g_retroflat_state->platform.buffer1.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+   g_retroflat_state->platform.buffer1.flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer1.draw),
       g_retroflat_state->platform.buffer1.vram_pg_x,
@@ -377,7 +377,7 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer2.alt_page =
       &(g_retroflat_state->platform.buffer1);
    g_retroflat_state->platform.buffer2.disp_idx = 0;
-   g_retroflat_state->platform.buffer2.flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+   g_retroflat_state->platform.buffer2.flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer2.draw),
       g_retroflat_state->platform.buffer2.vram_pg_x,
@@ -600,7 +600,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* Setup drawenv defaults. */
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER != (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
       /* Try to allocate space on the VRAM "canvas" for the main drawing buffer
        * of this bitmap.
@@ -629,8 +629,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    setRGB0( &(bmp_out->draw), 0, 0, 0 );
    bmp_out->w = w;
    bmp_out->h = h;
-   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & flags) ) {
-      bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
+      bmp_out->flags |= RETROFLAT_BITMAP_FLAG_OPAQUE;
       bmp_out->draw.isbg = 1;
    }
 
@@ -699,7 +699,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return MERROR_GUI;
    }
@@ -722,7 +722,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    _retroflat_psx_add_prim( blit, sizeof( POLY_FT4 ) );
 #endif
 
-   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags) ) {
       src_rect.x = src->vram_pg_x + src->vram_off_x + s_x;
       src_rect.y = src->vram_pg_y + src->vram_off_y + s_y;
       src_rect.w = w;
@@ -792,7 +792,7 @@ void retroflat_px(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
@@ -831,12 +831,12 @@ void retroflat_rect(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAGS_FILL == (RETROFLAT_DRAW_FLAGS_FILL & flags) ) {
       retroflat_constrain_px( x, y, target, return );
       retroflat_constrain_px( x + w - 1, y + h - 1, target, return );
 
@@ -878,7 +878,7 @@ void retroflat_line(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
@@ -915,13 +915,13 @@ void retroflat_ellipse(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
 
    /* TODO
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAGS_FILL == (RETROFLAT_DRAW_FLAGS_FILL & flags) ) {
    } else { */
    retrosoft_ellipse( target, color_idx, x, y, w, h, flags );
 }

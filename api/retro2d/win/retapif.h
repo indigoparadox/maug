@@ -44,7 +44,7 @@ static int retroflat_cli_s(
    const char* arg, ssize_t argc, struct RETROFLAT_ARGS* args
 ) {
    debug_printf( 3, "using screensaver mode..." );
-   args->flags |= RETROFLAT_FLAGS_SCREENSAVER;
+   args->flags |= RETROFLAT_STATE_FLAG_SCREENSAVER;
    return RETROFLAT_OK;
 }
 
@@ -205,7 +205,7 @@ static LRESULT CALLBACK WndProc(
                g_retroflat_state->screen_v_w,
                g_retroflat_state->screen_v_h,
                &(g_retroflat_state->platform.screen_buffer),
-               RETROFLAT_FLAGS_SCREEN_BUFFER | RETROFLAT_FLAGS_OPAQUE );
+               RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER | RETROFLAT_BITMAP_FLAG_OPAQUE );
             if( (HDC)NULL == g_retroflat_state->platform.screen_buffer.hdc_b ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not determine buffer device context!" );
@@ -405,7 +405,7 @@ static int retroflat_bitmap_win_transparency(
    unsigned long txp_color = 0;
    uint8_t autorelock = 0;
 
-   assert( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & bmp_out->flags) );
+   assert( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & bmp_out->flags) );
 
    /* Unlock the mask if one exists. */
    if( (HDC)NULL == bmp_out->hdc_mask ) {
@@ -623,8 +623,8 @@ MERROR_RETVAL retroflat_init_platform(
       window_style = WS_CHILD;
       GetClientRect( g_retroflat_state->platform.parent, &wr );
    } else if(
-      RETROFLAT_FLAGS_SCREENSAVER ==
-      (RETROFLAT_FLAGS_SCREENSAVER & g_retroflat_state->retroflat_flags)
+      RETROFLAT_STATE_FLAG_SCREENSAVER ==
+      (RETROFLAT_STATE_FLAG_SCREENSAVER & g_retroflat_state->retroflat_flags)
    ) {
       /* Make window fullscreen and on top. */
       window_style_ex = WS_EX_TOPMOST;
@@ -771,8 +771,8 @@ MERROR_RETVAL retroflat_loop(
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
 
    if(
-      RETROFLAT_FLAGS_RUNNING ==
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+      RETROFLAT_STATE_FLAG_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_RUNNING)
    ) {
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
@@ -825,7 +825,7 @@ MERROR_RETVAL retroflat_loop(
       }
    }
 
-   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_RUNNING;
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "beginning message loop..." );
@@ -1164,10 +1164,8 @@ MERROR_RETVAL retroflat_load_bitmap(
       sizeof( BITMAPINFOHEADER ) +
       (colors * sizeof( RGBQUAD )) > sz
    ) {
-      retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-         "Error",
-         "Attempted to load bitmap with too many colors!" );
-      retval = MERROR_FILE;
+      error_printf( "attempted to load bitmap with too many colors!" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -1244,7 +1242,7 @@ MERROR_RETVAL retroflat_load_bitmap(
 
 #  ifndef RETROFLAT_OPENGL
    /* The transparency portion is the same for Win32 and Win16. */
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       /* Setup bitmap transparency mask. */
 #if RETRO2D_TRACE_LVL > 0
       debug_printf(
@@ -1314,8 +1312,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 #     ifdef RETROFLAT_WING
    /* Put this first because WinGRecommendDIBFormat sets some header props. */
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == 
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) &&
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER == 
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags) &&
       (WinGCreateDC_t)NULL != g_w.WinGCreateDC &&
       (WinGRecommendDIBFormat_t)NULL != g_w.WinGRecommendDIBFormat
    ) {
@@ -1340,7 +1338,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 #     ifdef RETROFLAT_WING
    bmp_out->bmi.header.biHeight *= h;
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER != (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
 #     else
    bmp_out->bmi.header.biHeight = h;
@@ -1370,8 +1368,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 #     ifdef RETROFLAT_WING
    /* Now try to create the WinG bitmap using the header we've built. */
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == 
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) &&
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER == 
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags) &&
       (WinGCreateBitmap_t)NULL != g_w.WinGCreateBitmap
    ) {
       /* Setup an optimal WinG hardware screen buffer bitmap. */
@@ -1379,7 +1377,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       debug_printf( RETRO2D_TRACE_LVL, "creating WinG-backed bitmap..." );
 #endif /* RETRO2D_TRACE_LVL */
 
-      bmp_out->flags |= RETROFLAT_FLAGS_SCREEN_BUFFER;
+      bmp_out->flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
       bmp_out->b = g_w.WinGCreateBitmap(
          bmp_out->hdc_b,
          (BITMAPINFO far*)(&bmp_out->bmi),
@@ -1390,7 +1388,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       debug_printf( RETRO2D_TRACE_LVL, "WinG bitmap bits: %p", bmp_out->bits );
 #endif /* RETRO2D_TRACE_LVL */
 
-      bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
+      bmp_out->flags |= RETROFLAT_BITMAP_FLAG_OPAQUE;
 
    } else {
 #     endif /* RETROFLAT_WING */
@@ -1400,7 +1398,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_cleanup_if_null( HBITMAP, bmp_out->b, MERROR_GUI );
 
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER == (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER == (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
 #if RETRO2D_TRACE_LVL > 0
       debug_printf(
@@ -1411,7 +1409,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
    }
 
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       /* Setup bitmap transparency mask. */
 #if RETRO2D_TRACE_LVL > 0
       debug_printf(
@@ -1420,7 +1418,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
       maug_cleanup_if_null( HBITMAP, bmp_out->mask, MERROR_GUI );
    } else {
-      bmp_out->flags |= RETROFLAT_FLAGS_OPAQUE;
+      bmp_out->flags |= RETROFLAT_BITMAP_FLAG_OPAQUE;
    }
 
 #     ifdef RETROFLAT_WING
@@ -1438,7 +1436,7 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -1502,7 +1500,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 #endif
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return MERROR_GUI;
    }
 
@@ -1602,7 +1600,7 @@ void retroflat_px(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -1668,7 +1666,7 @@ void retroflat_rect(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -1737,7 +1735,7 @@ void retroflat_line(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -1797,7 +1795,7 @@ void retroflat_ellipse(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 

@@ -115,7 +115,7 @@ static MERROR_RETVAL retroflat_init_platform(
 #ifndef RETROFLAT_MAC_NO_DBLBUF
    retval = retroflat_create_bitmap(
       args->screen_w, args->screen_h,
-      &(g_retroflat_state->platform.screen_buffer), RETROFLAT_FLAGS_OPAQUE );
+      &(g_retroflat_state->platform.screen_buffer), RETROFLAT_BITMAP_FLAG_OPAQUE );
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
@@ -152,8 +152,8 @@ MERROR_RETVAL retroflat_loop(
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
 
    if(
-      RETROFLAT_FLAGS_RUNNING ==
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+      RETROFLAT_STATE_FLAG_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_RUNNING)
    ) {
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
@@ -162,7 +162,7 @@ MERROR_RETVAL retroflat_loop(
       goto cleanup;
    }
 
-   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_RUNNING;
 
    /* Handle Windows messages until quit. */
    do {
@@ -195,8 +195,8 @@ MERROR_RETVAL retroflat_loop(
 
       if(
          /* Not waiting for the next frame? */
-         RETROFLAT_FLAGS_WAIT_FOR_FPS !=
-         (RETROFLAT_FLAGS_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
+         RETROFLAT_STATE_FLAG_WAIT_FOR_FPS !=
+         (RETROFLAT_STATE_FLAG_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
          /* Inter-frame loop present? */
          NULL != g_retroflat_state->loop_iter
       ) {
@@ -204,8 +204,8 @@ MERROR_RETVAL retroflat_loop(
          g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
       }
       if(
-         RETROFLAT_FLAGS_UNLOCK_FPS !=
-         (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
+         RETROFLAT_STATE_FLAG_UNLOCK_FPS !=
+         (RETROFLAT_STATE_FLAG_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
@@ -222,7 +222,7 @@ MERROR_RETVAL retroflat_loop(
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
       }
       /* Reset wait-for-frame flag AFTER frame callback. */
-      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_WAIT_FOR_FPS;
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_WAIT_FOR_FPS;
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
          next = now + retroflat_fps_next();
@@ -236,8 +236,8 @@ MERROR_RETVAL retroflat_loop(
 #ifdef RETROFLAT_CYCLES
       0 < cycles_to_die &&
 #endif /* RETROFLAT_CYCLES */
-      RETROFLAT_FLAGS_RUNNING ==
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+      RETROFLAT_STATE_FLAG_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_RUNNING)
    );
 
 cleanup:
@@ -612,6 +612,12 @@ cleanup:
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & bmp->flags)
+   ) {
+      return;
+   }
+
    if( 2 < g_retroflat_state->screen_colors ) {
       DisposeGWorld( bmp->gworld );
    } else {
@@ -645,7 +651,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       retval = MERROR_GUI;
       goto cleanup;
@@ -728,7 +734,7 @@ void retroflat_px(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
@@ -760,6 +766,12 @@ void retroflat_rect(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
+   ) {
+      return;
+   }
+
    /*
    if(
       MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
@@ -780,7 +792,7 @@ void retroflat_rect(
    PenSize( 1, 1 );
    SetRect( &r, x, y, x + w, y + h );
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       PaintRect( &r );
    } else {
       FrameRect( &r );
@@ -805,6 +817,12 @@ void retroflat_line(
 
    if( NULL == target ) {
       target = retroflat_screen_buffer();
+   }
+
+   if(
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
+   ) {
+      return;
    }
 
    retroflat_constrain_px( x1, y1, target, return );
@@ -846,6 +864,12 @@ void retroflat_ellipse(
       target = retroflat_screen_buffer();
    }
 
+   if(
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
+   ) {
+      return;
+   }
+
    retroflat_constrain_px( x, y, target, return );
    retroflat_constrain_px( x + w, y + h, target, return );
 
@@ -854,7 +878,7 @@ void retroflat_ellipse(
    PenSize( 1, 1 );
    SetRect( &r, x, y, x + w, y + h );
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       PaintOval( &r );
    } else {
       FrameOval( &r );

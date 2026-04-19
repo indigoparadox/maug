@@ -79,7 +79,7 @@ struct RETROFLAT_BITMAP {
  */
 #  define retroflat_quit( retval_in ) \
       debug_printf( 1, "quit called, retval: %d", retval_in ); \
-      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_RUNNING; \
       g_retroflat_state->retval = retval_in;
 
 /*! \brief Defined for backward-compatibility with Allegro. */

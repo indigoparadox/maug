@@ -48,7 +48,7 @@ struct RETROFLAT_INPUT_STATE {
 MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
 
    g_retroflat_state->retroflat_flags |= 
-      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
+      (args->flags & RETROFLAT_STATE_FLAG_KEY_REPEAT);
 
    return MERROR_OK;
 }

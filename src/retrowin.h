@@ -196,7 +196,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_FLAGS_FILL );
+         RETROFLAT_DRAW_FLAG_FILL );
       break;
 
    case RETROWIN_FLAG_BORDER_GRAY:
@@ -208,7 +208,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_FLAGS_FILL );
+         RETROFLAT_DRAW_FLAG_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(
@@ -246,7 +246,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_FLAGS_FILL );
+         RETROFLAT_DRAW_FLAG_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(

@@ -130,7 +130,7 @@ MERROR_RETVAL retrogxc_init() {
       sizeof( struct RETROFLAT_CACHE_ASSET ) * gs_retrogxc_sz );
    */
 
-   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_USE_GXC;
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_USE_GXC;
 
    return retval;
 }
@@ -194,7 +194,7 @@ cleanup:
 void retrogxc_shutdown() {
    retrogxc_clear_cache();
    mdata_vector_free( &gs_retrogxc_bitmaps );
-   g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_USE_GXC;
+   g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_USE_GXC;
 }
 
 /* === */

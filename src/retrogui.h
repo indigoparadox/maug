@@ -842,7 +842,7 @@ static void retrogui_redraw_LISTBOX(
    if( RETROFLAT_COLOR_BLACK != ctl->base.bg_color ) {
       retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
          gui->x + ctl->base.x, gui->y + ctl->base.y,
-         ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+         ctl->base.w, ctl->base.h, RETROFLAT_DRAW_FLAG_FILL );
    }
 
    while( i < mdata_vector_ct( &(ctl->LISTBOX.list) ) ) {
@@ -867,7 +867,7 @@ static void retrogui_redraw_LISTBOX(
          retroflat_2d_rect( gui->draw_bmp, ctl->base.sel_bg,
             gui->x + ctl->base.x,
             gui->y + ctl->base.y + item_y,
-            ctl->base.w, h, RETROFLAT_FLAGS_FILL );
+            ctl->base.w, h, RETROFLAT_DRAW_FLAG_FILL );
          fg_color = ctl->base.sel_fg;
 
          retroflat_2d_ellipse(
@@ -1133,7 +1133,7 @@ static void retrogui_redraw_BUTTON(
 
    retroflat_2d_rect(
       gui->draw_bmp, bg_color, gui->x + ctl->base.x, gui->y + ctl->base.y,
-      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+      ctl->base.w, ctl->base.h, RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
@@ -1441,30 +1441,30 @@ static void retrogui_redraw_TEXTBOX(
 
    retroflat_2d_rect( gui->draw_bmp, ctl->base.bg_color,
       gui->x + ctl->base.x, gui->y + ctl->base.y,
-      ctl->base.w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+      ctl->base.w, ctl->base.h, RETROFLAT_DRAW_FLAG_FILL );
 
    /* Draw chiselled inset border. */
 
    retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, ctl->base.w, 2,
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_2d_rect( gui->draw_bmp, border_color,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y, 2, ctl->base.h,
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_2d_rect( gui->draw_bmp, shadow_color,
       gui->x + ctl->base.x,
       gui->y + ctl->base.y + ctl->base.h - 1,
       ctl->base.w, 2,
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_2d_rect( gui->draw_bmp, shadow_color,
        gui->x + ctl->base.x + ctl->base.w - 1,
        gui->y + ctl->base.y, 2, ctl->base.h,
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
 
    /* Draw text. */
 
@@ -1509,7 +1509,7 @@ static void retrogui_redraw_TEXTBOX(
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
       gui->focus == ctl->base.idc &&
-         0 < ctl->TEXTBOX.blink_frames ? RETROFLAT_FLAGS_FILL : 0 );
+         0 < ctl->TEXTBOX.blink_frames ? RETROFLAT_DRAW_FLAG_FILL : 0 );
 
    if( (-1 * RETROGUI_CTL_TEXT_BLINK_FRAMES) > --(ctl->TEXTBOX.blink_frames) ) {
       ctl->TEXTBOX.blink_frames = RETROGUI_CTL_TEXT_BLINK_FRAMES;
@@ -1990,13 +1990,13 @@ static void retrogui_redraw_FILLBAR(
       gui->draw_bmp, ctl->base.bg_color,
       gui->x + ctl->base.x + fill_w,
       gui->y + ctl->base.y,
-      ctl->base.w - fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+      ctl->base.w - fill_w, ctl->base.h, RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_2d_rect(
       gui->draw_bmp, ctl->base.fg_color,
       gui->x + ctl->base.x, 
       gui->y + ctl->base.y,
-      fill_w, ctl->base.h, RETROFLAT_FLAGS_FILL );
+      fill_w, ctl->base.h, RETROFLAT_DRAW_FLAG_FILL );
 
    return;
 }
@@ -2392,7 +2392,7 @@ MERROR_RETVAL retrogui_redraw_ctls( struct RETROGUI* gui ) {
       0 < gui->w && 0 < gui->h
    ) {
       retroflat_2d_rect( gui->draw_bmp,
-         gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_FLAGS_FILL );
+         gui->bg_color, gui->x, gui->y, gui->w, gui->h, RETROFLAT_DRAW_FLAG_FILL );
    }
 
    /* Mark the GUI dirty first so redraw can unmark it for animation! */
@@ -2661,8 +2661,8 @@ MERROR_RETVAL retrogui_set_font(
 
 #ifdef RETROGXC_PRESENT
    if(
-      RETROFLAT_FLAGS_USE_GXC ==
-      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+      RETROFLAT_STATE_FLAG_USE_GXC ==
+      (RETROFLAT_STATE_FLAG_USE_GXC & g_retroflat_state->retroflat_flags)
    ) {
       gui->font.cache_idx = retrogxc_load_font( font_path, 0, 33, 93 );
       maug_cleanup_if_lt(

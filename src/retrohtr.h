@@ -503,7 +503,7 @@ MERROR_RETVAL retrohtr_tree_create(
          retval = retroflat_load_bitmap(
             p_tag_iter->IMG.src,
             &(retrohtr_node( tree, node_new_idx )->bitmap),
-            RETROFLAT_FLAGS_LITERAL_PATH | RETROFLAT_FLAGS_BITMAP_SILENT );
+            RETROFLAT_BITMAP_FLAG_LITERAL_PATH );
          if( MERROR_OK == retval ) {
 #if RETROHTR_TRACE_LVL > 0
             debug_printf( RETROHTR_TRACE_LVL, "loaded img: %s", 
@@ -675,8 +675,8 @@ static MERROR_RETVAL retrohtr_load_font(
    /* Load the font into the cache. */
 #ifdef RETROGXC_PRESENT
    if(
-      RETROFLAT_FLAGS_USE_GXC ==
-      (RETROFLAT_FLAGS_USE_GXC & g_retroflat_state->retroflat_flags)
+      RETROFLAT_STATE_FLAG_USE_GXC ==
+      (RETROFLAT_STATE_FLAG_USE_GXC & g_retroflat_state->retroflat_flags)
    ) {
       font->cache_idx =
          retrogxc_load_font(
@@ -1537,7 +1537,7 @@ MERROR_RETVAL retrohtr_tree_draw(
             retrohtr_node_screen_y( tree, node_idx ),
             retrohtr_node( tree, node_idx )->w,
             retrohtr_node( tree, node_idx )->h,
-            RETROFLAT_FLAGS_FILL );
+            RETROFLAT_DRAW_FLAG_FILL );
       }
 
    } else if( MHTML_TAG_TYPE_IMG == p_tag->base.type ) {
@@ -1589,7 +1589,7 @@ MERROR_RETVAL retrohtr_tree_draw(
          retrohtr_node_screen_x( tree, node_idx ),
          retrohtr_node_screen_y( tree, node_idx ),
          node->w, node->h,
-         RETROFLAT_FLAGS_FILL );
+         RETROFLAT_DRAW_FLAG_FILL );
    }
 
    node->flags &= ~RETROHTR_NODE_FLAG_DIRTY;

@@ -104,11 +104,11 @@ MERROR_RETVAL retroflat_init_input( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    g_retroflat_state->retroflat_flags |= 
-      (args->flags & RETROFLAT_FLAGS_KEY_REPEAT);
+      (args->flags & RETROFLAT_STATE_FLAG_KEY_REPEAT);
 
    /* Setup key repeat. */
    if(
-      RETROFLAT_FLAGS_KEY_REPEAT == (RETROFLAT_FLAGS_KEY_REPEAT & args->flags)
+      RETROFLAT_STATE_FLAG_KEY_REPEAT == (RETROFLAT_STATE_FLAG_KEY_REPEAT & args->flags)
    ) {
       if( 0 != SDL_EnableKeyRepeat(
          1, SDL_DEFAULT_REPEAT_INTERVAL
@@ -202,8 +202,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 
    case SDL_KEYDOWN:
       if(
-         RETROFLAT_FLAGS_KEY_REPEAT ==
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) ||
+         RETROFLAT_STATE_FLAG_KEY_REPEAT ==
+         (RETROFLAT_STATE_FLAG_KEY_REPEAT & g_retroflat_state->retroflat_flags) ||
          event.key.keysym.sym != g_retroflat_state->input.prev_key
       ) {
 #if RETROINPUT_TRACE_LVL > 0

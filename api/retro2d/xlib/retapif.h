@@ -304,7 +304,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       retval = MERROR_GUI;
       goto cleanup;
@@ -315,7 +315,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
-   if( RETROFLAT_FLAGS_OPAQUE == (RETROFLAT_FLAGS_OPAQUE & src->flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE ==
+      (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags)
+   ) {
       /* Bitmap is opaque, so do this the relatively fast way. */
 
       t_w = target->img->width;
@@ -399,7 +402,7 @@ void retroflat_px(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }

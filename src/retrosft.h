@@ -202,7 +202,7 @@ void retrosoft_rect(
 
    retroflat_px_lock( target );
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
 
       for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
          for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
@@ -309,7 +309,7 @@ void retrosoft_ellipse(
       assert( 0 <= h );
       /* debug_printf( 1, "ELLIPSE %d, %d", w, h ); */
    } while(
-      (RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags)) &&
+      (RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags)) &&
       (0 < w || 0 < h)
    );
 

@@ -357,7 +357,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return retval;
    }
 
@@ -382,13 +382,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
       error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      }
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -399,13 +392,6 @@ MERROR_RETVAL retroflat_load_bitmap(
       RETROFLAT_SDL_BPP, 0, 0, 0, 0 );
    if( NULL == bmp_out->surface ) {
       error_printf( "SDL unable to create screen bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to create screen bitmap: %s", SDL_GetError() );
-      }
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -429,7 +415,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    SDL_FreeSurface( tmp_surface );
 
    /* Setup color-keying if not opaque. */
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
@@ -440,13 +426,6 @@ MERROR_RETVAL retroflat_load_bitmap(
       g_retroflat_state->platform.screen_buffer.renderer, bmp_out->surface );
    if( NULL == bmp_out->texture ) {
       error_printf( "SDL unable to create texture: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to create texture: %s", SDL_GetError() );
-      }
       retval = MERROR_GUI;
       if( NULL != bmp_out->surface ) {
          SDL_FreeSurface( bmp_out->surface );
@@ -475,7 +454,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return retval;
    }
 
@@ -502,7 +481,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    }
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
@@ -527,7 +506,7 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -575,7 +554,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       retval = MERROR_GUI;
       return retval;
    }
@@ -683,7 +662,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -731,7 +710,7 @@ void retroflat_rect(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -758,7 +737,7 @@ void retroflat_rect(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }
@@ -779,7 +758,7 @@ void retroflat_rect(
    SDL_SetRenderDrawColor(
       target->renderer, color->r, color->g, color->b, 255 );
 
-   if( RETROFLAT_FLAGS_FILL == (RETROFLAT_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       SDL_RenderFillRect( target->renderer, &area );
    } else {
       SDL_RenderDrawRect( target->renderer, &area );
@@ -808,7 +787,7 @@ void retroflat_line(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -831,7 +810,7 @@ void retroflat_line(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -859,7 +838,7 @@ void retroflat_ellipse(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 

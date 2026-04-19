@@ -47,7 +47,7 @@ struct RETROFLAT_BITMAP {
 
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->b)
 #  define retroflat_bitmap_locked( bmp ) \
-      (RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & (bmp)->flags))
+      (RETROFLAT_BITMAP_FLAG_LOCK == (RETROFLAT_BITMAP_FLAG_LOCK & (bmp)->flags))
 #  define retroflat_bitmap_w( bmp ) \
       (NULL == (bmp) ? g_retroflat_state->screen_v_w : ((bmp)->tex.w))
 #  define retroflat_bitmap_h( bmp ) \

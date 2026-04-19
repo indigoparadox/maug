@@ -7,8 +7,7 @@ ifneq ("$$(EMCC_CONFIG)","")
 	EMCC_EM_CONFIG := --em-config $$(EMCC_CONFIG)
 endif
 
-EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI \
-	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl -s USE_OGG=1 \
+EMCC_FLAGS_SDL += -DRETROFLAT_OS_WASM -DRETROFLAT_NO_CLI -s USE_OGG=1 \
 	-I$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/font/soft \
 	-I$(MAUG_ROOT)/api/mem/unix -I$(MAUG_ROOT)/api/serial/asn1
 
@@ -37,9 +36,9 @@ ifeq ("$$(RETROFLAT_OPENGL)","1")
 endif
 
 ifeq ("$$(SDL_VER_WASM)","1")
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_MIXER=1 -DRETROSND_API_SDL1
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_MIXER=1 -DRETROSND_API_SDL1 -I$$(MAUG_ROOT)/api/retro2d/sdl1 -I$(MAUG_ROOT)/api/input/sdl1
 else
-	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2 -DRETROSND_API_SDL2
+	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2 -DRETROSND_API_SDL2 -I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))

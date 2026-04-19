@@ -132,7 +132,7 @@ MERROR_RETVAL retroflat_init_platform(
 #  ifndef RETROFLAT_OS_WASM
    /* (This doesn't compile in emcc.) */
    if(
-      RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+      RETROFLAT_STATE_FLAG_UNLOCK_FPS == (RETROFLAT_STATE_FLAG_UNLOCK_FPS & args->flags)
    ) {
       SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
    }
@@ -219,6 +219,7 @@ MERROR_RETVAL retroflat_init_platform(
       RETROFLAT_ERROR_GRAPHICS );
 
 #  ifdef RETROFLAT_VDP
+   debug_printf( 1, "setting up VDP buffer links..." );
    g_retroflat_state->platform.screen_vdp.sz =
       sizeof( struct RETROFLAT_BITMAP );
    g_retroflat_state->platform.screen_vdp.surface = SDL_CreateRGBSurface(
@@ -379,24 +380,24 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
       bmp = &(g_retroflat_state->platform.screen_buffer);
 
       if(
-         RETROFLAT_FLAGS_SCREEN_LOCK !=
-         (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags)
+         RETROFLAT_BITMAP_FLAG_SCREEN_LOCK !=
+         (RETROFLAT_BITMAP_FLAG_SCREEN_LOCK & bmp->flags)
       ) {
          /* Do a perfunctory "screen lock" since programs are supposed to
           * lock the screen before doing any drawing.
           */
-         bmp->flags |= RETROFLAT_FLAGS_SCREEN_LOCK;
+         bmp->flags |= RETROFLAT_BITMAP_FLAG_SCREEN_LOCK;
 
       } else {
          /* We actually want to lock the buffer for pixel manipulation. */
-         assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
-         bmp->flags |= RETROFLAT_FLAGS_LOCK;
+         assert( 0 == (RETROFLAT_BITMAP_FLAG_LOCK & bmp->flags) );
+         bmp->flags |= RETROFLAT_BITMAP_FLAG_LOCK;
       }
 
    } else {
       /* Locking a bitmap for pixel drawing. */
-      assert( 0 == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
-      bmp->flags |= RETROFLAT_FLAGS_LOCK;
+      assert( 0 == (RETROFLAT_BITMAP_FLAG_LOCK & bmp->flags) );
+      bmp->flags |= RETROFLAT_BITMAP_FLAG_LOCK;
    }
 
 #  endif /* RETROFLAT_OPENGL */
@@ -430,17 +431,17 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       bmp = &(g_retroflat_state->platform.screen_buffer);
 
       if(
-         RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags)
+         RETROFLAT_BITMAP_FLAG_LOCK == (RETROFLAT_BITMAP_FLAG_LOCK & bmp->flags)
       ) {
          /* The screen was locked for pixel manipulation. */
-         bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+         bmp->flags &= ~RETROFLAT_BITMAP_FLAG_LOCK;
          SDL_UnlockSurface( bmp->surface );
 
       } else {
          assert( 
-            RETROFLAT_FLAGS_SCREEN_LOCK ==
-            (RETROFLAT_FLAGS_SCREEN_LOCK & bmp->flags) );
-         bmp->flags &= ~RETROFLAT_FLAGS_SCREEN_LOCK;
+            RETROFLAT_BITMAP_FLAG_SCREEN_LOCK ==
+            (RETROFLAT_BITMAP_FLAG_SCREEN_LOCK & bmp->flags) );
+         bmp->flags &= ~RETROFLAT_BITMAP_FLAG_SCREEN_LOCK;
 
 #  ifdef RETROFLAT_NO_SDL1_SCALING
          /* Blit the 8-bit indexed working buffer directly onto the 32-bit
@@ -490,8 +491,8 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 
    } else {
       /* Releasing a bitmap. */
-      assert( RETROFLAT_FLAGS_LOCK == (RETROFLAT_FLAGS_LOCK & bmp->flags) );
-      bmp->flags &= ~RETROFLAT_FLAGS_LOCK;
+      assert( RETROFLAT_BITMAP_FLAG_LOCK == (RETROFLAT_BITMAP_FLAG_LOCK & bmp->flags) );
+      bmp->flags &= ~RETROFLAT_BITMAP_FLAG_LOCK;
       SDL_UnlockSurface( bmp->surface );
    }
 
@@ -519,7 +520,7 @@ MERROR_RETVAL retroflat_load_bitmap(
    maug_cleanup_if_not_ok();
    debug_printf( 1, "retroflat: loading bitmap: %s", filename_path );
 
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return retval;
    }
 
@@ -542,13 +543,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    tmp_surface = _retroflat_sdl_load_bitmap( filename_path );
    if( NULL == tmp_surface ) {
       error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      }
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -559,13 +553,6 @@ MERROR_RETVAL retroflat_load_bitmap(
    bmp_out->surface = SDL_DisplayFormat( tmp_surface );
    if( NULL == bmp_out->surface ) {
       error_printf( "SDL unable to load bitmap: %s", SDL_GetError() );
-      if(
-         RETROFLAT_FLAGS_BITMAP_SILENT !=
-         (RETROFLAT_FLAGS_BITMAP_SILENT & flags)
-      ) {
-         retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
-            "Error", "SDL unable to load bitmap: %s", SDL_GetError() );
-      }
       retval = MERROR_GUI;
       goto cleanup;
    }
@@ -598,7 +585,7 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
-   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp_out, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return retval;
    }
 
@@ -622,19 +609,20 @@ MERROR_RETVAL retroflat_create_bitmap(
        * so use a 32-bit image capable of effects rather than an 8-bit paletted
        * image. The init callback calls SDL_CreateRGBSurface() directly.
        */
-      RETROFLAT_FLAGS_SCREEN_BUFFER ==
-         (RETROFLAT_FLAGS_SCREEN_BUFFER & flags) ? 32 : 8,
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags) ? 32 : 8,
       0, 0, 0, 0 );
    maug_cleanup_if_null(
       SDL_Surface*, bmp_out->surface, MERROR_GUI );
    if(
-      RETROFLAT_FLAGS_SCREEN_BUFFER != (RETROFLAT_FLAGS_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER !=
+      (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
       SDL_SetColors( /* TODO: Sync colors with screen throughout lifecycle? */
          bmp_out->surface,
          g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
    }
-   if( RETROFLAT_FLAGS_OPAQUE != (RETROFLAT_FLAGS_OPAQUE & flags) ) {
+   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
@@ -650,7 +638,7 @@ cleanup:
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
 
-   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( bmp, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
@@ -691,7 +679,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       retval = MERROR_GUI;
       return retval;
    }
@@ -773,7 +761,7 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_FLAGS_BITMAP_RO ) ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 

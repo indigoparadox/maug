@@ -444,7 +444,7 @@ MERROR_RETVAL retroflat_load_bitmap(
          bmp_out->pal_len = gc_ndsassets_pals_lens[i];
          bmp_out->w = gc_ndsassets_tiles_widths[i];
          bmp_out->h = gc_ndsassets_tiles_heights[i];
-         bmp_out->flags |= RETROFLAT_FLAGS_BITMAP_RO;
+         bmp_out->flags |= RETROFLAT_BITMAP_FLAG_RO;
          debug_printf(
             RETROFLAT_PLATFORM_TRACE_LVL,
             "found bitmap \"%s\" at index: " SIZE_T_FMT,
@@ -586,7 +586,7 @@ void retroflat_px(
    }
 
    if(
-      RETROFLAT_FLAGS_BITMAP_RO == (RETROFLAT_FLAGS_BITMAP_RO & target->flags)
+      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
    ) {
       return;
    }

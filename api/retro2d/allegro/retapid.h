@@ -59,7 +59,7 @@ typedef RGB RETROFLAT_COLOR_DEF;
 #  endif /* RETROFLAT_VDP */
 
 #  define retroflat_quit( retval_in ) \
-   g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_RUNNING; \
+   g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_RUNNING; \
    g_retroflat_state->retval = retval_in;
 
 /* These helper functions keep references to allergo global variables and

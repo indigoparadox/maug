@@ -117,8 +117,8 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
          }
       }
       if(
-         RETROFLAT_FLAGS_KEY_REPEAT !=
-         (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags)
+         RETROFLAT_STATE_FLAG_KEY_REPEAT !=
+         (RETROFLAT_STATE_FLAG_KEY_REPEAT & g_retroflat_state->retroflat_flags)
       ) {
          while( kbhit() ) {
             getch();

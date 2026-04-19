@@ -98,7 +98,7 @@ typedef int16_t retroflat_tile_t;
  *          retroflat_rect(
  *             NULL, RETROFLAT_COLOR_GRAY, 0, 0,
  *             retroflat_screen_w(), retroflat_screen_h(),
- *             RETROFLAT_FLAGS_FILL );
+ *             RETROFLAT_DRAW_FLAG_FILL );
  *       
  *          / * Release the screen (NULL) from drawing. * /
  *          retroflat_draw_release( NULL );
@@ -371,24 +371,18 @@ typedef int8_t RETROFLAT_COLOR;
  * \brief Flag for retroflat_rect() or retroflat_ellipse(), indicating drawn
  *        shape should be filled.
  */
-#define RETROFLAT_FLAGS_FILL     0x01
+#define RETROFLAT_DRAW_FLAG_FILL     0x01
 
 /**
  * \brief Flag for retroflat_create_bitmap() or retroflat_load_bitmap() to
  *        create or load a bitmap without transparency.
  */
-#define RETROFLAT_FLAGS_OPAQUE   0x01
+#define RETROFLAT_BITMAP_FLAG_OPAQUE   0x01
 
 /**
  * \brief Flag for retroflat_load_bitmap() to not use assets path.
  */
-#define RETROFLAT_FLAGS_LITERAL_PATH   0x02
-
-/**
- * \brief flag for retroflat_load_bitmap() to not show an error dialog if
- *        a bitmap fails to load (on supported platforms).
- */
-#define RETROFLAT_FLAGS_BITMAP_SILENT   0x04
+#define RETROFLAT_BITMAP_FLAG_LITERAL_PATH   0x02
 
 /**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
@@ -396,7 +390,7 @@ typedef int8_t RETROFLAT_COLOR;
  * \todo This has not yet been implemented and is present for backward
  *       compatibility.
  */
-#define RETROFLAT_FLAGS_ALL_CAPS 0x02
+#define RETROFLAT_FONT_FLAG_ALL_CAPS 0x02
 
 /**
  * \brief Flag for retroflat_create_bitmap() to create a VRAM-backed bitmap.
@@ -404,7 +398,7 @@ typedef int8_t RETROFLAT_COLOR;
  * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
  * is screen-backed.
  */
-#define RETROFLAT_FLAGS_SCREEN_BUFFER     0x80
+#define RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER     0x80
 
 /*! \} */ /* maug_retroflt_drawing */
 
@@ -414,46 +408,46 @@ typedef int8_t RETROFLAT_COLOR;
  * \warning This flag is not used on all platforms! It should only be removed
  *          using retroflat_quit().
  */
-#define RETROFLAT_FLAGS_RUNNING  0x01
+#define RETROFLAT_STATE_FLAG_RUNNING  0x01
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Flag indicating FPS should not be capped.
  * \warning This flag should only be set inside retroflat!
  */
-#define RETROFLAT_FLAGS_UNLOCK_FPS 0x02
+#define RETROFLAT_STATE_FLAG_UNLOCK_FPS 0x02
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Flag indicating keyboard repeat is enabled.
  * \warning This flag should only be set inside retroflat!
  */
-#define RETROFLAT_FLAGS_KEY_REPEAT 0x04
+#define RETROFLAT_STATE_FLAG_KEY_REPEAT 0x04
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Flag indicating the current application is running as a screensaver.
  * \warning This flag should only be set inside retroflat!
  */
-#define RETROFLAT_FLAGS_SCREENSAVER 0x08
+#define RETROFLAT_STATE_FLAG_SCREENSAVER 0x08
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Do not execute any more inter-frame loops until next frame.
  */
-#define RETROFLAT_FLAGS_WAIT_FOR_FPS   0x20
+#define RETROFLAT_STATE_FLAG_WAIT_FOR_FPS   0x20
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Assume all ::RETROGXC_CACHABLE are cache indexes and not handles.
  */
-#define RETROFLAT_FLAGS_USE_GXC  0x40
+#define RETROFLAT_STATE_FLAG_USE_GXC  0x40
 
 /**
  * \relates RETROFLAT_STATE
  * \brief Window closing has requested an orderly quit.
  */
-#define RETROFLAT_FLAGS_QUIT_REQUESTED 0x80
+#define RETROFLAT_STATE_FLAG_QUIT_REQUESTED 0x80
 
 /**
  * \addtogroup maug_retroflt_msg_api RetroFlat Message API
@@ -589,11 +583,11 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 /**
  * \relates RETROFLAT_BITMAP
  */
-#define RETROFLAT_FLAGS_LOCK     0x08
+#define RETROFLAT_BITMAP_FLAG_LOCK     0x08
 
-#define RETROFLAT_FLAGS_SCREEN_LOCK     0x02
+#define RETROFLAT_BITMAP_FLAG_SCREEN_LOCK     0x02
 
-#define RETROFLAT_FLAGS_BITMAP_RO   0x04
+#define RETROFLAT_BITMAP_FLAG_RO   0x04
 
 /**
  * \relates retroflat_blit_bitmap
@@ -794,11 +788,11 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 /*! \} */ /* maug_retroflt_compiling */
 
 #define retroflat_wait_for_frame() \
-   (g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_WAIT_FOR_FPS)
+   (g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_WAIT_FOR_FPS)
 
 #define retroflat_is_waiting_for_frame() \
-   (RETROFLAT_FLAGS_WAIT_FOR_FPS == \
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_WAIT_FOR_FPS))
+   (RETROFLAT_STATE_FLAG_WAIT_FOR_FPS == \
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_WAIT_FOR_FPS))
 
 /**
  * \brief Prototype for the main loop function passed to retroflat_loop().
@@ -2038,7 +2032,7 @@ void retroflat_px(
  * \param x Left X coordinate in pixels at which to draw on the target bitmap.
  * \param y Top Y coordinate in pixels at which to draw on the target bitmap.
  * \param flags Flags to control drawing. The following flags apply:
- *        ::RETROFLAT_FLAGS_FILL
+ *        ::RETROFLAT_DRAW_FLAG_FILL
  */
 void retroflat_rect(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
@@ -2053,7 +2047,7 @@ void retroflat_rect(
  * \param x Left X coordinate in pixels at which to draw on the target bitmap.
  * \param y Top Y coordinate in pixels at which to draw on the target bitmap.
  * \param flags Flags to control drawing. The following flags apply:
- *        ::RETROFLAT_FLAGS_FILL
+ *        ::RETROFLAT_DRAW_FLAG_FILL
  */
 void retroflat_ellipse(
    struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
@@ -2285,8 +2279,8 @@ MERROR_RETVAL retroflat_build_filename_path(
    /* Build the path to the bitmap. */
    maug_mzero( buffer_out, buffer_out_sz );
    if(
-      RETROFLAT_FLAGS_LITERAL_PATH ==
-      (RETROFLAT_FLAGS_LITERAL_PATH & flags)
+      RETROFLAT_BITMAP_FLAG_LITERAL_PATH ==
+      (RETROFLAT_BITMAP_FLAG_LITERAL_PATH & flags)
    ) {
       /* TODO: Error checking. */
       maug_snprintf( buffer_out, buffer_out_sz - 1, "%s", filename_in );
@@ -2363,8 +2357,8 @@ MERROR_RETVAL retroflat_loop_generic(
    g_retroflat_state->frame_iter = (retroflat_loop_iter)frame_iter;
 
    if(
-      RETROFLAT_FLAGS_RUNNING ==
-      (g_retroflat_state->retroflat_flags & RETROFLAT_FLAGS_RUNNING)
+      RETROFLAT_STATE_FLAG_RUNNING ==
+      (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_RUNNING)
    ) {
       /* Main loop is already running, so we're just changing the iter call
        * and leaving!
@@ -2373,14 +2367,14 @@ MERROR_RETVAL retroflat_loop_generic(
       goto cleanup;
    }
 
-   g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_RUNNING;
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_RUNNING;
    do {
       retroflat_system_task();
 
       if(
          /* Not waiting for the next frame? */
-         RETROFLAT_FLAGS_WAIT_FOR_FPS !=
-         (RETROFLAT_FLAGS_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
+         RETROFLAT_STATE_FLAG_WAIT_FOR_FPS !=
+         (RETROFLAT_STATE_FLAG_WAIT_FOR_FPS & g_retroflat_state->retroflat_flags) &&
          /* Inter-frame loop present? */
          NULL != g_retroflat_state->loop_iter
       ) {
@@ -2388,8 +2382,8 @@ MERROR_RETVAL retroflat_loop_generic(
          g_retroflat_state->loop_iter( g_retroflat_state->loop_data );
       }
       if(
-         RETROFLAT_FLAGS_UNLOCK_FPS !=
-         (RETROFLAT_FLAGS_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
+         RETROFLAT_STATE_FLAG_UNLOCK_FPS !=
+         (RETROFLAT_STATE_FLAG_UNLOCK_FPS & g_retroflat_state->retroflat_flags) &&
          retroflat_get_ms() < next
       ) {
          /* Sleep/low power for a bit. */
@@ -2416,7 +2410,7 @@ MERROR_RETVAL retroflat_loop_generic(
          g_retroflat_state->frame_iter( g_retroflat_state->loop_data );
       }
       /* Reset wait-for-frame flag AFTER frame callback. */
-      g_retroflat_state->retroflat_flags &= ~RETROFLAT_FLAGS_WAIT_FOR_FPS;
+      g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_WAIT_FOR_FPS;
       now = retroflat_get_ms();
       if( now + retroflat_fps_next() > now ) {
          next = now + retroflat_fps_next();
@@ -2426,8 +2420,8 @@ MERROR_RETVAL retroflat_loop_generic(
          next = 0;
       }
    } while(
-      RETROFLAT_FLAGS_RUNNING == 
-         (RETROFLAT_FLAGS_RUNNING & g_retroflat_state->retroflat_flags)
+      RETROFLAT_STATE_FLAG_RUNNING == 
+         (RETROFLAT_STATE_FLAG_RUNNING & g_retroflat_state->retroflat_flags)
    );
    retval = g_retroflat_state->retval;
 
@@ -2661,12 +2655,12 @@ static MERROR_RETVAL retroflat_cli_u(
    const char* arg, ssize_t arg_c, struct RETROFLAT_ARGS* args
 ) {
    if( 0 > arg_c ) {
-      args->flags &= ~RETROFLAT_FLAGS_UNLOCK_FPS;
+      args->flags &= ~RETROFLAT_STATE_FLAG_UNLOCK_FPS;
    } else if(
       0 == maug_strncmp( MAUG_CLI_SIGIL "rfu", arg, MAUG_CLI_SIGIL_SZ + 4 )
    ) {
       debug_printf( 1, "unlocking FPS..." );
-      args->flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
+      args->flags |= RETROFLAT_STATE_FLAG_UNLOCK_FPS;
    }
    return MERROR_OK;
 }
@@ -2903,9 +2897,9 @@ MERROR_RETVAL retroflat_init(
    args->joystick_id = -1;
 
    if(
-      RETROFLAT_FLAGS_UNLOCK_FPS == (RETROFLAT_FLAGS_UNLOCK_FPS & args->flags)
+      RETROFLAT_STATE_FLAG_UNLOCK_FPS == (RETROFLAT_STATE_FLAG_UNLOCK_FPS & args->flags)
    ) {
-      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_UNLOCK_FPS;
+      g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_UNLOCK_FPS;
    }
 
    debug_printf( 1, "retroflat: setting config..." );
@@ -2919,10 +2913,10 @@ MERROR_RETVAL retroflat_init(
 
 #  if defined( RETROFLAT_SCREENSAVER )
    if(
-      RETROFLAT_FLAGS_SCREENSAVER ==
-      (RETROFLAT_FLAGS_SCREENSAVER & args->flags)
+      RETROFLAT_STATE_FLAG_SCREENSAVER ==
+      (RETROFLAT_STATE_FLAG_SCREENSAVER & args->flags)
    ) {
-      g_retroflat_state->retroflat_flags |= RETROFLAT_FLAGS_SCREENSAVER;
+      g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_SCREENSAVER;
    }
 #  endif /* RETROFLAT_SCREENSAVER */
 
@@ -3039,7 +3033,7 @@ skip_vdp:
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, 0, 0,
       retroflat_screen_w(), retroflat_screen_h(),
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
    retroflat_draw_release( NULL );
 #  endif /* !RETROFLAT_NO_BLANK_INIT */
 
@@ -3111,8 +3105,8 @@ RETROFLAT_IN_KEY retroflat_repeat_input(
     */
    if(
       0 == key_out &&
-      RETROFLAT_FLAGS_KEY_REPEAT ==
-      (RETROFLAT_FLAGS_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
+      RETROFLAT_STATE_FLAG_KEY_REPEAT ==
+      (RETROFLAT_STATE_FLAG_KEY_REPEAT & g_retroflat_state->retroflat_flags) &&
       /* There is an input to repeat. */
       0 != *prev_input &&
       /* Delay countdown reached. */
