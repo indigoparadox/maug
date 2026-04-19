@@ -285,12 +285,23 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
 
       switch( channels[i].voice ) {
       case 0:
+         /* Triangle wave. */
          if( 32768 > channels[i].phase ) {
             mix += (channels[i].phase - 16384) * 2;
          } else {
             mix += ((uint16_t)((((65536 - channels[i].phase)
                - 16384) * 2)) * channels[i].vol) >> 8;
          }
+         break;
+
+      case 1:
+         /* Square wave. */
+         mix += ((INT16_MAX >= (uint16_t)(channels[i].phase) ? 30000 : -30000)
+               * channels[i].vol) >> 8;
+         break;
+
+      case 2:
+         mix += retroflat_get_rand() % INT16_MAX;
          break;
       }
    }

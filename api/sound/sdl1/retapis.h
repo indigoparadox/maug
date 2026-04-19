@@ -75,8 +75,6 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    SDL_PauseAudio( 0 );
  
-cleanup:
-
    return retval;
 }
 

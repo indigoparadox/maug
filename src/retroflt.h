@@ -799,6 +799,8 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
  */
 typedef void (*retroflat_loop_iter)(void* data);
 
+uint32_t retroflat_get_rand();
+
 /**
  * \addtogroup maug_retroflt_input RetroFlat Input API
  * \brief Functions and constants for polling and interpreting user input.
@@ -1785,8 +1787,6 @@ RETROFLAT_IN_KEY retroflat_repeat_input(
 void retroflat_set_title( const char* format, ... );
 
 retroflat_ms_t retroflat_get_ms();
-
-uint32_t retroflat_get_rand();
 
 #  if !defined( RETROFLAT_NO_KEYBOARD )
 char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags );
