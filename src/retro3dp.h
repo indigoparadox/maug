@@ -209,7 +209,7 @@ MERROR_RETVAL
 retro3dp_parse_obj_c( struct RETRO3DP_PARSER* parser, unsigned char c );
 
 MERROR_RETVAL retro3dp_parse_obj_file(
-   const char* filename, struct RETRO3DP_PARSER* parser,
+   const maug_path filename, struct RETRO3DP_PARSER* parser,
    struct RETRO3DP_MODEL* obj );
 
 void retro3dp_destroy_obj( struct RETRO3DP_MODEL* obj );

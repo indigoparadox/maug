@@ -193,11 +193,12 @@ MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 #  endif /* !RETROFLAT_NO_SDL1_SCALING */
 
-#endif /* !RETROFLAT_OPENGL */
-
+/* Only attach bitmappable screen if not using OpenGL. */
    g_retroflat_state->platform.screen_final.sz =
       sizeof( struct RETROFLAT_BITMAP );
-   g_retroflat_state->platform.screen_final.surface = SDL_SetVideoMode(
+   g_retroflat_state->platform.screen_final.surface =
+#endif /* !RETROFLAT_OPENGL */
+   SDL_SetVideoMode( /* See bitmap assignment above ^ */
       g_retroflat_state->screen_w,
       g_retroflat_state->screen_h,
       info->vfmt->BitsPerPixel,
@@ -407,9 +408,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
-#ifndef RETROFLAT_NO_SDL1_SCALING
+#if !defined( RETROFLAT_NO_SDL1_SCALING ) && !defined( RETROFLAT_OPENGL )
    SDL_Rect scale_rect;
-#endif /* !RETROFLAT_NO_SDL1_SCALING */
+#endif /* !RETROFLAT_NO_SDL1_SCALING && !RETROFLAT_OPENGL */
 
 #ifdef RETROFLAT_OPENGL
 

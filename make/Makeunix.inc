@@ -28,11 +28,11 @@ endif
 
 ifeq ("$(RETROFLAT_OPENGL)","1")
 
-CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
-CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl
-CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags)
+CFLAGS_GCC_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl -DRETROFLAT_NO_VDP
+CFLAGS_GCC64_UNIX += -I$(MAUG_ROOT)/api/retro3d/opengl -DRETROFLAT_NO_VDP
+CFLAGS_GCC_UNIX += $(shell pkg-config gl --cflags) -DRETROFLAT_NO_VDP
 LDFLAGS_GCC_UNIX += $(shell pkg-config gl --libs)
-CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags)
+CFLAGS_GCC64_UNIX += $(shell pkg-config gl --cflags) -DRETROFLAT_NO_VDP
 LDFLAGS_GCC64_UNIX += $(shell pkg-config gl --libs)
 
 endif
