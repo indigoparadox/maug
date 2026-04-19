@@ -30,7 +30,7 @@ void loopa(template)( struct dataa(TEMPLATE)* data ) {
    retroflat_rect(
       NULL, RETROFLAT_COLOR_BLACK, 0, 0,
       retroflat_screen_w(), retroflat_screen_h(),
-      RETROFLAT_FLAGS_FILL );
+      RETROFLAT_DRAW_FLAG_FILL );
 
    retroflat_draw_release( NULL );
 }
