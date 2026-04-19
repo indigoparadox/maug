@@ -62,14 +62,12 @@ MERROR_RETVAL retroflat_init_platform(
 #if defined( RETROFLAT_SDL_ICO )
    SDL_Surface* icon = NULL;
 #endif /* RETROFLAT_SDL_ICO */
-#if defined( RETROFLAT_API_SDL1 )
    const SDL_VideoInfo* info = NULL;
    char sdl_video_parms[256] = "";
 #  if defined( RETROFLAT_OPENGL )
    int gl_retval = 0,
       gl_depth = 16;
 #  endif /* RETROFLAT_OPENGL */
-#endif /* RETROFLAT_API_SDL1 */
 
 #ifndef RETROFLAT_OPENGL
    maug_mzero( &g_retroflat_sdl_bitmap_list, sizeof( struct MDATA_VECTOR ) );
@@ -84,7 +82,12 @@ MERROR_RETVAL retroflat_init_platform(
    srand( time( NULL ) );
 
    /* Startup SDL. */
-   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER ) ) {
+   if( SDL_Init(
+      SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER
+#ifndef RETROFLAT_NO_SOUND
+      | SDL_INIT_AUDIO
+#endif /* RETROFLAT_NO_SOUND */
+   ) ) {
       retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
          "Error", "Error initializing SDL: %s", SDL_GetError() );
       retval = RETROFLAT_ERROR_ENGINE;

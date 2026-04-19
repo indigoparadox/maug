@@ -21,10 +21,6 @@ LDFLAGS_EMCC += -s ASYNCIFY -s ASYNCIFY_IMPORTS=[mfile_wasm_fetch] -O2
 # NOTE: The -O2 here facilitates ASYNCIFY. It is necessary, or we'll get lots
 #       of "unreachable executed" errors at runtime.
 
-ifeq ("$$(RETROFLAT_SOUND)","1")
-	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl
-endif
-
 # TODO: Load audio files with HTTP fetch?
 ifneq ("$$(AUDIO_FILES)","")
 	EMCC_FLAGS_SDL += --use-preload-plugins $$(addprefix --preload-file ,$$(AUDIO_FILES))
@@ -36,9 +32,21 @@ ifeq ("$$(RETROFLAT_OPENGL)","1")
 endif
 
 ifeq ("$$(SDL_VER_WASM)","1")
+
 	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_MIXER=1 -DRETROSND_API_SDL1 -I$$(MAUG_ROOT)/api/retro2d/sdl1 -I$(MAUG_ROOT)/api/input/sdl1
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl1 -DRETROSND_SAMPLE_44100
+endif
+
 else
+
 	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2 -DRETROSND_API_SDL2 -I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl2 -DRETROSND_SAMPLE_44100
+endif
+
 endif
 
 $(1).html: $$(addprefix obj/wasm/,$$(subst .c,.o,$$(C_FILES)))

@@ -139,6 +139,9 @@ union RETROGXC_CACHABLE {
 
 #  ifdef MAUG_C
 #     define RETROFLT_C
+#     ifndef RETROFLAT_NO_SOUND
+#        define RETROSND_C
+#     endif /* !RETROFLAT_NO_SOUND */
 #  endif /* MAUG_C */
 #  include <retroflt.h>
 #  ifdef MAUG_C
@@ -153,7 +156,6 @@ union RETROGXC_CACHABLE {
 #     define RETROANI_C
 #     define RETROW3D_C
 #     define RETRODLG_C
-#     define RETROSND_C
 #     ifdef RETROFLAT_OPENGL
 #        define RETROGLU_C
 #     endif /* RETROFLAT_OPENGL */
