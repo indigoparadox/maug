@@ -39,6 +39,7 @@ struct RETROFLAT_BITMAP {
 #  else
    size_t sz;
    uint8_t flags;
+   uint16_t id;
    SDL_Surface* surface;
    /* SDL1 autolock counter. */
    ssize_t autolock_refs;

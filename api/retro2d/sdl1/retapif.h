@@ -4,6 +4,8 @@
 
 #ifndef RETROFLAT_OPENGL
 
+struct MDATA_VECTOR g_retroflat_sdl_bitmap_list;
+
 static SDL_Surface* _retroflat_sdl_load_bitmap( maug_path path ) {
    MERROR_RETVAL retval = MERROR_OK;
    SDL_Surface* bmp_out = NULL;
@@ -68,6 +70,10 @@ MERROR_RETVAL retroflat_init_platform(
       gl_depth = 16;
 #  endif /* RETROFLAT_OPENGL */
 #endif /* RETROFLAT_API_SDL1 */
+
+#ifndef RETROFLAT_OPENGL
+   maug_mzero( &g_retroflat_sdl_bitmap_list, sizeof( struct MDATA_VECTOR ) );
+#endif /* !RETROFLAT_OPENGL */
 
    /* TODO: Add some flexibility for simulating lower-color platforms. */
    g_retroflat_state->screen_colors = 16;
@@ -508,9 +514,10 @@ MERROR_RETVAL retroflat_load_bitmap(
 ) {
    maug_path filename_path;
    MERROR_RETVAL retval = MERROR_OK;
-#  if !defined( RETROFLAT_OPENGL )
+#ifndef RETROFLAT_BMP_TEX
    SDL_Surface* tmp_surface = NULL;
-#  endif /* !RETROFLAT_OPENGL */
+   ssize_t inv_idx = 0;
+#  endif /* !RETROFLAT_BMP_TEX */
 
    assert( NULL != bmp_out );
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
@@ -524,7 +531,7 @@ MERROR_RETVAL retroflat_load_bitmap(
       return retval;
    }
 
-#  ifdef RETROFLAT_OPENGL
+#ifdef RETROFLAT_BMP_TEX
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_load_bitmap()!" );
    /*
@@ -568,7 +575,19 @@ MERROR_RETVAL retroflat_load_bitmap(
       SDL_FreeSurface( tmp_surface );
    }
 
-#  endif /* RETROFLAT_OPENGL */
+   /* Add the surface to global inventory for palette swaps. */
+   inv_idx = mdata_vector_append(
+      &g_retroflat_sdl_bitmap_list, &(bmp_out->surface),
+      sizeof( SDL_Surface* ) );
+   if( 0 > inv_idx ) {
+      retval = merror_sz_to_retval( inv_idx );
+      goto cleanup;
+   }
+   debug_printf( RETRO2D_TRACE_LVL,
+      "adding bitmap surface to global cache: %p",
+      bmp_out->surface );
+
+#  endif /* RETROFLAT_BMP_TEX */
 
 cleanup:
 
@@ -582,6 +601,9 @@ MERROR_RETVAL retroflat_create_bitmap(
    struct RETROFLAT_BITMAP* bmp_out, uint8_t flags
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROFLAT_BMP_TEX
+   ssize_t inv_idx = 0;
+#endif /* !RETROFLAT_BMP_TEX */
 
    maug_mzero( bmp_out, sizeof( struct RETROFLAT_BITMAP ) );
 
@@ -589,7 +611,7 @@ MERROR_RETVAL retroflat_create_bitmap(
       return retval;
    }
 
-#  if defined( RETROFLAT_OPENGL )
+#ifdef RETROFLAT_BMP_TEX
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_create_bitmap()!" );
    /*
@@ -597,7 +619,7 @@ MERROR_RETVAL retroflat_create_bitmap(
    retval = retro3d_texture_create( w, h, &(bmp_out->tex), flags );
    */
 
-#  else
+#else
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
@@ -621,15 +643,29 @@ MERROR_RETVAL retroflat_create_bitmap(
       SDL_SetColors( /* TODO: Sync colors with screen throughout lifecycle? */
          bmp_out->surface,
          g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+
+      /* Add the surface to global inventory for palette swaps. */
+      inv_idx = mdata_vector_append(
+         &g_retroflat_sdl_bitmap_list, &(bmp_out->surface),
+         sizeof( SDL_Surface* ) );
+      if( 0 > inv_idx ) {
+         retval = merror_sz_to_retval( inv_idx );
+         goto cleanup;
+      }
+      debug_printf( RETRO2D_TRACE_LVL,
+         "adding bitmap surface to global cache: %p",
+         bmp_out->surface );
    }
-   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags)
+   ) {
       SDL_SetColorKey( bmp_out->surface, RETROFLAT_SDL_CC_FLAGS,
          SDL_MapRGB( bmp_out->surface->format,
             RETROFLAT_TXP_R, RETROFLAT_TXP_G, RETROFLAT_TXP_B ) );
    }
 
 cleanup:
-#  endif /* RETROFLAT_OPENGL */
+#endif /* RETROFLAT_BMP_TEX */
 
    return retval;
 }
@@ -637,12 +673,17 @@ cleanup:
 /* === */
 
 void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
+#ifndef RETROFLAT_BMP_TEX
+   SDL_Surface** st = NULL;
+   size_t i = 0;
+   MERROR_RETVAL retval = MERROR_OK;
+#endif /* !RETROFLAT_BMP_TEX */
 
    if( retroflat_bitmap_has_flags( bmp, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
-#  if defined( RETROFLAT_OPENGL )
+#ifdef RETROFLAT_BMP_TEX
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_destroy_bitmap()!" );
    /*
@@ -650,15 +691,39 @@ void retroflat_destroy_bitmap( struct RETROFLAT_BITMAP* bmp ) {
    retro3d_texture_destroy( &(bmp->tex) );
    */
 
-#  else
+#else
 
    assert( NULL != bmp );
    assert( NULL != bmp->surface );
 
+   if( 0 < mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) ) {
+      mdata_vector_lock( &g_retroflat_sdl_bitmap_list );
+      for( i = 0 ; mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) > i ; i++ ) {
+         st = mdata_vector_get( &g_retroflat_sdl_bitmap_list, i, SDL_Surface* );
+         if( *st == bmp->surface ) {
+            debug_printf( RETRO2D_TRACE_LVL, "found surface: %p", *st );
+            break;
+         }
+      }
+      mdata_vector_unlock( &g_retroflat_sdl_bitmap_list );
+      if( mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) > i ) {
+         mdata_vector_remove( &g_retroflat_sdl_bitmap_list, i );
+      } else {
+         error_printf( "surface %p not in inventory vector!", *st );
+      }
+   }
+
    SDL_FreeSurface( bmp->surface );
    bmp->surface = NULL;
 
-#  endif /* RETROFLAT_OPENGL */
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      error_printf( "error during bitmap destroy!" );
+   }
+
+   return;
+#endif /* RETROFLAT_BMP_TEX */
 
 }
 
@@ -819,13 +884,17 @@ void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
 
 MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    MERROR_RETVAL retval = MERROR_OK;
+#ifndef RETROFLAT_BMP_TEX
+   size_t i = 0;
+   SDL_Surface** st = NULL;
+#endif /* !RETROFLAT_BMP_TEX */
 
    if( RETROFLAT_COLORS_CT_MAX <= idx ) {
       error_printf( "invalid color index: %u", idx );
       return MERROR_GUI;
    }
 
-#  ifdef RETROFLAT_BMP_TEX
+#ifdef RETROFLAT_BMP_TEX
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
@@ -837,7 +906,7 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
    g_retroflat_state->tex_palette[idx][1] = (rgb & 0xff00) >> 8;
    g_retroflat_state->tex_palette[idx][2] = (rgb & 0xff0000) >> 16;
 
-#  else
+#else
 
 #if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL,
@@ -859,6 +928,18 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 #     endif /* !RETROFLAT_NO_SDL1_SCALING */
 
+   /* Set the palettes on all loaded bitmaps. */
+   if( 0 < mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) ) {
+      mdata_vector_lock( &g_retroflat_sdl_bitmap_list );
+      for( i = 0 ; mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) > i ; i++ ) {
+         st = mdata_vector_get( &g_retroflat_sdl_bitmap_list, i, SDL_Surface* );
+         SDL_SetColors(
+            *st, g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
+      }
+      mdata_vector_unlock( &g_retroflat_sdl_bitmap_list );
+   }
+
+cleanup:
 #  endif
 
    return retval;
