@@ -13,6 +13,7 @@ struct RETROFLAT_SOUND_STATE {
    int audio_open;
    struct RETROSND_CHANNEL channels[RETROSND_CHANNEL_CT_MAX];
    SDL_AudioSpec spec;
+   volatile int lock;
 };
 
 #elif defined( RETROFLT_C )
@@ -24,9 +25,11 @@ void retrosnd_sdl_audio_callback( void* userdata, Uint8* stream, int len ) {
    struct RETROFLAT_SOUND_STATE* state =
       (struct RETROFLAT_SOUND_STATE*)userdata;
 
+   state->lock = 1;
    for( i = 0 ; i < samples ; i++ ) {
       out[i] = _retrosnd_generate_note( state->channels );
    }
+   state->lock = 0;
 }
 
 /* === */
@@ -81,12 +84,18 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 /* === */
 
 void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
+   while( 1 == g_retroflat_state->sound.lock ) {
+      debug_printf( 1, "waiting for sound buffer lock..." );
+   }
    g_retroflat_state->sound.channels[channel].voice = voice;
 }
 
 /* === */
 
 void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+   while( 1 == g_retroflat_state->sound.lock ) {
+      debug_printf( 1, "waiting for sound buffer lock..." );
+   }
    switch( key ) {
    case RETROSND_CONTROL_VOL:
       g_retroflat_state->sound.channels[channel].vol = val;
@@ -101,12 +110,24 @@ void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 /* === */
 
 void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+   if( g_retroflat_state->sound.channels[channel].note == pitch ) {
+      return;
+   }
+   while( 1 == g_retroflat_state->sound.lock ) {
+      debug_printf( 1, "waiting for sound buffer lock..." );
+   }
    g_retroflat_state->sound.channels[channel].note = pitch;
 }
 
 /* === */
 
 void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+   if( -1 == g_retroflat_state->sound.channels[channel].note ) {
+      return;
+   }
+   while( 1 == g_retroflat_state->sound.lock ) {
+      debug_printf( 1, "waiting for sound buffer lock..." );
+   }
    g_retroflat_state->sound.channels[channel].note = -1;
 }
 
