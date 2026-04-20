@@ -62,8 +62,14 @@ struct RETROSND_CHANNEL {
 #  define RETROSND_REG_TRACE_LVL 0
 #endif /* !RETROSND_REG_TRACE_LVL */
 
+#ifndef RETROSND_SAMPLES_CT
+#  define RETROSND_SAMPLES_CT 2048
+#endif /* !RETROSND_SAMPLES_CT */
+
 #ifdef RETROSND_SAMPLE_44100
-#  define RETROSND_SAMPLE 44100
+/* Specify the sample rate as a number based on existends of predefined flag.
+ */
+#  define RETROSND_SAMPLE_RATE 44100
 #endif /* RETROSND_SAMPLE_44100 */
 
 /**
@@ -125,7 +131,12 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
 
 void retrosnd_shutdown();
 
+void retrosnd_pump();
+
 int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels );
+
+MERROR_RETVAL _retrosnd_set_control(
+   struct RETROSND_CHANNEL* channel, uint8_t key, uint8_t val );
 
 /*! \} */ /* maug_retrosnd */
 
@@ -314,6 +325,27 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
    } else {
       return mix;
    }
+}
+
+/* === */
+
+MERROR_RETVAL _retrosnd_set_control(
+   struct RETROSND_CHANNEL* channel, uint8_t key, uint8_t val
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   switch( key ) {
+   case RETROSND_CONTROL_VOL:
+      channel->vol = val;
+      break;
+
+   default:
+      error_printf( "unimplemented control message: %d!", key );
+      retval = MERROR_OVERFLOW;
+      break;
+   }
+
+   return retval;
 }
 
 #endif /* RETROSND_C */

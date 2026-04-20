@@ -12,13 +12,20 @@ struct RETROFLAT_SOUND_ARGS {
 
 struct RETROFLAT_SOUND_STATE {
    uint8_t flags;
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_t* seq_handle;
    int seq_port;
    int out_client;
    int out_port;
+#else
+   snd_pcm_t* pcm_handle;
+   struct RETROSND_CHANNEL channels[RETROSND_CHANNEL_CT_MAX];
+#endif /* RETROSND_ALSA_MIDI */
 };
 
 #elif defined( RETROFLT_C )
+
+#ifdef RETROSND_ALSA_MIDI
 
 static void retrosnd_alsa_ev( snd_seq_event_t* ev ) {
    snd_seq_ev_clear( ev );
@@ -35,6 +42,8 @@ static void retrosnd_alsa_ev_send( snd_seq_event_t* ev ) {
    snd_seq_event_output( g_retroflat_state->sound.seq_handle, ev );
    snd_seq_drain_output( g_retroflat_state->sound.seq_handle );
 }
+
+#endif /* RETROSND_ALSA_MIDI */
 
 /* === */
 
@@ -89,6 +98,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 
    assert( 2 <= sizeof( MERROR_RETVAL ) );
 
+#ifdef RETROSND_ALSA_MIDI
    /* TODO: If the /rsl arg was specified, show a list of MIDI devices. */
    
    /* Make destination seq/port configurable. */
@@ -127,6 +137,16 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    }
    debug_printf( 3, "sequencer connected to to: %u:%u",
       g_retroflat_state->sound.out_client, g_retroflat_state->sound.out_port );
+#else
+   snd_pcm_open(
+      &(g_retroflat_state->sound.pcm_handle), "default",
+      SND_PCM_STREAM_PLAYBACK, 0 );
+
+   snd_pcm_set_params( g_retroflat_state->sound.pcm_handle,
+      SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1,
+      RETROSND_SAMPLE_RATE, 1, 500000 );
+#endif /* RETROSND_ALSA_MIDI */
+
    g_retroflat_state->sound.flags |= RETROSND_FLAG_INIT;
 
 cleanup:
@@ -136,14 +156,10 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_set_sf_bank( const char* filename_in ) {
-#  pragma message( "warning: set_sf_bank not implemented" )
-}
-
-/* === */
-
-void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
+void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_event_t ev;
+#endif /* RETROSND_ALSA_MIDI */
 
    if(
       RETROSND_FLAG_INIT !=
@@ -155,15 +171,25 @@ void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
    debug_printf(
       RETROSND_TRACE_LVL,
       "setting channel %u to voice: %u", channel, voice );
+#ifdef RETROSND_ALSA_MIDI
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_pgmchange( &ev, channel, voice );
    retrosnd_alsa_ev_send( &ev );
+#else
+   if( RETROSND_CHANNEL_CT_MAX <= channel ) {
+      error_printf( "invalid channel: %d", channel );
+      return;
+   }
+   g_retroflat_state->sound.channels[channel].voice = voice;
+#endif /* RETROSND_ALSA_MIDI */
 }
 
 /* === */
 
-void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_event_t ev;
+#endif /* RETROSND_ALSA_MIDI */
 
    if(
       RETROSND_FLAG_INIT !=
@@ -175,15 +201,27 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
    debug_printf( RETROSND_TRACE_LVL,
       "setting channel %u controller %u to: %u", 
       channel, key, val );
+
+#ifdef RETROSND_ALSA_MIDI
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_controller( &ev, channel, key, val );
    retrosnd_alsa_ev_send( &ev );
+#else
+   if( RETROSND_CHANNEL_CT_MAX <= channel ) {
+      error_printf( "invalid channel: %d", channel );
+      return;
+   }
+   _retrosnd_set_control(
+      &(g_retroflat_state->sound.channels[channel]), key, val );
+#endif /* RETROSND_ALSA_MIDI */
 }
 
 /* === */
 
-void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_event_t ev;
+#endif /* RETROSND_ALSA_MIDI */
 
    if(
       RETROSND_FLAG_INIT !=
@@ -192,15 +230,24 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
+#ifdef RETROSND_ALSA_MIDI
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteon( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
+#else
+   if( g_retroflat_state->sound.channels[channel].note == pitch ) {
+      return;
+   }
+   g_retroflat_state->sound.channels[channel].note = pitch;
+#endif /* RETROSND_ALSA_MIDI */
 }
 
 /* === */
 
-void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_event_t ev;
+#endif /* RETROSND_ALSA_MIDI */
 
    if(
       RETROSND_FLAG_INIT !=
@@ -209,26 +256,16 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
 
+#ifdef RETROSND_ALSA_MIDI
    retrosnd_alsa_ev( &ev );
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
-}
-
-/* === */
-
-MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-#  pragma message( "warning: midi_play_smf not implemented" )
-
-   return retval;
-}
-
-/* === */
-
-uint8_t retrosnd_midi_is_playing_smf() {
-#  pragma message( "warning: midi_play_smf not implemented" )
-   return 1;
+#else
+   if( -1 == g_retroflat_state->sound.channels[channel].note ) {
+      return;
+   }
+   g_retroflat_state->sound.channels[channel].note = -1;
+#endif /* RETROSND_ALSA_MIDI */
 }
 
 /* === */
@@ -242,7 +279,23 @@ void retrosnd_shutdown() {
       return;
    }
 
+#ifdef RETROSND_ALSA_MIDI
    snd_seq_close( g_retroflat_state->sound.seq_handle );
+#endif /* RETROSND_ALSA_MIDI */
+}
+
+/* === */
+
+void retrosnd_pump() {
+   int i = 0;
+   int16_t out[RETROSND_SAMPLES_CT];
+
+   for( i = 0 ; RETROSND_SAMPLES_CT > i ; i++ ) {
+      out[i] = _retrosnd_generate_note( g_retroflat_state->sound.channels );
+   }
+
+   snd_pcm_writei(
+      g_retroflat_state->sound.pcm_handle, out, RETROSND_SAMPLES_CT );
 }
 
 #endif /* !RETPLTS_H_DEFS || RETROFLT_C */

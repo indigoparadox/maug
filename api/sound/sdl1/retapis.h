@@ -65,10 +65,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    }
    */
 
-   g_retroflat_state->sound.spec.freq = RETROSND_SAMPLE;
+   g_retroflat_state->sound.spec.freq = RETROSND_SAMPLE_RATE;
    g_retroflat_state->sound.spec.format = AUDIO_S16SYS;
    g_retroflat_state->sound.spec.channels = 1;
-   g_retroflat_state->sound.spec.samples = 512;
+   g_retroflat_state->sound.spec.samples = RETROSND_SAMPLES_CT;
    g_retroflat_state->sound.spec.callback = retrosnd_sdl_audio_callback;
    g_retroflat_state->sound.spec.userdata = &(g_retroflat_state->sound);
 
@@ -84,6 +84,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
 /* === */
 
 void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
+   if( RETROSND_CHANNEL_CT_MAX <= channel ) {
+      error_printf( "invalid channel: %d", channel );
+      return;
+   }
    while( 1 == g_retroflat_state->sound.lock ) {
       debug_printf( 1, "waiting for sound buffer lock..." );
    }
@@ -93,18 +97,15 @@ void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
 /* === */
 
 void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+   if( RETROSND_CHANNEL_CT_MAX <= channel ) {
+      error_printf( "invalid channel: %d", channel );
+      return;
+   }
    while( 1 == g_retroflat_state->sound.lock ) {
       debug_printf( 1, "waiting for sound buffer lock..." );
    }
-   switch( key ) {
-   case RETROSND_CONTROL_VOL:
-      g_retroflat_state->sound.channels[channel].vol = val;
-      break;
-
-   default:
-      error_printf( "unimplemented control message: %d!", key );
-      break;
-   }
+   _retrosnd_set_control(
+      &(g_retroflat_state->sound.channels[channel]), key, val );
 }
 
 /* === */
@@ -149,6 +150,12 @@ void retrosnd_shutdown() {
    }
 
    g_retroflat_state->sound.flags &= ~RETROSND_FLAG_INIT;
+}
+
+/* === */
+
+void retrosnd_pump() {
+   /* Do nothing; sound is pumped in separate thread. */
 }
 
 #endif /* !RETPLTS_H || RETROFLT_C */
