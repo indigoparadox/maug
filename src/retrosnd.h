@@ -72,6 +72,8 @@ struct RETROSND_CHANNEL {
     * \brief Volume for this channel to play its instrument at.
     */
    uint8_t vol;
+   uint8_t noise_time;
+   int16_t noise_last;
    /**
     * \brief Current step of the waveform to generate samples for.
     */
@@ -193,18 +195,62 @@ MERROR_RETVAL _retrosnd_set_control(
 
 #define RETROSND_TUNE_NOTE_DISABLED (255)
 
+#define RETROSND_NOTES_START (36)
+
+#define RETROSND_NOTES_OCTAVE_SZ (12)
+
+#define RETROSND_NOTES_SZ (RETROSND_NOTES_OCTAVE_SZ * 3)
+
+#define RETROSND_NOTES_OCTAVE_MIDDLE (48)
+
 #define RETROSND_NOTES_TABLE( f ) \
+   f( 36, C2 ) \
+   f( 37, D2F ) \
+   f( 38, D2 ) \
+   f( 39, E2F ) \
+   f( 40, E2 ) \
+   f( 41, F2 ) \
+   f( 42, G2F ) \
+   f( 43, G2 ) \
+   f( 44, A2F ) \
+   f( 45, A2 ) \
+   f( 46, B2F ) \
+   f( 47, B2 ) \
    f( 48, C3 ) \
+   f( 49, D3F ) \
    f( 50, D3 ) \
+   f( 51, E3F ) \
    f( 52, E3 ) \
    f( 53, F3 ) \
+   f( 54, G3F ) \
    f( 55, G3 ) \
+   f( 56, A3F ) \
    f( 57, A3 ) \
-   f( 59, B3 )
+   f( 58, B3F ) \
+   f( 59, B3 ) \
+   f( 60, C4 ) \
+   f( 61, D4F ) \
+   f( 62, D4 ) \
+   f( 63, E4F ) \
+   f( 64, E4 ) \
+   f( 65, F4 ) \
+   f( 66, G4F ) \
+   f( 67, G4 ) \
+   f( 68, A4F ) \
+   f( 69, A4 ) \
+   f( 70, B4F ) \
+   f( 71, B4 )
 
 /*! \} */ /* maug_retrosnd */
 
 #ifdef RETROSND_C
+
+#define RETROSND_NOTES_TABLE_CONST_NAMES( num, name ) \
+   #name,
+
+MAUG_CONST char* gc_retrosnd_note_names[RETROSND_NOTES_SZ] = {
+RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_CONST_NAMES )
+};
 
 #define RETROSND_NOTES_TABLE_CONST_CONSTS( num, name ) \
    MAUG_CONST int8_t RSN_ ## name = num;
@@ -560,17 +606,15 @@ cleanup:
 
 /* === */
 
-#define RETROSND_NOTES_TABLE_TO_STR( num, name ) \
-   case num: \
-      return #name;
-
-const char* retrosnd_note_to_str( int8_t note ) {
-   switch( note ) {
-   RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_TO_STR )
-   default:
+MAUG_CONST char* retrosnd_note_to_str( int8_t note ) {
+   if(
+      RETROSND_NOTES_START > note ||
+      RETROSND_NOTES_START + RETROSND_NOTES_SZ < note
+   ) {
       return "?";
-      break;
    }
+
+   return gc_retrosnd_note_names[note - RETROSND_NOTES_START];
 }
 
 #ifndef RETROFLAT_NO_SOUND
@@ -642,7 +686,13 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
          break;
 
       case 2:
-         mix += retroflat_get_rand() % INT16_MAX;
+         if( 0 < channels[i].noise_time ) {
+            channels[i].noise_time--;
+         } else {
+            channels[i].noise_last = retroflat_get_rand() % INT16_MAX;
+            channels[i].noise_time = channels[i].note / 2;
+         }
+         mix += channels[i].noise_last;
          break;
       }
    }
