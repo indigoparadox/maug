@@ -91,7 +91,7 @@ struct RETROSND_TUNE {
    size_t sz;
    uint8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
    uint8_t notes_ct;
-   uint8_t current_note_idx;
+   int8_t current_note_idx;
    retroflat_ms_t next_note_at;
    int ms_per_note;
    struct RETROSND_TUNE* next;
@@ -173,6 +173,8 @@ MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune );
  * This should be called once per frame with the same tune.
  */
 MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune );
+
+void retrosnd_tune_seek( struct RETROSND_TUNE* tune, int8_t idx );
 
 MERROR_RETVAL retrosnd_tune_set_note(
    struct RETROSND_TUNE*, int channel, int index, int8_t note );
@@ -570,12 +572,29 @@ MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune ) {
 
       /* Ensure playing blocks are playing and stopped are stopped. */
       for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
-         retrosnd_note_off( i, tune->notes[i][prev_note], 0 );
-         retrosnd_note_on( i, tune->notes[i][tune->current_note_idx], 0 );
+         if( 0 <= prev_note ) {
+            retrosnd_note_off( i, tune->notes[i][prev_note], 0 );
+         }
+         if( MERROR_OK == retval ) {
+            retrosnd_note_on( i, tune->notes[i][tune->current_note_idx], 0 );
+         }
       }
    }
 
    return retval;
+}
+
+/* === */
+
+void retrosnd_tune_seek( struct RETROSND_TUNE* tune, int8_t idx ) {
+   int i = 0;
+   if( 0 <= tune->current_note_idx ) {
+      for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
+         retrosnd_note_off( i, tune->notes[i][tune->current_note_idx], 0 );
+      }
+   }
+   tune->current_note_idx = idx;
+   tune->next_note_at = 0;
 }
 
 /* === */
