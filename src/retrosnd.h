@@ -30,25 +30,9 @@
  * And the MPU-401 interface for being so darn simple!
  */
 
-struct RETROSND_CHANNEL {
-   uint8_t flags;
-   /**
-    * \brief Instrument for this channel to play.
-    */
-   int8_t voice;
-   /**
-    * \brief Note for this channel to play its instrument at.
-    */
-   int8_t note;
-   /**
-    * \brief Volume for this channel to play its instrument at.
-    */
-   uint8_t vol;
-   /**
-    * \brief Current step of the waveform to generate samples for.
-    */
-   uint32_t phase;
-};
+#ifndef RETROSND_TUNE_NOTE_CT_MAX
+#  define RETROSND_TUNE_NOTE_CT_MAX 30
+#endif /* RETROSND_TUNE_NOTE_CT_MAX */
 
 #ifndef RETROSND_CHANNEL_CT_MAX
 #  define RETROSND_CHANNEL_CT_MAX 4
@@ -71,6 +55,40 @@ struct RETROSND_CHANNEL {
  */
 #  define RETROSND_SAMPLE_RATE 44100
 #endif /* RETROSND_SAMPLE_44100 */
+
+struct RETROSND_CHANNEL {
+   uint8_t flags;
+   /**
+    * \brief Instrument for this channel to play.
+    */
+   int8_t voice;
+   /**
+    * \brief Note for this channel to play its instrument at.
+    */
+   int8_t note;
+   /**
+    * \brief Volume for this channel to play its instrument at.
+    */
+   uint8_t vol;
+   /**
+    * \brief Current step of the waveform to generate samples for.
+    */
+   uint32_t phase;
+};
+
+/**
+ * \brief Simple tune designed to be played on the software synthesizer.
+ *
+ * Requires retrosnd_tune_update() to be called at regular intervals.
+ */
+struct RETROSND_TUNE {
+   size_t sz;
+   int8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
+   maug_ms_t next_note_at;
+   int current_note_idx;
+   int ms_per_note;
+   struct RETROSND_TUNE* next;
+};
 
 /**
  * \addtogroup maug_retrosnd_flags RetroSound State Flags
@@ -133,14 +151,53 @@ void retrosnd_shutdown();
 
 void retrosnd_pump();
 
+MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune );
+
+/**
+ * \brief Update the currently playing note in the given tune.
+ *
+ * This should be called once per frame with the same tune.
+ */
+MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune );
+
+MERROR_RETVAL retrosnd_tune_set_note(
+   struct RETROSND_TUNE*, int channel, int index, int8_t note );
+
+/**
+ * \brief Increment synthesizer phase based on its instrument and system
+ *        settings.
+ * \note This should only be called by the API-specific implementation, and not
+ *       a client program.
+ */
 int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels );
 
+/**
+ * \brief Set controls for the software synthesizer.
+ * \note This should only be called by the API-specific implementation, and not
+ *       a client program.
+ */
 MERROR_RETVAL _retrosnd_set_control(
    struct RETROSND_CHANNEL* channel, uint8_t key, uint8_t val );
+
+#define RETROSND_TUNE_NOTE_DISABLED (-1)
+
+#define RETROSND_NOTES_TABLE( f ) \
+   f( 48, C3 ) \
+   f( 50, D3 ) \
+   f( 52, E3 ) \
+   f( 53, F3 ) \
+   f( 55, G3 ) \
+   f( 57, A3 ) \
+   f( 59, B3 )
 
 /*! \} */ /* maug_retrosnd */
 
 #ifdef RETROSND_C
+
+#define RETROSND_NOTES_TABLE_CONST_CONSTS( num, name ) \
+   MAUG_CONST int8_t RSN_ ## name = num;
+
+RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_CONST_CONSTS )
 
 #ifdef RETROSND_SAMPLE_44100
 
@@ -282,6 +339,77 @@ uint32_t gc_phase_inc[] = {
 
 /* === */
 
+MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   maug_mzero( tune, sizeof( struct RETROSND_TUNE ) );
+
+   memset( tune->notes, -1,
+      RETROSND_CHANNEL_CT_MAX * RETROSND_TUNE_NOTE_CT_MAX );
+
+   tune->sz = sizeof( struct RETROSND_TUNE );
+   tune->ms_per_note = 100;
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int prev_note = 0, i = 0;
+
+   if( retroflat_get_ms() > tune->next_note_at ) {
+      /* It's time to advance the playing note in the tune! */
+      tune->next_note_at = retroflat_get_ms() + tune->ms_per_note;
+      prev_note = tune->current_note_idx;
+      tune->current_note_idx++;
+      if( RETROSND_TUNE_NOTE_CT_MAX <= tune->current_note_idx ) {
+         tune->current_note_idx = 0;
+      }
+#if 0 < RETROSND_TUNE_TRACE_LVL
+      debug_printf( RETROSND_TUNE_TRACE_LVL, "next note index: %d\n",
+         tune->current_note_idx );
+#endif /* RETROSND_TUNE_TRACE_LVL */
+
+      /* Ensure playing blocks are playing and stopped are stopped. */
+      for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
+         retrosnd_note_off( i, tune->notes[i][prev_note], 0 );
+         retrosnd_note_on( i, tune->notes[i][tune->current_note_idx], 0 );
+      }
+   }
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retrosnd_tune_set_note(
+   struct RETROSND_TUNE* tune, int channel, int index, int8_t note
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if( index >= RETROSND_TUNE_NOTE_CT_MAX ) {
+      error_printf( "invalid note index specified: %d", index );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   if( channel >= RETROSND_CHANNEL_CT_MAX ) {
+      error_printf( "invalid channel specified: %d", channel );
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   tune->notes[channel][index] = note;
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
 int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
    int32_t mix = 0;
    int i = 0;
@@ -347,6 +475,13 @@ MERROR_RETVAL _retrosnd_set_control(
 
    return retval;
 }
+
+#else
+
+#define RETROSND_NOTES_TABLE_EXT_CONSTS( num, name ) \
+   extern MAUG_CONST int8_t RSN_ ## name;
+
+RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_EXT_CONSTS )
 
 #endif /* RETROSND_C */
 

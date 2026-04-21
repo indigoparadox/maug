@@ -925,6 +925,10 @@ struct RETROFLAT_ARGS;
 #  define RETRO2D_LOCK_TRACE_LVL 0
 #endif /* !RETRO2D_LOCK_TRACE_LVL */
 
+typedef maug_ms_t retroflat_ms_t;
+
+retroflat_ms_t retroflat_get_ms();
+
 #ifndef RETROFLAT_NO_SOUND
 #  include "retrosnd.h"
 #endif /* !RETROFLAT_NO_SOUND */
@@ -1001,8 +1005,6 @@ struct RETROFLAT_3DTEX {
  */
 #  define retroflat_system_task()
 #endif /* !retroflat_system_task */
-
-typedef maug_ms_t retroflat_ms_t;
 
 typedef void (*retroflat_timer_cb_t)( retroflat_ms_t time, void* data );
 
@@ -1785,8 +1787,6 @@ RETROFLAT_IN_KEY retroflat_repeat_input(
    RETROFLAT_IN_KEY* prev_input, int* prev_delay );
 
 void retroflat_set_title( const char* format, ... );
-
-retroflat_ms_t retroflat_get_ms();
 
 #  if !defined( RETROFLAT_NO_KEYBOARD )
 char retroflat_vk_to_ascii( RETROFLAT_IN_KEY k, uint8_t flags );
