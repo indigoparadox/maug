@@ -54,7 +54,7 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
       &g_retroflat_state->sound, sizeof( struct RETROFLAT_SOUND_STATE ) );
 
    for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
-      g_retroflat_state->sound.channels[i].note = -1;
+      g_retroflat_state->sound.channels[i].note = RETROSND_TUNE_NOTE_DISABLED;
    }
 
    /*
@@ -89,8 +89,14 @@ void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
       return;
    }
    while( 1 == g_retroflat_state->sound.lock ) {
-      debug_printf( 1, "waiting for sound buffer lock..." );
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "waiting for sound buffer lock..." );
+#endif /* RETROSND_TRACE_LVL */
    }
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "setting channel %u voice: %u",
+         channel, voice );
+#endif /* RETROSND_TRACE_LVL */
    g_retroflat_state->sound.channels[channel].voice = voice;
 }
 
@@ -102,8 +108,14 @@ void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
       return;
    }
    while( 1 == g_retroflat_state->sound.lock ) {
-      debug_printf( 1, "waiting for sound buffer lock..." );
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "waiting for sound buffer lock..." );
+#endif /* RETROSND_TRACE_LVL */
    }
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "setting control %u: %u on %u",
+         key, val, channel );
+#endif /* RETROSND_TRACE_LVL */
    _retrosnd_set_control(
       &(g_retroflat_state->sound.channels[channel]), key, val );
 }
@@ -115,21 +127,37 @@ void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
       return;
    }
    while( 1 == g_retroflat_state->sound.lock ) {
-      debug_printf( 1, "waiting for sound buffer lock..." );
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "waiting for sound buffer lock..." );
+#endif /* RETROSND_TRACE_LVL */
    }
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "setting channel %u note: %u on",
+         channel, pitch );
+#endif /* RETROSND_TRACE_LVL */
    g_retroflat_state->sound.channels[channel].note = pitch;
 }
 
 /* === */
 
 void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
-   if( -1 == g_retroflat_state->sound.channels[channel].note ) {
+   if(
+      RETROSND_TUNE_NOTE_DISABLED ==
+      g_retroflat_state->sound.channels[channel].note
+   ) {
       return;
    }
    while( 1 == g_retroflat_state->sound.lock ) {
-      debug_printf( 1, "waiting for sound buffer lock..." );
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "waiting for sound buffer lock..." );
+#endif /* RETROSND_TRACE_LVL */
    }
-   g_retroflat_state->sound.channels[channel].note = -1;
+#if RETROSND_TRACE_LVL > 0
+      debug_printf( RETROSND_TRACE_LVL, "setting channel %u note: off",
+         channel );
+#endif /* RETROSND_TRACE_LVL */
+   g_retroflat_state->sound.channels[channel].note =
+      RETROSND_TUNE_NOTE_DISABLED;
 }
 
 /* === */

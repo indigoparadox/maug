@@ -261,10 +261,14 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    snd_seq_ev_set_noteoff( &ev, channel, pitch, vel );
    retrosnd_alsa_ev_send( &ev );
 #else
-   if( -1 == g_retroflat_state->sound.channels[channel].note ) {
+   if(
+      RETROSND_TUNE_NOTE_DISABLED ==
+      g_retroflat_state->sound.channels[channel].note
+   ) {
       return;
    }
-   g_retroflat_state->sound.channels[channel].note = -1;
+   g_retroflat_state->sound.channels[channel].note =
+      RETROSND_TUNE_NOTE_DISABLED;
 #endif /* RETROSND_ALSA_MIDI */
 }
 

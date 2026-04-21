@@ -31,7 +31,7 @@
  */
 
 #ifndef RETROSND_TUNE_NOTE_CT_MAX
-#  define RETROSND_TUNE_NOTE_CT_MAX 30
+#  define RETROSND_TUNE_NOTE_CT_MAX 32
 #endif /* RETROSND_TUNE_NOTE_CT_MAX */
 
 #ifndef RETROSND_CHANNEL_CT_MAX
@@ -65,7 +65,7 @@ struct RETROSND_CHANNEL {
    /**
     * \brief Note for this channel to play its instrument at.
     */
-   int8_t note;
+   uint8_t note;
    /**
     * \brief Volume for this channel to play its instrument at.
     */
@@ -83,9 +83,10 @@ struct RETROSND_CHANNEL {
  */
 struct RETROSND_TUNE {
    size_t sz;
-   int8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
+   uint8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
+   uint8_t notes_ct;
+   uint8_t current_note_idx;
    maug_ms_t next_note_at;
-   int current_note_idx;
    int ms_per_note;
    struct RETROSND_TUNE* next;
 };
@@ -155,6 +156,10 @@ MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune );
 
 /**
  * \brief Update the currently playing note in the given tune.
+ * \return MERROR_OVERFLOW if the tune is finished playing (runs out of notes)
+ *         or MERROR_OK otherwise. If it is done playing,
+ *         RETROSND_TUNE::current_note_idx will be reset to 0 automatically
+ *         so that it will loop.
  *
  * This should be called once per frame with the same tune.
  */
@@ -179,7 +184,7 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels );
 MERROR_RETVAL _retrosnd_set_control(
    struct RETROSND_CHANNEL* channel, uint8_t key, uint8_t val );
 
-#define RETROSND_TUNE_NOTE_DISABLED (-1)
+#define RETROSND_TUNE_NOTE_DISABLED (255)
 
 #define RETROSND_NOTES_TABLE( f ) \
    f( 48, C3 ) \
@@ -344,7 +349,7 @@ MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune ) {
 
    maug_mzero( tune, sizeof( struct RETROSND_TUNE ) );
 
-   memset( tune->notes, -1,
+   memset( tune->notes, RETROSND_TUNE_NOTE_DISABLED,
       RETROSND_CHANNEL_CT_MAX * RETROSND_TUNE_NOTE_CT_MAX );
 
    tune->sz = sizeof( struct RETROSND_TUNE );
@@ -358,14 +363,18 @@ MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune ) {
 MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune ) {
    MERROR_RETVAL retval = MERROR_OK;
    int prev_note = 0, i = 0;
+   int notes_ct =
+      tune->notes_ct > 0 && tune->notes_ct < RETROSND_TUNE_NOTE_CT_MAX ?
+      tune->notes_ct : RETROSND_TUNE_NOTE_CT_MAX;
 
    if( retroflat_get_ms() > tune->next_note_at ) {
       /* It's time to advance the playing note in the tune! */
       tune->next_note_at = retroflat_get_ms() + tune->ms_per_note;
       prev_note = tune->current_note_idx;
       tune->current_note_idx++;
-      if( RETROSND_TUNE_NOTE_CT_MAX <= tune->current_note_idx ) {
+      if( notes_ct <= tune->current_note_idx ) {
          tune->current_note_idx = 0;
+         retval = MERROR_OVERFLOW;
       }
 #if 0 < RETROSND_TUNE_TRACE_LVL
       debug_printf( RETROSND_TUNE_TRACE_LVL, "next note index: %d\n",
@@ -431,7 +440,7 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
 
    /* Mix each of the channels into a single sample. */
    for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
-      if( 0 > channels[i].note ) {
+      if( RETROSND_TUNE_NOTE_DISABLED == channels[i].note ) {
          continue;
       }
 
