@@ -151,19 +151,19 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_set_sf_bank( const char* filename_in ) {
+void retrosnd_set_sf_bank( const char* filename_in ) {
 }
 
 /* === */
 
-void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
+void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
    midiOutShortMsg( g_retroflat_state->sound.mo_handle,
       (((voice & 0xff) << 8) | 0xc0 | (channel & 0x0f)) );
 }
 
 /* === */
 
-void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
    uint32_t midi_msg = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -180,7 +180,7 @@ void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
 
 /* === */
 
-void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    uint32_t midi_msg = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -197,7 +197,7 @@ void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
 /* === */
 
-void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    uint32_t midi_msg = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -214,23 +214,30 @@ void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
 /* === */
 
-MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
-   MERROR_RETVAL retval = MERROR_OK;
-#     pragma message( "warning: midi_play_smf not implemented" )
-   return retval;
-}
-
-/* === */
-
-uint8_t retrosnd_midi_is_playing_smf() {
-#     pragma message( "warning: midi_is_playing_smf not implemented" )
-   return 1;
-}
-
-/* === */
-
 void retrosnd_shutdown() {
    midiOutClose( g_retroflat_state->sound.mo_handle );
+}
+
+/* === */
+
+void retrosnd_note_on_deadline( 
+   uint8_t channel, uint8_t pitch, retroflat_ms_t deadline
+) {
+
+#ifndef RETROFLAT_NO_SOUND
+#  pragma message( "warning: note_on_deadline not implemented" )
+#endif /* !RETROFLAT_NO_SOUND */
+
+}
+
+/* === */
+
+void retrosnd_pump() {
+
+#ifndef RETROFLAT_NO_SOUND
+#  pragma message( "warning: pump not implemented" )
+#endif /* !RETROFLAT_NO_SOUND */
+
 }
 
 #endif /* !RETPLTS_H_DEFS || RETROFLT_C */

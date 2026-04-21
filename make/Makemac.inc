@@ -39,7 +39,7 @@ CFLAGS_GCC_MAC68K_TB6 += -I"$(MAUG_ROOT)/api/file/mac68k"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_MAC68K_TB6 += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_GCC_MAC68K_TB6 += -I$(MAUG_ROOT)/api/sound/null -DRETROFLAT_NO_SOUND
 endif
 
 ifeq ("$(4)","")
@@ -130,7 +130,8 @@ CFLAGS_GCC_MACPPC_CARBON += -I"$(MAUG_ROOT)/api/file/mac68k"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_MACPPC_CARBON += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_GCC_MACPPC_CARBON += -I$(MAUG_ROOT)/api/sound/null \
+		-DRETROFLAT_NO_SOUND
 endif
 
 ifeq ("$(4)","")

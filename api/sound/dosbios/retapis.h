@@ -299,14 +299,7 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_set_sf_bank( const char* filename_in ) {
-   maug_strncpy( g_retroflat_state->sound.sf_bank_filename, filename_in,
-      MAUG_PATH_SZ_MAX - 1 );
-}
-
-/* === */
-
-void retrosnd_midi_set_voice( uint8_t channel, uint8_t voice ) {
+void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
    MERROR_RETVAL retval = 0;
    mfile_t opl_defs;
    uint8_t byte_buffer = 0;
@@ -403,7 +396,7 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
+void retrosnd_set_control( uint8_t channel, uint8_t key, uint8_t val ) {
    MERROR_RETVAL retval = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -440,7 +433,7 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    MERROR_RETVAL retval = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -486,7 +479,7 @@ cleanup:
 
 /* === */
 
-void retrosnd_midi_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
+void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
    MERROR_RETVAL retval = 0;
 
    if( RETROSND_FLAG_INIT != (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags) ) {
@@ -530,21 +523,6 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
-   MERROR_RETVAL retval = MERROR_OK;
-#     pragma message( "warning: midi_play_smf not implemented" )
-   return retval;
-}
-
-/* === */
-
-uint8_t retrosnd_midi_is_playing_smf() {
-#     pragma message( "warning: midi_is_playing_smf not implemented" )
-   return 1;
-}
-
-/* === */
-
 void retrosnd_shutdown() {
 
    switch( g_retroflat_state->sound.driver ) {
@@ -560,6 +538,28 @@ void retrosnd_shutdown() {
       retrosnd_adlib_clear();
       break;
    }
+}
+
+/* === */
+
+void retrosnd_note_on_deadline( 
+   uint8_t channel, uint8_t pitch, retroflat_ms_t deadline
+) {
+
+#ifndef RETROFLAT_NO_SOUND
+#  pragma message( "warning: note_on_deadline not implemented" )
+#endif /* !RETROFLAT_NO_SOUND */
+
+}
+
+/* === */
+
+void retrosnd_pump() {
+
+#ifndef RETROFLAT_NO_SOUND
+#  pragma message( "warning: pump not implemented" )
+#endif /* !RETROFLAT_NO_SOUND */
+
 }
 
 #endif /* !RETPLTS_H_DEFS || RETROFLT_C */

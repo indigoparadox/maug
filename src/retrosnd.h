@@ -50,7 +50,9 @@
 #  define RETROSND_SAMPLES_CT 2048
 #endif /* !RETROSND_SAMPLES_CT */
 
-#ifdef RETROSND_SAMPLE_44100
+#ifdef RETROSND_SAMPLE_22050
+#  define RETROSND_SAMPLE_RATE 22050
+#elif defined( RETROSND_SAMPLE_44100 )
 /* Specify the sample rate as a number based on existends of predefined flag.
  */
 #  define RETROSND_SAMPLE_RATE 44100
@@ -209,7 +211,141 @@ MERROR_RETVAL _retrosnd_set_control(
 
 RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_CONST_CONSTS )
 
-#ifdef RETROSND_SAMPLE_44100
+#ifdef RETROSND_SAMPLE_22050
+
+uint32_t gc_phase_inc[] = {
+   24,  /* Idx: 0, Freq: 8.175799 */
+   25,  /* Idx: 1, Freq: 8.661957 */
+   27,  /* Idx: 2, Freq: 9.177024 */
+   28,  /* Idx: 3, Freq: 9.722718 */
+   30,  /* Idx: 4, Freq: 10.300861 */
+   32,  /* Idx: 5, Freq: 10.913382 */
+   34,  /* Idx: 6, Freq: 11.562326 */
+   36,  /* Idx: 7, Freq: 12.249857 */
+   38,  /* Idx: 8, Freq: 12.978272 */
+   40,  /* Idx: 9, Freq: 13.750000 */
+   43,  /* Idx: 10, Freq: 14.567618 */
+   45,  /* Idx: 11, Freq: 15.433853 */
+   48,  /* Idx: 12, Freq: 16.351598 */
+   51,  /* Idx: 13, Freq: 17.323914 */
+   54,  /* Idx: 14, Freq: 18.354048 */
+   57,  /* Idx: 15, Freq: 19.445436 */
+   61,  /* Idx: 16, Freq: 20.601722 */
+   64,  /* Idx: 17, Freq: 21.826764 */
+   68,  /* Idx: 18, Freq: 23.124651 */
+   72,  /* Idx: 19, Freq: 24.499715 */
+   77,  /* Idx: 20, Freq: 25.956544 */
+   81,  /* Idx: 21, Freq: 27.500000 */
+   86,  /* Idx: 22, Freq: 29.135235 */
+   91,  /* Idx: 23, Freq: 30.867706 */
+   97,  /* Idx: 24, Freq: 32.703196 */
+   102,  /* Idx: 25, Freq: 34.647829 */
+   109,  /* Idx: 26, Freq: 36.708096 */
+   115,  /* Idx: 27, Freq: 38.890873 */
+   122,  /* Idx: 28, Freq: 41.203445 */
+   129,  /* Idx: 29, Freq: 43.653529 */
+   137,  /* Idx: 30, Freq: 46.249303 */
+   145,  /* Idx: 31, Freq: 48.999429 */
+   154,  /* Idx: 32, Freq: 51.913087 */
+   163,  /* Idx: 33, Freq: 55.000000 */
+   173,  /* Idx: 34, Freq: 58.270470 */
+   183,  /* Idx: 35, Freq: 61.735413 */
+   194,  /* Idx: 36, Freq: 65.406391 */
+   205,  /* Idx: 37, Freq: 69.295658 */
+   218,  /* Idx: 38, Freq: 73.416192 */
+   231,  /* Idx: 39, Freq: 77.781746 */
+   244,  /* Idx: 40, Freq: 82.406889 */
+   259,  /* Idx: 41, Freq: 87.307058 */
+   274,  /* Idx: 42, Freq: 92.498606 */
+   291,  /* Idx: 43, Freq: 97.998859 */
+   308,  /* Idx: 44, Freq: 103.826174 */
+   326,  /* Idx: 45, Freq: 110.000000 */
+   346,  /* Idx: 46, Freq: 116.540940 */
+   366,  /* Idx: 47, Freq: 123.470825 */
+   388,  /* Idx: 48, Freq: 130.812783 */
+   411,  /* Idx: 49, Freq: 138.591315 */
+   436,  /* Idx: 50, Freq: 146.832384 */
+   462,  /* Idx: 51, Freq: 155.563492 */
+   489,  /* Idx: 52, Freq: 164.813778 */
+   518,  /* Idx: 53, Freq: 174.614116 */
+   549,  /* Idx: 54, Freq: 184.997211 */
+   582,  /* Idx: 55, Freq: 195.997718 */
+   617,  /* Idx: 56, Freq: 207.652349 */
+   653,  /* Idx: 57, Freq: 220.000000 */
+   692,  /* Idx: 58, Freq: 233.081881 */
+   733,  /* Idx: 59, Freq: 246.941651 */
+   777,  /* Idx: 60, Freq: 261.625565 */
+   823,  /* Idx: 61, Freq: 277.182631 */
+   872,  /* Idx: 62, Freq: 293.664768 */
+   924,  /* Idx: 63, Freq: 311.126984 */
+   979,  /* Idx: 64, Freq: 329.627557 */
+   1037,  /* Idx: 65, Freq: 349.228231 */
+   1099,  /* Idx: 66, Freq: 369.994423 */
+   1165,  /* Idx: 67, Freq: 391.995436 */
+   1234,  /* Idx: 68, Freq: 415.304698 */
+   1307,  /* Idx: 69, Freq: 440.000000 */
+   1385,  /* Idx: 70, Freq: 466.163762 */
+   1467,  /* Idx: 71, Freq: 493.883301 */
+   1555,  /* Idx: 72, Freq: 523.251131 */
+   1647,  /* Idx: 73, Freq: 554.365262 */
+   1745,  /* Idx: 74, Freq: 587.329536 */
+   1849,  /* Idx: 75, Freq: 622.253967 */
+   1959,  /* Idx: 76, Freq: 659.255114 */
+   2075,  /* Idx: 77, Freq: 698.456463 */
+   2199,  /* Idx: 78, Freq: 739.988845 */
+   2330,  /* Idx: 79, Freq: 783.990872 */
+   2468,  /* Idx: 80, Freq: 830.609395 */
+   2615,  /* Idx: 81, Freq: 880.000000 */
+   2771,  /* Idx: 82, Freq: 932.327523 */
+   2935,  /* Idx: 83, Freq: 987.766603 */
+   3110,  /* Idx: 84, Freq: 1046.502261 */
+   3295,  /* Idx: 85, Freq: 1108.730524 */
+   3491,  /* Idx: 86, Freq: 1174.659072 */
+   3698,  /* Idx: 87, Freq: 1244.507935 */
+   3918,  /* Idx: 88, Freq: 1318.510228 */
+   4151,  /* Idx: 89, Freq: 1396.912926 */
+   4398,  /* Idx: 90, Freq: 1479.977691 */
+   4660,  /* Idx: 91, Freq: 1567.981744 */
+   4937,  /* Idx: 92, Freq: 1661.218790 */
+   5230,  /* Idx: 93, Freq: 1760.000000 */
+   5542,  /* Idx: 94, Freq: 1864.655046 */
+   5871,  /* Idx: 95, Freq: 1975.533205 */
+   6220,  /* Idx: 96, Freq: 2093.004522 */
+   6590,  /* Idx: 97, Freq: 2217.461048 */
+   6982,  /* Idx: 98, Freq: 2349.318143 */
+   7397,  /* Idx: 99, Freq: 2489.015870 */
+   7837,  /* Idx: 100, Freq: 2637.020455 */
+   8303,  /* Idx: 101, Freq: 2793.825851 */
+   8797,  /* Idx: 102, Freq: 2959.955382 */
+   9320,  /* Idx: 103, Freq: 3135.963488 */
+   9874,  /* Idx: 104, Freq: 3322.437581 */
+   10461,  /* Idx: 105, Freq: 3520.000000 */
+   11084,  /* Idx: 106, Freq: 3729.310092 */
+   11743,  /* Idx: 107, Freq: 3951.066410 */
+   12441,  /* Idx: 108, Freq: 4186.009045 */
+   13181,  /* Idx: 109, Freq: 4434.922096 */
+   13965,  /* Idx: 110, Freq: 4698.636287 */
+   14795,  /* Idx: 111, Freq: 4978.031740 */
+   15675,  /* Idx: 112, Freq: 5274.040911 */
+   16607,  /* Idx: 113, Freq: 5587.651703 */
+   17594,  /* Idx: 114, Freq: 5919.910763 */
+   18641,  /* Idx: 115, Freq: 6271.926976 */
+   19749,  /* Idx: 116, Freq: 6644.875161 */
+   20923,  /* Idx: 117, Freq: 7040.000000 */
+   22168,  /* Idx: 118, Freq: 7458.620184 */
+   23486,  /* Idx: 119, Freq: 7902.132820 */
+   24882,  /* Idx: 120, Freq: 8372.018090 */
+   26362,  /* Idx: 121, Freq: 8869.844191 */
+   27930,  /* Idx: 122, Freq: 9397.272573 */
+   29590,  /* Idx: 123, Freq: 9956.063479 */
+   31350,  /* Idx: 124, Freq: 10548.081821 */
+   33214,  /* Idx: 125, Freq: 11175.303406 */
+   35189,  /* Idx: 126, Freq: 11839.821527 */
+   37282,  /* Idx: 127, Freq: 12543.853951 */
+   39499 /* Idx: 128, Freq: 13289.750323 */
+};
+
+#elif defined( RETROSND_SAMPLE_44100 )
 
 uint32_t gc_phase_inc[] = {
    12,  /* Idx: 0, Freq: 8.175799 */
@@ -437,6 +573,8 @@ const char* retrosnd_note_to_str( int8_t note ) {
    }
 }
 
+#ifndef RETROFLAT_NO_SOUND
+
 /* === */
 
 MERROR_RETVAL _retrosnd_channels_init( struct RETROSND_CHANNEL* channels ) {
@@ -539,6 +677,8 @@ MERROR_RETVAL _retrosnd_set_control(
 
    return retval;
 }
+
+#endif /* !RETROFLAT_NO_SOUND */
 
 #else
 

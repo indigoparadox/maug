@@ -213,7 +213,8 @@ CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/log/unix
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_UNIX_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_GCC_UNIX_ALLEGRO += \
+		-I$(MAUG_ROOT)/api/sound/null -DRETROFLAT_NO_SOUND
 endif
 
 $(1).$$(MAUG_UNIX).ale: \

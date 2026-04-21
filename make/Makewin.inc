@@ -177,7 +177,8 @@ else
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/sound/win
+	CFLAGS_WATCOM386_WIN_WIN32 += -i=$(MAUG_ROOT)/api/sound/win \
+		-DRETROSND_SAMPLE_44100
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN32)))
@@ -228,7 +229,8 @@ CFLAGS_WATCOM386_WIN_GLUT += -i="$(MAUG_ROOT)/api/file/win32"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_WIN_GLUT += -i=$(MAUG_ROOT)/api/sound/null
+	CFLAGS_WATCOM386_WIN_GLUT += -i=$(MAUG_ROOT)/api/sound/null \
+		-DRETROFLAT_NO_SOUND
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_GLUT)))
@@ -327,7 +329,8 @@ CFLAGS_WATCOM_WIN_WIN16 += \
 LDFLAGS_WATCOM_WIN_WIN16 += system windows option eliminate option stack=16k
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win
+	CFLAGS_WATCOM_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win \
+		-DRETROSND_SAMPLE_22050
 endif
 
 # Strip out options to bake-in resources, as they make the exe too big!
@@ -392,7 +395,8 @@ CFLAGS_WATCOM386_WIN_WIN16 += -i="$(MAUG_ROOT)/api/file/unix"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win
+	CFLAGS_WATCOM386_WIN_WIN16 += -i=$(MAUG_ROOT)/api/sound/win \
+		-DRETROSND_SAMPLE_22050
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_WIN16)))
@@ -443,7 +447,8 @@ CFLAGS_GCC_WIN_WIN32 += -I"$(MAUG_ROOT)/api/file/win32"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win
+	CFLAGS_GCC_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win \
+		-DRETROSND_SAMPLE_44100
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
@@ -497,7 +502,8 @@ else
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win
+	CFLAGS_GCC64_WIN_WIN32 += -I$(MAUG_ROOT)/api/sound/win \
+		-DRETROSND_SAMPLE_44100
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_GCC64_WIN_WIN32)))

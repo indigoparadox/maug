@@ -88,7 +88,8 @@ else
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_DJGPP_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_DJGPP_DOS_ALLEGRO += \
+		-I$(MAUG_ROOT)/api/sound/null -DRETROFLAT_NO_SOUND
 endif
 
 $(1)dg.exe: $$(addprefix obj/dosdg/,$$(subst .c,.o,$$(C_FILES)))
@@ -128,7 +129,8 @@ CFLAGS_WATCOM_DOS_BIOS += \
 LDFLAGS_WATCOM_DOS_BIOS += system dos option stack=8k option eliminate
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM_DOS_BIOS += -I$(MAUG_ROOT)/api/sound/dosbios
+	CFLAGS_WATCOM_DOS_BIOS += \
+		-I$(MAUG_ROOT)/api/sound/dosbios -DRETROSND_SAMPLE_22050
 endif
 
 $(1)b.exe: $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_FILES) $$(C_MAUG_STUBS))) $$(addprefix obj/dos_bios/,$$(subst .c,.o,$$(C_MPLUG_OVLS)))
