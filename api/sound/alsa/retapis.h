@@ -145,6 +145,10 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    snd_pcm_set_params( g_retroflat_state->sound.pcm_handle,
       SND_PCM_FORMAT_S16, SND_PCM_ACCESS_RW_INTERLEAVED, 1,
       RETROSND_SAMPLE_RATE, 1, 500000 );
+
+   retval = _retrosnd_channels_init( g_retroflat_state->sound.channels );
+   maug_cleanup_if_not_ok();
+
 #endif /* RETROSND_ALSA_MIDI */
 
    g_retroflat_state->sound.flags |= RETROSND_FLAG_INIT;
@@ -286,6 +290,15 @@ void retrosnd_shutdown() {
 #ifdef RETROSND_ALSA_MIDI
    snd_seq_close( g_retroflat_state->sound.seq_handle );
 #endif /* RETROSND_ALSA_MIDI */
+}
+
+/* === */
+
+void retrosnd_note_on_deadline( 
+   uint8_t channel, uint8_t pitch, retroflat_ms_t deadline
+) {
+   retrosnd_note_on( channel, pitch, 0 );
+   g_retroflat_state->sound.channels[channel].deadline = deadline;
 }
 
 /* === */

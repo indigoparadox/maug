@@ -52,14 +52,12 @@ MERROR_RETVAL retrosnd_cli_rsd(
 
 MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    MERROR_RETVAL retval = MERROR_OK;
-   size_t i = 0;
 
    maug_mzero(
       &g_retroflat_state->sound, sizeof( struct RETROFLAT_SOUND_STATE ) );
 
-   for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
-      g_retroflat_state->sound.channels[i].note = RETROSND_TUNE_NOTE_DISABLED;
-   }
+   retval = _retrosnd_channels_init( g_retroflat_state->sound.channels );
+   maug_cleanup_if_not_ok();
 
    /*
    if( 0 > SDL_Init( SDL_INIT_AUDIO ) ) {
@@ -81,6 +79,8 @@ MERROR_RETVAL retrosnd_init( struct RETROFLAT_ARGS* args ) {
    g_retroflat_state->sound.flags |= RETROSND_FLAG_INIT;
 
    SDL_PauseAudio( 0 );
+
+cleanup:
  
    return retval;
 }
@@ -140,6 +140,7 @@ void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel ) {
          channel, pitch );
 #endif /* RETROSND_TRACE_LVL */
    g_retroflat_state->sound.channels[channel].note = pitch;
+   g_retroflat_state->sound.channels[channel].deadline = 0;
 }
 
 /* === */
@@ -162,6 +163,7 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 #endif /* RETROSND_TRACE_LVL */
    g_retroflat_state->sound.channels[channel].note =
       RETROSND_TUNE_NOTE_DISABLED;
+   g_retroflat_state->sound.channels[channel].deadline = 0;
 }
 
 /* === */
@@ -182,6 +184,15 @@ void retrosnd_shutdown() {
    }
 
    g_retroflat_state->sound.flags &= ~RETROSND_FLAG_INIT;
+}
+
+/* === */
+
+void retrosnd_note_on_deadline( 
+   uint8_t channel, uint8_t pitch, retroflat_ms_t deadline
+) {
+   retrosnd_note_on( channel, pitch, 0 );
+   g_retroflat_state->sound.channels[channel].deadline = deadline;
 }
 
 /* === */

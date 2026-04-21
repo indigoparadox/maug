@@ -74,6 +74,8 @@ struct RETROSND_CHANNEL {
     * \brief Current step of the waveform to generate samples for.
     */
    uint32_t phase;
+
+   retroflat_ms_t deadline;
 };
 
 /**
@@ -86,7 +88,7 @@ struct RETROSND_TUNE {
    uint8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
    uint8_t notes_ct;
    uint8_t current_note_idx;
-   maug_ms_t next_note_at;
+   retroflat_ms_t next_note_at;
    int ms_per_note;
    struct RETROSND_TUNE* next;
 };
@@ -151,6 +153,9 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
 void retrosnd_shutdown();
 
 void retrosnd_pump();
+
+void retrosnd_note_on_deadline(
+   uint8_t channel, uint8_t pitch, retroflat_ms_t after );
 
 MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune );
 
@@ -434,6 +439,29 @@ const char* retrosnd_note_to_str( int8_t note ) {
 
 /* === */
 
+MERROR_RETVAL _retrosnd_channels_init( struct RETROSND_CHANNEL* channels ) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int i = 0;
+
+   for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
+      channels[i].note = RETROSND_TUNE_NOTE_DISABLED;
+   }
+
+   /* Setup synthesizer defaults. */
+
+   retrosnd_set_voice( 0, 0 );
+   retrosnd_set_voice( 1, 0 );
+   retrosnd_set_voice( 2, 1 );
+   retrosnd_set_voice( 3, 2 );
+
+   retrosnd_set_control( 0, RETROSND_CONTROL_VOL, 128 );
+   retrosnd_set_control( 1, RETROSND_CONTROL_VOL, 128 );
+   retrosnd_set_control( 2, RETROSND_CONTROL_VOL, 128 );
+   retrosnd_set_control( 3, RETROSND_CONTROL_VOL, 128 );
+
+   return retval;
+}
+
 int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
    int32_t mix = 0;
    int i = 0;
@@ -441,6 +469,18 @@ int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
    /* Mix each of the channels into a single sample. */
    for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
       if( RETROSND_TUNE_NOTE_DISABLED == channels[i].note ) {
+         continue;
+      }
+
+      if(
+         channels[i].deadline > 0 && channels[i].deadline < retroflat_get_ms()
+      ) {
+#if RETROSND_TRACE_LVL > 0
+         debug_printf( RETROSND_TRACE_LVL, "note %d disabled after deadline!",
+            i );
+#endif /* RETROSND_TRACE_LVL */
+         channels[i].note = RETROSND_TUNE_NOTE_DISABLED;
+         channels[i].deadline = 0;
          continue;
       }
 
