@@ -410,6 +410,21 @@ cleanup:
 
 /* === */
 
+#define RETROSND_NOTES_TABLE_TO_STR( num, name ) \
+   case num: \
+      return #name;
+
+const char* retrosnd_note_to_str( int8_t note ) {
+   switch( note ) {
+   RETROSND_NOTES_TABLE( RETROSND_NOTES_TABLE_TO_STR )
+   default:
+      return "?";
+      break;
+   }
+}
+
+/* === */
+
 int16_t _retrosnd_generate_note( struct RETROSND_CHANNEL* channels ) {
    int32_t mix = 0;
    int i = 0;
