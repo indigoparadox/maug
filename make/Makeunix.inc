@@ -112,7 +112,7 @@ CFLAGS_GCC_UNIX_SDL += \
 	-I$$(MAUG_ROOT)/api/retro2d/sdl1 -I$(MAUG_ROOT)/api/input/sdl1
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl1 -DRETROSND_SAMPLE_44100
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 CFLAGS_GCC_UNIX_SDL += -DRETROFLAT_API_SDL1 $$(shell pkg-config sdl --cflags)
@@ -131,7 +131,7 @@ CFLAGS_GCC_UNIX_SDL += \
 	-I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl2 -DRETROSND_SAMPLE_44100
+CFLAGS_GCC_UNIX_SDL += -I$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 CFLAGS_GCC_UNIX_SDL += $$(shell pkg-config sdl2 --cflags) -DRETROFLAT_API_SDL2

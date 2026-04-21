@@ -18,7 +18,11 @@ struct RETROFLAT_SOUND_STATE {
 
 #elif defined( RETROFLT_C )
 
+#ifdef RETROFLAT_OS_WIN
+void __cdecl retrosnd_sdl_audio_callback( void* userdata, Uint8* stream, int len ) {
+#else
 void retrosnd_sdl_audio_callback( void* userdata, Uint8* stream, int len ) {
+#endif /* RETROFLAT_OS_WIN */
    int16_t* out = (int16_t*)stream;
    int i = 0;
    int samples = len / sizeof( int16_t );

@@ -264,8 +264,8 @@ define TGT_WATCOM386_WIN_SDL
 
 # SDL is always on Pentium.
 CFLAGS_WATCOM386_WIN_SDL += \
-	-mf -5s -ei -fp5 -zm -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/retro2d/sdl \
-	-i=$(MAUG_ROOT)/api/input/sdl -i=$(MAUG_ROOT)/api/log/unix \
+	-mf -5s -ei -fp5 -zm -dSDL_main=main -bt=nt -i=$(MAUG_ROOT)/api/log/unix \
+	-i=$(MAUG_ROOT)/api/retro2d/sdl1 -i=$(MAUG_ROOT)/api/input/sdl1 \
 	-i=$(WATCOM)/h/nt -i=$(WATCOM)/h/nt/SDL -DRETROFLAT_API_SDL1 \
 	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/win \
 	-i=$(MAUG_ROOT)/api/serial/asn1
@@ -279,7 +279,8 @@ CFLAGS_WATCOM386_WIN_SDL += -i="$(MAUG_ROOT)/api/file/win32"
 endif
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_WIN_SDL += -i=$(MAUG_ROOT)/api/sound/null
+	CFLAGS_WATCOM386_WIN_SDL += -i=$(MAUG_ROOT)/api/sound/sdl \
+		-DRETROSND_SAMPLE_44100
 endif
 
 $(eval $(call TGT_ICO_WIN,$(1),$$(OBJDIR_WATCOM386_WIN_SDL)))

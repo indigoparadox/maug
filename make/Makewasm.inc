@@ -37,7 +37,7 @@ ifeq ("$$(SDL_VER_WASM)","1")
 	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL1 -s USE_SDL=1 -s USE_SDL_MIXER=1 -DRETROSND_API_SDL1 -I$$(MAUG_ROOT)/api/retro2d/sdl1 -I$(MAUG_ROOT)/api/input/sdl1
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl1 -DRETROSND_SAMPLE_44100
+	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 else
@@ -45,7 +45,7 @@ else
 	EMCC_FLAGS_SDL += -DRETROFLAT_API_SDL2 -s USE_SDL=2 -s USE_SDL_MIXER=2 -DRETROSND_API_SDL2 -I$$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl1 -DRETROSND_SAMPLE_44100
+	EMCC_FLAGS_SDL += -I$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 endif

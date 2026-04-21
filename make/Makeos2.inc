@@ -58,14 +58,15 @@ define TGT_WATCOM386_OS2_SDL
 CFLAGS_WATCOM386_OS2_SDL := \
 	-mf -5s -fp5 -bt=os2 -i=$(WATCOM)/h/os2 -i=$(WATCOM)/h/os2/SDL \
 	-DRETROFLAT_API_SDL1 \
-	-i=$(MAUG_ROOT)/api/retro2d/sdl -i=$(MAUG_ROOT)/api/input/sdl \
+	-i=$(MAUG_ROOT)/api/retro2d/sdl1 -i=$(MAUG_ROOT)/api/input/sdl1 \
 	-i=$(MAUG_ROOT)/api/log/unix -I$(MAUG_ROOT)/api/serial/asn1 \
 	-i=$(MAUG_ROOT)/api/font/soft -i=$(MAUG_ROOT)/api/mem/unix
 
 LDFLAGS_WATCOM386_OS2_SDL := system os2v2_pm libr {sdl12}
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_OS2_SDL += -i=$(MAUG_ROOT)/api/sound/sdl
+	CFLAGS_WATCOM386_OS2_SDL += \
+		-i=$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 ifeq ("$$(FORCE_MVFS)","1")

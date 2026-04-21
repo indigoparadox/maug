@@ -47,18 +47,18 @@ define TGTNXSDL
 DEFINES_GCC_NX_SDL += -DRETROFLAT_OS_NX -DRETROFLAT_API_SDL2 -DRETROFLAT_NO_CLI
 
 INCLUDES_GCC_NX_SDL += \
-	-I$(MAUG_ROOT)/api/retro2d/sdl -I$(MAUG_ROOT)/api/input/sdl \
+	-I$(MAUG_ROOT)/api/retro2d/sdl2 -I$(MAUG_ROOT)/api/input/sdl2 \
 	-I$(MAUG_ROOT)/api/file/unix -I$(MAUG_ROOT)/api/log/unix \
 	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
 	-I$(MAUG_ROOT)/api/serial/asn1
 
 CFLAGS_GCC_NX_SDL := $$(DEFINES_GCC_NX_SDL) $$(INCLUDES_GCC_NX_SDL) \
-	$$(shell $$(PKGCONFIG_NX) --cflags sdl2 SDL2_mixer SDL2_image)
+	$$(shell $$(PKGCONFIG_NX) --cflags sdl2 SDL2_image)
 
 # Setup LDFLAGS_GCC_NX_SDL
 
 LIBS_GCC_NX_SDL += \
-	$$(shell $$(PKGCONFIG_NX) --libs sdl2 SDL2_mixer SDL2_image SDL2_ttf)
+	$$(shell $$(PKGCONFIG_NX) --libs sdl2 SDL2_image SDL2_ttf)
 
 LDFLAGS_GCC_NX_SDL := $$(LIBS_GCC_NX_SDL)
 
@@ -71,7 +71,7 @@ C_FILES_NX := $$(NXASSET_C_FILE) $$(C_FILES)
 MAUG_DEPS_NX := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_GCC_NX += -I$(MAUG_ROOT)/api/sound/sdl
+	CFLAGS_GCC_NX += -I$(MAUG_ROOT)/api/sound/sdl -DRETROSND_SAMPLE_44100
 endif
 
 ifneq ("$(2)","")

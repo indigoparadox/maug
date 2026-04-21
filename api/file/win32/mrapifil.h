@@ -117,7 +117,7 @@ MERROR_RETVAL mfile_file_vprintf(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    char line_buf[MFILE_LINE_BUF_SZ + 1];
-   int32_t written = 0;
+   uint32_t written = 0;
 
    if( MFILE_FLAG_READ_ONLY == (MFILE_FLAG_READ_ONLY & p_file->flags) ) {
       return MERROR_FILE;

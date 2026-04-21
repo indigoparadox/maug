@@ -3233,7 +3233,7 @@ MERROR_RETVAL retroflat_vdp_call( const char* proc_name ) {
    }
 
 #     ifdef RETROFLAT_OS_WIN
-   retroflat_draw_release( g_retroflat_state->vdp_buffer );
+   retroflat_draw_release( g_retroflat_state->vdp_buffer_in );
 #     endif /* RETROFLAT_OS_WIN */
 
 cleanup:
