@@ -177,6 +177,8 @@ MERROR_RETVAL retroflat_init_platform(
 #ifndef RETROFLAT_OPENGL
 
    /* Create our first-stage buffer, which gets drawn on directly. */
+   g_retroflat_state->platform.screen_buffer.flags =
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER || RETROFLAT_BITMAP_FLAG_OPAQUE;
    g_retroflat_state->platform.screen_buffer.surface = SDL_CreateRGBSurface(
       0, g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h,
       8, 0, 0, 0, 0 );

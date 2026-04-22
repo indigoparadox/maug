@@ -222,9 +222,9 @@ struct RETROFLAT_VIEWPORT {
 MERROR_RETVAL retroflat_viewport_set_refresh_generic(
    retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tid );
 
-uint8_t retroflat_viewport_move_x_generic( int16_t x );
+uint8_t retroflat_viewport_move_x_generic( retroflat_pxxy_t x );
 
-uint8_t retroflat_viewport_move_y_generic( int16_t y );
+uint8_t retroflat_viewport_move_y_generic( retroflat_pxxy_t y );
 
 uint8_t retroflat_viewport_focus_generic(
    retroflat_pxxy_t x1, retroflat_pxxy_t y1,
@@ -434,7 +434,13 @@ uint8_t retroflat_viewport_focus_generic(
 #  define retroflat_viewport_screen_get_y() \
    retroflat_viewport_screen_get_y_generic()
 
-#  ifndef RETROFLAT_VIEWPORT_OVERRIDE_MOVE
+#  ifdef RETROFLAT_VIEWPORT_OVERRIDE_MOVE
+
+uint8_t retroflat_viewport_move_x( retroflat_pxxy_t x );
+
+uint8_t retroflat_viewport_move_y( retroflat_pxxy_t x );
+
+#  else
 #     define retroflat_viewport_move_x( x ) \
          retroflat_viewport_move_x_generic( x )
 
@@ -482,8 +488,8 @@ MERROR_RETVAL retroflat_viewport_set_refresh_generic(
 
 /* === */
 
-uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
-   int16_t new_world_x = g_retroflat_state->viewport.world_x + x;
+uint8_t retroflat_viewport_move_x_generic( retroflat_pxxy_t x ) {
+   retroflat_pxxy_t new_world_x = g_retroflat_state->viewport.world_x + x;
 
    /* Keep the viewport in the world arena. */
    if(
@@ -501,8 +507,8 @@ uint8_t retroflat_viewport_move_x_generic( int16_t x ) {
 
 /* === */
 
-uint8_t retroflat_viewport_move_y_generic( int16_t y ) {
-   int16_t new_world_y = g_retroflat_state->viewport.world_y + y;
+uint8_t retroflat_viewport_move_y_generic( retroflat_pxxy_t y ) {
+   retroflat_pxxy_t new_world_y = g_retroflat_state->viewport.world_y + y;
 
    /* Keep the viewport in the world arena. */
    if(
