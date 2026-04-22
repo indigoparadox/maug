@@ -1096,9 +1096,15 @@ static retrogui_idc_t retrogui_key_BUTTON(
 ) {
    retrogui_idc_t idc_out = RETROGUI_IDC_NONE;
 
-   /* Set the last button clicked. */
-   /* TODO: Only set out on ENTER/SPACE. */
-   /* idc_out = ctl->base.idc; */
+   /* Set the last button clicked. Only set out on ENTER/SPACE. */
+   if(
+      retroflat_or_key( *p_input, RETROGUI_KEY_ACTIVATE, RETROGUI_PAD_ACTIVATE )
+   ) {
+#if RETROGUI_TRACE_LVL > 0
+      debug_printf( RETROGUI_TRACE_LVL, "pushing BUTTON control..." );
+#endif /* RETROGUI_TRACE_LVL */
+      idc_out = ctl->base.idc;
+   }
 
    return idc_out;
 }
@@ -2223,6 +2229,10 @@ retrogui_idc_t retrogui_poll_ctls(
          "debo! %d vs %d", retroflat_get_ms(), gui->debounce_next );
 #endif /* RETROGUI_TRACE_LVL */
       goto cleanup;
+#if RETROGUI_TRACE_LVL > 0
+   } else if( 0 != *p_input ) {
+      debug_printf( RETROGUI_TRACE_LVL, "no debo!" );
+#endif /* RETROGUI_TRACE_LVL */
    }
 
    if( 0 == *p_input ) {
@@ -2234,6 +2244,10 @@ retrogui_idc_t retrogui_poll_ctls(
    ) {
 
       if( 0 <= gui->focus ) {
+#if RETROGUI_TRACE_LVL > 0
+         debug_printf( RETROGUI_TRACE_LVL,
+            "activate on focus IDC: " RETROGUI_IDC_FMT, gui->focus );
+#endif /* RETROGUI_TRACE_LVL */
          idc_out = gui->focus;
          /* gui->focus = -1; */
          gui->flags |= RETROGUI_FLAGS_DIRTY;
@@ -2316,6 +2330,7 @@ retrogui_idc_t retrogui_poll_ctls(
    } else {
 
       if( RETROGUI_IDC_NONE == gui->focus ) {
+         error_printf( "no control has focus!" );
          goto cleanup;
       }
 

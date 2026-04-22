@@ -209,6 +209,10 @@ RETROFLAT_IN_KEY retroflat_poll_input( struct RETROFLAT_INPUT* input ) {
 #if RETROINPUT_TRACE_LVL > 0
          debug_printf( RETROINPUT_TRACE_LVL, "key: %d", event.key.keysym.sym );
 #endif /* RETROINPUT_TRACE_LVL */
+         if( SDLK_CAPSLOCK == event.key.keysym.sym ) {
+            error_printf( "caps lock detected!" );
+            break;
+         }
          key_out = event.key.keysym.sym;
          g_retroflat_state->input.prev_key = event.key.keysym.sym;
       }
