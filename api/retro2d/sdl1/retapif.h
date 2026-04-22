@@ -188,7 +188,6 @@ MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 
-#  ifndef RETROFLAT_NO_SDL1_SCALING
    /* Insert a normal surface as the standard buffer that things draw to, so
     * those things can be scaled onto the scale buffer as the last step.
     */
@@ -200,7 +199,6 @@ MERROR_RETVAL retroflat_init_platform(
    SDL_SetColors(
       g_retroflat_state->platform.screen_scale.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
-#  endif /* !RETROFLAT_NO_SDL1_SCALING */
 
 /* Only attach bitmappable screen if not using OpenGL. */
    g_retroflat_state->platform.screen_final.sz =
@@ -254,9 +252,7 @@ void retroflat_shutdown_platform( MERROR_RETVAL retval ) {
 #ifndef RETROFLAT_OPENGL
    if( NULL != g_retroflat_state ) {
       SDL_FreeSurface( g_retroflat_state->platform.screen_buffer.surface );
-#  ifndef RETROFLAT_NO_SDL1_SCALING
       SDL_FreeSurface( g_retroflat_state->platform.screen_scale.surface );
-#  endif /* RETROFLAT_NO_SDL1_SCALING */
 #  ifdef RETROFLAT_VDP
       SDL_FreeSurface( g_retroflat_state->platform.screen_vdp.surface );
 #  endif /* RETROFLAT_VDP */
@@ -418,9 +414,9 @@ MERROR_RETVAL retroflat_draw_lock( struct RETROFLAT_BITMAP* bmp ) {
 
 MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
    MERROR_RETVAL retval = MERROR_OK;
-#if !defined( RETROFLAT_NO_SDL1_SCALING ) && !defined( RETROFLAT_OPENGL )
+#if !defined( RETROFLAT_OPENGL )
    SDL_Rect scale_rect;
-#endif /* !RETROFLAT_NO_SDL1_SCALING && !RETROFLAT_OPENGL */
+#endif /* !RETROFLAT_OPENGL */
 
 #ifdef RETROFLAT_OPENGL
 
@@ -452,19 +448,6 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
             (RETROFLAT_BITMAP_FLAG_SCREEN_LOCK & bmp->flags) );
          bmp->flags &= ~RETROFLAT_BITMAP_FLAG_SCREEN_LOCK;
 
-#  ifdef RETROFLAT_NO_SDL1_SCALING
-         /* Blit the 8-bit indexed working buffer directly onto the 32-bit
-          * screen.
-          */
-         SDL_BlitSurface(
-            g_retroflat_state->platform.screen_buffer.surface, NULL,
-#     ifdef RETROFLAT_VDP
-            retroflat_vdp_available() ?
-               g_retroflat_state->platform.screen_vdp_in.surface :
-#     endif /* RETROFLAT_VDP */
-            g_retroflat_state->platform.screen_final.surface,
-            NULL );
-#  else
          /* Do the scaled blit from the intermediate scaling buffer to the
           * real screen buffer before flip.
           */
@@ -489,7 +472,6 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
 #     endif /* RETROFLAT_VDP */
             g_retroflat_state->platform.screen_final.surface,
             NULL );
-#  endif /* RETROFLAT_NO_SDL1_SCALING */
 
 #  if defined( RETROFLAT_VDP )
          retroflat_vdp_call( "retroflat_vdp_flip" );
@@ -925,11 +907,9 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 
-#     ifndef RETROFLAT_NO_SDL1_SCALING
    SDL_SetColors(
       g_retroflat_state->platform.screen_scale.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
-#     endif /* !RETROFLAT_NO_SDL1_SCALING */
 
    /* Set the palettes on all loaded bitmaps. */
    if( 0 < mdata_vector_ct( &g_retroflat_sdl_bitmap_list ) ) {

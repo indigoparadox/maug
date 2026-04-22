@@ -528,20 +528,37 @@ uint8_t retroflat_viewport_focus_generic(
       new_moved = 0;
    int16_t new_pt = 0;
 
-#  define _retroflat_viewport_focus_dir( n, xy, wh, gl, pm, dir, range, speed ) \
-      new_pt = n - retroflat_viewport_world_ ## xy(); \
-      if( new_pt gl (retroflat_screen_ ## wh() >> 1) pm range ) { \
-         new_moved = retroflat_viewport_move_ ## xy( \
-            gc_retroflat_offsets8_ ## xy[RETROFLAT_DIR8_ ## dir] * speed ); \
-         if( !moved && new_moved ) { \
-            moved = new_moved; \
-         } \
+   /* Test if the screen is scrolling east/west. */
+   new_pt = x1 - retroflat_viewport_world_x();
+   if( new_pt > (retroflat_screen_w() >> 1) + range ) {
+      new_moved = retroflat_viewport_move_x(
+         gc_retroflat_offsets8_x[RETROFLAT_DIR8_EAST] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
       }
+   } else if( new_pt < (retroflat_screen_w() >> 1) - range ) {
+      new_moved = retroflat_viewport_move_x(
+         gc_retroflat_offsets8_x[RETROFLAT_DIR8_WEST] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   }
 
-   _retroflat_viewport_focus_dir( x1, x, w, <, -, WEST, range, speed );
-   _retroflat_viewport_focus_dir( x1, x, w, >, +, EAST, range, speed );
-   _retroflat_viewport_focus_dir( y1, y, h, <, -, NORTH, range, speed );
-   _retroflat_viewport_focus_dir( y1, y, h, >, +, SOUTH, range, speed );
+   /* Test if the screen is scrolling north/south. */
+   new_pt = y1 - retroflat_viewport_world_y();
+   if( new_pt > (retroflat_screen_h() >> 1) + range ) {
+      new_moved = retroflat_viewport_move_y(
+         gc_retroflat_offsets8_y[RETROFLAT_DIR8_SOUTH] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   } else if( new_pt < (retroflat_screen_h() >> 1) - range ) {
+      new_moved = retroflat_viewport_move_y(
+         gc_retroflat_offsets8_y[RETROFLAT_DIR8_NORTH] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   }
 
    return moved;
 }
