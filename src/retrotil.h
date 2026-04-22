@@ -1276,7 +1276,7 @@ MERROR_RETVAL retrotile_parse_json_file(
    maug_malloc_test( parser_h, 1, sizeof( struct RETROTILE_PARSER ) );
 
    maug_mlock( parser_h, parser );
-   maug_cleanup_if_null_alloc( struct RETROTILE_PARSER*, parser );
+   maug_cleanup_if_null_lock( struct RETROTILE_PARSER*, parser );
    maug_mzero( parser, sizeof( struct RETROTILE_PARSER ) );
 
    parser->flags = flags;

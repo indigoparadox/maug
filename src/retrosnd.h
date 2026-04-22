@@ -30,10 +30,6 @@
  * And the MPU-401 interface for being so darn simple!
  */
 
-#ifndef RETROSND_TUNE_NOTE_CT_MAX
-#  define RETROSND_TUNE_NOTE_CT_MAX 32
-#endif /* RETROSND_TUNE_NOTE_CT_MAX */
-
 #ifndef RETROSND_CHANNEL_CT_MAX
 #  define RETROSND_CHANNEL_CT_MAX 4
 #endif /* !RETROSND_CHANNEL_CT_MAX */
@@ -88,13 +84,15 @@ struct RETROSND_CHANNEL {
  * Requires retrosnd_tune_update() to be called at regular intervals.
  */
 struct RETROSND_TUNE {
+   /*! \brief Size of this struct (useful for serializing). */
    size_t sz;
-   uint8_t notes[RETROSND_CHANNEL_CT_MAX][RETROSND_TUNE_NOTE_CT_MAX];
+   /*! \brief Size of the tune in bytes (including this struct header). */
+   size_t total_sz;
    uint8_t notes_ct;
    int8_t current_note_idx;
+   int16_t ms_per_note;
    retroflat_ms_t next_note_at;
-   int ms_per_note;
-   struct RETROSND_TUNE* next;
+   uint8_t notes[][RETROSND_CHANNEL_CT_MAX];
 };
 
 /**
@@ -161,7 +159,8 @@ void retrosnd_pump();
 void retrosnd_note_on_deadline(
    uint8_t channel, uint8_t pitch, retroflat_ms_t after );
 
-MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune );
+MERROR_RETVAL retrosnd_tune_init(
+   MAUG_MHANDLE* p_tune_h, size_t notes_ct, uint16_t ms_per_note );
 
 /**
  * \brief Update the currently playing note in the given tune.
@@ -178,6 +177,9 @@ void retrosnd_tune_seek( struct RETROSND_TUNE* tune, int8_t idx );
 
 MERROR_RETVAL retrosnd_tune_set_note(
    struct RETROSND_TUNE*, int channel, int index, int8_t note );
+
+#define retrosnd_tune_get_note( tune, channel, idx ) \
+   ((tune)->notes[idx][channel])
 
 /**
  * \brief Increment synthesizer phase based on its instrument and system
@@ -533,16 +535,34 @@ uint32_t gc_phase_inc[] = {
 
 /* === */
 
-MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune ) {
+MERROR_RETVAL retrosnd_tune_init(
+   MAUG_MHANDLE* p_tune_h, size_t notes_ct, uint16_t ms_per_note
+) {
+   struct RETROSND_TUNE* tune = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
-   maug_mzero( tune, sizeof( struct RETROSND_TUNE ) );
+   maug_malloc_test( *p_tune_h, 1,
+      sizeof( struct RETROSND_TUNE ) + (notes_ct * RETROSND_CHANNEL_CT_MAX ) );
+   maug_mlock( *p_tune_h, tune );
+   maug_cleanup_if_null_lock( struct RETROSND_TUNE*, tune );
+
+   maug_mzero( tune,
+      sizeof( struct RETROSND_TUNE ) + (notes_ct * RETROSND_CHANNEL_CT_MAX ) );
 
    memset( tune->notes, RETROSND_TUNE_NOTE_DISABLED,
-      RETROSND_CHANNEL_CT_MAX * RETROSND_TUNE_NOTE_CT_MAX );
+      RETROSND_CHANNEL_CT_MAX * notes_ct );
 
    tune->sz = sizeof( struct RETROSND_TUNE );
-   tune->ms_per_note = 100;
+   tune->notes_ct = notes_ct;
+   tune->total_sz = sizeof( struct RETROSND_TUNE ) +
+      (RETROSND_CHANNEL_CT_MAX * tune->notes_ct);
+   tune->ms_per_note = ms_per_note;
+
+cleanup:
+
+   if( NULL != tune ) {
+      maug_munlock( *p_tune_h, tune );
+   }
 
    return retval;
 }
@@ -552,16 +572,13 @@ MERROR_RETVAL retrosnd_tune_init( struct RETROSND_TUNE* tune ) {
 MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune ) {
    MERROR_RETVAL retval = MERROR_OK;
    int prev_note = 0, i = 0;
-   int notes_ct =
-      tune->notes_ct > 0 && tune->notes_ct < RETROSND_TUNE_NOTE_CT_MAX ?
-      tune->notes_ct : RETROSND_TUNE_NOTE_CT_MAX;
 
    if( retroflat_get_ms() > tune->next_note_at ) {
       /* It's time to advance the playing note in the tune! */
       tune->next_note_at = retroflat_get_ms() + tune->ms_per_note;
       prev_note = tune->current_note_idx;
       tune->current_note_idx++;
-      if( notes_ct <= tune->current_note_idx ) {
+      if( tune->notes_ct <= tune->current_note_idx ) {
          tune->current_note_idx = 0;
          retval = MERROR_OVERFLOW;
       }
@@ -573,10 +590,10 @@ MERROR_RETVAL retrosnd_tune_update( struct RETROSND_TUNE* tune ) {
       /* Ensure playing blocks are playing and stopped are stopped. */
       for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
          if( 0 <= prev_note ) {
-            retrosnd_note_off( i, tune->notes[i][prev_note], 0 );
+            retrosnd_note_off( i, tune->notes[prev_note][i], 0 );
          }
          if( MERROR_OK == retval ) {
-            retrosnd_note_on( i, tune->notes[i][tune->current_note_idx], 0 );
+            retrosnd_note_on( i, tune->notes[tune->current_note_idx][i], 0 );
          }
       }
    }
@@ -590,7 +607,7 @@ void retrosnd_tune_seek( struct RETROSND_TUNE* tune, int8_t idx ) {
    int i = 0;
    if( 0 <= tune->current_note_idx ) {
       for( i = 0 ; RETROSND_CHANNEL_CT_MAX > i ; i++ ) {
-         retrosnd_note_off( i, tune->notes[i][tune->current_note_idx], 0 );
+         retrosnd_note_off( i, tune->notes[tune->current_note_idx][i], 0 );
       }
    }
    tune->current_note_idx = idx;
@@ -604,7 +621,7 @@ MERROR_RETVAL retrosnd_tune_set_note(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   if( index >= RETROSND_TUNE_NOTE_CT_MAX ) {
+   if( index >= tune->notes_ct ) {
       error_printf( "invalid note index specified: %d", index );
       retval = MERROR_OVERFLOW;
       goto cleanup;
@@ -616,7 +633,7 @@ MERROR_RETVAL retrosnd_tune_set_note(
       goto cleanup;
    }
 
-   tune->notes[channel][index] = note;
+   tune->notes[index][channel] = note;
 
 cleanup:
 
