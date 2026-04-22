@@ -836,7 +836,7 @@ void retroflat_rect(
       return;
    }
 
-   if( RETROFLAT_DRAW_FLAGS_FILL == (RETROFLAT_DRAW_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
       retroflat_constrain_px( x, y, target, return );
       retroflat_constrain_px( x + w - 1, y + h - 1, target, return );
 
@@ -921,7 +921,7 @@ void retroflat_ellipse(
    }
 
    /* TODO
-   if( RETROFLAT_DRAW_FLAGS_FILL == (RETROFLAT_DRAW_FLAGS_FILL & flags) ) {
+   if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
    } else { */
    retrosoft_ellipse( target, color_idx, x, y, w, h, flags );
 }

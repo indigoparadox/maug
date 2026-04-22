@@ -1,6 +1,6 @@
 
 #ifndef MAUG_NO_RETRO
-#ifndef RETROFLAT_NO_RETROSND
+#if !defined( RETROFLAT_NO_RETROSND ) && !defined( RETROFLAT_NO_SOUND )
 #  define MAUG_NO_RETRO
 #  define RETROSND_C
 #  include <maug.h>

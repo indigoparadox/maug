@@ -139,6 +139,7 @@ union RETROGXC_CACHABLE {
 
 #  ifdef MAUG_C
 #     define RETROFLT_C
+#     define RETROVIW_C
 #     ifndef RETROFLAT_NO_SOUND
 #        define RETROSND_C
 #     endif /* !RETROFLAT_NO_SOUND */
