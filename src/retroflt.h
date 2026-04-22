@@ -1267,24 +1267,6 @@ struct RETROFLAT_VIEWPORT {
 #  define _retroflat_viewport_refresh_tile_y( y_px ) \
    (((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS)
 
-#  define retroflat_viewport_set_refresh_generic( x_px, y_px, tid ) \
-   assert( NULL != g_retroflat_state->viewport.refresh_grid ); \
-   if( \
-      /* Expand the range by -1 to account for just off-screen tile. */ \
-      -(RETROFLAT_TILE_W) <= x_px && -(RETROFLAT_TILE_H) <= y_px && \
-      retroflat_screen_w() > x_px && \
-      retroflat_screen_h() > y_px \
-   ) { \
-      assert( 0 < g_retroflat_state->viewport.screen_tile_w ); \
-      assert( 0 <= (((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS) ); \
-      assert( 0 <= (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS) ); \
-      g_retroflat_state->viewport.refresh_grid[ \
-         /* Add +1 tile to make off-screen "-1" tile positive. */ \
-         ((_retroflat_viewport_refresh_tile_y( y_px ) + 1) * \
-            (g_retroflat_state->viewport.screen_tile_w + 2)) + \
-               (_retroflat_viewport_refresh_tile_x( x_px ) + 1)] = tid; \
-   }
-
 #  define retroflat_viewport_tile_is_stale( x_px, y_px, tile_id ) \
       ((tile_id) != \
       g_retroflat_state->viewport.refresh_grid[ \
@@ -1293,6 +1275,9 @@ struct RETROFLAT_VIEWPORT {
                (_retroflat_viewport_refresh_tile_x( x_px ) + 1)])
 
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+
+MERROR_RETVAL retroflat_viewport_set_refresh_generic(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tid );
 
 uint8_t retroflat_viewport_move_x_generic( int16_t x );
 
@@ -2888,8 +2873,10 @@ MERROR_RETVAL retroflat_init(
       0, 0, retroflat_screen_w(), retroflat_screen_h() );
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-   debug_printf( 1, "allocating refresh grid (%d tiles...)",
-      g_retroflat_state->viewport.screen_tile_w *
+   debug_printf( 1, "allocating refresh grid (%d tiles, %d+2x%d+2...)",
+      (g_retroflat_state->viewport.screen_tile_w + 2) *
+      (g_retroflat_state->viewport.screen_tile_h + 2),
+      g_retroflat_state->viewport.screen_tile_w,
       g_retroflat_state->viewport.screen_tile_h );
    maug_malloc_test(
       g_retroflat_state->viewport.refresh_grid_h,
@@ -3295,6 +3282,40 @@ void retroflat_set_proc_quit(
 ) {
    g_retroflat_state->on_quit = on_quit_in;
    g_retroflat_state->on_quit_data = data_in;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_viewport_set_refresh_generic(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tid
+) {
+   int tile_x = 0;
+   int tile_y = 0;
+
+   /* Add +1 tile to make off-screen "-1" tile positive. */
+   tile_x = _retroflat_viewport_refresh_tile_x( x_px ) + 1;
+   tile_y = _retroflat_viewport_refresh_tile_y( y_px ) + 1;
+
+   assert( NULL != g_retroflat_state->viewport.refresh_grid );
+   if(
+      /* Expand the range by -1 to account for just off-screen tile. */
+      0 > tile_x || 0 > tile_y ||
+      g_retroflat_state->viewport.screen_tile_w + 2 <= tile_x ||
+      g_retroflat_state->viewport.screen_tile_h + 2 <= tile_y
+   ) {
+      error_printf( "invalid viewport refresh coord: %d, %d", tile_x, tile_y );
+      debug_printf( 1,
+         "viewport is %dx%d tiles!",
+         g_retroflat_state->viewport.screen_tile_w + 2,
+         g_retroflat_state->viewport.screen_tile_h + 2 );
+      return MERROR_GUI;
+   }
+
+   g_retroflat_state->viewport.refresh_grid[
+      (tile_y * (g_retroflat_state->viewport.screen_tile_w + 2)) + tile_x] =
+         tid;
+
+   return MERROR_OK;
 }
 
 /* === */
