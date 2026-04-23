@@ -2290,6 +2290,10 @@ MERROR_RETVAL retrotile_topdown_draw(
 ) {
    int16_t x = 0,
       y = 0,
+      x_start = 0,
+      y_start = 0,
+      x_end = 0,
+      y_end = 0,
       x_tile = 0,
       y_tile = 0;
    retroflat_tile_t tile_id = 0;
@@ -2299,36 +2303,40 @@ MERROR_RETVAL retrotile_topdown_draw(
 
    layer = retrotile_get_layer_p( t, 0 );
 
+   x_start = retroflat_viewport_world_tile_x();
+   y_start = retroflat_viewport_world_tile_y();
+   x_end = x_start + retroflat_viewport_screen_tile_w();
+   y_end = y_start + retroflat_viewport_screen_tile_h();
+
+   if(
+      RETROFLAT_STATE_FLAG_HWSCROLLING ==
+      (RETROFLAT_STATE_FLAG_HWSCROLLING & g_retroflat_state->retroflat_flags) &&
+      RETROFLAT_VIEWPORT_FLAG_FULLSCREEN ==
+      (RETROFLAT_VIEWPORT_FLAG_FULLSCREEN & g_retroflat_state->viewport.flags)
+   ) {
+      x_start--;
+      y_start--;
+      x_end += 1;
+      y_end += 1;
+   }
+
    mdata_vector_lock( t_defs );
    /* TODO: Rework this so it uses viewport tile indexes and then calculates
     *       screen pixel X/Y from those? For performance?
     */
-   for(
-      y = ((retroflat_viewport_world_y() >>
-         RETROFLAT_TILE_H_BITS) << RETROFLAT_TILE_H_BITS) ;
-      y < (int)retroflat_viewport_world_y() +
-         (int)retroflat_viewport_screen_h() ;
-      y += RETROFLAT_TILE_H
-   ) {
-      for(
-         x = ((retroflat_viewport_world_x() >>
-            RETROFLAT_TILE_W_BITS) << RETROFLAT_TILE_W_BITS) ;
-         x < (int)retroflat_viewport_world_x() +
-            (int)retroflat_viewport_screen_w() ;
-         x += RETROFLAT_TILE_W
-      ) {
+   for( y_tile = y_start ; y_tile < y_end ; y_tile++ ) {
+      for( x_tile = x_start ; x_tile < x_end ; x_tile++ ) {
          /* Limit to tiles that exist in the world. */
          if(
-            -1 > x || -1 > y ||
-            (int)retroflat_viewport_world_w() <= x ||
-            (int)retroflat_viewport_world_h() <= y
+            0 > x_tile || 0 > y_tile ||
+            retroflat_viewport_world_tile_w() < x_tile ||
+            retroflat_viewport_world_tile_h() < y_tile
          ) {
             continue;
          }
 
-         /* Divide by tile width (16), or shift by 2^4. */
-         x_tile = x >> RETROFLAT_TILE_W_BITS;
-         y_tile = y >> RETROFLAT_TILE_H_BITS;
+         x = x_tile << RETROFLAT_TILE_W_BITS;
+         y = y_tile << RETROFLAT_TILE_H_BITS;
 
          tile_id = retrotile_get_tile( t, layer, x_tile, y_tile );
          t_def = mdata_vector_get(
@@ -2345,8 +2353,8 @@ MERROR_RETVAL retrotile_topdown_draw(
          /* Check tile refresh buffer. */
          retroflat_viewport_lock_refresh();
          if( !retroflat_viewport_tile_is_stale(
-            x - retroflat_viewport_world_x(),
-            y - retroflat_viewport_world_y(), tile_id
+            x_tile - retroflat_viewport_world_tile_x(),
+            y_tile - retroflat_viewport_world_tile_y(), tile_id
          ) ) {
             retroflat_viewport_unlock_refresh();
             continue;

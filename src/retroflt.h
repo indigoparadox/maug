@@ -374,15 +374,11 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_DRAW_FLAG_FILL     0x01
 
 /**
- * \brief Flag for retroflat_create_bitmap() or retroflat_load_bitmap() to
- *        create or load a bitmap without transparency.
+ * \brief Flag for retroflat_px() indicating that coordinates should always
+ *        draw relative to the *visible* screen, and not the possibly larger
+ *        hardware scrolling buffer.
  */
-#define RETROFLAT_BITMAP_FLAG_OPAQUE   0x01
-
-/**
- * \brief Flag for retroflat_load_bitmap() to not use assets path.
- */
-#define RETROFLAT_BITMAP_FLAG_LITERAL_PATH   0x02
+#define RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT 0x02
 
 /**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
@@ -391,14 +387,6 @@ typedef int8_t RETROFLAT_COLOR;
  *       compatibility.
  */
 #define RETROFLAT_FONT_FLAG_ALL_CAPS 0x02
-
-/**
- * \brief Flag for retroflat_create_bitmap() to create a VRAM-backed bitmap.
- *
- * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
- * is screen-backed.
- */
-#define RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER     0x80
 
 /*! \} */ /* maug_retroflt_drawing */
 
@@ -430,6 +418,11 @@ typedef int8_t RETROFLAT_COLOR;
  * \warning This flag should only be set inside retroflat!
  */
 #define RETROFLAT_STATE_FLAG_SCREENSAVER 0x08
+
+/**
+ * \relates RETROFLAT_STATE
+ */
+#define RETROFLAT_STATE_FLAG_HWSCROLLING  0x10
 
 /**
  * \relates RETROFLAT_STATE
@@ -581,13 +574,43 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
  */
 
 /**
+ * \brief Flag for retroflat_create_bitmap() or retroflat_load_bitmap() to
+ *        create or load a bitmap without transparency.
+ */
+#define RETROFLAT_BITMAP_FLAG_OPAQUE   0x01
+
+/**
+ * \brief Flag for retroflat_load_bitmap() to not use assets path.
+ */
+#define RETROFLAT_BITMAP_FLAG_LITERAL_PATH   0x02
+
+/**
  * \relates RETROFLAT_BITMAP
  */
-#define RETROFLAT_BITMAP_FLAG_LOCK     0x08
-
-#define RETROFLAT_BITMAP_FLAG_SCREEN_LOCK     0x02
-
 #define RETROFLAT_BITMAP_FLAG_RO   0x04
+
+/**
+ * \brief Flag for retroflat_create_bitmap() to create a VRAM-backed bitmap.
+ *
+ * Also may be present in RETROFLAT_BITMAP::flags to indicate that a bitmap
+ * is screen-backed.
+ */
+#define RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER     0x08
+
+/**
+ * \relates RETROFLAT_BITMAP
+ */
+#define RETROFLAT_BITMAP_FLAG_IGNORE_VIEWPORT 0x10
+
+/**
+ * \relates RETROFLAT_BITMAP
+ */
+#define RETROFLAT_BITMAP_FLAG_SCREEN_LOCK     0x20
+
+/**
+ * \relates RETROFLAT_BITMAP
+ */
+#define RETROFLAT_BITMAP_FLAG_LOCK     0x40
 
 /**
  * \relates retroflat_blit_bitmap
@@ -2396,24 +2419,14 @@ MERROR_RETVAL retroflat_init(
    maug_cleanup_if_eq(
       (size_t)0, retroflat_screen_colors(), SIZE_T_FMT, MERROR_GUI );
 
+   debug_printf( 3, "setting up viewport for %d x %d screen...",
+      retroflat_screen_w(), retroflat_screen_h() );
+
    /* This is intended as a default and can be modified by calling this macro
     * again later.
     */
    retroflat_viewport_set_pos_size(
       0, 0, retroflat_screen_w(), retroflat_screen_h() );
-
-#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-   debug_printf( 1, "allocating refresh grid (%d tiles, %d+2x%d+2...)",
-      (g_retroflat_state->viewport.screen_tile_w + 2) *
-      (g_retroflat_state->viewport.screen_tile_h + 2),
-      g_retroflat_state->viewport.screen_tile_w,
-      g_retroflat_state->viewport.screen_tile_h );
-   maug_malloc_test(
-      g_retroflat_state->viewport.refresh_grid_h,
-      (g_retroflat_state->viewport.screen_tile_w + 2) *
-      (g_retroflat_state->viewport.screen_tile_h + 2),
-      sizeof( retroflat_tile_t ) );
-#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )

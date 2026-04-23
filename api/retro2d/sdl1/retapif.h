@@ -200,6 +200,8 @@ MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_HWSCROLLING;
+
 #ifdef RETROFLAT_SDL_HWSCROLLING
    /* Setup the viewport blit source rect to blit from the center of the
     * unnaturally large buffer by default. */
@@ -636,6 +638,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    bmp_out->sz = sizeof( struct RETROFLAT_BITMAP );
 
+   bmp_out->flags |= flags;
+
    /* == SDL1 == */
 
    /* Create image surface. */
@@ -779,13 +783,25 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target = retroflat_screen_buffer();
    }
 
-#if 0
+#ifdef RETROFLAT_SDL_HWSCROLLING
+
    if( retroflat_screen_buffer() == target ) {
-      /* Bump up to draw relative to viewport. */
-      d_x += g_retroflat_state->platform.viewport_rect.x;
-      d_y += g_retroflat_state->platform.viewport_rect.y;
+      if(
+         RETROFLAT_BITMAP_FLAG_IGNORE_VIEWPORT ==
+         (RETROFLAT_BITMAP_FLAG_IGNORE_VIEWPORT & src->flags)
+      ) {
+         /* Keep ignore-viewport stuff always centered in the viewport. */
+         d_x += g_retroflat_state->platform.viewport_rect.x;
+         d_y += g_retroflat_state->platform.viewport_rect.y;
+
+      } else {
+         /* Bump up to put negative coords into extended HW scrolling area. */
+         d_x += RETROFLAT_TILE_W;
+         d_y += RETROFLAT_TILE_H;
+      }
    }
-#endif
+
+#endif /* RETROFLAT_SDL_HWSCROLLING */
 
    /* Trim sprite to stay on-screen. */
    retval = retroflat_viewport_trim_px(
@@ -840,8 +856,6 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
-
 #  if defined( RETROFLAT_OPENGL )
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_px()!" );
@@ -855,6 +869,19 @@ void retroflat_px(
    /* == SDL1 == */
 
    /* retroflat_px_lock( target ); */
+
+   /*
+   XXX
+   if(
+      RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT ==
+      (RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT & flags)
+   ) {
+      x += g_retroflat_state->platform.viewport_rect.x;
+      y += g_retroflat_state->platform.viewport_rect.y;
+   }
+   */
+
+   retroflat_viewport_constrain_px( x, y, target, return );
 
    assert( 0 < target->autolock_refs );
    assert( 1 == target->surface->format->BytesPerPixel );
