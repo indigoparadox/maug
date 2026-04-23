@@ -403,14 +403,13 @@ void retro3d_texture_px(
    retroflat_pxxy_t x, retroflat_pxxy_t y, uint8_t flags
 ) {
 
+   /* We use our own constraint function since this is special. */
    if(
       tex->w <= x || tex->h <= y || RETROFLAT_BITMAP_FLAG_RO ==
          (RETROFLAT_BITMAP_FLAG_RO & tex->flags)
    ) {
       return;
    }
-
-   retroflat_viewport_constrain_px( x, y, target, return );
 
    //assert( NULL != tex->bytes );
    /* assert( retro3d_texture_locked( target ) ); */

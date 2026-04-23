@@ -4,7 +4,7 @@
 
 #define RETROPLAT_PRESENT 1
 
-#ifndef RETROFLAT_NO_VDP
+#if !defined( RETROFLAT_OPENGL ) && !defined( RETROFLAT_NO_VDP )
 /* If we're not running on a console or something, enable VDP! */
 #  define RETROFLAT_VDP
 #endif /* !RETROFLAT_NO_VDP */
