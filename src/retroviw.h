@@ -320,6 +320,12 @@ MERROR_RETVAL retroflat_viewport_shift_viewport_y( int8_t shift );
 
 #if defined( RETROFLAT_SOFT_VIEWPORT ) || defined( DOCUMENTATION )
 
+#  define retroflat_viewport_world_tile_x() \
+      retroflat_viewport_world_tile_x_generic()
+
+#  define retroflat_viewport_world_tile_y() \
+      retroflat_viewport_world_tile_y_generic()
+
 /**
  * \relates RETROFLAT_VIEWPORT
  * \brief Return the current viewport X position in the world in pixels.

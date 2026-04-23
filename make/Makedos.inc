@@ -43,7 +43,8 @@ LDFLAGS_WATCOM386_DOS_ALLEGRO += \
 	system dos32a option stack=128k libr alleg
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null
+	CFLAGS_WATCOM386_DOS_ALLEGRO += -I$(MAUG_ROOT)/api/sound/null \
+		-DRETROFLAT_NO_SOUND
 endif
 
 ifeq ("$$(FORCE_MVFS)","1")
