@@ -814,6 +814,7 @@ INPUT                  = \
    src/uprintf.h \
    api/unix/mmem.h \
    src/retrotil.h \
+   src/retroviw.h \
    api/null/retpltd.h \
    src/mlispe.h \
    src/mlisps.h \

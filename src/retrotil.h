@@ -519,8 +519,6 @@ void retrotile_format_asset_path(
    maug_path path_out, const char* afile,
    struct RETROTILE_PARSER* parser );
 
-MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max );
-
 MERROR_RETVAL retrotile_topdown_draw(
    struct RETROFLAT_BITMAP* target,
    struct RETROTILE* t, struct MDATA_VECTOR* t_defs );
@@ -2282,37 +2280,6 @@ void retrotile_format_asset_path(
    maug_mzero( path_out, MAUG_PATH_SZ_MAX );
    maug_snprintf( path_out, MAUG_PATH_SZ_MAX - 1, "%s/%s",
       parser->dirname, afile );
-}
-
-/* === */
-
-MERROR_RETVAL retrotile_clear_refresh( retroflat_pxxy_t y_max ) {
-   MERROR_RETVAL retval = MERROR_OK;
-#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-   int16_t x = 0,
-      y = 0;
-
-#if RETROTILE_TRACE_LVL > 0
-   debug_printf( RETROTILE_TRACE_LVL,
-      "clearing " SIZE_T_FMT " vertical viewport pixels (" SIZE_T_FMT
-         " rows)...",
-      y_max, y_max / RETROFLAT_TILE_H );
-#endif /* RETROTILE_TRACE_LVL */
-
-   retroflat_viewport_lock_refresh();
-   for( y = 0 ; y_max > y ; y += RETROFLAT_TILE_H ) {
-      for( x = 0 ; retroflat_viewport_screen_w() > x ; x += RETROFLAT_TILE_W ) {
-         retroflat_viewport_set_refresh( x, y, -1 );
-      }
-   }
-
-cleanup:
-
-   retroflat_viewport_unlock_refresh();
-
-#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
-
-   return retval;
 }
 
 /* === */

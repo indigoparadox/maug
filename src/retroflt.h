@@ -1061,6 +1061,12 @@ struct RETROFLAT_ARGS {
 
 /**
  * \relates RETROFLAT_STATE
+ * \brief Get the number of available on-screen colors.
+ */
+#  define retroflat_screen_colors() (g_retroflat_state->screen_colors)
+
+/**
+ * \relates RETROFLAT_STATE
  * \brief Set parameters for the RETROFLAT_STATE::heartbeat_frame.
  * \param len Number of ms between updates to RETROFLAT_STATE::heartbeat_frame.
  * \param max Value of RETROFLAT_STATE::heartbeat_frame on which to reset to 0.
@@ -1385,43 +1391,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
    retroflat_pxxy_t d_x, retroflat_pxxy_t d_y,
    retroflat_pxxy_t w, retroflat_pxxy_t h,
    int16_t instance );
-
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-#  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
-         error_printf( "attempted draw at %d, %d, out of bounds %d x %d", \
-            x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
-         retact; \
-      }
-#else
-/**
- * \brief Ensure x and y (which must be unsigned!) are inside image boundaries.
- *
- * This also relies on the platform-specific retroflat_bitmap_w() and
- * retroflat_bitmap_h() macros being smart enough to measure the screen buffer
- * if bmp is NULL.
- */
-#  define retroflat_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
-         retact; \
-      }
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-
-/**
- * \brief Chop w/h down to fit inside viewport or just fail if it's impossible.
- */
-MERROR_RETVAL retroflat_trim_px(
-   struct RETROFLAT_BITMAP* bitmap,
-   int16_t instance,
-   retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
-   retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
-   retroflat_pxxy_t* w, retroflat_pxxy_t* h );
 
 /*! \} */ /* maug_retroflt_bitmap */
 
@@ -2620,110 +2589,6 @@ void retroflat_timer_handle() {
          i--;
       }
    }
-}
-
-/* === */
-
-MERROR_RETVAL retroflat_trim_px(
-   struct RETROFLAT_BITMAP* bitmap,
-   int16_t instance,
-   retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
-   retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
-   retroflat_pxxy_t* w, retroflat_pxxy_t* h
-) {
-   retroflat_pxxy_t trim_bottom = *d_y + *h;
-   retroflat_pxxy_t trim_right = *d_x + *w;
-   retroflat_pxxy_t viewport_bottom = 0;
-   retroflat_pxxy_t viewport_right = 0;
-   retroflat_pxxy_t viewport_left = 0;
-   retroflat_pxxy_t viewport_top = 0;
-
-   if( 
-      /* On the screen, constrain to the edges of the viewport. */
-      retroflat_screen_buffer() == bitmap &&
-      /* Probably blitting a window or other element that can go anywhere. */
-      RETROFLAT_INSTANCE_NULL != instance
-   ) {
-      viewport_left = retroflat_viewport_screen_get_x();
-      viewport_top = retroflat_viewport_screen_get_y();
-      viewport_bottom =
-         (retroflat_viewport_screen_get_y() + retroflat_viewport_screen_h());
-      viewport_right =
-         (retroflat_viewport_screen_get_x() + retroflat_viewport_screen_w());
-
-   } else {
-      /* Constrain to the edges of the arbitrary bitmap. */
-      viewport_bottom = retroflat_bitmap_h( bitmap );
-      viewport_right = retroflat_bitmap_w( bitmap );
-   }
-
-   if( viewport_bottom < *d_y || trim_bottom < viewport_top ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
-         *d_x, *d_y );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      return MERROR_GUI;
-
-   } else if( viewport_bottom <= trim_bottom ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf(
-         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
-            SIZE_T_FMT,
-         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *h -= (trim_bottom - viewport_bottom);
-
-   } else if( viewport_top > *d_y ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf(
-         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
-            SIZE_T_FMT,
-         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *h -= (viewport_top - *d_y);
-      if( NULL != s_y ) {
-         *s_y += (viewport_top - *d_y);
-      }
-      *d_y += (viewport_top - *d_y);
-      assert( viewport_top == *d_y );
-   }
-
-   if( viewport_right < *d_x || trim_right < viewport_left ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
-         *d_x, *d_y );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      return MERROR_GUI;
-
-   } else if( viewport_right <= trim_right ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf(
-         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
-            SIZE_T_FMT,
-         trim_right - viewport_right, trim_right, viewport_right );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *w -= (trim_right - viewport_right);
-
-   } else if( viewport_left > *d_x ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf(
-         "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
-            SIZE_T_FMT,
-         trim_bottom - viewport_bottom, trim_bottom, viewport_bottom );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      *w -= (viewport_left - *d_x);
-      if( NULL != s_x ) {
-         *s_x += (viewport_left - *d_x);
-      }
-      *d_x += (viewport_left - *d_x);
-      assert( viewport_left == *d_x );
-   }
-
-   if( 0 == w && 0 == h ) {
-      return MERROR_GUI;
-   }
-
-   return MERROR_OK;
 }
 
 /* === */

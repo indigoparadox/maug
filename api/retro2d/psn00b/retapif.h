@@ -705,7 +705,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_trim_px(
+   retval = retroflat_viewport_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -797,7 +797,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
 
    px = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
 
@@ -837,8 +837,8 @@ void retroflat_rect(
    }
 
    if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
-      retroflat_constrain_px( x, y, target, return );
-      retroflat_constrain_px( x + w - 1, y + h - 1, target, return );
+      retroflat_viewport_constrain_px( x, y, target, return );
+      retroflat_viewport_constrain_px( x + w - 1, y + h - 1, target, return );
 
       /* Draw a filled rect with the GPU. */
       rect = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
@@ -883,8 +883,8 @@ void retroflat_line(
       return;
    }
 
-   retroflat_constrain_px( x1, y1, target, return );
-   retroflat_constrain_px( x2, y2, target, return );
+   retroflat_viewport_constrain_px( x1, y1, target, return );
+   retroflat_viewport_constrain_px( x2, y2, target, return );
 
    line = (LINE_F2*)(_retroflat_psx_next_prim( target, sizeof( LINE_F2 ) ));
 

@@ -213,7 +213,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
 
    /* TODO */
 #  pragma message( "warning: px not implemented" )
@@ -242,8 +242,8 @@ void retroflat_rect(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
-   retroflat_constrain_px( x + w, y + h, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x + w, y + h, target, return );
 
    /* TODO */
 #  pragma message( "warning: rect not implemented" )
@@ -272,8 +272,8 @@ void retroflat_line(
       return;
    }
 
-   retroflat_constrain_px( x1, y1, target, return );
-   retroflat_constrain_px( x2, y2, target, return );
+   retroflat_viewport_constrain_px( x1, y1, target, return );
+   retroflat_viewport_constrain_px( x2, y2, target, return );
 
    /* TODO */
 #  pragma message( "warning: line not implemented" )
@@ -302,7 +302,8 @@ void retroflat_ellipse(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x + w, y + h, target, return );
 
    /* TODO */
 #  pragma message( "warning: ellipse not implemented" )

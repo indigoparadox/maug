@@ -4,7 +4,9 @@
 
 #define RETROPLAT_PRESENT 1
 
+/* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
 #define RETROFLAT_SOFT_VIEWPORT
+#define RETROFLAT_NO_VIEWPORT_REFRESH
 
 #  ifdef RETROFLAT_OPENGL
 #     error "opengl support not implemented for allegro"

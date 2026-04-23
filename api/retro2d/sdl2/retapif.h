@@ -589,7 +589,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_trim_px(
+   retval = retroflat_viewport_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -666,7 +666,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
@@ -715,7 +715,8 @@ void retroflat_rect(
    }
 
    if(
-      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
+      MERROR_OK !=
+      retroflat_viewport_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
@@ -743,7 +744,8 @@ void retroflat_rect(
    }
 
    if(
-      MERROR_OK != retroflat_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
+      MERROR_OK !=
+      retroflat_viewport_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }

@@ -16,7 +16,9 @@
 
 #define RETROFLAT_NO_CLI_SZ
 
+/* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
 #define RETROFLAT_SOFT_VIEWPORT
+#define RETROFLAT_NO_VIEWPORT_REFRESH
 
 #define RETROFLAT_LOAD_BITMAP_GENERIC
 

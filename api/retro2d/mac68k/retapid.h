@@ -25,8 +25,9 @@
  */
 #define RETROFLAT_M68K_PORT_STACK_MAX_CT 4
 
-/* TODO: Implement Quickdraw viewport. */
+/* TODO: Implement Quickdraw viewport once we figure it out in sdl1. */
 #define RETROFLAT_SOFT_VIEWPORT
+#define RETROFLAT_NO_VIEWPORT_REFRESH
 
 #define RETROFLAT_LOAD_BITMAP_GENERIC
 

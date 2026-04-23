@@ -410,7 +410,7 @@ void retro3d_texture_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
 
    //assert( NULL != tex->bytes );
    /* assert( retro3d_texture_locked( target ) ); */

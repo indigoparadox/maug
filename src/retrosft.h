@@ -167,7 +167,7 @@ void retrosoft_line(
       */
       retroflat_2d_px(
          target, color,
-         iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], 0 );
+         iter[RETROFLAT_LINE_X], iter[RETROFLAT_LINE_Y], flags );
       /* } */
 
       /* Increment off-axis based on for-axis. */
@@ -193,6 +193,10 @@ void retrosoft_rect(
    int x_iter = 0,
       y_iter = 0;
 
+   /* Don't trim or constrain, as those should be left to the platform-specific
+    * px routine.
+    */
+
 #ifndef RETROFLAT_3D
    /* Under 3D mode, we should never be drawing directly to the screen! */
    if( NULL == target ) {
@@ -207,22 +211,22 @@ void retrosoft_rect(
       for( y_iter = y ; y_iter < y + h ; y_iter++ ) {
          for( x_iter = x ; x_iter < x + w ; x_iter++ ) {
             /* TODO: Optimize filling 4-byte sequences! */
-            retroflat_2d_px( target, color_idx, x_iter, y_iter, 0 );
+            retroflat_2d_px( target, color_idx, x_iter, y_iter, flags );
          }
       }
 
    } else {
 
 #if defined( RETROFLAT_SOFT_LINES ) || defined( RETROFLAT_3D )
-      retrosoft_line( target, color_idx, x, y, x + w, y, 0 );
-      retrosoft_line( target, color_idx, x + w, y, x + w, y + h, 0 );
-      retrosoft_line( target, color_idx, x + w, y + h, x, y + h, 0 );
-      retrosoft_line( target, color_idx, x, y + h, x, y, 0 );
+      retrosoft_line( target, color_idx, x, y, x + w, y, flags );
+      retrosoft_line( target, color_idx, x + w, y, x + w, y + h, flags );
+      retrosoft_line( target, color_idx, x + w, y + h, x, y + h, flags );
+      retrosoft_line( target, color_idx, x, y + h, x, y, flags );
 #else
-      retroflat_line( target, color_idx, x, y, x + w, y, 0 );
-      retroflat_line( target, color_idx, x + w, y, x + w, y + h, 0 );
-      retroflat_line( target, color_idx, x + w, y + h, x, y + h, 0 );
-      retroflat_line( target, color_idx, x, y + h, x, y, 0 );
+      retroflat_line( target, color_idx, x, y, x + w, y, flags );
+      retroflat_line( target, color_idx, x + w, y, x + w, y + h, flags );
+      retroflat_line( target, color_idx, x + w, y + h, x, y + h, flags );
+      retroflat_line( target, color_idx, x, y + h, x, y, flags );
 #endif
 
    }
@@ -278,9 +282,9 @@ void retrosoft_ellipse(
           */
 
 #ifdef RETROSOFT_HARD_LINES
-         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+         retroflat_line( target, color, px_x1, px_y1, px_x2, px_y2, flags );  
 #else
-         retrosoft_line( target, color, px_x1, px_y1, px_x2, px_y2, 0 );  
+         retrosoft_line( target, color, px_x1, px_y1, px_x2, px_y2, flags );  
 #endif /* RETROSOFT_HARD_LINES */
       }
 

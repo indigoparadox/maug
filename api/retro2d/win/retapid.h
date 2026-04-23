@@ -9,13 +9,9 @@
 void free( void* );
 #endif /* MAUG_NO_STDLIB */
 
-/* Windows doesn't have hardware scrolling and on older systems GDI can be
- * slow, so minimize blitting!
- */
+/* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
 #define RETROFLAT_SOFT_VIEWPORT
-#ifdef RETROFLAT_API_WIN16
-#  define RETROFLAT_VIEWPORT_ADAPT
-#endif
+#define RETROFLAT_NO_VIEWPORT_REFRESH
 
 /* Windows uses its own message loop. */
 #define RETROFLAT_NO_GENERIC_LOOP 1

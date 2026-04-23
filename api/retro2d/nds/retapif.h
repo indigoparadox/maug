@@ -731,15 +731,6 @@ uint8_t retroflat_viewport_move_y( int16_t y ) {
 
 /* === */
 
-uint8_t retroflat_viewport_focus(
-   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
-   retroflat_pxxy_t range, retroflat_pxxy_t speed
-) {
-   return retroflat_viewport_focus_generic( x1, y1, range, speed );
-}
-
-/* === */
-
 uint8_t retroflat_focus_platform() {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;

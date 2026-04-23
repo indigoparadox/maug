@@ -739,7 +739,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
 
    retroflat_mac_bwcolor( color_idx );
 
@@ -825,8 +825,8 @@ void retroflat_line(
       return;
    }
 
-   retroflat_constrain_px( x1, y1, target, return );
-   retroflat_constrain_px( x2, y2, target, return );
+   retroflat_viewport_constrain_px( x1, y1, target, return );
+   retroflat_viewport_constrain_px( x2, y2, target, return );
 
 #if RETRO2D_DRAW_TRACE_LVL > 0
    debug_printf( RETRO2D_DRAW_TRACE_LVL,
@@ -870,8 +870,8 @@ void retroflat_ellipse(
       return;
    }
 
-   retroflat_constrain_px( x, y, target, return );
-   retroflat_constrain_px( x + w, y + h, target, return );
+   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_viewport_constrain_px( x + w, y + h, target, return );
 
    retroflat_mac_bwcolor( color_idx );
 
