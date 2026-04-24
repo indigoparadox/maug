@@ -1692,8 +1692,11 @@ static MERROR_RETVAL _mlisp_step_lambda(
    n = mdata_vector_get( &(parser->ast), n_idx, struct MLISP_AST_NODE );
    
    /* There needs to be an arg node and an exec node. */
-   /* TODO: Handle this gracefully. */
-   assert( 1 < n->ast_idx_children_sz );
+   if( 1 >= n->ast_idx_children_sz ) {
+      retval = MERROR_EXEC;
+      error_printf( "%u: invalid lambda node: too few children!" );
+      goto cleanup;
+   }
 
    if( 0 == *p_lambda_child_idx ) {
       /* Parse the args passed to this lambda into the env, temporarily. */
