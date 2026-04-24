@@ -1030,7 +1030,7 @@ uint8_t retroflat_viewport_move_x( retroflat_pxxy_t x ) {
       /* Move the viewport back to the center of the real screen buffer. */
       g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
 
-      retroflat_viewport_shift_x( x );
+      /* retroflat_viewport_shift_x( x ); */
    }
 
 cleanup:
@@ -1057,7 +1057,7 @@ uint8_t retroflat_viewport_move_y( retroflat_pxxy_t y ) {
       /* Move the viewport back to the center of the real screen buffer. */
       g_retroflat_state->platform.viewport_rect.y = RETROFLAT_TILE_H;
 
-      retroflat_viewport_shift_y( y );
+      /* retroflat_viewport_shift_y( y ); */
    }
 
 cleanup:

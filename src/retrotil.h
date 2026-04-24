@@ -2329,14 +2329,14 @@ MERROR_RETVAL retrotile_topdown_draw(
          /* Limit to tiles that exist in the world. */
          if(
             -1 > x_tile || -1 > y_tile ||
-            retroflat_viewport_world_tile_w() < x_tile ||
-            retroflat_viewport_world_tile_h() < y_tile
+            retroflat_viewport_world_tile_w() <= x_tile ||
+            retroflat_viewport_world_tile_h() <= y_tile
          ) {
             continue;
          }
 
-         x = x_tile << RETROFLAT_TILE_W_BITS;
-         y = y_tile << RETROFLAT_TILE_H_BITS;
+         x = x_tile * RETROFLAT_TILE_W;
+         y = y_tile * RETROFLAT_TILE_H;
 
          tile_id = retrotile_get_tile( t, layer, x_tile, y_tile );
          t_def = mdata_vector_get(
@@ -2359,23 +2359,28 @@ MERROR_RETVAL retrotile_topdown_draw(
             retroflat_viewport_unlock_refresh();
             continue;
          }
+#if RETROFLAT_VIEWPORT_GRID_TRACE_LVL > 0
          /* Noisy! */
-         /*
-         debug_printf( RETROTILE_TRACE_LVL, "redrawing tile: %u, %u",
-            x - retroflat_viewport_world_x(),
-            y - retroflat_viewport_world_y() );
-         */
+         debug_printf( RETROFLAT_VIEWPORT_GRID_TRACE_LVL,
+            "redrawing px: %d, %d, x_tile: %d, y_tile: %d",
+            x - retroflat_viewport_world_x() + retroflat_viewport_hw_border_x(),
+            y - retroflat_viewport_world_y() + retroflat_viewport_hw_border_y(),
+            x_tile - retroflat_viewport_world_tile_x(),
+            y_tile - retroflat_viewport_world_tile_y(),
+            tile_id );
+#endif /* RETROFLAT_VIEWPORT_GRID_TRACE_LVL */
          retroflat_viewport_set_refresh(
-            retroflat_viewport_screen_x( x ),
-            retroflat_viewport_screen_y( y ), tile_id );
+            x - retroflat_viewport_world_x(),
+            y - retroflat_viewport_world_y(),
+            tile_id );
          retroflat_viewport_unlock_refresh();
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
 #ifdef RETROGXC_PRESENT
          retrogxc_blit_bitmap( target, t_def->image_cache_id,
             t_def->x, t_def->y,
-            retroflat_viewport_screen_x( x ),
-            retroflat_viewport_screen_y( y ),
+            x - retroflat_viewport_world_x() + retroflat_viewport_hw_border_x(),
+            y - retroflat_viewport_world_y() + retroflat_viewport_hw_border_y(),
             RETROFLAT_TILE_W, RETROFLAT_TILE_H,
             retroflat_instance_tile( tile_id ) );
 #else

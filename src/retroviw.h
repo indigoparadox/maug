@@ -192,12 +192,6 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_tile_w) = (w) / RETROFLAT_TILE_W; \
    (g_retroflat_state->viewport.world_tile_h) = (h) / RETROFLAT_TILE_H;
 
-#  define _retroflat_viewport_refresh_tile_x( x_px ) \
-   (((x_px) + RETROFLAT_TILE_W) >> RETROFLAT_TILE_W_BITS)
-
-#  define _retroflat_viewport_refresh_tile_y( y_px ) \
-   (((y_px) + RETROFLAT_TILE_H) >> RETROFLAT_TILE_H_BITS)
-
 #  define retroflat_viewport_screen_x_generic( world_x ) \
    (g_retroflat_state->viewport.screen_x + \
       ((world_x) - retroflat_viewport_world_x()))
@@ -211,6 +205,11 @@ struct RETROFLAT_VIEWPORT {
 
 #  define retroflat_viewport_screen_get_y_generic() \
    (g_retroflat_state->viewport.screen_y)
+
+#define retroflat_viewport_grid_tile( x_tile, y_tile ) \
+   (g_retroflat_state->viewport.refresh_grid[ \
+      ((y_tile) * (g_retroflat_state->viewport.screen_tile_w + 2)) + \
+            (x_tile)])
 
 void retroflat_viewport_set_world_pos_generic(
    retroflat_pxxy_t x, retroflat_pxxy_t y );
@@ -480,6 +479,10 @@ MERROR_RETVAL retroflat_viewport_shift_viewport_y( int8_t shift );
 #  define retroflat_viewport_move_y( y ) \
       retroflat_viewport_move_y_generic( y )
 
+#  define retroflat_viewport_hw_border_x() (0)
+
+#  define retroflat_viewport_hw_border_y() (0)
+
 #endif /* RETROFLAT_SOFT_VIEWPORT || DOCUMENTATION */
 
 #ifndef RETROFLAT_NO_VIEWPORT_REFRESH
@@ -541,11 +544,11 @@ void retroflat_viewport_set_world_pos_generic(
 ) {
    int x_tile = (x >> RETROFLAT_TILE_W_BITS);
    int y_tile = (y >> RETROFLAT_TILE_H_BITS);
+#if RETROFLAT_VIEWPORT_TRACE_LVL > 0
    debug_printf(
-      1,
+      RETROFLAT_VIEWPORT_TRACE_LVL,
       "setting viewport world pos to %d, %d (tile %d, %d)...",
       x, y, x_tile, y_tile );
-#if RETROFLAT_VIEWPORT_TRACE_LVL > 0
 #endif /* RETROFLAT_VIEWPORT_TRACE_LVL */
    g_retroflat_state->viewport.world_x = x;
    g_retroflat_state->viewport.world_y = y;
@@ -564,8 +567,26 @@ MERROR_RETVAL retroflat_viewport_set_refresh_generic(
    int y_tile = 0;
 
    /* Add +1 tile to make off-screen "-1" tile positive. */
-   x_tile = _retroflat_viewport_refresh_tile_x( x_px ) + 1;
-   y_tile = _retroflat_viewport_refresh_tile_y( y_px ) + 1;
+   x_tile = x_px / RETROFLAT_TILE_W;
+   y_tile = y_px / RETROFLAT_TILE_H;
+
+   if(
+      RETROFLAT_STATE_FLAG_HWSCROLLING ==
+      (RETROFLAT_STATE_FLAG_HWSCROLLING & g_retroflat_state->retroflat_flags) &&
+      RETROFLAT_VIEWPORT_FLAG_FULLSCREEN ==
+      (RETROFLAT_VIEWPORT_FLAG_FULLSCREEN & g_retroflat_state->viewport.flags)
+   ) {
+      /*
+      x_tile++;
+      y_tile++;
+      */
+   }
+
+#if RETROFLAT_VIEWPORT_GRID_TRACE_LVL > 0
+   debug_printf( RETROFLAT_VIEWPORT_GRID_TRACE_LVL,
+      "setting x_tile: %d, y_tile: %d (%d, %d) to: %d",
+      x_tile, y_tile, x_px, y_px, tid );
+#endif /* RETROFLAT_VIEWPORT_GRID_TRACE_LVL */
 
    assert( NULL != g_retroflat_state->viewport.refresh_grid );
    if(
@@ -584,9 +605,7 @@ MERROR_RETVAL retroflat_viewport_set_refresh_generic(
       return MERROR_GUI;
    }
 
-   g_retroflat_state->viewport.refresh_grid[
-      (y_tile * (g_retroflat_state->viewport.screen_tile_w + 2)) + x_tile] =
-         tid;
+   retroflat_viewport_grid_tile( x_tile, y_tile ) = tid;
 
    return MERROR_OK;
 }
@@ -685,6 +704,7 @@ MERROR_RETVAL retroflat_viewport_set_pos_size_generic(
    retroflat_pxxy_t w_px,  retroflat_pxxy_t h_px
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int x_tile = 0, y_tile = 0;
 
    if( w_px == retroflat_screen_w() && h_px == retroflat_screen_h() ) {
       debug_printf( 1, "fullscreen viewport; hardware scrolling enabled!" );
@@ -759,11 +779,15 @@ MERROR_RETVAL retroflat_viewport_set_pos_size_generic(
       sizeof( retroflat_tile_t ) );
 
    retroflat_viewport_lock_refresh();
-   memset(
-      g_retroflat_state->viewport.refresh_grid,
-      -1,
-      (g_retroflat_state->viewport.screen_tile_w + 2) *
-      (g_retroflat_state->viewport.screen_tile_h + 2) );
+   for(
+      y_tile = 0 ; retroflat_viewport_screen_tile_h() + 2 > y_tile ; y_tile++
+   ) {
+      for(
+         x_tile = 0 ; retroflat_viewport_screen_tile_w() + 2 > x_tile ; x_tile++
+      ) {
+         retroflat_viewport_grid_tile( x_tile, y_tile ) = -1;
+      }
+   }
    retroflat_viewport_unlock_refresh();
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 
@@ -792,16 +816,19 @@ uint8_t retroflat_viewport_tile_is_stale(
       y_tile++;
    }
 
-   debug_printf( 1, "xt: %d, yt: %d, idx: %d (%dx%d, %d total)",
+#if RETROFLAT_VIEWPORT_GRID_TRACE_LVL > 0
+   debug_printf( RETROFLAT_VIEWPORT_GRID_TRACE_LVL,
+      "stale check x_tile: %d, y_tile: %d, idx: %d (%dx%d, %d total): %d vs %d",
       x_tile, y_tile,
       (y_tile * row_tiles) + x_tile,
       g_retroflat_state->viewport.screen_tile_w + 2,
       g_retroflat_state->viewport.screen_tile_h + 2,
       (g_retroflat_state->viewport.screen_tile_w + 2) *
-      (g_retroflat_state->viewport.screen_tile_h + 2) );
+      (g_retroflat_state->viewport.screen_tile_h + 2),
+      tile_id, retroflat_viewport_grid_tile( x_tile, y_tile ) );
+#endif /* RETROFLAT_VIEWPORT_GRID_TRACE_LVL */
 
-   return tile_id !=
-      g_retroflat_state->viewport.refresh_grid[(y_tile * row_tiles) + x_tile];
+   return tile_id != retroflat_viewport_grid_tile( x_tile, y_tile );
 }
 
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
@@ -920,8 +947,7 @@ MERROR_RETVAL retroflat_viewport_trim_px(
 
 MERROR_RETVAL retroflat_viewport_clear_refresh( retroflat_pxxy_t y_max ) {
    MERROR_RETVAL retval = MERROR_OK;
-   int y = 0,
-      row_sz = g_retroflat_state->viewport.screen_tile_w + 2;
+   int x = 0, y = 0;
 
 #if RETROTILE_TRACE_LVL > 0
    debug_printf( RETROTILE_TRACE_LVL,
@@ -932,10 +958,11 @@ MERROR_RETVAL retroflat_viewport_clear_refresh( retroflat_pxxy_t y_max ) {
 
    retroflat_viewport_lock_refresh();
    for( y = 0 ; y_max > y ; y += RETROFLAT_TILE_H ) {
-      memset(
-         &(g_retroflat_state->viewport.refresh_grid[y * row_sz]),
-         -1,
-         row_sz );
+      for(
+         x = 0 ; retroflat_viewport_screen_tile_w() > x ; x += RETROFLAT_TILE_W
+      ) {
+         retroflat_viewport_grid_tile( x, y ) = -1;
+      }
    }
 
 cleanup:
@@ -945,13 +972,13 @@ cleanup:
    return retval;
 }
 
+#if 0
 /* === */
 
 MERROR_RETVAL retroflat_viewport_shift_x( int8_t shift ) {
    MERROR_RETVAL retval = MERROR_OK;
    int y_tile;
    /* Make some of these calculations appear less gnarly. */
-   int row_sz = g_retroflat_state->viewport.screen_tile_w + 2;
 
    if( 0 == shift ) {
       error_printf( "null shift requested!" );
@@ -977,7 +1004,7 @@ MERROR_RETVAL retroflat_viewport_shift_x( int8_t shift ) {
          */
 
          /* Mark the oncoming tile as dirty. */
-         g_retroflat_state->viewport.refresh_grid[y_tile * row_sz] = -1;
+         retroflat_viewport_grid_tile( 0, y_tile ) = -1;
 
       } else {
          /* Perform the (leftward) shift. */
@@ -990,8 +1017,7 @@ MERROR_RETVAL retroflat_viewport_shift_x( int8_t shift ) {
          */
 
          /* Mark the oncoming tile as dirty. */
-         g_retroflat_state->viewport.refresh_grid[
-            (y_tile * row_sz) + row_sz - 1] = -1;
+         retroflat_viewport_grid_tile( 0, y_tile ) = -1;
       }
    }
    retroflat_viewport_unlock_refresh();
@@ -1007,7 +1033,6 @@ MERROR_RETVAL retroflat_viewport_shift_y( int8_t shift ) {
    MERROR_RETVAL retval = MERROR_OK;
    int y_tile;
    /* Make some of these calculations appear less gnarly. */
-   int row_sz = g_retroflat_state->viewport.screen_tile_w + 2;
 
    /* Shift the adaptive refresh grid up/down accordingly, row by row. */
    retroflat_viewport_lock_refresh();
@@ -1032,10 +1057,10 @@ MERROR_RETVAL retroflat_viewport_shift_y( int8_t shift ) {
 
       /* Mark the oncoming tiles as dirty. */
       memset(
-         &(g_retroflat_state->viewport.refresh_grid[
-            (g_retroflat_state->viewport.screen_tile_h + 1) * row_sz]),
+         &retroflat_viewport_grid_tile( 0, y_tile ),
          -1,
-         row_sz );
+         (g_retroflat_state->viewport.screen_tile_w + 2) *
+            sizeof( retroflat_tile_t ) );
 
    } else {
       for(
@@ -1056,7 +1081,9 @@ MERROR_RETVAL retroflat_viewport_shift_y( int8_t shift ) {
       }
 
       /* Mark the oncoming tiles as dirty. */
-      memset( &(g_retroflat_state->viewport.refresh_grid[0]), -1, row_sz );
+      memset( &(g_retroflat_state->viewport.refresh_grid[0]), -1,
+         (g_retroflat_state->viewport.screen_tile_w + 2) *
+            sizeof( retroflat_tile_t ) );
    }
    retroflat_viewport_unlock_refresh();
 
@@ -1064,6 +1091,7 @@ cleanup:
 
    return retval;
 }
+#endif
 
 #endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
 

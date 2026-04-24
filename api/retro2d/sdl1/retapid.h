@@ -150,15 +150,11 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 #  define retroflat_viewport_world_tile_h() \
       retroflat_viewport_world_tile_h_generic()
 
-/* Factor the platform-specific viewport into screen coords. */
 #  define retroflat_viewport_screen_x( world_x ) \
-      (retroflat_viewport_screen_x_generic( world_x ) + \
-         g_retroflat_state->platform.viewport_rect.x)
+      retroflat_viewport_screen_x_generic( world_x )
 
-/* Factor the platform-specific viewport into screen coords. */
 #  define retroflat_viewport_screen_y( world_y ) \
-      (retroflat_viewport_screen_y_generic( world_y ) + \
-         g_retroflat_state->platform.viewport_rect.y)
+      retroflat_viewport_screen_y_generic( world_y )
 
 #  define retroflat_viewport_screen_get_x() \
       retroflat_viewport_screen_get_x_generic()
@@ -192,6 +188,13 @@ typedef SDL_Color RETROFLAT_COLOR_DEF;
 
 #  define retroflat_viewport_set_pos_size( x_px, y_px, w_px, h_px ) \
       retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px )
+
+#  define retroflat_viewport_hw_border_x() \
+      (g_retroflat_state->platform.viewport_rect.x)
+
+#  define retroflat_viewport_hw_border_y() \
+      (g_retroflat_state->platform.viewport_rect.y)
+
 #else
 
 #  define RETROFLAT_SOFT_VIEWPORT
