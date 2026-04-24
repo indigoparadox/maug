@@ -195,6 +195,11 @@ struct RETROFLAT_PLATFORM {
 #  define retroflat_viewport_world_tile_y() \
    retroflat_viewport_world_tile_y_generic()
 
+#  define retroflat_viewport_world_tile_w() \
+      retroflat_viewport_world_tile_w_generic()
+
+#  define retroflat_viewport_world_tile_h() \
+      retroflat_viewport_world_tile_h_generic()
 /**
  * \brief Set the pixel width and height of the world so the viewport knows
  *        how far it may scroll.
@@ -218,6 +223,10 @@ struct RETROFLAT_PLATFORM {
 
 #  define retroflat_viewport_set_pos_size( x_px, y_px, w_px, h_px ) \
    retroflat_viewport_set_pos_size_generic( x_px, y_px, w_px, h_px )
+
+#  define retroflat_viewport_hw_border_x() (0)
+
+#  define retroflat_viewport_hw_border_y() (0)
 
 uint8_t retroflat_viewport_move_x( int16_t x );
 
