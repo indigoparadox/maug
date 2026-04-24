@@ -2328,7 +2328,7 @@ MERROR_RETVAL retrotile_topdown_draw(
       for( x_tile = x_start ; x_tile < x_end ; x_tile++ ) {
          /* Limit to tiles that exist in the world. */
          if(
-            0 > x_tile || 0 > y_tile ||
+            -1 > x_tile || -1 > y_tile ||
             retroflat_viewport_world_tile_w() < x_tile ||
             retroflat_viewport_world_tile_h() < y_tile
          ) {

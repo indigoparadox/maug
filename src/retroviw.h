@@ -539,18 +539,18 @@ MERROR_RETVAL retroflat_viewport_shift_viewport_y( int8_t shift );
 void retroflat_viewport_set_world_pos_generic(
    retroflat_pxxy_t x, retroflat_pxxy_t y
 ) {
-   int tile_x = (x >> RETROFLAT_TILE_W_BITS);
-   int tile_y = (y >> RETROFLAT_TILE_H_BITS);
+   int x_tile = (x >> RETROFLAT_TILE_W_BITS);
+   int y_tile = (y >> RETROFLAT_TILE_H_BITS);
    debug_printf(
       1,
       "setting viewport world pos to %d, %d (tile %d, %d)...",
-      x, y, tile_x, tile_y );
+      x, y, x_tile, y_tile );
 #if RETROFLAT_VIEWPORT_TRACE_LVL > 0
 #endif /* RETROFLAT_VIEWPORT_TRACE_LVL */
    g_retroflat_state->viewport.world_x = x;
    g_retroflat_state->viewport.world_y = y;
-   g_retroflat_state->viewport.world_tile_x = tile_x;
-   g_retroflat_state->viewport.world_tile_y = tile_y;
+   g_retroflat_state->viewport.world_tile_x = x_tile;
+   g_retroflat_state->viewport.world_tile_y = y_tile;
 }
 
 /* === */
@@ -560,22 +560,22 @@ void retroflat_viewport_set_world_pos_generic(
 MERROR_RETVAL retroflat_viewport_set_refresh_generic(
    retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tid
 ) {
-   int tile_x = 0;
-   int tile_y = 0;
+   int x_tile = 0;
+   int y_tile = 0;
 
    /* Add +1 tile to make off-screen "-1" tile positive. */
-   tile_x = _retroflat_viewport_refresh_tile_x( x_px ) + 1;
-   tile_y = _retroflat_viewport_refresh_tile_y( y_px ) + 1;
+   x_tile = _retroflat_viewport_refresh_tile_x( x_px ) + 1;
+   y_tile = _retroflat_viewport_refresh_tile_y( y_px ) + 1;
 
    assert( NULL != g_retroflat_state->viewport.refresh_grid );
    if(
       /* Expand the range by -1 to account for just off-screen tile. */
-      0 > tile_x || 0 > tile_y ||
-      g_retroflat_state->viewport.screen_tile_w + 2 <= tile_x ||
-      g_retroflat_state->viewport.screen_tile_h + 2 <= tile_y
+      0 > x_tile || 0 > y_tile ||
+      g_retroflat_state->viewport.screen_tile_w + 2 <= x_tile ||
+      g_retroflat_state->viewport.screen_tile_h + 2 <= y_tile
    ) {
 #if RETROFLAT_VIEWPORT_TRACE_LVL > 0
-      error_printf( "invalid viewport refresh coord: %d, %d", tile_x, tile_y );
+      error_printf( "invalid viewport refresh coord: %d, %d", x_tile, y_tile );
       debug_printf( RETROFLAT_VIEWPORT_TRACE_LVL,
          "viewport is %dx%d tiles!",
          g_retroflat_state->viewport.screen_tile_w + 2,
@@ -585,7 +585,7 @@ MERROR_RETVAL retroflat_viewport_set_refresh_generic(
    }
 
    g_retroflat_state->viewport.refresh_grid[
-      (tile_y * (g_retroflat_state->viewport.screen_tile_w + 2)) + tile_x] =
+      (y_tile * (g_retroflat_state->viewport.screen_tile_w + 2)) + x_tile] =
          tid;
 
    return MERROR_OK;
