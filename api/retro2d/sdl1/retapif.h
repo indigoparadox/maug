@@ -784,6 +784,26 @@ MERROR_RETVAL retroflat_blit_bitmap(
          /* Bump up to put negative coords into extended HW scrolling area. */
          d_x += RETROFLAT_TILE_W;
          d_y += RETROFLAT_TILE_H;
+
+         if(
+            retroflat_outside_rect( d_x, d_y, 0, 0,
+               retroflat_screen_w() + (2 << RETROFLAT_TILE_W_BITS),
+               retroflat_screen_h() + (2 << RETROFLAT_TILE_H_BITS) )
+         ) {
+            /* This tile is truly offscreen. */
+            goto cleanup;
+         }
+
+         if( 0 > instance ) {
+            /* This is a tile, check to see if it needs to be refreshed. */
+            retroview_lock_grid();
+            if( (-1 * instance) == retroview_grid_at_px( d_x, d_y ) ) {
+               retroview_unlock_grid();
+               goto cleanup;
+            }
+         }
+
+         retroview_grid_at_px( d_x, d_y ) = (-1 * instance);
       }
    }
 
