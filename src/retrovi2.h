@@ -74,14 +74,15 @@ struct RETROFLAT_VIEWPORT {
 /**
  * \param x_px X coordinate of pixel to check.
  * \param y_px Y coordinate of pixel to check.
- * \note The X and Y coordinates are assumed to have been normalized (i.e. +1
- *       has been added so that they are never negative!
+ * \note The X and Y coordinates can span from -1 to
+ *       RETROFLAT_VIEWPORT::screen_tile_w + 1, to account for hardware
+ *       scrolling.
  */
 #define retroview_grid_at_px( x_px, y_px ) \
    (g_retroflat_state->viewport.grid[ \
-      (((y_px) >> RETROFLAT_TILE_H_BITS) * \
+      ((((y_px) + 1) >> RETROFLAT_TILE_H_BITS) * \
          g_retroflat_state->viewport.screen_tile_w) + \
-            ((x_px) >> RETROFLAT_TILE_W_BITS)])
+            (((x_px) + 1) >> RETROFLAT_TILE_W_BITS)])
 
 /**
  * \brief Internal viewport movement to be called by platform-specific viewport

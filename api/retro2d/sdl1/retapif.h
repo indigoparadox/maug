@@ -781,14 +781,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
          (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & target->flags ) );
 
       if( 0 != instance ) {
-         /* Bump up to put negative coords into extended HW scrolling area. */
-         d_x += RETROFLAT_TILE_W;
-         d_y += RETROFLAT_TILE_H;
-
          if(
-            retroflat_outside_rect( d_x, d_y, 0, 0,
-               retroflat_screen_w() + (2 << RETROFLAT_TILE_W_BITS),
-               retroflat_screen_h() + (2 << RETROFLAT_TILE_H_BITS) )
+            retroflat_outside_rect( d_x, d_y, -1, -1,
+               retroflat_screen_w() + RETROFLAT_TILE_W,
+               retroflat_screen_h() + RETROFLAT_TILE_H )
          ) {
             /* This tile is truly offscreen. */
             goto cleanup;
@@ -804,6 +800,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
          }
 
          retroview_grid_at_px( d_x, d_y ) = (-1 * instance);
+
+         /* Bump up to put negative coords into extended HW scrolling area. */
+         d_x += RETROFLAT_TILE_W;
+         d_y += RETROFLAT_TILE_H;
       }
    }
 
