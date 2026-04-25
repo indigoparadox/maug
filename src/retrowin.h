@@ -196,7 +196,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_DRAW_FLAG_FILL | RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         RETROFLAT_DRAW_FLAG_FILL );
       break;
 
    case RETROWIN_FLAG_BORDER_GRAY:
@@ -208,7 +208,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_DRAW_FLAG_FILL | RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         RETROFLAT_DRAW_FLAG_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(
@@ -219,7 +219,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         0 );
       if( 2 < retroflat_screen_colors() ) {
          /* Draw highlight lines only visible in >2-color mode. */
          retroflat_2d_line(
@@ -228,14 +228,14 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
             win->gui_p->y + 1,
             win->gui_p->x + win->gui_p->w - 2,
             win->gui_p-> y + 1,
-            RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+            0 );
          retroflat_2d_line(
             win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
             win->gui_p->x + 1,
             win->gui_p->y + 2,
             win->gui_p->x + 1,
             win->gui_p->y + win->gui_p->h - 3,
-            RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+            0 );
       }
       break;
 
@@ -248,7 +248,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_DRAW_FLAG_FILL | RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         RETROFLAT_DRAW_FLAG_FILL );
 
       /* Draw the border. */
       retroflat_2d_rect(
@@ -259,14 +259,14 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y + 2,
          win->gui_p->w - 4,
          win->gui_p->h - 4,
-         RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         0 );
       retroflat_2d_rect(
          win->gui_p->draw_bmp, RETROFLAT_COLOR_WHITE,
          win->gui_p->x + 1,
          win->gui_p->y + 1,
          win->gui_p->w - 2,
          win->gui_p->h - 2,
-         RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         0 );
       retroflat_2d_rect(
          win->gui_p->draw_bmp,
          2 < retroflat_screen_colors() ?
@@ -275,7 +275,7 @@ static MERROR_RETVAL _retrowin_draw_border( struct RETROWIN* win ) {
          win->gui_p->y,
          win->gui_p->w,
          win->gui_p->h,
-         RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT );
+         0 );
       break;
    }
 
@@ -758,7 +758,7 @@ ssize_t retrowin_push_win(
 #ifndef RETROWIN_NO_BITMAP
    retval = retroflat_2d_create_bitmap(
       w, h, &(win.gui_bmp),
-      RETROFLAT_BITMAP_FLAG_IGNORE_VIEWPORT | RETROFLAT_BITMAP_FLAG_OPAQUE );
+      RETROFLAT_BITMAP_FLAG_OPAQUE );
    maug_cleanup_if_not_ok();
 #endif /* !RETROWIN_NO_BITMAP */
 

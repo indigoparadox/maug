@@ -800,10 +800,18 @@ MERROR_RETVAL retroflat_blit_bitmap(
          }
 
          retroview_grid_at_px( d_x, d_y ) = (-1 * instance);
+         retroview_unlock_grid();
 
          /* Bump up to put negative coords into extended HW scrolling area. */
          d_x += RETROFLAT_TILE_W;
          d_y += RETROFLAT_TILE_H;
+      } else {
+         /* No instance, sprite or tile. Must be a window or something! */
+         retroview_lock_grid();
+         retroview_grid_at_px( d_x, d_y ) = -1;
+         retroview_unlock_grid();
+         d_x += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
+         d_y += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
       }
    }
 
