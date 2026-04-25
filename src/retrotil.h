@@ -16,8 +16,6 @@
 
 #define RETROTILE_PRESENT
 
-typedef int16_t retrotile_coord_t;
-
 #ifndef RETROTILE_TRACE_CHARS
 #  define RETROTILE_TRACE_CHARS 0
 #endif /* !RETROTILE_TRACE_TOKENS */

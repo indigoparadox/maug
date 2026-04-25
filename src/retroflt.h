@@ -18,6 +18,8 @@
  */
 typedef int16_t retroflat_tile_t;
 
+typedef int16_t retrotile_coord_t;
+
 /*! \} */
 
 /**
@@ -374,13 +376,6 @@ typedef int8_t RETROFLAT_COLOR;
 #define RETROFLAT_DRAW_FLAG_FILL     0x01
 
 /**
- * \brief Flag for retroflat_px() indicating that coordinates should always
- *        draw relative to the *visible* screen, and not the possibly larger
- *        hardware scrolling buffer.
- */
-#define RETROFLAT_DRAW_FLAG_IGNORE_VIEWPORT 0x02
-
-/**
  * \brief Flag for retroflat_string() and retroflat_string_sz() to print
  *        text in all capital letters. Non-letters are unmodified.
  * \todo This has not yet been implemented and is present for backward
@@ -600,11 +595,6 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
 /**
  * \relates RETROFLAT_BITMAP
  */
-#define RETROFLAT_BITMAP_FLAG_IGNORE_VIEWPORT 0x10
-
-/**
- * \relates RETROFLAT_BITMAP
- */
 #define RETROFLAT_BITMAP_FLAG_SCREEN_LOCK     0x20
 
 /**
@@ -624,7 +614,7 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
  * \brief Declare that a given instance ID is for a tile, rather than a sprite.
  */
 #define retroflat_instance_tile( instance ) \
-  (instance * -1)
+  (0 - (instance))
 
 /**
  * \brief The filename suffix to be appended with a "." to filenames passed to
@@ -922,6 +912,10 @@ typedef int8_t retroflat_dir8_t;
 
 /*! \} */ /* maug_retroflt_dir */
 
+#define retroflat_outside_rect( x, y, rx, ry, rw, rh ) \
+   ((unsigned int)(x - rx) >= (unsigned int)rw || \
+   (unsigned int)(y - ry) >= (unsigned int)rh)
+
 /**
  * \brief Type used for surface pixel coordinates.
  *
@@ -1125,7 +1119,7 @@ struct RETROFLAT_ARGS {
          retroflat_get_ms() + g_retroflat_state->heartbeat_len; \
    }
 
-#include <retroviw.h>
+#include <retrovi2.h>
 
 /**
  * \brief Global singleton containing state for the current platform.
@@ -1699,7 +1693,7 @@ MAUG_CONST char* SEG_MCONST gc_retroflat_color_names[] = {
 };
 
 /* Call a second time, to add function bodies. */
-#include <retroviw.h>
+#include <retrovi2.h>
 
 /* Callback table is down below, after the statically-defined callbacks. */
 
@@ -2419,14 +2413,11 @@ MERROR_RETVAL retroflat_init(
    maug_cleanup_if_eq(
       (size_t)0, retroflat_screen_colors(), SIZE_T_FMT, MERROR_GUI );
 
-   debug_printf( 3, "setting up viewport for %d x %d screen...",
-      retroflat_screen_w(), retroflat_screen_h() );
-
-   /* This is intended as a default and can be modified by calling this macro
-    * again later.
+   /* Init the viewport with no world size, just to get the refresh grid
+    * allocated.
     */
-   retroflat_viewport_set_pos_size(
-      0, 0, retroflat_screen_w(), retroflat_screen_h() );
+   retval = retroview_init( 0, 0 );
+   maug_cleanup_if_not_ok();
 
 #  ifdef RETROFLAT_VDP
 #     if defined( RETROFLAT_OS_UNIX )
@@ -2477,14 +2468,7 @@ void retroflat_shutdown( int retval ) {
 
    debug_printf( 1, "retroflat shutdown called..." );
 
-#ifndef RETROFLAT_NO_VIEWPORT_REFRESH
-   if(
-      NULL != g_retroflat_state &&
-      (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.refresh_grid_h
-   ) {
-      maug_mfree( g_retroflat_state->viewport.refresh_grid_h );
-   }
-#endif /* !RETROFLAT_NO_VIEWPORT_REFRESH */
+   retroview_shutdown();
 
 #  if defined( RETROFLAT_VDP )
    if( NULL != g_retroflat_state->vdp_exe ) {
