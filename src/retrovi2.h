@@ -111,8 +111,7 @@ struct RETROFLAT_VIEWPORT {
    _retroview_grid_to_px_xy( y_tile, y, RETROFLAT_TILE_H )
 
 #define _retroview_grid_to_px_xy( xy_tile, xy, tile_sz ) \
-   (((xy_tile) - g_retroflat_state->viewport.world_tile_ ## xy \
-      + 1) /* Keep the left-most border visible. */ \
+   (((xy_tile) - g_retroflat_state->viewport.world_tile_ ## xy) \
          * tile_sz) /* Translate to pixels. */
 
 /**
@@ -128,7 +127,7 @@ struct RETROFLAT_VIEWPORT {
       /* Don't worry about the px/tile conversion so much, here, just see if
        * the positiveness/negativeness would take us out of the world.
        */ \
-      0 > g_retroflat_state->viewport.world_tile_ ## xy + \
+      -1 > g_retroflat_state->viewport.world_tile_ ## xy + \
          (((xy_px) > 0) - ((xy_px) < 0)) || \
       g_retroflat_state->viewport.world_tile_ ## wh <= \
          g_retroflat_state->viewport.world_tile_ ## xy + \
@@ -212,6 +211,12 @@ MERROR_RETVAL retroview_init(
 
    g_retroflat_state->viewport.world_tile_w = world_w;
    g_retroflat_state->viewport.world_tile_h = world_h;
+
+   /* Start the world tiles at -1 always to keep the left-most border
+    * visible.
+    */
+   g_retroflat_state->viewport.world_tile_x = -1;
+   g_retroflat_state->viewport.world_tile_y = -1;
 
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.grid_h ) {
       maug_mfree( g_retroflat_state->viewport.grid_h );
