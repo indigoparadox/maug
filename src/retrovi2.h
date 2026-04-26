@@ -191,6 +191,10 @@ MERROR_RETVAL retroview_grid_set_px(
 retroflat_tile_t retroview_grid_get_px(
    retroflat_pxxy_t x_px, retroflat_pxxy_t y_px );
 
+MERROR_RETVAL _retroview_hwscroll(
+   retroflat_pxxy_t* x_px, retroflat_pxxy_t* y_px,
+   retroflat_pxxy_t w_px, retroflat_pxxy_t h_px, int16_t instance );
+
 uint8_t retroview_move_x( retroflat_pxxy_t x_px );
 
 uint8_t retroview_move_y( retroflat_pxxy_t y_px );
@@ -450,6 +454,70 @@ uint8_t retroflat_viewport_focus(
    }
 
    return moved;
+}
+
+/* === */
+
+MERROR_RETVAL _retroview_hwscroll(
+   retroflat_pxxy_t* x_px, retroflat_pxxy_t* y_px,
+   retroflat_pxxy_t w_px, retroflat_pxxy_t h_px, int16_t instance
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   retroflat_pxxy_t i_x, i_y;
+   retroflat_tile_t grid_tile;
+
+   if( 0 > instance ) {
+      if(
+         retroflat_outside_rect( *x_px, *y_px, -1, -1,
+            retroflat_screen_w() + (2 * RETROFLAT_TILE_W),
+            retroflat_screen_h() + (2 * RETROFLAT_TILE_H) )
+      ) {
+         /* This tile is truly offscreen. */
+         retval = MERROR_OVERFLOW;
+         goto cleanup;
+      }
+
+      if( 0 > instance ) {
+         /* This is a tile, check to see if it needs to be refreshed. */
+         grid_tile = retroview_grid_get_px( *x_px, *y_px );
+         if( 0 <= grid_tile && (-1 * instance) == grid_tile ) {
+            /* Tile does not need to be redrawn. */
+            retval = MERROR_PREEMPT;
+            goto cleanup;
+         }
+      }
+      retroview_grid_set_px(
+         *x_px, *y_px, -1 * instance ); /* Invert back positive. */
+
+      /* There is no bump. The tile is drawn on-screen, unmolested. */
+
+   } else if( 0 < instance ) {
+
+      *x_px -= (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
+      *y_px -= (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
+
+   } else {
+      /* No instance, sprite or tile. Must be a window or something! */
+      for(
+         i_x = *x_px;
+         *x_px + w_px + RETROFLAT_TILE_W >= i_x;
+         i_x += RETROFLAT_TILE_W
+      ) {
+         for(
+            i_y = *y_px;
+            *y_px + h_px + RETROFLAT_TILE_H >= i_y;
+            i_y += RETROFLAT_TILE_H
+         ) {
+            retroview_grid_set_px( i_x, i_y, -1 );
+         }
+      }
+      *x_px += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
+      *y_px += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
+   }
+
+cleanup:
+
+   return retval;
 }
 
 #endif /* RETROVI2_H */

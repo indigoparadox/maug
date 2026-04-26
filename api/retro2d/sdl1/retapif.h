@@ -751,8 +751,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  ifndef  RETROFLAT_OPENGL
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
-   retroflat_pxxy_t i_x, i_y;
-   retroflat_tile_t grid_tile;
 #  endif /* !RETROFLAT_OPENGL */
 
    assert( NULL != src );
@@ -782,54 +780,8 @@ MERROR_RETVAL retroflat_blit_bitmap(
          RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
          (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & target->flags ) );
 
-      if( 0 > instance ) {
-         if(
-            retroflat_outside_rect( d_x, d_y, -1, -1,
-               retroflat_screen_w() + (2 * RETROFLAT_TILE_W),
-               retroflat_screen_h() + (2 * RETROFLAT_TILE_H) )
-         ) {
-            /* This tile is truly offscreen. */
-            retval = MERROR_OVERFLOW;
-            goto cleanup;
-         }
-
-         if( 0 > instance ) {
-            /* This is a tile, check to see if it needs to be refreshed. */
-            grid_tile = retroview_grid_get_px( d_x, d_y );
-            if( 0 <= grid_tile && (-1 * instance) == grid_tile ) {
-               /* Tile does not need to be redrawn. */
-               retval = MERROR_PREEMPT;
-               goto cleanup;
-            }
-         }
-         retroview_grid_set_px(
-            d_x, d_y, -1 * instance ); /* Invert back positive. */
-
-         /* There is no bump. The tile is drawn on-screen, unmolested. */
-
-      } else if( 0 < instance ) {
-
-         d_x -= (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
-         d_y -= (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
-
-      } else {
-         /* No instance, sprite or tile. Must be a window or something! */
-         for(
-            i_x = d_x;
-            d_x + w + RETROFLAT_TILE_W >= i_x;
-            i_x += RETROFLAT_TILE_W
-         ) {
-            for(
-               i_y = d_y;
-               d_y + h + RETROFLAT_TILE_H >= i_y;
-               i_y += RETROFLAT_TILE_H
-            ) {
-               retroview_grid_set_px( i_x, i_y, -1 );
-            }
-         }
-         d_x += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
-         d_y += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
-      }
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    /* Trim sprite to stay on-screen. */
