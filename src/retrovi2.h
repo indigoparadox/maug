@@ -102,6 +102,12 @@ struct RETROFLAT_VIEWPORT {
          g_retroflat_state->viewport.screen_tile_w) + \
             (((x_px) + 1) >> RETROFLAT_TILE_W_BITS)])
 
+#define retroview_world_px_x() \
+   (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W)
+
+#define retroview_world_px_y() \
+   (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H)
+
 /**
  * \brief Translate a horizontal world tile coordinate to screen tile coordinate
  *        for RETROFLAT_VIEWPORT::grid.
@@ -175,6 +181,17 @@ MERROR_RETVAL retroview_init(
    retrotile_coord_t world_w, retrotile_coord_t world_h );
 
 void retroview_shutdown();
+
+MERROR_RETVAL retroflat_viewport_trim_px(
+   struct RETROFLAT_BITMAP* bitmap,
+   int16_t instance,
+   retroflat_pxxy_t* s_x, retroflat_pxxy_t* s_y,
+   retroflat_pxxy_t* d_x, retroflat_pxxy_t* d_y,
+   retroflat_pxxy_t* w, retroflat_pxxy_t* h );
+
+uint8_t retroflat_viewport_focus(
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed );
 
 uint8_t retroview_move_x( retroflat_pxxy_t x_px );
 
@@ -312,6 +329,53 @@ MERROR_RETVAL retroflat_viewport_trim_px(
    }
 
    return MERROR_OK;
+}
+
+/* === */
+
+uint8_t retroflat_viewport_focus(
+   retroflat_pxxy_t x1, retroflat_pxxy_t y1,
+   retroflat_pxxy_t range, retroflat_pxxy_t speed
+) {
+   uint8_t moved = 0,
+      new_moved = 0;
+   int16_t new_pt = 0;
+
+   /* TODO: Reduce conditional jumps with math. */
+
+   /* Test if the screen is scrolling east/west. */
+   new_pt = x1 - (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
+   if( new_pt > (retroflat_screen_w() >> 1) + range ) {
+      new_moved = retroview_move_x(
+         gc_retroflat_offsets8_x[RETROFLAT_DIR8_EAST] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   } else if( new_pt < (retroflat_screen_w() >> 1) - range ) {
+      new_moved = retroview_move_x(
+         gc_retroflat_offsets8_x[RETROFLAT_DIR8_WEST] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   }
+
+   /* Test if the screen is scrolling north/south. */
+   new_pt = y1 - (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
+   if( new_pt > (retroflat_screen_h() >> 1) + range ) {
+      new_moved = retroview_move_y(
+         gc_retroflat_offsets8_y[RETROFLAT_DIR8_SOUTH] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   } else if( new_pt < (retroflat_screen_h() >> 1) - range ) {
+      new_moved = retroview_move_y(
+         gc_retroflat_offsets8_y[RETROFLAT_DIR8_NORTH] * speed );
+      if( !moved && new_moved ) {
+         moved = new_moved;
+      }
+   }
+
+   return moved;
 }
 
 #endif /* RETROVI2_H */
