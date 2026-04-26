@@ -35,6 +35,7 @@ struct RETROFLAT_VIEWPORT {
    retrotile_coord_t screen_tile_h;
    int8_t px_x;
    int8_t px_y;
+   size_t grid_ct;
    MAUG_MHANDLE grid_h;
    /**
     * \brief Grid that covers the full screen in tiles, with 1 extra tile just
@@ -88,19 +89,6 @@ struct RETROFLAT_VIEWPORT {
          g_retroflat_state->viewport.grid_h, \
          g_retroflat_state->viewport.grid ); \
    }
-
-/**
- * \param x_px X coordinate of pixel to check.
- * \param y_px Y coordinate of pixel to check.
- * \note The X and Y coordinates can span from -1 to
- *       RETROFLAT_VIEWPORT::screen_tile_w + 1, to account for hardware
- *       scrolling.
- */
-#define retroview_grid_at_px( x_px, y_px ) \
-   (g_retroflat_state->viewport.grid[ \
-      ((((y_px) + 1) >> RETROFLAT_TILE_H_BITS) * \
-         g_retroflat_state->viewport.screen_tile_w) + \
-            (((x_px) + 1) >> RETROFLAT_TILE_W_BITS)])
 
 #define retroview_world_px_x() \
    (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W)
@@ -193,6 +181,16 @@ uint8_t retroflat_viewport_focus(
    retroflat_pxxy_t x1, retroflat_pxxy_t y1,
    retroflat_pxxy_t range, retroflat_pxxy_t speed );
 
+MERROR_RETVAL retroview_grid_set_tile(
+   retrotile_coord_t x_tile, retrotile_coord_t y_tile,
+   retroflat_tile_t tile_in );
+
+MERROR_RETVAL retroview_grid_set_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tile_in );
+
+retroflat_tile_t retroview_grid_get_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px );
+
 uint8_t retroview_move_x( retroflat_pxxy_t x_px );
 
 uint8_t retroview_move_y( retroflat_pxxy_t y_px );
@@ -220,10 +218,12 @@ MERROR_RETVAL retroview_init(
       (_retroflat_screen_tile_wh( w, RETROFLAT_TILE_W ) + 2);
    g_retroflat_state->viewport.screen_tile_h = 
       (_retroflat_screen_tile_wh( h, RETROFLAT_TILE_H ) + 2);
+   g_retroflat_state->viewport.grid_ct = 
+      g_retroflat_state->viewport.screen_tile_w *
+      g_retroflat_state->viewport.screen_tile_h;
    maug_malloc_test(
       g_retroflat_state->viewport.grid_h,
-      g_retroflat_state->viewport.screen_tile_w *
-      g_retroflat_state->viewport.screen_tile_h,
+      g_retroflat_state->viewport.grid_ct,
       sizeof( retroflat_tile_t ) );
    debug_printf( RETROVIEW_TRACE_LVL,
       "viewport refresh grid initialized for %d x %d screen: %d x %d tiles",
@@ -242,6 +242,80 @@ void retroview_shutdown() {
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.grid_h ) {
       maug_mfree( g_retroflat_state->viewport.grid_h );
    }
+}
+
+/* === */
+
+MERROR_RETVAL retroview_grid_set_tile(
+   retrotile_coord_t x_tile, retrotile_coord_t y_tile, retroflat_tile_t tile_in
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t tile_idx = (y_tile * g_retroflat_state->viewport.screen_tile_w)
+      + x_tile;
+
+   if( tile_idx >= g_retroflat_state->viewport.grid_ct ) {
+      return MERROR_OVERFLOW;
+   }
+
+   retroview_lock_grid();
+   g_retroflat_state->viewport.grid[tile_idx] = tile_in;
+   retroview_unlock_grid();
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL retroview_grid_set_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px, retroflat_tile_t tile_in
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t tile_idx = ((((y_px) + 1) >> RETROFLAT_TILE_H_BITS) *
+      g_retroflat_state->viewport.screen_tile_w) +
+         (((x_px) + 1) >> RETROFLAT_TILE_W_BITS);
+
+   if( tile_idx >= g_retroflat_state->viewport.grid_ct ) {
+      return MERROR_OVERFLOW;
+   }
+
+   retroview_lock_grid();
+   g_retroflat_state->viewport.grid[tile_idx] = tile_in;
+   retroview_unlock_grid();
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+retroflat_tile_t retroview_grid_get_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   size_t tile_idx = ((((y_px) + 1) >> RETROFLAT_TILE_H_BITS) *
+      g_retroflat_state->viewport.screen_tile_w) +
+         (((x_px) + 1) >> RETROFLAT_TILE_W_BITS);
+   retroflat_tile_t tile_out = -1;
+
+   if( tile_idx >= g_retroflat_state->viewport.grid_ct ) {
+      retval = MERROR_OVERFLOW;
+      goto cleanup;
+   }
+
+   retroview_lock_grid();
+   tile_out = g_retroflat_state->viewport.grid[tile_idx];
+   retroview_unlock_grid();
+
+cleanup:
+
+   if( MERROR_OK != retval ) {
+      return merror_retval_to_sz( retval );
+   }
+
+   return tile_out;
 }
 
 /* === */

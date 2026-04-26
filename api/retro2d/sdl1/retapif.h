@@ -752,6 +752,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
    retroflat_pxxy_t i_x, i_y;
+   retroflat_tile_t grid_tile;
 #  endif /* !RETROFLAT_OPENGL */
 
    assert( NULL != src );
@@ -792,19 +793,17 @@ MERROR_RETVAL retroflat_blit_bitmap(
             goto cleanup;
          }
 
-         retroview_lock_grid();
-
          if( 0 > instance ) {
             /* This is a tile, check to see if it needs to be refreshed. */
-            if( (-1 * instance) == retroview_grid_at_px( d_x, d_y ) ) {
+            grid_tile = retroview_grid_get_px( d_x, d_y );
+            if( 0 <= grid_tile && (-1 * instance) == grid_tile ) {
                /* Tile does not need to be redrawn. */
                retval = MERROR_PREEMPT;
-               retroview_unlock_grid();
                goto cleanup;
             }
          }
-         retroview_grid_at_px( d_x, d_y ) = (-1 * instance);
-         retroview_unlock_grid();
+         retroview_grid_set_px(
+            d_x, d_y, -1 * instance ); /* Invert back positive. */
 
          /* There is no bump. The tile is drawn on-screen, unmolested. */
 
@@ -815,7 +814,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
       } else {
          /* No instance, sprite or tile. Must be a window or something! */
-         retroview_lock_grid();
          for(
             i_x = d_x;
             d_x + w + RETROFLAT_TILE_W >= i_x;
@@ -826,10 +824,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
                d_y + h + RETROFLAT_TILE_H >= i_y;
                i_y += RETROFLAT_TILE_H
             ) {
-               retroview_grid_at_px( i_x, i_y ) = -1;
+               retroview_grid_set_px( i_x, i_y, -1 );
             }
          }
-         retroview_unlock_grid();
          d_x += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
          d_y += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
       }
