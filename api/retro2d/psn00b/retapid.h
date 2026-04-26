@@ -241,6 +241,8 @@ struct RETROFLAT_PLATFORM {
    size_t draw_stack_ct;
    struct RETROFLAT_BITMAP buffer1;
    struct RETROFLAT_BITMAP buffer2;
+   int scroll_x;
+   int scroll_y;
 };
 
 #ifdef RETROFLT_C

@@ -343,6 +343,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
    assert( NULL != target->b );
    assert( NULL != src->b );
 
+   assert( d_x >= 0 );
+   assert( d_y >= 0 );
+   assert( d_x < retroflat_bitmap_w( target ) );
+   assert( d_y < retroflat_bitmap_h( target ) );
+
    if(
       RETROFLAT_BITMAP_FLAG_OPAQUE !=
       (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags)

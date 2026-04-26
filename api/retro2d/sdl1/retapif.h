@@ -809,6 +809,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
+   assert( d_x >= 0 );
+   assert( d_y >= 0 );
+   assert( d_x < retroflat_bitmap_w( target ) );
+   assert( d_y < retroflat_bitmap_h( target ) );
+
    src_rect.x = s_x;
    src_rect.y = s_y;
    src_rect.w = w;
@@ -820,6 +825,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( 0 == src->autolock_refs );
    assert( 0 == target->autolock_refs );
+
+   assert( d_x >= 0 );
+   assert( d_y >= 0 );
+   assert( d_x < retroflat_bitmap_w( target ) );
+   assert( d_y < retroflat_bitmap_h( target ) );
 
    retval = 
       SDL_BlitSurface( src->surface, &src_rect, target->surface, &dest_rect );
@@ -875,6 +885,11 @@ void retroflat_px(
 
    assert( 0 < target->autolock_refs );
    assert( 1 == target->surface->format->BytesPerPixel );
+
+   assert( x >= 0 );
+   assert( y >= 0 );
+   assert( x < retroflat_bitmap_w( target ) );
+   assert( y < retroflat_bitmap_h( target ) );
 
    offset = (y * target->surface->pitch) + x;
 

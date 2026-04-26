@@ -299,8 +299,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       target = retroflat_screen_buffer();
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    if(
@@ -311,9 +314,14 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
+
+   assert( d_x >= 0 );
+   assert( d_y >= 0 );
+   assert( d_x < retroflat_bitmap_w( target ) );
+   assert( d_y < retroflat_bitmap_h( target ) );
 
    if(
       RETROFLAT_BITMAP_FLAG_OPAQUE ==
@@ -425,6 +433,26 @@ uint8_t retroflat_focus_platform() {
 #  pragma message( "warning: focus_platform not implemented" )
 
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */

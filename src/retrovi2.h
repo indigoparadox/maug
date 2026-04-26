@@ -449,17 +449,32 @@ MERROR_RETVAL _retroview_trim_px(
    retroflat_pxxy_t viewport_right = retroflat_bitmap_w( bitmap );
    retroflat_pxxy_t viewport_left = 0;
    retroflat_pxxy_t viewport_top = 0;
+   retroflat_pxxy_t limit_x_l, limit_y_l, limit_x_h, limit_y_h;
 
-   /* TODO: Reduce conditional jumps with math. */
+#ifdef DEBUG
+   /* This stuff should be handled in _hwscroll below. */
+   if(
+      ((RETROFLAT_STATE_FLAG_HWSCROLLING == \
+         (RETROFLAT_STATE_FLAG_HWSCROLLING & \
+            g_retroflat_state->retroflat_flags)))
+   ) {
+      limit_x_h = -RETROFLAT_TILE_W;
+      limit_y_h = -RETROFLAT_TILE_H;
+      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W);
+      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H);
+   } else {
+      limit_x_l = 0;
+      limit_y_l = 0;
+      limit_x_h = retroflat_screen_w();
+      limit_y_h = retroflat_screen_h();
+   }
+   debug_printf( 1, "trim test px: %d, %d inside of %d, %d to %d, %d",
+      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h );
+   assert( !retroflat_outside_rect(
+      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h ) );
+#endif /* DEBUG */
 
-   if( viewport_bottom < *d_y || trim_bottom < viewport_top ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
-         *d_x, *d_y );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      return MERROR_GUI;
-
-   } else if( viewport_bottom <= trim_bottom ) {
+   if( viewport_bottom <= trim_bottom ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
@@ -483,14 +498,7 @@ MERROR_RETVAL _retroview_trim_px(
       assert( viewport_top == *d_y );
    }
 
-   if( viewport_right < *d_x || trim_right < viewport_left ) {
-#ifdef RETROFLAT_TRACE_CONSTRAIN
-      error_printf( "attempted to blit bitmap way out of bounds at %d, %d!",
-         *d_x, *d_y );
-#endif /* RETROFLAT_TRACE_CONSTRAIN */
-      return MERROR_GUI;
-
-   } else if( viewport_right <= trim_right ) {
+   if( viewport_right <= trim_right ) {
 #ifdef RETROFLAT_TRACE_CONSTRAIN
       error_printf(
          "trimming " SIZE_T_FMT " pixels to get " SIZE_T_FMT " under "
@@ -528,14 +536,29 @@ MERROR_RETVAL _retroview_hwscroll(
    retroflat_pxxy_t w_px, retroflat_pxxy_t h_px, int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
-   retroflat_pxxy_t i_x, i_y;
+   retroflat_pxxy_t i_x, i_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h;
    retroflat_tile_t grid_tile;
+
+   if(
+      ((RETROFLAT_STATE_FLAG_HWSCROLLING == \
+         (RETROFLAT_STATE_FLAG_HWSCROLLING & \
+            g_retroflat_state->retroflat_flags)))
+   ) {
+      limit_x_h = -RETROFLAT_TILE_W;
+      limit_y_h = -RETROFLAT_TILE_H;
+      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W);
+      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H);
+   } else {
+      limit_x_l = 0;
+      limit_y_l = 0;
+      limit_x_h = retroflat_screen_w();
+      limit_y_h = retroflat_screen_h();
+   }
 
    if( 0 > instance ) {
       if(
-         retroflat_outside_rect( *x_px, *y_px, -1, -1,
-            retroflat_screen_w() + (2 * RETROFLAT_TILE_W),
-            retroflat_screen_h() + (2 * RETROFLAT_TILE_H) )
+         retroflat_outside_rect(
+            *x_px, *y_px, limit_x_l, limit_y_l, limit_x_h, limit_y_h )
       ) {
          /* This tile is truly offscreen. */
          retval = MERROR_OVERFLOW;
@@ -560,6 +583,15 @@ MERROR_RETVAL _retroview_hwscroll(
 
       *x_px -= (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
       *y_px -= (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
+
+      if(
+         retroflat_outside_rect(
+            *x_px, *y_px, limit_x_l, limit_y_l, limit_x_h, limit_y_h )
+      ) {
+         /* This tile is truly offscreen. */
+         retval = MERROR_OVERFLOW;
+         goto cleanup;
+      }
 
    } else {
       /* No instance, sprite or tile. Must be a window or something! */

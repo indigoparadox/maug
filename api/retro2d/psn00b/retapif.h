@@ -363,7 +363,8 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer1.alt_page =
       &(g_retroflat_state->platform.buffer2);
    g_retroflat_state->platform.buffer1.disp_idx = 1;
-   g_retroflat_state->platform.buffer1.flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
+   g_retroflat_state->platform.buffer1.flags |=
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer1.draw),
       g_retroflat_state->platform.buffer1.vram_pg_x,
@@ -377,7 +378,8 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.buffer2.alt_page =
       &(g_retroflat_state->platform.buffer1);
    g_retroflat_state->platform.buffer2.disp_idx = 0;
-   g_retroflat_state->platform.buffer2.flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
+   g_retroflat_state->platform.buffer2.flags |=
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
    SetDefDrawEnv(
       &(g_retroflat_state->platform.buffer2.draw),
       g_retroflat_state->platform.buffer2.vram_pg_x,
@@ -694,8 +696,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
    SPRT* sprite = NULL;
    RECT src_rect;
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       target = retroflat_screen_buffer();
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    if(
@@ -705,7 +710,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -722,7 +727,10 @@ MERROR_RETVAL retroflat_blit_bitmap(
    _retroflat_psx_add_prim( blit, sizeof( POLY_FT4 ) );
 #endif
 
-   if( RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE ==
+      (RETROFLAT_BITMAP_FLAG_OPAQUE & src->flags)
+   ) {
       src_rect.x = src->vram_pg_x + src->vram_off_x + s_x;
       src_rect.y = src->vram_pg_y + src->vram_off_y + s_y;
       src_rect.w = w;
@@ -937,6 +945,54 @@ void retroflat_resize_v() {
 uint8_t retroflat_focus_platform() {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_x += x;
+   if(
+      0 >= g_retroflat_state->platform.scroll_x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.scroll_x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_x = RETROFLAT_TILE_W;
+   }
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_y += y;
+   if(
+      0 >= g_retroflat_state->platform.scroll_y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.scroll_y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_y = RETROFLAT_TILE_H;
+   }
+
+cleanup:
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */
