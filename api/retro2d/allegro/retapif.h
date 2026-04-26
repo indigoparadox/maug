@@ -110,6 +110,11 @@ MERROR_RETVAL retroflat_init_platform(
       BITMAP*, retroflat_screen_buffer()->b, RETROFLAT_ERROR_GRAPHICS );
    retroflat_screen_buffer()->flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
 
+   /* Translate hardware scrolling flag. */
+   if( GFX_CAN_SCROLL == (GFX_CAN_SCROLL & gfx_capabilities) ) {
+      g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_HWSCROLLING;
+   }
+
 cleanup:
 
    return retval;
@@ -311,8 +316,15 @@ MERROR_RETVAL retroflat_blit_bitmap(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       target = retroflat_screen_buffer();
+
+      assert(
+         RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & target->flags ) );
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {

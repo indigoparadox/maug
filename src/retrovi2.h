@@ -124,10 +124,16 @@ struct RETROFLAT_VIEWPORT {
 #define _retroview_move_xy( xy_px, move, xy, wh, tile_sz ) \
    assert( (tile_sz) > (xy_px) ); \
    if( \
+      /* If we have hardware scrolling, enable the off-screen buffer zone.
+       * If not, then the viewport starts at 0, 0.
+       */ \
+      ((RETROFLAT_STATE_FLAG_HWSCROLLING == \
+         (RETROFLAT_STATE_FLAG_HWSCROLLING & \
+            g_retroflat_state->retroflat_flags)) ? -1 : 0) > \
       /* Don't worry about the px/tile conversion so much, here, just see if
        * the positiveness/negativeness would take us out of the world.
        */ \
-      -1 > g_retroflat_state->viewport.world_tile_ ## xy + \
+      g_retroflat_state->viewport.world_tile_ ## xy + \
          (((xy_px) > 0) - ((xy_px) < 0)) || \
       g_retroflat_state->viewport.world_tile_ ## wh <= \
          g_retroflat_state->viewport.world_tile_ ## xy + \
@@ -183,6 +189,9 @@ uint8_t retroview_focus(
    retroflat_pxxy_t x1, retroflat_pxxy_t y1,
    retroflat_pxxy_t range, retroflat_pxxy_t speed );
 
+MERROR_RETVAL retroview_dirty_fuzzy_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px );
+
 MERROR_RETVAL _retroview_trim_px(
    struct RETROFLAT_BITMAP* bitmap,
    int16_t instance,
@@ -212,21 +221,41 @@ MERROR_RETVAL retroview_init(
    g_retroflat_state->viewport.world_tile_w = world_w;
    g_retroflat_state->viewport.world_tile_h = world_h;
 
-   /* Start the world tiles at -1 always to keep the left-most border
-    * visible.
-    */
-   g_retroflat_state->viewport.world_tile_x = -1;
-   g_retroflat_state->viewport.world_tile_y = -1;
+   if(
+      RETROFLAT_STATE_FLAG_HWSCROLLING ==
+      (RETROFLAT_STATE_FLAG_HWSCROLLING & g_retroflat_state->retroflat_flags)
+   ) {
+      /* Start the world tiles at -1 always to keep the left-most border
+      * visible.
+      */
+      g_retroflat_state->viewport.world_tile_x = -1;
+      g_retroflat_state->viewport.world_tile_y = -1;
+   } else {
+      g_retroflat_state->viewport.world_tile_x = 0;
+      g_retroflat_state->viewport.world_tile_y = 0;
+   }
 
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.grid_h ) {
       maug_mfree( g_retroflat_state->viewport.grid_h );
    }
 
    /* Allocate the viewport refresh grid based on current screen. */
-   g_retroflat_state->viewport.screen_tile_w = 
-      (_retroflat_screen_tile_wh( w, RETROFLAT_TILE_W ) + 2);
-   g_retroflat_state->viewport.screen_tile_h = 
-      (_retroflat_screen_tile_wh( h, RETROFLAT_TILE_H ) + 2);
+   if(
+      RETROFLAT_STATE_FLAG_HWSCROLLING ==
+      (RETROFLAT_STATE_FLAG_HWSCROLLING & g_retroflat_state->retroflat_flags)
+   ) {
+      /* Allocate two extra tiles for the off-screen zone. */
+      g_retroflat_state->viewport.screen_tile_w =
+         (_retroflat_screen_tile_wh( w, RETROFLAT_TILE_W ) + 2);
+      g_retroflat_state->viewport.screen_tile_h =
+         (_retroflat_screen_tile_wh( h, RETROFLAT_TILE_H ) + 2);
+   } else {
+      g_retroflat_state->viewport.screen_tile_w =
+         _retroflat_screen_tile_wh( w, RETROFLAT_TILE_W );
+      g_retroflat_state->viewport.screen_tile_h =
+         _retroflat_screen_tile_wh( h, RETROFLAT_TILE_H );
+   }
+
    g_retroflat_state->viewport.grid_ct = 
       g_retroflat_state->viewport.screen_tile_w *
       g_retroflat_state->viewport.screen_tile_h;
@@ -376,6 +405,34 @@ uint8_t retroview_focus(
 
 /* === */
 
+MERROR_RETVAL retroview_dirty_fuzzy_px(
+   retroflat_pxxy_t x_px, retroflat_pxxy_t y_px
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   retrotile_coord_t x_tile = 
+         ((x_px - retroview_world_px_x()) >> RETROFLAT_TILE_W_BITS),
+      y_tile =
+         ((y_px - retroview_world_px_y()) >> RETROFLAT_TILE_H_BITS);
+   int i = 0;
+
+   for( i = 0 ; 8 > i ; i++ ) {
+      retval = retroview_grid_set_tile(
+         x_tile + gc_retroflat_offsets8_x[i],
+         y_tile + gc_retroflat_offsets8_y[i],
+         -1 );
+      if( MERROR_OVERFLOW == retval ) {
+         retval = MERROR_OK;
+      }
+      maug_cleanup_if_not_ok();
+   }
+   retval = retroview_grid_set_tile( x_tile, y_tile, -1 );
+
+cleanup:
+   return retval;
+}
+
+/* === */
+
 MERROR_RETVAL _retroview_trim_px(
    struct RETROFLAT_BITMAP* bitmap,
    int16_t instance,
@@ -492,7 +549,7 @@ MERROR_RETVAL _retroview_hwscroll(
          }
       }
       retroview_grid_set_px(
-         *x_px, *y_px, -1 * instance ); /* Invert back positive. */
+         *x_px, *y_px, -1 * instance /* Invert back positive. */ );
 
       /* There is no bump. The tile is drawn on-screen, unmolested. */
 
@@ -503,6 +560,18 @@ MERROR_RETVAL _retroview_hwscroll(
 
    } else {
       /* No instance, sprite or tile. Must be a window or something! */
+      
+      if(
+         ((RETROFLAT_STATE_FLAG_HWSCROLLING == \
+            (RETROFLAT_STATE_FLAG_HWSCROLLING & \
+               g_retroflat_state->retroflat_flags)))
+      ) {
+         /* Always keep the window in the visible screen area. */
+         *x_px += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
+         *y_px += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
+      }
+
+      /* Invalidate any tiles under the window. */
       for(
          i_x = *x_px;
          *x_px + w_px + RETROFLAT_TILE_W >= i_x;
@@ -516,8 +585,6 @@ MERROR_RETVAL _retroview_hwscroll(
             retroview_grid_set_px( i_x, i_y, -1 );
          }
       }
-      *x_px += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
-      *y_px += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;
    }
 
 cleanup:

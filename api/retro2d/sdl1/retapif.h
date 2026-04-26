@@ -755,11 +755,6 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
-      retval = MERROR_GUI;
-      return retval;
-   }
-
 #  if defined( RETROFLAT_OPENGL )
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_blit_bitmap()!" );
@@ -782,6 +777,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
       retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
       maug_cleanup_if_not_ok();
+   }
+
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
+      retval = MERROR_GUI;
+      return retval;
    }
 
    /* Trim sprite to stay on-screen. */
