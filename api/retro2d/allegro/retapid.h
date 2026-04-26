@@ -81,6 +81,8 @@ struct RETROFLAT_PLATFORM_ARGS {
 struct RETROFLAT_PLATFORM {
    uint8_t flags;
    struct RETROFLAT_BITMAP screen_buffer;
+   int scroll_x;
+   int scroll_y;
 };
 
 #endif /* !RETPLTD_H */

@@ -55,7 +55,10 @@ MERROR_RETVAL retroflat_init_platform(
 #     ifdef RETROFLAT_OS_DOS
    /* Don't try windowed mode in DOS. */
    if(
-      set_gfx_mode( GFX_AUTODETECT, args->screen_w, args->screen_h, 0, 0 )
+      set_gfx_mode( GFX_AUTODETECT,
+         args->screen_w, args->screen_h,
+         args->screen_w + (2 * RETROFLAT_TILE_W),
+         args->screen_h + (2 * RETROFLAT_TILE_H) )
    ) {
 #     else
    if( 
@@ -105,6 +108,7 @@ MERROR_RETVAL retroflat_init_platform(
       create_bitmap( args->screen_w, args->screen_h );
    maug_cleanup_if_null(
       BITMAP*, retroflat_screen_buffer()->b, RETROFLAT_ERROR_GRAPHICS );
+   retroflat_screen_buffer()->flags |= RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER;
 
 cleanup:
 
@@ -317,7 +321,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -385,8 +389,7 @@ void retroflat_rect(
    }
 
    if(
-      MERROR_OK != retroflat_viewport_trim_px(
-         target, 0, NULL, NULL, &x, &y, &w, &h )
+      MERROR_OK != _retroview_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
@@ -530,6 +533,63 @@ uint8_t retroflat_focus_platform() {
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 #endif  /* RETROFLAT_OS_WIN | RETROFLAT_OS_UNIX */
 }
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_x += x;
+   if(
+      0 >= g_retroflat_state->platform.scroll_x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.scroll_x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_x = RETROFLAT_TILE_W;
+   }
+
+   scroll_screen(
+      g_retroflat_state->platform.scroll_x,
+      g_retroflat_state->platform.scroll_y );
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_y += y;
+   if(
+      0 >= g_retroflat_state->platform.scroll_y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.scroll_y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_y = RETROFLAT_TILE_H;
+   }
+
+   scroll_screen(
+      g_retroflat_state->platform.scroll_x,
+      g_retroflat_state->platform.scroll_y );
+
+cleanup:
+
+   return move;
+}
+
 
 #endif /* !RETPLTF_H */
 
