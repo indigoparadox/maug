@@ -123,6 +123,7 @@ struct RETROFLAT_VIEWPORT {
  */
 #define _retroview_move_xy( xy_px, move, xy, wh, tile_sz ) \
    assert( (tile_sz) > (xy_px) ); \
+   /* TODO: Use outside range check to reduce branches. */ \
    if( \
       /* If we have hardware scrolling, enable the off-screen buffer zone.
        * If not, then the viewport starts at 0, 0.

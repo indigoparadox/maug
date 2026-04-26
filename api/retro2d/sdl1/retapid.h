@@ -59,11 +59,13 @@ struct RETROFLAT_BITMAP {
 
 #     define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #     define retroflat_bitmap_w( bmp ) \
-         (NULL == (bmp) || NULL == (bmp)->surface ? \
-            g_retroflat_state->screen_v_w : (size_t)((bmp)->surface->w))
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
+            g_retroflat_state->screen_v_w + (2 * RETROFLAT_TILE_W) : \
+               (size_t)((bmp)->surface->w))
 #     define retroflat_bitmap_h( bmp ) \
-         (NULL == (bmp) || NULL == (bmp)->surface ? \
-            g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
+            g_retroflat_state->screen_v_h + (2 * RETROFLAT_TILE_H) : \
+               (size_t)((bmp)->surface->h))
 #     define retroflat_bitmap_locked( bmp ) \
          (RETROFLAT_BITMAP_FLAG_LOCK == (RETROFLAT_BITMAP_FLAG_LOCK & (bmp)->flags))
 

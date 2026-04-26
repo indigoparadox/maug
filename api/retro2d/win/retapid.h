@@ -201,10 +201,12 @@ typedef COLORREF RETROFLAT_COLOR_DEF;
 #  else
 #     define retroflat_bitmap_w( bmp ) \
          ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
-            g_retroflat_state->screen_v_w : ((bmp)->bmi.header.biWidth))
+            g_retroflat_state->screen_v_w + (2 * RETROFLAT_TILE_W) : \
+               ((bmp)->bmi.header.biWidth))
 #     define retroflat_bitmap_h( bmp ) \
          ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
-            g_retroflat_state->screen_v_h : ((bmp)->bmi.header.biHeight))
+            g_retroflat_state->screen_v_h + (2 * RETROFLAT_TILE_H) : \
+               ((bmp)->bmi.header.biHeight))
 #     define retroflat_bitmap_locked( bmp ) ((HDC)NULL != (bmp)->hdc_b)
 
 #  endif /* RETROFLAT_OPENGL */
@@ -332,6 +334,8 @@ struct RETROFLAT_PLATFORM {
    HWND                 window;
    int16_t              last_idc; /* Last clicked button. */
    struct RETROFLAT_BITMAP screen_buffer;
+   retroflat_pxxy_t scroll_x;
+   retroflat_pxxy_t scroll_y;
 #  ifdef RETROFLAT_SCREENSAVER
    HWND                 parent;
 #  endif /* RETROFLAT_SCREENSAVER */

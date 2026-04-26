@@ -186,6 +186,7 @@ MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->platform.screen_buffer.surface = SDL_CreateRGBSurface(
       0,
       g_retroflat_state->screen_v_w
+         /* Hardware scrolling example point 1: */
          /* Add off-screen tiles. */
          + (2 * RETROFLAT_TILE_W)
       , g_retroflat_state->screen_v_h
@@ -200,8 +201,10 @@ MERROR_RETVAL retroflat_init_platform(
       g_retroflat_state->platform.screen_buffer.surface,
       g_retroflat_state->palette, 0, RETROFLAT_COLORS_CT_MAX );
 
+   /* Hardware scrolling example point 2: */
    g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_HWSCROLLING;
 
+   /* Hardware scrolling example point 3: */
    /* Setup the viewport blit source rect to blit from the center of the
     * unnaturally large buffer by default. */
    g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
@@ -483,6 +486,11 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
          scale_rect.w = g_retroflat_state->screen_w;
          scale_rect.h = g_retroflat_state->screen_h;
          SDL_SoftStretch(
+            /* Hardware scrolling example point 4: */
+            /* If double-buffering, blit from the platform-specific rect
+             * inside of the full buffer. Only applicable on windowed systems,
+             * generally.
+             */
             g_retroflat_state->platform.screen_buffer.surface,
             &(g_retroflat_state->platform.viewport_rect),
             g_retroflat_state->platform.screen_scale.surface,
@@ -775,6 +783,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
          RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
          (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & target->flags ) );
 
+      /* Hardware scrolling example point 5: */
+      /* Run bitmaps targeted at the screen through the hwscroll preprocessor.
+       * This applies adjustments based on the instance, so tiles, sprites,
+       * and window bitmaps appear naturally.
+       */
       retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
       maug_cleanup_if_not_ok();
    }
@@ -783,6 +796,13 @@ MERROR_RETVAL retroflat_blit_bitmap(
       retval = MERROR_GUI;
       return retval;
    }
+
+   /* Hardware scrolling example point 6: */
+   /* Use the trim_px function to keep stuff drawn on-screen, but make sure
+    * the retroflat_bitmap_w() passes the REAL screen buffer size (including
+    * 2x tile w/h additions on each side) when passed the bitmap behind
+    * retroflat_screen_buffer()!
+    */
 
    /* Trim sprite to stay on-screen. */
    retval = _retroview_trim_px(
@@ -989,6 +1009,10 @@ uint8_t retroview_move_x( retroflat_pxxy_t x ) {
       goto cleanup;
    }
 
+   /* Hardware scrolling example point 7: */
+   /* Add the scroll amounts to the platform-specific viewport so the blits
+    * above know where to grab from on the full hardware buffer.
+    */
    g_retroflat_state->platform.viewport_rect.x += x;
    if(
       0 >= g_retroflat_state->platform.viewport_rect.x ||

@@ -196,16 +196,18 @@ static LRESULT CALLBACK WndProc(
             debug_printf( RETRO2D_TRACE_LVL,
                "retroflat: creating window buffer ("
                   SIZE_T_FMT " x " SIZE_T_FMT ")...",
-               g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+               g_retroflat_state->screen_v_w + (2 * RETROFLAT_TILE_W),
+               g_retroflat_state->screen_v_h + (2 * RETROFLAT_TILE_W) );
 #endif /* RETRO2D_TRACE_LVL */
             /* Do this in its own function so a one-time setup isn't using stack
             * in our WndProc!
             */
             retroflat_create_bitmap(
-               g_retroflat_state->screen_v_w,
-               g_retroflat_state->screen_v_h,
+               g_retroflat_state->screen_v_w + (2 * RETROFLAT_TILE_W),
+               g_retroflat_state->screen_v_h + (2 * RETROFLAT_TILE_H),
                &(g_retroflat_state->platform.screen_buffer),
-               RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER | RETROFLAT_BITMAP_FLAG_OPAQUE );
+               RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER |
+               RETROFLAT_BITMAP_FLAG_OPAQUE );
             if( (HDC)NULL == g_retroflat_state->platform.screen_buffer.hdc_b ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not determine buffer device context!" );
@@ -214,6 +216,14 @@ static LRESULT CALLBACK WndProc(
                retroflat_quit( g_retroflat_state->retval );
                break;
             }
+
+            /* We will always use stretchblt to copy from inside the buffer,
+             * at the very least.
+             */
+            g_retroflat_state->retroflat_flags |=
+               RETROFLAT_STATE_FLAG_HWSCROLLING;
+            g_retroflat_state->platform.scroll_x = RETROFLAT_TILE_W;
+            g_retroflat_state->platform.scroll_y = RETROFLAT_TILE_H;
 
          }
          if(
@@ -270,9 +280,10 @@ static LRESULT CALLBACK WndProc(
                g_retroflat_state->screen_w,
                g_retroflat_state->screen_h,
                g_retroflat_state->platform.screen_buffer.hdc_b,
-               0, 0,
-               g_retroflat_state->screen_w,
-               g_retroflat_state->screen_h
+               g_retroflat_state->platform.scroll_x,
+               g_retroflat_state->platform.scroll_y,
+               g_retroflat_state->screen_v_w,
+               g_retroflat_state->screen_v_h
             ) ) {
                retroflat_message( RETROFLAT_MSG_FLAG_ERROR,
                   "Error", "Could not blit to screen!" );
@@ -290,7 +301,8 @@ static LRESULT CALLBACK WndProc(
             g_retroflat_state->screen_w,
             g_retroflat_state->screen_h,
             g_retroflat_state->platform.screen_buffer.hdc_b,
-            0, 0,
+            g_retroflat_state->platform.scroll_x,
+            g_retroflat_state->platform.scroll_y,
             g_retroflat_state->screen_v_w,
             g_retroflat_state->screen_v_h,
             SRCCOPY
@@ -1338,7 +1350,8 @@ MERROR_RETVAL retroflat_create_bitmap(
 #     ifdef RETROFLAT_WING
    bmp_out->bmi.header.biHeight *= h;
    if(
-      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER != (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER !=
+      (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
 #     else
    bmp_out->bmi.header.biHeight = h;
@@ -1398,7 +1411,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    maug_cleanup_if_null( HBITMAP, bmp_out->b, MERROR_GUI );
 
    if(
-      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER == (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
+      RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
+      (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & flags)
    ) {
 #if RETRO2D_TRACE_LVL > 0
       debug_printf(
@@ -1409,7 +1423,9 @@ MERROR_RETVAL retroflat_create_bitmap(
       bmp_out->old_hbm_b = SelectObject( bmp_out->hdc_b, bmp_out->b );
    }
 
-   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags)
+   ) {
       /* Setup bitmap transparency mask. */
 #if RETRO2D_TRACE_LVL > 0
       debug_printf(
@@ -1417,13 +1433,13 @@ MERROR_RETVAL retroflat_create_bitmap(
 #endif /* RETRO2D_TRACE_LVL */
       bmp_out->mask = CreateBitmap( w, h, 1, 1, NULL );
       maug_cleanup_if_null( HBITMAP, bmp_out->mask, MERROR_GUI );
-   } else {
-      bmp_out->flags |= RETROFLAT_BITMAP_FLAG_OPAQUE;
    }
 
 #     ifdef RETROFLAT_WING
    }
 #     endif /* RETROFLAT_WING */
+
+   bmp_out->flags = flags;
 
 cleanup:
 
@@ -1489,41 +1505,31 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-#if 0
-   /* Win API not setup for hardware scrolling. */
-   if(
-      0 > d_x || 0 > d_y ||
-      retroflat_bitmap_w( target ) + w <= d_x ||
-      retroflat_bitmap_h( target ) + h <= d_y
-   ) {
-      return;
-   }
-#endif
-
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
-      return MERROR_GUI;
-   }
-
 #  if defined( RETROFLAT_OPENGL )
 
-#if RETRO2D_TRACE_LVL > 0
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_blit_bitmap()!" );
-#endif /* RETRO2D_TRACE_LVL */
-   /*
-   retval = retro3d_texture_blit(
-      &(target->tex), &(src->tex), s_x, s_y, d_x, d_y, w, h, instance );
-   */
 
 #  else
 
    /* == Win16/Win32 == */
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       target = retroflat_screen_buffer();
+
+      assert(
+         RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER ==
+         (RETROFLAT_BITMAP_FLAG_SCREEN_BUFFER & target->flags ) );
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
+   }
+
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
+      return MERROR_GUI;
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -1674,7 +1680,7 @@ void retroflat_rect(
    w -= 1;
    h -= 1;
 
-   if( MERROR_OK != retroflat_viewport_trim_px(
+   if( MERROR_OK != _retroview_trim_px(
       target, 0, NULL, NULL, &x, &y, &w, &h
    ) ) {
       return;
@@ -1799,7 +1805,7 @@ void retroflat_ellipse(
       return;
    }
 
-   if( MERROR_OK != retroflat_viewport_trim_px(
+   if( MERROR_OK != _retroview_trim_px(
       target, 0, NULL, NULL, &x, &y, &w, &h
    ) ) {
       return;
@@ -1867,6 +1873,52 @@ void retroflat_resize_v() {
 }
 
 /* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_x += x;
+   if(
+      0 >= g_retroflat_state->platform.scroll_x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.scroll_x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_x = RETROFLAT_TILE_W;
+   }
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.scroll_y += y;
+   if(
+      0 >= g_retroflat_state->platform.scroll_y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.scroll_y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.scroll_y = RETROFLAT_TILE_H;
+   }
+
+cleanup:
+
+   return move;
+}
 
 #endif /* !RETPLTF_H */
 

@@ -113,6 +113,8 @@ MERROR_RETVAL retroflat_init_platform(
    /* Translate hardware scrolling flag. */
    if( GFX_CAN_SCROLL == (GFX_CAN_SCROLL & gfx_capabilities) ) {
       g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_HWSCROLLING;
+      g_retroflat_state->platform.scroll_x = RETROFLAT_TILE_W;
+      g_retroflat_state->platform.scroll_y = RETROFLAT_TILE_H;
    }
 
 cleanup:
@@ -601,7 +603,6 @@ cleanup:
 
    return move;
 }
-
 
 #endif /* !RETPLTF_H */
 
