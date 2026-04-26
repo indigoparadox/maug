@@ -751,6 +751,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
 #  ifndef  RETROFLAT_OPENGL
    SDL_Rect src_rect;
    SDL_Rect dest_rect;
+   retroflat_pxxy_t i_x, i_y;
 #  endif /* !RETROFLAT_OPENGL */
 
    assert( NULL != src );
@@ -783,32 +784,44 @@ MERROR_RETVAL retroflat_blit_bitmap(
       if( 0 != instance ) {
          if(
             retroflat_outside_rect( d_x, d_y, -1, -1,
-               retroflat_screen_w() + RETROFLAT_TILE_W,
-               retroflat_screen_h() + RETROFLAT_TILE_H )
+               retroflat_screen_w() + (2 * RETROFLAT_TILE_W),
+               retroflat_screen_h() + (2 * RETROFLAT_TILE_H) )
          ) {
             /* This tile is truly offscreen. */
             goto cleanup;
          }
 
+         retroview_lock_grid();
+
          if( 0 > instance ) {
             /* This is a tile, check to see if it needs to be refreshed. */
-            retroview_lock_grid();
             if( (-1 * instance) == retroview_grid_at_px( d_x, d_y ) ) {
                retroview_unlock_grid();
                goto cleanup;
             }
          }
-
          retroview_grid_at_px( d_x, d_y ) = (-1 * instance);
          retroview_unlock_grid();
 
-         /* Bump up to put negative coords into extended HW scrolling area. */
-         d_x += RETROFLAT_TILE_W;
-         d_y += RETROFLAT_TILE_H;
+         /* There is no bump. The tile is drawn on-screen, unmolested. */
+
       } else {
          /* No instance, sprite or tile. Must be a window or something! */
          retroview_lock_grid();
-         retroview_grid_at_px( d_x, d_y ) = -1;
+         for(
+            i_x = d_x;
+            d_x + w + RETROFLAT_TILE_W >= i_x;
+            i_x += RETROFLAT_TILE_W
+         ) {
+            for(
+               i_y = d_y;
+               d_y + h + RETROFLAT_TILE_H >= i_y;
+               i_y += RETROFLAT_TILE_H
+            ) {
+               debug_printf( 1, "inval %d, %d", i_x, i_y );
+               retroview_grid_at_px( i_x, i_y ) = -1;
+            }
+         }
          retroview_unlock_grid();
          d_x += RETROFLAT_TILE_W + g_retroflat_state->viewport.px_x;
          d_y += RETROFLAT_TILE_H + g_retroflat_state->viewport.px_y;

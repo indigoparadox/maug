@@ -2,8 +2,24 @@
 #ifndef RETROVI2_H
 #define RETROVI2_H
 
+/**
+ * \addtogroup maug_retroflt
+ * \{
+ * \addtogroup maug_retroview RetroFlat Grid API
+ * \{
+ * \file retrovi2.h
+ */
+
 struct RETROFLAT_VIEWPORT {
+   /**
+    * \note Technically this coordinate starts at 1, as 0 will always be
+    *       invisible off-screen in the hardware scroll area.
+    */
    retrotile_coord_t world_tile_x;
+   /**
+    * \note Technically this coordinate starts at 1, as 0 will always be
+    *       invisible off-screen in the hardware scroll area.
+    */
    retrotile_coord_t world_tile_y;
    retrotile_coord_t world_tile_w;
    retrotile_coord_t world_tile_h;
@@ -20,6 +36,11 @@ struct RETROFLAT_VIEWPORT {
    int8_t px_x;
    int8_t px_y;
    MAUG_MHANDLE grid_h;
+   /**
+    * \brief Grid that covers the full screen in tiles, with 1 extra tile just
+    *        off-screen on every border. The visible upper-left is 0, 0, the
+    *        extra left border is -1 on each axis, etc.
+    */
    retroflat_tile_t* grid;
 };
 
@@ -37,9 +58,6 @@ struct RETROFLAT_VIEWPORT {
          x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
       retact; \
    }
-
-#define retroview_invalidate_px( x_px, y_px ) \
-   retroview_invalidate( (x_px) / RETROFLAT_TILE_W, (y_px) / RETROFLAT_TILE_H )
 
 /**
  * \relates RETROFLAT_VIEWPORT
@@ -83,6 +101,25 @@ struct RETROFLAT_VIEWPORT {
       ((((y_px) + 1) >> RETROFLAT_TILE_H_BITS) * \
          g_retroflat_state->viewport.screen_tile_w) + \
             (((x_px) + 1) >> RETROFLAT_TILE_W_BITS)])
+
+/**
+ * \brief Translate a horizontal world tile coordinate to screen tile coordinate
+ *        for RETROFLAT_VIEWPORT::grid.
+ */
+#define retroview_grid_to_px_x( x_tile ) \
+   _retroview_grid_to_px_xy( x_tile, x, RETROFLAT_TILE_W )
+
+/**
+ * \brief Translate a vertical world tile coordinate to screen tile coordinate
+ *        for RETROFLAT_VIEWPORT::grid.
+ */
+#define retroview_grid_to_px_y( y_tile ) \
+   _retroview_grid_to_px_xy( y_tile, y, RETROFLAT_TILE_H )
+
+#define _retroview_grid_to_px_xy( xy_tile, xy, tile_sz ) \
+   (((xy_tile) - g_retroflat_state->viewport.world_tile_ ## xy \
+      + 1) /* Keep the left-most border visible. */ \
+         * tile_sz) /* Translate to pixels. */
 
 /**
  * \brief Internal viewport movement to be called by platform-specific viewport
@@ -139,11 +176,13 @@ MERROR_RETVAL retroview_init(
 
 void retroview_shutdown();
 
-void retroview_invalidate( retrotile_coord_t x_tile, retrotile_coord_t y_tile );
-
 uint8_t retroview_move_x( retroflat_pxxy_t x_px );
 
 uint8_t retroview_move_y( retroflat_pxxy_t y_px );
+
+/*! \} */ /* maug_retroview */
+
+/*! \} */ /* maug_retroflt */
 
 #elif defined( RETROVIW_C )
 
@@ -186,16 +225,6 @@ void retroview_shutdown() {
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.grid_h ) {
       maug_mfree( g_retroflat_state->viewport.grid_h );
    }
-}
-
-/* === */
-
-void retroview_invalidate(
-   retrotile_coord_t x_tile, retrotile_coord_t y_tile
-) {
-
-   /* TODO */
-
 }
 
 /* === */
