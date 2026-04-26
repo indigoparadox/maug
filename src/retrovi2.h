@@ -135,9 +135,11 @@ struct RETROFLAT_VIEWPORT {
        */ \
       g_retroflat_state->viewport.world_tile_ ## xy + \
          (((xy_px) > 0) - ((xy_px) < 0)) || \
+      \
       g_retroflat_state->viewport.world_tile_ ## wh <= \
          g_retroflat_state->viewport.world_tile_ ## xy + \
-            (((xy_px) > 0) - ((xy_px) < 0)) \
+            ((((xy_px) > 0) - ((xy_px) < 0)) * \
+               (g_retroflat_state->viewport.screen_tile_ ## wh - 1)) \
    ) { \
       /* Unable to move without leaving the world. */ \
       debug_printf( RETROVIEW_TRACE_LVL, \
