@@ -385,10 +385,7 @@ MERROR_RETVAL retrowin_redraw_win_stack( struct MDATA_VECTOR* win_stack ) {
 
 #ifndef RETROWIN_NO_BITMAP
       if(
-         RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui_p->flags) ||
-         RETROFLAT_STATE_FLAG_HWSCROLLING ==
-            (RETROFLAT_STATE_FLAG_HWSCROLLING &
-               g_retroflat_state->retroflat_flags)
+         RETROGUI_FLAGS_DIRTY == (RETROGUI_FLAGS_DIRTY & win->gui_p->flags)
       ) {
 #endif /* !RETROWIN_NO_BITMAP */
 #if RETROWIN_TRACE_LVL > 0
