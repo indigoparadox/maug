@@ -1936,7 +1936,12 @@ static MERROR_RETVAL _mlisp_step_iter(
    assert( mdata_vector_is_locked( &(exec->per_node_visit_ct) ) );
    p_visit_ct = mdata_vector_get(
       &(exec->per_node_visit_ct), n_idx, size_t );
-   assert( NULL != p_visit_ct );
+   if( NULL == p_visit_ct ) {
+      /* TODO: How does this happen? */
+      error_printf( "null visit count!" );
+      retval = MERROR_EXEC;
+      goto cleanup;
+   }
    (*p_visit_ct)++;
 #if MLISP_STEP_TRACE_LVL > 0
    debug_printf( MLISP_STEP_TRACE_LVL,
