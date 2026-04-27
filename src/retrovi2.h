@@ -97,24 +97,6 @@ struct RETROFLAT_VIEWPORT {
    (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H)
 
 /**
- * \brief Translate a horizontal world tile coordinate to screen tile coordinate
- *        for RETROFLAT_VIEWPORT::grid.
- */
-#define retroview_grid_to_px_x( x_tile ) \
-   _retroview_grid_to_px_xy( x_tile, x, RETROFLAT_TILE_W )
-
-/**
- * \brief Translate a vertical world tile coordinate to screen tile coordinate
- *        for RETROFLAT_VIEWPORT::grid.
- */
-#define retroview_grid_to_px_y( y_tile ) \
-   _retroview_grid_to_px_xy( y_tile, y, RETROFLAT_TILE_H )
-
-#define _retroview_grid_to_px_xy( xy_tile, xy, tile_sz ) \
-   (((xy_tile) - g_retroflat_state->viewport.world_tile_ ## xy) \
-         * tile_sz) /* Translate to pixels. */
-
-/**
  * \brief Internal viewport movement to be called by platform-specific viewport
  *        implementation, as part of its viewport handling.
  * \param xy "x" or "y" depending on dimension being moved.
@@ -464,19 +446,28 @@ MERROR_RETVAL _retroview_trim_px(
          (RETROFLAT_STATE_FLAG_HWSCROLLING & \
             g_retroflat_state->retroflat_flags)))
    ) {
-      limit_x_h = -RETROFLAT_TILE_W;
-      limit_y_h = -RETROFLAT_TILE_H;
-      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W);
-      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H);
+#if RETROVIEW_TRACE_LVL > 0
+      debug_printf( RETROVIEW_TRACE_LVL, "hardware scrolling enabled" );
+#endif /* RETROVIEW_TRACE_LVL */
+      limit_x_l = -RETROFLAT_TILE_W;
+      limit_y_l = -RETROFLAT_TILE_H;
+      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W)
+         + 1; /* Add 1px to keep the far right inside the trim rect. */
+      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H) + 1;
    } else {
+#if RETROVIEW_TRACE_LVL > 0
+      debug_printf( RETROVIEW_TRACE_LVL, "hardware scrolling disabled" );
+#endif /* RETROVIEW_TRACE_LVL */
       limit_x_l = 0;
       limit_y_l = 0;
       limit_x_h = retroflat_screen_w();
       limit_y_h = retroflat_screen_h();
    }
-   /*
-   debug_printf( 1, "trim test px: %d, %d inside of %d, %d to %d, %d",
-      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h ); */
+#if RETROVIEW_TRACE_LVL > 0
+   debug_printf( RETROVIEW_TRACE_LVL,
+      "trim test px: %d, %d inside of %d, %d to %d, %d",
+      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h );
+#endif /* RETROVIEW_TRACE_LVL */
    assert( !retroflat_outside_rect(
       *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h ) );
 #endif /* DEBUG */
@@ -545,16 +536,21 @@ MERROR_RETVAL _retroview_hwscroll(
    MERROR_RETVAL retval = MERROR_OK;
    retroflat_pxxy_t i_x, i_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h;
    retroflat_tile_t grid_tile;
+   int16_t instance_pos;
 
+   /* Setup screen limits; if hwscrolling is on, then we can and should draw to
+    * the one-tile border around the visible screen if needed, to support
+    * scrolling.
+    */
    if(
       ((RETROFLAT_STATE_FLAG_HWSCROLLING == \
          (RETROFLAT_STATE_FLAG_HWSCROLLING & \
             g_retroflat_state->retroflat_flags)))
    ) {
-      limit_x_h = -RETROFLAT_TILE_W;
-      limit_y_h = -RETROFLAT_TILE_H;
-      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W);
-      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H);
+      limit_x_l = -RETROFLAT_TILE_W;
+      limit_y_l = -RETROFLAT_TILE_H;
+      limit_x_h = retroflat_screen_w() + (2 * RETROFLAT_TILE_W) + 1;
+      limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H) + 1;
    } else {
       limit_x_l = 0;
       limit_y_l = 0;
@@ -563,6 +559,13 @@ MERROR_RETVAL _retroview_hwscroll(
    }
 
    if( 0 > instance ) {
+
+      /* Keep the tiles drawn in the localized context of the viewport
+       * relative to the greater context of the world.
+       */
+      *x_px -= (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
+      *y_px -= (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
+
       if(
          retroflat_outside_rect(
             *x_px, *y_px, limit_x_l, limit_y_l, limit_x_h, limit_y_h )
@@ -572,26 +575,26 @@ MERROR_RETVAL _retroview_hwscroll(
          goto cleanup;
       }
 
-      if( 0 > instance ) {
-         /* This is a tile, check to see if it needs to be refreshed. */
-         grid_tile = retroview_grid_get_px( *x_px, *y_px );
-         if( 0 <= grid_tile && (-1 * instance) == grid_tile ) {
-            /* Tile does not need to be redrawn. */
-            retval = MERROR_PREEMPT;
-            goto cleanup;
-         }
+      /* This is a tile, check to see if it needs to be refreshed. */
+      grid_tile = retroview_grid_get_px( *x_px, *y_px );
+      instance_pos = -1 * instance;
+      assert( 0 < instance_pos );
+      if( 0 <= grid_tile && instance_pos == grid_tile ) {
+         /* Tile does not need to be redrawn. */
+         retval = MERROR_PREEMPT;
+         goto cleanup;
       }
-      retroview_grid_set_px(
-         *x_px, *y_px, -1 * instance /* Invert back positive. */ );
+      retroview_grid_set_px( *x_px, *y_px, instance_pos );
 
       /* Tiles should ALWAYS land on the tile grid! */
       assert( 0 == *x_px % RETROFLAT_TILE_W );
       assert( 0 == *y_px % RETROFLAT_TILE_H );
 
-      /* There is no bump. The tile is drawn on-screen, unmolested. */
-
    } else if( 0 < instance ) {
 
+      /* Keep the mobiles drawn in the localized context of the viewport
+       * relative to the greater context of the world.
+       */
       *x_px -= (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
       *y_px -= (g_retroflat_state->viewport.world_tile_y * RETROFLAT_TILE_H);
 
