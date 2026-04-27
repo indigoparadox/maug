@@ -133,6 +133,7 @@ struct RETROFLAT_PLATFORM {
    size_t port_stack_ct;
    GWorldPtr gworld_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
    GDHandle gdhandle_stack[RETROFLAT_M68K_PORT_STACK_MAX_CT];
+   Rect viewport_rect;
 };
 
 #endif /* !RETPLTD_H */

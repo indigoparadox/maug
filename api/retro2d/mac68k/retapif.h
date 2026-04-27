@@ -115,7 +115,8 @@ static MERROR_RETVAL retroflat_init_platform(
 #ifndef RETROFLAT_MAC_NO_DBLBUF
    retval = retroflat_create_bitmap(
       args->screen_w, args->screen_h,
-      &(g_retroflat_state->platform.screen_buffer), RETROFLAT_BITMAP_FLAG_OPAQUE );
+      &(g_retroflat_state->platform.screen_buffer),
+      RETROFLAT_BITMAP_FLAG_OPAQUE );
 #endif /* !RETROFLAT_MAC_NO_DBLBUF */
 
 cleanup:
@@ -646,8 +647,11 @@ MERROR_RETVAL retroflat_blit_bitmap(
 
    assert( NULL != src );
 
-   if( NULL == target ) {
+   if( NULL == target || retroflat_screen_buffer() == target ) {
       target = retroflat_screen_buffer();
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    if(
@@ -657,11 +661,9 @@ MERROR_RETVAL retroflat_blit_bitmap(
       goto cleanup;
    }
 
-   /*
-   retval = retroflat_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
-   */
 
    SetRect( &src_r, s_x, s_y, s_x + w, s_y + h );
    SetRect( &dest_r, d_x, d_y, d_x + w, d_y + h );
@@ -893,6 +895,70 @@ void retroflat_ellipse(
 
 void retroflat_resize_v() {
    /* Platform does not support resizing. */
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+   int left = g_retroflat_state->platform.viewport_rect.left;
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   left += x;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.left ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.viewport_rect.left
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      left = RETROFLAT_TILE_W;
+   }
+
+   SetRect(
+      &(g_retroflat_state->platform.viewport_rect),
+      left,
+      g_retroflat_state->platform.viewport_rect.top,
+      left + g_retroflat_state->screen_v_w,
+      g_retroflat_state->platform.viewport_rect.bottom );
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+   int top = g_retroflat_state->platform.viewport_rect.top;
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   top += y;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.top ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.viewport_rect.top
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      top = RETROFLAT_TILE_H;
+   }
+
+   SetRect(
+      &(g_retroflat_state->platform.viewport_rect),
+      g_retroflat_state->platform.viewport_rect.left,
+      top,
+      g_retroflat_state->platform.viewport_rect.right,
+      top + g_retroflat_state->screen_v_h );
+
+cleanup:
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */
