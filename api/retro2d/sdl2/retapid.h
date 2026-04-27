@@ -64,11 +64,13 @@ struct RETROFLAT_BITMAP {
 #  else
 #     define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->surface)
 #     define retroflat_bitmap_w( bmp ) \
-         (NULL == (bmp) || NULL == (bmp)->surface ? \
-            g_retroflat_state->screen_v_w : (size_t)((bmp)->surface->w))
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
+            g_retroflat_state->screen_v_w + (2 * RETROFLAT_TILE_W) : \
+               (size_t)((bmp)->surface->w))
 #     define retroflat_bitmap_h( bmp ) \
-         (NULL == (bmp) || NULL == (bmp)->surface ? \
-            g_retroflat_state->screen_v_h : (size_t)((bmp)->surface->h))
+         ((NULL == (bmp) || retroflat_screen_buffer() == (bmp)) ? \
+            g_retroflat_state->screen_v_h + (2 * RETROFLAT_TILE_H) : \
+               (size_t)((bmp)->surface->h))
 
 #     define retroflat_bitmap_locked( bmp ) (NULL != (bmp)->renderer)
 
@@ -124,6 +126,7 @@ struct RETROFLAT_PLATFORM {
    struct RETROFLAT_BITMAP screen_buffer;
    SDL_Window*          window;
    uint8_t focus;
+   SDL_Rect viewport_rect;
 };
 
 #endif /* !RETPLTD_H */

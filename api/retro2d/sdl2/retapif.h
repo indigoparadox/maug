@@ -105,9 +105,26 @@ MERROR_RETVAL retroflat_init_platform(
 
    /* Create the buffer texture. */
    g_retroflat_state->platform.screen_buffer.texture =
-      SDL_CreateTexture( g_retroflat_state->platform.screen_buffer.renderer,
+      SDL_CreateTexture(
+         g_retroflat_state->platform.screen_buffer.renderer,
          SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
-         g_retroflat_state->screen_v_w, g_retroflat_state->screen_v_h );
+         g_retroflat_state->screen_v_w
+         /* Add off-screen tiles. */
+         + (2 * RETROFLAT_TILE_W),
+         g_retroflat_state->screen_v_h
+         /* Add off-screen tiles. */
+         + (2 * RETROFLAT_TILE_H) );
+
+   g_retroflat_state->retroflat_flags |= RETROFLAT_STATE_FLAG_HWSCROLLING;
+
+   /* Setup the viewport blit source rect to blit from the center of the
+    * unnaturally large buffer by default. */
+   g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
+   g_retroflat_state->platform.viewport_rect.y = RETROFLAT_TILE_H;
+   g_retroflat_state->platform.viewport_rect.w =
+      g_retroflat_state->screen_v_w;
+   g_retroflat_state->platform.viewport_rect.h =
+      g_retroflat_state->screen_v_h;
 
 #     ifdef RETROFLAT_SDL_ICO
    debug_printf( 1, "setting SDL window icon..." );
@@ -296,7 +313,9 @@ MERROR_RETVAL retroflat_draw_release( struct RETROFLAT_BITMAP* bmp ) {
       SDL_SetRenderTarget( g_retroflat_state->platform.screen_buffer.renderer, NULL );
       SDL_RenderCopyEx(
          g_retroflat_state->platform.screen_buffer.renderer,
-         g_retroflat_state->platform.screen_buffer.texture, NULL, NULL, 0, NULL, 0 );
+         g_retroflat_state->platform.screen_buffer.texture,
+         &(g_retroflat_state->platform.viewport_rect),
+         NULL, 0, NULL, 0 );
       SDL_RenderPresent( g_retroflat_state->platform.screen_buffer.renderer );
 
       goto cleanup;
@@ -586,10 +605,13 @@ MERROR_RETVAL retroflat_blit_bitmap(
    if( NULL == target || retroflat_screen_buffer() == target ) {
       is_screen = 1;
       target = retroflat_screen_buffer();
+
+      retval = _retroview_hwscroll( &d_x, &d_y, w, h, instance );
+      maug_cleanup_if_not_ok();
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -602,10 +624,16 @@ MERROR_RETVAL retroflat_blit_bitmap(
    dest_rect.w = w;
    dest_rect.h = h;
 
+   assert( d_x >= 0 );
+   assert( d_y >= 0 );
+   assert( d_x < retroflat_bitmap_w( target ) );
+   assert( d_y < retroflat_bitmap_h( target ) );
+
    assert( retroflat_bitmap_locked( target ) );
    
    if( is_screen ) {
       tmp_tex = src->texture;
+
    } else {
       assert( !retroflat_bitmap_locked( src ) );
       retroflat_draw_lock( src );
@@ -710,42 +738,22 @@ void retroflat_rect(
       return;
    }
 
-   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
-      return;
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
    }
 
-   if(
-      MERROR_OK !=
-      retroflat_viewport_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
-   ) {
+   if( retroflat_bitmap_has_flags( target, RETROFLAT_BITMAP_FLAG_RO ) ) {
       return;
    }
 
 #  ifdef RETROFLAT_OPENGL
 
    debug_printf( RETRO2D_TRACE_LVL, "called retroflat_rect()!" );
-#if 0
-   assert( NULL != target );
-
-   /* Draw the rect onto the given 2D texture. */
-   retrosoft_rect( target, color_idx, x, y, w, h, flags );
-#endif
 
 #  else
 
-   if( NULL == target ) {
-      target = retroflat_screen_buffer();
-   }
-
    if(
-      RETROFLAT_BITMAP_FLAG_RO == (RETROFLAT_BITMAP_FLAG_RO & target->flags)
-   ) {
-      return;
-   }
-
-   if(
-      MERROR_OK !=
-      retroflat_viewport_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
+      MERROR_OK != _retroview_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
       return;
    }
@@ -929,6 +937,57 @@ uint8_t retroflat_focus_platform() {
    }
 
    return app_state_out;
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   /* Add the scroll amounts to the platform-specific viewport so the blits
+    * above know where to grab from on the full hardware buffer.
+    */
+   g_retroflat_state->platform.viewport_rect.x += x;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.viewport_rect.x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
+   }
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.viewport_rect.y += y;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.viewport_rect.y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.y = RETROFLAT_TILE_H;
+   }
+
+cleanup:
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */
