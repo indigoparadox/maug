@@ -577,6 +577,10 @@ MERROR_RETVAL _retroview_hwscroll(
       retroview_grid_set_px(
          *x_px, *y_px, -1 * instance /* Invert back positive. */ );
 
+      /* Tiles should ALWAYS land on the tile grid! */
+      assert( 0 == *x_px % RETROFLAT_TILE_W );
+      assert( 0 == *y_px % RETROFLAT_TILE_H );
+
       /* There is no bump. The tile is drawn on-screen, unmolested. */
 
    } else if( 0 < instance ) {
