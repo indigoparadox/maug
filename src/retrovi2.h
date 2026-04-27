@@ -272,6 +272,12 @@ MERROR_RETVAL retroview_init(
       g_retroflat_state->viewport.screen_tile_w,
       g_retroflat_state->viewport.screen_tile_h );
 
+   retroview_lock_grid();
+   maug_mzero( g_retroflat_state->viewport.grid, 
+      g_retroflat_state->viewport.grid_ct *
+      sizeof( retroflat_tile_t ) );
+   retroview_unlock_grid();
+
 cleanup:
 
    return retval;
@@ -468,8 +474,9 @@ MERROR_RETVAL _retroview_trim_px(
       limit_x_h = retroflat_screen_w();
       limit_y_h = retroflat_screen_h();
    }
+   /*
    debug_printf( 1, "trim test px: %d, %d inside of %d, %d to %d, %d",
-      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h );
+      *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h ); */
    assert( !retroflat_outside_rect(
       *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h ) );
 #endif /* DEBUG */
