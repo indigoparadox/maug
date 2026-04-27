@@ -19,7 +19,7 @@ endif
 
 # Disable the keyboard and viewport/refresh functions, since the NDS doesn't
 # have those.
-DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROFLAT_NO_VIEWPORT_REFRESH -DRETROGL_NO_TEXTURE_LISTS -DRETROGL_NO_FOG
+DEFINES_GCC_NDS += -D__NDS__ -DRETROFLAT_OS_NDS -DARM9 -DRETROGL_NO_TEXTURE_LISTS -DRETROGL_NO_FOG
 
 INCLUDES_GCC_NDS += -I $(DEVKITPRO)/devkitARM/arm-none-eabi/include -I $(DEVKITPRO)/devkitARM/include
 
@@ -67,7 +67,7 @@ H_FILES_NDS_LIBNDS :=
 MAUG_DEPS_NDS := $$(subst $$(RETROXPM_H_DIR)/xpmasset.h,,$$(MAUG_DEPS))
 
 ifeq ("$$(RETROFLAT_SOUND)","1")
-CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/sound/nds
+CFLAGS_GCC_NDS_LIBNDS += -I$(MAUG_ROOT)/api/sound/nds -DRETROSND_SAMPLE_44100
 endif
 
 ifeq ("$$(RETROFLAT_OPENGL)","1")
