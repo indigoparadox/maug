@@ -652,7 +652,7 @@ ssize_t retrowin_get_by_idc(
    ssize_t idx_out = -1;
    int autolock = 0;
    size_t i = 0;
-   struct RETROWIN* win = NULL;
+   struct RETROWIN const* win = NULL;
    MERROR_RETVAL retval = MERROR_OK;
 
    if( 0 == mdata_vector_ct( win_stack ) ) {

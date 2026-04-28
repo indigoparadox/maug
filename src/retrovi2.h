@@ -357,22 +357,14 @@ uint8_t retroview_focus(
       new_moved = 0;
    int16_t new_pt = 0;
 
-   /* TODO: Reduce conditional jumps with math. */
-
    /* Test if the screen is scrolling east/west. */
    new_pt = x1 - (g_retroflat_state->viewport.world_tile_x * RETROFLAT_TILE_W);
    if( new_pt > (retroflat_screen_w() >> 1) + range ) {
-      new_moved = retroview_move_x(
+      moved = retroview_move_x(
          gc_retroflat_offsets8_x[RETROFLAT_DIR8_EAST] * speed );
-      if( !moved && new_moved ) {
-         moved = new_moved;
-      }
    } else if( new_pt < (retroflat_screen_w() >> 1) - range ) {
-      new_moved = retroview_move_x(
+      moved = retroview_move_x(
          gc_retroflat_offsets8_x[RETROFLAT_DIR8_WEST] * speed );
-      if( !moved && new_moved ) {
-         moved = new_moved;
-      }
    }
 
    /* Test if the screen is scrolling north/south. */
@@ -380,13 +372,13 @@ uint8_t retroview_focus(
    if( new_pt > (retroflat_screen_h() >> 1) + range ) {
       new_moved = retroview_move_y(
          gc_retroflat_offsets8_y[RETROFLAT_DIR8_SOUTH] * speed );
-      if( !moved && new_moved ) {
+      if( !moved ) {
          moved = new_moved;
       }
    } else if( new_pt < (retroflat_screen_h() >> 1) - range ) {
       new_moved = retroview_move_y(
          gc_retroflat_offsets8_y[RETROFLAT_DIR8_NORTH] * speed );
-      if( !moved && new_moved ) {
+      if( !moved ) {
          moved = new_moved;
       }
    }

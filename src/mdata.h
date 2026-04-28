@@ -262,7 +262,7 @@ typedef MERROR_RETVAL (*mdata_table_iter_t)(
 
 MERROR_RETVAL mdata_table_lock( struct MDATA_TABLE* t );
 
-MERROR_RETVAL mdata_table_unlock( struct MDATA_TABLE* t );
+void mdata_table_unlock( struct MDATA_TABLE* t );
 
 MERROR_RETVAL mdata_table_iter(
    struct MDATA_TABLE* t,
@@ -1255,17 +1255,9 @@ cleanup:
 
 /* === */
 
-MERROR_RETVAL mdata_table_unlock( struct MDATA_TABLE* t ) {
-   MERROR_RETVAL retval = MERROR_OK;
-
+void mdata_table_unlock( struct MDATA_TABLE* t ) {
    mdata_vector_unlock( &(t->data_cols[0]) );
    mdata_vector_unlock( &(t->data_cols[1]) );
-
-   if( MERROR_OK != retval ) {
-      assert( mdata_vector_is_locked( &(t->data_cols[0]) ) );
-   }
-
-   return retval;
 }
 
 /* === */

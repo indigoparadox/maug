@@ -198,7 +198,7 @@ cleanup:
 size_t retrofont_sz_from_filename( const char* font_name ) {
    const char* p_c = NULL;
    size_t glyph_h = 0;
-   size_t i = 0;
+   size_t i;
    char glyph_h_buf[10];
 
    maug_mzero( glyph_h_buf, 10 );

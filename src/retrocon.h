@@ -275,6 +275,7 @@ MERROR_RETVAL retrocon_print_line( struct RETROCON* con, const char* line ) {
       retval = retrogui_get_ctl_text(
          &(con->gui), RETROCON_IDC_CON_BASE + i - 1,
          sbuffer_shift, RETROCON_LBUFFER_SZ_MAX );
+      maug_cleanup_if_not_ok();
       retval = retrogui_set_ctl_text(
          &(con->gui), RETROCON_IDC_CON_BASE + i,
          RETROCON_LBUFFER_SZ_MAX, sbuffer_shift );
@@ -384,6 +385,7 @@ MERROR_RETVAL retrocon_input(
    if( RETROCON_IDC_TEXTBOX == *p_idc_out ) {
       retval = retrogui_get_ctl_text(
          &(con->gui), RETROCON_IDC_TEXTBOX, lbuffer, RETROCON_LBUFFER_SZ_MAX );
+      maug_cleanup_if_not_ok();
       retval = retrogui_set_ctl_text(
          &(con->gui), RETROCON_IDC_TEXTBOX, 1, "" );
       maug_cleanup_if_not_ok();
