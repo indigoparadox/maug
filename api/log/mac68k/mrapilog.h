@@ -17,9 +17,9 @@ void _maug_error_printf( int line, const char* fmt, ... );
 
 extern short g_log_ref;
 
-MERROR_RETVAL logging_init();
+MERROR_RETVAL logging_init( void );
 
-void logging_shutdown();
+void logging_shutdown( void );
 
 #elif defined( MFILE_C )
 
@@ -29,7 +29,7 @@ void logging_shutdown();
 
 short g_log_ref = 0;
 
-MERROR_RETVAL logging_init() {
+MERROR_RETVAL logging_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
    OSErr err;
 
@@ -45,7 +45,7 @@ MERROR_RETVAL logging_init() {
 
 /* === */
 
-void logging_shutdown() {
+void logging_shutdown( void ) {
    CloseDriver( g_log_ref );
 }
 

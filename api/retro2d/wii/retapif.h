@@ -136,13 +136,13 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    return ticks_to_millisecs( gettime() );
 }
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -317,13 +317,13 @@ cleanup:
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 }

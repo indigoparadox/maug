@@ -86,7 +86,7 @@ void* _retroflat_psx_next_prim( struct RETROFLAT_BITMAP* bmp, size_t prim_sz ) {
    return bmp->next_prim;
 }
 
-void _retroflat_psx_timer2_isr() {
+void _retroflat_psx_timer2_isr( void ) {
    /* Increment ms timer. */
    g_ms++;
 }
@@ -481,7 +481,7 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    retroflat_ms_t ms = g_ms;
 
    /* debug_printf( 1, "ms: %d", ms ); */
@@ -491,7 +491,7 @@ retroflat_ms_t retroflat_get_ms() {
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    /* LCG based on "Numerical Recipes" chapter 7.1. */
    g_retroflat_state->platform.rand_state =
       g_retroflat_state->platform.rand_state * 1664525 + 1013904233;
@@ -936,13 +936,13 @@ void retroflat_ellipse(
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 }

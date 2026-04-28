@@ -80,7 +80,7 @@ struct MMEM_DEF g_mmem_defs[MMEM_DEFS_CT_MAX];
 int g_mmem_defs_ct = 0;
 void* g_mmem_alloc_ptr = NULL;
 
-void debug_mmem_print_total() {
+void debug_mmem_print_total( void ) {
    size_t i = 0;
    int sz_total = 0;
    char prefix = ' ';

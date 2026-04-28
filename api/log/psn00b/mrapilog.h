@@ -30,13 +30,13 @@ void _internal_debug_printf(
       _internal_debug_printf( lvl, __FILE__, __LINE__, \
          "single " name " size is " SIZE_T_FMT " bytes, " name " array size is " SIZE_T_FMT " bytes", (sz), ((sz) * (max)) );
 
-MERROR_RETVAL logging_init();
+MERROR_RETVAL logging_init( void );
 
-void logging_shutdown();
+void logging_shutdown( void );
 
 #elif defined( MFILE_C )
 
-MERROR_RETVAL logging_init() {
+MERROR_RETVAL logging_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
 #ifdef RETROFLAT_PSX_LOG_SERIAL
    AddSIO( 115200 );
@@ -46,7 +46,7 @@ MERROR_RETVAL logging_init() {
 
 /* === */
 
-void logging_shutdown() {
+void logging_shutdown( void ) {
 }
 
 /* === */

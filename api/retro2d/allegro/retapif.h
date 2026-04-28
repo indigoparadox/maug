@@ -6,7 +6,7 @@ static volatile retroflat_ms_t g_ms = 0;
 
 /* Allegro-specific callbacks for init, below. */
 
-void retroflat_on_ms_tick() {
+void retroflat_on_ms_tick( void ) {
    if( NULL == g_retroflat_state ) {
       /* debug_printf( 1, "no state!" ); */
    } else {
@@ -14,7 +14,7 @@ void retroflat_on_ms_tick() {
    }
 }
 
-void retroflat_on_close_button() {
+void retroflat_on_close_button( void ) {
    g_retroflat_state->input.close_button = 1;
 }
 END_OF_FUNCTION( retroflat_on_close_button )
@@ -168,13 +168,13 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    return g_ms;
 }
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -527,13 +527,13 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* TODO */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
 #ifdef RETROFLAT_OS_WIN
    HWND hwnd = win_get_window();
    uint8_t flags_out = 0;

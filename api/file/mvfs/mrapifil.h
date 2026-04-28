@@ -12,7 +12,7 @@ union MFILE_HANDLE {
  * (probably via Makevfs.inc). */
 #  include <mvfs.h>
 
-MERROR_RETVAL mfile_plt_init() {
+MERROR_RETVAL mfile_plt_init( void ) {
    return MERROR_OK;
 }
 

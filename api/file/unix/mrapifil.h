@@ -132,7 +132,7 @@ MERROR_RETVAL mfile_file_read_line(
 
 /* === */
 
-MERROR_RETVAL mfile_plt_init() {
+MERROR_RETVAL mfile_plt_init( void ) {
 #ifdef RETROFLAT_OS_NX
    /* Nintendo Switch ROMFS mount. */
    romfsInit();

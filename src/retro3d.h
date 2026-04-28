@@ -84,9 +84,9 @@ void retro3d_init_projection( struct RETRO3D_PROJ_ARGS* args );
 void retro3d_init_bg(
    RETROFLAT_COLOR color, mfix_t fog_draw_dist, mfix_t fog_density );
 
-MERROR_RETVAL retro3d_platform_init();
+MERROR_RETVAL retro3d_platform_init( void );
 
-void retro3d_platform_shutdown();
+void retro3d_platform_shutdown( void );
 
 /**
  * \addtogroup maug_retro3d_scene Retro3D Scene Graph
@@ -97,13 +97,13 @@ void retro3d_platform_shutdown();
 /**
  * \brief Commence drawing a new scene/frame.
  */
-void retro3d_scene_init();
+void retro3d_scene_init( void );
 
 /**
  * \brief Finish drawing the current scene/frame and display it on-screen.
  * \return The number of polys drawn for this scene/frame.
  */
-size_t retro3d_scene_complete();
+size_t retro3d_scene_complete( void );
 
 /**
  * \brief Denote the beginning of a new scene node, or group of polygons inside
@@ -112,13 +112,13 @@ size_t retro3d_scene_complete();
  * This can be useful for e.g. applying \ref maug_retro3d_trans to a group
  * of polygons, like a spinning waterwheel or a character's moving arm.
  */
-void retro3d_scene_open_node();
+void retro3d_scene_open_node( void );
 
 /**
  * \brief Denote the end of the current scene node opened with
  *        retro3d_scene_open_node().
  */
-void retro3d_scene_close_node();
+void retro3d_scene_close_node( void );
 
 /*! \} */
 
@@ -170,7 +170,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags );
  * \brief Complete a triangle opened with retro3d_tri_begin(). This MUST be
  *        called after drawing three vertices.
  */
-void retro3d_tri_end();
+void retro3d_tri_end( void );
 
 /*! \} */ /* maug_retro3d_poly */
 

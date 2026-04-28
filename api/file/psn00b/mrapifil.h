@@ -242,7 +242,7 @@ MERROR_RETVAL mfile_file_write_block(
 
 /* === */
 
-MERROR_RETVAL mfile_plt_init() {
+MERROR_RETVAL mfile_plt_init( void ) {
    
    /* Initialize graphics to get interrupts going. We can do this again once
     * retro2D inits, but we need interrupts for CD-ROM init to complete!

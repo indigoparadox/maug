@@ -812,7 +812,7 @@ typedef MERROR_RETVAL (*retroflat_proc_quit_t)( void* data );
  */
 typedef void (*retroflat_loop_iter)(void* data);
 
-uint32_t retroflat_get_rand();
+uint32_t retroflat_get_rand( void );
 
 /**
  * \addtogroup maug_retroflt_input RetroFlat Input API
@@ -944,7 +944,7 @@ struct RETROFLAT_ARGS;
 
 typedef maug_ms_t retroflat_ms_t;
 
-retroflat_ms_t retroflat_get_ms();
+retroflat_ms_t retroflat_get_ms( void );
 
 #ifndef RETROFLAT_NO_SOUND
 #  include "retrosnd.h"
@@ -1341,9 +1341,9 @@ void retroflat_shutdown( int retval );
  */
 MERROR_RETVAL retroflat_vdp_call( const char* proc_name );
 
-uint8_t* retroflat_vdp_get_vdp_in();
+uint8_t* retroflat_vdp_get_vdp_in( void );
 
-uint8_t* retroflat_vdp_get_vdp_out();
+uint8_t* retroflat_vdp_get_vdp_out( void );
 
 /*! \} */ /* maug_retroflt_vdp */
 #  endif /* RETROFLAT_VDP || DOCUMENTATION */
@@ -1629,19 +1629,19 @@ void retroflat_set_proc_quit(
  * \brief Platform-specific function to get current focus flags for the generic
  *        loop.
  */
-uint8_t retroflat_focus_platform();
+uint8_t retroflat_focus_platform( void );
 
 /**
  * \brief Platform-specific function to resize virtual screen to match
  *        physical window size.
  */
-void retroflat_resize_v();
+void retroflat_resize_v( void );
 
 /**
  * \brief This should be called in the API HAL on every iteration of the main
  *        loop (this is done automatically in the generic main loop).
  */
-void retroflat_timer_handle();
+void retroflat_timer_handle( void );
 
 /*! \} */ /* maug_retroflt_platform_handler */
 
@@ -2556,7 +2556,7 @@ ssize_t retroflat_timer_add(
 
 /* === */
 
-void retroflat_timer_handle() {
+void retroflat_timer_handle( void ) {
    size_t i = 0;
    retroflat_ms_t time_now = 0;
 

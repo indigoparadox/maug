@@ -380,14 +380,14 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    return SDL_GetTicks();
 }
 
 /* === */
 
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -987,13 +987,13 @@ cleanup:
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* TODO */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
    uint8_t app_state = 0;
    uint8_t app_state_out = 0;
 

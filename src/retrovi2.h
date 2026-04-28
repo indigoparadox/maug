@@ -158,7 +158,7 @@ struct RETROFLAT_VIEWPORT {
 MERROR_RETVAL retroview_init(
    retrotile_coord_t world_w, retrotile_coord_t world_h );
 
-void retroview_shutdown();
+void retroview_shutdown( void );
 
 MERROR_RETVAL retroview_grid_set_tile(
    retrotile_coord_t x_tile, retrotile_coord_t y_tile,
@@ -267,7 +267,7 @@ cleanup:
 
 /* === */
 
-void retroview_shutdown() {
+void retroview_shutdown( void ) {
    if( (MAUG_MHANDLE)NULL != g_retroflat_state->viewport.grid_h ) {
       maug_mfree( g_retroflat_state->viewport.grid_h );
    }

@@ -57,7 +57,7 @@ __attribute__((aligned(4))) = {
 
 /* === */
 
-static void _retroflat_nds_change_bg() {
+static void _retroflat_nds_change_bg( void ) {
 
    /* Update background tiles. */
    if(
@@ -351,7 +351,7 @@ void retroflat_message(
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
 #ifdef RETROFLAT_API_CALICO
    return cpuGetTiming();
 #else
@@ -361,7 +361,7 @@ retroflat_ms_t retroflat_get_ms() {
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -721,13 +721,13 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 }

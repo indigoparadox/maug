@@ -161,7 +161,7 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    struct timespec spec;
    uint32_t ms_out = 0,
       ms_launch_delta = 0;
@@ -179,7 +179,7 @@ retroflat_ms_t retroflat_get_ms() {
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -422,13 +422,13 @@ void retroflat_px(
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
 
 #  pragma message( "warning: focus_platform not implemented" )
 

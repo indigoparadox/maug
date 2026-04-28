@@ -6,7 +6,7 @@ static volatile retroflat_ms_t g_ms = 0;
 
 /* === */
 
-void __interrupt __far retroflat_timer_handler() {
+void __interrupt __far retroflat_timer_handler( void ) {
    static unsigned long count = 0;
 
    ++g_ms;
@@ -23,7 +23,7 @@ void __interrupt __far retroflat_timer_handler() {
 
 /* === */
 
-static void retroflat_show_mouse() {
+static void retroflat_show_mouse( void ) {
    union REGS r;
    r.x.ax = 0x01;
    int86( 0x33, &r, &r );
@@ -31,7 +31,7 @@ static void retroflat_show_mouse() {
 
 /* === */
 
-static void retroflat_hide_mouse() {
+static void retroflat_hide_mouse( void ) {
    union REGS r;
    r.x.ax = 0x02;
    int86( 0x33, &r, &r );
@@ -237,13 +237,13 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    return /**((uint16_t far*)0x046c) >> 4;*/ g_ms;
 }
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return rand();
 }
 
@@ -647,13 +647,13 @@ MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 }

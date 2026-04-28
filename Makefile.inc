@@ -90,8 +90,8 @@ ifeq ("$(PEDANTIC)","1")
 endif
 
 ifeq ("$(WERROR)","1")
-	CFLAGS_GCC += -Werror -Wno-sign-compare -Wno-strict-aliasing -Wno-unused-value -Wno-unused-but-set-variable
-	CFLAGS_GCC64 += -Werror -Wno-sign-compare -Wno-strict-aliasing -Wno-unused-value -Wno-unused-but-set-variable
+	CFLAGS_GCC += -Werror -Wno-sign-compare -Wno-strict-aliasing -Wno-unused-value -Wno-unused-but-set-variable -Wstrict-prototypes
+	CFLAGS_GCC64 += -Werror -Wno-sign-compare -Wno-strict-aliasing -Wno-unused-value -Wno-unused-but-set-variable -Wstrict-prototypes
 	CFLAGS_WATCOM += -we
 	CFLAGS_WATCOM386 += -we
 endif

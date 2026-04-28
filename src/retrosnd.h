@@ -152,9 +152,9 @@ void retrosnd_note_on( uint8_t channel, uint8_t pitch, uint8_t vel );
 
 void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel );
 
-void retrosnd_shutdown();
+void retrosnd_shutdown( void );
 
-void retrosnd_pump();
+void retrosnd_pump( void );
 
 void retrosnd_note_on_deadline(
    uint8_t channel, uint8_t pitch, retroflat_ms_t after );

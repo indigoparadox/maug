@@ -66,11 +66,11 @@ struct RETROGXC_FONT_PARMS {
    uint16_t glyphs_count;
 };
 
-MERROR_RETVAL retrogxc_init();
+MERROR_RETVAL retrogxc_init( void );
 
-void retrogxc_clear_cache();
+void retrogxc_clear_cache( void );
 
-void retrogxc_shutdown();
+void retrogxc_shutdown( void );
 
 retrogxc_asset_type_t retrogxc_loader_bitmap(
    const maug_path res_p, MAUG_MHANDLE* handle_p,
@@ -120,7 +120,7 @@ static struct MDATA_VECTOR SEG_MGLOBAL gs_retrogxc_bitmaps;
 
 /* === */
 
-MERROR_RETVAL retrogxc_init() {
+MERROR_RETVAL retrogxc_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /*
@@ -137,7 +137,7 @@ MERROR_RETVAL retrogxc_init() {
 
 /* === */
 
-void retrogxc_clear_cache() {
+void retrogxc_clear_cache( void ) {
    size_t dropped_count = 0;
    struct RETROFLAT_CACHE_ASSET* asset = NULL;
    retroflat_blit_t* bitmap = NULL;
@@ -191,7 +191,7 @@ cleanup:
 
 /* === */
 
-void retrogxc_shutdown() {
+void retrogxc_shutdown( void ) {
    retrogxc_clear_cache();
    mdata_vector_free( &gs_retrogxc_bitmaps );
    g_retroflat_state->retroflat_flags &= ~RETROFLAT_STATE_FLAG_USE_GXC;

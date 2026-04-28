@@ -71,14 +71,14 @@ void retroflat_set_title( const char* format, ... ) {
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    /* TODO */
 #  pragma message( "warning: get_ms not implemented" )
 }
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    /* TODO */
 #  pragma message( "warning: get_rand not implemented" )
 }
@@ -312,7 +312,7 @@ void retroflat_ellipse(
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
 
 #  pragma message( "warning: resize_v not implemented" )
 
@@ -320,7 +320,7 @@ void retroflat_resize_v() {
 
 /* === */
 
-uint8_t retroflat_focus_platform() {
+uint8_t retroflat_focus_platform( void ) {
 
 #  pragma message( "warning: focus_platform not implemented" )
 

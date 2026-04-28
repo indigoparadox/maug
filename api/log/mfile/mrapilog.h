@@ -52,8 +52,8 @@ void _internal_debug_printf(
 #  ifndef MFILE_C
 extern struct MFILE_CADDY SEG_MGLOBAL g_log_file;
 #  endif /* MFILE_C */
-MERROR_RETVAL logging_init();
-void logging_shutdown();
+MERROR_RETVAL logging_init( void );
+void logging_shutdown( void );
 
 #elif defined( MFILE_C )
 
@@ -114,7 +114,7 @@ void error_printf( const char* fmt, ... ) {
 
 /* === */
 
-MERROR_RETVAL logging_init() {
+MERROR_RETVAL logging_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
    retval = mfile_open_write( LOG_FILE_NAME, &g_log_file );
 #ifndef MAUG_NO_RETRO
@@ -128,7 +128,7 @@ MERROR_RETVAL logging_init() {
 
 /* === */
 
-void logging_shutdown() {
+void logging_shutdown( void ) {
    mfile_close( &g_log_file );
 }
 

@@ -214,7 +214,7 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
 /* === */
 
-void retrosnd_shutdown() {
+void retrosnd_shutdown( void ) {
    midiOutClose( g_retroflat_state->sound.mo_handle );
 }
 
@@ -232,7 +232,7 @@ void retrosnd_note_on_deadline(
 
 /* === */
 
-void retrosnd_pump() {
+void retrosnd_pump( void ) {
 
 #ifndef RETROFLAT_NO_SOUND
 #  pragma message( "warning: pump not implemented" )

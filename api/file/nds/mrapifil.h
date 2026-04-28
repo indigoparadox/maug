@@ -96,7 +96,7 @@ MERROR_RETVAL mfile_file_write_block(
 
 /* === */
 
-MERROR_RETVAL mfile_plt_init() {
+MERROR_RETVAL mfile_plt_init( void ) {
    return MERROR_OK;
 }
 

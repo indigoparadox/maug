@@ -73,8 +73,8 @@ typedef RGB RETROFLAT_COLOR_DEF;
  * so good and will cause multiple defs otherwise...
  */
 
-size_t retroflat_allegro_screen_w();
-size_t retroflat_allegro_screen_h();
+size_t retroflat_allegro_screen_w( void );
+size_t retroflat_allegro_screen_h( void );
 size_t retroflat_allegro_bmp_w( struct RETROFLAT_BITMAP* bmp );
 size_t retroflat_allegro_bmp_h( struct RETROFLAT_BITMAP* bmp );
 

@@ -116,7 +116,7 @@ void retro3d_init_bg(
 
 /* === */
 
-MERROR_RETVAL retro3d_platform_init() {
+MERROR_RETVAL retro3d_platform_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    /*
@@ -159,14 +159,14 @@ MERROR_RETVAL retro3d_platform_init() {
 
 /* === */
 
-void retro3d_platform_shutdown() {
+void retro3d_platform_shutdown( void ) {
    /* Destroy weird texture we need to create so things show up. */
    retroflat_destroy_bitmap( &g_bmp_wtf );
 }
 
 /* === */
 
-void retro3d_scene_init() {
+void retro3d_scene_init( void ) {
    /* Scale down up so glVertex3i operates on 100-basis. */
    glLoadIdentity();
    glPushMatrix();
@@ -176,7 +176,7 @@ void retro3d_scene_init() {
 
 /* === */
 
-size_t retro3d_scene_complete() {
+size_t retro3d_scene_complete( void ) {
    glPopMatrix();
    glFlush();
    gs_scene_tris = 0;
@@ -185,13 +185,13 @@ size_t retro3d_scene_complete() {
 
 /* === */
 
-void retro3d_scene_open_node() {
+void retro3d_scene_open_node( void ) {
    glPushMatrix();
 }
 
 /* === */
 
-void retro3d_scene_close_node() {
+void retro3d_scene_close_node( void ) {
    glPopMatrix();
 }
 
@@ -276,7 +276,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
 
 /* === */
 
-void retro3d_tri_end() {
+void retro3d_tri_end( void ) {
    assert( 0 <= gs_tri_vxs_drawn );
    assert( 3 > gs_tri_vxs_drawn );
    debug_printf( RETRO3D_TRACE_LVL, "triangle end!" );

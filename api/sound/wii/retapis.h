@@ -110,14 +110,14 @@ MERROR_RETVAL retrosnd_midi_play_smf( const char* filename ) {
 
 /* === */
 
-uint8_t retrosnd_midi_is_playing_smf() {
+uint8_t retrosnd_midi_is_playing_smf( void ) {
 #  pragma message( "warning: midi_play_smf not implemented" )
    return 1;
 }
 
 /* === */
 
-void retrosnd_shutdown() {
+void retrosnd_shutdown( void ) {
 
    if(
       RETROSND_FLAG_INIT !=

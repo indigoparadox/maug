@@ -26,7 +26,7 @@ void retroflat_mac_bwcolor( RETROFLAT_COLOR color_idx ) {
 
 /* === */
 
-int retroflat_mac_get_bpp() {
+int retroflat_mac_get_bpp( void ) {
    int bpp_out = 0;
    GDHandle gd_monitor = nil;
 
@@ -308,7 +308,7 @@ cleanup:
 
 /* === */
 
-retroflat_ms_t retroflat_get_ms() {
+retroflat_ms_t retroflat_get_ms( void ) {
    int32_t ticks = 0;
    ticks = TickCount();
    return (ticks << 4) + (ticks >> 1) + (ticks >> 3);
@@ -316,7 +316,7 @@ retroflat_ms_t retroflat_get_ms() {
 
 /* === */
 
-uint32_t retroflat_get_rand() {
+uint32_t retroflat_get_rand( void ) {
    return Random();
 }
 
@@ -893,7 +893,7 @@ void retroflat_ellipse(
 
 /* === */
 
-void retroflat_resize_v() {
+void retroflat_resize_v( void ) {
    /* Platform does not support resizing. */
 }
 

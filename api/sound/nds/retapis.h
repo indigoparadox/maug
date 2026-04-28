@@ -118,7 +118,7 @@ void retrosnd_note_off( uint8_t channel, uint8_t pitch, uint8_t vel ) {
 
 /* === */
 
-void retrosnd_shutdown() {
+void retrosnd_shutdown( void ) {
 
    if(
       RETROSND_FLAG_INIT !=
@@ -145,7 +145,7 @@ void retrosnd_note_on_deadline(
 
 /* === */
 
-void retrosnd_pump() {
+void retrosnd_pump( void ) {
 
 #ifndef RETROFLAT_NO_SOUND
 #  pragma message( "warning: pump not implemented" )

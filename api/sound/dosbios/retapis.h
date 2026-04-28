@@ -124,7 +124,7 @@ static void retrosnd_adlib_poke( uint8_t reg, uint8_t b_in ) {
 
 /* === */
 
-static void retrosnd_adlib_clear() {
+static void retrosnd_adlib_clear( void ) {
    int i = 0;
    for( i = 0 ; 245 > i ; i++ ) {
       retrosnd_adlib_poke( i, 0 );
@@ -523,7 +523,7 @@ cleanup:
 
 /* === */
 
-void retrosnd_shutdown() {
+void retrosnd_shutdown( void ) {
 
    switch( g_retroflat_state->sound.driver ) {
    case RETROSND_PC_BIOS_MPU:
@@ -554,7 +554,7 @@ void retrosnd_note_on_deadline(
 
 /* === */
 
-void retrosnd_pump() {
+void retrosnd_pump( void ) {
 
 #ifndef RETROFLAT_NO_SOUND
 #  pragma message( "warning: pump not implemented" )

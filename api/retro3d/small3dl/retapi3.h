@@ -14,7 +14,7 @@ void retro3d_init_bg(
 
 /* === */
 
-MERROR_RETVAL retro3d_platform_init() {
+MERROR_RETVAL retro3d_platform_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
 
    return retval;
@@ -22,27 +22,27 @@ MERROR_RETVAL retro3d_platform_init() {
 
 /* === */
 
-void retro3d_platform_shutdown() {
+void retro3d_platform_shutdown( void ) {
 }
 
 /* === */
 
-void retro3d_scene_init() {
+void retro3d_scene_init( void ) {
 }
 
 /* === */
 
-void retro3d_scene_complete() {
+void retro3d_scene_complete( void ) {
 }
 
 /* === */
 
-void retro3d_scene_open_node() {
+void retro3d_scene_open_node( void ) {
 }
 
 /* === */
 
-void retro3d_scene_close_node() {
+void retro3d_scene_close_node( void ) {
 }
 
 /* === */
@@ -77,7 +77,7 @@ void retro3d_tri_begin_rgb( float r, float g, float b, uint8_t flags ) {
 
 /* === */
 
-void retro3d_tri_end() {
+void retro3d_tri_end( void ) {
 }
 
 /* === */

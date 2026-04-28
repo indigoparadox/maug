@@ -187,7 +187,7 @@ MERROR_RETVAL mfile_mem_vprintf(
 MERROR_RETVAL mfile_mem_write_block(
    struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
 
-MERROR_RETVAL mfile_plt_init();
+MERROR_RETVAL mfile_plt_init( void );
 
 /**
  * \related MFILE_CADDY

@@ -60,9 +60,9 @@ void _internal_debug_printf(
 extern FILE* SEG_MGLOBAL g_log_file;
 #  endif /* LOG_TO_FILE */
 
-MERROR_RETVAL logging_init();
+MERROR_RETVAL logging_init( void );
 
-void logging_shutdown();
+void logging_shutdown( void );
 
 #elif defined( MFILE_C )
 
@@ -70,7 +70,7 @@ void logging_shutdown();
 FILE* SEG_MGLOBAL g_log_file = NULL;
 #  endif /* LOG_TO_FILE */
 
-MERROR_RETVAL logging_init() {
+MERROR_RETVAL logging_init( void ) {
    MERROR_RETVAL retval = MERROR_OK;
 #  ifdef LOG_TO_FILE
    g_log_file = fopen( LOG_FILE_NAME, "w" );
@@ -84,7 +84,7 @@ MERROR_RETVAL logging_init() {
 
 /* === */
 
-void logging_shutdown() {
+void logging_shutdown( void ) {
 #  ifdef LOG_TO_FILE
    fclose( g_log_file );
 #  endif /* LOG_FILE_NAME */
