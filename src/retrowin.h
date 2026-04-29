@@ -152,6 +152,8 @@ ssize_t retrowin_get_by_idc(
  * \param win_stack The vector on which windows are stored.
  * \param font_filename Font to load into the GUI. Only used if this window
  *                      will manage its own GUI.
+ * \return Index of the pushed window on the window stack, or negative value if
+ *         there is an error.
  */
 ssize_t retrowin_push_win(
    struct RETROGUI* gui, struct MDATA_VECTOR* win_stack,
