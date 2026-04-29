@@ -222,7 +222,7 @@ MERROR_RETVAL retrocon_init(
          con->sbuffer_lines++;
       }
 
-   con->gui.focus = RETROCON_IDC_TEXTBOX;
+   con->gui.focus_idc = RETROCON_IDC_TEXTBOX;
 
    retval = retrocon_add_command( con, "PRINT", retrocon_cmd_print, NULL );
    maug_cleanup_if_not_ok();

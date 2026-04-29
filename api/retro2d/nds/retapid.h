@@ -130,7 +130,7 @@ typedef int RETROFLAT_COLOR_DEF;
 #  define END_OF_MAIN()
 
 /* TODO? */
-#  define retroflat_quit( retval_in )
+#  define retroflat_quit( retval_in ) while( 1 )
 #  define retroflat_bitmap_w( bmp ) ((bmp)->w)
 #  define retroflat_bitmap_h( bmp ) ((bmp)->h)
 #  define retroflat_bitmap_ok( bitmap ) (NULL != (bitmap)->tiles)

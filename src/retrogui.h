@@ -331,7 +331,7 @@ typedef int16_t retrogui_idc_t;
 
 #define RETROGUI_IDC_FMT "%d"
 
-#define RETROGUI_IDC_NONE -1
+#define RETROGUI_IDC_NONE 0
 
 /**
  * \brief Value for retrogui_set_ctl_color() color_key indicating background.
@@ -475,7 +475,7 @@ struct RETROGUI {
    retrogui_idc_t idc_prev;
    struct MDATA_VECTOR ctls;
    /*! \brief Unique identifying index for current highlighted RETROGUI_CTL. */
-   retrogui_idc_t focus;
+   retrogui_idc_t focus_idc;
    retroflat_blit_t* draw_bmp;
    retroflat_ms_t debounce_next;
    retroflat_ms_t debounce_max;
@@ -1121,12 +1121,12 @@ static void retrogui_redraw_BUTTON(
    RETROFLAT_COLOR border_color = RETROGUI_COLOR_BORDER;
    MAUG_MHANDLE font_h = (MAUG_MHANDLE)NULL;
 
-   if( ctl->base.idc == gui->focus ) {
+   if( ctl->base.idc == gui->focus_idc ) {
       /* Assign selected color if focused. */
       fg_color = ctl->base.sel_fg;
    }
 
-   if( ctl->base.idc == gui->focus ) {
+   if( ctl->base.idc == gui->focus_idc ) {
       /* Assign selected color if focused. */
       bg_color = ctl->base.sel_bg;
    }
@@ -1514,7 +1514,7 @@ static void retrogui_redraw_TEXTBOX(
       RETROGUI_CTL_TEXT_CUR_WH, RETROGUI_CTL_TEXT_CUR_WH,
       /* Draw blinking cursor. */
       /* TODO: Use a global timer to mark this field dirty. */
-      gui->focus == ctl->base.idc &&
+      gui->focus_idc == ctl->base.idc &&
          0 < ctl->TEXTBOX.blink_frames ? RETROFLAT_DRAW_FLAG_FILL : 0 );
 
    if( (-1 * RETROGUI_CTL_TEXT_BLINK_FRAMES) > --(ctl->TEXTBOX.blink_frames) ) {
@@ -2184,7 +2184,7 @@ retrogui_idc_t retrogui_poll_ctls(
    if( NULL == ctl ) {
 #if RETROGUI_TRACE_LVL > 0
       debug_printf( RETROGUI_TRACE_LVL,
-         "invalid IDC: " RETROGUI_IDC_FMT, gui->focus );
+         "invalid IDC: " RETROGUI_IDC_FMT, gui->focus_idc );
 #endif /* RETROGUI_TRACE_LVL */
       goto cleanup;
    }
@@ -2218,7 +2218,7 @@ retrogui_idc_t retrogui_poll_ctls(
    if( 0 != *p_input ) {
 #if RETROGUI_TRACE_LVL > 0
       debug_printf( RETROGUI_TRACE_LVL,
-         "focus " RETROGUI_IDC_FMT " input: %d", gui->focus, *p_input );
+         "focus " RETROGUI_IDC_FMT " input: %d", gui->focus_idc, *p_input );
 #endif /* RETROGUI_TRACE_LVL */
    }
 
@@ -2243,13 +2243,13 @@ retrogui_idc_t retrogui_poll_ctls(
       retroflat_or_key( *p_input, RETROGUI_KEY_ACTIVATE, RETROGUI_PAD_ACTIVATE )
    ) {
 
-      if( 0 <= gui->focus ) {
+      if( RETROGUI_IDC_NONE < gui->focus_idc ) {
 #if RETROGUI_TRACE_LVL > 0
          debug_printf( RETROGUI_TRACE_LVL,
-            "activate on focus IDC: " RETROGUI_IDC_FMT, gui->focus );
+            "activate on focus IDC: " RETROGUI_IDC_FMT, gui->focus_idc );
 #endif /* RETROGUI_TRACE_LVL */
-         idc_out = gui->focus;
-         /* gui->focus = -1; */
+         idc_out = gui->focus_idc;
+         /* gui->focus_idc = -1; */
          gui->flags |= RETROGUI_FLAGS_DIRTY;
       }
 
@@ -2259,7 +2259,7 @@ retrogui_idc_t retrogui_poll_ctls(
       retrogui_focus_next( gui );
 
 #if RETROGUI_TRACE_LVL > 0
-      debug_printf( RETROGUI_TRACE_LVL, "next: " RETROGUI_IDC_FMT, gui->focus );
+      debug_printf( RETROGUI_TRACE_LVL, "next: " RETROGUI_IDC_FMT, gui->focus_idc );
 #endif /* RETROGUI_TRACE_LVL */
 
       /* Cleanup after the menu. */
@@ -2271,7 +2271,7 @@ retrogui_idc_t retrogui_poll_ctls(
       retrogui_focus_prev( gui );
 
 #if RETROGUI_TRACE_LVL > 0
-      debug_printf( RETROGUI_TRACE_LVL, "prev: " RETROGUI_IDC_FMT, gui->focus );
+      debug_printf( RETROGUI_TRACE_LVL, "prev: " RETROGUI_IDC_FMT, gui->focus_idc );
 #endif /* RETROGUI_TRACE_LVL */
 
       /* Cleanup after the menu. */
@@ -2288,7 +2288,7 @@ retrogui_idc_t retrogui_poll_ctls(
 #if RETROGUI_TRACE_LVL > 0
       debug_printf( RETROGUI_TRACE_LVL, "resetting focus for mouse click..." );
 #endif /* RETROGUI_TRACE_LVL */
-      gui->focus = RETROGUI_IDC_NONE;
+      gui->focus_idc = RETROGUI_IDC_NONE;
 
       mouse_x = input_evt->mouse_x - gui->x;
       mouse_y = input_evt->mouse_y - gui->y;
@@ -2318,7 +2318,7 @@ retrogui_idc_t retrogui_poll_ctls(
             "setting focus to clicked control: " RETROGUI_IDC_FMT,
             ctl->base.idc );
 #endif /* RETROGUI_TRACE_LVL */
-         gui->focus = ctl->base.idc;
+         gui->focus_idc = ctl->base.idc;
 
          if( 0 ) {
          RETROGUI_CTL_TABLE( RETROGUI_CTL_TABLE_CLICK )
@@ -2329,21 +2329,21 @@ retrogui_idc_t retrogui_poll_ctls(
 
    } else {
 
-      if( RETROGUI_IDC_NONE == gui->focus ) {
+      if( RETROGUI_IDC_NONE == gui->focus_idc ) {
          error_printf( "no control has focus!" );
          goto cleanup;
       }
 
       /* Send keystrokes to control that has focus. */
 
-      ctl = _retrogui_get_ctl_by_idc( gui, gui->focus );
+      ctl = _retrogui_get_ctl_by_idc( gui, gui->focus_idc );
       if( NULL == ctl ) {
          /* This is a debug message because an invalid focus isn't necessarily
           * a game-over situation...
           */
 #if RETROGUI_TRACE_LVL > 0
          debug_printf( RETROGUI_TRACE_LVL,
-            "invalid focus IDC: " RETROGUI_IDC_FMT, gui->focus );
+            "invalid focus IDC: " RETROGUI_IDC_FMT, gui->focus_idc );
 #endif /* RETROGUI_TRACE_LVL */
          goto cleanup;
       }
@@ -2361,7 +2361,7 @@ retrogui_idc_t retrogui_poll_ctls(
 cleanup:
 
    if( MERROR_OK != retval ) {
-      idc_out = RETROGUI_IDC_NONE;
+      idc_out = merror_retval_to_sz( retval );
    }
 
    mdata_vector_unlock( &(gui->ctls) );
@@ -2606,12 +2606,12 @@ MERROR_RETVAL retrogui_push_ctl(
       maug_cleanup_if_not_ok();
    }
 
-   if( 0 > gui->focus && retrogui_can_focus_ctl( ctl ) ) {
+   if( RETROGUI_IDC_NONE >= gui->focus_idc && retrogui_can_focus_ctl( ctl ) ) {
 #if RETROGUI_TRACE_LVL > 0
       debug_printf( RETROGUI_TRACE_LVL,
          "setting focus to control: " RETROGUI_IDC_FMT, ctl->base.idc );
 #endif /* RETROGUI_TRACE_LVL */
-      gui->focus = ctl->base.idc;
+      gui->focus_idc = ctl->base.idc;
    }
 
 cleanup:
@@ -3200,6 +3200,12 @@ MERROR_RETVAL retrogui_init_ctl(
 ) {
    MERROR_RETVAL retval = MERROR_OK;
 
+   if( RETROGUI_IDC_NONE >= idc ) {
+      error_printf( "invalid IDC: %d", idc );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
 #if RETROGUI_TRACE_LVL > 0
    debug_printf( RETROGUI_TRACE_LVL,
       "initializing control base " RETROGUI_IDC_FMT "...", idc );
@@ -3227,6 +3233,8 @@ MERROR_RETVAL retrogui_init_ctl(
       ctl->IMAGE.image_cache_id = -1;
    }
 #  endif /* !RETROGXC_PRESENT */
+
+cleanup:
 
    return retval;
 }
@@ -3304,17 +3312,17 @@ retrogui_idc_t retrogui_focus_iter(
       ctl = mdata_vector_get( &(gui->ctls), i, union RETROGUI_CTL );
       if( !retrogui_can_focus_ctl( ctl ) ) {
          continue;
-      } else if( RETROGUI_IDC_NONE == gui->focus || 0 <= i_before ) {
+      } else if( RETROGUI_IDC_NONE == gui->focus_idc || 0 <= i_before ) {
          /* We're primed to set the new focus, so do that and finish. */
          idc_out = ctl->base.idc;
 #if RETROGUI_TRACE_LVL > 0
          debug_printf( RETROGUI_TRACE_LVL,
             "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
 #endif /* RETROGUI_TRACE_LVL */
-         gui->focus = idc_out;
+         gui->focus_idc = idc_out;
          goto cleanup;
 
-      } else if( ctl->base.idc == gui->focus ) {
+      } else if( ctl->base.idc == gui->focus_idc ) {
          /* We've found the current focus, so prime to select the new focus. */
          i_before = i;
       }
@@ -3341,7 +3349,7 @@ retrogui_idc_t retrogui_focus_iter(
             debug_printf( RETROGUI_TRACE_LVL,
                "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
 #endif /* RETROGUI_TRACE_LVL */
-            gui->focus = idc_out;
+            gui->focus_idc = idc_out;
             break;
          }
       }
@@ -3363,7 +3371,7 @@ retrogui_idc_t retrogui_focus_iter(
             debug_printf( RETROGUI_TRACE_LVL,
                "moving focus to control: " RETROGUI_IDC_FMT, idc_out );
 #endif /* RETROGUI_TRACE_LVL */
-            gui->focus = idc_out;
+            gui->focus_idc = idc_out;
             break;
          }
       }
@@ -3402,7 +3410,7 @@ MERROR_RETVAL retrogui_init( struct RETROGUI* gui ) {
    maug_mzero( gui, sizeof( struct RETROGUI ) );
 
    gui->bg_color = RETROFLAT_COLOR_BLACK;
-   gui->focus = RETROGUI_IDC_NONE;
+   gui->focus_idc = RETROGUI_IDC_NONE;
    gui->debounce_max = RETROGUI_DEBOUNCE_MAX_DEFAULT;
 
 #if RETROGUI_TRACE_LVL > 0

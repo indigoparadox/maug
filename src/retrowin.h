@@ -75,13 +75,9 @@
       RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & (win)->flags) && \
       RETROWIN_FLAG_GUI_LOCKED != (RETROWIN_FLAG_GUI_LOCKED & (win)->flags) \
    ) { \
-      /* debug_printf( RETROWIN_TRACE_LVL, "locking managed gui handle %p...", \
-         (win)->gui_h ); */ \
       maug_mlock( (win)->gui_h, (win)->gui_p ); \
       maug_cleanup_if_null_lock( struct RETROGUI*, (win)->gui_p ); \
       (win)->flags |= RETROWIN_FLAG_GUI_LOCKED; \
-      /* debug_printf( RETROWIN_TRACE_LVL, "locked managed gui to pointer %p!", \
-         (win)->gui_p ); */ \
    }
 
 #define retrowin_unlock_gui( win ) \
@@ -89,8 +85,6 @@
       RETROWIN_FLAG_INIT_GUI == (RETROWIN_FLAG_INIT_GUI & (win)->flags) && \
       RETROWIN_FLAG_GUI_LOCKED == (RETROWIN_FLAG_GUI_LOCKED & (win)->flags) \
    ) { \
-      /* debug_printf( RETROWIN_TRACE_LVL, "unlocking managed gui pointer %p...", \
-         (win)->gui_h ); */ \
       maug_munlock( (win)->gui_h, (win)->gui_p ); \
       (win)->flags &= ~RETROWIN_FLAG_GUI_LOCKED; \
    }
@@ -500,6 +494,7 @@ retrogui_idc_t retrowin_poll_win_stack(
    if( 0 > win_idx ) {
       /* No window found! */
       error_printf( "polling missing window!" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -509,6 +504,7 @@ retrogui_idc_t retrowin_poll_win_stack(
    if( !retrowin_win_is_active( win ) ) {
       /* Window not initialized! */
       error_printf( "polling uninitialized window!" );
+      retval = MERROR_GUI;
       goto cleanup;
    }
 
@@ -527,7 +523,7 @@ cleanup:
 
    if( MERROR_OK != retval ) {
       error_printf( "error polling windows!" );
-      idc_out = RETROGUI_IDC_NONE;
+      idc_out = merror_retval_to_sz( retval );
    }
 
    if( autolock ) {
@@ -697,6 +693,12 @@ ssize_t retrowin_push_win(
    struct RETROWIN win;
    ssize_t idx_out = -1;
 
+   if( RETROGUI_IDC_NONE >= idc ) {
+      error_printf( "invalid IDC: %d", idc );
+      retval = MERROR_GUI;
+      goto cleanup;
+   }
+
    if(
       0 > x || 0 > y ||
       retroflat_screen_w() < x + w || retroflat_screen_h() < y + h
@@ -756,7 +758,7 @@ ssize_t retrowin_push_win(
    retval = retroflat_2d_create_bitmap(
       w, h, &(win.gui_bmp),
       RETROFLAT_BITMAP_FLAG_OPAQUE );
-   maug_cleanup_if_not_ok();
+   maug_cleanup_if_not_ok_msg( "error creating window bitmap!" );
 #endif /* !RETROWIN_NO_BITMAP */
 
    win.flags |= RETROWIN_FLAG_INIT_BMP;
