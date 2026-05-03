@@ -241,7 +241,6 @@ int maug_digits( long int num, int base ) {
 
 int maug_zdigits( size_t num, int base ) {
    int digits = 0;
-   int negative = 0;
 
    while( 0 < num ) {
       num /= base;
@@ -250,10 +249,6 @@ int maug_zdigits( size_t num, int base ) {
 
    if( 0 == digits ) {
       digits = 1; /* 0 */
-   }
-
-   if( negative ) {
-      digits++; /* - symbol */
    }
 
    return digits;
@@ -721,8 +716,7 @@ void maug_vsnprintf(
    }
 
    /* Add a terminating null if it'll fit! */
-   maug_bufcat( '\0', buffer, buffer_idx,
-      buffer_sz, cleanup );
+   maug_bufcat( '\0', buffer, buffer_idx, buffer_sz, cleanup );
 
 cleanup:
    return;

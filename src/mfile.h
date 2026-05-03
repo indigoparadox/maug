@@ -15,10 +15,7 @@ void retroflat_message(
    uint8_t flags, const char* title, const char* format, ... );
 #endif /* !MAUG_NO_RETRO && !DOCUMENTATION */
 
-#if !defined( MFILE_MMAP ) && \
-   !defined( RETROFLAT_API_WINCE ) && \
-   !defined( RETROFLAT_API_PALM ) && \
-   !defined( RETROFLAT_API_PSN )
+#if !defined( MFILE_MMAP ) && !defined( MAUG_NO_STAT )
 #  include <sys/stat.h>
 #endif /* !MFILE_MMAP */
 
