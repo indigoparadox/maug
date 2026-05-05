@@ -1,0 +1,4 @@
+<map id="RetroFlat Common Dialogs" name="RetroFlat Common Dialogs">
+<area shape="rect" id="node1" title="Provides some common dialog types using RetroGUI API and RetroFlat Window API." alt="" coords="160,5,359,31"/>
+<area shape="rect" id="node2" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,5,112,31"/>
+</map>
