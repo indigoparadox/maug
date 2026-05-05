@@ -13,7 +13,7 @@ $(1).dll: $$(addprefix $$(OBJDIR_WATCOM_WIN32_PLUG)/,$$(subst .c,.o,$(2)))
 $$(OBJDIR_WATCOM_WIN32_PLUG)/%.o: %.c
 	$$(MD) "$$(dir $$@)"
 	INCLUDE=$(WATCOM)/h $$(CC_WATCOM386) -Isrc -Imaug/src $$(CFLAGS_WATCOM386) \
-		-i=$(MAUG_ROOT)/api/file/win -i=$(MAUG_ROOT)/api/log/unix \
+		-i=$(MAUG_ROOT)/api/file/win32 -i=$(MAUG_ROOT)/api/log/unix \
 		-I$(MAUG_ROOT)/api/mem/win \
 		-I$$(WATCOM)/h/nt -bd $$< -fo=$$@ \
 		-DRETROFLAT_OS_WIN $$(PLUGIN_DEFINES) -mf -5r -fp5
@@ -28,7 +28,7 @@ define TGT_GCC_UNIX_PLUG
 
 OBJDIR_GCC_UNIX_PLUG := obj/gcc-$$(MAUG_UNIX)-plug
 
-$(1).$(MAUG_UNIX).so: $$(addprefix $$(OBJDIR_GCC_UNIX_PLUG)/,$$(subst .c,.o,$(2)))
+$(1).so: $$(addprefix $$(OBJDIR_GCC_UNIX_PLUG)/,$$(subst .c,.o,$(2)))
 	gcc -fpic -shared -o $$@ $$^
 
 $$(OBJDIR_GCC_UNIX_PLUG)/%.o: %.c
