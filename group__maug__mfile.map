@@ -1,0 +1,6 @@
+<map id="RetroFile API" name="RetroFile API">
+<area shape="rect" id="node1" title="Abstraction layer for dealing with files on retro systems." alt="" coords="5,55,111,80"/>
+<area shape="rect" id="node2" href="$group__maug__mfile__byte__order.html" title="Flags controlling byte order for read operations." alt="" coords="159,5,313,31"/>
+<area shape="rect" id="node3" href="$group__maug__mfile__types.html" title="Types of files/data stores that mfile can abstract from." alt="" coords="175,55,297,80"/>
+<area shape="rect" id="node4" href="$group__maug__retroflt__assets.html" title="Functions and macros for handling graphical asset files." alt="" coords="159,104,313,129"/>
+</map>

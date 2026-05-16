@@ -1,0 +1,4 @@
+<map id="Data Memory String Pools" name="Data Memory String Pools">
+<area shape="rect" id="node1" href="$group__maug__data.html" title="Vectors and tables for storing data." alt="" coords="5,13,141,38"/>
+<area shape="rect" id="node2" title="Structure for storing a compact group of mutable, variable&#45;length character strings." alt="" coords="189,5,343,45"/>
+</map>

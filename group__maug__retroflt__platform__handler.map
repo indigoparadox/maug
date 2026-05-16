@@ -1,0 +1,4 @@
+<map id="Platform&#45;Specific Handlers" name="Platform&#45;Specific Handlers">
+<area shape="rect" id="node1" href="$group__maug__retroflt__platform.html" title="Callbacks for handling platform events like focus/size changes." alt="" coords="5,5,148,45"/>
+<area shape="rect" id="node2" title="These are called internally from the platform API." alt="" coords="196,13,391,38"/>
+</map>

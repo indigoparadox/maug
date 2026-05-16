@@ -1,0 +1,4 @@
+<map id="RetroGUI Overrideable Config" name="RetroGUI Overrideable Config">
+<area shape="rect" id="node1" href="$group__maug__retrogui.html" title="Tools for drawing interactive GUI elements in a RetroFlat program." alt="" coords="5,13,112,38"/>
+<area shape="rect" id="node2" title="Options to configure RetroGUI behavior defined at compile time." alt="" coords="160,5,329,45"/>
+</map>

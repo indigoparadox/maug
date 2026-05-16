@@ -1,0 +1,6 @@
+<map id="RETROHTR_RENDER_TREE" name="RETROHTR_RENDER_TREE">
+<area shape="rect" id="node1" title=" " alt="" coords="67,184,262,211"/>
+<area shape="rect" id="node2" href="$structRETROHTR__RENDER__NODE.html" title=" " alt="" coords="5,95,204,121"/>
+<area shape="rect" id="node3" href="$structRETROGUI.html" title=" " alt="" coords="227,95,318,121"/>
+<area shape="rect" id="node4" href="$structMDATA__VECTOR.html" title="A vector of uniformly&#45;sized objects, stored contiguously." alt="" coords="209,5,337,32"/>
+</map>
