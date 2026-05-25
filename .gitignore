@@ -4,3 +4,5 @@ $DSync*
 mcheck
 obj
 todo.csv
+*.err
+*.so
