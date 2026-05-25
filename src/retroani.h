@@ -845,6 +845,16 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
       h_r = a->hole.x + a->hole.w;
       h_t = a->hole.y;
       h_b = a->hole.y + a->hole.h;
+
+      if(
+         RETROFLAT_STATE_FLAG_HWSCROLLING ==
+         (g_retroflat_state->retroflat_flags & RETROFLAT_STATE_FLAG_HWSCROLLING)
+      ) {
+         h_l += RETROFLAT_TILE_W;
+         h_r += RETROFLAT_TILE_W;
+         h_t += RETROFLAT_TILE_H;
+         h_b += RETROFLAT_TILE_H;
+      }
    }
 
    /* Iterate over every tile covered by the animation's screen area. */
@@ -859,6 +869,15 @@ void retroani_tesselate( struct RETROANI* a, int16_t y_orig ) {
 
                p_x = a->x + t_x + x;
                p_y = a->y + t_y + y;
+
+               if(
+                  RETROFLAT_STATE_FLAG_HWSCROLLING ==
+                  (g_retroflat_state->retroflat_flags &
+                     RETROFLAT_STATE_FLAG_HWSCROLLING)
+               ) {
+                  p_x += RETROFLAT_TILE_W;
+                  p_y += RETROFLAT_TILE_H;
+               }
 
                if( h_on && p_x > h_l && p_x < h_r && p_y > h_t && p_y < h_b ) {
                   /* We're inside an active animation "hole". */
