@@ -33,7 +33,13 @@ struct RETROFLAT_VIEWPORT {
     *        buffer portion used for scrolling.
     */
    retrotile_coord_t screen_tile_h;
+   /**
+    * \brief Left offset of the viewport in the virtual screen area.
+    */
    int8_t px_x;
+   /**
+    * \brief Top offset of the viewport in the virtual screen area.
+    */
    int8_t px_y;
    size_t grid_ct;
    MAUG_MHANDLE grid_h;
@@ -49,16 +55,26 @@ struct RETROFLAT_VIEWPORT {
 #  define RETROVIEW_TRACE_LVL 0
 #endif /* !RETROVIEW_TRACE_LVL */
 
-#define retroflat_viewport_constrain_px( x, y, bmp, retact ) \
-   if( \
-      x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-      0 > x || 0 > y \
-   ) { \
-      debug_printf( RETROVIEW_TRACE_LVL, \
-         "attempted draw at %d, %d, out of bounds %d x %d", \
-         x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
-      retact; \
-   }
+#if RETROVIEW_TRACE_LVL > 1
+#  define retroflat_viewport_constrain_px( x, y, bmp, retact ) \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
+         debug_printf( RETROVIEW_TRACE_LVL - 1, \
+            "attempted draw at %d, %d, out of bounds %d x %d", \
+            x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
+         retact; \
+      }
+#else
+#  define retroflat_viewport_constrain_px( x, y, bmp, retact ) \
+      if( \
+         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
+         0 > x || 0 > y \
+      ) { \
+         retact; \
+      }
+#endif /* RETROVIEW_TRACE_LVL */
 
 /**
  * \relates RETROFLAT_VIEWPORT
@@ -248,11 +264,13 @@ MERROR_RETVAL retroview_init(
       g_retroflat_state->viewport.grid_h,
       g_retroflat_state->viewport.grid_ct,
       sizeof( retroflat_tile_t ) );
+#if RETROVIEW_TRACE_LVL > 0
    debug_printf( RETROVIEW_TRACE_LVL,
       "viewport refresh grid initialized for %d x %d screen: %d x %d tiles",
       retroflat_screen_w(), retroflat_screen_h(),
       g_retroflat_state->viewport.screen_tile_w,
       g_retroflat_state->viewport.screen_tile_h );
+#endif /* RETROVIEW_TRACE_LVL */
 
    retroview_lock_grid();
    maug_mzero( g_retroflat_state->viewport.grid, 
@@ -438,7 +456,7 @@ MERROR_RETVAL _retroview_trim_px(
          (RETROFLAT_STATE_FLAG_HWSCROLLING & \
             g_retroflat_state->retroflat_flags)))
    ) {
-#if RETROVIEW_TRACE_LVL > 0
+#if RETROVIEW_TRACE_LVL > 1
       debug_printf( RETROVIEW_TRACE_LVL, "hardware scrolling enabled" );
 #endif /* RETROVIEW_TRACE_LVL */
       limit_x_l = -RETROFLAT_TILE_W;
@@ -447,7 +465,7 @@ MERROR_RETVAL _retroview_trim_px(
          + 1; /* Add 1px to keep the far right inside the trim rect. */
       limit_y_h = retroflat_screen_h() + (2 * RETROFLAT_TILE_H) + 1;
    } else {
-#if RETROVIEW_TRACE_LVL > 0
+#if RETROVIEW_TRACE_LVL > 1
       debug_printf( RETROVIEW_TRACE_LVL, "hardware scrolling disabled" );
 #endif /* RETROVIEW_TRACE_LVL */
       limit_x_l = 0;
@@ -455,7 +473,7 @@ MERROR_RETVAL _retroview_trim_px(
       limit_x_h = retroflat_screen_w();
       limit_y_h = retroflat_screen_h();
    }
-#if RETROVIEW_TRACE_LVL > 0
+#if RETROVIEW_TRACE_LVL > 1
    debug_printf( RETROVIEW_TRACE_LVL,
       "trim test px: %d, %d inside of %d, %d to %d, %d",
       *d_x, *d_y, limit_x_l, limit_y_l, limit_x_h, limit_y_h );
@@ -579,8 +597,14 @@ MERROR_RETVAL _retroview_hwscroll(
       retroview_grid_set_px( *x_px, *y_px, instance_pos );
 
       /* Tiles should ALWAYS land on the tile grid! */
-      assert( 0 == *x_px % RETROFLAT_TILE_W );
-      assert( 0 == *y_px % RETROFLAT_TILE_H );
+#if RETROVIEW_TRACE_LVL > 0
+      if( 0 != *x_px % RETROFLAT_TILE_W ) {
+         debug_printf( RETROVIEW_TRACE_LVL, "bad tile X at %d", *x_px );
+      }
+      if( 0 != *y_px % RETROFLAT_TILE_H ) {
+         debug_printf( RETROVIEW_TRACE_LVL, "bad tile Y at %d", *y_px );
+      }
+#endif /* RETROVIEW_TRACE_LVL */
 
    } else if( 0 < instance ) {
 

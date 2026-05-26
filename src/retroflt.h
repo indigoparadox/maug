@@ -1673,6 +1673,11 @@ MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4] =
 MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4] =
    { -1, 0, 1,  0 };
 
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x_tile[4] =
+   {  0, RETROFLAT_TILE_W, 0, -RETROFLAT_TILE_W };
+MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y_tile[4] =
+   { -RETROFLAT_TILE_H, 0, RETROFLAT_TILE_H,  0 };
+
 #     ifdef RETROFLAT_STATE_ON_STACK
 struct RETROFLAT_STATE SEG_MGLOBAL g_retroflat_state_stack;
 #     else
@@ -2788,6 +2793,8 @@ extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_x[8];
 extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets8_y[8];
 extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x[4];
 extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y[4];
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_x_tile[4];
+extern MAUG_CONST int16_t SEG_MCONST gc_retroflat_offsets4_y_tile[4];
 
 /*! \} */
 

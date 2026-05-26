@@ -44,7 +44,8 @@
    f( struct MLISP_ENV_NODE,   28 ) \
    f( union MLISP_VAL,         29 ) \
    f( struct MDATA_TABLE,      30 ) \
-   f( struct MDATA_TABLE_KEY,  31 )
+   f( struct MDATA_TABLE_KEY,  31 ) \
+   f( retroflat_pxxy_t,        32 )
 
 #include <msercust.h>
 

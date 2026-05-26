@@ -166,6 +166,9 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
 MERROR_RETVAL mserialize_retroflat_ms_t(
    mfile_t* ser_out, const retroflat_ms_t* p_ser_int, int array );
 
+MERROR_RETVAL mserialize_retroflat_pxxy_t(
+   mfile_t* ser_out, const retroflat_pxxy_t* p_ser_int, int array );
+
 #endif /* !MAUG_NO_RETRO */
 
 MERROR_RETVAL mserialize_struct_MLISP_ENV_NODE(
@@ -246,6 +249,9 @@ MERROR_RETVAL mdeserialize_retroflat_dir4_t(
 
 MERROR_RETVAL mdeserialize_retroflat_ms_t(
    mfile_t* ser_in, retroflat_ms_t* p_ser_int, int array, ssize_t* p_ser_sz );
+
+MERROR_RETVAL mdeserialize_retroflat_pxxy_t(
+   mfile_t* ser_in, retroflat_pxxy_t* p_ser_int, int array, ssize_t* p_ser_sz );
 
 #endif /* !MAUG_NO_RETRO */
 
@@ -333,6 +339,12 @@ MERROR_RETVAL mserialize_retroflat_dir4_t(
 
 MERROR_RETVAL mserialize_retroflat_ms_t(
    mfile_t* ser_out, const retroflat_ms_t* p_ser_int, int array 
+) {
+   return mserialize_int( ser_out, *p_ser_int, array );
+}
+
+MERROR_RETVAL mserialize_retroflat_pxxy_t(
+   mfile_t* ser_out, const retroflat_pxxy_t* p_ser_int, int array 
 ) {
    return mserialize_int( ser_out, *p_ser_int, array );
 }
@@ -495,6 +507,18 @@ cleanup:
 
 MERROR_RETVAL mdeserialize_retroflat_ms_t(
    mfile_t* ser_out, retroflat_ms_t* p_ser_int, int array, ssize_t* p_ser_sz 
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+   int32_t value = 0;
+   retval = mdeserialize_int( ser_out, &value, array, p_ser_sz );
+   maug_cleanup_if_not_ok();
+   *p_ser_int = value;
+cleanup:
+   return retval;
+}
+
+MERROR_RETVAL mdeserialize_retroflat_pxxy_t(
+   mfile_t* ser_out, retroflat_pxxy_t* p_ser_int, int array, ssize_t* p_ser_sz 
 ) {
    MERROR_RETVAL retval = MERROR_OK;
    int32_t value = 0;
