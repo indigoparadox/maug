@@ -1509,45 +1509,13 @@ void retroflat_line(
 
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
 
-/**
- * \brief Get the size in pixels of a text string when drawn with a given font
- *        by retroflat_string().
- * \warning Font specifications for font_str may vary by platform, so be sure
- *          to test with #ifdefs for each!
- * \param target Pointer to the ::RETROFLAT_BITMAP on which drawing is planned.
- * \param str The text string to get the size of.
- * \param str_sz Length of the string to get the size of in characters.
- * \param font_str Name of the font in which to size the string.
- * \param w_out Pointer to an int in which to store the string width in pixels.
- * \param h_out Pointer to an int in which to store the string height in pixels.
- */
-void retroflat_string_sz(
-   struct RETROFLAT_BITMAP* target, const char* str, size_t str_sz,
-   const char* font_str,
-   retroflat_pxxy_t* w_out, retroflat_pxxy_t* h_out, uint8_t flags );
-
-/**
- * \brief Draw a text string at the specified location in the specified font
- *        and color on the target ::RETROFLAT_BITMAP.
- * \warning Font specifications for font_str may vary by platform, so be sure
- *          to test with #ifdefs for each!
- * \param target Pointer to the ::RETROFLAT_BITMAP to draw onto, or NULL to
- *        draw to the screen buffer.
- * \param color \ref maug_retroflt_color in which to draw.
- * \param str The text string to draw to the target bitmap.
- * \param str_sz Length of the string to draw in characters.
- * \param font_str Name of the font in which to draw the string.
- * \param x_orig Left X coordinate in pixels at which to draw on the target
- *               bitmap.
- * \param y_orig Top Y coordinate in pixels at which to draw on the target
- *               bitmap.
- * \param flags Flags to control drawing. No flags currently apply.
- */
-void retroflat_string(
-   struct RETROFLAT_BITMAP* target, const RETROFLAT_COLOR color,
-   const char* str, int str_sz, const char* font_str,
-   retroflat_pxxy_t x_orig, retroflat_pxxy_t y_orig,
-   uint8_t flags );
+#define retroflat_blank( target, color ) \
+   retroflat_rect( \
+      target, color, 0, 0, \
+      retroflat_bitmap_w( NULL == target ? retroflat_screen_buffer() : target )\
+      , \
+      retroflat_bitmap_h( NULL == target ? retroflat_screen_buffer() : target )\
+      , RETROFLAT_DRAW_FLAG_FILL );
 
 /* TODO: Documentation! */
 void retroflat_get_palette( uint8_t idx, uint32_t* rgb );
