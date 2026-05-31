@@ -6,9 +6,11 @@ struct MDATA_VECTOR g_vector_test_insert;
 
 struct MDATA_TABLE g_table_test_set;
 
-char g_test_keys[9][8] = {
-   "a", "bb", "ccc", "dddd", "eeeee", "ffffff", "ggggggg", "hhhhhhhh" };
-int g_test_data[8] = { 16, 32, 64, 128, 88, 512, 1024, 2048 };
+#define TEST_ITEMS_CT 9
+
+char g_test_keys[9][TEST_ITEMS_CT] = {
+   "a", "ba", "bb", "ccc", "dddd", "eeeee", "ffffff", "ggggggg", "hhhhhhhh" };
+int g_test_data[TEST_ITEMS_CT] = { 16, 161, 32, 64, 128, 88, 512, 1024, 2048 };
 
 START_TEST( test_mdat_vector_append ) {
    MERROR_RETVAL retval = MERROR_OK;
@@ -34,7 +36,8 @@ START_TEST( test_mdat_vector_insert ) {
 
    mdata_vector_lock( &g_vector_test_insert );
 
-   p_int = mdata_vector_get( &g_vector_test_insert, 7 - _i, int );
+   p_int = mdata_vector_get(
+      &g_vector_test_insert, (TEST_ITEMS_CT - 1) - _i, int );
 
    ck_assert_ptr_ne( p_int, NULL );
    ck_assert_int_eq( g_test_data[_i], *p_int );
@@ -64,14 +67,14 @@ void vector_setup() {
    ssize_t idx = 0;
 
    maug_mzero( &g_vector_test_append, sizeof( struct MDATA_VECTOR ) );
-   for( i = 0 ; 8 > i ; i++ ) {
+   for( i = 0 ; TEST_ITEMS_CT > i ; i++ ) {
       idx = mdata_vector_append(
          &g_vector_test_append, &(g_test_data[i]), sizeof( int ) );
       /* ck_assert_int_eq( idx, i ); */
    }
 
    maug_mzero( &g_vector_test_insert, sizeof( struct MDATA_VECTOR ) );
-   for( i = 0 ; 8 > i ; i++ ) {
+   for( i = 0 ; TEST_ITEMS_CT > i ; i++ ) {
       idx = mdata_vector_insert(
          &g_vector_test_insert, &(g_test_data[i]), 0, sizeof( int ) );
       /* ck_assert_int_eq( idx, 0 ); */
@@ -173,7 +176,7 @@ void table_setup() {
    size_t i = 0;
    MERROR_RETVAL retval = MERROR_OK;
 
-   for( i = 0 ; 8 > i ; i++ ) {
+   for( i = 0 ; TEST_ITEMS_CT > i ; i++ ) {
       retval = mdata_table_set(
          &g_table_test_set, g_test_keys[i],
          &(g_test_data[i]), sizeof( int ) );
