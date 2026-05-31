@@ -291,7 +291,7 @@ size_t retroflat_config_read(
 
    /* == SDL / Allegro == */
 
-   while( MERROR_OK == config->read_line(
+   while( MERROR_OK == mfile_read_line(
       config, line, RETROFLAT_CONFIG_LN_SZ_MAX, 0 )
    ) {
       /* Size check. */
@@ -351,7 +351,7 @@ size_t retroflat_config_read(
 
 cleanup:
 
-   config->seek( config, 0 );
+   mfile_seek( config, 0 );
 
 #  elif defined( RETROFLAT_API_WIN16 )
 
