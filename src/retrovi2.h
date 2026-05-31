@@ -598,10 +598,10 @@ MERROR_RETVAL _retroview_hwscroll(
 
       /* Tiles should ALWAYS land on the tile grid! */
 #if RETROVIEW_TRACE_LVL > 0
-      if( 0 != *x_px % RETROFLAT_TILE_W ) {
+      if( 0 != (*x_px & (RETROFLAT_TILE_W - 1)) ) {
          debug_printf( RETROVIEW_TRACE_LVL, "bad tile X at %d", *x_px );
       }
-      if( 0 != *y_px % RETROFLAT_TILE_H ) {
+      if( 0 != (*y_px & (RETROFLAT_TILE_H - 1)) ) {
          debug_printf( RETROVIEW_TRACE_LVL, "bad tile Y at %d", *y_px );
       }
 #endif /* RETROVIEW_TRACE_LVL */
