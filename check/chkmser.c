@@ -234,8 +234,8 @@ START_TEST( test_mser_vector_write ) {
       (mserialize_cb_t)mserialize_size_t );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   ser_mem.seek( &ser_mem, 0 );
-   ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_vec_ser ) );
+   mfile_seek( &ser_mem, 0 );
+   mfile_read_block( &ser_mem, buf_mem, sizeof( g_test_vec_ser ) );
 
    ck_assert_mem_eq( buf_mem, g_test_vec_ser, sizeof( g_test_vec_ser ) );
 
@@ -269,8 +269,8 @@ START_TEST( test_mser_vector_write_arr ) {
       (mserialize_cb_t)mserialize_size_t );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   ser_mem.seek( &ser_mem, 0 );
-   ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_vec_arr_ser ) );
+   mfile_seek( &ser_mem, 0 );
+   mfile_read_block( &ser_mem, buf_mem, sizeof( g_test_vec_arr_ser ) );
 
    ck_assert_mem_eq(
       buf_mem, g_test_vec_arr_ser, sizeof( g_test_vec_arr_ser ) );
@@ -418,8 +418,8 @@ START_TEST( test_mser_table_write ) {
       (mserialize_cb_t)mserialize_size_t );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   ser_mem.seek( &ser_mem, 0 );
-   ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_tab_ser ) );
+   mfile_seek( &ser_mem, 0 );
+   mfile_read_block( &ser_mem, buf_mem, sizeof( g_test_tab_ser ) );
 
    ck_assert_mem_eq( buf_mem, g_test_tab_ser, sizeof( g_test_tab_ser ) );
 
@@ -453,8 +453,8 @@ START_TEST( test_mser_table_write_arr ) {
       (mserialize_cb_t)mserialize_size_t );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   ser_mem.seek( &ser_mem, 0 );
-   ser_mem.read_block( &ser_mem, buf_mem, sizeof( g_test_tab_arr_ser ) );
+   mfile_seek( &ser_mem, 0 );
+   mfile_read_block( &ser_mem, buf_mem, sizeof( g_test_tab_arr_ser ) );
 
    ck_assert_mem_eq(
       buf_mem, g_test_tab_arr_ser, sizeof( g_test_tab_arr_ser ) );

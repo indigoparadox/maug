@@ -35,6 +35,8 @@ START_TEST( test_mfmt_decode_rle_4bit ) {
    maug_munlock( check_rle_out_h, check_rle_out );
    maug_mfree( check_rle_out_h );
 
+cleanup:
+
    ck_assert_uint_eq( retval, MERROR_OK );
 }
 END_TEST
@@ -82,6 +84,8 @@ START_TEST( test_mfmt_bmp_px_4bit ) {
 
    maug_munlock( check_8bit_out_h, check_8bit_out );
    maug_mfree( check_8bit_out_h );
+
+cleanup:
 
    ck_assert_uint_eq( retval, MERROR_OK );
 }

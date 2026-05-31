@@ -15,8 +15,8 @@ START_TEST( test_mfil_mem_read ) {
       (MAUG_MHANDLE)NULL, g_test_mem, TEST_MEM_SZ, &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   test_file.seek( &test_file, _i );
-   test_file.read_block( &test_file, &char_buf, 1 );
+   mfile_seek( &test_file, _i );
+   mfile_read_block( &test_file, &char_buf, 1 );
 
    ck_assert_int_eq( char_buf, g_test_mem[_i] );
 
@@ -33,7 +33,7 @@ START_TEST( test_mfil_mem_write ) {
       (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   test_file.write_block( &test_file, g_test_mem, TEST_MEM_SZ );
+   mfile_write_block( &test_file, g_test_mem, TEST_MEM_SZ );
 
    ck_assert_int_eq( test_buf[_i], g_test_mem[_i] );
 
@@ -55,9 +55,9 @@ START_TEST( test_mfil_mem_insert ) {
       (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   test_file.seek( &test_file, 0 );
+   mfile_seek( &test_file, 0 );
 
-   test_file.write_block( &test_file, &(g_test_mem[_i]), 1 );
+   mfile_write_block( &test_file, &(g_test_mem[_i]), 1 );
 
    ck_assert_int_eq( test_buf[0], g_test_mem[_i] );
    ck_assert_int_eq( test_buf[1], 1 );
@@ -75,9 +75,9 @@ START_TEST( test_mfil_mem_cursor ) {
       (MAUG_MHANDLE)NULL, test_buf, TEST_MEM_SZ, &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   test_file.write_block( &test_file, g_test_mem, _i );
+   mfile_write_block( &test_file, g_test_mem, _i );
 
-   ck_assert_int_eq( test_file.cursor( &test_file ), _i );
+   ck_assert_int_eq( mfile_cursor( &test_file ), _i );
 
    mfile_close( &test_file );
 }
@@ -89,9 +89,9 @@ START_TEST( test_mfil_file_cursor ) {
    retval = open_temp( "chkfile", &test_file );
    ck_assert_uint_eq( retval, MERROR_OK );
 
-   test_file.write_block( &test_file, g_test_mem, _i );
+   mfile_write_block( &test_file, g_test_mem, _i );
 
-   ck_assert_int_eq( test_file.cursor( &test_file ), _i );
+   ck_assert_int_eq( mfile_cursor( &test_file ), _i );
 
    close_temp( &test_file );
 }

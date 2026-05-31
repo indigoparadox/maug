@@ -88,8 +88,6 @@ void vector_teardown() {
 START_TEST( test_mdat_table_set ) {
    int* p_int = NULL;
 
-   debug_printf( MDATA_TRACE_LVL, "test_mdat_table_set" );
-
    mdata_table_lock( &g_table_test_set );
 
    p_int = mdata_table_get( &g_table_test_set, g_test_keys[_i], int );
