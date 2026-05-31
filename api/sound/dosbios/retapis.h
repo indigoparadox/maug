@@ -343,9 +343,9 @@ void retrosnd_set_voice( uint8_t channel, uint8_t voice ) {
 
       /* Read specified voice param field into specified reg. */
       #define adlib_read_voice( field, reg, offset ) \
-         retval = opl_defs.seek( &opl_defs, adlib_opl2_offset() + offset ); \
+         retval = mfile_seek( &opl_defs, adlib_opl2_offset() + offset ); \
          maug_cleanup_if_not_ok(); \
-         retval = opl_defs.read_int( &opl_defs, &byte_buffer, 1, 0 ); \
+         retval = mfile_read_int( &opl_defs, &byte_buffer, 1, 0 ); \
          maug_cleanup_if_not_ok(); \
          debug_printf( RETROSND_TRACE_LVL, \
             "voice %d: " #field ": ofs: %d: 0x%02x -> reg 0x%02x", \

@@ -129,5 +129,37 @@ void retrosnd_shutdown( void ) {
 #  pragma message( "warning: shutdown not implemented" )
 }
 
+/* === */
+
+void retrosnd_note_on_deadline( 
+   uint8_t channel, uint8_t pitch, retroflat_ms_t deadline
+) {
+
+   if(
+      RETROSND_FLAG_INIT !=
+      (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
+   ) {
+      return;
+   }
+
+#  pragma message( "warning: note_on_deadline not implemented" )
+
+}
+
+/* === */
+
+void retrosnd_pump( void ) {
+
+   if(
+      RETROSND_FLAG_INIT !=
+      (RETROSND_FLAG_INIT & g_retroflat_state->sound.flags)
+   ) {
+      return;
+   }
+
+#  pragma message( "warning: note_on_deadline not implemented" )
+
+}
+
 #endif /* !RETPLTS_H_DEFS || RETROFLT_C */
 

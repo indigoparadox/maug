@@ -456,7 +456,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_viewport_trim_px(
+   retval = _retroview_trim_px(
       target, instance, &s_x, &s_x, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
@@ -656,6 +656,62 @@ void retroflat_resize_v( void ) {
 uint8_t retroflat_focus_platform( void ) {
    /* Platform does not support focus. */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+#if 0
+   if( !move ) {
+      goto cleanup;
+   }
+
+   /* Hardware scrolling example point 7: */
+   /* Add the scroll amounts to the platform-specific viewport so the blits
+    * above know where to grab from on the full hardware buffer.
+    */
+   g_retroflat_state->platform.viewport_rect.x += x;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.viewport_rect.x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
+   }
+#endif
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+#if 0
+   if( !move ) {
+      goto cleanup;
+   }
+
+   g_retroflat_state->platform.viewport_rect.y += y;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.viewport_rect.y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.y = RETROFLAT_TILE_H;
+   }
+#endif
+
+cleanup:
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */

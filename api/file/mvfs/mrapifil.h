@@ -6,6 +6,27 @@ union MFILE_HANDLE {
    MAUG_MHANDLE mem;
 };
 
+#define mfile_file_cursor( p_file ) \
+   mfile_mem_cursor( p_file )
+
+#define mfile_file_read_block( p_file, buf, buf_sz ) \
+   mfile_mem_read_block( p_file, buf, buf_sz )
+
+#define mfile_file_seek( p_file, pos ) \
+   mfile_mem_seek( p_file, pos )
+
+#define mfile_file_read_line( p_f, buffer, buffer_sz, flags ) \
+   mfile_mem_read_line( p_f, buffer, buffer_sz, flags )
+
+#define mfile_file_printf( p_f, flags, fmt, ... ) \
+   mfile_mem_printf( p_f, flags, fmt, __VA_ARGS__ )
+
+#define mfile_file_write_block( p_f, buf, buf_sz ) \
+   mfile_mem_write_block( p_f, buf, buf_sz )
+
+#define mfile_file_vprintf( p_f, flags, fmt, args ) \
+   mfile_mem_vprintf( p_f, flags, fmt, args )
+
 #elif defined( MFILE_C )
 
 /* Load the MVFS assets from the include dir specified in the Makefile
@@ -40,15 +61,6 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
    }
 
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
-
-   p_file->has_bytes = mfile_mem_has_bytes;
-   p_file->read_byte = mfile_mem_read_byte;
-   p_file->read_block = mfile_mem_read_block;
-   p_file->read_int = mfile_file_read_int;
-   p_file->seek = mfile_mem_seek;
-   p_file->read_line = mfile_mem_read_line;
-   p_file->printf = mfile_file_printf;
-   p_file->vprintf = mfile_mem_vprintf;
 
    p_file->flags = MFILE_FLAG_READ_ONLY;
    p_file->mem_buffer = gc_mvfs_data[i];
