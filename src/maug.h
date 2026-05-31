@@ -117,6 +117,8 @@ union MAUG_MHANDLEPTR {
 #  define MLISPP_C
 #  define MLISPE_C
 #  define MSERIAL_C
+#  define MVMC_C
+#  define MVMM_C
 #endif /* MAUG_C */
 
 /**

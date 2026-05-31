@@ -141,6 +141,18 @@ include maug/make/Makeplug.inc
 
 # ---
 
+define TGTSCRIPTCOM
+
+obj/scriptcom/scriptcom: $(MAUG_ROOT)/tools/scriptcom.c
+	mkdir -v -p "`dirname $$@`"
+	gcc $(CFLAGS_GCC) -Isrc -I$(MAUG_ROOT)/src \
+		-I$(MAUG_ROOT)/api/mem/unix -I$(MAUG_ROOT)/api/file/unix \
+		-I$(MAUG_ROOT)/api/log/unix -o $$@ $$< $(LDFLAGS_GCC)
+
+endef
+
+# ---
+
 define TGTISO
 
 # Easier to understand error messages.
