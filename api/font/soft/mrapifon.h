@@ -139,7 +139,7 @@ MERROR_RETVAL retrofont_load(
          debug_printf( RETROFONT_TRACE_LVL, "reading glyphs..." );
 #endif /* RETROFONT_TRACE_LVL */
 
-   while( font_file.has_bytes( &font_file ) ) {
+   while( mfile_has_bytes( &font_file ) ) {
       retval = retrofont_read_line( &font_file, line, &line_bytes );
       if( MERROR_WAIT != retval && MERROR_PARSE != retval ) {
          /* Figure out the index of this glyph. */

@@ -21,7 +21,7 @@ static SDL_Surface* _retroflat_sdl_load_bitmap( maug_path path ) {
    maug_cleanup_if_null_lock( uint8_t*, buffer );
 
    /* Read the file into a memory buffer. */
-   retval = bmp_file.read_block( &bmp_file, buffer, bmp_file.sz );
+   retval = mfile_read_block( &bmp_file, buffer, bmp_file.sz );
    maug_cleanup_if_not_ok();
 
    debug_printf( 1, "%c%c", buffer[0], buffer[1] );

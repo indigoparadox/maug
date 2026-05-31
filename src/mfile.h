@@ -147,21 +147,10 @@ typedef char maug_path[MAUG_PATH_SZ_MAX];
 struct MFILE_CADDY;
 typedef struct MFILE_CADDY mfile_t;
 
-typedef off_t (*mfile_cursor_t)( struct MFILE_CADDY* p_file );
-typedef off_t (*mfile_has_bytes_t)( struct MFILE_CADDY* p_file );
-typedef MERROR_RETVAL (*mfile_read_byte_t)(
-   struct MFILE_CADDY* p_file, uint8_t* buf );
-typedef MERROR_RETVAL (*mfile_read_block_t)(
-   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz );
-typedef MERROR_RETVAL (*mfile_seek_t)( struct MFILE_CADDY* p_file, off_t pos );
-typedef MERROR_RETVAL (*mfile_read_int_t)(
-   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
-typedef MERROR_RETVAL (*mfile_read_line_t)(
-   struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
-typedef MERROR_RETVAL (*mfile_printf_t)(
-   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
-typedef MERROR_RETVAL (*mfile_write_block_t)(
-   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
+/**
+ * \addtogroup maug_mfile_mem Maug Memory File API
+ * \{
+ */
 
 off_t mfile_mem_cursor( struct MFILE_CADDY* p_file );
 off_t mfile_mem_has_bytes( struct MFILE_CADDY* p_file );
@@ -184,17 +173,9 @@ MERROR_RETVAL mfile_mem_vprintf(
 MERROR_RETVAL mfile_mem_write_block(
    struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
 
-MERROR_RETVAL mfile_plt_init( void );
+/*! \} */
 
-/**
- * \related MFILE_CADDY
- * \brief Callback to printf the given format string, replacing tokens from
- *        the providied *pre-initialized* list of args.
- * \param Pre-initialized list of token format args.
- * \warning The args parameter must have already been initialized with va_start!
- */
-typedef MERROR_RETVAL (*mfile_vprintf_t)(
-   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
+MERROR_RETVAL mfile_plt_init( void );
 
 /* Load the platform-specific file API. */
 #include <mrapifil.h>
@@ -214,16 +195,6 @@ struct MFILE_CADDY {
    /*! \brief Size of the current file/buffer in bytes. */
    off_t sz;
    maug_path filename;
-   mfile_has_bytes_t has_bytes;
-   mfile_cursor_t cursor;
-   mfile_read_byte_t read_byte;
-   mfile_read_block_t read_block;
-   mfile_seek_t seek;
-   mfile_read_int_t read_int;
-   mfile_read_line_t read_line;
-   mfile_printf_t printf;
-   mfile_vprintf_t vprintf;
-   mfile_write_block_t write_block;
 };
 
 typedef struct MFILE_CADDY mfile_t;
@@ -242,15 +213,15 @@ MERROR_RETVAL mfile_assign_path(
 
 /*! \} */
 
-off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file );
+/**
+ * \addtogroup maug_mfile_file Maug True File API
+ * \{
+ */
 
-MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf );
+off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file );
 
 MERROR_RETVAL mfile_file_read_block(
    struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz );
-
-MERROR_RETVAL mfile_file_read_int(
-   struct MFILE_CADDY* p_f, uint8_t* buf, size_t buf_sz, uint8_t flags );
 
 MERROR_RETVAL mfile_file_seek( struct MFILE_CADDY* p_file, off_t pos );
 
@@ -265,6 +236,46 @@ MERROR_RETVAL mfile_file_write_block(
 
 MERROR_RETVAL mfile_file_vprintf(
    struct MFILE_CADDY* p_f, uint8_t flags, const char* fmt, va_list args );
+
+/*! \} */
+
+/**
+ * \addtogroup maug_mfile_virt Maug Virtual File API
+ * \{
+ */
+
+off_t mfile_cursor( struct MFILE_CADDY* p_file );
+
+off_t mfile_has_bytes( struct MFILE_CADDY* p_file );
+
+MERROR_RETVAL mfile_read_block(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz );
+
+MERROR_RETVAL mfile_seek( struct MFILE_CADDY* p_file, off_t pos );
+
+MERROR_RETVAL mfile_read_int(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags );
+
+MERROR_RETVAL mfile_read_line(
+   struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags );
+
+MERROR_RETVAL mfile_printf(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ... );
+
+MERROR_RETVAL mfile_write_block(
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz );
+
+/**
+ * \related MFILE_CADDY
+ * \brief Callback to printf the given format string, replacing tokens from
+ *        the providied *pre-initialized* list of args.
+ * \param Pre-initialized list of token format args.
+ * \warning The args parameter must have already been initialized with va_start!
+ */
+MERROR_RETVAL mfile_vprintf(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
+
+/*! \} */
 
 #define mfile_get_sz( p_file ) ((p_file)->sz)
 
@@ -294,9 +305,165 @@ void mfile_close( mfile_t* p_file );
 #include <mrapifil.h>
 #include <mrapilog.h>
 
+off_t mfile_cursor( struct MFILE_CADDY* p_file ) {
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_cursor( p_file );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_cursor( p_file );
+   }
+   return -1;
+}
+
+/* === */
+
+off_t mfile_has_bytes( struct MFILE_CADDY* p_file ) {
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_has_bytes( p_file );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_has_bytes( p_file );
+   }
+   return -1;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_read_block(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz
+) {
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_read_block( p_file, buf, buf_sz );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_read_block( p_file, buf, buf_sz );
+   }
+   return MERROR_FILE;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_seek( struct MFILE_CADDY* p_file, off_t pos ) {
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_seek( p_file, pos );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_seek( p_file, pos );
+   }
+   return MERROR_FILE;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_read_int(
+   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
+) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   if(
+#ifdef MAUG_LSBF
+      MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
+#elif defined( MAUG_MSBF )
+      MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags)
+#endif
+   ) {
+      debug_printf( MFILE_READ_TRACE_LVL, "reading integer forward" );
+      /* Shrink the buffer moving right and read into it. */
+      switch( p_file->type ) {
+      case MFILE_CADDY_TYPE_FILE:
+         retval = mfile_file_read_block( p_file, buf, buf_sz );
+         break;
+      case MFILE_CADDY_TYPE_MEM_BUFFER:
+         retval = mfile_mem_read_block( p_file, buf, buf_sz );
+         break;
+      }
+
+   } else {
+      debug_printf( MFILE_READ_TRACE_LVL, "reading integer reversed" );
+      /* Move to the end of the output buffer and read backwards. */
+      while( 0 < buf_sz ) {
+         switch( p_file->type ) {
+         case MFILE_CADDY_TYPE_FILE:
+            retval = mfile_file_read_block( p_file, (buf + (buf_sz - 1)), 1 );
+            break;
+         case MFILE_CADDY_TYPE_MEM_BUFFER:
+            retval = mfile_mem_read_block( p_file, (buf + (buf_sz - 1)), 1 );
+            break;
+         }
+
+         maug_cleanup_if_not_ok();
+         buf_sz--;
+      }
+   }
+
+cleanup:
+
+   return retval;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_read_line(
+   struct MFILE_CADDY* p_file, char* buf, off_t buf_sz, uint8_t flags
+) {
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_read_line( p_file, buf, buf_sz, flags );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_read_line( p_file, buf, buf_sz, flags );
+   }
+   return MERROR_FILE;
+}
+
+/* === */
+
+MERROR_RETVAL mfile_printf(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ...
+) {
+   MERROR_RETVAL retval = MERROR_FILE;
+   va_list vargs;
+
+   va_start( vargs, fmt );
+   switch( p_file->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      retval = mfile_file_vprintf( p_file, flags, fmt, vargs );
+      break;
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      retval = mfile_mem_vprintf( p_file, flags, fmt, vargs );
+      break;
+   }
+   va_end( vargs );
+
+   return retval;
+}
+
+/* === */
+
+
+MERROR_RETVAL mfile_write_block(
+   struct MFILE_CADDY* p_f, const uint8_t* buf, size_t buf_sz
+) {
+   switch( p_f->type ) {
+   case MFILE_CADDY_TYPE_FILE:
+      return mfile_file_write_block( p_f, buf, buf_sz );
+   case MFILE_CADDY_TYPE_MEM_BUFFER:
+      return mfile_mem_write_block( p_f, buf, buf_sz );
+   }
+   return MERROR_FILE;
+}
+
+/* === */
+
+/*
+MERROR_RETVAL mfile_vprintf(
+   struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, va_list args );
+*/
+
+/* === */
+
 off_t mfile_file_has_bytes( struct MFILE_CADDY* p_file ) {
    size_t cursor = 0;
-   cursor = p_file->cursor( p_file );
+   cursor = mfile_cursor( p_file );
    if( p_file->sz > cursor ) {
 #if MFILE_READ_TRACE_LVL > 0
       debug_printf( MFILE_READ_TRACE_LVL,
@@ -336,39 +503,8 @@ MERROR_RETVAL mfile_assign_path(
 
 /* === */
 
-MERROR_RETVAL mfile_file_read_int(
-   struct MFILE_CADDY* p_file, uint8_t* buf, size_t buf_sz, uint8_t flags
-) {
-   MERROR_RETVAL retval = MERROR_OK;
-
-   if(
-#ifdef MAUG_LSBF
-      MFILE_READ_FLAG_LSBF == (MFILE_READ_FLAG_LSBF & flags)
-#elif defined( MAUG_MSBF )
-      MFILE_READ_FLAG_MSBF != (MFILE_READ_FLAG_MSBF & flags)
-#endif
-   ) {
-      debug_printf( MFILE_READ_TRACE_LVL, "reading integer forward" );
-      /* Shrink the buffer moving right and read into it. */
-      retval = p_file->read_block( p_file, buf, buf_sz );
-
-   } else {
-      debug_printf( MFILE_READ_TRACE_LVL, "reading integer reversed" );
-      /* Move to the end of the output buffer and read backwards. */
-      while( 0 < buf_sz ) {
-         retval = p_file->read_byte( p_file, (buf + (buf_sz - 1)) );
-         maug_cleanup_if_not_ok();
-         buf_sz--;
-      }
-   }
-
-cleanup:
-
-   return retval;
-}
-
-/* === */
-
+/*
+ * XXX: This should never be needed!
 MERROR_RETVAL mfile_file_printf(
    struct MFILE_CADDY* p_file, uint8_t flags, const char* fmt, ...
 ) {
@@ -376,11 +512,12 @@ MERROR_RETVAL mfile_file_printf(
    va_list vargs;
 
    va_start( vargs, fmt );
-   retval = p_file->vprintf( p_file, flags, fmt, vargs );
+   retval = mfile_file_vprintf( p_file, flags, fmt, vargs );
    va_end( vargs );
 
    return retval;
 }
+*/
 
 /* === */
 
@@ -424,12 +561,6 @@ static void mfile_mem_release( struct MFILE_CADDY* p_f ) {
       maug_munlock( p_f->h.mem, p_f->mem_buffer );
       p_f->flags &= ~MFILE_FLAG_HANDLE_LOCKED;
    }
-}
-
-/* === */
-
-MERROR_RETVAL mfile_mem_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
-   return p_file->read_block( p_file, buf, 1 );
 }
 
 /* === */
@@ -484,13 +615,13 @@ MERROR_RETVAL mfile_mem_read_line(
    assert( MFILE_CADDY_TYPE_MEM_BUFFER == p_f->type );
 
    /* Check for no bytes at the start, as the loop below won't trigger if so! */
-   if( !p_f->has_bytes( p_f ) ) {
+   if( !mfile_mem_has_bytes( p_f ) ) {
       error_printf( "file %s out of bytes!", p_f->filename );
       retval = MERROR_FILE;
       goto cleanup;
    }
 
-   while( i < buffer_sz - 1 && p_f->has_bytes( p_f ) ) {
+   while( i < buffer_sz - 1 && mfile_mem_has_bytes( p_f ) ) {
       /* Check for potential overflow. */
       if( i + 1 >= buffer_sz ) {
          error_printf( "overflow reading string from file %s!", p_f->filename );
@@ -498,7 +629,7 @@ MERROR_RETVAL mfile_mem_read_line(
          break;
       }
 
-      retval = p_f->read_int( p_f, (uint8_t*)&(buffer[i]), 1, 0 );
+      retval = mfile_mem_read_block( p_f, (uint8_t*)&(buffer[i]), 1 );
       maug_cleanup_if_not_ok();
       if( '\n' == buffer[i] ) {
          /* Break on newline and overwrite it below. */
@@ -611,15 +742,6 @@ MERROR_RETVAL mfile_lock_buffer(
    }
 
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
-
-   p_file->has_bytes = mfile_mem_has_bytes;
-   p_file->cursor = mfile_mem_cursor;
-   p_file->read_byte = mfile_mem_read_byte;
-   p_file->read_block = mfile_mem_read_block;
-   p_file->read_int = mfile_file_read_int;
-   p_file->seek = mfile_mem_seek;
-   p_file->read_line = mfile_mem_read_line;
-   p_file->write_block = mfile_mem_write_block;
 
    p_file->sz = handle_sz;
 

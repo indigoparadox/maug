@@ -1387,8 +1387,8 @@ MERROR_RETVAL retrotile_parse_json_file(
          parser->pass_layer_iter = 0;
       }
 
-      while( tile_file.has_bytes( &tile_file ) ) {
-         tile_file.read_int( &tile_file, (uint8_t*)&c, 1, 0 );
+      while( mfile_has_bytes( &tile_file ) ) {
+         mfile_read_int( &tile_file, (uint8_t*)&c, 1, 0 );
 #if RETROTILE_TRACE_CHARS > 0
          debug_printf( RETROTILE_TRACE_CHARS, "%c", c );
 #endif /* RETROTILE_TRACE_CHARS */
@@ -1399,7 +1399,7 @@ MERROR_RETVAL retrotile_parse_json_file(
          }
       }
 
-      tile_file.seek( &tile_file, 0 );
+      mfile_seek( &tile_file, 0 );
 
       filename_ext = maug_strrchr( filename, '.' );
       if( NULL == filename_ext ) {

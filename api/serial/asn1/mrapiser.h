@@ -27,7 +27,7 @@ static MERROR_RETVAL _mserialize_asn_int_value(
          /* Two's complement buffer to disambiguate that this is negative. */
          int_buf = 0xff;
       }
-      retval = p_file->write_block( p_file, &int_buf, 1 );
+      retval = mfile_write_block( p_file, &int_buf, 1 );
       maug_cleanup_if_not_ok();
 #if MSERIALIZE_TRACE_LVL > 0
       debug_printf( MSERIALIZE_TRACE_LVL,
@@ -79,10 +79,10 @@ MERROR_RETVAL _mserialize_asn_sz( mfile_t* ser_out, size_t sz ) {
    if( 127 < sz ) {
       /* 0x80 | size of size, followed by size. */
       sz_of_sz_asn = 0x80 | sz_of_sz;
-      ser_out->write_block( ser_out, &sz_of_sz_asn, 1 );
+      mfile_write_block( ser_out, &sz_of_sz_asn, 1 );
       retval = _mserialize_asn_int_value( ser_out, sz, sz_of_sz );
    } else {
-      retval = ser_out->write_block( ser_out, (uint8_t*)&sz, 1 );
+      retval = mfile_write_block( ser_out, (uint8_t*)&sz, 1 );
    }
 
    return retval;
@@ -122,7 +122,7 @@ MERROR_RETVAL mserialize_int( mfile_t* ser_out, int32_t value, int array ) {
    }
 
    /* Write the type and size of the integer to the buffer. */
-   retval = ser_out->write_block( ser_out, &type_val, 1 );
+   retval = mfile_write_block( ser_out, &type_val, 1 );
    maug_cleanup_if_not_ok();
    retval = _mserialize_asn_sz( ser_out, val_sz );
    maug_cleanup_if_not_ok();
@@ -324,7 +324,7 @@ MERROR_RETVAL mserialize_block(
 
    header = mserialize_header( ser_out, MSERIALIZE_TYPE_BLOB, 0 );
 
-   retval = ser_out->write_block( ser_out, p_block, block_sz );
+   retval = mfile_write_block( ser_out, p_block, block_sz );
    maug_cleanup_if_not_ok();
    
    retval = mserialize_footer( ser_out, header, 0 );
@@ -371,7 +371,7 @@ off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags ) {
       goto cleanup;
    }
 
-   retval = ser_out->write_block( ser_out, &asn_seq, 1 );
+   retval = mfile_write_block( ser_out, &asn_seq, 1 );
 
 #if MSERIALIZE_TRACE_LVL > 0
    debug_printf( MSERIALIZE_TRACE_LVL,
@@ -383,7 +383,7 @@ off_t mserialize_header( mfile_t* ser_out, uint8_t type, uint8_t flags ) {
 cleanup:
 
    if( MERROR_OK == retval ) {
-      return ser_out->cursor( ser_out );
+      return mfile_cursor( ser_out );
    } else {
       return 0;
    }
@@ -403,11 +403,11 @@ MERROR_RETVAL mserialize_footer(
       "ending sequence of " SIZE_T_FMT " bytes", seq_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
 
-   /* assert( ser_out->cursor( ser_out ) == ser_out->sz ); */
+   /* assert( mfile_cursor( ser_out ) == ser_out->sz ); */
 
-   ser_out->seek( ser_out, header );
+   mfile_seek( ser_out, header );
    retval = _mserialize_asn_sz( ser_out, seq_sz );
-   ser_out->seek( ser_out, ser_out->sz );
+   mfile_seek( ser_out, ser_out->sz );
 
    assert( MERROR_OK == retval );
 
@@ -428,7 +428,7 @@ MERROR_RETVAL mserialize_char(
          "serializing string: %s", p_ser_char );
 #endif /* MSERIALIZE_TRACE_LVL */
       header = mserialize_header( ser_out, MSERIALIZE_TYPE_STRING, 0 );
-      retval = ser_out->write_block(
+      retval = mfile_write_block(
          ser_out, (uint8_t*)p_ser_char, strlen( p_ser_char ) );
       maug_cleanup_if_not_ok();
       retval = mserialize_footer( ser_out, header, 0 );
@@ -632,7 +632,7 @@ static MERROR_RETVAL _mdeserialize_asn_sz(
    size_t i = 0;
    uint8_t byte_buf = 0;
 
-   retval = ser_in->read_block( ser_in, &byte_buf, 1 );
+   retval = mfile_read_block( ser_in, &byte_buf, 1 );
    maug_cleanup_if_not_ok_msg( "error reading integer size" );
 
    *p_value_sz = 0;
@@ -655,7 +655,7 @@ static MERROR_RETVAL _mdeserialize_asn_sz(
          /* Left-shift first to make more room. */
          *p_sz <<= 8;
 
-         retval = ser_in->read_block( ser_in, &byte_buf, 1 );
+         retval = mfile_read_block( ser_in, &byte_buf, 1 );
          maug_cleanup_if_not_ok_msg( "error reading field size" );
 
          *p_sz |= byte_buf;
@@ -691,7 +691,7 @@ static MERROR_RETVAL _mdeserialize_asn_int_value(
       /* Left-shift first to make more room. */
       *p_value <<= 8;
 
-      retval = ser_in->read_block( ser_in, &byte_buf, 1 );
+      retval = mfile_read_block( ser_in, &byte_buf, 1 );
       maug_cleanup_if_not_ok_msg( "error reading field size" );
 
       *p_value |= byte_buf;
@@ -709,9 +709,9 @@ MERROR_RETVAL mdeserialize_header(
 #if MSERIALIZE_TRACE_LVL > 0
    off_t offset = 0;
    
-   offset = ser_in->cursor( ser_in );
+   offset = mfile_cursor( ser_in );
 #endif /* MSERIALIZE_TRACE_LVL */
-   retval = ser_in->read_block( ser_in, p_type, 1 );
+   retval = mfile_read_block( ser_in, p_type, 1 );
    maug_cleanup_if_not_ok_msg( "error reading field type" );
 
    retval = _mdeserialize_asn_sz( ser_in, &sz_buf, p_header_sz );
@@ -1067,7 +1067,7 @@ MERROR_RETVAL mdeserialize_char(
    *p_ser_sz = header_sz_seq + sz;
 
    /* Grab the start to seek to if provided is more than expected. */
-   start = ser_in->cursor( ser_in );
+   start = mfile_cursor( ser_in );
 
    /* Use the lesser of (expected/provided) sizes. */
    if( sz < cpy_sz ) {
@@ -1079,10 +1079,10 @@ MERROR_RETVAL mdeserialize_char(
       cpy_sz = sz;
    }
 
-   ser_in->read_block( ser_in, (uint8_t*)p_ser_char, cpy_sz );
+   mfile_read_block( ser_in, (uint8_t*)p_ser_char, cpy_sz );
 
    /* Make sure we're focused on the next field when we're done. */
-   ser_in->seek( ser_in, start + sz );
+   mfile_seek( ser_in, start + sz );
 
 #if MSERIALIZE_TRACE_LVL > 0
    if( 1 < array ) {
@@ -1279,7 +1279,7 @@ MERROR_RETVAL mdeserialize_union_MLISP_VAL(
          "deserializing union MLISP_VAL (" SSIZE_T_FMT " bytes)...",
          union_sz );
 #endif /* MSERIALIZE_TRACE_LVL */
-      retval = ser_in->read_block(
+      retval = mfile_read_block(
          ser_in, (uint8_t*)&(p_ser_union[i]), union_sz );
       maug_cleanup_if_not_ok();
 #if MSERIALIZE_TRACE_LVL > 0

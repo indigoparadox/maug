@@ -125,16 +125,6 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
 
    p_file->type = MFILE_CADDY_TYPE_MEM_BUFFER;
 
-   p_file->has_bytes = mfile_mem_has_bytes;
-   p_file->read_byte = mfile_mem_read_byte;
-   p_file->read_block = mfile_mem_read_block;
-   p_file->read_int = mfile_file_read_int;
-   p_file->seek = mfile_mem_seek;
-   p_file->read_line = mfile_mem_read_line;
-   p_file->printf = mfile_file_printf;
-   p_file->vprintf = mfile_mem_vprintf;
-   p_file->write_block = mfile_file_write_block;
-
    p_file->flags = MFILE_FLAG_READ_ONLY;
    p_file->mem_buffer = gc_mvfs_data[i];
    p_file->sz = *(gc_mvfs_lens[i]);

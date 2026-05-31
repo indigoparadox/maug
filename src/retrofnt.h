@@ -108,7 +108,7 @@ MERROR_RETVAL retrofont_read_line(
    MERROR_RETVAL retval = MERROR_OK;
    size_t last_char_idx = 0;
 
-   retval = font_file->read_line(
+   retval = mfile_read_line(
       font_file, glyph_idx_str, RETROFONT_LINE_SZ, 0 );
    maug_cleanup_if_not_ok();
 

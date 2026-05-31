@@ -73,7 +73,7 @@ off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
 /* === */
 
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
-   return p_file->read_block( p_file, buf, 1 );
+   return mfile_file_read_block( p_file, buf, 1 );
 }
 
 /* === */
@@ -207,17 +207,6 @@ cleanup:
 
    p_file->type = MFILE_CADDY_TYPE_FILE;
 
-   p_file->has_bytes = mfile_file_has_bytes;
-   p_file->cursor = mfile_file_cursor;
-   p_file->read_byte = mfile_file_read_byte;
-   p_file->read_block = mfile_file_read_block;
-   p_file->read_int = mfile_file_read_int;
-   p_file->seek = mfile_file_seek;
-   p_file->read_line = mfile_file_read_line;
-   p_file->printf = mfile_file_printf;
-   p_file->vprintf = mfile_file_vprintf;
-   p_file->write_block = mfile_file_write_block;
-
    p_file->flags = flags;
 
 cleanup:
@@ -267,7 +256,7 @@ MERROR_RETVAL mfile_file_write_block(
       return MERROR_FILE;
    }
 
-   cursor = p_f->cursor( p_f );
+   cursor = mfile_file_cursor( p_f );
 
    if( 0 < p_f->sz && cursor < p_f->sz ) {
       /* Grab the rest of the file to shift down if we're not at the end. */
@@ -318,7 +307,7 @@ MERROR_RETVAL mfile_file_write_block(
       debug_printf( MFILE_WRITE_TRACE_LVL,
          "shifting " SIZE_T_FMT " bytes of binary data from cursor position "
             OFF_T_FMT " to position " OFF_T_FMT "...",
-         end_buf_sz, p_f->cursor( p_f ), cursor );
+         end_buf_sz, mfile_file_cursor( p_f ), cursor );
       for( i = 0 ; end_buf_sz > i ; i++ ) {
          debug_printf( MFILE_CONTENTS_TRACE_LVL, " > 0x%02x", end_buf[i] );
       }

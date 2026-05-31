@@ -318,9 +318,9 @@ MERROR_RETVAL mfmt_decode_rle(
    maug_mzero( buffer_out, buffer_out_sz );
 
    do {
-      retval = p_file_in->seek( p_file_in, file_offset + in_byte_cur++ );
+      retval = mfile_seek( p_file_in, file_offset + in_byte_cur++ );
       maug_cleanup_if_not_ok();
-      retval = p_file_in->read_byte( p_file_in, &byte_buffer );
+      retval = mfile_read_block( p_file_in, &byte_buffer, 1 );
       maug_cleanup_if_not_ok();
 
       debug_printf( MFMT_TRACE_RLE_LVL, "in byte " OFF_T_FMT
@@ -503,15 +503,15 @@ MERROR_RETVAL mfmt_read_bmp_header(
          file_offset + 2 );
 
       /* Grab file header info. */
-      retval = p_file_in->seek( p_file_in, file_offset + 2 );
+      retval = mfile_seek( p_file_in, file_offset + 2 );
       maug_cleanup_if_not_ok();
-      retval = p_file_in->read_int( p_file_in,
+      retval = mfile_read_int( p_file_in,
          (uint8_t*)&(header_bmp_file->file_sz), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
 
-      retval = p_file_in->seek( p_file_in, file_offset + 10 );
+      retval = mfile_seek( p_file_in, file_offset + 10 );
       maug_cleanup_if_not_ok();
-      retval = p_file_in->read_int( p_file_in,
+      retval = mfile_read_int( p_file_in,
          (uint8_t*)&(header_bmp_file->px_offset), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
       
@@ -523,9 +523,9 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    /* Read the bitmap image header. */
-   retval = p_file_in->seek( p_file_in, file_offset + header_offset );
+   retval = mfile_seek( p_file_in, file_offset + header_offset );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&file_hdr_sz, 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
    if( 40 != file_hdr_sz ) { /* Windows BMP. */
@@ -546,17 +546,17 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    /* Read bitmap image dimensions. */
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_WIDTH );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->width), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_HEIGHT );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->height), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
@@ -566,18 +566,18 @@ MERROR_RETVAL mfmt_read_bmp_header(
       *p_flags |= MFMT_PX_FLAG_INVERT_Y;
    }
 
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_SZ );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->img_sz), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
    /* Check that we're a palettized image. */
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_BPP );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->bpp), 2, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
@@ -589,10 +589,10 @@ MERROR_RETVAL mfmt_read_bmp_header(
    }
 
    /* Make sure there's no weird compression. */
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_COMPRESSION );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->compression), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
@@ -610,10 +610,10 @@ MERROR_RETVAL mfmt_read_bmp_header(
 
    /* Get the number of palette colors. */
 
-   retval = p_file_in->seek( p_file_in,
+   retval = mfile_seek( p_file_in,
       file_offset + header_offset + MFMT_BMPINFO_OFS_PAL_SZ );
    maug_cleanup_if_not_ok();
-   retval = p_file_in->read_int( p_file_in,
+   retval = mfile_read_int( p_file_in,
       (uint8_t*)&(header_bmp_info->palette_ncolors), 4, MFILE_READ_FLAG_LSBF );
    maug_cleanup_if_not_ok();
 
@@ -642,7 +642,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
 
    mfmt_bmp_check_header();
  
-   retval = p_file_in->seek( p_file_in, file_offset );
+   retval = mfile_seek( p_file_in, file_offset );
    maug_cleanup_if_not_ok();
    for( i = 0 ; header_bmp_info->palette_ncolors > i ; i++ ) {
       if( i * 4 > palette_sz ) {
@@ -651,7 +651,7 @@ MERROR_RETVAL mfmt_read_bmp_palette(
          goto cleanup;
       }
 
-      retval = p_file_in->read_int( p_file_in,
+      retval = mfile_read_int( p_file_in,
          (uint8_t*)&(palette[i]), 4, MFILE_READ_FLAG_LSBF );
       maug_cleanup_if_not_ok();
 
@@ -778,7 +778,7 @@ MERROR_RETVAL mfmt_read_bmp_px_cb(
       /* Only seek to offset if we're using the original (not translated from
        * RLE or something.
        */
-      p_file_bmp->seek( p_file_bmp, px_offset );
+      mfile_seek( p_file_bmp, px_offset );
    }
    while( 0 <= y ) {
       /* Each iteration is a single, fresh pixel. */
@@ -802,7 +802,7 @@ MERROR_RETVAL mfmt_read_bmp_px_cb(
 
          /* Move on to a new byte. */
          /* TODO: Bad cursor? */
-         retval = p_file_bmp->read_byte( p_file_bmp, &byte_buffer );
+         retval = mfile_read_block( p_file_bmp, &byte_buffer, 1 );
          maug_cleanup_if_not_ok();
          byte_in_idx++;
 
@@ -851,7 +851,7 @@ MERROR_RETVAL mfmt_read_bmp_px_cb(
          x = 0;
          while( byte_in_idx % 4 != 0 ) {
             byte_in_idx++;
-            p_file_bmp->seek( p_file_bmp, px_offset + byte_in_idx );
+            mfile_seek( p_file_bmp, px_offset + byte_in_idx );
          }
 
          /* Move to the next row of the output. */

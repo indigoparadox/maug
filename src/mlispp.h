@@ -597,7 +597,7 @@ MERROR_RETVAL mlisp_parse_file(
    maug_cleanup_if_not_ok();
 
    for( i = 0 ; mfile_get_sz( &ai_file ) > i ; i++ ) {
-      retval = ai_file.read_int( &ai_file, (uint8_t*)&c, 1, 0 );
+      retval = mfile_read_int( &ai_file, (uint8_t*)&c, 1, 0 );
       maug_cleanup_if_not_ok();
       retval = mlisp_parse_c( parser, c );
       maug_cleanup_if_not_ok();

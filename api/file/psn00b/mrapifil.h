@@ -314,18 +314,7 @@ MERROR_RETVAL mfile_plt_open_read( const char* filename, mfile_t* p_file ) {
       filepath, CdPosToInt( &(p_file->h.file.cdf.pos) ), p_file->sz );
 #endif /* MFILE_SEEK_TRACE_LVL */
 
-   /* Setup file type and function pointers.*/
    p_file->type = MFILE_CADDY_TYPE_FILE;
-   p_file->has_bytes = mfile_file_has_bytes;
-   p_file->cursor = mfile_file_cursor;
-   p_file->read_byte = mfile_file_read_byte;
-   p_file->read_int = mfile_file_read_int;
-   p_file->read_block = mfile_file_read_block;
-   p_file->seek = mfile_file_seek;
-   p_file->read_line = mfile_file_read_line;
-   p_file->printf = mfile_file_printf;
-   p_file->vprintf = mfile_file_vprintf;
-   p_file->write_block = mfile_file_write_block;
 
    /* Read the first sector into the sector buffer. */
    p_file->h.file.cursor = 0;
