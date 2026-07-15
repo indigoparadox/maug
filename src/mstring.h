@@ -69,6 +69,10 @@ int maug_zdigits( size_t num, int base );
 #define maug_hctoi( c ) \
    ('9' > (c) ? (c) - '0' : 'a' > (c) ? 10 + (c) - 'A' : 10 + (c) - 'a')
 
+/**
+ * \param sign 1 if the number may be signed, or 0 if always unsigned.
+ * \return 1 if string is numeric, or 0 otherwise.
+ */
 int maug_is_num( const char* str, size_t str_sz, uint8_t base, uint8_t sign );
 
 int maug_is_float( const char* str, size_t str_sz );
