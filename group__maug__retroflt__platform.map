@@ -1,0 +1,5 @@
+<map id="RetroFlat Platform Function API" name="RetroFlat Platform Function API">
+<area shape="rect" id="node1" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,13,112,38"/>
+<area shape="rect" id="node2" title="Callbacks for handling platform events like focus/size changes." alt="" coords="160,5,303,45"/>
+<area shape="rect" id="node3" href="$group__maug__retroflt__platform__handler.html" title="These are called internally from the platform API." alt="" coords="351,13,545,38"/>
+</map>

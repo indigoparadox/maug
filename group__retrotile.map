@@ -1,0 +1,7 @@
+<map id="RetroTile API" name="RetroTile API">
+<area shape="rect" id="node1" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,55,112,80"/>
+<area shape="rect" id="node2" title="Functions and structures for working with tilemaps/grids." alt="" coords="160,55,267,80"/>
+<area shape="rect" id="node3" href="$group__retrotile__defs.html" title=" " alt="" coords="315,5,497,31"/>
+<area shape="rect" id="node4" href="$group__retrotile__gen.html" title="Tools for procedurally generating tilemaps." alt="" coords="327,55,485,80"/>
+<area shape="rect" id="node5" href="$group__retrotile__parser.html" title=" " alt="" coords="343,104,469,129"/>
+</map>
