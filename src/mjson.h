@@ -37,9 +37,7 @@ struct MJSON_PARSER {
    char last_key[MPARSER_TOKEN_SZ_MAX + 1];
 };
 
-#define mjson_parser_pstate( parser ) \
-   ((&((parser)->base))->pstate_sz > 0 ? \
-      (&((parser)->base))->pstate[(&((parser)->base))->pstate_sz - 1] : MJSON_PSTATE_NONE)
+#define mjson_parser_pstate( parser ) mparser_pstate( &((parser)->base) )
 
 #ifdef MPARSER_TRACE_NAMES
 #  define mjson_parser_pstate_push( parser, new_pstate ) \

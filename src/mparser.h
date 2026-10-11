@@ -215,9 +215,13 @@ cleanup:
 }
 
 void mparser_reset_token( const char* ptype, struct MPARSER* parser ) {
-   (parser)->token_sz = 0;
-   (parser)->token[(parser)->token_sz] = '\0';
-   debug_printf( MPARSER_TRACE_LVL, "%s parser reset token", ptype );
+   if( 0 < parser->token_sz ) {
+      parser->token_sz = 0;
+      parser->token[(parser)->token_sz] = '\0';
+#if MPARSER_TRACE_LVL > 0
+      debug_printf( MPARSER_TRACE_LVL, "%s parser reset token", ptype );
+#endif /* MPARSER_TRACE_LVL */
+   }
 }
 
 #endif /* MPARSER_C */
