@@ -1,0 +1,6 @@
+<map id="RetroGUI API" name="RetroGUI API">
+<area shape="rect" id="node1" href="$group__maug__retroflt.html" title="Abstraction layer header for retro systems." alt="" coords="5,42,112,67"/>
+<area shape="rect" id="node2" title="Tools for drawing interactive GUI elements in a RetroFlat program." alt="" coords="160,42,267,67"/>
+<area shape="rect" id="node3" href="$group__maug__retrogui__cfg.html" title="Options to configure RetroGUI behavior defined at compile time." alt="" coords="315,5,484,45"/>
+<area shape="rect" id="node4" href="$group__maug__retrogui__ctl.html" title=" " alt="" coords="330,70,469,95"/>
+</map>
