@@ -347,3 +347,53 @@ CLEAN_TARGETS += $(1).$$(MAUG_UNIX).xlib
 
 endef
 
+# ---
+
+define TGTUNIXVNC
+
+# Easier to understand error messages.
+ifeq ("$$(shell pkg-config libvncserver --libs 2>/dev/null)","")
+# Make this only a warning, in case we're compiling for other targets.
+$$(warning could not find pkg-config for libvncserver!)
+endif
+
+OBJDIR_GCC_UNIX_VNC := obj/gcc-$$(MAUG_UNIX)-vnc
+
+CFLAGS_GCC_UNIX_VNC := -DRETROFLAT_API_VNC $(shell pkg-config x11 --cflags) \
+	-I$(MAUG_ROOT)/api/retro2d/vnc -I$(MAUG_ROOT)/api/input/vnc \
+	-I$(MAUG_ROOT)/api/font/soft -I$(MAUG_ROOT)/api/mem/unix \
+	-I$(MAUG_ROOT)/api/serial/asn1
+
+LDFLAGS_GCC_UNIX_VNC := $(shell pkg-config libvncserver --libs)
+
+ifeq ("$$(FORCE_MVFS)","1")
+CFLAGS_GCC_UNIX_VNC += -I"$(MAUG_ROOT)/api/file/mvfs"
+else
+CFLAGS_GCC_UNIX_VNC += -I"$(MAUG_ROOT)/api/file/unix"
+endif
+
+ifeq ("$$(RETROFLAT_FORCE_LOG_MFILE)", "1")
+CFLAGS_GCC_UNIX_VNC += -I$(MAUG_ROOT)/api/log/mfile
+else
+CFLAGS_GCC_UNIX_VNC += -I$(MAUG_ROOT)/api/log/unix
+endif
+
+ifeq ("$$(RETROFLAT_SOUND)","1")
+	CFLAGS_GCC_UNIX_VNC += \
+		-I$(MAUG_ROOT)/api/sound/null -DRETROSND_API_NULL -DRETROSND_SAMPLE_44100
+endif
+
+$(1).$$(MAUG_UNIX).vnc: $$(addprefix $$(OBJDIR_GCC_UNIX_VNC)/,$$(subst .c,.o,$$(C_FILES)))
+	$$(CC_GCC) -o $$@ $$^ \
+		$$(LDFLAGS_GCC) $$(LDFLAGS_GCC_UNIX) $$(LDFLAGS_GCC_UNIX_VNC)
+
+$$(OBJDIR_GCC_UNIX_VNC)/%.o: %.c | $$(MAUG_DEPS)
+	$$(MD) $$(dir $$@)
+	$$(CC_GCC) -c -o $$@ $$< \
+		$$(CFLAGS_GCC) $$(CFLAGS_GCC_UNIX) $$(CFLAGS_GCC_UNIX_VNC) \
+		$$(CFLAGS_OPT_GCC)
+
+CLEAN_TARGETS += $(1).$$(MAUG_UNIX).vnc
+
+endef
+
