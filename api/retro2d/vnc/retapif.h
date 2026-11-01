@@ -12,12 +12,18 @@ static MERROR_RETVAL retroflat_init_platform(
    g_retroflat_state->screen_colors = 16;
 
 #  define RETROFLAT_COLOR_TABLE_INIT( i, name_l, name_u, ri, gi, bi, cgac, cgad ) \
-      g_retroflat_state->palette[i] = (ri) | (gi << 8) | (bi << 16);
-
-   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_INIT )
+      g_retroflat_state->platform.server->colourMap.data.bytes[i * 3] = ri;\
+      g_retroflat_state->platform.server->colourMap.data.bytes[i * 3 + 1] = gi;\
+      g_retroflat_state->platform.server->colourMap.data.bytes[i * 3 + 2] = bi;\
 
    g_retroflat_state->platform.server =
-      rfbGetScreen( &argc, argv, args->screen_w, args->screen_h, 8, 3, 4 );
+      rfbGetScreen( &argc, argv, args->screen_w, args->screen_h, 8, 1, 1 );
+   g_retroflat_state->platform.server->serverFormat.trueColour = FALSE;
+   g_retroflat_state->platform.server->colourMap.count = 256;
+   g_retroflat_state->platform.server->colourMap.is16 = FALSE;
+   g_retroflat_state->platform.server->colourMap.data.bytes = calloc( 256, 3 );
+
+   RETROFLAT_COLOR_TABLE( RETROFLAT_COLOR_TABLE_INIT )
 
    /* Allocate the screen buffer bitmap. */
    g_retroflat_state->platform.screen_buffer.sz =
@@ -191,6 +197,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    int16_t instance
 ) {
    MERROR_RETVAL retval = MERROR_OK;
+   int i = 0;
 
    assert( NULL != src );
 
@@ -211,6 +218,13 @@ MERROR_RETVAL retroflat_blit_bitmap(
    retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
+
+   for( i = 0 ; h > i ; i++ ) {
+      memcpy(
+         &(target->buffer[((d_y + i) * target->w) + d_x]),
+         &(src->buffer[((s_y + i) * src->w) + s_x]),
+         w );
+   }
 
    /* TODO */
 #  pragma message( "warning: blit_bitmap not implemented" )
@@ -242,10 +256,43 @@ void retroflat_px(
 
    retroflat_viewport_constrain_px( x, y, target, return );
 
-   target->buffer[(y * retroflat_bitmap_w( target )) + x] =
-         g_retroflat_state->palette[color_idx];
+   target->buffer[(y * retroflat_bitmap_w( target )) + x] = color_idx;
 
-   rfbMarkRectAsModified( g_retroflat_state->platform.server, x, y, 1, 1 );
+   if( NULL == target || retroflat_screen_buffer() == target ) {
+      rfbMarkRectAsModified( g_retroflat_state->platform.server, x, y, 1, 1 );
+   }
+}
+
+/* === */
+
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+   /* TODO: Colors are in reverse order? Probably? Should check? */
+   *p_rgb = 0;
+   *p_rgb |=
+      g_retroflat_state->platform.server->colourMap.data.bytes[(idx * 3) + 2];
+   *p_rgb |= 
+      (g_retroflat_state->platform.server->colourMap.data.bytes[(idx * 3) + 1]
+         << 8);
+   *p_rgb |= 
+      (g_retroflat_state->platform.server->colourMap.data.bytes[idx * 3]
+         << 16);
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+   g_retroflat_state->platform.server->colourMap.data.bytes[(idx * 3) + 2] =
+      (rgb & 0xff);
+   g_retroflat_state->platform.server->colourMap.data.bytes[(idx * 3) + 1] =
+      ((rgb & 0xff00) >> 8);
+   g_retroflat_state->platform.server->colourMap.data.bytes[idx * 3] =
+      ((rgb & 0xff0000) >> 16);
+
+   rfbSetClientColourMaps( g_retroflat_state->platform.server, idx, idx + 1 );
+
+   return retval;
 }
 
 /* === */
@@ -259,9 +306,7 @@ void retroflat_resize_v( void ) {
 /* === */
 
 uint8_t retroflat_focus_platform( void ) {
-
-#  pragma message( "warning: focus_platform not implemented" )
-
+   /* Impractical? */
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
 }
 

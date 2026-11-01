@@ -35,7 +35,7 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
-   uint32_t* buffer;
+   uint8_t* buffer;
    retroflat_pxxy_t w;
    retroflat_pxxy_t h;
 };

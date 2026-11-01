@@ -314,6 +314,32 @@ void retroflat_ellipse(
 
 /* === */
 
+void retroflat_get_palette( uint8_t idx, uint32_t* p_rgb ) {
+
+#  pragma message( "warning: get_palette not implemented" )
+
+   *p_rgb = 0;
+   *p_rgb |= (g_retroflat_state->palette[idx].r & 0xff) * 4;
+   *p_rgb |= ((g_retroflat_state->palette[idx].g & 0xff) << 8) * 4;
+   *p_rgb |= ((g_retroflat_state->palette[idx].b & 0xff) << 16) * 4;
+}
+
+/* === */
+
+MERROR_RETVAL retroflat_set_palette( uint8_t idx, uint32_t rgb ) {
+   MERROR_RETVAL retval = MERROR_OK;
+
+#  pragma message( "warning: set_palette not implemented" )
+
+   g_retroflat_state->palette[idx].r = (rgb & 0xff) / 4;
+   g_retroflat_state->palette[idx].g = ((rgb & 0xff00) >> 8) / 4;
+   g_retroflat_state->palette[idx].b = ((rgb & 0xff0000) >> 16) / 4;
+
+   return retval;
+}
+
+/* === */
+
 void retroflat_resize_v( void ) {
 
 #  pragma message( "warning: resize_v not implemented" )
