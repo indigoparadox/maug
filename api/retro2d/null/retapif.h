@@ -183,12 +183,14 @@ MERROR_RETVAL retroflat_blit_bitmap(
     * scroll then use that!
     */
    /* Trim sprite to stay on-screen. */
-   retval = retroflat_trim_px(
-      instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
+   retval = _retroview_trim_px(
+      target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
 
    /* TODO */
 #  pragma message( "warning: blit_bitmap not implemented" )
+
+cleanup:
 
    return retval;
 }
@@ -325,6 +327,82 @@ uint8_t retroflat_focus_platform( void ) {
 #  pragma message( "warning: focus_platform not implemented" )
 
    return RETROFLAT_FOCUS_FLAG_VISIBLE | RETROFLAT_FOCUS_FLAG_ACTIVE;
+}
+
+/* === */
+
+uint8_t retroview_move_x( retroflat_pxxy_t x ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( x, move, x, w, RETROFLAT_TILE_W );
+   if( !move ) {
+      goto cleanup;
+   }
+
+#if 0
+   /* Example of what we're expected to do here.
+    *
+    * viewport_rect.y is the pixel offset of the viewport inside of a
+    * framebuffer that is 1 tile bigger than the viewport on all sides.
+    *
+    * Scoot the framebuffer over a bit until it hits the border and then shunt
+    * it right back.
+    *
+    * The refresh grid handles which tiles need to be redrawn.
+    *
+    * Look up Adaptive Tile Refresh for more info.
+    */
+   g_retroflat_state->platform.viewport_rect.x += x;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.x ||
+      RETROFLAT_TILE_W * 2 <= g_retroflat_state->platform.viewport_rect.x
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.x = RETROFLAT_TILE_W;
+   }
+#endif
+
+cleanup:
+
+   return move;
+}
+
+/* === */
+
+uint8_t retroview_move_y( retroflat_pxxy_t y ) {
+   uint8_t move; /* Really a boolean. */
+
+   _retroview_move_xy( y, move, y, h, RETROFLAT_TILE_H );
+   if( !move ) {
+      goto cleanup;
+   }
+
+#if 0
+   /* Example of what we're expected to do here.
+    *
+    * viewport_rect.y is the pixel offset of the viewport inside of a
+    * framebuffer that is 1 tile bigger than the viewport on all sides.
+    *
+    * Scoot the framebuffer over a bit until it hits the border and then shunt
+    * it right back.
+    *
+    * The refresh grid handles which tiles need to be redrawn.
+    *
+    * Look up Adaptive Tile Refresh for more info.
+    */
+   g_retroflat_state->platform.viewport_rect.y += y;
+   if(
+      0 >= g_retroflat_state->platform.viewport_rect.y ||
+      RETROFLAT_TILE_H * 2 <= g_retroflat_state->platform.viewport_rect.y
+   ) {
+      /* Move the viewport back to the center of the real screen buffer. */
+      g_retroflat_state->platform.viewport_rect.y = RETROFLAT_TILE_H;
+   }
+#endif
+
+cleanup:
+
+   return move;
 }
 
 #endif /* !RETPLTF_H */
