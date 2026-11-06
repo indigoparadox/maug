@@ -1273,6 +1273,9 @@ MERROR_RETVAL retroflat_load_bitmap(
    }
 #  endif /* !RETROFLAT_OPENGL */
 
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
+
 cleanup:
 
 #  ifdef RETROFLAT_API_WIN16
@@ -1440,6 +1443,9 @@ MERROR_RETVAL retroflat_create_bitmap(
 #     endif /* RETROFLAT_WING */
 
    bmp_out->flags = flags;
+
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
 
 cleanup:
 
@@ -1614,7 +1620,8 @@ void retroflat_px(
       target = retroflat_screen_buffer();
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
+   /* TODO: Remove this when we implement clipping. */
+   retroflat_clip_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 

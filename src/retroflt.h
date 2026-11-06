@@ -1507,6 +1507,44 @@ void retroflat_line(
 
 #endif /* RETROFLAT_SOFT_LINES */
 
+#ifndef RETROFLAT_CLIP_TRACE_LVL
+#  define RETROFLAT_CLIP_TRACE_LVL 0
+#endif /* !RETROFLAT_CLIP_TRACE_LVL */
+
+#ifdef RETROFLAT_CLIP_GENERIC
+
+#if RETROFLAT_CLIP_TRACE_LVL > 0
+#  define retroflat_clip_px( x, y, bmp, retact ) \
+      if( \
+         x < bmp->clip_l || \
+         y < bmp->clip_t || \
+         x >= bmp->clip_r || \
+         y >= bmp->clip_b \
+      ) { \
+         debug_printf( RETROFLAT_CLIP_TRACE_LVL, \
+            "attempted draw at %d, %d, out of bounds %d, %d, %d, %d", \
+            x, y, bmp->clip_l, bmp->clip_t, bmp->clip_r, bmp->clip_b ); \
+         retact; \
+      }
+#else
+#  define retroflat_clip_px( x, y, bmp, retact ) \
+      if( \
+         x < bmp->clip_l || \
+         y < bmp->clip_t || \
+         x >= bmp->clip_r || \
+         y >= bmp->clip_b \
+      ) { \
+         retact; \
+      }
+#endif /* RETROFLAT_CLIP_TRACE_LVL */
+
+#endif /* RETROFLAT_CLIP_GENERIC */
+
+void retroflat_set_clip(
+   struct RETROFLAT_BITMAP* target,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h );
+
 void retroflat_cursor( struct RETROFLAT_BITMAP* target, uint8_t flags );
 
 #define retroflat_blank( target, color ) \
@@ -2624,6 +2662,27 @@ cleanup:
 }
 
 #  endif /* RETROFLAT_VDP */
+
+#  ifdef RETROFLAT_CLIP_GENERIC
+
+/* === */
+
+void retroflat_set_clip(
+   struct RETROFLAT_BITMAP* target,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
+) {
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   target->clip_l = x;
+   target->clip_t = y;
+   target->clip_r = x + w;
+   target->clip_b = y + h;
+}
+
+#  endif /* RETROFLAT_CLIP_GENERIC */
 
 /* === */
 

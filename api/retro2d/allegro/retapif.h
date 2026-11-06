@@ -335,6 +335,7 @@ MERROR_RETVAL retroflat_blit_bitmap(
    }
 
    /* Trim sprite to stay on-screen. */
+   /* TODO: Remove this and use hardware viewport/clipping. */
    retval = _retroview_trim_px(
       target, instance, &s_x, &s_y, &d_x, &d_y, &w, &h );
    maug_cleanup_if_not_ok();
@@ -381,8 +382,6 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
-
    /* == Allegro == */
 
    putpixel( target->b, x, y, color_idx );
@@ -407,6 +406,7 @@ void retroflat_rect(
       return;
    }
 
+   /* TODO: Remove this and use hardware viewport/clipping. */
    if(
       MERROR_OK != _retroview_trim_px( target, 0, NULL, NULL, &x, &y, &w, &h )
    ) {
@@ -607,6 +607,20 @@ uint8_t retroview_move_y( retroflat_pxxy_t y ) {
 cleanup:
 
    return move;
+}
+
+/* === */
+
+void retroflat_set_clip(
+   struct RETROFLAT_BITMAP* target,
+   retroflat_pxxy_t x, retroflat_pxxy_t y,
+   retroflat_pxxy_t w, retroflat_pxxy_t h
+) {
+   if( NULL == target ) {
+      target = retroflat_screen_buffer();
+   }
+
+   set_clip_rect( target->b, x, y, x + w, y + w );
 }
 
 #endif /* !RETPLTF_H */

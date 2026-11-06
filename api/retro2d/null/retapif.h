@@ -124,6 +124,9 @@ MERROR_RETVAL retroflat_load_bitmap(
    /* TODO */
 #  pragma message( "warning: load_bitmap not implemented" )
 
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
+
 cleanup:
 
    return retval;
@@ -143,6 +146,9 @@ MERROR_RETVAL retroflat_create_bitmap(
 
    /* TODO */
 #  pragma message( "warning: create_bitmap not implemented" )
+
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
 
    return retval;
 }

@@ -5,8 +5,12 @@
 #define RETROPLAT_PRESENT 1
 
 /* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
-#define RETROFLAT_SOFT_VIEWPORT
-#define RETROFLAT_NO_VIEWPORT_REFRESH
+#define RETROFLAT_SOFT_VIEWPORT 1
+
+#define RETROFLAT_NO_VIEWPORT_REFRESH 1
+
+/* TODO: Rework texture rendering to use native clipping. */
+#define RETROFLAT_CLIP_GENERIC 1
 
 #  include <time.h> /* For srand() */
 
@@ -48,6 +52,14 @@ struct RETROFLAT_BITMAP {
    /* SDL2 texture pointers. */
    SDL_Texture* texture;
    SDL_Renderer* renderer;
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 #  ifdef RETROFLAT_BMP_TEX

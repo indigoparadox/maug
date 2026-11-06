@@ -55,27 +55,6 @@ struct RETROFLAT_VIEWPORT {
 #  define RETROVIEW_TRACE_LVL 0
 #endif /* !RETROVIEW_TRACE_LVL */
 
-#if RETROVIEW_TRACE_LVL > 1
-#  define retroflat_viewport_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
-         debug_printf( RETROVIEW_TRACE_LVL - 1, \
-            "attempted draw at %d, %d, out of bounds %d x %d", \
-            x, y, retroflat_bitmap_w( bmp ), retroflat_bitmap_h( bmp ) ); \
-         retact; \
-      }
-#else
-#  define retroflat_viewport_constrain_px( x, y, bmp, retact ) \
-      if( \
-         x >= retroflat_bitmap_w( bmp ) || y >= retroflat_bitmap_h( bmp ) || \
-         0 > x || 0 > y \
-      ) { \
-         retact; \
-      }
-#endif /* RETROVIEW_TRACE_LVL */
-
 /**
  * \relates RETROFLAT_VIEWPORT
  * \brief Lock access to RETROFLAT_VIEWPORT::refresh_grid in memory.

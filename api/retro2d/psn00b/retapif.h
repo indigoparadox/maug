@@ -631,13 +631,18 @@ MERROR_RETVAL retroflat_create_bitmap(
    setRGB0( &(bmp_out->draw), 0, 0, 0 );
    bmp_out->w = w;
    bmp_out->h = h;
-   if( RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE == (RETROFLAT_BITMAP_FLAG_OPAQUE & flags)
+   ) {
       bmp_out->flags |= RETROFLAT_BITMAP_FLAG_OPAQUE;
       bmp_out->draw.isbg = 1;
    }
 
    /* Clear buffer without waiting since this bitmap is brand new! */
    _retroflat_psx_clear_buffers( bmp_out, RETROFLAT_PSX_FLAG_NOWAIT );
+
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
 
 cleanup:
 
@@ -805,7 +810,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_clip_px( x, y, target, return );
 
    px = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
 
@@ -845,8 +850,8 @@ void retroflat_rect(
    }
 
    if( RETROFLAT_DRAW_FLAG_FILL == (RETROFLAT_DRAW_FLAG_FILL & flags) ) {
-      retroflat_viewport_constrain_px( x, y, target, return );
-      retroflat_viewport_constrain_px( x + w - 1, y + h - 1, target, return );
+      retroflat_clip_px( x, y, target, return );
+      retroflat_clip_px( x + w - 1, y + h - 1, target, return );
 
       /* Draw a filled rect with the GPU. */
       rect = (TILE*)(_retroflat_psx_next_prim( target, sizeof( TILE ) ));
@@ -891,8 +896,8 @@ void retroflat_line(
       return;
    }
 
-   retroflat_viewport_constrain_px( x1, y1, target, return );
-   retroflat_viewport_constrain_px( x2, y2, target, return );
+   retroflat_clip_px( x1, y1, target, return );
+   retroflat_clip_px( x2, y2, target, return );
 
    line = (LINE_F2*)(_retroflat_psx_next_prim( target, sizeof( LINE_F2 ) ));
 

@@ -9,7 +9,9 @@
 
 #define RETROPLAT_PRESENT 1
 
-#define RETROFLAT_SOFT_VIEWPORT
+#define RETROFLAT_SOFT_VIEWPORT 1
+
+#define RETROFLAT_CLIP_GENERIC 1
 
 /**
  * \addtogroup maug_retroflt_bitmap
@@ -27,6 +29,14 @@ struct RETROFLAT_BITMAP {
    size_t sz;
    /*! \brief Platform-specific bitmap flags. */
    uint8_t flags;
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 /**

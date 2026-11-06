@@ -266,6 +266,9 @@ MERROR_RETVAL retroflat_create_bitmap(
       goto cleanup;
    }
 
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
+
 cleanup:
 
    return retval;
@@ -415,7 +418,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_clip_px( x, y, target, return );
 
    XPutPixel( target->img, x, y, g_retroflat_state->palette[color_idx] );
 }

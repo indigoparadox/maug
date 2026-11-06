@@ -5,8 +5,11 @@
 #define RETROPLAT_PRESENT 1
 
 /* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
-#define RETROFLAT_SOFT_VIEWPORT
-#define RETROFLAT_NO_VIEWPORT_REFRESH
+#define RETROFLAT_SOFT_VIEWPORT 1
+
+#define RETROFLAT_NO_VIEWPORT_REFRESH 1
+
+#define RETROFLAT_CLIP_GENERIC 1
 
 #  ifdef RETROFLAT_OPENGL
 #     error "opengl support not implemented for PC BIOS"
@@ -99,6 +102,14 @@ struct RETROFLAT_BITMAP {
    int16_t h;
    uint8_t SEG_FAR* px;
    uint8_t SEG_FAR* mask;
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 #  define retroflat_screen_buffer() \

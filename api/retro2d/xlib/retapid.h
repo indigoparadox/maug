@@ -10,14 +10,17 @@
 #define RETROPLAT_PRESENT 1
 
 /* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
-#define RETROFLAT_SOFT_VIEWPORT
-#define RETROFLAT_NO_VIEWPORT_REFRESH
+#define RETROFLAT_SOFT_VIEWPORT 1
 
-#define RETROFLAT_SOFT_SHAPES
+#define RETROFLAT_NO_VIEWPORT_REFRESH 1
 
-#define RETROFLAT_SOFT_LINES
+#define RETROFLAT_SOFT_SHAPES 1
+
+#define RETROFLAT_SOFT_LINES 1
 
 #define RETROFLAT_LOAD_BITMAP_GENERIC 1
+
+#define RETROFLAT_CLIP_GENERIC 1
 
 #include <time.h>
 #include <X11/Xutil.h>
@@ -41,6 +44,14 @@ struct RETROFLAT_BITMAP {
    XImage* img;
    char* bits;
    int bits_sz;
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 /**

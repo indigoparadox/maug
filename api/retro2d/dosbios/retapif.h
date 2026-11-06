@@ -372,9 +372,14 @@ MERROR_RETVAL retroflat_load_bitmap(
       mfile_get_sz( &bmp_file ) - header_bmp.px_offset, bmp_flags );
    maug_cleanup_if_not_ok();
 
-   if( RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags) ) {
+   if(
+      RETROFLAT_BITMAP_FLAG_OPAQUE != (RETROFLAT_BITMAP_FLAG_OPAQUE & flags)
+   ) {
       retval = retroflat_bitmap_dos_transparency( bmp_out );
    }
+
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
 
 cleanup:
 
@@ -412,6 +417,8 @@ MERROR_RETVAL retroflat_create_bitmap(
     */
    bmp_out->px = _fcalloc( w, h );
    maug_cleanup_if_null_alloc( uint8_t*, bmp_out->px );
+
+   retroflat_set_clip( bmp_out, 0, 0, bmp_out->w, bmp_out->h );
 
 cleanup:
 
@@ -529,7 +536,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_clip_px( x, y, target, return );
 
    /* == DOS PC_BIOS == */
 

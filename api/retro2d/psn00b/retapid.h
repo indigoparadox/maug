@@ -14,13 +14,16 @@
 
 #define RETROPLAT_PRESENT
 
-#define RETROFLAT_NO_CLI_SZ
+#define RETROFLAT_NO_CLI_SZ 1
 
 /* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
-#define RETROFLAT_SOFT_VIEWPORT
-#define RETROFLAT_NO_VIEWPORT_REFRESH
+#define RETROFLAT_SOFT_VIEWPORT 1
 
-#define RETROFLAT_LOAD_BITMAP_GENERIC
+#define RETROFLAT_NO_VIEWPORT_REFRESH 1
+
+#define RETROFLAT_LOAD_BITMAP_GENERIC 1
+
+#define RETROFLAT_CLIP_GENERIC 1
 
 #define RETROFLAT_PSX_OT_LEN 1
 
@@ -127,6 +130,14 @@ struct RETROFLAT_BITMAP {
    size_t used_prim;
    struct RETROFLAT_BITMAP* alt_page;
    uint8_t disp_idx;
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 /**

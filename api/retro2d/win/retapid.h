@@ -10,11 +10,15 @@ void free( void* );
 #endif /* MAUG_NO_STDLIB */
 
 /* TODO: Setup adaptive screen scrolling once we get it figured out in sdl1. */
-#define RETROFLAT_SOFT_VIEWPORT
-#define RETROFLAT_NO_VIEWPORT_REFRESH
+#define RETROFLAT_SOFT_VIEWPORT 1
+
+#define RETROFLAT_NO_VIEWPORT_REFRESH 1
 
 /* Windows uses its own message loop. */
 #define RETROFLAT_NO_GENERIC_LOOP 1
+
+/* TODO: Figure out handle storage for native clipping. */
+#define RETROFLAT_CLIP_GENERIC 1
 
 #ifdef RETROFLAT_API_WINCE
 /* WinCE is very similar to Win32, so we'll mostly use that with some exceptions below. */
@@ -112,6 +116,14 @@ struct RETROFLAT_BITMAP {
    ssize_t autolock_refs;
    struct RETROFLAT_BMI bmi;
 #  endif /* RETROFLAT_OPENGL */
+   /* \brief Left clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_l;
+   /* \brief Top clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_t;
+   /* \brief Right clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_r;
+   /* \brief Bottom clip px. Required for RETROFLAT_CLIP_GENERIC. */
+   retroflat_pxxy_t clip_b;
 };
 
 #  ifdef MAUG_NO_CLI

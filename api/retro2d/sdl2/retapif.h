@@ -135,6 +135,10 @@ MERROR_RETVAL retroflat_init_platform(
    SDL_SetWindowIcon( g_retroflat_state->platform.window, icon );
 #     endif /* RETROFLAT_SDL_ICO */
 
+   retroflat_set_clip( &(g_retroflat_state->platform.screen_buffer), 0, 0,
+      g_retroflat_state->screen_w,
+      g_retroflat_state->screen_w );
+
 cleanup:
 
    return retval;
@@ -453,6 +457,9 @@ MERROR_RETVAL retroflat_load_bitmap(
       goto cleanup;
    }
 
+   retroflat_set_clip( bmp_out, 0, 0,
+      retroflat_bitmap_w( bmp_out ), retroflat_bitmap_h( bmp_out ) );
+
    debug_printf( RETROFLAT_BITMAP_TRACE_LVL,
       "successfully loaded bitmap: %s", filename_path );
 
@@ -514,6 +521,8 @@ MERROR_RETVAL retroflat_create_bitmap(
    }
    maug_cleanup_if_null(
       SDL_Texture*, bmp_out->texture, MERROR_GUI );
+
+   retroflat_set_clip( bmp_out, 0, 0, w, h );
       
 cleanup:
 #  endif /* RETROFLAT_OPENGL */
@@ -694,7 +703,7 @@ void retroflat_px(
       return;
    }
 
-   retroflat_viewport_constrain_px( x, y, target, return );
+   retroflat_clip_px( x, y, target, return );
 
 #  if defined( RETROFLAT_OPENGL )
 
