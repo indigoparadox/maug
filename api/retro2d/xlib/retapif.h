@@ -81,6 +81,10 @@ static MERROR_RETVAL retroflat_init_platform(
       goto cleanup;
    }
 
+   retroflat_set_clip( &(g_retroflat_state->platform.screen_buffer), 0, 0,
+      retroflat_bitmap_w( &(g_retroflat_state->platform.screen_buffer) ),
+      retroflat_bitmap_h( &(g_retroflat_state->platform.screen_buffer) ) );
+
    clock_gettime( CLOCK_MONOTONIC, &spec );
    g_retroflat_state->platform.s_launch = spec.tv_sec;
 
