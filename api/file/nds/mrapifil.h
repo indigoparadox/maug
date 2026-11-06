@@ -16,6 +16,16 @@ union MFILE_HANDLE {
 
 /* TODO: Use libfat to read files from SD card if not in MVFS. */
 
+off_t mfile_file_cursor( struct MFILE_CADDY* p_file ) {
+
+   assert( MFILE_CADDY_TYPE_FILE == p_file->type );
+
+   /* TODO */
+
+}
+
+/* === */
+
 MERROR_RETVAL mfile_file_read_byte( struct MFILE_CADDY* p_file, uint8_t* buf ) {
    return mfile_file_read_block( p_file, buf, 1 );
 }
